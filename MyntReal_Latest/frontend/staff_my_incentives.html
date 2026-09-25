@@ -960,29 +960,57 @@
             const rateEl = document.getElementById(rateId);
             if (!card) return;
 
+            const isTele = !!emp.is_telecaller;
             const hasKra = emp.kra_total > 0;
             const pct = emp.kra_percentage !== undefined ? emp.kra_percentage : 100;
-            const mult = emp.kra_multiplier !== undefined ? emp.kra_multiplier : (hasKra ? (pct >= 80 ? 1.2 : 0.5) : 1.0);
+            const mult = emp.compliance_multiplier !== undefined ? emp.compliance_multiplier : (emp.kra_multiplier !== undefined ? emp.kra_multiplier : 1.0);
 
-            valEl.textContent = hasKra ? `${pct}%` : 'N/A';
-            if (mult < 1.0) {
-                badge.style.background = '#fee2e2';
-                badge.style.color = '#b91c1c';
-                txtEl.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Active KRA target not met (below 80%)</span>`;
-                rateEl.textContent = '50%';
-                rateEl.style.color = '#ef4444';
-            } else if (mult > 1.0) {
-                badge.style.background = '#d1fae5';
-                badge.style.color = '#065f46';
-                txtEl.innerHTML = `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Active goals met! (80%+)</span>`;
-                rateEl.textContent = '120%';
-                rateEl.style.color = '#10b981';
+            if (isTele) {
+                const qPct = emp.quality_percentage !== undefined ? emp.quality_percentage : 100;
+                const tsPct = emp.timesheet_percentage !== undefined ? emp.timesheet_percentage : 100;
+                valEl.innerHTML = `KRA: ${pct}% · Quality: ${qPct}% · Timesheet: ${tsPct}%`;
+
+                if (mult < 1.0) {
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#b91c1c';
+                    const reasons = (emp.penalty_reasons && emp.penalty_reasons.length) ? emp.penalty_reasons.join(', ') : 'Gate compliance below 80%';
+                    txtEl.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>50% Penalty: ${reasons}</span>`;
+                    rateEl.textContent = '50%';
+                    rateEl.style.color = '#ef4444';
+                } else if (mult > 1.0) {
+                    badge.style.background = '#d1fae5';
+                    badge.style.color = '#065f46';
+                    txtEl.innerHTML = `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>All Gates Passed & KRA 80%+ (120% Rate)</span>`;
+                    rateEl.textContent = '120%';
+                    rateEl.style.color = '#10b981';
+                } else {
+                    badge.style.background = '#e0f2fe';
+                    badge.style.color = '#0369a1';
+                    txtEl.innerHTML = `<span style="color:#0284c7;"><i class="fas fa-check-circle me-1"></i>All 3 Gates Passed (100% Rate)</span>`;
+                    rateEl.textContent = '100%';
+                    rateEl.style.color = '#0284c7';
+                }
             } else {
-                badge.style.background = '#f3f4f6';
-                badge.style.color = '#374151';
-                txtEl.innerHTML = `<span style="color:#6b7280;"><i class="fas fa-info-circle me-1"></i>No active goals</span>`;
-                rateEl.textContent = '100%';
-                rateEl.style.color = '#6b7280';
+                valEl.textContent = hasKra ? `${pct}%` : 'N/A';
+                if (mult < 1.0) {
+                    badge.style.background = '#fee2e2';
+                    badge.style.color = '#b91c1c';
+                    txtEl.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i>Active KRA target not met (below 80%)</span>`;
+                    rateEl.textContent = '50%';
+                    rateEl.style.color = '#ef4444';
+                } else if (mult > 1.0) {
+                    badge.style.background = '#d1fae5';
+                    badge.style.color = '#065f46';
+                    txtEl.innerHTML = `<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Active goals met! (80%+)</span>`;
+                    rateEl.textContent = '120%';
+                    rateEl.style.color = '#10b981';
+                } else {
+                    badge.style.background = '#f3f4f6';
+                    badge.style.color = '#374151';
+                    txtEl.innerHTML = `<span style="color:#6b7280;"><i class="fas fa-info-circle me-1"></i>No active goals</span>`;
+                    rateEl.textContent = '100%';
+                    rateEl.style.color = '#6b7280';
+                }
             }
             card.style.display = '';
         }

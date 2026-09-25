@@ -500,6 +500,11 @@ async def list_operator_calls(
     if not hasattr(current_user, 'emp_code'):
         raise HTTPException(status_code=403, detail="Staff access required")
 
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('TELEPHONY_SOFTPHONE')
+
     company_ids = _get_accessible_company_ids(current_user)
 
     query = db.query(OperatorCall).filter(

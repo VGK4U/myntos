@@ -130,6 +130,14 @@ def trigger_staff_lead_incentive(db, lead, transaction, company_id: int,
     """
     from sqlalchemy import text
 
+    now = _now_ist()
+    # DC-STRUCTURE-CONSOLIDATION-SEP2026:
+    # Structure 2 retired from September 2026 onwards in favor of unified Structure 1
+    # (Sales Performance Engine). Historical records prior to Sep 2026 are preserved intact.
+    if now.year > 2026 or (now.year == 2026 and now.month >= 9):
+        logger.info("[STAFF-INCV] Structure 2 retired from Sep 2026 onwards; skipping real-time transaction hook.")
+        return {"success": False, "message": "Structure 2 retired from Sep 2026 onwards in favor of Performance Incentive Engine"}
+
     employee_id = override_employee_id or getattr(lead, "field_staff_id", None)
     if not employee_id:
         return {"success": False, "message": "No employee_id — skipped"}
@@ -143,7 +151,6 @@ def trigger_staff_lead_incentive(db, lead, transaction, company_id: int,
     if vgk_rate is None:
         return {"success": False, "message": "VGK L1 uses flat amount — not percentage, skipped"}
 
-    now = _now_ist()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     # Monthly tier: calculate this month's existing sum to decide multiplier

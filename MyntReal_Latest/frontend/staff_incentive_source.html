@@ -204,8 +204,9 @@ function renderTable(d) {
   const isPrivileged = true;
 
   const incentiveTotal = d.incentive_total != null ? d.incentive_total : rows.reduce((s,r) => s+(r.incentive_count||1), 0);
-  const selfCount = rows.filter(r => r.lead_type === 'Self').reduce((s,r) => s+(r.incentive_count||1), 0);
-  const coCount   = rows.filter(r => r.lead_type === 'Company').reduce((s,r) => s+(r.incentive_count||1), 0);
+  const selfCount   = rows.filter(r => r.lead_type === 'Self').reduce((s,r) => s+(r.incentive_count||1), 0);
+  const directCount = rows.filter(r => r.lead_type === 'Direct').reduce((s,r) => s+(r.incentive_count||1), 0);
+  const coCount     = rows.filter(r => r.lead_type === 'Company').reduce((s,r) => s+(r.incentive_count||1), 0);
   
   const totalDV   = rows.reduce((s, r) => s + (r.deal_value||0), 0);
   const totalDVR  = rows.reduce((s, r) => s + (r.deal_value_received||0), 0);
@@ -217,8 +218,9 @@ function renderTable(d) {
   sumBar.innerHTML = `
     <div class="sum-card"><div class="val">${incentiveTotal}</div><div class="lbl">Incentive Count</div></div>
     <div class="sum-card"><div class="val">${rows.length}</div><div class="lbl">Unique Records</div></div>
-    <div class="sum-card"><div class="val">${coCount}</div><div class="lbl">Company Leads</div></div>
     <div class="sum-card"><div class="val">${selfCount}</div><div class="lbl">Self Leads</div></div>
+    <div class="sum-card"><div class="val">${directCount}</div><div class="lbl">Direct Leads</div></div>
+    <div class="sum-card"><div class="val">${coCount}</div><div class="lbl">Member/Co Leads</div></div>
     ${isPrivileged && totalDV > 0 ? `<div class="sum-card"><div class="val" style="color:#2563eb;">₹${fmtNum(totalDV)}</div><div class="lbl">Total Deal Value</div></div>` : ''}
     ${isPrivileged && totalDVR > 0 ? `<div class="sum-card"><div class="val" style="color:#0d9488;">₹${fmtNum(totalDVR)}</div><div class="lbl">Total Received</div></div>` : ''}
     ${isPrivileged && totalCV > 0 ? `<div class="sum-card"><div class="val" style="color:#d97706;">₹${fmtNum(totalCV)}</div><div class="lbl">Total Confirmed</div></div>` : ''}
@@ -231,9 +233,14 @@ function renderTable(d) {
   }
 
   const tableRows = rows.map((r, i) => {
+    const splitBadge = (r.split_ratio && r.split_ratio < 1.0)
+      ? ` <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.65rem;" title="Shared 50/50 with Supporting Staff">50% Split</span>`
+      : '';
     const typeBadge = r.lead_type === 'Self'
-      ? '<span class="badge badge-self">Self</span>'
-      : '<span class="badge badge-co">Co</span>';
+      ? `<span class="badge badge-self">Self</span>${splitBadge}`
+      : (r.lead_type === 'Direct'
+         ? `<span class="badge" style="background:#fef3c7;color:#92400e;">Direct</span>${splitBadge}`
+         : `<span class="badge badge-co">Member/Co</span>${splitBadge}`);
     const recBadge = r.record_type === 'crm_lead'
       ? '<span class="badge badge-crm" title="CRM Lead">CRM</span>'
       : (r.record_type === 'service_ticket'
@@ -243,6 +250,7 @@ function renderTable(d) {
     const rolesMapped = (r.roles||[]).map(role => {
       if (role === 'Telecaller') return '<span style="color:#0891b2;" title="Telecaller">TC</span>';
       if (role === 'Field Staff') return '<span style="color:#059669;" title="Field Staff">FS</span>';
+      if (role === 'Support Staff') return '<span style="color:#7c3aed;" title="Support Staff">SS</span>';
       if (role === 'Handler') return '<span style="color:#b45309;" title="Handler">HD</span>';
       return esc(role);
     }).join(', ') || '—';

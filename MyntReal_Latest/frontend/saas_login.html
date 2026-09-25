@@ -669,9 +669,9 @@
                     return '/staff/accounts/companies?segment=SEGMENT_B_SAAS';
                 }
 
-                // Level 3: Individual Tenant Administrator / Client User -> Tenant CRM Leads
+                // Level 3: Individual Tenant Administrator / Client User -> SaaS Tenant Welcome / Core Profile
                 if (scope === 'CLIENT_SPECIFIC' || roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT') {
-                    return '/staff/crm/leads';
+                    return '/staff/my-tenant';
                 }
             }
             return '/staff/accounts/companies?segment=SEGMENT_B_SAAS';

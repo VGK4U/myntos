@@ -303,6 +303,30 @@ def _get_ea_vgk_employee_ids(db: Session) -> Set[int]:
     return {row[0] for row in result.fetchall()}
 
 
+def _get_saas_company_filter(current_user, db: Session, StaffEmployee):
+    """Returns a filter predicate restricting queries to the SaaS tenant's company, or None."""
+    if not current_user:
+        return None
+    try:
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        _saas_ctx = resolve_tenant_context(db, current_user)
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            from app.models.staff import StaffCompanyMembership
+            cid = _saas_ctx.company.id
+            return or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+    except Exception:
+        pass
+    return None
+
+
 def get_accessible_employee_ids(
     current_user,
     db: Session,
@@ -320,6 +344,7 @@ def get_accessible_employee_ids(
     - VGK4U Supreme, EA, HR, Accounts: See ALL eligible employees (full org visibility)
     - Key Leadership, Leadership Role: See all eligible employees EXCEPT EA/VGK Supreme
     - Other roles: See their complete downline via reporting_manager_id chain
+    - SaaS tenants: Scoped strictly to employees within their authorized company
     
     Args:
         current_user: Current logged-in staff employee
@@ -337,6 +362,9 @@ def get_accessible_employee_ids(
     eligibility_cond = get_employee_eligibility_filter(
         StaffEmployee, as_of_date=as_of_date, start_date=start_date, end_date=end_date
     )
+    saas_cond = _get_saas_company_filter(current_user, db, StaffEmployee)
+    if saas_cond is not None:
+        eligibility_cond = and_(eligibility_cond, saas_cond)
     
     if role_code in FULL_ACCESS_ROLES:
         base_query = db.query(StaffEmployee.id).filter(eligibility_cond)
@@ -466,6 +494,9 @@ def get_team_member_ids(
     eligibility_cond = get_employee_eligibility_filter(
         StaffEmployee, as_of_date=as_of_date, start_date=start_date, end_date=end_date
     )
+    saas_cond = _get_saas_company_filter(current_user, db, StaffEmployee)
+    if saas_cond is not None:
+        eligibility_cond = and_(eligibility_cond, saas_cond)
     
     if role_code in FULL_ACCESS_ROLES:
         base_query = db.query(StaffEmployee.id).filter(eligibility_cond)

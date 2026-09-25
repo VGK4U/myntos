@@ -1495,6 +1495,11 @@ export class LoginPage {
         localStorage.removeItem('mnr_current_route');
         localStorage.removeItem('mnr_pre_expiry_route');
         window.dispatchEvent(new CustomEvent('login-success'));
+        setTimeout(() => {
+          if (document.getElementById('loginBtn')) {
+            this.showLoading(loginBtn, false);
+          }
+        }, 3000);
       } else {
         this.showError(result.error || 'Login failed');
         this.showLoading(loginBtn, false);

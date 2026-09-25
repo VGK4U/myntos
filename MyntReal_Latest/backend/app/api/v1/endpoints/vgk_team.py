@@ -5830,23 +5830,21 @@ def member_earnings_dashboard(
     return {"success": True, "total": total, "page": page_num, "page_size": psize, "data": paged_items}
 
 
-@router.get("/dashboard/member-income-entries")
-def member_income_entries_detail(
-    partner_id: int = Query(..., description="OfficialPartner.id"),
-    status: Optional[str] = Query(None, description="Filter by income entry status; BALANCE_RECEIVED_PLUS groups balance_received/subsidy_pending/completed CRM leads"),
-    date_from: Optional[str] = Query(None, description="Filter entries from this date (YYYY-MM-DD, inclusive) based on created_at::date"),
-    date_to: Optional[str] = Query(None, description="Filter entries up to this date (YYYY-MM-DD, inclusive) based on created_at::date"),
-    community_only: bool = Query(False),
-    community_service_id: Optional[int] = Query(None),
-    current_user: StaffEmployee = Depends(get_current_staff_user),
-    db: Session = Depends(get_db)
-):
-    """Date-wise income entry detail for one VGK member — used by the expand row.
-    Queries vgk_cash_income_entries directly (no VGK_TEAM join restriction).
-    Accepts optional status filter; BALANCE_RECEIVED_PLUS filters by CRM lead solar stage.
-    Accepts optional date_from/date_to to restrict by entry created_at::date.
+def fetch_member_income_entries_data(
+    partner_id: int,
+    status: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    community_only: bool = False,
+    community_service_id: Optional[int] = None,
+    db: Session = None
+) -> dict:
+    """Core logic to fetch itemized income entry details for a VGK member.
+    Single source of data for both staff dashboard and member portal.
     """
-    # Query partner paid activation and commission config
+    if db is None:
+        return {"success": False, "error": "Database session required", "data": []}
+
     from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig
     partner = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
     if not partner:
@@ -6186,7 +6184,9 @@ def member_income_entries_detail(
                     pe_lost_pool += float(lr.adv_paid or 0)
 
             pe_ded = 0.0
-            if pe_lost_pool > 0 and pe_kind not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
+            # Only apply active deduction pool to entries awaiting payout (PENDING / DRAFT).
+            # Historical PAID/RELEASED entries were already disbursed and cannot have deductions invented retroactively.
+            if str(pe.status).upper() not in ('PAID', 'RELEASED') and pe_lost_pool > 0 and pe_kind not in ('SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION', 'REFERRAL_BONUS'):
                 prior_ded = sum(lost_ded_map.get(prev.id, 0.0) for prev in all_partner_entries if prev.created_at < pe_created or (prev.created_at == pe_created and prev.id < pe_id))
                 avail = max(0.0, pe_lost_pool - prior_ded)
                 if avail > 0 and pe_gross > 0:
@@ -6378,7 +6378,7 @@ def member_income_entries_detail(
             "complete_date":     _li["complete_date"]  if _li else None,
             "solar_pipeline_status": _li.get("solar_pipeline_status") if _li else None,
             "lead_status":       _li.get("lead_status") if _li else None,
-            "stage_name":        _li.get("solar_pipeline_status") or (_li.get("lead_status") if _li else None),
+            "stage_name":        (_li.get("solar_pipeline_status") or _li.get("lead_status")) if _li else None,
             "installation_date": _li.get("installation_date") if _li else None,
             "from_vsca":         is_vsca,
             "source_lead_id":    r.source_lead_id,
@@ -6400,8 +6400,30 @@ def member_income_entries_detail(
 
     # Sort merged list by income_date descending then entry_number descending
     result.sort(key=lambda x: (x.get("income_date") or ""), reverse=True)
-
     return {"success": True, "data": result, "total": len(result)}
+
+
+@router.get("/dashboard/member-income-entries")
+def member_income_entries_detail(
+    partner_id: int = Query(..., description="OfficialPartner.id"),
+    status: Optional[str] = Query(None, description="Filter by income entry status; BALANCE_RECEIVED_PLUS groups balance_received/subsidy_pending/completed CRM leads"),
+    date_from: Optional[str] = Query(None, description="Filter entries from this date (YYYY-MM-DD, inclusive) based on created_at::date"),
+    date_to: Optional[str] = Query(None, description="Filter entries up to this date (YYYY-MM-DD, inclusive) based on created_at::date"),
+    community_only: bool = Query(False),
+    community_service_id: Optional[int] = Query(None),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Date-wise income entry detail for one VGK member — used by the expand row."""
+    return fetch_member_income_entries_data(
+        partner_id=partner_id,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        community_only=community_only,
+        community_service_id=community_service_id,
+        db=db
+    )
 
 
 # ── DC-VGK-LEAD-VIEW-001: Lead-centric income dashboard (reverse of member view) ──

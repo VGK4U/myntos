@@ -347,7 +347,45 @@ def resolve_crm_list_security_scope(
     """
     ctx = get_current_request_context()
     if not ctx:
-        ctx = auth_context_service.build_context(db, current_employee)
+        try:
+            ctx = auth_context_service.build_context(db, current_employee)
+        except Exception:
+            ctx = None
+
+    if not ctx:
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        from app.core.context import RequestContext, AdminScope
+        saas_ctx = resolve_tenant_context(db, current_employee)
+        if saas_ctx.is_saas_tenant and saas_ctx.client:
+            t_id = saas_ctx.client.id
+            co_ids = [c.id for c in db.query(AssociatedCompany).filter(
+                AssociatedCompany.client_id == t_id,
+                AssociatedCompany.is_active == True
+            ).all()]
+            if current_employee.base_company_id and current_employee.base_company_id not in co_ids:
+                co_ids.append(current_employee.base_company_id)
+            active_co = current_employee.base_company_id or (co_ids[0] if co_ids else 1)
+            ctx = RequestContext(
+                staff_id=current_employee.id,
+                emp_code=current_employee.emp_code,
+                tenant_id=t_id,
+                active_company_id=active_co,
+                base_company_id=current_employee.base_company_id,
+                accessible_company_ids=co_ids,
+                admin_scope=AdminScope.TENANT_ADMIN if saas_ctx.is_tenant_admin else AdminScope.STAFF,
+                capabilities={"crm.leads.view_all"} if saas_ctx.is_tenant_admin else set(),
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="No operational company access. Staff employee has no active company memberships."
+            )
+
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_crm_ctx = resolve_tenant_context(db, current_employee)
+    if _saas_crm_ctx.is_saas_tenant:
+        if not (_saas_crm_ctx.has_module('CRM_LEADS') or _saas_crm_ctx.has_module('SOLAR_EV')):
+            _saas_crm_ctx.require_module('CRM_LEADS')
 
     is_superadmin = ctx.is_platform_admin()
     tenant_id = ctx.tenant_id
@@ -641,14 +679,22 @@ def get_my_companies(
     Also returns visibility permissions for the current user.
     """
     # Scope companies by tenant for tenant staff/admins; platform staff see platform companies
+    from app.services.segment_governance import SegmentGovernanceService
+    allowed_cids = SegmentGovernanceService.get_allowed_company_ids_for_user(db, current_employee)
     comp_query = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True)
-    if current_employee.tenant_id and (current_employee.admin_scope == "TENANT_ADMIN" or current_employee.tenant_id != 1):
-        comp_query = comp_query.filter(AssociatedCompany.client_id == current_employee.tenant_id)
+    if allowed_cids is not None:
+        comp_query = comp_query.filter(AssociatedCompany.id.in_(allowed_cids))
     companies = comp_query.order_by(AssociatedCompany.company_name).all()
     
     # Determine visibility permissions
     staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type) or (current_employee.admin_scope == "TENANT_ADMIN")
+    role_code = (getattr(current_employee.role, 'role_code', '') or '').lower()
+    is_admin = (
+        is_vgk_admin(staff_type) or 
+        (getattr(current_employee, 'admin_scope', '') in ("TENANT_ADMIN", "CLIENT_SPECIFIC")) or
+        (staff_type in ("TENANT_ADMIN", "SAAS_CLIENT")) or
+        (role_code == "tenant_admin")
+    )
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
     
     _team_tag_lower = (current_employee.team_tag or '').lower()
@@ -2432,11 +2478,17 @@ def _crm_assignment_filter(emp_id: int, emp_code: str):
     won/lost/dropped/completed in staff_progress.py, plus do_not_call in the dialer).
     Each caller retains its existing exclusion list until the team decides to harmonize.
     """
+    emp_strs = [emp_code] if emp_code else []
+    if str(emp_id) not in emp_strs:
+        emp_strs.append(str(emp_id))
     return or_(
-        and_(CRMLead.handler_type == 'staff', CRMLead.handler_id == emp_code),
+        and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(emp_strs)),
+        CRMLead.handler_id.in_(emp_strs),
+        CRMLead.mnr_handler_id.in_(emp_strs),
         CRMLead.telecaller_id == emp_id,
         CRMLead.field_staff_id == emp_id,
         and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == emp_id),
+        CRMLead.created_by_id.in_(emp_strs),
     )
 
 
@@ -2444,14 +2496,18 @@ def _crm_assignment_filter_for_team(emp_ids: list, emp_codes: list):
     """
     DC_OVERDUE_FIX: OR-based assignment filter for a team of employees.
     Returns a SQLAlchemy OR condition matching leads where ANY of the employees
-    in the list is assigned via any of the four assignment fields.
+    in the list is assigned via any of the assignment fields or created the lead.
     Used for aggregate (category-wise, company-wise) overdue counts across a team.
     """
+    all_strs = list(set([str(x) for x in emp_ids] + [str(c) for c in emp_codes if c]))
     return or_(
-        and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(emp_codes)),
+        and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(all_strs)),
+        CRMLead.handler_id.in_(all_strs),
+        CRMLead.mnr_handler_id.in_(all_strs),
         CRMLead.telecaller_id.in_(emp_ids),
         CRMLead.field_staff_id.in_(emp_ids),
         and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(emp_ids)),
+        CRMLead.created_by_id.in_(all_strs),
     )
 
 
@@ -2475,23 +2531,42 @@ def get_crm_dashboard_v2(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    is_admin = is_vgk_admin(current_employee.staff_type) or current_employee.emp_code == 'MR10001'
-    is_leader = has_direct_reports(current_employee.id, db, StaffEmployee) if not is_admin else True
-
-    # DC_FINANCIALS_TAB_GATE: Company-wise and Earnings tabs are strictly restricted to MR10001 and Accounts (Subhash)
-    from app.models.staff import StaffDepartment
-    is_subhash = (
-        current_employee.emp_code == 'MR10025' or 
-        'subhash' in (current_employee.first_name or '').lower() or 
-        'subhash' in (current_employee.last_name or '').lower()
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
     )
-    is_accounts_dept = False
-    if current_employee.department_id:
-        dept = db.query(StaffDepartment).filter(StaffDepartment.id == current_employee.department_id).first()
-        if dept and 'account' in (dept.name or '').lower():
-            is_accounts_dept = True
+    is_saas = (tenant_id is not None and not ctx.is_platform_admin())
+    staff_type_upper = (current_employee.staff_type or '').upper()
 
-    can_view_financials = (current_employee.emp_code == 'MR10001') or is_subhash or is_accounts_dept
+    if is_saas:
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        _saas_crm_ctx = resolve_tenant_context(db, current_employee)
+        if _saas_crm_ctx.is_saas_tenant:
+            _saas_crm_ctx.require_module('CRM_LEADS')
+
+        is_admin = (
+            staff_type_upper in ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_SEGMENT_ADMIN', 'ADMIN'] or
+            has_view_all or (getattr(ctx, 'admin_scope', None) and getattr(ctx.admin_scope, 'value', '') in ['TENANT_ADMIN', 'COMPANY_ADMIN'])
+        )
+        is_leader = is_admin or has_direct_reports(current_employee.id, db, StaffEmployee)
+        can_view_financials = is_admin
+    else:
+        is_admin = is_vgk_admin(current_employee.staff_type) or current_employee.emp_code == 'MR10001'
+        is_leader = has_direct_reports(current_employee.id, db, StaffEmployee) if not is_admin else True
+
+        # DC_FINANCIALS_TAB_GATE: Company-wise and Earnings tabs are strictly restricted to MR10001 and Accounts (Subhash)
+        from app.models.staff import StaffDepartment
+        is_subhash = (
+            current_employee.emp_code == 'MR10025' or 
+            'subhash' in (current_employee.first_name or '').lower() or 
+            'subhash' in (current_employee.last_name or '').lower()
+        )
+        is_accounts_dept = False
+        if current_employee.department_id:
+            dept = db.query(StaffDepartment).filter(StaffDepartment.id == current_employee.department_id).first()
+            if dept and 'account' in (dept.name or '').lower():
+                is_accounts_dept = True
+
+        can_view_financials = (current_employee.emp_code == 'MR10001') or is_subhash or is_accounts_dept
 
     today = get_indian_time().date()
     today_start = datetime.combine(today, datetime.min.time())
@@ -2532,8 +2607,16 @@ def get_crm_dashboard_v2(
 
     def base_lead_filters():
         filters = []
-        if company_id:
-            filters.append(CRMLead.company_id == company_id)
+        if is_saas:
+            if tenant_id is not None:
+                filters.append(CRMLead.tenant_id == tenant_id)
+            if effective_co_ids:
+                filters.append(CRMLead.company_id.in_(effective_co_ids))
+            else:
+                filters.append(CRMLead.id == -1)
+        else:
+            if company_id:
+                filters.append(CRMLead.company_id == company_id)
         if start_date:
             try:
                 filters.append(CRMLead.created_at >= datetime.strptime(start_date, "%Y-%m-%d"))
@@ -2643,7 +2726,7 @@ def get_crm_dashboard_v2(
         my_vgk_created = 0
         my_wa_shares = 0
 
-    cat_breakdown_raw = db.query(
+    cat_query = db.query(
         SignupCategory.id,
         SignupCategory.name,
         CRMLead.status,
@@ -2653,7 +2736,10 @@ def get_crm_dashboard_v2(
         CRMLead.primary_owner_type == 'staff',
         CRMLead.primary_owner_id == my_id,
         *common_filters
-    )).group_by(SignupCategory.id, SignupCategory.name, CRMLead.status).all()
+    ))
+    if is_saas and effective_co_ids:
+        cat_query = cat_query.filter(SignupCategory.company_id.in_(effective_co_ids))
+    cat_breakdown_raw = cat_query.group_by(SignupCategory.id, SignupCategory.name, CRMLead.status).all()
 
     cat_contacted_raw = db.query(
         CRMLead.category_id, func.count(CRMLead.id)
@@ -2793,7 +2879,31 @@ def get_crm_dashboard_v2(
 
     if is_leader or is_admin:
         hidden_ids_team = _get_hidden_employee_ids(db, StaffEmployee)
-        if is_admin:
+        if is_saas:
+            # SaaS team resolution: Query active employees of this tenant
+            emp_query = db.query(StaffEmployee).filter(
+                StaffEmployee.status == 'active',
+                StaffEmployee.is_deleted == False
+            )
+            if tenant_id and effective_co_ids:
+                emp_query = emp_query.filter(
+                    or_(
+                        StaffEmployee.tenant_id == tenant_id,
+                        StaffEmployee.base_company_id.in_(effective_co_ids)
+                    )
+                )
+            elif tenant_id:
+                emp_query = emp_query.filter(StaffEmployee.tenant_id == tenant_id)
+            elif effective_co_ids:
+                emp_query = emp_query.filter(StaffEmployee.base_company_id.in_(effective_co_ids))
+
+            if not is_admin:
+                downline_ids = get_recursive_downline(current_employee.id, db, StaffEmployee, include_manager=False)
+                allowed_eids = set(downline_ids) | {current_employee.id}
+                emp_query = emp_query.filter(StaffEmployee.id.in_(allowed_eids))
+
+            team_employees = emp_query.order_by(StaffEmployee.full_name).all()
+        elif is_admin:
             emp_query = db.query(StaffEmployee).filter(
                 StaffEmployee.status == 'active',
                 StaffEmployee.is_deleted == False,
@@ -6785,6 +6895,9 @@ def master_leads(
     if not has_view_all:
         allowed_ids = [current_employee.id] + authorized_downline_ids
         emp_code = current_employee.emp_code
+        emp_identifiers = [emp_code] if emp_code else []
+        if str(current_employee.id) not in emp_identifiers:
+            emp_identifiers.append(str(current_employee.id))
         query = query.filter(or_(
             CRMLead.telecaller_id.in_(allowed_ids),
             CRMLead.field_staff_id.in_(allowed_ids),
@@ -6792,8 +6905,9 @@ def master_leads(
                 CRMLead.primary_owner_type == 'staff',
                 CRMLead.primary_owner_id.in_(allowed_ids)
             ),
-            (CRMLead.handler_id == emp_code) if emp_code else False,
-            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
+            CRMLead.handler_id.in_(emp_identifiers),
+            CRMLead.mnr_handler_id.in_(emp_identifiers),
+            CRMLead.created_by_id.in_(emp_identifiers),
         ))
 
     # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
@@ -7883,6 +7997,11 @@ def lead_analytics(
         db, current_employee, company_id=company_id_filter
     )
     is_admin = has_view_all
+
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_wf_ctx = resolve_tenant_context(db, current_employee)
+    if _saas_wf_ctx.is_saas_tenant:
+        _saas_wf_ctx.require_module('SOLAR_EV')
 
     import time as _pytime
     _ckey = (
@@ -10505,8 +10624,7 @@ def create_lead(
         )
 
     _lead_status = lead_data.status or 'new'
-    # DC-STAFF-LEAD-ASSIGN-001: Staff-created leads must be assigned directly to the creating staff member
-    # (or explicit valid assignee chosen) and immediately visible in "My Leads", never lost in unassigned pool.
+    # DC-STAFF-LEAD-ASSIGN-001: Staff-created leads respect explicit assignee, segment routing pool, or fallback to creator
     validated_owner_id = None
     if lead_data.primary_owner_id:
         try:
@@ -10515,7 +10633,33 @@ def create_lead(
         except Exception:
             validated_owner_id = current_employee.id
     else:
-        validated_owner_id = current_employee.id
+        # Check if segment has an active routing pool
+        routed_owner_id = None
+        if lead_data.category_id:
+            from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
+            handler = db.query(CRMLeadHandler).filter(
+                CRMLeadHandler.company_id == resolved_company_id,
+                CRMLeadHandler.category_id == lead_data.category_id,
+                CRMLeadHandler.is_active == True
+            ).first()
+            if handler:
+                members = db.query(CRMLeadHandlerMember).filter(
+                    CRMLeadHandlerMember.handler_id == handler.id,
+                    CRMLeadHandlerMember.is_active == True
+                ).all()
+                if members:
+                    member_eids = [m.employee_id for m in members]
+                    # Weighted round robin across members
+                    weights = {m.employee_id: max(1, getattr(m, 'assignment_weight', 1) or 1) for m in members}
+                    lead_counts = db.query(CRMLead.primary_owner_id, func.count(CRMLead.id)).filter(
+                        CRMLead.primary_owner_id.in_(member_eids),
+                        CRMLead.category_id == lead_data.category_id
+                    ).group_by(CRMLead.primary_owner_id).all()
+                    cnt_dict = {c[0]: c[1] for c in lead_counts}
+                    best_eid = min(member_eids, key=lambda eid: (cnt_dict.get(eid, 0) / weights.get(eid, 1), cnt_dict.get(eid, 0)))
+                    routed_owner_id = best_eid
+
+        validated_owner_id = routed_owner_id if routed_owner_id else current_employee.id
 
     _eff_owner_type = 'staff'
     _eff_owner_id = validated_owner_id
@@ -10526,7 +10670,8 @@ def create_lead(
         _eff_handler_id = lead_data.handler_id
     else:
         _eff_handler_type = 'staff'
-        _eff_handler_id = current_employee.emp_code
+        owner_obj = db.query(SE).filter(SE.id == validated_owner_id).first() if validated_owner_id != current_employee.id else current_employee
+        _eff_handler_id = owner_obj.emp_code if owner_obj and owner_obj.emp_code else current_employee.emp_code
 
     # Role slot assignment: auto-assign creator to telecaller or field staff if neither was explicitly selected
     if validated_telecaller_id is None and validated_field_staff_id is None:
@@ -14459,6 +14604,57 @@ def crm_list_revenue_categories(
     return {'success': True, 'categories': result, 'total': len(result)}
 
 
+@router.get("/segments/{category_id}/routing-pool")
+def get_segment_routing_pool(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """Fetch active staff members configured in the routing pool for this segment."""
+    from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
+
+    handlers = db.query(CRMLeadHandler).filter(
+        CRMLeadHandler.category_id == category_id,
+        CRMLeadHandler.is_active == True
+    ).all()
+    if not handlers:
+        return {"success": True, "category_id": category_id, "members": [], "routing_pool": []}
+
+    h_ids = [h.id for h in handlers]
+    has_weight = hasattr(CRMLeadHandlerMember, "assignment_weight")
+    q = db.query(CRMLeadHandlerMember).filter(
+        CRMLeadHandlerMember.handler_id.in_(h_ids),
+        CRMLeadHandlerMember.is_active == True
+    )
+    if has_weight:
+        members = q.order_by(getattr(CRMLeadHandlerMember, "assignment_weight").desc()).all()
+    else:
+        members = q.order_by(CRMLeadHandlerMember.id).all()
+
+    emp_ids = [m.employee_id for m in members]
+    employees = db.query(StaffEmployee).filter(StaffEmployee.id.in_(emp_ids), StaffEmployee.status == 'active').all() if emp_ids else []
+    emp_map = {e.id: e for e in employees}
+
+    res_members = []
+    for m in members:
+        if m.employee_id in emp_map:
+            emp = emp_map[m.employee_id]
+            res_members.append({
+                "employee_id": emp.id,
+                "emp_code": emp.emp_code,
+                "full_name": emp.full_name or f"{emp.first_name or ''} {emp.last_name or ''}".strip(),
+                "role": emp.role.role_code if getattr(emp, 'role', None) else getattr(emp, 'staff_type', 'STAFF'),
+                "assignment_weight": getattr(m, "assignment_weight", 1) or 1
+            })
+
+    return {
+        "success": True,
+        "category_id": category_id,
+        "members": res_members,
+        "routing_pool": res_members
+    }
+
+
 # ============= LEAD DEALS (CROSS-SELLING) ENDPOINTS =============
 
 @router.get("/leads/{lead_id}/deals")
@@ -16262,7 +16458,11 @@ async def get_unified_my_leads(
     
     if segment == 'my':
         if is_staff_user:
-            # Staff user: Check telecaller_id, field_staff_id, support_staff_id, technical_staff1_id, technical_id, or primary_owner/creator (staff type)
+            # Staff user: Check telecaller_id, field_staff_id, support_staff_id, technical_staff1_id, technical_id, handler_id, or primary_owner/creator (staff type)
+            emp_code_val = getattr(current_user, 'emp_code', None)
+            emp_identifiers = [user_id_str]
+            if emp_code_val and emp_code_val not in emp_identifiers:
+                emp_identifiers.append(emp_code_val)
             query = query.filter(
                 or_(
                     CRMLead.telecaller_id == user_id,
@@ -16270,13 +16470,19 @@ async def get_unified_my_leads(
                     CRMLead.support_staff_id == user_id,
                     CRMLead.technical_staff1_id == user_id,
                     CRMLead.technical_id == user_id,
+                    CRMLead.handler_id.in_(emp_identifiers),
+                    CRMLead.mnr_handler_id.in_(emp_identifiers),
                     and_(
                         CRMLead.primary_owner_type == 'staff',
                         CRMLead.primary_owner_id == user_id
                     ),
                     and_(
                         CRMLead.created_by_type == 'staff',
-                        CRMLead.created_by_id == user_id_str
+                        CRMLead.created_by_id.in_(emp_identifiers)
+                    ),
+                    and_(
+                        CRMLead.created_by_type.is_(None),
+                        CRMLead.created_by_id.in_(emp_identifiers)
                     )
                 )
             )
@@ -20109,6 +20315,53 @@ def get_solar_vendors(
     List all SOLAR type vendors from vendor_master.
     Returns vendor info including MNRE fields and bank details.
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    from app.models.staff_accounts import AssociatedCompany
+
+    tenant_ctx = resolve_tenant_context(db, current_employee)
+    if tenant_ctx.is_saas_tenant:
+        tenant_cos = []
+        if tenant_ctx.client:
+            tenant_cos = db.query(AssociatedCompany).filter(
+                AssociatedCompany.client_id == tenant_ctx.client.id,
+                AssociatedCompany.is_active == True
+            ).order_by(AssociatedCompany.company_name).all()
+        if not tenant_cos and current_employee.base_company_id:
+            co = db.query(AssociatedCompany).filter_by(id=current_employee.base_company_id).first()
+            if co:
+                tenant_cos = [co]
+
+        vendors = []
+        for c in tenant_cos:
+            vendors.append({
+                "id": c.id,
+                "vendor_code": c.company_code or f"CO-{c.id}",
+                "vendor_name": c.company_name,
+                "vendor_type": "SOLAR",
+                "gst_number": c.gst_number or "",
+                "pan_number": c.pan_number or "",
+                "phone": c.phone or "",
+                "email": c.email or "",
+                "address": c.address or "",
+                "city": c.city or "",
+                "state": c.state or "",
+                "pincode": c.pincode or "",
+                "bank_name": getattr(c, "bank_name", "") or "",
+                "bank_branch": getattr(c, "bank_branch", "") or "",
+                "account_number": getattr(c, "account_number", "") or "",
+                "ifsc_code": getattr(c, "ifsc_code", "") or "",
+                "account_holder_name": c.company_name,
+                "mnre_empanelled": True,
+                "mnre_reg_no": "",
+                "vendor_logo_url": getattr(tenant_ctx.client, "company_logo_path", "") or "",
+                "stamp_image_url": "",
+                "rep_signature_url": "",
+                "tech_signature_url": "",
+                "gst_certificate_url": "",
+                "is_associated_company": True
+            })
+        return {"vendors": vendors}
+
     rows = db.execute(text("""
         SELECT id, vendor_code, vendor_name, vendor_type,
                gst_number, phone, email, address, city, state, pincode,
@@ -20682,6 +20935,11 @@ async def generate_solar_doc(
             SELECT * FROM vendor_master WHERE id = :vid AND vendor_type = 'SOLAR'
         """), {"vid": vendor_id}).fetchone()
         if not vendor:
+            from app.models.staff_accounts import AssociatedCompany
+            co = db.query(AssociatedCompany).filter(AssociatedCompany.id == vendor_id).first()
+            if co:
+                vendor = co
+        if not vendor:
             raise HTTPException(status_code=404, detail="Solar vendor not found")
 
     # [DC-SOLAR-VENDOR-AUTO] Auto-carry vendor from last quotation if vendor_id omitted
@@ -20689,6 +20947,9 @@ async def generate_solar_doc(
         _auto_v = db.execute(text("""
             SELECT * FROM vendor_master WHERE id = :vid AND vendor_type = 'SOLAR'
         """), {"vid": tech.last_quote_vendor_id}).fetchone()
+        if not _auto_v:
+            from app.models.staff_accounts import AssociatedCompany
+            _auto_v = db.query(AssociatedCompany).filter(AssociatedCompany.id == tech.last_quote_vendor_id).first()
         if _auto_v:
             vendor = _auto_v
             vendor_id = tech.last_quote_vendor_id
@@ -20705,7 +20966,19 @@ async def generate_solar_doc(
     tech_dict = tech.to_dict() if tech else {}
     vendor_dict = {}
     if vendor:
-        vendor_dict = {col: getattr(vendor, col, None) for col in vendor._fields}
+        if hasattr(vendor, '_fields'):
+            vendor_dict = {col: getattr(vendor, col, None) for col in vendor._fields}
+        elif hasattr(vendor, 'to_dict'):
+            vendor_dict = vendor.to_dict()
+            vendor_dict['vendor_name'] = getattr(vendor, 'company_name', '')
+            vendor_dict['vendor_code'] = getattr(vendor, 'company_code', '')
+            vendor_dict['vendor_type'] = 'SOLAR'
+            vendor_dict['mnre_empanelled'] = True
+            vendor_dict['bank_name'] = getattr(vendor, 'bank_name', '') or ''
+            vendor_dict['bank_branch'] = getattr(vendor, 'bank_branch', '') or ''
+            vendor_dict['account_number'] = getattr(vendor, 'account_number', '') or ''
+            vendor_dict['ifsc_code'] = getattr(vendor, 'ifsc_code', '') or ''
+            vendor_dict['account_holder_name'] = getattr(vendor, 'company_name', '')
 
     # [DC-SOLAR-FIELD-FALLBACK] Carry kw_size from last quotation into lead context if not on lead record
     if not lead_dict.get("kw_size") and tech_dict.get("last_quote_kw_size"):

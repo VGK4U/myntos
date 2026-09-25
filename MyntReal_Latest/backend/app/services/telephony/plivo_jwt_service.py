@@ -54,12 +54,21 @@ class PlivoJWTService:
             TelephonyPlivoEndpoint.staff_id == staff.id
         ).first()
 
-        auth_id = getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID")
-        auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN")
-        app_id = getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID") or "10583407997011554"
+        # Dynamic Integration Framework: resolve tenant-specific Plivo credentials with platform fallback
+        try:
+            from app.services.integrations.resolver import resolve_integration_credentials
+            t_id = getattr(staff, 'tenant_id', 1) or 1
+            dyn_creds, dyn_pub, _ = resolve_integration_credentials(db, tenant_id=t_id, integration_code='plivo')
+        except Exception:
+            dyn_creds, dyn_pub = {}, {}
+
+        auth_id = dyn_creds.get("auth_id") or dyn_pub.get("auth_id") or getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID")
+        auth_token = dyn_creds.get("auth_token") or getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN")
+        app_id = dyn_pub.get("app_id") or dyn_creds.get("app_id") or getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID") or "10583407997011554"
 
         if endpoint and endpoint.plivo_endpoint_id:
             return endpoint
+
 
         # 2. Provision new endpoint username & alias
         # Plivo requires purely alphanumeric username and clean alias characters
@@ -143,9 +152,18 @@ class PlivoJWTService:
         # 2. Retrieve or provision endpoint mapping
         endpoint = cls.get_or_create_staff_endpoint(db, company_id, staff)
 
-        auth_id = getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID", "mock_plivo_auth_id")
-        auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN", "mock_plivo_auth_token_secret_12345")
-        app_id = getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID", "mock_app_id")
+        # Dynamic Integration Framework: resolve tenant-specific Plivo credentials with platform fallback
+        try:
+            from app.services.integrations.resolver import resolve_integration_credentials
+            t_id = getattr(staff, 'tenant_id', 1) or 1
+            dyn_creds, dyn_pub, _ = resolve_integration_credentials(db, tenant_id=t_id, integration_code='plivo')
+        except Exception:
+            dyn_creds, dyn_pub = {}, {}
+
+        auth_id = dyn_creds.get("auth_id") or dyn_pub.get("auth_id") or getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID", "mock_plivo_auth_id")
+        auth_token = dyn_creds.get("auth_token") or getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN", "mock_plivo_auth_token_secret_12345")
+        app_id = dyn_pub.get("app_id") or dyn_creds.get("app_id") or getattr(settings, 'PLIVO_APP_ID', None) or os.getenv("PLIVO_APP_ID", "mock_app_id")
+
 
         now = int(time.time())
         exp = now + PLIVO_JWT_EXPIRATION_SECONDS

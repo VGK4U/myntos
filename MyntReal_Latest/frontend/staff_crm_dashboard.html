@@ -13,10 +13,10 @@
     <script src="/public/js/universal-history-modal.js"></script>
     <script src="/public/js/universal-quality-review-modal.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
-        .main-content { margin-left: 280px; padding-top: 88px; min-height: 100vh; transition: margin-left 0.3s ease; }
-        @media (max-width: 991px) { .main-content { margin-left: 0 !important; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; margin: 0; padding: 0; }
+        .main-content { margin-left: 260px; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 0 !important; }
+        body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+        @media (max-width: 991px) { .main-content { margin-left: 0 !important; padding-top: 0 !important; } }
         .content-area { padding: 24px; }
 
         .page-banner {

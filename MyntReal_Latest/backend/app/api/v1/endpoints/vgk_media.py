@@ -160,7 +160,6 @@ def list_member_media(
     q = db.query(VGKMediaItem).filter(
         VGKMediaItem.status == 'active',
         VGKMediaItem.deleted_at == None,
-        VGKMediaItem.vgk_category != None,
     )
     if category and category in VALID_CATEGORIES:
         q = q.filter(VGKMediaItem.vgk_category == category)

@@ -52,6 +52,9 @@ class CRMLeadEditor {
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Lead</h5>
                         <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-light text-primary fw-bold" onclick="window.crmLeadEditor && window.crmLeadEditor.openFixAppointment()">
+                                <i class="fas fa-calendar-check me-1"></i>Fix Appointment
+                            </button>
                             <button type="button" class="btn btn-sm btn-light text-success fw-bold" onclick="window.crmLeadEditor && window.crmLeadEditor.openUniversalHistory()">
                                 <i class="fas fa-history me-1"></i>History
                             </button>
@@ -2349,6 +2352,27 @@ class CRMLeadEditor {
                 category: l.category || 'CRM Lead'
             });
         }
+    }
+
+    openFixAppointment() {
+        if (!this.currentLead || !this.currentLead.id) return;
+        const l = this.currentLead;
+        const trigger = () => {
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal(l, () => {
+                    if (typeof this.onSave === 'function') this.onSave();
+                });
+            }
+        };
+
+        if (!window.openFixAppointmentModal && typeof document !== 'undefined') {
+            const s = document.createElement('script');
+            s.src = '/public/js/crm-field-appointment-modal.js?v=20260925';
+            s.onload = trigger;
+            document.head.appendChild(s);
+            return;
+        }
+        trigger();
     }
 
     _esc(str) {

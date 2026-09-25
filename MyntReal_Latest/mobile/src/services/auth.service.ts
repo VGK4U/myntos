@@ -336,7 +336,15 @@ class AuthService {
       try {
         localStorage.setItem('staff_token', response.data.access_token);
         localStorage.setItem('token', response.data.access_token);
-        if (normalizedUser) localStorage.setItem('staff_user', JSON.stringify(normalizedUser));
+        if (portal === 'vgk') {
+          localStorage.setItem('vgk_token', response.data.access_token);
+        }
+        if (normalizedUser) {
+          localStorage.setItem('staff_user', JSON.stringify(normalizedUser));
+          if (portal === 'vgk') {
+            localStorage.setItem('vgk_partner', JSON.stringify(normalizedUser));
+          }
+        }
       } catch {}
 
       // Fetch and store menu settings for Staff portal in background

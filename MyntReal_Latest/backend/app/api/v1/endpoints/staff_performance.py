@@ -1293,8 +1293,9 @@ def _ensure_default_service_configs(db: Session, company_id: int, month: int, ye
         db.execute(text("""
             INSERT INTO staff_incentive_config 
             (company_id, month, year, category_slug, category_label, min_target_value, min_target_unit, 
-             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type, is_active)
-            VALUES (:co, :mo, :yr, 'service_spares', 'Service Spares', 0.0, 'amount', 0.0, 2.0, 0.0, 'percentage', TRUE)
+             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type,
+             bonus_trigger_value, bonus_multiplier, is_active)
+            VALUES (:co, :mo, :yr, 'service_spares', 'Service Spares', 50000.0, 'amount', 3.0, 1.0, 2.0, 'percentage', 1.50, 1.50, TRUE)
         """), {"co": co, "mo": month, "yr": year})
         inserted_any = True
         
@@ -1302,8 +1303,9 @@ def _ensure_default_service_configs(db: Session, company_id: int, month: int, ye
         db.execute(text("""
             INSERT INTO staff_incentive_config 
             (company_id, month, year, category_slug, category_label, min_target_value, min_target_unit, 
-             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type, is_active)
-            VALUES (:co, :mo, :yr, 'service_revenue', 'Service Revenue', 0.0, 'amount', 0.0, 10.0, 0.0, 'percentage', TRUE)
+             incentive_rate_without_support, incentive_rate_with_support, incentive_rate_direct_work, incentive_type,
+             bonus_trigger_value, bonus_multiplier, is_active)
+            VALUES (:co, :mo, :yr, 'service_revenue', 'Service Revenue', 20000.0, 'amount', 15.0, 2.5, 10.0, 'percentage', 1.50, 1.50, TRUE)
         """), {"co": co, "mo": month, "yr": year})
         inserted_any = True
         
@@ -1547,7 +1549,18 @@ def get_incentive_achievements(
 
     can_view_all_financials = (me.emp_code == 'MR10001') or is_subhash or is_accounts_dept
     if not can_view_all_financials:
-        employee_id = me.emp_code
+        target_emp_row = (me.id, me.emp_code)
+    else:
+        target_emp_row = None
+        if employee_id:
+            emp_str = str(employee_id).strip()
+            if emp_str.isdigit():
+                target_emp_row = db.execute(text("SELECT id, emp_code FROM staff_employees WHERE id = :id"), {'id': int(emp_str)}).fetchone()
+            else:
+                target_emp_row = db.execute(text("SELECT id, emp_code FROM staff_employees WHERE emp_code = :ec"), {'ec': emp_str}).fetchone()
+
+    filter_emp_id = str(target_emp_row[0]) if target_emp_row else None
+    filter_emp_code = target_emp_row[1] if target_emp_row else None
 
     all_companies = not company_id or company_id == 0
     cfg_company_id = 1 if all_companies else company_id
@@ -1580,15 +1593,15 @@ def get_incentive_achievements(
     # Ensure service spares and service revenue always exist in config context by default
     if 'service_spares' not in cfg_by_slug:
         cfg_by_slug['service_spares'] = {
-            'min_target_value': 0.0, 'min_target_unit': 'amount',
-            'rate_no': 0.0, 'rate_wi': 2.0, 'rate_dw': 0.0,
-            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+            'min_target_value': 50000.0, 'min_target_unit': 'amount',
+            'rate_no': 3.0, 'rate_wi': 1.0, 'rate_dw': 2.0,
+            'itype': 'percentage', 'bonus_trigger': 1.50, 'bonus_mul': 1.50
         }
     if 'service_revenue' not in cfg_by_slug:
         cfg_by_slug['service_revenue'] = {
-            'min_target_value': 0.0, 'min_target_unit': 'amount',
-            'rate_no': 0.0, 'rate_wi': 10.0, 'rate_dw': 0.0,
-            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+            'min_target_value': 20000.0, 'min_target_unit': 'amount',
+            'rate_no': 15.0, 'rate_wi': 2.5, 'rate_dw': 10.0,
+            'itype': 'percentage', 'bonus_trigger': 1.50, 'bonus_mul': 1.50
         }
 
     # Category slug → ILIKE patterns
@@ -1632,16 +1645,33 @@ def get_incentive_achievements(
     # DC-LEAD-TYPE-PRESENCE-001: Company = lead has at least one MNR/VGK4U reference ID.
     # Self = source 'Self Lead'. Direct = everything else (no MNR/VGK4U link, not self).
     # Replaces confirmation-gate (DC-HANDLER-CONFIRM-GATE-001) for incentive classification.
-    _sup = """CASE
-        WHEN l.source = 'Self Lead' THEN 0
+    # DC-UNIFIED-INCENTIVE-TIERS:
+    # 1. Self: Self-generated and closed by self (l.source = 'Self Lead' and no member/network source)
+    # 2. Direct: Company lead without VGK or MNR member added
+    # 3. Member's / Company: VGK member, MNR member, partner network, or referral source
+    # Split rule: If both primary closer and supporting staff/telecaller are assigned, 50% each.
+    _has_member_source = """CASE
         WHEN (
             l.guru_id IS NOT NULL
             OR l.z_guru_id IS NOT NULL
             OR l.adi_guru_id IS NOT NULL
             OR (l.mnr_handler_id IS NOT NULL AND l.mnr_handler_id != '')
             OR l.associated_partner_id IS NOT NULL
+            OR l.source ILIKE '%vgk%'
+            OR l.source ILIKE '%mnr%'
         ) THEN 1
         ELSE 0
+    END"""
+
+    _sup = _has_member_source
+    _split_ratio_expr = """CASE
+        WHEN l.field_staff_id IS NOT NULL AND l.telecaller_id IS NOT NULL AND l.field_staff_id != l.telecaller_id THEN 0.5
+        WHEN l.field_staff_id IS NOT NULL AND l.support_staff_id IS NOT NULL AND l.field_staff_id != l.support_staff_id THEN 0.5
+        ELSE 1.0
+    END"""
+    _is_direct_expr = f"""CASE
+        WHEN (l.source IS NULL OR l.source != 'Self Lead') AND ({_has_member_source} = 0) THEN TRUE
+        ELSE FALSE
     END"""
     _co_clause = "" if all_companies else "AND l.company_id = :co"
 
@@ -1682,8 +1712,8 @@ def get_incentive_achievements(
     )"""
 
     lead_q = text(f"""
-        SELECT emp_key, category_id, dvr, has_support, partner_id, is_direct_work FROM (
-            SELECT DISTINCT ON (lead_id, emp_key) lead_id, emp_key, category_id, dvr, has_support, partner_id, is_direct_work
+        SELECT emp_key, category_id, dvr, has_support, partner_id, is_direct_work, split_ratio FROM (
+            SELECT DISTINCT ON (lead_id, emp_key) lead_id, emp_key, category_id, dvr, has_support, partner_id, is_direct_work, split_ratio
             FROM (
                 SELECT l.id                                                             AS lead_id,
                        l.telecaller_id::TEXT                                            AS emp_key,
@@ -1695,28 +1725,10 @@ def get_incentive_achievements(
                              AND ie.is_deleted = FALSE 
                              AND ie.status = 'CONFIRMED'
                        ), 0)                                                            AS dvr,
-                       {_sup}                                                           AS has_support,
+                       {_has_member_source}                                             AS has_support,
                        l.associated_partner_id                                          AS partner_id,
-                       CASE WHEN (
-                           (l.source IS NULL OR l.source != 'Self Lead')
-                           AND l.guru_id IS NULL
-                           AND l.z_guru_id IS NULL
-                           AND l.adi_guru_id IS NULL
-                           AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND (
-                               l.associated_partner_id IS NULL
-                               OR (
-                                   l.associated_partner_id IS NOT NULL
-                                   AND se_reg.id = l.telecaller_id
-                                   AND (
-                                       SELECT COUNT(DISTINCT vci.partner_id)
-                                       FROM vgk_cash_income_entries vci
-                                       WHERE vci.source_lead_id = l.id
-                                         AND vci.status NOT IN ('CANCELLED')
-                                   ) = 1
-                               )
-                           )
-                       ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
+                       {_is_direct_expr}                                                AS is_direct_work,
+                       {_split_ratio_expr}                                              AS split_ratio
                 FROM crm_leads l
                 LEFT JOIN official_partners op ON op.id = l.associated_partner_id
                 LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
@@ -1733,37 +1745,39 @@ def get_incentive_achievements(
                              AND ie.is_deleted = FALSE 
                              AND ie.status = 'CONFIRMED'
                        ), 0)                                                            AS dvr,
-                       {_sup}                                                           AS has_support,
+                       {_has_member_source}                                             AS has_support,
                        l.associated_partner_id                                          AS partner_id,
-                       CASE WHEN (
-                           (l.source IS NULL OR l.source != 'Self Lead')
-                           AND l.guru_id IS NULL
-                           AND l.z_guru_id IS NULL
-                           AND l.adi_guru_id IS NULL
-                           AND (l.mnr_handler_id IS NULL OR l.mnr_handler_id = '')
-                           AND (
-                               l.associated_partner_id IS NULL
-                               OR (
-                                   l.associated_partner_id IS NOT NULL
-                                   AND se_reg.id = l.field_staff_id
-                                   AND (
-                                       SELECT COUNT(DISTINCT vci.partner_id)
-                                       FROM vgk_cash_income_entries vci
-                                       WHERE vci.source_lead_id = l.id
-                                         AND vci.status NOT IN ('CANCELLED')
-                                   ) = 1
-                               )
-                           )
-                       ) THEN TRUE ELSE FALSE END                                       AS is_direct_work
+                       {_is_direct_expr}                                                AS is_direct_work,
+                       {_split_ratio_expr}                                              AS split_ratio
                 FROM crm_leads l
                 LEFT JOIN official_partners op ON op.id = l.associated_partner_id
                 LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
                 WHERE {_comp_where}
                   {_co_clause} AND l.field_staff_id IS NOT NULL
+                UNION ALL
+                SELECT l.id                                                             AS lead_id,
+                       l.support_staff_id::TEXT                                         AS emp_key,
+                       l.category_id                                                    AS category_id,
+                       COALESCE((
+                           SELECT SUM(ie.amount) 
+                           FROM income_entries ie 
+                           WHERE ie.lead_id = l.id 
+                             AND ie.is_deleted = FALSE 
+                             AND ie.status = 'CONFIRMED'
+                       ), 0)                                                            AS dvr,
+                       {_has_member_source}                                             AS has_support,
+                       l.associated_partner_id                                          AS partner_id,
+                       {_is_direct_expr}                                                AS is_direct_work,
+                       0.5                                                              AS split_ratio
+                FROM crm_leads l
+                LEFT JOIN official_partners op ON op.id = l.associated_partner_id
+                LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
+                WHERE {_comp_where}
+                  {_co_clause} AND l.support_staff_id IS NOT NULL
             ) raw
             ORDER BY lead_id, emp_key
         ) deduped
-    """ + (" WHERE emp_key = :eid" if employee_id else ""))
+    """ + (" WHERE emp_key = :eid" if filter_emp_id else ""))
 
     from datetime import date as _date_cls
     params_lead: dict = {
@@ -1773,8 +1787,8 @@ def get_incentive_achievements(
     }
     if not all_companies:
         params_lead['co'] = company_id
-    if employee_id:
-        params_lead['eid'] = str(employee_id)
+    if filter_emp_id:
+        params_lead['eid'] = str(filter_emp_id)
 
     lead_rows = db.execute(lead_q, params_lead).fetchall()
 
@@ -1783,8 +1797,8 @@ def get_incentive_achievements(
     _etc_cat_ids = set(slug_to_cat_ids.get('training', []))
     if _etc_cat_ids:
         lead_rows = [
-            (ek, cid, dvr, 1 if cid in _etc_cat_ids else hs, pid, idw)
-            for ek, cid, dvr, hs, pid, idw in lead_rows
+            (row[0], row[1], row[2], 1 if row[1] in _etc_cat_ids else row[3], row[4], row[5], row[6] if len(row) > 6 else 1.0)
+            for row in lead_rows
         ]
 
     # DC-ETC-DIRECT-001: Pre-fetch direct ETC students (crm_lead_id IS NULL) for processing
@@ -1802,7 +1816,7 @@ def get_incentive_achievements(
             WHERE es.training_completed_date IS NOT NULL
               AND es.training_completed_date BETWEEN :df_d AND :dt_d
               AND es.crm_lead_id IS NULL AND es.is_active = TRUE {_co_etc}
-              {"AND se.id::TEXT = :eid" if employee_id else ""}
+              {"AND se.id::TEXT = :eid" if filter_emp_id else ""}
             UNION ALL
             SELECT se.id::TEXT AS emp_key,
                    COALESCE(es.deal_value_received, 0) AS dvr
@@ -1811,13 +1825,13 @@ def get_incentive_achievements(
             WHERE es.training_completed_date IS NOT NULL
               AND es.training_completed_date BETWEEN :df_d AND :dt_d
               AND es.crm_lead_id IS NULL AND es.is_active = TRUE {_co_etc}
-              {"AND se.id::TEXT = :eid" if employee_id else ""}
+              {"AND se.id::TEXT = :eid" if filter_emp_id else ""}
         """)
         _etc_direct_params: dict = {'df_d': params_lead['df_d'], 'dt_d': params_lead['dt_d']}
         if not all_companies:
             _etc_direct_params['co'] = company_id
-        if employee_id:
-            _etc_direct_params['eid'] = employee_id
+        if filter_emp_id:
+            _etc_direct_params['eid'] = filter_emp_id
         _etc_direct_rows = db.execute(_etc_direct_q, _etc_direct_params).fetchall()
 
     # Build per-employee per-slug achievements
@@ -1831,39 +1845,42 @@ def get_incentive_achievements(
     b2b_pending: list = []  # (emp_key, partner_id, dvr, has_sup)
 
     emp_data: dict = {}
-    for emp_key, cat_id, dvr, has_sup, partner_id, is_direct in lead_rows:
+    for emp_key, cat_id, dvr, has_sup, partner_id, is_direct, split_ratio in lead_rows:
+        s_ratio = float(split_ratio or 1.0)
         if not emp_key:
             continue
         if emp_key not in emp_data:
             emp_data[emp_key] = {}
         if use_b2b_split and cat_id in b2b_cat_ids:
-            b2b_pending.append((emp_key, partner_id, float(dvr), bool(has_sup), bool(is_direct)))
+            b2b_pending.append((emp_key, partner_id, float(dvr), bool(has_sup), bool(is_direct), s_ratio))
             continue
         for slug, cat_ids in slug_to_cat_ids.items():
             if cat_id in cat_ids:
                 if slug not in emp_data[emp_key]:
                     emp_data[emp_key][slug] = {
-                        'self_count': 0, 'self_amount': 0.0,
-                        'company_count': 0, 'company_amount': 0.0,
-                        'direct_count': 0, 'direct_amount': 0.0,
+                        'self_count': 0.0, 'self_amount': 0.0,
+                        'company_count': 0.0, 'company_amount': 0.0,
+                        'direct_count': 0.0, 'direct_amount': 0.0,
+                        'raw_count': 0, 'raw_amount': 0.0,
                     }
-                # DC-INCENTIVE-LEAD-TYPE-003: Direct Work (no MNR/VGK4U user_id) takes
-                # priority over Self/Company classification.
                 if bool(is_direct):
-                    emp_data[emp_key][slug]['direct_count'] += 1
-                    emp_data[emp_key][slug]['direct_amount'] += float(dvr)
+                    emp_data[emp_key][slug]['direct_count'] += (1.0 * s_ratio)
+                    emp_data[emp_key][slug]['direct_amount'] += (float(dvr) * s_ratio)
                 elif has_sup:
-                    emp_data[emp_key][slug]['company_count'] += 1
-                    emp_data[emp_key][slug]['company_amount'] += float(dvr)
+                    emp_data[emp_key][slug]['company_count'] += (1.0 * s_ratio)
+                    emp_data[emp_key][slug]['company_amount'] += (float(dvr) * s_ratio)
                 else:
-                    emp_data[emp_key][slug]['self_count'] += 1
-                    emp_data[emp_key][slug]['self_amount'] += float(dvr)
+                    emp_data[emp_key][slug]['self_count'] += (1.0 * s_ratio)
+                    emp_data[emp_key][slug]['self_amount'] += (float(dvr) * s_ratio)
+
+                emp_data[emp_key][slug]['raw_count'] += 1
+                emp_data[emp_key][slug]['raw_amount'] += float(dvr)
                 break
 
     # DC-B2B-SPLIT-001: Route B2B leads to ev_b2b_new or ev_b2b_existing.
     # New partner = associated_partner_id has NO prior completed B2B lead before this period.
     if use_b2b_split and b2b_pending:
-        _b2b_pids = list({p for _, p, _, _, _ in b2b_pending if p is not None})
+        _b2b_pids = list({item[1] for item in b2b_pending if item[1] is not None})
         _existing_pids: set = set()
         if _b2b_pids and b2b_cat_ids:
             _prior = db.execute(text("""
@@ -1882,23 +1899,25 @@ def get_incentive_achievements(
             """), {'pids': _b2b_pids, 'cids': list(b2b_cat_ids), 'cutoff': date_from}).fetchall()
             _existing_pids = {r[0] for r in _prior}
         def _empty_b2b():
-            return {'self_count': 0, 'self_amount': 0.0, 'company_count': 0, 'company_amount': 0.0,
-                    'direct_count': 0, 'direct_amount': 0.0}
-        for _ek, _pid, _dvr, _hs, _is_direct in b2b_pending:
+            return {'self_count': 0.0, 'self_amount': 0.0, 'company_count': 0.0, 'company_amount': 0.0,
+                    'direct_count': 0.0, 'direct_amount': 0.0, 'raw_count': 0, 'raw_amount': 0.0}
+        for _ek, _pid, _dvr, _hs, _is_direct, _sr in b2b_pending:
             _aslug = 'ev_b2b_existing' if _pid in _existing_pids else 'ev_b2b_new'
             if _ek not in emp_data:
                 emp_data[_ek] = {}
             if _aslug not in emp_data[_ek]:
                 emp_data[_ek][_aslug] = _empty_b2b()
             if _is_direct:
-                emp_data[_ek][_aslug]['direct_count'] += 1
-                emp_data[_ek][_aslug]['direct_amount'] += _dvr
+                emp_data[_ek][_aslug]['direct_count'] += (1.0 * _sr)
+                emp_data[_ek][_aslug]['direct_amount'] += (_dvr * _sr)
             elif _hs:
-                emp_data[_ek][_aslug]['company_count'] += 1
-                emp_data[_ek][_aslug]['company_amount'] += _dvr
+                emp_data[_ek][_aslug]['company_count'] += (1.0 * _sr)
+                emp_data[_ek][_aslug]['company_amount'] += (_dvr * _sr)
             else:
-                emp_data[_ek][_aslug]['self_count'] += 1
-                emp_data[_ek][_aslug]['self_amount'] += _dvr
+                emp_data[_ek][_aslug]['self_count'] += (1.0 * _sr)
+                emp_data[_ek][_aslug]['self_amount'] += (_dvr * _sr)
+            emp_data[_ek][_aslug]['raw_count'] += 1
+            emp_data[_ek][_aslug]['raw_amount'] += _dvr
 
     # DC-ETC-DIRECT-001 (loop) / DC-ETC-DW-AMOUNT-001:
     # Direct ETC students (no CRM link) are classified as Direct Work because there is
@@ -1913,12 +1932,15 @@ def get_incentive_achievements(
                 emp_data[_ek] = {}
             if _training_slug not in emp_data[_ek]:
                 emp_data[_ek][_training_slug] = {
-                    'self_count': 0, 'self_amount': 0.0,
-                    'company_count': 0, 'company_amount': 0.0,
-                    'direct_count': 0, 'direct_amount': 0.0,
+                    'self_count': 0.0, 'self_amount': 0.0,
+                    'company_count': 0.0, 'company_amount': 0.0,
+                    'direct_count': 0.0, 'direct_amount': 0.0,
+                    'raw_count': 0, 'raw_amount': 0.0,
                 }
-            emp_data[_ek][_training_slug]['direct_count'] += 1
+            emp_data[_ek][_training_slug]['direct_count'] += 1.0
             emp_data[_ek][_training_slug]['direct_amount'] += float(_dvr_etc or 0)
+            emp_data[_ek][_training_slug]['raw_count'] += 1
+            emp_data[_ek][_training_slug]['raw_amount'] += float(_dvr_etc or 0)
 
     # Service Team Spares & Service Revenue (payment_status = 'paid')
     _service_rows = []
@@ -1932,11 +1954,11 @@ def get_incentive_achievements(
             WHERE b.created_at BETWEEN :df AND :dt
               AND b.payment_status = 'paid'
               AND t.service_technician_id IS NOT NULL
-              {"AND t.service_technician_id::TEXT = :eid" if employee_id else ""}
+              {"AND t.service_technician_id::TEXT = :eid" if filter_emp_id else ""}
         """
         _srv_p = {'df': date_from, 'dt': date_to}
-        if employee_id:
-            _srv_p['eid'] = employee_id
+        if filter_emp_id:
+            _srv_p['eid'] = filter_emp_id
         _service_rows = db.execute(text(_srv_q), _srv_p).fetchall()
 
     for emp_key, spares, service_rev in _service_rows:
@@ -1971,13 +1993,15 @@ def get_incentive_achievements(
     emp_ids_from_leads = list(emp_data.keys())
     emp_map = {}
 
-    if show_all or (not employee_id and not emp_ids_from_leads):
+    if show_all or (not filter_emp_id and not emp_ids_from_leads):
         # Fetch ALL active staff employees (filtered by company if specified)
         all_emp_q = (
             "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
-            "COALESCE(d.name, 'Unassigned') as department_name "
+            "COALESCE(d.name, 'Unassigned') as department_name, "
+            "COALESCE(r.role_code, '') as role_code, COALESCE(r.role_name, '') as role_name "
             "FROM staff_employees e "
             "LEFT JOIN staff_departments d ON d.id = e.department_id "
+            "LEFT JOIN staff_roles r ON r.id = e.role_id "
             "WHERE e.status = 'active' AND e.is_deleted = FALSE "
             "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
             "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
@@ -1988,26 +2012,28 @@ def get_incentive_achievements(
         if not all_companies:
             all_emp_params['co'] = company_id
         all_emps = db.execute(text(all_emp_q), all_emp_params).fetchall()
-        emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in all_emps}
+        emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4], 'role_code': r[5], 'role_name': r[6]} for r in all_emps}
         # Ensure every employee exists in emp_data (with empty slug data)
         for eid in emp_map:
             if eid not in emp_data:
                 emp_data[eid] = {}
     else:
         # Resolve names for employees found in lead data AND requested employee_id if specified
-        requested_eid_int = [int(employee_id)] if (employee_id and str(employee_id).isdigit()) else []
+        requested_eid_int = [int(filter_emp_id)] if filter_emp_id else []
         int_ids = list(set([int(x) for x in emp_ids_from_leads if str(x).isdigit()] + requested_eid_int))
         if int_ids:
             emps = db.execute(text(
                 "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
-                "COALESCE(d.name, 'Unassigned') as department_name "
+                "COALESCE(d.name, 'Unassigned') as department_name, "
+                "COALESCE(r.role_code, '') as role_code, COALESCE(r.role_name, '') as role_name "
                 "FROM staff_employees e "
                 "LEFT JOIN staff_departments d ON d.id = e.department_id "
+                "LEFT JOIN staff_roles r ON r.id = e.role_id "
                 "WHERE e.id = ANY(:ids) AND e.is_deleted = FALSE "
                 "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
                 "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             ), {'ids': int_ids}).fetchall()
-            emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]} for r in emps}
+            emp_map = {str(r[0]): {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4], 'role_code': r[5], 'role_name': r[6]} for r in emps}
             for eid in emp_map:
                 if eid not in emp_data:
                     emp_data[eid] = {}
@@ -2018,13 +2044,15 @@ def get_incentive_achievements(
     if missing_lead_eids:
         missing_emps = db.execute(text(
             "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
-            "COALESCE(d.name, 'Unassigned') as department_name "
+            "COALESCE(d.name, 'Unassigned') as department_name, "
+            "COALESCE(r.role_code, '') as role_code, COALESCE(r.role_name, '') as role_name "
             "FROM staff_employees e "
             "LEFT JOIN staff_departments d ON d.id = e.department_id "
+            "LEFT JOIN staff_roles r ON r.id = e.role_id "
             "WHERE e.id = ANY(:ids) AND e.is_deleted = FALSE"
         ), {'ids': missing_lead_eids}).fetchall()
         for r in missing_emps:
-            emp_map[str(r[0])] = {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]}
+            emp_map[str(r[0])] = {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4], 'role_code': r[5], 'role_name': r[6]}
 
     # DC-INCENTIVE-EMP-TARGETS-001: Load per-employee incentive min-targets for this month.
     # Keyed as {emp_id_str: {category_slug: min_target_float}}. Default = 2.0 when not set.
@@ -2079,48 +2107,105 @@ def get_incentive_achievements(
                 'pct': round(_pct_val, 1)
             }
 
+    # Bulk query Call Quality Review scores
+    emp_quality_map = {}
+    if _all_emp_int_ids:
+        df_str = date_from.strftime('%Y-%m-%d')
+        dt_str = date_to.strftime('%Y-%m-%d')
+        q_rows = db.execute(text("""
+            SELECT staff_id::TEXT,
+                   COUNT(id) as total_reviewed,
+                   AVG(overall_score) as avg_score
+            FROM call_quality_reviews
+            WHERE staff_id = ANY(:eids)
+              AND sample_date BETWEEN :df AND :dt
+              AND status IN ('reviewed', 'completed')
+              AND overall_score IS NOT NULL
+            GROUP BY staff_id
+        """), {'df': df_str, 'dt': dt_str, 'eids': _all_emp_int_ids}).fetchall()
+        for _sid, _tot_rev, _avg_sc in q_rows:
+            _avg = float(_avg_sc or 0)
+            _pct = (_avg / 5.0 * 100.0) if _avg <= 5.0 else _avg
+            emp_quality_map[str(_sid)] = {
+                'total_reviewed': int(_tot_rev or 0),
+                'avg_score': round(_avg, 2),
+                'quality_pct': round(_pct, 1)
+            }
+
+    # Bulk query Timesheet Productive & Approved timing (80% gate)
+    emp_timesheet_map = {}
+    if _all_emp_int_ids:
+        ts_rows = db.execute(text("""
+            SELECT employee_id::TEXT,
+                   SUM(COALESCE(approved_minutes, billable_minutes, duration_minutes, 0)) as app_mins,
+                   COUNT(DISTINCT date) as ts_days
+            FROM staff_timesheet_entries
+            WHERE employee_id = ANY(:eids)
+              AND date BETWEEN :df AND :dt
+              AND status = 'approved'
+            GROUP BY employee_id
+        """), {'df': date_from.date(), 'dt': date_to.date(), 'eids': _all_emp_int_ids}).fetchall()
+
+        att_rows = db.execute(text("""
+            SELECT employee_id::TEXT,
+                   COUNT(id) as present_days
+            FROM staff_attendance
+            WHERE employee_id = ANY(:eids)
+              AND date BETWEEN :df AND :dt
+              AND (status IN ('present', 'half_day', 'late') OR clock_in IS NOT NULL)
+            GROUP BY employee_id
+        """), {'df': date_from.date(), 'dt': date_to.date(), 'eids': _all_emp_int_ids}).fetchall()
+        att_days_map = {str(r[0]): int(r[1] or 0) for r in att_rows}
+
+        for _eid, _app_mins, _ts_days in ts_rows:
+            _mins = float(_app_mins or 0)
+            _pdays = att_days_map.get(str(_eid), int(_ts_days or 0))
+            _req_mins = max(_pdays, 1) * 480.0
+            _ts_pct = min(100.0, (_mins / _req_mins) * 100.0) if _req_mins > 0 else 100.0
+            emp_timesheet_map[str(_eid)] = {
+                'approved_minutes': round(_mins, 1),
+                'required_minutes': round(_req_mins, 1),
+                'present_days': _pdays,
+                'timesheet_pct': round(_ts_pct, 1)
+            }
+
     def _calc_employee(emp_id: str, slug_data: dict) -> dict:
-        emp_info = emp_map.get(str(emp_id), {'emp_code': emp_id, 'name': emp_id, 'dept_id': None})
+        emp_info = emp_map.get(str(emp_id), {'emp_code': emp_id, 'name': emp_id, 'dept_id': None, 'role_code': '', 'role_name': ''})
         cat_results = []
         total_earned = 0.0
-        _empty = {'self_count': 0, 'self_amount': 0.0, 'company_count': 0, 'company_amount': 0.0,
-                  'direct_count': 0, 'direct_amount': 0.0}
+        _empty = {'self_count': 0.0, 'self_amount': 0.0, 'company_count': 0.0, 'company_amount': 0.0,
+                  'direct_count': 0.0, 'direct_amount': 0.0, 'raw_count': 0, 'raw_amount': 0.0}
         for slug, cfg in cfg_by_slug.items():
             ach = slug_data.get(slug, _empty)
 
-            self_count     = ach.get('self_count', 0)
+            self_count     = ach.get('self_count', 0.0)
             self_amount    = ach.get('self_amount', 0.0)
-            company_count  = ach.get('company_count', 0)
+            company_count  = ach.get('company_count', 0.0)
             company_amount = ach.get('company_amount', 0.0)
-            direct_count   = ach.get('direct_count', 0)
+            direct_count   = ach.get('direct_count', 0.0)
             direct_amount  = ach.get('direct_amount', 0.0)
-            total_count    = self_count + company_count + direct_count
-            total_amount   = self_amount + company_amount + direct_amount
+            raw_count      = ach.get('raw_count', int(round(self_count + company_count + direct_count)))
+            raw_amount     = ach.get('raw_amount', self_amount + company_amount + direct_amount)
 
             rate_no  = cfg['rate_no']
             rate_wi  = cfg['rate_wi']
             rate_dw  = cfg.get('rate_dw', 0.0)
 
             # DC-INCENTIVE-EMP-TARGETS-001: Per-employee min target gate.
-            # Total (self+company+direct) must meet emp_min_target before ANY incentive is paid.
-            # If emp_min_target = 0 → pay from deal 1. Default = 2.
             emp_min_target = _inc_target_map.get(str(emp_id), {}).get(slug, None)
             if emp_min_target is None:
                 if slug in ('service_spares', 'service_revenue'):
                     ctc = emp_salary_map.get(str(emp_id), 0.0)
                     if ctc > 0:
-                        emp_min_target = 2.0 * ctc if emp_info['dept_id'] == 14 else 1.0 * ctc
+                        emp_min_target = 2.0 * ctc if emp_info.get('dept_id') == 14 else 1.0 * ctc
                     else:
                         emp_min_target = 50000.0
                 else:
                     emp_min_target = _INC_DEFAULT_TARGET
-            total_gate_val = total_count if cfg['min_target_unit'] == 'count' else total_amount
+            total_gate_val = raw_count if cfg['min_target_unit'] == 'count' else raw_amount
             target_met = (emp_min_target == 0) or (total_gate_val >= emp_min_target)
             gap = max(0.0, emp_min_target - total_gate_val) if emp_min_target > 0 else 0.0
 
-            # DC-INCENTIVE-SPLITVAL-001: fixed_per_unit uses count; percentage uses amount.
-            # DC-BONUS-COMPANY-ONLY-001: Self leads → flat rate_no, NO bonus multiplier.
-            # DC-INCENTIVE-LEAD-TYPE-003: Direct Work → rate_dw, shares bonus trigger.
             if cfg['itype'] == 'fixed_per_unit':
                 self_base    = self_count    * rate_no
                 company_base = company_count * rate_wi
@@ -2134,26 +2219,22 @@ def get_incentive_achievements(
             if not target_met:
                 self_base = company_base = direct_base = 0.0
 
-            # Bonus trigger — on company AND direct leads combined (only when target met)
-            company_target_val = company_count + direct_count if cfg['min_target_unit'] == 'count' \
-                                 else company_amount + direct_amount
+            # 150% Super-Achiever Double Bonus Trigger (2.0x)
             bonus_applied = False
-            final_company = company_base
-            final_direct  = direct_base
             target_base = emp_min_target if emp_min_target > 0 else _INC_DEFAULT_TARGET
-            bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg['bonus_trigger'] else None
-            if target_met and bonus_trigger_threshold and company_target_val >= bonus_trigger_threshold \
-                    and (company_base + direct_base) > 0:
-                final_company = company_base * cfg['bonus_mul']
-                final_direct  = direct_base  * cfg['bonus_mul']
+            bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg.get('bonus_trigger') else (1.5 * target_base)
+            
+            final_subtotal = self_base + company_base + direct_base
+            bonus_mul_val = float(cfg.get('bonus_mul') or 2.0)
+            if target_met and bonus_trigger_threshold and total_gate_val >= bonus_trigger_threshold and final_subtotal > 0:
                 bonus_applied = True
+                final_subtotal = final_subtotal * bonus_mul_val
 
-            final_incentive = self_base + final_company + final_direct
-            total_earned   += final_incentive
+            total_earned += final_subtotal
 
             cat_results.append({
                 'slug': slug,
-                'achieved_count': total_count, 'achieved_amount': total_amount,
+                'achieved_count': raw_count, 'achieved_amount': raw_amount,
                 'self_count': self_count,      'self_amount': self_amount,
                 'company_count': company_count, 'company_amount': company_amount,
                 'direct_count': direct_count,  'direct_amount': direct_amount,
@@ -2170,43 +2251,93 @@ def get_incentive_achievements(
                 'direct_incentive_base': round(direct_base, 2),
                 'base_incentive': round(self_base + company_base + direct_base, 2),
                 'bonus_applied': bonus_applied,
-                'bonus_multiplier': cfg['bonus_mul'] if bonus_applied else None,
-                'incentive_earned': round(final_incentive, 2),
+                'bonus_multiplier': bonus_mul_val if bonus_applied else None,
+                'incentive_earned': round(final_subtotal, 2),
             })
+
+        # Telecaller Specific Checks & Deductions
+        is_telecaller = False
+        rn = (emp_info.get('role_name') or '').lower()
+        rc = (emp_info.get('role_code') or '').lower()
+        dn = (emp_info.get('department') or '').lower()
+        if 'telecaller' in rc or 'telecaller' in rn or 'tele' in dn or 'tele sales' in dn:
+            is_telecaller = True
+
+        # 1. KRA Check (>= 80%)
         kra_info = emp_kra_pct_map.get(str(emp_id), {'total': 0, 'completed': 0, 'pct': 100.0})
         kra_total = kra_info['total']
         kra_completed = kra_info['completed']
         kra_pct = kra_info['pct']
-        
-        # Determine KRA multiplier:
-        #   KRA >= 80%: 120% multiplier (1.2)
-        #   KRA < 80%: 50% multiplier (0.5)
-        #   No KRA tasks: 100% multiplier (1.0)
-        if kra_total > 0:
-            if kra_pct >= 80.0:
-                kra_multiplier = 1.2
+        kra_pass = (kra_total == 0) or (kra_pct >= 80.0)
+
+        # 2. Call Quality Check (>= 80%)
+        qual_info = emp_quality_map.get(str(emp_id), {'total_reviewed': 0, 'quality_pct': 100.0, 'avg_score': 5.0})
+        qual_total = qual_info['total_reviewed']
+        qual_pct = qual_info['quality_pct']
+        qual_pass = (qual_total == 0) or (qual_pct >= 80.0)
+
+        # 3. Timesheet Check (80% productive & approved timing)
+        ts_info = emp_timesheet_map.get(str(emp_id), {'approved_minutes': 0, 'required_minutes': 0, 'timesheet_pct': 100.0})
+        ts_pct = ts_info['timesheet_pct']
+        ts_pass = (ts_info['required_minutes'] == 0) or (ts_pct >= 80.0)
+
+        telecaller_penalty_applied = False
+        penalty_reasons = []
+
+        if is_telecaller:
+            if not kra_pass:
+                penalty_reasons.append(f"KRA ({kra_pct}% < 80%)")
+            if not qual_pass:
+                penalty_reasons.append(f"Call Quality ({qual_pct}% < 80%)")
+            if not ts_pass:
+                penalty_reasons.append(f"Timesheet ({ts_pct}% < 80%)")
+
+            if penalty_reasons:
+                telecaller_penalty_applied = True
+                compliance_multiplier = 0.5  # Option B: 50% deduction
             else:
-                kra_multiplier = 0.5
+                compliance_multiplier = 1.2 if (kra_total > 0 and kra_pct >= 80.0) else 1.0
         else:
-            kra_multiplier = 1.0
-            
-        kra_penalty_applied = (kra_total > 0 and kra_pct < 80.0)
-        final_incentive_earned = total_earned * kra_multiplier
+            # Non-telecaller: standard KRA compliance
+            if kra_total > 0:
+                if kra_pct >= 80.0:
+                    compliance_multiplier = 1.2
+                else:
+                    compliance_multiplier = 0.5
+            else:
+                compliance_multiplier = 1.0
+
+        kra_penalty_applied = telecaller_penalty_applied or (not is_telecaller and kra_total > 0 and kra_pct < 80.0)
+        final_incentive_earned = round(total_earned * compliance_multiplier, 2)
 
         return {
             'employee_id': emp_id, 'emp_code': emp_info['emp_code'], 'name': emp_info['name'],
-            'dept_id': emp_info['dept_id'], 'department': emp_info.get('department', 'Unassigned'),
+            'dept_id': emp_info.get('dept_id'), 'department': emp_info.get('department', 'Unassigned'),
+            'role_name': emp_info.get('role_name', ''),
+            'is_telecaller': is_telecaller,
             'categories': cat_results,
             'raw_total_incentive': round(total_earned, 2),
             'kra_total': kra_total,
             'kra_completed': kra_completed,
             'kra_percentage': kra_pct,
+            'kra_pass': kra_pass,
+            'quality_total_reviewed': qual_total,
+            'quality_percentage': qual_pct,
+            'quality_pass': qual_pass,
+            'timesheet_approved_minutes': ts_info['approved_minutes'],
+            'timesheet_required_minutes': ts_info['required_minutes'],
+            'timesheet_percentage': ts_pct,
+            'timesheet_pass': ts_pass,
+            'penalty_reasons': penalty_reasons,
             'kra_penalty_applied': kra_penalty_applied,
-            'kra_multiplier': kra_multiplier,
-            'total_incentive_earned': round(final_incentive_earned, 2),
+            'kra_multiplier': compliance_multiplier,
+            'compliance_multiplier': compliance_multiplier,
+            'total_incentive_earned': final_incentive_earned,
         }
 
     results = [_calc_employee(eid, sd) for eid, sd in emp_data.items()]
+    if filter_emp_id:
+        results = [r for r in results if str(r['employee_id']) == filter_emp_id]
     results.sort(key=lambda x: (-x['total_incentive_earned'], (x['name'] or '').lower()))
     return {'success': True, 'data': results, 'month': month, 'year': year}
 
@@ -2256,10 +2387,17 @@ def incentive_achievements_drilldown(
 
     # Resolve employee ID (default to logged-in user me.id if not provided)
     target_emp_id = employee_id if (employee_id and str(employee_id).strip() and str(employee_id).strip() not in ('null', 'undefined')) else str(me.id)
-    emp_row = db.execute(text(
-        "SELECT id, emp_code, COALESCE(full_name, emp_code) AS name "
-        "FROM staff_employees WHERE id = :eid"
-    ), {'eid': int(target_emp_id)}).fetchone()
+    target_emp_id_str = str(target_emp_id).strip()
+    if target_emp_id_str.isdigit():
+        emp_row = db.execute(text(
+            "SELECT id, emp_code, COALESCE(full_name, emp_code) AS name "
+            "FROM staff_employees WHERE id = :eid"
+        ), {'eid': int(target_emp_id_str)}).fetchone()
+    else:
+        emp_row = db.execute(text(
+            "SELECT id, emp_code, COALESCE(full_name, emp_code) AS name "
+            "FROM staff_employees WHERE emp_code = :ecode"
+        ), {'ecode': target_emp_id_str}).fetchone()
     if not emp_row:
         return {'success': False, 'data': [], 'message': 'Employee not found'}
     emp_db_id, emp_code, emp_name = emp_row
@@ -2306,15 +2444,15 @@ def incentive_achievements_drilldown(
     # Ensure service spares and service revenue default configs exist
     if 'service_spares' not in cfg_by_slug:
         cfg_by_slug['service_spares'] = {
-            'min_target_value': 0.0, 'min_target_unit': 'amount',
-            'rate_no': 0.0, 'rate_wi': 2.0, 'rate_dw': 0.0,
-            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+            'min_target_value': 50000.0, 'min_target_unit': 'amount',
+            'rate_no': 3.0, 'rate_wi': 1.0, 'rate_dw': 2.0,
+            'itype': 'percentage', 'bonus_trigger': 1.50, 'bonus_mul': 1.50
         }
     if 'service_revenue' not in cfg_by_slug:
         cfg_by_slug['service_revenue'] = {
-            'min_target_value': 0.0, 'min_target_unit': 'amount',
-            'rate_no': 0.0, 'rate_wi': 10.0, 'rate_dw': 0.0,
-            'itype': 'percentage', 'bonus_trigger': None, 'bonus_mul': 1.2
+            'min_target_value': 20000.0, 'min_target_unit': 'amount',
+            'rate_no': 15.0, 'rate_wi': 2.5, 'rate_dw': 10.0,
+            'itype': 'percentage', 'bonus_trigger': 1.50, 'bonus_mul': 1.50
         }
 
     # Resolve category IDs for B2B category
@@ -2450,8 +2588,14 @@ def incentive_achievements_drilldown(
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
                         CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END,
+                        CASE WHEN l.support_staff_id::text = :emp_id THEN 'Support Staff' END,
                         CASE WHEN (l.created_by_id = :emp_code OR l.source_ref_id = :emp_id OR l.primary_owner_id::text = :emp_id) THEN 'Lead By' END
-                    ], NULL) AS roles
+                    ], NULL) AS roles,
+                    CASE
+                        WHEN l.field_staff_id IS NOT NULL AND l.telecaller_id IS NOT NULL AND l.field_staff_id != l.telecaller_id THEN 0.5
+                        WHEN l.field_staff_id IS NOT NULL AND l.support_staff_id IS NOT NULL AND l.field_staff_id != l.support_staff_id THEN 0.5
+                        ELSE 1.0
+                    END AS split_ratio
                 FROM crm_leads l
                 LEFT JOIN official_partners op ON op.id = l.associated_partner_id
                 LEFT JOIN staff_employees se_reg ON se_reg.emp_code = op.registered_by_emp_code
@@ -2461,6 +2605,7 @@ def incentive_achievements_drilldown(
                   AND (
                       l.telecaller_id::text = :emp_id
                       OR l.field_staff_id::text = :emp_id
+                      OR l.support_staff_id::text = :emp_id
                       OR l.created_by_id = :emp_code
                       OR l.source_ref_id = :emp_id
                       OR l.primary_owner_id::text = :emp_id
@@ -2489,8 +2634,9 @@ def incentive_achievements_drilldown(
                     'record_type': 'crm_lead',
                     'incentive_count': 1,
                     'category_slug': slug,
+                    'split_ratio': float(r[12] if len(r) > 12 and r[12] is not None else 1.0),
                     'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
-                    'incentive_amount': round(incentive_amount, 2),
+                    'incentive_amount': round(incentive_amount * float(r[12] if len(r) > 12 and r[12] is not None else 1.0), 2),
                 })
 
             # Direct ETC students
@@ -2671,8 +2817,14 @@ def incentive_achievements_drilldown(
                     ARRAY_REMOVE(ARRAY[
                         CASE WHEN l.telecaller_id::text = :emp_id   THEN 'Telecaller'  END,
                         CASE WHEN l.field_staff_id::text = :emp_id  THEN 'Field Staff' END,
+                        CASE WHEN l.support_staff_id::text = :emp_id THEN 'Support Staff' END,
                         CASE WHEN (l.created_by_id = :emp_code OR l.source_ref_id = :emp_id OR l.primary_owner_id::text = :emp_id) THEN 'Lead By' END
                     ], NULL) AS roles,
+                    CASE
+                        WHEN l.field_staff_id IS NOT NULL AND l.telecaller_id IS NOT NULL AND l.field_staff_id != l.telecaller_id THEN 0.5
+                        WHEN l.field_staff_id IS NOT NULL AND l.support_staff_id IS NOT NULL AND l.field_staff_id != l.support_staff_id THEN 0.5
+                        ELSE 1.0
+                    END AS split_ratio,
                     (CASE WHEN l.associated_partner_id IS NOT NULL AND EXISTS (
                         SELECT 1 FROM crm_leads l2
                         WHERE l2.associated_partner_id = l.associated_partner_id
@@ -2697,6 +2849,7 @@ def incentive_achievements_drilldown(
                   AND (
                       l.telecaller_id::text = :emp_id
                       OR l.field_staff_id::text = :emp_id
+                      OR l.support_staff_id::text = :emp_id
                       OR l.created_by_id = :emp_code
                       OR l.source_ref_id = :emp_id
                       OR l.primary_owner_id::text = :emp_id
@@ -2710,7 +2863,7 @@ def incentive_achievements_drilldown(
             for r in db.execute(crm_q, p).fetchall():
                 lead_slug = slug
                 if slug in ('ev_b2b_new', 'ev_b2b_existing'):
-                    lead_slug = 'ev_b2b_existing' if r[13] else 'ev_b2b_new'
+                    lead_slug = 'ev_b2b_existing' if r[14] else 'ev_b2b_new'
                     cfg = cfg_by_slug.get(lead_slug, cfg)
 
                 final_ltype = 'Direct' if r[11] else r[10]
@@ -2734,8 +2887,9 @@ def incentive_achievements_drilldown(
                     'record_type': 'crm_lead',
                     'incentive_count': 1,
                     'category_slug': lead_slug,
+                    'split_ratio': float(r[13] if len(r) > 13 and r[13] is not None else 1.0),
                     'incentive_pct': f"{rate}%" if cfg['itype'] == 'percentage' else f"₹{fmtNum(rate)}/unit",
-                    'incentive_amount': round(incentive_amount, 2),
+                    'incentive_amount': round(incentive_amount * float(r[13] if len(r) > 13 and r[13] is not None else 1.0), 2),
                 })
 
     # Apply targets and bonus triggers per category slug
@@ -2792,10 +2946,10 @@ def incentive_achievements_drilldown(
                              else stats['company_amount'] + stats['direct_amount']
         
         target_base = emp_min_target if emp_min_target > 0 else _INC_DEFAULT_TARGET
-        bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg.get('bonus_trigger') else None
+        bonus_trigger_threshold = float(cfg['bonus_trigger']) * target_base if cfg.get('bonus_trigger') else (1.5 * target_base)
 
         bonus_applied = False
-        if target_met and bonus_trigger_threshold and company_target_val >= bonus_trigger_threshold:
+        if target_met and bonus_trigger_threshold and total_gate_val >= bonus_trigger_threshold:
             bonus_applied = True
             
         # Recalculate cell-level values
@@ -2805,18 +2959,20 @@ def incentive_achievements_drilldown(
         else:
             ltype = r['lead_type']
             base_rate = cfg['rate_no'] if ltype == 'Self' else (cfg['rate_dw'] if ltype == 'Direct' else cfg['rate_wi'])
-            effective_mul = cfg['bonus_mul'] if (bonus_applied and ltype in ('Company', 'Direct')) else 1.0
+            bonus_mul_val = float(cfg.get('bonus_mul') or 2.0)
+            effective_mul = bonus_mul_val if bonus_applied else 1.0
             effective_rate = base_rate * effective_mul
+            split_ratio = float(r.get('split_ratio') or 1.0)
             
             conf_val = float(r.get('confirmed_value') or 0.0)
             cnt_val = int(r.get('incentive_count') or 1)
             
             if cfg['itype'] == 'percentage':
-                calc_inc = (conf_val * effective_rate) / 100.0
-                r['incentive_pct'] = f"{effective_rate:g}%" + (f" (×{cfg['bonus_mul']:g} Bonus)" if effective_mul > 1.0 else "")
+                calc_inc = ((conf_val * effective_rate) / 100.0) * split_ratio
+                r['incentive_pct'] = f"{effective_rate:g}%" + (f" (×{bonus_mul_val:g} Bonus)" if effective_mul > 1.0 else "") + (f" [50% Split]" if split_ratio < 1.0 else "")
             else:
-                calc_inc = effective_rate * cnt_val
-                r['incentive_pct'] = f"₹{fmtNum(effective_rate)}/unit" + (f" (×{cfg['bonus_mul']:g} Bonus)" if effective_mul > 1.0 else "")
+                calc_inc = (effective_rate * cnt_val) * split_ratio
+                r['incentive_pct'] = f"₹{fmtNum(effective_rate)}/unit" + (f" (×{bonus_mul_val:g} Bonus)" if effective_mul > 1.0 else "") + (f" [50% Split]" if split_ratio < 1.0 else "")
                 
             r['incentive_amount'] = round(calc_inc, 2)
 

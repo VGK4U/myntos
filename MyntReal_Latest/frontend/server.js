@@ -18780,7 +18780,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': `/staff/leads?view=team` });
     res.end();
     return;
-  } else if (url.startsWith('/staff/leads')) {
+  } else if (url.startsWith('/staff/leads') || url.startsWith('/staff_leads')) {
     const filePath = path.join(__dirname, 'staff_leads.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) {
@@ -18890,11 +18890,36 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url.startsWith('/staff/my-tenant/users')) {
+    // Canonical compatibility redirect: /staff/my-tenant/users -> /staff/tenant-users
+    res.writeHead(302, { 'Location': '/staff/tenant-users' });
+    res.end();
+    return;
   } else if (url.startsWith('/staff/my-tenant')) {
     // DC_SAAS_CONSOLE_001: VGK SaaS → My Tenant / All Tenants (B2B)
     const filePath = path.join(__dirname, 'staff_my_tenant.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/tenant-users')) {
+    // VGK SaaS → SaaS Tenant Staff & Access Management
+    const filePath = path.join(__dirname, 'staff_tenant_users.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/saas-crm-settings') || url.startsWith('/staff/my-tenant/crm-setup') || url.startsWith('/staff_saas_crm_settings')) {
+    // SaaS Core Workspace: CRM / Workflow Setup (DC_SAAS_CRM_SETUP_001)
+    const filePath = path.join(__dirname, 'staff_saas_crm_settings.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('CRM / Workflow Setup page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(html);
@@ -19396,6 +19421,58 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url === '/staff/service-dashboard' || url.startsWith('/staff/service-dashboard?')) {
+    res.writeHead(301, { 'Location': '/staff/service-tickets/dashboard' });
+    res.end();
+    return;
+  } else if (url === '/staff/service-queue' || url.startsWith('/staff/service-queue?')) {
+    res.writeHead(301, { 'Location': '/staff/service-tickets/queue' });
+    res.end();
+    return;
+  } else if (url === '/staff/service-tickets' || url.startsWith('/staff/service-tickets?') || url === '/staff/service-raise-ticket' || url.startsWith('/staff/service-raise-ticket?')) {
+    res.writeHead(301, { 'Location': '/staff/service-tickets/raise' });
+    res.end();
+    return;
+  } else if (url === '/staff/service-reports' || url.startsWith('/staff/service-reports?')) {
+    res.writeHead(301, { 'Location': '/staff/service-tickets/reports' });
+    res.end();
+    return;
+  // SaaS HRMS Canonical 301 Route Redirects
+  } else if (url === '/staff/attendance/sheet' || url.startsWith('/staff/attendance/sheet?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/attendance-sheet' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/attendance/summary' || url.startsWith('/staff/attendance/summary?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/team-attendance-summary' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/leave-management' || url.startsWith('/staff/leave-management?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/my-leaves' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/journeys/my' || url.startsWith('/staff/journeys/my?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/my-journeys' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/journeys/team' || url.startsWith('/staff/journeys/team?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/team-journeys' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/journeys/all' || url.startsWith('/staff/journeys/all?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/all-journeys' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
+  } else if (url === '/staff/kra/my' || url.startsWith('/staff/kra/my?')) {
+    const qs = url.indexOf('?');
+    res.writeHead(301, { 'Location': '/staff/my-kras' + (qs >= 0 ? url.substring(qs) : '') });
+    res.end();
+    return;
   } else if (url.startsWith('/staff/service-tickets/dashboard')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
@@ -19890,7 +19967,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
 
-  } else if (url.startsWith('/staff/mnr-leads')) {
+  } else if (url.startsWith('/staff/mnr-leads') || url.startsWith('/staff/category-leads') || url.startsWith('/staff/workflow-leads')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_mnr_leads_master.html');
@@ -20328,6 +20405,16 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url.startsWith('/staff/field-appointments')) {
+    // DC Protocol: Field Appointments & Supporting Staff physical visits
+    const filePath = path.join(__dirname, 'staff_field_appointments.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/my-journeys')) {
     // DC Protocol: Staff My Journeys - Personal journey tracking page
     const filePath = path.join(__dirname, 'staff_my_journeys.html');
@@ -20495,6 +20582,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/configuration/a1top')) {
     const filePath = path.join(__dirname, 'staff_configuration_a1top.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/configuration/integrations') || url.startsWith('/staff/integrations')) {
+    const filePath = path.join(__dirname, 'staff_integrations.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
@@ -30550,7 +30646,7 @@ async function processAction(id, action){
       res.end(html);
     });
 
-  } else if (url.startsWith('/staff/crm/dashboard')) {
+  } else if (url.startsWith('/staff/crm/dashboard') || url.startsWith('/staff_crm_dashboard')) {
     const filePath = path.join(__dirname, 'staff_crm_dashboard.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('CRM Dashboard page not found'); return; }

@@ -2597,6 +2597,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     StaffHeader.inject('Executive Dashboard','fas fa-chart-line');
     StaffHeader.init();
   }
+  try {
+    const sResp = await staffFetch('/api/v1/saas/crm-setup/segments');
+    if (sResp && sResp.ok) {
+      const sData = await sResp.json();
+      const isSaaS = Boolean(sData && (sData.is_saas_tenant || (typeof StaffSidebar !== 'undefined' && StaffSidebar.isSaaSTenant)));
+      const segs = sData.segments || [];
+      if (isSaaS) {
+        const subP = document.querySelector('.page-banner p');
+        if (subP) {
+          subP.textContent = segs.length > 0 
+            ? 'Live workflow analytics — ' + segs.map(s => s.name).join(' · ')
+            : 'Live operational workflow analytics across business segments';
+        }
+        const catSelect = document.getElementById('dashCategory');
+        if (catSelect) {
+          catSelect.innerHTML = '<option value="">All Segments</option>' + 
+            segs.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+        }
+        const gsCatSelect = document.getElementById('execGsCategory');
+        if (gsCatSelect) {
+          gsCatSelect.innerHTML = '<option value="">All Segments</option>' + 
+            segs.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+        }
+      } else if (segs.length > 0) {
+        const catSelect = document.getElementById('dashCategory');
+        if (catSelect) {
+          catSelect.innerHTML = '<option value="">All Segments</option>' + 
+            segs.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+        }
+        const gsCatSelect = document.getElementById('execGsCategory');
+        if (gsCatSelect) {
+          gsCatSelect.innerHTML = '<option value="">All Segments</option>' + 
+            segs.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+        }
+      }
+    }
+  } catch(e) {
+    console.log('[EXEC-DASH] Using default segments:', e.message);
+  }
   loadDashboard();
 });
 

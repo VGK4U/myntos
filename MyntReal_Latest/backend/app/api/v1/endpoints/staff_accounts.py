@@ -8098,6 +8098,11 @@ async def list_expense_entries_endpoint(
     When view_mode='ledger' (or on personal ledger view): returns unified IN (Credits: income, bank allocations, transfers in)
     and OUT (Debits: expenses, transfers out) with running balances.
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('ACCOUNTS_GST')
+
     try:
         filters = {
             'company_id': company_id,

@@ -587,7 +587,7 @@
                             </div>
                             <div class="col-md-4 col-12">
                                 <label class="form-label">Category</label>
-                                <select class="form-select" id="leadCategory"></select>
+                                <select class="form-select" id="leadCategory" onchange="onLeadCategoryChange()"></select>
                             </div>
                         </div>
                         
@@ -1492,6 +1492,9 @@
                                         <button class="btn btn-outline-success btn-sm" onclick="scheduleFollowup()">
                                             <i class="fas fa-calendar-plus me-1"></i>Schedule Followup
                                         </button>
+                                        <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 600;" onclick="openFixAppointmentModalFromDetail()">
+                                            <i class="fas fa-calendar-check me-1"></i>Fix Appointment
+                                        </button>
                                         <button class="btn btn-outline-warning btn-sm" onclick="reassignLead()">
                                             <i class="fas fa-user-tag me-1"></i>Reassign Lead
                                         </button>
@@ -1532,6 +1535,22 @@
                                     <button class="btn btn-sm btn-outline-secondary" onclick="hideAddFollowupForm()">Cancel</button>
                                 </div>
                                 <div id="followupsContainer"></div>
+                            </div>
+
+                            <!-- Field Appointments & Supporting Staff Section -->
+                            <div class="detail-section" id="fieldAppointmentsSection">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-calendar-check me-2 text-success"></i>Field Appointments
+                                        <span class="badge bg-success ms-1" id="leadFieldAppointmentsCount" style="display:none; font-size:10px;">0</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-success" onclick="openFixAppointmentModalFromDetail()" title="Schedule Field Appointment">
+                                        <i class="fas fa-plus me-1"></i>Fix Appointment
+                                    </button>
+                                </div>
+                                <div id="leadFieldAppointmentsContainer">
+                                    <div class="text-muted small">No field appointments scheduled.</div>
+                                </div>
                             </div>
 
                             <!-- AI Call Recordings -->
@@ -1642,6 +1661,7 @@
     <script src="/public/js/crm-assignee-search.js"></script>
     <script src="/public/js/crm-handler-confirm.js"></script>
     <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
@@ -2226,6 +2246,38 @@
             }
         }
 
+        async function onLeadCategoryChange() {
+            const catSelect = document.getElementById('leadCategory');
+            const catId = parseInt(catSelect?.value, 10);
+            const leadId = document.getElementById('leadId')?.value;
+            const isNew = !leadId;
+
+            if (!catId) return;
+
+            // Check if category has routing pool configured by the company
+            try {
+                const res = await staffFetchJson(`/api/v1/crm/segments/${catId}/routing-pool`);
+                if (res && res.success && res.routing_pool && res.routing_pool.length > 0) {
+                    const pool = res.routing_pool;
+                    const poolNames = pool.map(p => `${p.full_name} (${p.emp_code || ''}, weight:${p.assignment_weight || 1})`).join(', ');
+                    if (isNew) {
+                        const ownerIdEl = document.getElementById('leadPrimaryOwnerId');
+                        if (ownerIdEl) ownerIdEl.value = '';
+                        if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch && typeof primaryOwnerSearch.clear === 'function') {
+                            primaryOwnerSearch.clear();
+                        }
+                        const noteEl = document.getElementById('primaryOwnerNote');
+                        if (noteEl) {
+                            const safePool = String(poolNames).replace(/[&<>"']/g, '');
+                            noteEl.innerHTML = `<span class="text-success"><i class="fas fa-route me-1"></i>Auto-assigned by Company Segment Pool (Weighted Round-Robin): ${safePool}</span>`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[DC-CRM] Failed to resolve segment routing pool:', e);
+            }
+        }
+
         function populateSourceDropdowns() {
             const filterSelect = document.getElementById('filterSource');
             const formSelect = document.getElementById('leadSource');
@@ -2723,6 +2775,9 @@
                         <div class="d-flex gap-1">
                             <button class="btn btn-outline-secondary icon-btn" onclick="event.stopPropagation(); openUniversalHistory({entityType:'crm_lead', entityId:${lead.id}, name:'${safeNameEsc}', phone:'${cleanP}', status:'${lead.status||''}', stage:'${lead.stage||lead.solar_pipeline_status||''}', category:'${safeCatEsc}', assignedTo:'${safeOwnerEsc}'})" title="Universal History">
                                 <i class="fas fa-history"></i>
+                            </button>
+                            <button class="btn btn-outline-success icon-btn" onclick="event.stopPropagation(); openFixAppointmentModalForLead(${lead.id}, '${safeNameEsc}', '${cleanP}')" title="Fix Field Appointment">
+                                <i class="fas fa-calendar-check"></i>
                             </button>
                             <button class="btn btn-outline-primary icon-btn" onclick="event.stopPropagation(); editLead(${lead.id}, ${leadCompanyIdParam})" title="Edit">
                                 <i class="fas fa-edit"></i>
@@ -4540,6 +4595,9 @@
                     
                     renderNotes(lead.notes || [], lead);
                     renderFollowups(lead.followups || []);
+                    if (typeof window.renderLeadFieldAppointments === 'function') {
+                        window.renderLeadFieldAppointments(lead.id, 'leadFieldAppointmentsContainer');
+                    }
 
                     // Populate MNR Assignment fields in view modal
                     document.getElementById('detailMnrHandler').textContent = lead.source_ref_name ? `${lead.source_ref_name} (${lead.source_ref_id})` : (lead.mnr_handler_name ? `${lead.mnr_handler_name} (${lead.mnr_handler_id})` : (lead.mnr_handler_id || '-'));
@@ -5351,6 +5409,27 @@
         
         function scheduleFollowup() {
             showAddFollowupForm();
+        }
+
+        function openFixAppointmentModalFromDetail() {
+            if (!window._currentViewLeadData) return;
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal(window._currentViewLeadData, function(newApt) {
+                    if (typeof window.renderLeadFieldAppointments === 'function' && window._currentViewLeadData) {
+                        window.renderLeadFieldAppointments(window._currentViewLeadData.id, 'leadFieldAppointmentsContainer');
+                    }
+                    loadLeads(currentPage);
+                });
+            }
+        }
+
+        function openFixAppointmentModalForLead(leadId, name, phone) {
+            const leadObj = { id: leadId, name: name, phone: phone };
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal(leadObj, function(newApt) {
+                    loadLeads(currentPage);
+                });
+            }
         }
         
         function reassignLead() {

@@ -25,7 +25,7 @@ from app.schemas.ticket import (
     ServiceTicketAcknowledge, ServiceTicketDiagnose, ServiceTicketComplete, ServiceTicketClose
 )
 from app.services.ticket_service import TicketService
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 
 router = APIRouter(prefix="/tickets", tags=["Support Tickets"])
@@ -418,6 +418,17 @@ async def upload_ticket_attachment(
 
 # ===== DC PROTOCOL JAN 2026: MULTI-MEDIA UPLOAD FOR SERVICE TICKETS =====
 
+def _assert_ticket_tenant_access(ticket: ServiceTicket, db: Session, current_user: Any) -> None:
+    """Enforces SaaS tenant module entitlement and company isolation for service tickets."""
+    if not ticket:
+        return
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    saas_ctx = resolve_tenant_context(db, current_user)
+    if saas_ctx.is_saas_tenant:
+        saas_ctx.require_module('SERVICE_TICKETS')
+        if saas_ctx.company and ticket.company_id and ticket.company_id != saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Access denied: Ticket belongs to another organization.")
+
 @router.post("/service/{ticket_id}/upload-media")
 async def upload_service_ticket_media(
     ticket_id: int,
@@ -440,6 +451,7 @@ async def upload_service_ticket_media(
     ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     staff = get_current_staff_user_from_hybrid(current_user, db)
     is_staff = staff is not None
@@ -590,6 +602,7 @@ async def get_service_ticket_media(
     ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     attachments = db.query(TicketAttachment).filter(
         TicketAttachment.ticket_id == ticket_id,
@@ -1104,6 +1117,14 @@ async def create_service_ticket(
     else:
         ticket_user_id = current_user.id  # MNR user's string ID
     
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, staff or current_user)
+    _saas_company_id = None
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+        _saas_company_id = _saas_ctx.company.id if _saas_ctx.company else None
+
     ticket = TicketService.create_service_ticket(
         db=db,
         user_id=ticket_user_id,
@@ -1124,7 +1145,8 @@ async def create_service_ticket(
         spares_required=spares_required,
         ip_address=ip_address,
         user_agent=user_agent,
-        staff_id=staff_id
+        staff_id=staff_id,
+        company_id=_saas_company_id
     )
     
     # DC Protocol Jan 2026: Create spare request records for procurement queue
@@ -1202,7 +1224,15 @@ async def get_service_dashboard_stats(
     else:
         filter_to = now
     
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+
     def apply_filters(query):
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            query = query.filter(ServiceTicket.company_id == _saas_ctx.company.id)
         query = query.filter(
             ServiceTicket.created_date >= filter_from,
             ServiceTicket.created_date <= filter_to
@@ -1421,10 +1451,18 @@ async def get_showroom_breakdown(
     else:
         filter_to = now
 
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+
     open_statuses = ['new', 'acknowledged', 'diagnosing', 'awaiting_spares', 'procurement_in_progress', 'ready_for_work']
 
     # Base filter predicate builder
     def base_filters(q):
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            q = q.filter(ServiceTicket.company_id == _saas_ctx.company.id)
         if filter_from:
             q = q.filter(ServiceTicket.created_date >= filter_from)
         q = q.filter(ServiceTicket.created_date <= filter_to)
@@ -1507,7 +1545,7 @@ async def get_technician_breakdown(
     Shows assigned/resolved/pending/SLA stats per technician.
     Auth: get_current_user_hybrid.
     """
-    from sqlalchemy import func, and_, case
+    from sqlalchemy import func, and_, or_, case
     from app.models.staff import StaffEmployee
     import pytz
     from datetime import datetime, timedelta
@@ -1533,17 +1571,39 @@ async def get_technician_breakdown(
     else:
         filter_to = now
 
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+
     open_statuses = ['new', 'acknowledged', 'diagnosing', 'awaiting_spares', 'procurement_in_progress', 'ready_for_work']
 
     # All active service dept staff
-    service_staff = db.query(StaffEmployee).filter(
-        StaffEmployee.department_id == SERVICE_DEPT_ID,
-        StaffEmployee.status == 'active'
-    ).all()
+    staff_q = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        staff_q = staff_q.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
+    else:
+        staff_q = staff_q.filter(StaffEmployee.department_id == SERVICE_DEPT_ID)
+    service_staff = staff_q.all()
     staff_map = {s.id: s.full_name for s in service_staff}
     service_staff_ids = list(staff_map.keys())
 
     def base_filters(q):
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            q = q.filter(ServiceTicket.company_id == _saas_ctx.company.id)
         if filter_from:
             q = q.filter(ServiceTicket.created_date >= filter_from)
         q = q.filter(ServiceTicket.created_date <= filter_to)
@@ -1659,6 +1719,12 @@ async def get_showroom_trend(
         buckets.append(cursor)
         cursor += step
 
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+
     # Get partner IDs that have tickets in range
     pq = db.query(ServiceTicket.partner_id).filter(
         ServiceTicket.created_date >= filter_from,
@@ -1666,6 +1732,8 @@ async def get_showroom_trend(
         ServiceTicket.status != 'deleted',
         ServiceTicket.partner_id.isnot(None)
     )
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        pq = pq.filter(ServiceTicket.company_id == _saas_ctx.company.id)
     if partner_id:
         pq = pq.filter(ServiceTicket.partner_id == partner_id)
     active_partner_ids = list({r.partner_id for r in pq.distinct().all()})
@@ -1683,12 +1751,15 @@ async def get_showroom_trend(
         data = []
         for i, bucket_start in enumerate(buckets):
             bucket_end = buckets[i + 1] if i + 1 < len(buckets) else filter_to + timedelta(seconds=1)
-            cnt = db.query(func.count(ServiceTicket.id)).filter(
+            cnt_q = db.query(func.count(ServiceTicket.id)).filter(
                 ServiceTicket.partner_id == pid,
                 ServiceTicket.created_date >= bucket_start,
                 ServiceTicket.created_date < bucket_end,
                 ServiceTicket.status != 'deleted'
-            ).scalar() or 0
+            )
+            if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+                cnt_q = cnt_q.filter(ServiceTicket.company_id == _saas_ctx.company.id)
+            cnt = cnt_q.scalar() or 0
             data.append(cnt)
         series.append({"partner_id": pid, "partner_name": partners.get(pid, f"Center #{pid}"), "data": data})
 
@@ -1731,13 +1802,26 @@ async def get_service_queue(
     _is_privileged = _user_role_code in _PRIVILEGED_ROLES or _is_team_service
     _staff_id_filter = None if _is_privileged else getattr(current_user, 'id', None)
 
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    _saas_company_id = None
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+        _saas_company_id = _saas_ctx.company.id if _saas_ctx.company else None
+        if _saas_ctx.is_tenant_admin:
+            _staff_id_filter = None
+        else:
+            _staff_id_filter = getattr(current_user, 'id', None)
+
     try:
         tickets = TicketService.get_service_queue(
             db=db,
             service_center_id=service_center_id,
             sub_status_filter=sub_status,
             ticket_type_filter=ticket_type,
-            staff_id_filter=_staff_id_filter
+            staff_id_filter=_staff_id_filter,
+            company_id=_saas_company_id
         )
         
         result = []
@@ -1815,7 +1899,15 @@ async def get_procurement_queue(
     from app.models.ticket import ServiceTicketSpareRequest, ServiceTicket, TicketAttachment
     from datetime import datetime as dt
     
+    # SaaS Tenant Authorization & Scoping
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('SERVICE_TICKETS')
+
     query = db.query(ServiceTicketSpareRequest)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        query = query.join(ServiceTicket, ServiceTicketSpareRequest.ticket_id == ServiceTicket.id).filter(ServiceTicket.company_id == _saas_ctx.company.id)
     
     if status:
         query = query.filter(ServiceTicketSpareRequest.procurement_status == status)
@@ -1907,6 +1999,7 @@ async def update_service_ticket_status(
     ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
 
     staff = get_current_staff_user_from_hybrid(current_user, db)
     staff_id = staff.id if staff else None
@@ -2033,6 +2126,10 @@ async def acknowledge_service_ticket(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     if not staff:
         raise HTTPException(status_code=403, detail="Staff authentication required")
+    ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     result = TicketService.acknowledge_ticket(
         db=db,
@@ -2061,6 +2158,10 @@ async def diagnose_service_ticket(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     if not staff:
         raise HTTPException(status_code=403, detail="Staff authentication required")
+    ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     result = TicketService.diagnose_ticket(
         db=db,
@@ -2102,6 +2203,10 @@ async def request_spares_for_ticket(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     if not staff:
         raise HTTPException(status_code=403, detail="Staff authentication required")
+    ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     result = TicketService.request_spares(
         db=db,
@@ -3726,6 +3831,10 @@ async def complete_service_work(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     if not staff:
         raise HTTPException(status_code=403, detail="Staff authentication required")
+    ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     result = TicketService.complete_work(
         db=db,
@@ -3759,6 +3868,10 @@ async def close_service_ticket(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     if not staff:
         raise HTTPException(status_code=403, detail="Staff authentication required")
+    ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     customer_satisfaction = data.customer_satisfaction if data else None
     force_close = data.force_close if data else False
@@ -6018,6 +6131,9 @@ async def get_service_ticket_details(
     is_admin = hasattr(current_user, 'is_admin') and callable(getattr(current_user, 'is_admin', None)) and current_user.is_admin()
     if ticket.user_id != current_user.id and not is_admin and not is_staff:
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # SaaS Tenant Isolation
+    _assert_ticket_tenant_access(ticket, db, current_user)
     
     spare_requests = db.query(ServiceTicketSpareRequest).filter(
         ServiceTicketSpareRequest.ticket_id == ticket_id

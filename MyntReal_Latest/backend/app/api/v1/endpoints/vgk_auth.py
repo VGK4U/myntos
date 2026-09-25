@@ -1116,12 +1116,12 @@ def vgk_my_leads(
     zguru_count = len(zguru_lead_ids)
     core_count  = len(core_lead_ids)
 
-    all_lead_ids = list(set(
-        [r.id for r in db.query(CRMLead.id).filter(source_condition).all()] +
-        [r.id for r in db.query(CRMLead.id).filter(CRMLead.vgk_field_support_id == mid).all()] +
-        guru_lead_ids + zguru_lead_ids + core_lead_ids
-    ))
-    overall_count = len(all_lead_ids)
+    all_role_lead_ids = list(set(guru_lead_ids + zguru_lead_ids + core_lead_ids))
+    overall_conditions = [source_condition, CRMLead.vgk_field_support_id == mid]
+    if all_role_lead_ids:
+        overall_conditions.append(CRMLead.id.in_(all_role_lead_ids))
+    overall_filter = or_(*overall_conditions)
+    overall_count = db.query(CRMLead).filter(overall_filter).count()
 
     # --- Build base query by segment ---
     norm = segment.lower()
@@ -1145,10 +1145,7 @@ def vgk_my_leads(
         else:
             query = db.query(CRMLead).filter(CRMLead.id == -1)
     else:
-        if all_lead_ids:
-            query = db.query(CRMLead).filter(CRMLead.id.in_(all_lead_ids))
-        else:
-            query = db.query(CRMLead).filter(CRMLead.id == -1)
+        query = db.query(CRMLead).filter(overall_filter)
 
     # Filters
     if status:
@@ -1197,18 +1194,36 @@ def vgk_my_leads(
     total = query.count()
     leads = query.offset((page - 1) * page_size).limit(page_size).all()
 
+    # Pre-fetch income entries and partners in batch to eliminate N+1 latency
+    page_lead_ids = [l.id for l in leads]
+    income_by_lead_level = {}
+    partner_ids_to_fetch = set()
+    if page_lead_ids:
+        inc_entries = db.query(VGKTeamIncomeEntry).filter(
+            VGKTeamIncomeEntry.source_lead_id.in_(page_lead_ids),
+            VGKTeamIncomeEntry.level.in_([2, 3])
+        ).all()
+        for ie in inc_entries:
+            key = (ie.source_lead_id, ie.level)
+            # If for current partner, prioritize it
+            if key not in income_by_lead_level or ie.partner_id == mid:
+                income_by_lead_level[key] = ie
+            if ie.partner_id:
+                partner_ids_to_fetch.add(ie.partner_id)
+        vendor_pids = {l.vendor_id for l in leads if getattr(l, 'vendor_id', None)}
+        partner_ids_to_fetch |= vendor_pids
+
+    partners_cache = {}
+    if partner_ids_to_fetch:
+        for p in db.query(OfficialPartner).filter(OfficialPartner.id.in_(partner_ids_to_fetch)).all():
+            partners_cache[p.id] = p
+
     def _get_support_info(lead):
         """For Source tab: resolve L2/L3 income entries and handler info for this lead."""
         info = {"guru": None, "zguru": None, "handlers": []}
-
-        # L2 entry for this lead
-        l2_entry = db.query(VGKTeamIncomeEntry).filter(
-            VGKTeamIncomeEntry.source_lead_id == lead.id,
-            VGKTeamIncomeEntry.level == 2,
-            VGKTeamIncomeEntry.status.in_(["PENDING", "HOLD"])
-        ).first()
-        if l2_entry:
-            l2p = db.query(OfficialPartner).filter(OfficialPartner.id == l2_entry.partner_id).first()
+        l2_entry = income_by_lead_level.get((lead.id, 2))
+        if l2_entry and l2_entry.status in ("PENDING", "HOLD"):
+            l2p = partners_cache.get(l2_entry.partner_id)
             info["guru"] = {
                 "entry_id": l2_entry.id,
                 "partner_id": l2_entry.partner_id,
@@ -1217,15 +1232,9 @@ def vgk_my_leads(
                 "support_confirmed": l2_entry.support_confirmed,
                 "commission_amount": float(l2_entry.commission_amount or 0),
             }
-
-        # L3 entry for this lead
-        l3_entry = db.query(VGKTeamIncomeEntry).filter(
-            VGKTeamIncomeEntry.source_lead_id == lead.id,
-            VGKTeamIncomeEntry.level == 3,
-            VGKTeamIncomeEntry.status.in_(["PENDING", "HOLD"])
-        ).first()
-        if l3_entry:
-            l3p = db.query(OfficialPartner).filter(OfficialPartner.id == l3_entry.partner_id).first()
+        l3_entry = income_by_lead_level.get((lead.id, 3))
+        if l3_entry and l3_entry.status in ("PENDING", "HOLD"):
+            l3p = partners_cache.get(l3_entry.partner_id)
             info["zguru"] = {
                 "entry_id": l3_entry.id,
                 "partner_id": l3_entry.partner_id,
@@ -1234,18 +1243,14 @@ def vgk_my_leads(
                 "support_confirmed": l3_entry.support_confirmed,
                 "commission_amount": float(l3_entry.commission_amount or 0),
             }
-
-        # Extra handlers: showroom/partner (vendor_id)
-        if getattr(lead, 'vendor_id', None):
-            vp = db.query(OfficialPartner).filter(OfficialPartner.id == lead.vendor_id).first()
-            if vp:
-                info["handlers"].append({
-                    "type": "partner",
-                    "name": vp.partner_name,
-                    "code": vp.partner_code,
-                    "id": vp.id,
-                })
-
+        if getattr(lead, 'vendor_id', None) and lead.vendor_id in partners_cache:
+            vp = partners_cache[lead.vendor_id]
+            info["handlers"].append({
+                "type": "partner",
+                "name": vp.partner_name,
+                "code": vp.partner_code,
+                "id": vp.id,
+            })
         return info
 
     def lead_dict(l):
@@ -1270,6 +1275,10 @@ def vgk_my_leads(
             "created_at": l.created_at.isoformat() if l.created_at else None,
             "updated_at": l.updated_at.isoformat() if l.updated_at else None,
             "company_id": l.company_id,
+            "associated_partner_id": getattr(l, "associated_partner_id", None),
+            "vgk_field_support_id": getattr(l, "vgk_field_support_id", None),
+            "is_source_l1": (l.associated_partner_id == mid) or (str(l.created_by_id) == mid_str and l.created_by_type == 'partner') or (str(l.source_ref_id) == mid_str and l.source_ref_type in ('partner', 'vgk_partner')),
+            "is_support_l5": (getattr(l, "vgk_field_support_id", None) == mid),
         }
 
         # DC-PRIVACY-001 (Sep 2026): Server-side Lead Contact Privacy & Masking
@@ -1285,20 +1294,12 @@ def vgk_my_leads(
         if norm in ("source", "source_marked"):
             base["support_info"] = _get_support_info(l)
         elif norm == "guru":
-            e = db.query(VGKTeamIncomeEntry).filter(
-                VGKTeamIncomeEntry.source_lead_id == l.id,
-                VGKTeamIncomeEntry.partner_id == mid,
-                VGKTeamIncomeEntry.level == 2
-            ).first()
+            e = income_by_lead_level.get((l.id, 2))
             base["support_confirmed"] = e.support_confirmed if e else None
             base["income_status"] = e.status if e else None
             base["commission_amount"] = float(e.commission_amount or 0) if e else 0
         elif norm == "zguru":
-            e = db.query(VGKTeamIncomeEntry).filter(
-                VGKTeamIncomeEntry.source_lead_id == l.id,
-                VGKTeamIncomeEntry.partner_id == mid,
-                VGKTeamIncomeEntry.level == 3
-            ).first()
+            e = income_by_lead_level.get((l.id, 3))
             base["support_confirmed"] = e.support_confirmed if e else None
             base["income_status"] = e.status if e else None
             base["commission_amount"] = float(e.commission_amount or 0) if e else 0
@@ -1316,6 +1317,17 @@ def vgk_my_leads(
 
         return base
 
+    # Stage-wise counts for Self (L1) files
+    self_stages = db.execute(sa_text("""
+        SELECT COALESCE(NULLIF(solar_pipeline_status, ''), status) AS stage, COUNT(*)
+        FROM crm_leads
+        WHERE associated_partner_id = :mid
+           OR (created_by_type = 'partner' AND created_by_id = :mid_str)
+           OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = :mid_str)
+        GROUP BY COALESCE(NULLIF(solar_pipeline_status, ''), status)
+    """), {"mid": mid, "mid_str": mid_str}).fetchall()
+    self_stage_counts = {r[0]: r[1] for r in self_stages if r[0]}
+
     return {
         "success": True,
         "total": total,
@@ -1331,7 +1343,213 @@ def vgk_my_leads(
             "source_marked": source_count,
             "field_assistant": support_count,
         },
+        "self_stage_counts": self_stage_counts,
         "data": [lead_dict(l) for l in leads]
+    }
+
+
+@router.get("/dashboard/leads/{lead_id}/solar-docs")
+def vgk_get_lead_solar_docs(
+    lead_id: int,
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """Fetch solar documents for a lead. Gated strictly to Source (L1) or Support (L5) partner."""
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    mid = current_member.id
+    mid_str = str(mid)
+    is_l1 = (lead.associated_partner_id == mid) or (str(lead.created_by_id) == mid_str and lead.created_by_type == 'partner') or (str(lead.source_ref_id) == mid_str and lead.source_ref_type in ('partner', 'vgk_partner'))
+    is_l5 = (getattr(lead, 'vgk_field_support_id', None) == mid)
+    if not (is_l1 or is_l5):
+        raise HTTPException(status_code=403, detail="Access denied. Only Source (L1) or Support (L5) partner can view documents.")
+    
+    rows = db.execute(sa_text("""
+        SELECT id, doc_category, doc_type, doc_label, doc_number,
+               file_name, original_name, file_size,
+               uploaded_by_id, uploaded_by_name, uploaded_at, notes
+        FROM crm_lead_solar_documents
+        WHERE lead_id = :lid
+        ORDER BY doc_category, doc_type
+    """), {"lid": lead_id}).fetchall()
+
+    docs = []
+    for r in rows:
+        docs.append({
+            "id":               r.id,
+            "doc_category":     r.doc_category,
+            "doc_type":         r.doc_type,
+            "doc_label":        r.doc_label,
+            "doc_number":       r.doc_number or "",
+            "file_name":        r.file_name,
+            "original_name":    r.original_name,
+            "file_size":        r.file_size,
+            "uploaded_by_id":   r.uploaded_by_id,
+            "uploaded_by_name": r.uploaded_by_name,
+            "uploaded_at":      r.uploaded_at.isoformat() if r.uploaded_at else None,
+            "notes":            r.notes or "",
+            "view_url":         f"/storage/{r.file_name}" if r.file_name else None,
+        })
+
+    has_vendor_gst = any(d["doc_type"] == "vendor_gst" for d in docs)
+    if not has_vendor_gst:
+        v_gst = db.execute(sa_text("""
+            SELECT id, vendor_name, gst_number, gst_certificate_url
+            FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            docs.append({
+                "id": f"vgst_{v_gst.id}",
+                "doc_category": "bank_link",
+                "doc_type": "vendor_gst",
+                "doc_label": f"Solar Vendor GST ({v_gst.vendor_name})",
+                "doc_number": v_gst.gst_number or "",
+                "file_name": raw_fn,
+                "original_name": "Visionera_GST_Registration_Certificate.pdf",
+                "file_size": 118277,
+                "uploaded_by_id": None,
+                "uploaded_by_name": f"{v_gst.vendor_name} (Solar Vendor)",
+                "uploaded_at": None,
+                "notes": f"Vendor Level GST Registration Certificate ({v_gst.vendor_name})",
+                "view_url": v_gst.gst_certificate_url,
+                "is_vendor_default": True
+            })
+
+    return {"success": True, "docs": docs, "count": len(docs)}
+
+
+@router.get("/dashboard/leads/{lead_id}/solar-docs/bundle")
+def vgk_download_lead_solar_docs_bundle(
+    lead_id: int,
+    section: str,
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """Download merged solar docs PDF for bank or discom. Gated to L1 or L5."""
+    from app.api.v1.endpoints.crm import _BANK_DOC_TYPES, _DISCOM_DOC_TYPES, _merge_pdf_bytes
+    from app.services.object_storage import storage_service as _ss
+    from fastapi.responses import Response as _R
+    from collections import namedtuple
+
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    mid = current_member.id
+    mid_str = str(mid)
+    is_l1 = (lead.associated_partner_id == mid) or (str(lead.created_by_id) == mid_str and lead.created_by_type == 'partner') or (str(lead.source_ref_id) == mid_str and lead.source_ref_type in ('partner', 'vgk_partner'))
+    is_l5 = (getattr(lead, 'vgk_field_support_id', None) == mid)
+    if not (is_l1 or is_l5):
+        raise HTTPException(status_code=403, detail="Access denied. Only Source (L1) or Support (L5) partner can download documents.")
+
+    sec = section.lower()
+    if sec == 'bank':
+        doc_types = _BANK_DOC_TYPES
+        label = 'Bank'
+    elif sec == 'discom':
+        doc_types = _DISCOM_DOC_TYPES
+        label = 'DISCOM'
+    else:
+        raise HTTPException(status_code=400, detail="section must be 'bank' or 'discom'")
+
+    placeholders = ','.join(f':t{i}' for i in range(len(doc_types)))
+    params = {"lid": lead_id, **{f"t{i}": t for i, t in enumerate(doc_types)}}
+    rows = db.execute(sa_text(
+        f"SELECT file_name, doc_type FROM crm_lead_solar_documents "
+        f"WHERE lead_id = :lid AND doc_type IN ({placeholders}) AND file_name IS NOT NULL"
+    ), params).fetchall()
+    rows = list(rows)
+
+    if sec == 'bank' and not any(r[1] == 'vendor_gst' for r in rows):
+        v_gst = db.execute(sa_text("""
+            SELECT gst_certificate_url FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst[0]:
+            FakeRow = namedtuple("FakeRow", ["file_name", "doc_type"])
+            rows.append(FakeRow(file_name=v_gst[0].replace("/storage/", ""), doc_type="vendor_gst"))
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No {label} documents found for this lead")
+
+    file_bytes_list = []
+    for r in rows:
+        b = _ss.get_file(r[0])
+        if b:
+            file_bytes_list.append((b, r[0], r[1]))
+
+    if not file_bytes_list:
+        raise HTTPException(status_code=404, detail=f"No {label} document files could be retrieved from storage")
+
+    merged_pdf = _merge_pdf_bytes(file_bytes_list, label)
+    cust_slug = "".join(c if c.isalnum() else "_" for c in (lead.name or f"Lead_{lead_id}")).strip("_")
+    filename = f"{cust_slug}_{label}_Documents.pdf"
+
+    return _R(
+        content=merged_pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.post("/dashboard/leads/{lead_id}/share-link")
+def vgk_lead_share_link(
+    lead_id: int,
+    request: Request,
+    body: dict = Body(default={}),
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """Generate a share link for a lead's documents, gated strictly to L1 (source) and L5 (support)."""
+    import secrets as _secrets_mod
+    import json as _json
+    from datetime import datetime, timezone as _tz, timedelta
+    from app.models.crm import CRMLead
+
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    is_source = (lead.associated_partner_id == current_member.id or lead.created_by_id == str(current_member.id))
+    is_support = (lead.vgk_field_support_id == current_member.id)
+    if not (is_source or is_support):
+        raise HTTPException(status_code=403, detail="Document access restricted: you must be the Source partner (L1) or Support partner (L5).")
+
+    doc_types = body.get("doc_types", None) if body else None
+    doc_filter_json = _json.dumps(doc_types) if doc_types and isinstance(doc_types, list) and len(doc_types) > 0 else None
+
+    token = _secrets_mod.token_urlsafe(40)
+    expires_at_utc = datetime.now(_tz.utc) + timedelta(hours=6)
+    partner_name = current_member.partner_name or f"Partner #{current_member.id}"
+
+    db.execute(sa_text("""
+        INSERT INTO crm_lead_share_tokens (token, lead_id, expires_at, created_by_id, created_by_name, doc_filter)
+        VALUES (:tok, :lid, :exp, :uid, :uname, :df)
+    """), {
+        "tok":   token,
+        "lid":   lead_id,
+        "exp":   expires_at_utc,
+        "uid":   current_member.id,
+        "uname": partner_name,
+        "df":    doc_filter_json,
+    })
+    db.commit()
+
+    from app.api.v1.endpoints.crm import _canonical_base
+    base_url = _canonical_base(request)
+    share_url = f"{base_url}/lead-share.html?token={token}"
+
+    return {
+        "success": True,
+        "share_url": share_url,
+        "expires_at": expires_at_utc.isoformat(),
+        "token": token
     }
 
 
@@ -2555,6 +2773,32 @@ def vgk_dashboard_summary(
     orders_total = int(_agg.orders_total); orders_pend = int(_agg.orders_pend)
     tickets_total = int(_agg.tickets_total); tickets_open = int(_agg.tickets_open)
 
+    # ── 4b. Authoritative recursive downline team level counts ───────────────
+    level_rows = db.execute(sa_text("""
+        WITH RECURSIVE downline AS (
+            SELECT id, parent_partner_id, 2 AS level
+            FROM official_partners
+            WHERE parent_partner_id = :pid
+            UNION ALL
+            SELECT p.id, p.parent_partner_id, d.level + 1
+            FROM official_partners p
+            JOIN downline d ON p.parent_partner_id = d.id
+        )
+        SELECT level, count(*) as count
+        FROM downline
+        GROUP BY level
+        ORDER BY level
+    """), {"pid": pid}).fetchall()
+
+    team_levels = [{"level": r[0], "label": f"L{r[0]}", "count": int(r[1])} for r in level_rows]
+    total_downline = sum(r["count"] for r in team_levels)
+    l3_count = 0
+    if total_downline > 0:
+        total_team = total_downline
+        l2_count = next((r["count"] for r in team_levels if r["level"] == 2), 0)
+        l3_count = next((r["count"] for r in team_levels if r["level"] == 3), 0)
+        l1_direct = l2_count  # Keep for backward compatibility
+
     # ── 5. Upline ──────────────────────────────────────────────────────────────
     upline_info = None
     if current_member.parent_partner_id:
@@ -2625,9 +2869,12 @@ def vgk_dashboard_summary(
     if vgk4u_status:
         vgk4u_status["career_designation_label"] = vgk4u_status.get("career_designation", "Member")
         vgk4u_status["personal_prod_tier"] = vgk4u_status.get("personal_prod_qualification", "Base")
-        vgk4u_status["personal_prod_tier_label"] = vgk4u_status.get("personal_prod_qualification", "Base")
+        vgk4u_status["personal_prod_tier_label"] = "Active Channel Partner (5.0%)" if (vgk4u_status.get("own_qualifying_files") or 0) >= 1 else "Entry Member (0.0%)"
         vgk4u_status["active_legs"] = vgk4u_status.get("active_team_legs", 0)
-        vgk4u_status["effective_personal_rate"] = vgk4u_status.get("effective_personal_producer_rate", 6.0)
+        vgk4u_status["effective_personal_rate"] = vgk4u_status.get("effective_personal_producer_rate", 5.0)
+        vgk4u_status["team_differential_pct"] = float(vgk4u_status.get("team_differential_rate") or 0.0)
+        vgk4u_status["cumulative_differential_pct"] = float(vgk4u_status.get("cumulative_differential_rate") or 0.0)
+        vgk4u_status["sponsor_override_pct"] = float(vgk4u_status.get("sponsor_override_rate") or (1.0 if (vgk4u_status.get("own_qualifying_files") or 0) >= 1 else 0.0))
 
     career_cfg_rows = db.execute(sa_text("""
         SELECT designation_code, designation_name, hierarchy_order,
@@ -2637,8 +2884,12 @@ def vgk_dashboard_summary(
         WHERE is_active = TRUE
         ORDER BY hierarchy_order ASC
     """)).fetchall()
-    career_ladder = [
-        {
+    cum_diff_acc = 0.0
+    career_ladder = []
+    for r in career_cfg_rows:
+        diff_val = float(r[7])
+        cum_diff_acc += diff_val
+        career_ladder.append({
             "code": r[0],
             "name": r[1],
             "label": r[1],
@@ -2652,31 +2903,25 @@ def vgk_dashboard_summary(
             "required_active_legs": r[5],
             "self_pct": float(r[6]),
             "self_earning_pct": float(r[6]),
-            "diff_pct": float(r[7]),
-            "team_differential_pct": float(r[7]),
-        }
-        for r in career_cfg_rows
-    ]
+            "diff_pct": diff_val,
+            "team_differential_pct": diff_val,
+            "cumulative_diff_pct": cum_diff_acc,
+            "cumulative_differential_pct": cum_diff_acc,
+            "sponsor_override_pct": 1.0 if r[4] >= 1 else 0.0,
+        })
 
-    prod_cfg_rows = db.execute(sa_text("""
-        SELECT tier_code, tier_name, min_qualifying_files, commission_rate_pct
-        FROM vgk4u_personal_prod_configs
-        WHERE is_active = TRUE
-        ORDER BY min_qualifying_files ASC
-    """)).fetchall()
-    prod_ladder = [
-        {
-            "code": r[0],
-            "tier_code": r[0],
-            "name": r[1],
-            "label": r[1],
-            "tier_name": r[1],
-            "min_files": r[2],
-            "commission_pct": float(r[3]),
-            "commission_rate_pct": float(r[3]),
-        }
-        for r in prod_cfg_rows
-    ]
+    prod_ladder = [{
+        "code": "BASE",
+        "tier_code": "BASE",
+        "name": "Direct Personal Sales",
+        "label": "Direct Personal Sales",
+        "tier_name": "Direct Personal Sales",
+        "min_files": 1,
+        "max_files": None,
+        "rank_order": 1,
+        "commission_pct": 5.0,
+        "commission_rate_pct": 5.0,
+    }]
 
     return {
         "success": True,
@@ -2710,7 +2955,7 @@ def vgk_dashboard_summary(
             "pending_points": pts_pending,
             "recent": recent_pts_list,
         },
-        "team":    {"total": total_team, "l1_direct": l1_direct, "l2": l2_count},
+        "team":    {"total": total_team, "l1_direct": l1_direct, "l2": l2_count, "l3": l3_count, "levels": team_levels},
         "leads":   {"total": leads_total,   "new": leads_new,  "converted": leads_converted},
         "orders":  {"total": orders_total,  "pending": orders_pend},
         "tickets": {"total": tickets_total, "open": tickets_open},

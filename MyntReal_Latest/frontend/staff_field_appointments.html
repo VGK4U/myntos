@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - Field Appointments & Supporting Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f8fafc; 
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .content-area { 
+            padding: 16px 20px;
+            max-width: 100%;
+        }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #064e3b, #047857);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(6, 78, 59, 0.15);
+        }
+        .page-banner h1 { font-size: 18px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .page-banner p { opacity: .9; margin: 2px 0 0 0; font-size: 12px; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .metric-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+        .metric-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+        .metric-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+        .filter-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .period-pill {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .period-pill:hover { background: #e2e8f0; color: #0f172a; }
+        .period-pill.active { background: #059669; border-color: #059669; color: white; }
+
+        .table-wrap {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            overflow-x: auto !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 24px;
+        }
+        table.appt-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1400px; }
+        table.appt-table th { background: #1e293b; color: white; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 10px 12px; white-space: nowrap; user-select: none; }
+        table.appt-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
+        table.appt-table tr:hover td { background: #f8fafc; }
+
+        .badge-bank { background: #059669; color: white; font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+        .badge-cust { background: #0284c7; color: white; font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+        .badge-other { background: #d97706; color: white; font-size: 10.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+
+        .status-pill { font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; }
+        .status-assigned { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .status-accepted { background: #cffafe; color: #155e75; border: 1px solid #a5f3fc; }
+        .status-in_progress { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .status-reached { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+        .status-completed { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-rescheduled { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .status-unable_to_visit { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-cancelled { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        .action-btn { padding: 4px 8px; font-size: 11px; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .action-btn:hover { opacity: 0.9; }
+
+        .photo-thumb { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 1px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+        <!-- Banner -->
+        <div class="page-banner">
+            <div>
+                <h1><i class="fas fa-calendar-check me-2"></i>Field Appointments &amp; Supporting Staff</h1>
+                <p>Physical visits for Bank Verification (Option 1), Customer Location (Option 2), and Other official visits (Option 3)</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-light btn-sm text-success fw-bold" onclick="openCreateAppointmentModal()">
+                    <i class="fas fa-plus-circle me-1"></i>Fix New Appointment
+                </button>
+                <button type="button" class="btn btn-outline-light btn-sm" onclick="loadAppointments()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Total Appointments</div>
+                    <div class="metric-val" id="metricTotal">0</div>
+                </div>
+                <div class="metric-icon" style="background:#e0f2fe; color:#0284c7;"><i class="fas fa-calendar-alt"></i></div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Completed Visits</div>
+                    <div class="metric-val" id="metricCompleted" style="color:#059669;">0</div>
+                </div>
+                <div class="metric-icon" style="background:#d1fae5; color:#059669;"><i class="fas fa-check-circle"></i></div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Visited On-Time</div>
+                    <div class="metric-val" id="metricOnTime" style="color:#10b981;">0</div>
+                </div>
+                <div class="metric-icon" style="background:#ecfdf5; color:#10b981;"><i class="fas fa-clock"></i></div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">On-Time %</div>
+                    <div class="metric-val" id="metricOnTimePct" style="color:#0284c7;">0%</div>
+                </div>
+                <div class="metric-icon" style="background:#f0f9ff; color:#0284c7;"><i class="fas fa-percentage"></i></div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Reached Location</div>
+                    <div class="metric-val" id="metricReached" style="color:#8b5cf6;">0</div>
+                </div>
+                <div class="metric-icon" style="background:#f5f3ff; color:#8b5cf6;"><i class="fas fa-map-marker-alt"></i></div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Pending / In-Progress</div>
+                    <div class="metric-val" id="metricPending" style="color:#f59e0b;">0</div>
+                </div>
+                <div class="metric-icon" style="background:#fef3c7; color:#f59e0b;"><i class="fas fa-hourglass-half"></i></div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div class="d-flex align-items-center gap-1 flex-wrap" id="periodPills">
+                    <button class="period-pill active" onclick="setPeriod('all', this)">Overall</button>
+                    <button class="period-pill" onclick="setPeriod('today', this)">Today</button>
+                    <button class="period-pill" onclick="setPeriod('yesterday', this)">Yesterday</button>
+                    <button class="period-pill" onclick="setPeriod('this_week', this)">This Week</button>
+                    <button class="period-pill" onclick="setPeriod('last_week', this)">Last Week</button>
+                    <button class="period-pill" onclick="setPeriod('this_month', this)">This Month</button>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="viewAllSwitch" onchange="loadAppointments()">
+                    <label class="form-check-label small fw-bold text-muted" for="viewAllSwitch">View All Team Appointments</label>
+                </div>
+            </div>
+
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search Code, Lead, Staff, Phone..." oninput="debounceSearch()">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" id="visitTypeSelect" onchange="loadAppointments()">
+                        <option value="all">All Visit Types</option>
+                        <option value="visit_bank">Option 1: Bank Visit</option>
+                        <option value="visit_customer">Option 2: Customer Visit</option>
+                        <option value="others">Option 3: Others</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" id="statusSelect" onchange="loadAppointments()">
+                        <option value="all">All Statuses</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="reached">Reached Location</option>
+                        <option value="completed">Completed</option>
+                        <option value="rescheduled">Rescheduled</option>
+                        <option value="unable_to_visit">Unable to Visit</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-center gap-1">
+                    <input type="date" class="form-control form-control-sm" id="dateFrom" title="From Date" onchange="loadAppointments()">
+                    <span class="text-muted small">to</span>
+                    <input type="date" class="form-control form-control-sm" id="dateTo" title="To Date" onchange="loadAppointments()">
+                </div>
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
+                        <i class="fas fa-times me-1"></i>Reset Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments Table -->
+        <div class="table-wrap">
+            <table class="appt-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px; text-align:center;">#</th>
+                        <th>Appt Code</th>
+                        <th>Date &amp; Time</th>
+                        <th>Type</th>
+                        <th>Lead Details</th>
+                        <th>Destination Location</th>
+                        <th>Assigned Staff</th>
+                        <th>Status</th>
+                        <th>Reached Status</th>
+                        <th>Completion &amp; Evidence</th>
+                        <th style="text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="apptsTableBody">
+                    <tr>
+                        <td colspan="11" class="text-center py-4 text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading field appointments...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+
+    <!-- Reassign Modal (Leadership) -->
+    <div class="modal fade" id="reassignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h6 class="modal-title mb-0"><i class="fas fa-user-edit me-2"></i>Reassign Field Appointment</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="reassignApptId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Appointment Code</label>
+                        <input type="text" class="form-control form-control-sm" id="reassignApptCode" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select New Supporting Staff *</label>
+                        <select class="form-select form-select-sm" id="reassignStaffSelect">
+                            <option value="">Loading staff...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Reason for Reassignment</label>
+                        <textarea class="form-control form-control-sm" id="reassignReason" rows="2" placeholder="e.g. Previous staff unavailable / Territory re-balance"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="submitReassignment()">Confirm Reassign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Evidence / Detail Modal -->
+    <div class="modal fade" id="evidenceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h6 class="modal-title mb-0"><i class="fas fa-clipboard-check me-2"></i>Appointment Visit Report &amp; Evidence</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="evidenceModalBody">
+                    <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading details...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/menu-master.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/crm/field-appointments';
+        let currentFilterPeriod = 'all';
+        let searchTimeout = null;
+        let supportingStaffCache = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') {
+                try { await StaffSidebar.init(); } catch (e) { console.warn('Sidebar init error:', e); }
+            }
+            if (typeof StaffHeader !== 'undefined') {
+                try {
+                    StaffHeader.inject('Field Appointments', 'fas fa-calendar-check');
+                    StaffHeader.init();
+                } catch (e) { console.warn('Header init error:', e); }
+            }
+            await loadSupportingStaffList();
+            await loadAppointments();
+        });
+
+        function setPeriod(period, btn) {
+            currentFilterPeriod = period;
+            document.querySelectorAll('#periodPills .period-pill').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            // Clear manual date pickers when using quick period
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            loadAppointments();
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadAppointments, 350);
+        }
+
+        function resetFilters() {
+            currentFilterPeriod = 'all';
+            document.querySelectorAll('#periodPills .period-pill').forEach((p, idx) => {
+                if (idx === 0) p.classList.add('active');
+                else p.classList.remove('active');
+            });
+            document.getElementById('searchInput').value = '';
+            document.getElementById('visitTypeSelect').value = 'all';
+            document.getElementById('statusSelect').value = 'all';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('viewAllSwitch').checked = false;
+            loadAppointments();
+        }
+
+        async function loadSupportingStaffList() {
+            try {
+                const r = await staffFetch(`${API_BASE}/supporting-staff`);
+                if (r.ok) {
+                    const res = await r.json();
+                    supportingStaffCache = res.data || [];
+                    const sel = document.getElementById('reassignStaffSelect');
+                    if (sel) {
+                        sel.innerHTML = '<option value="">— Select New Staff —</option>' +
+                            supportingStaffCache.map(s => `<option value="${s.id}">${s.full_name} (${s.emp_code}) - ${s.department || 'Staff'}</option>`).join('');
+                    }
+                }
+            } catch (e) {
+                console.warn('Error loading staff:', e);
+            }
+        }
+
+        async function loadAppointments() {
+            const tbody = document.getElementById('apptsTableBody');
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading appointments...</td></tr>';
+
+            const params = new URLSearchParams();
+            params.set('filter_period', currentFilterPeriod);
+            
+            const vType = document.getElementById('visitTypeSelect').value;
+            if (vType !== 'all') params.set('visit_type', vType);
+
+            const st = document.getElementById('statusSelect').value;
+            if (st !== 'all') params.set('status', st);
+
+            const dFrom = document.getElementById('dateFrom').value;
+            if (dFrom) params.set('date_from', dFrom);
+
+            const dTo = document.getElementById('dateTo').value;
+            if (dTo) params.set('date_to', dTo);
+
+            const q = document.getElementById('searchInput').value.trim();
+            if (q) params.set('search', q);
+
+            const viewAll = document.getElementById('viewAllSwitch').checked;
+            params.set('view_all', viewAll ? 'true' : 'false');
+
+            try {
+                const res = await staffFetch(`${API_BASE}/my-assigned?${params.toString()}`);
+                if (!res.ok) throw new Error('Failed to fetch field appointments');
+                const data = await res.json();
+
+                renderMetrics(data.metrics || {});
+                renderTable(data.data || []);
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>${err.message}</td></tr>`;
+            }
+        }
+
+        function renderMetrics(m) {
+            document.getElementById('metricTotal').textContent = m.total_appointments || 0;
+            document.getElementById('metricCompleted').textContent = m.visited_completed || 0;
+            document.getElementById('metricOnTime').textContent = m.visited_on_time || 0;
+            document.getElementById('metricOnTimePct').textContent = `${m.on_time_pct || 0}%`;
+            document.getElementById('metricReached').textContent = m.reached_count || 0;
+            document.getElementById('metricPending').textContent = m.pending_count || 0;
+        }
+
+        function renderTable(items) {
+            const tbody = document.getElementById('apptsTableBody');
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5 text-muted"><i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>No field appointments found matching filters.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map((item, index) => {
+                // Visit Type Badge
+                let typeBadge = '';
+                let destTitle = '';
+                let destSub = '';
+                let mapsUrl = '';
+
+                if (item.visit_type === 'visit_bank') {
+                    typeBadge = '<span class="badge-bank"><i class="fas fa-university me-1"></i>Bank</span>';
+                    destTitle = item.bank_name || 'Bank Visit';
+                    destSub = item.bank_branch ? `${item.bank_branch}, ${item.bank_address || ''}` : (item.bank_address || '');
+                    mapsUrl = item.bank_google_maps_url;
+                } else if (item.visit_type === 'visit_customer') {
+                    typeBadge = '<span class="badge-cust"><i class="fas fa-home me-1"></i>Customer</span>';
+                    destTitle = item.customer_address || 'Customer Location';
+                    destSub = [item.customer_area, item.customer_city, item.customer_pincode].filter(Boolean).join(', ');
+                    mapsUrl = item.customer_google_maps_url;
+                } else {
+                    typeBadge = '<span class="badge-other"><i class="fas fa-map-marker-alt me-1"></i>Other</span>';
+                    destTitle = item.other_location_title || 'Other Visit';
+                    destSub = item.other_location_address || '';
+                    mapsUrl = item.other_google_maps_url;
+                }
+
+                // Lead info
+                const leadName = item.lead ? item.lead.name : `Lead #${item.lead_id}`;
+                const leadPhone = item.lead ? item.lead.phone : '';
+                const cleanPhone = (leadPhone || '').replace(/\D/g, '').slice(-10);
+
+                // Staff info
+                const staffName = item.assigned_to ? item.assigned_to.full_name : `Staff #${item.assigned_to_id}`;
+                const staffCode = item.assigned_to ? item.assigned_to.emp_code : '';
+                const staffDept = item.assigned_to ? item.assigned_to.department : '';
+
+                // Status
+                const statusCls = `status-${item.status || 'assigned'}`;
+                const statusLabel = (item.status || 'assigned').replace(/_/g, ' ');
+
+                // Reached status
+                let reachedHtml = '<span class="text-muted small">—</span>';
+                if (item.reached_at) {
+                    const rTime = new Date(item.reached_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                    reachedHtml = `<div><span class="badge bg-purple" style="font-size:10px;"><i class="fas fa-check-double me-1"></i>Reached ${rTime}</span></div>`;
+                }
+
+                // Completion evidence
+                let evidenceHtml = '<span class="text-muted small">—</span>';
+                if (item.status === 'completed') {
+                    const pUrl = item.photo_url || item.photo_path;
+                    const imgThumb = pUrl ? `<img src="${pUrl}" class="photo-thumb" onclick="openEvidenceModal(${item.id})" title="Click to view photo">` : '';
+                    const gpsIcon = item.is_gps_verified 
+                        ? '<span class="badge bg-success" style="font-size:9.5px;" title="GPS Accuracy verified"><i class="fas fa-satellite"></i> GPS OK</span>'
+                        : '<span class="badge bg-secondary" style="font-size:9.5px;">No GPS</span>';
+                    const onTimeBadge = item.visited_on_time 
+                        ? '<span class="badge bg-success ms-1" style="font-size:9.5px;">On-Time</span>' 
+                        : '<span class="badge bg-warning text-dark ms-1" style="font-size:9.5px;">Late</span>';
+                    evidenceHtml = `<div class="d-flex align-items-center gap-1">${imgThumb}<div>${gpsIcon}${onTimeBadge}</div></div>`;
+                }
+
+                const mapsBtn = mapsUrl 
+                    ? `<a href="${mapsUrl}" target="_blank" class="action-btn text-primary bg-light border" title="Open in Google Maps"><i class="fas fa-map-marked-alt"></i></a>` 
+                    : '';
+
+                const callBtn = cleanPhone 
+                    ? `<a href="tel:${cleanPhone}" class="action-btn text-success bg-light border" title="Call Lead"><i class="fas fa-phone-alt"></i></a>` 
+                    : '';
+
+                const safeLeadName = leadName.replace(/'/g, "\\'");
+                const historyBtn = `<button class="action-btn text-secondary bg-light border" onclick="openUniversalHistory({entityType:'crm_lead', entityId:${item.lead_id}, name:'${safeLeadName}', phone:'${cleanPhone}'})" title="Universal History"><i class="fas fa-history"></i></button>`;
+
+                const reassignBtn = `<button class="action-btn text-warning bg-light border" onclick="openReassignModal(${item.id}, '${item.appointment_code}')" title="Reassign Staff"><i class="fas fa-user-edit"></i></button>`;
+
+                const viewBtn = `<button class="action-btn text-dark bg-light border" onclick="openEvidenceModal(${item.id})" title="View Full Report"><i class="fas fa-eye"></i></button>`;
+
+                return `
+                <tr>
+                    <td style="text-align:center; font-weight:600; color:#64748b;">${index + 1}</td>
+                    <td>
+                        <strong class="text-primary font-monospace" style="font-size:12px;">${item.appointment_code}</strong>
+                        <div style="font-size:10px; color:#94a3b8;">Created: ${formatDate(item.created_at)}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:700;">${item.appointment_date}</div>
+                        <div style="font-size:11px; color:#64748b;">${item.preferred_time || 'Anytime'}</div>
+                    </td>
+                    <td>${typeBadge}</td>
+                    <td>
+                        <div style="font-weight:700; color:#0f172a;">${leadName}</div>
+                        <div style="font-size:11px; color:#64748b; font-family:monospace;">${leadPhone || '—'}</div>
+                    </td>
+                    <td style="max-width:240px; overflow:hidden; text-overflow:ellipsis;">
+                        <div style="font-weight:600; color:#1e293b;" title="${destTitle}">${destTitle}</div>
+                        <div style="font-size:10.5px; color:#64748b;" title="${destSub}">${destSub}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:600;">${staffName}</div>
+                        <div style="font-size:10.5px; color:#64748b;">${staffCode ? staffCode + ' &bull; ' : ''}${staffDept || 'Staff'}</div>
+                    </td>
+                    <td><span class="status-pill ${statusCls}">${statusLabel}</span></td>
+                    <td>${reachedHtml}</td>
+                    <td>${evidenceHtml}</td>
+                    <td style="text-align:center;">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            ${callBtn}
+                            ${mapsBtn}
+                            ${historyBtn}
+                            ${reassignBtn}
+                            ${viewBtn}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function formatDate(dStr) {
+            if (!dStr) return '—';
+            return new Date(dStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function openCreateAppointmentModal() {
+            // Pick or prompt for lead, or user can open from CRM lead table
+            const leadIdStr = prompt('Enter CRM Lead ID to fix appointment for:');
+            if (!leadIdStr || isNaN(parseInt(leadIdStr))) return;
+            const leadId = parseInt(leadIdStr);
+
+            staffFetch(`/api/v1/crm/leads/${leadId}`)
+                .then(r => r.json())
+                .then(data => {
+                    const lead = data.data || { id: leadId, name: `Lead #${leadId}` };
+                    window.openFixAppointmentModal(lead, () => {
+                        loadAppointments();
+                    });
+                })
+                .catch(err => {
+                    window.openFixAppointmentModal({ id: leadId, name: `Lead #${leadId}` }, () => {
+                        loadAppointments();
+                    });
+                });
+        }
+
+        function openReassignModal(aptId, code) {
+            document.getElementById('reassignApptId').value = aptId;
+            document.getElementById('reassignApptCode').value = code;
+            document.getElementById('reassignReason').value = '';
+            new bootstrap.Modal(document.getElementById('reassignModal')).show();
+        }
+
+        async function submitReassignment() {
+            const aptId = document.getElementById('reassignApptId').value;
+            const newStaffId = document.getElementById('reassignStaffSelect').value;
+            const reason = document.getElementById('reassignReason').value.trim();
+
+            if (!newStaffId) {
+                alert('Please select a supporting staff member');
+                return;
+            }
+
+            try {
+                const res = await staffFetch(`${API_BASE}/${aptId}/reassign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_assigned_to_id: parseInt(newStaffId), reason })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Reassignment failed');
+
+                bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
+                loadAppointments();
+                alert('Appointment successfully reassigned!');
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function openEvidenceModal(aptId) {
+            const body = document.getElementById('evidenceModalBody');
+            body.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            new bootstrap.Modal(document.getElementById('evidenceModal')).show();
+
+            try {
+                const res = await staffFetch(`${API_BASE}/${aptId}`);
+                if (!res.ok) throw new Error('Failed to load appointment details');
+                const data = await res.json();
+                const apt = data.data;
+
+                const pUrl = apt.photo_url || apt.photo_path;
+                const photoBlock = pUrl 
+                    ? `<div class="text-center my-3"><img src="${pUrl}" style="max-width:100%; max-height:360px; border-radius:10px; border:1px solid #cbd5e1; box-shadow:0 4px 15px rgba(0,0,0,0.1);"></div>`
+                    : '<div class="alert alert-light text-center small text-muted my-2">No photo evidence uploaded yet</div>';
+
+                let mapsLink = '';
+                if (apt.visit_latitude && apt.visit_longitude) {
+                    mapsLink = `<a href="https://maps.google.com/?q=${apt.visit_latitude},${apt.visit_longitude}" target="_blank" class="btn btn-sm btn-outline-success"><i class="fas fa-external-link-alt me-1"></i>View Captured GPS on Google Maps</a>`;
+                }
+
+                body.innerHTML = `
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded bg-light">
+                                <div class="text-muted small">APPOINTMENT CODE</div>
+                                <div class="fw-bold text-primary font-monospace">${apt.appointment_code}</div>
+                                <div class="mt-2 text-muted small">TYPE &amp; SCHEDULE</div>
+                                <div class="fw-bold">${apt.visit_type.toUpperCase().replace(/_/g, ' ')} &bull; ${apt.appointment_date} (${apt.preferred_time || 'Anytime'})</div>
+                                <div class="mt-2 text-muted small">PURPOSE</div>
+                                <div>${apt.purpose || '—'}</div>
+                                <div class="mt-2 text-muted small">TELECALLER INSTRUCTIONS</div>
+                                <div>${apt.telecaller_instructions || '—'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded bg-light">
+                                <div class="text-muted small">STATUS &amp; TIMELINE</div>
+                                <div><span class="status-pill status-${apt.status}">${apt.status.toUpperCase().replace(/_/g, ' ')}</span></div>
+                                <div class="mt-2 text-muted small">REACHED LOCATION</div>
+                                <div>${apt.reached_at ? new Date(apt.reached_at).toLocaleString('en-IN') : '—'}</div>
+                                <div class="mt-2 text-muted small">COMPLETED AT</div>
+                                <div>${apt.completed_at ? new Date(apt.completed_at).toLocaleString('en-IN') : '—'}</div>
+                                <div class="mt-2 text-muted small">GPS VERIFICATION</div>
+                                <div>${apt.is_gps_verified ? '<span class="badge bg-success">GPS Verified (Accuracy &le; 150m)</span>' : '<span class="badge bg-secondary">Unverified / No GPS</span>'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${photoBlock}
+
+                    <div class="mt-3 p-3 border rounded" style="background:#f8fafc;">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-clipboard-list me-1 text-primary"></i>Outcome &amp; Visit Remarks</h6>
+                        <div class="mb-1"><strong>Outcome Status:</strong> ${apt.outcome_status ? apt.outcome_status.toUpperCase().replace(/_/g, ' ') : '—'}</div>
+                        <div><strong>Outcome Summary:</strong> ${apt.outcome_summary || '—'}</div>
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
+                            <div>${mapsLink}</div>
+                            <div class="small text-muted">${apt.timesheet_entry_id ? 'Timesheet Logged (ID #' + apt.timesheet_entry_id + ')' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                body.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

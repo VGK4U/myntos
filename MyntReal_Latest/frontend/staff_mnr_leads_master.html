@@ -13,6 +13,7 @@
 <script src="/public/js/crm-handler-confirm.js"></script>
 <script src="/public/js/universal-history-modal.js"></script>
 <script src="/public/js/mnr-map-modal.js"></script>
+<script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh}
@@ -1020,6 +1021,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
     <div class="modal-header">
       <h3 id="editModalTitle">Edit Lead</h3>
       <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-sm" id="btnEditModalFixAppointment" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:6px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;cursor:pointer;font-weight:600;" onclick="openFixAppointmentFromEditModal()"><i class="fas fa-calendar-check"></i> Fix Appointment</button>
         <button type="button" class="btn btn-sm" id="btnEditModalHistory" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:6px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;cursor:pointer;font-weight:600;" onclick="openHistoryFromEditModal()"><i class="fas fa-history"></i> History</button>
         <button class="modal-close" onclick="closeEditModal()">&times;</button>
       </div>
@@ -1733,7 +1735,7 @@ const STATUS_LABELS = {
   proposal:'Proposal', on_hold:'On Hold', waiting_for_bank_loan:'With Bank', bank_loan_rejected:'Loan Rejected', won:'Won', lost:'Lost'
 };
 
-const TABS = [
+let TABS = [
   {key:'solar',      label:'Solar',        icon:'fa-solar-panel',    category:'Solar',        cls:'t-solar'},
   {key:'ev-b2b',     label:'EV B2B',       icon:'fa-truck',          category:'EV B2B',       cls:'t-ev-b2b'},
   {key:'ev-b2c',     label:'EV B2C',       icon:'fa-car',            category:'EV B2C',       cls:'t-ev-b2c'},
@@ -2466,7 +2468,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="text-align:center;min-width:100px">${typeof _vgkCell==='function'?_vgkCell(l, l.company_id, _sdName):'—'}</td>
-        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="openFixAppointmentFromMnr(${l.id})" title="Fix Field Appointment"><i class="fas fa-calendar-check"></i> Visit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     } else if (isB2B) {
       const bStage = l.ev_b2b_stage||'';
@@ -2505,7 +2507,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="font-size:10.5px">${cr}</td>
-        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="openFixAppointmentFromMnr(${l.id})" title="Fix Field Appointment"><i class="fas fa-calendar-check"></i> Visit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     } else {
       const src = l.source ? `<span class="source-tag">${esc(l.source)}</span>` : '—';
@@ -2542,7 +2544,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="font-size:10.5px">${cr}</td>
-        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="openFixAppointmentFromMnr(${l.id})" title="Fix Field Appointment"><i class="fas fa-calendar-check"></i> Visit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     }
   }).join('');
@@ -3813,6 +3815,42 @@ function openLeadHistory(leadId) {
 function openHistoryFromEditModal() {
   if (!editingLead) return;
   openLeadHistory(editingLead.id);
+}
+
+function openFixAppointmentFromMnr(leadId) {
+  const l = (_leadsCache || []).find(x => x.id == leadId) || (editingLead && editingLead.id == leadId ? editingLead : null);
+  if (!l) {
+    if (typeof window.openFixAppointmentModal === 'function') {
+      window.openFixAppointmentModal({ id: leadId }, () => {
+        if (typeof loadLeads === 'function') loadLeads();
+      });
+    }
+    return;
+  }
+  if (typeof window.openFixAppointmentModal === 'function') {
+    window.openFixAppointmentModal({
+      id: l.id,
+      name: l.name,
+      phone: l.phone || l.mobile_number || '',
+      address: l.address || '',
+      city: l.city || '',
+      area: l.area || '',
+      pincode: l.pincode || '',
+      bank_name: l.loan_bank || l.bank_name || '',
+      bank_branch: l.bank_branch || '',
+      bank_address: l.bank_address || '',
+      google_maps_url: l.google_maps_link || l.google_maps_url || '',
+      company_id: l.company_id,
+      category: activeTab || 'Workflow Lead'
+    }, () => {
+      if (typeof loadLeads === 'function') loadLeads();
+    });
+  }
+}
+
+function openFixAppointmentFromEditModal() {
+  if (!editingLead) return;
+  openFixAppointmentFromMnr(editingLead.id);
 }
 
 function renderStaffVisitsSection(lead) {
@@ -5460,16 +5498,82 @@ function showToast(msg,type='success'){const t=document.getElementById('toast');
 function refreshPage(){if(activeTab==='etc')loadEtcStudents(_etcPage);else loadData();loadTabCounts();}
 
 // ── Init ──────────────────────────────────────────────────────────────────
-buildTabNav();
-buildTableHead();
-document.querySelectorAll('.solar-only').forEach(el=>el.style.display=''); // Solar is default tab
-// Solar is the default tab — show export buttons immediately
-(function(){const seb=document.getElementById('solarExportBtns');if(seb)seb.style.display='flex';})();
+let _initIsSaaS = false;
+try {
+  const _rawStaffUser = localStorage.getItem('staff_user');
+  if (_rawStaffUser) {
+    const _uObj = JSON.parse(_rawStaffUser);
+    const _rCode = (_uObj.role?.role_code || _uObj.role_code || '').toLowerCase();
+    const _sType = (_uObj.staff_type || '').toUpperCase();
+    if (_rCode.startsWith('tenant_') || _sType === 'TENANT_ADMIN' || _sType === 'SAAS_CLIENT' || _sType === 'SAAS_TENANT' || _uObj.company_segment === 'SEGMENT_B_SAAS') {
+      _initIsSaaS = true;
+    }
+  }
+} catch(_) {}
+
+if (!_initIsSaaS) {
+  buildTabNav();
+  buildTableHead();
+  document.querySelectorAll('.solar-only').forEach(el=>el.style.display=''); // Solar is default tab
+  (function(){const seb=document.getElementById('solarExportBtns');if(seb)seb.style.display='flex';})();
+} else {
+  // Pre-set SaaS banner and loading state
+  const bannerH1 = document.querySelector('.page-banner h1');
+  if (bannerH1) bannerH1.innerHTML = '<i class="fas fa-layer-group me-1"></i>Category-wise Leads';
+  const bannerP = document.querySelector('.page-banner p');
+  if (bannerP) bannerP.textContent = 'Segment-wise operational pipelines and workflow management';
+  const tabNavEl = document.getElementById('tabNav');
+  if (tabNavEl) tabNavEl.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:#6b7280"><i class="fas fa-spinner fa-spin me-2"></i>Loading tenant segments...</div>';
+}
 
 // DC-OPEN-LEAD-001: ?open_lead=ID — auto-open a specific lead after the tab loads.
 const _openLeadId = parseInt(new URLSearchParams(window.location.search).get('open_lead')) || 0;
 
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded', async () => {
+  // SaaS Dynamic Segment Loading
+  try {
+    const _segRes = await staffFetch('/api/v1/saas/crm-setup/segments');
+    if (_segRes && _segRes.ok) {
+      const _segData = await _segRes.json();
+      const isSaaS = Boolean(_segData.is_saas_tenant || _initIsSaaS);
+      if (isSaaS) {
+        const bannerH1 = document.querySelector('.page-banner h1');
+        if (bannerH1) bannerH1.innerHTML = '<i class="fas fa-layer-group me-1"></i>Category-wise Leads';
+        const bannerP = document.querySelector('.page-banner p');
+        if (bannerP) bannerP.textContent = 'Segment-wise operational pipelines and workflow management';
+      }
+      const _segs = _segData.segments || [];
+      if (_segs.length > 0) {
+        TABS = _segs.map((s, idx) => ({
+          key: s.slug || (s.name || `seg-${idx}`).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          label: s.name,
+          icon: s.icon || 'fa-folder',
+          category: s.name,
+          cls: idx === 0 ? 't-solar' : (idx === 1 ? 't-ev-b2b' : (idx === 2 ? 't-ev-b2c' : 't-etc'))
+        }));
+        tabCounts = {};
+        wonCounts = {};
+        TABS.forEach(t => { tabCounts[t.key] = null; wonCounts[t.key] = null; });
+        activeTab = TABS[0].key;
+        buildTabNav();
+        buildTableHead();
+        const t0 = TABS[0];
+        const titleEl = document.getElementById('tableTitle');
+        if (titleEl && t0) titleEl.textContent = `${t0.label} Leads`;
+        loadData();
+      } else if (isSaaS) {
+        const tabNavEl = document.getElementById('tabNav');
+        if (tabNavEl) tabNavEl.innerHTML = '<div style="padding:10px 16px;font-size:12px;color:#64748b"><i class="fas fa-info-circle me-2"></i>No business segments configured. Please configure segments in <a href="/staff/saas-crm-settings" style="color:#2563eb;font-weight:600">CRM / Workflow Setup</a>.</div>';
+      }
+    }
+  } catch(e) {
+    // Non-SaaS fallback: retain default platform TABS
+    if (!_initIsSaaS) {
+      buildTabNav();
+      buildTableHead();
+    }
+  }
+
   loadEtcBatches();
 
   // DC-INCENTIVE-FILTER-001: pre-fill handler + completion-date filters when
@@ -6345,9 +6449,13 @@ function _renderBrandOptions(brands) {
 let _quoteVendorId=null,_quoteRefNo='';
 function openQuoteModal(){
   const sel=document.getElementById('qmVendorSel');
-  sel.innerHTML='<option value="">-- Select Solar Vendor --</option>'+_solarVendors.map(v=>`<option value="${v.id}">${esc(v.vendor_name)} (${esc(v.vendor_code)})</option>`).join('');
+  sel.innerHTML='<option value="">-- Select Solar Vendor / Company Entity --</option>'+_solarVendors.map(v=>`<option value="${v.id}">${esc(v.vendor_name)} ${v.gst_number ? `— GST: ${esc(v.gst_number)}` : `(${esc(v.vendor_code||'')})`}</option>`).join('');
   // Pre-select previously used vendor for this lead
   if(_sdocVendorId){sel.value=String(_sdocVendorId);onVendorChange();}
+  else {
+    const hint=document.getElementById('qmVendorDetailsHint');
+    if(hint) hint.style.display='none';
+  }
   document.getElementById('qmKw').value='';
   document.getElementById('qmQuoteVal').value='';
   document.getElementById('qmDiscount').value='0';
@@ -6363,8 +6471,20 @@ function closeQuoteModal(){document.getElementById('quoteModal').classList.remov
 
 async function onVendorChange(){
   const vid=document.getElementById('qmVendorSel').value;
-  if(!vid){document.getElementById('qmRefNo').value='';return;}
+  const hint=document.getElementById('qmVendorDetailsHint');
+  if(!vid){
+    document.getElementById('qmRefNo').value='';
+    if(hint) hint.style.display='none';
+    return;
+  }
   _sdocVendorId=parseInt(vid)||null;  // remember for all other doc types
+  const chosen = _solarVendors.find(v => String(v.id) === String(vid));
+  if(hint && chosen) {
+    hint.innerHTML = `<span style="display:inline-block;padding:4px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;color:#166534;font-size:11.5px"><i class="fas fa-building me-1"></i><strong>${esc(chosen.vendor_name)}</strong> &bull; GSTIN: <strong>${esc(chosen.gst_number || 'N/A')}</strong> &bull; PAN: <strong>${esc(chosen.pan_number || 'N/A')}</strong> ${chosen.city ? `&bull; ${esc(chosen.city)}` : ''}</span>`;
+    hint.style.display = 'block';
+  } else if(hint) {
+    hint.style.display = 'none';
+  }
   try{
     const r=await staffFetch('/api/v1/crm/vendors/'+vid+'/next-quote-ref');
     const d=r.ok?await r.json():{};
@@ -7271,10 +7391,11 @@ async function saveCompleteDate(lid, val) {
     </div>
     <div class="sdoc-body" style="max-height:70vh">
       <div style="margin-bottom:12px">
-        <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Solar Vendor <span style="color:#ef4444">*</span></label>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Solar Vendor / Legal Entity (For Invoicing & GST) <span style="color:#ef4444">*</span></label>
         <select id="qmVendorSel" onchange="onVendorChange()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
-          <option value="">-- Select Solar Vendor --</option>
+          <option value="">-- Select Solar Vendor / Company Entity --</option>
         </select>
+        <div id="qmVendorDetailsHint" style="margin-top:6px;font-size:11.5px;display:none"></div>
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">System Size (KW) <span style="color:#ef4444">*</span></label>

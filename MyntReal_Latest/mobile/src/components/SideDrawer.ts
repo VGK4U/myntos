@@ -5,13 +5,19 @@ import { apiService } from '../services/api.service';
 import { MENU_MASTER as CANONICAL_MENU_MASTER, SidebarSection, SidebarSubSection, SidebarItem } from '../constants/menu-master';
 
 const ROUTE_PATH_MAP: Record<string, string> = {
+  '/staff/my-tenant': 'staff-my-tenant',
+  '/staff/tenant-users': 'staff-tenant-users',
   '/staff/dashboard': 'dashboard',
   '/staff/my-attendance': 'attendance',
   '/staff/my-leaves': 'leaves',
+  '/staff/leave-management': 'leaves',
   '/staff/leave-approvals': 'staff-leave-approvals',
   '/staff/attendance-records': 'team-attendance',
   '/staff/attendance-sheet': 'staff-attendance-sheet',
+  '/staff/attendance/sheet': 'staff-attendance-sheet',
   '/staff/attendance-reports': 'staff-attendance-reports',
+  '/staff/attendance/summary': 'staff-attendance-reports',
+  '/staff/team-attendance-summary': 'staff-attendance-reports',
   '/staff/attendance-exceptions': 'staff-attendance-exceptions',
   '/staff/attendance-computation': 'staff-attendance-computation',
   
@@ -19,11 +25,12 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/tasks/assigned-by-me-v2': 'tasks-assigned',
   '/staff/tasks/assigned-to-me': 'tasks-received',
   '/staff/tasks/team-activities': 'staff-team-activities',
-  '/staff/tasks/task-tracker': 'staff-task-tracker',
+  '/staff/tasks/task-tracker': 'tasks',
   '/staff/tasks/task-reviews': 'staff-task-reviews',
   '/staff/task-review': 'staff-task-reviews',
   
   '/staff/my-kras': 'kras',
+  '/staff/kra/my': 'kras',
   '/staff/kra-templates': 'staff-kra-templates',
   '/staff/kra-tracking-sheet': 'staff-kra-tracking',
   '/staff/kra-review': 'staff-kra-review',
@@ -31,6 +38,9 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/my-timesheet': 'timesheet',
   '/staff/timesheet-approval': 'staff-timesheet-approval',
   
+  '/staff/field-appointments': 'field-appointments',
+  'field-appointments': 'field-appointments',
+  'staff-field-appointments': 'field-appointments',
   '/staff/my-journeys': 'journeys',
   '/staff/team-journeys': 'team-journeys',
   '/staff/all-journeys': 'staff-all-journeys',
@@ -444,6 +454,12 @@ export class SideDrawer {
       Boolean(user.is_manager || user.is_admin || user.is_super_admin)
     );
     
+    const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+    const isPlatformAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
+                        ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
+                        ['super_admin', 'saas_segment_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+    const isSaaSTenant = !isPlatformAdmin && (roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || user?.company_segment === 'SEGMENT_B_SAAS');
+
     let topItems = TOP_MENU_ITEMS;
     if (isVgk) {
       topItems = VGK_TOP_MENU_ITEMS;
@@ -458,7 +474,7 @@ export class SideDrawer {
 
       const isRestrictedFreelancer = user.staff_type === 'FREELANCER' && user.freelancer_access_mode === 'only_leads';
 
-      if (isRestrictedFreelancer) {
+      if (isRestrictedFreelancer || isSaaSTenant) {
         topItems = [];
       } else {
         topItems = [
@@ -667,19 +683,50 @@ export class SideDrawer {
       if (response.success && response.data) {
         const menus: any[] = response.data.menus || [];
         const paths = new Set<string>(menus.map(m => m.route_path).filter(p => Boolean(p)));
-        // Default permitted system/communication routes
-        paths.add('/staff/whatsapp-center');
-        paths.add('/staff/crm/whatsapp-inbox');
-        paths.add('/staff/crm/whatsapp-bot');
-        paths.add('/staff/softphone-center');
-        paths.add('/staff/softphone-hub');
-        paths.add('/staff/softphone');
-        paths.add('/staff/dialer');
-        paths.add('/staff/auto-dialer');
-        paths.add('/staff/my-leads');
-        paths.add('/staff/configuration/catalog');
-        paths.add('/staff/catalog-library');
-        paths.add('/staff/catalog');
+        // Default permitted system/communication routes (Internal staff only)
+        if (!response.data.is_saas_tenant) {
+          paths.add('/staff/whatsapp-center');
+          paths.add('/staff/crm/whatsapp-inbox');
+          paths.add('/staff/crm/whatsapp-bot');
+          paths.add('/staff/softphone-center');
+          paths.add('/staff/softphone-hub');
+          paths.add('/staff/softphone');
+          paths.add('/staff/dialer');
+          paths.add('/staff/auto-dialer');
+          paths.add('auto-dialer');
+          paths.add('softphone');
+          paths.add('/staff/my-leads');
+          paths.add('/staff/configuration/catalog');
+          paths.add('/staff/catalog-library');
+          paths.add('/staff/catalog');
+
+          const sDeptId = Number(user.department_id || 0);
+          const sDeptName = (user.department || user.department_name || '').toString().toLowerCase().trim();
+          const sRoleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+          const sRoleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+          const sEmpCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+          const isSalesStaff = sDeptId === 13 || sDeptId === 19 || sDeptName.includes('sale') || sRoleCode.includes('sale') || sRoleName.includes('SALE') || sEmpCode === 'MN10019';
+
+          if (isSalesStaff) {
+            paths.add('/staff/executive-dashboard');
+            paths.add('/staff/mnr-leads');
+            paths.add('/staff/mnr-leads-master');
+            paths.add('/staff/solar-vendors');
+            paths.add('/staff/solar-leads');
+            paths.add('/staff/ev-b2b-leads');
+            paths.add('/staff/ev-b2c-leads');
+            paths.add('/staff/ev-spares-leads');
+            paths.add('/staff/real-dreams-leads');
+            paths.add('/staff/insurance-leads');
+            paths.add('/staff/etc-leads');
+            paths.add('/staff/bank-wise-leads');
+            paths.add('/staff/field-sales');
+            paths.add('/staff/leads');
+            paths.add('/staff/crm/leads');
+            paths.add('/staff/crm/dashboard');
+            paths.add('/staff/crm/team-leads');
+          }
+        }
 
         this.allowedPaths = paths;
         this.isSupremeStaff = false;
@@ -771,9 +818,10 @@ export class SideDrawer {
       "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA", "EXECUTIVE ADMIN", "MANAGER", 
       "DIRECTOR", "SUPER_ADMIN", "ADMIN"
     ];
-    const isSaaSAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
+    const isPlatformAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
                         ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
-                        ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+                        ['super_admin', 'saas_segment_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+    const isSaaSAdmin = isPlatformAdmin;
     const isSupreme = this.isSupremeStaff || 
                       supremeVariants.includes(staffType) ||
                       ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
@@ -790,20 +838,42 @@ export class SideDrawer {
     // DC Protocol: Staff Leads restriction list (Nandana MN10009 granted full access per request)
     const isRestrictedSales = ['MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
 
+    const sDeptId = Number(user.department_id || 0);
+    const sDeptName = (user.department || user.department_name || '').toString().toLowerCase().trim();
+    const sRoleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+    const sRoleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+    const isSalesStaff = sDeptId === 13 || sDeptId === 19 || sDeptName.includes('sale') || sRoleCode.includes('sale') || sRoleName.includes('SALE') || empCode === 'MN10019';
+
+    const salesWorkflowRoutes = [
+      '/staff/executive-dashboard', '/staff/mnr-leads', '/staff/mnr-leads-master',
+      '/staff/solar-vendors', '/staff/solar-leads', '/staff/ev-b2b-leads',
+      '/staff/ev-b2c-leads', '/staff/ev-spares-leads', '/staff/real-dreams-leads',
+      '/staff/insurance-leads', '/staff/etc-leads', '/staff/crm/leads',
+      '/staff/leads', '/staff/crm/dashboard', '/staff/crm/team-leads'
+    ];
+
     const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
     const isInternalType = staffType && internalTypes.includes(staffType);
     const isInternalCompany = user?.base_company_id && [1, 2, 3, 4, 88].includes(Number(user.base_company_id));
-    const isSaaSTenant = !isSaaSAdmin && !isInternalType && !isInternalCompany && (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || user?.company_segment === 'SEGMENT_B_SAAS');
+    const isSaaSTenant = !isPlatformAdmin && (roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || user?.company_segment === 'SEGMENT_B_SAAS');
 
     const formatItem = (item: SidebarItem): MenuItem | null => {
-      // Permission check (skip if not supreme and path not allowed)
-      if (!isSupreme && this.allowedPaths !== '*') {
+      // SaaS Tenant Core Workspace
+      if (item.route === '/staff/my-tenant') {
+        // Core welcome/profile page - always visible
+      } else if (item.route === '/staff/tenant-users') {
+        const isTenantAdmin = roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || isPlatformAdmin;
+        if (!isTenantAdmin) {
+          return null;
+        }
+      } else if (!isSupreme && this.allowedPaths !== '*') {
         const cleanPath = item.route.replace(/\/$/, '');
-        const isAlwaysAllowed = [
-          '/staff/dialer', '/staff/auto-dialer', '/staff/softphone', '/staff/whatsapp-center',
+        const isAlwaysAllowed = !isSaaSTenant && ([
+          '/staff/dialer', '/staff/auto-dialer', 'auto-dialer', '/staff/softphone', 'softphone', '/staff/whatsapp-center',
           '/staff/configuration/catalog', '/staff/catalog-library', '/staff/catalog',
-          '/staff/bank-wise-leads', '/staff/field-sales', '/staff/my-leads'
-        ].includes(item.route) || item.route.startsWith('/staff/vgk/');
+          '/staff/bank-wise-leads', '/staff/field-sales', '/staff/my-leads',
+          ...(isSalesStaff ? salesWorkflowRoutes : [])
+        ].includes(item.route) || item.route.startsWith('/staff/vgk/'));
         
         if (!isAlwaysAllowed && !this.allowedPaths.has(item.route) && !this.allowedPaths.has(cleanPath)) {
           return null;
@@ -865,13 +935,23 @@ export class SideDrawer {
 
       const sCode = (section.section_code || '').toUpperCase();
       const sTitle = (section.section_label || '').toUpperCase();
-      const isSaasSection = sCode === 'VGK_SAAS' || sCode === 'MYNTOS_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('SAAS');
+      const isSaasSection = sCode === 'VGK_SAAS' || sCode === 'MYNTOS_SAAS' || sTitle.includes('MYNTOS SAAS');
+      const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE';
 
       // For SaaS tenants, completely exclude internal platform and group company sections
       if (isSaaSTenant) {
-        const saasRestricted = ['MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER', 'INTERNAL'];
-        if (saasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
-          if (!isSaasSection) {
+        if (!isCoreWorkspace) {
+          const hasHrmsAccess = Boolean(this.allowedPaths !== '*' && this.allowedPaths instanceof Set && (this.allowedPaths.has('/staff/attendance-sheet') || this.allowedPaths.has('/staff/my-attendance')));
+          const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
+          const saasRestricted = [
+            'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
+            'PARTNER', 'INTERNAL', 'VGK_SAAS', 'PROGRESS', 'STAFF_DASHBOARD',
+            'BUSINESS_PARTNERS', 'CONFIGURATION', 'META_ADS', 'MNR_USER_SIDEBAR', 'VGK_TEAM'
+          ];
+          if (!hasHrmsAccess) {
+            saasRestricted.push(...hrmsSections);
+          }
+          if (saasRestricted.some(k => sCode === k || sCode.includes(k) || sTitle === k || sTitle.includes(k))) {
             continue;
           }
         }
@@ -883,21 +963,27 @@ export class SideDrawer {
       }
 
       // Global Directive: Remove META ADS, CONFIGURATION, SAAS, INTERNAL for general staff unless granted or SaaS admin
-      if (!isSaaSAdmin) {
-        const globalRestrictedKeywords = ['META', 'CONFIG', 'SAAS', 'INTERNAL'];
-        if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
-          if (this.allowedPaths !== '*' && this.allowedPaths instanceof Set) {
-            const allowedSet = this.allowedPaths as Set<string>;
-            const allSecRoutes = [
-              ...(section.items || []).map(i => i.route),
-              ...(section.subSections || []).flatMap(sub => sub.items.map(i => i.route))
-            ];
-            const hasAnyRoute = allSecRoutes.some(r => allowedSet.has(r) || allowedSet.has(r.replace(/\/$/, '')));
-            if (!hasAnyRoute) {
+      if (!isPlatformAdmin) {
+        if (isSaaSTenant) {
+          if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS')) {
+            continue;
+          }
+        } else {
+          const globalRestrictedKeywords = ['META', 'CONFIG', 'SAAS', 'INTERNAL'];
+          if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+            if (this.allowedPaths !== '*' && this.allowedPaths instanceof Set) {
+              const allowedSet = this.allowedPaths as Set<string>;
+              const allSecRoutes = [
+                ...(section.items || []).map(i => i.route),
+                ...(section.subSections || []).flatMap(sub => sub.items.map(i => i.route))
+              ];
+              const hasAnyRoute = allSecRoutes.some(r => allowedSet.has(r) || allowedSet.has(r.replace(/\/$/, '')));
+              if (!hasAnyRoute) {
+                continue;
+              }
+            } else if (!isSupreme) {
               continue;
             }
-          } else if (!isSupreme) {
-            continue;
           }
         }
       } else {
@@ -936,10 +1022,10 @@ export class SideDrawer {
         }
       }
 
-      // Guarantee Softphone, Auto Dialer, Digital Catalog in CRM
-      if (sCode === 'CRM_LEADS') {
+      // Guarantee Softphone, Auto Dialer, Digital Catalog in CRM (Internal only)
+      if (sCode === 'CRM_LEADS' && !isSaaSTenant) {
         if (!sectionItems.some(i => i.route === 'auto-dialer' || i.route === '/staff/dialer')) {
-          sectionItems.push({
+          sectionItems.unshift({
             menu_code: 'AUTO_DIALER',
             label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
             route: '/staff/dialer'
@@ -982,9 +1068,10 @@ export class SideDrawer {
       }
 
       if (sectionItems.length > 0 || sectionSubSections.length > 0) {
+        const displayLabel = (isSaaSTenant && (section.section_code === 'SOLAR_EV' || (section.section_label || '').toUpperCase().includes('SOLAR'))) ? 'WORKFLOWS' : (isSaaSTenant && (section.section_code === 'SERVICE_TICKETS' || (section.section_label || '').toUpperCase().includes('SERVICE')) ? 'SERVICE' : (isSaaSTenant && section.section_code === 'ACCOUNTS' ? 'ACCOUNTS & GST' : (isSaaSTenant && section.section_code === 'HR' ? 'HRMS' : section.section_label)));
         sections.push({
           section_code: section.section_code,
-          section_label: section.section_label,
+          section_label: displayLabel,
           order: section.order,
           items: sectionItems.length > 0 ? sectionItems : undefined,
           subSections: sectionSubSections.length > 0 ? sectionSubSections : undefined
@@ -998,7 +1085,7 @@ export class SideDrawer {
   open(): void {
     if (this.isOpen) return;
     const portal = portalService.getPortal();
-    if (portal === 'staff' && !this.isStaffMenuLoaded) {
+    if (portal === 'staff') {
       this.loadStaffMenus();
     }
     this.updateUI();

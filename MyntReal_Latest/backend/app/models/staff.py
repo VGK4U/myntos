@@ -216,6 +216,7 @@ class StaffEmployee(Base):
     
     # DC-SAAS-GOVERNANCE-002: Administrative Scope (PLATFORM, SEGMENT_A, SEGMENT_B, CLIENT_SPECIFIC)
     admin_scope = Column(String(50), default='CLIENT_SPECIFIC', nullable=True, index=True)
+    assigned_modules = Column(JSONB, default=[], nullable=True)  # List of module keys assigned to tenant user
     
     # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
     employment_type = Column(String(32), default='probation', nullable=False, index=True)  # probation, confirmed, extended_probation
@@ -329,6 +330,8 @@ class StaffEmployee(Base):
             "base_company_id": self.base_company_id,
             "base_company_name": self.base_company.company_name if self.base_company else None,
             "base_company_code": self.base_company.company_code if self.base_company else None,
+            "company_logo": self.base_company.logo_path if self.base_company else None,
+            "assigned_modules": self.assigned_modules or [],
             "data_companies": self._get_data_companies_info(company_lookup=company_lookup),
             # Stage 1 / Stage 2A Multi-Tenant Context
             "tenant_id": getattr(self, 'tenant_id', 1) or 1,
@@ -1758,7 +1761,7 @@ class StaffEmployeeModule(Base):
         Index('idx_emp_module_active', 'employee_id', 'is_active'),
     )
     
-    employee = relationship("StaffEmployee", foreign_keys=[employee_id], backref="assigned_modules")
+    employee = relationship("StaffEmployee", foreign_keys=[employee_id], backref="module_assignments")
     module = relationship("StaffModuleMaster", back_populates="employee_assignments")
     assigner = relationship("StaffEmployee", foreign_keys=[assigned_by])
     updater = relationship("StaffEmployee", foreign_keys=[updated_by])
@@ -2517,6 +2520,8 @@ DEFAULT_STAFF_MENUS = [
     {"menu_code": "staff_my_kyc", "menu_name": "My KYC", "menu_category": "staff", "menu_icon": "fas fa-id-badge", "route_path": "/staff/my-kyc", "display_order": 188},
     {"menu_code": "staff_kyc_approvals", "menu_name": "KYC Approvals", "menu_category": "staff", "menu_icon": "fas fa-user-check", "route_path": "/staff/kyc-approvals", "display_order": 189},
     {"menu_code": "staff_audit_logs", "menu_name": "Audit Logs", "menu_category": "staff", "menu_icon": "fas fa-history", "route_path": "/staff/audit-logs", "display_order": 190},
+    {"menu_code": "CENTRAL_INTEGRATIONS", "menu_name": "Integrations", "menu_category": "configuration", "menu_icon": "fas fa-plug", "route_path": "/staff/configuration/integrations", "display_order": 195, "sidebar_section": "configuration", "sidebar_section_title": "CONFIGURATION", "sidebar_section_order": 15},
+    {"menu_code": "FIELD_APPOINTMENTS", "menu_name": "Field Appointments", "menu_category": "staff_journey", "menu_icon": "fas fa-calendar-check", "route_path": "/staff/field-appointments", "display_order": 156, "sidebar_section": "journey-tracking", "sidebar_section_title": "JOURNEY TRACKING", "sidebar_section_order": 8},
     
     # ===================== SFMS - ACCOUNTS PAGES (200-249) =====================
     # DC_ACCOUNTS_DEFAULT_ACCESS_001: Default access granted only to staff with accounts department

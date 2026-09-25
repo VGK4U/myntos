@@ -279,6 +279,10 @@ def apply_leave(
     db: Session = Depends(get_db)
 ):
     """Submit a leave request"""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
     
     leave_type = db.query(StaffLeaveType).filter(
         StaffLeaveType.id == data.leave_type_id,
@@ -406,10 +410,11 @@ def apply_leave(
         skip_level_approval = True
         logger.info(f"[DC-LEAVE-SKIP] No manager assigned for {current_user.emp_code}, escalating directly to HR")
     
+    req_company_id = _saas_ctx.company.id if _saas_ctx.is_saas_tenant and _saas_ctx.company else current_user.base_company_id
     leave_request = StaffLeaveRequest(
         employee_id=current_user.id,
         leave_type_id=data.leave_type_id,
-        company_id=current_user.base_company_id,
+        company_id=req_company_id,
         reason=data.reason,
         status=initial_status,
         is_lop=is_lop,
@@ -705,11 +710,20 @@ def get_pending_hr_approvals(
     HR users see all pending requests in their company
     """
     
-    if not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=False):
-        raise HTTPException(status_code=403, detail="You do not have access to leave approvals")
-    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        hr_company_id = _saas_ctx.company.id if _saas_ctx.company else current_user.base_company_id
+        if not _saas_ctx.is_tenant_admin and not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=False):
+            raise HTTPException(status_code=403, detail="You do not have access to leave approvals")
+    else:
+        if not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=False):
+            raise HTTPException(status_code=403, detail="You do not have access to leave approvals")
+        hr_company_id = current_user.base_company_id
+
     pending_requests = db.query(StaffLeaveRequest).filter(
-        StaffLeaveRequest.company_id == current_user.base_company_id,
+        StaffLeaveRequest.company_id == hr_company_id,
         StaffLeaveRequest.status == 'pending_hr'
     ).order_by(StaffLeaveRequest.created_at).all()
     

@@ -31,8 +31,8 @@ SAAS_GLOBAL_MODULE_CATALOG = {
         "default_for_saas": True,
     },
     "SOLAR_EV": {
-        "name": "Solar / EV Mobility",
-        "description": "EV vehicle sales, solar installations, battery tracking, and warranties",
+        "name": "Workflows",
+        "description": "Workflow management, multi-stage operational pipelines, and category tracking",
         "default_for_saas": False,
     },
     "ACCOUNTS_GST": {

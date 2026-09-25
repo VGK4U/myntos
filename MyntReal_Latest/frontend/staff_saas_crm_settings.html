@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM & Workflow Setup — MyntOS SaaS</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+            --page-bg: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--page-bg);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding-top: 0 !important;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        body.sidebar-collapsed-mode .main-content {
+            margin-left: 70px;
+        }
+        @media (max-width: 991px) {
+            .main-content { margin-left: 0 !important; padding-top: 0 !important; }
+        }
+
+        .workspace-container {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Page Header */
+        .page-header-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .page-title-box h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-title-box p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+        .tenant-pill {
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Nav Tabs */
+        .setup-nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 24px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .setup-tab-btn {
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .setup-tab-btn:hover {
+            color: var(--primary);
+        }
+        .setup-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        .setup-tab-pane {
+            display: none;
+        }
+        .setup-tab-pane.active {
+            display: block;
+        }
+
+        /* Card Styles */
+        .settings-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-header-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .card-header-line h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin: 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Form elements */
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 6px;
+        }
+        .form-control, .form-select {
+            font-size: 13px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+
+        /* Table styles */
+        .table-responsive {
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        .custom-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .custom-table th {
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .custom-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .custom-table tr:hover td {
+            background: #f8fafc;
+        }
+        .badge-status {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+        .badge-status.active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge-status.inactive {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .icon-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .staff-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            margin: 2px 4px 2px 0;
+        }
+        .staff-chip-weight {
+            background: #2563eb;
+            color: white;
+            border-radius: 10px;
+            font-size: 10px;
+            padding: 1px 6px;
+            font-weight: 700;
+        }
+        .btn-action-sm {
+            padding: 4px 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+    </style>
+<body>
+    <script src="/public/js/menu-master.js?v=20260904_unified"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/staff_sidebar.js?v=20260904_unified"></script>
+
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+        <div id="headerContainer"></div>
+
+        <div class="workspace-container">
+            <!-- Page Header -->
+            <div class="page-header-box">
+                <div class="page-title-box">
+                    <h1><i class="fas fa-sliders text-primary"></i> CRM / Workflow Setup</h1>
+                    <p>Configure company branches, lead categories & segments, staff routing pools, and CRM operational rules.</p>
+                </div>
+                <div>
+                    <span class="tenant-pill" id="tenantPill"><i class="fas fa-building"></i> <span id="tenantName">Loading tenant...</span></span>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Bar -->
+            <div class="setup-nav-tabs">
+                <button class="setup-tab-btn active" id="tabBtn_crm" onclick="switchSetupTab('crm')">
+                    <i class="fas fa-cog"></i> CRM Settings
+                </button>
+                <button class="setup-tab-btn" id="tabBtn_companies" onclick="switchSetupTab('companies')">
+                    <i class="fas fa-building"></i> Companies &amp; Branches
+                </button>
+                <button class="setup-tab-btn" id="tabBtn_segments" onclick="switchSetupTab('segments')">
+                    <i class="fas fa-layer-group"></i> Segments &amp; Categories
+                </button>
+                <button class="setup-tab-btn" id="tabBtn_handlers" onclick="switchSetupTab('handlers')">
+                    <i class="fas fa-users-gear"></i> Staff / Segment Assignment
+                </button>
+            </div>
+
+            <!-- TAB 1: CRM SETTINGS -->
+            <div class="setup-tab-pane active" id="pane_crm">
+                <div class="settings-card">
+                    <div class="card-header-line">
+                        <h3><i class="fas fa-sliders text-primary"></i> Operational Rules &amp; Automation</h3>
+                        <button class="btn btn-primary btn-sm px-3" onclick="saveCRMSettings()"><i class="fas fa-save me-1"></i> Save Changes</button>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="set_auto_assign" checked style="cursor:pointer;">
+                                <label class="form-check-label fw-bold" for="set_auto_assign" style="cursor:pointer;">Auto-Assignment to Staff Handlers</label>
+                                <div class="text-muted small">Automatically route incoming leads to active segment staff members via weighted round-robin.</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="set_dup_check" checked style="cursor:pointer;">
+                                <label class="form-check-label fw-bold" for="set_dup_check" style="cursor:pointer;">Duplicate Inquiries Detection</label>
+                                <div class="text-muted small">Flag or merge incoming leads if phone number or email matches an existing active inquiry.</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="set_allow_manual" checked style="cursor:pointer;">
+                                <label class="form-check-label fw-bold" for="set_allow_manual" style="cursor:pointer;">Allow Staff Manual Lead Creation</label>
+                                <div class="text-muted small">Permit authenticated sales staff to manually register new walk-in and self-sourced leads.</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Default New Lead Stage</label>
+                                <select class="form-select" id="set_default_stage">
+                                    <option value="new">Fresh / New Inquiry</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="qualified">Qualified</option>
+                                </select>
+                                <div class="text-muted small mt-1">Initial pipeline stage assigned when a lead is captured without an explicit stage.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">First Follow-up SLA (Hours)</label>
+                                <input type="number" class="form-control" id="set_sla_hours" min="1" max="168" value="24">
+                                <div class="text-muted small mt-1">Standard turnaround time for sales handlers to initiate first contact before marked overdue.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Notification Email</label>
+                                <input type="email" class="form-control" id="set_notif_email" placeholder="admin@company.com">
+                                <div class="text-muted small mt-1">Email address to receive daily lead ingestion digests and SLA escalation alerts.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: COMPANIES & BRANCHES -->
+            <div class="setup-tab-pane" id="pane_companies">
+                <div class="settings-card">
+                    <div class="card-header-line">
+                        <div>
+                            <h3><i class="fas fa-building text-primary"></i> Tenant Companies &amp; Branches</h3>
+                            <div class="text-muted small">Manage operational business entities, subsidiary companies, and local branches belonging to this tenant.</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm px-3" onclick="openAddCompanyModal()"><i class="fas fa-plus me-1"></i> Add Company / Branch</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="custom-table" id="companiesTable">
+                            <thead>
+                                <tr>
+                                    <th>Company Name</th>
+                                    <th>Code</th>
+                                    <th>Segment / Division</th>
+                                    <th>GST / Tax ID</th>
+                                    <th>Contact Info</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th style="text-align:right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="companiesTableBody">
+                                <tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading companies...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SEGMENTS & CATEGORIES -->
+            <div class="setup-tab-pane" id="pane_segments">
+                <div class="settings-card">
+                    <div class="card-header-line">
+                        <div>
+                            <h3><i class="fas fa-layer-group text-primary"></i> Business Segments &amp; Categories</h3>
+                            <div class="text-muted small">Define custom business categories, workflow pipelines, and operational sectors (e.g. Solar, EV, Real Estate, Insurance).</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm px-3" onclick="openAddSegmentModal()"><i class="fas fa-plus me-1"></i> Add Segment</button>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="segCompanyFilter" onchange="filterSegmentsByCompany()">
+                                <option value="">All Companies / Branches</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="custom-table" id="segmentsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px">Icon</th>
+                                    <th>Segment / Category Name</th>
+                                    <th>Slug / Identifier</th>
+                                    <th>Company</th>
+                                    <th>Assigned Staff Routing Pool</th>
+                                    <th>Vendor Entity (GSTIN)</th>
+                                    <th>Status</th>
+                                    <th style="text-align:right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="segmentsTableBody">
+                                <tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading segments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: STAFF / SEGMENT ASSIGNMENT -->
+            <div class="setup-tab-pane" id="pane_handlers">
+                <div class="settings-card">
+                    <div class="card-header-line">
+                        <div>
+                            <h3><i class="fas fa-users-gear text-primary"></i> Staff-Wise Segment Routing</h3>
+                            <div class="text-muted small">Configure which sales agents and support staff handle incoming inquiries for each business segment.</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm px-3" onclick="openAssignStaffModal()"><i class="fas fa-user-plus me-1"></i> Configure Routing</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="custom-table" id="handlersTable">
+                            <thead>
+                                <tr>
+                                    <th>Segment / Category</th>
+                                    <th>Company</th>
+                                    <th>Assigned Staff Handlers</th>
+                                    <th>Pool Count</th>
+                                    <th>Routing Status</th>
+                                    <th style="text-align:right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="handlersTableBody">
+                                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading handler assignments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD / EDIT COMPANY -->
+    <div class="modal fade" id="companyModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.15)">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="companyModalTitle"><i class="fas fa-building text-primary me-2"></i>Add Company / Branch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="comp_id">
+                    <div class="mb-3">
+                        <label class="form-label">Company / Branch Legal Name *</label>
+                        <input type="text" class="form-control" id="comp_name" placeholder="e.g. Apex Solar Hyderabad">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Branch Code</label>
+                            <input type="text" class="form-control text-uppercase" id="comp_code" placeholder="AUTO (e.g. BR01)">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Division / Segment</label>
+                            <input type="text" class="form-control" id="comp_segment" placeholder="e.g. SOLAR, EV, HQ">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">GST Number</label>
+                            <input type="text" class="form-control text-uppercase" id="comp_gst" placeholder="36AAAAA0000A1Z5">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">PAN Number</label>
+                            <input type="text" class="form-control text-uppercase" id="comp_pan" placeholder="AAAAA0000A">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Contact Email</label>
+                            <input type="email" class="form-control" id="comp_email" placeholder="branch@company.com">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Contact Phone</label>
+                            <input type="text" class="form-control" id="comp_phone" placeholder="+91 9876543210">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" id="comp_city" placeholder="Hyderabad">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">State</label>
+                            <input type="text" class="form-control" id="comp_state" placeholder="Telangana">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" onclick="submitCompanyForm()"><i class="fas fa-check me-1"></i> Save Company</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD / EDIT SEGMENT -->
+    <div class="modal fade" id="segmentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.15)">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="segmentModalTitle"><i class="fas fa-layer-group text-primary me-2"></i>Add Segment / Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="seg_id">
+                    <div class="mb-3">
+                        <label class="form-label">Associated Company / Branch *</label>
+                        <select class="form-select" id="seg_company_id"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Segment Name *</label>
+                        <input type="text" class="form-control" id="seg_name" placeholder="e.g. Commercial Rooftop Solar">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Slug / Identifier</label>
+                            <input type="text" class="form-control text-lowercase" id="seg_slug" placeholder="auto-generated">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Icon (FontAwesome)</label>
+                            <select class="form-select" id="seg_icon">
+                                <option value="fa-solar-panel">Solar Panel</option>
+                                <option value="fa-truck">Truck / B2B</option>
+                                <option value="fa-car">Car / EV</option>
+                                <option value="fa-cogs">Cogs / Spares</option>
+                                <option value="fa-building">Building / Real Estate</option>
+                                <option value="fa-shield-alt">Shield / Insurance</option>
+                                <option value="fa-graduation-cap">Education</option>
+                                <option value="fa-hand-holding-usd">Finance / Loans</option>
+                                <option value="fa-layer-group">General Layer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" class="form-control" id="seg_order" value="1" min="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Vendor Entity (Invoicing)</label>
+                            <select class="form-select" id="seg_vendor_company_id" onchange="onSegVendorChange()">
+                                <option value="">-- Same as Branch --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="seg_vendor_info_box" class="p-2 mb-3 rounded bg-light border" style="font-size:12px; display:none;">
+                        <span class="fw-bold text-dark"><i class="fas fa-file-invoice-dollar text-success me-1"></i> Invoice Details:</span>
+                        <div id="seg_vendor_info_text" class="text-muted mt-1"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="seg_desc" rows="2" placeholder="Brief note on what leads belong here..."></textarea>
+                    </div>
+                    <div class="card border rounded p-2.5 mb-2 bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold small text-dark"><i class="fas fa-users-gear text-primary me-1"></i> Default Staff Routing Pool</span>
+                            <span class="badge bg-primary text-white" id="segStaffCountBadge">0 Selected</span>
+                        </div>
+                        <div class="small text-muted mb-2">Staff members selected here will be the default lead handlers for this segment:</div>
+                        <div id="segStaffCheckboxesList" style="max-height: 180px; overflow-y: auto;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" onclick="submitSegmentForm()"><i class="fas fa-check me-1"></i> Save Segment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ASSIGN STAFF TO SEGMENT -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.15)">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-users-gear text-primary me-2"></i>Configure Staff Routing Pool</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Select Company *</label>
+                            <select class="form-select" id="assign_company_id" onchange="onAssignCompanyChange()"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Select Segment *</label>
+                            <select class="form-select" id="assign_segment_id" onchange="loadCurrentSegmentStaff()"></select>
+                        </div>
+                    </div>
+
+                    <div class="card border rounded p-3 mb-3 bg-light">
+                        <div class="fw-bold small text-uppercase text-muted mb-2">Select Staff Members &amp; Assignment Weights</div>
+                        <div class="small text-muted mb-3">Staff checked below will automatically receive incoming leads for this segment. Higher weight = proportionally more leads.</div>
+                        <div id="staffCheckboxesList" style="max-height: 280px; overflow-y: auto;">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4" onclick="submitStaffAssignment()"><i class="fas fa-check me-1"></i> Save Routing Pool</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let _setupData = null;
+        let _companyModal = null;
+        let _segmentModal = null;
+        let _assignModal = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init().catch(e => console.warn(e));
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('CRM / Workflow Setup', 'fas fa-sliders');
+                StaffHeader.init();
+            }
+            _companyModal = new bootstrap.Modal(document.getElementById('companyModal'));
+            _segmentModal = new bootstrap.Modal(document.getElementById('segmentModal'));
+            _assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+            await loadOverview();
+        });
+
+        function switchSetupTab(tabName) {
+            document.querySelectorAll('.setup-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.setup-tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById(`tabBtn_${tabName}`)?.classList.add('active');
+            document.getElementById(`pane_${tabName}`)?.classList.add('active');
+        }
+
+        async function loadOverview() {
+            try {
+                const res = await staffFetch('/api/v1/saas/crm-setup/overview');
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Failed to load CRM setup overview');
+                }
+                const data = await res.json();
+                _setupData = data;
+
+                // Update tenant pill
+                document.getElementById('tenantName').textContent = data.tenant.company_name || 'MyntOS Client';
+
+                // Render all tabs
+                renderCRMSettings(data.crm_settings);
+                renderCompaniesTable(data.companies);
+                renderSegmentsTable(data.segments, data.companies);
+                renderHandlersTable(data.handler_routing, data.segments, data.companies);
+
+            } catch (e) {
+                console.error('[CRM-SETUP] Overview error:', e);
+                alert('Error loading CRM setup: ' + e.message);
+            }
+        }
+
+        // ── TAB 1: CRM SETTINGS ──
+        function renderCRMSettings(settings) {
+            if (!settings) return;
+            document.getElementById('set_auto_assign').checked = Boolean(settings.auto_assignment_enabled);
+            document.getElementById('set_dup_check').checked = Boolean(settings.duplicate_check_enabled);
+            document.getElementById('set_allow_manual').checked = Boolean(settings.allow_staff_manual_lead_creation);
+            document.getElementById('set_default_stage').value = settings.default_lead_stage || 'new';
+            document.getElementById('set_sla_hours').value = settings.followup_sla_hours || 24;
+            document.getElementById('set_notif_email').value = settings.notification_email || '';
+        }
+
+        async function saveCRMSettings() {
+            try {
+                const payload = {
+                    auto_assignment_enabled: document.getElementById('set_auto_assign').checked,
+                    duplicate_check_enabled: document.getElementById('set_dup_check').checked,
+                    allow_staff_manual_lead_creation: document.getElementById('set_allow_manual').checked,
+                    default_lead_stage: document.getElementById('set_default_stage').value,
+                    followup_sla_hours: parseInt(document.getElementById('set_sla_hours').value, 10) || 24,
+                    notification_email: document.getElementById('set_notif_email').value.trim()
+                };
+
+                const res = await staffFetch('/api/v1/saas/crm-setup/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Failed to update CRM settings');
+                alert('CRM operational settings saved successfully!');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // ── TAB 2: COMPANIES ──
+        function renderCompaniesTable(companies) {
+            const tbody = document.getElementById('companiesTableBody');
+            if (!companies || companies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No companies registered yet. Click "+ Add Company" to add one.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = companies.map(c => `
+                <tr>
+                    <td class="fw-bold"><i class="fas fa-building text-primary me-2"></i>${esc(c.company_name)}</td>
+                    <td><span class="badge bg-light text-dark border">${esc(c.company_code)}</span></td>
+                    <td>${esc(c.company_segment || 'GENERAL')}</td>
+                    <td>${esc(c.gst_number || '—')}</td>
+                    <td>
+                        <div class="small">${esc(c.primary_email || '—')}</div>
+                        <div class="small text-muted">${esc(c.primary_phone || '')}</div>
+                    </td>
+                    <td>${esc([c.city, c.state].filter(Boolean).join(', ') || '—')}</td>
+                    <td><span class="badge-status ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td style="text-align:right">
+                        <button class="btn btn-outline-secondary btn-action-sm me-1" onclick="editCompany(${c.id})"><i class="fas fa-pen"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Also populate dropdowns
+            const segFilter = document.getElementById('segCompanyFilter');
+            const segModalComp = document.getElementById('seg_company_id');
+            const assignComp = document.getElementById('assign_company_id');
+
+            const compOpts = companies.map(c => `<option value="${c.id}">${esc(c.company_name)} (${esc(c.company_code)})</option>`).join('');
+            segFilter.innerHTML = '<option value="">All Companies / Branches</option>' + compOpts;
+            segModalComp.innerHTML = compOpts;
+            assignComp.innerHTML = compOpts;
+        }
+
+        function openAddCompanyModal() {
+            document.getElementById('companyModalTitle').innerHTML = '<i class="fas fa-building text-primary me-2"></i>Add Company / Branch';
+            document.getElementById('comp_id').value = '';
+            document.getElementById('comp_name').value = '';
+            document.getElementById('comp_code').value = '';
+            document.getElementById('comp_segment').value = 'GENERAL';
+            document.getElementById('comp_gst').value = '';
+            document.getElementById('comp_pan').value = '';
+            document.getElementById('comp_email').value = '';
+            document.getElementById('comp_phone').value = '';
+            document.getElementById('comp_city').value = '';
+            document.getElementById('comp_state').value = '';
+            _companyModal.show();
+        }
+
+        function editCompany(cid) {
+            const comp = (_setupData?.companies || []).find(c => c.id === cid);
+            if (!comp) return;
+            document.getElementById('companyModalTitle').innerHTML = '<i class="fas fa-pen text-primary me-2"></i>Edit Company / Branch';
+            document.getElementById('comp_id').value = comp.id;
+            document.getElementById('comp_name').value = comp.company_name;
+            document.getElementById('comp_code').value = comp.company_code;
+            document.getElementById('comp_segment').value = comp.company_segment;
+            document.getElementById('comp_gst').value = comp.gst_number || '';
+            document.getElementById('comp_pan').value = comp.pan_number || '';
+            document.getElementById('comp_email').value = comp.primary_email || '';
+            document.getElementById('comp_phone').value = comp.primary_phone || '';
+            document.getElementById('comp_city').value = comp.city || '';
+            document.getElementById('comp_state').value = comp.state || '';
+            _companyModal.show();
+        }
+
+        async function submitCompanyForm() {
+            const cid = document.getElementById('comp_id').value;
+            const name = document.getElementById('comp_name').value.trim();
+            if (!name) { alert('Company name is required.'); return; }
+
+            const payload = {
+                company_name: name,
+                company_code: document.getElementById('comp_code').value.trim() || null,
+                company_segment: document.getElementById('comp_segment').value.trim() || 'GENERAL',
+                gst_number: document.getElementById('comp_gst').value.trim() || null,
+                pan_number: document.getElementById('comp_pan').value.trim() || null,
+                primary_email: document.getElementById('comp_email').value.trim() || null,
+                primary_phone: document.getElementById('comp_phone').value.trim() || null,
+                city: document.getElementById('comp_city').value.trim() || null,
+                state: document.getElementById('comp_state').value.trim() || null
+            };
+
+            try {
+                const url = cid ? `/api/v1/saas/crm-setup/companies/${cid}` : '/api/v1/saas/crm-setup/companies';
+                const method = cid ? 'PUT' : 'POST';
+                const res = await staffFetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Failed to save company');
+                }
+                _companyModal.hide();
+                await loadOverview();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // ── TAB 3: SEGMENTS ──
+        function renderSegmentsTable(segments, companies) {
+            const tbody = document.getElementById('segmentsTableBody');
+            const compMap = {};
+            (companies || []).forEach(c => { compMap[c.id] = c.company_name; });
+
+            if (!segments || segments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No business segments defined yet. Click "+ Add Segment" to create one.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = segments.map(s => {
+                const staffList = s.staff_members || [];
+                const staffHtml = staffList.length > 0
+                    ? staffList.map(m => `<span class="badge bg-light text-dark border me-1"><i class="fas fa-user text-primary me-1"></i>${esc(m.employee_name)}</span>`).join('')
+                    : '<span class="text-muted small">None (Default Round-Robin)</span>';
+
+                let vendorHtml = '<span class="text-muted small">Same as Branch</span>';
+                if (s.vendor_company) {
+                    vendorHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-file-invoice me-1"></i>${esc(s.vendor_company.company_name)}</span><div class="text-muted" style="font-size:10px">GST: ${esc(s.vendor_company.gst_number || 'N/A')}</div>`;
+                } else if (s.vendor_company_id) {
+                    const vc = (companies || []).find(c => c.id === s.vendor_company_id);
+                    if (vc) {
+                        vendorHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-file-invoice me-1"></i>${esc(vc.company_name)}</span><div class="text-muted" style="font-size:10px">GST: ${esc(vc.gst_number || 'N/A')}</div>`;
+                    }
+                }
+
+                return `
+                    <tr>
+                        <td><div class="icon-circle"><i class="fas ${esc(s.icon || 'fa-layer-group')}"></i></div></td>
+                        <td class="fw-bold">${esc(s.name)}</td>
+                        <td><code>${esc(s.slug)}</code></td>
+                        <td>${esc(compMap[s.company_id] || `Co #${s.company_id}`)}</td>
+                        <td>${staffHtml}</td>
+                        <td>${vendorHtml}</td>
+                        <td><span class="badge-status ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td style="text-align:right">
+                            <button class="btn btn-outline-secondary btn-action-sm me-1" onclick="editSegment(${s.id})"><i class="fas fa-pen"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterSegmentsByCompany() {
+            const cid = parseInt(document.getElementById('segCompanyFilter').value, 10);
+            const all = _setupData?.segments || [];
+            const filtered = cid ? all.filter(s => s.company_id === cid) : all;
+            renderSegmentsTable(filtered, _setupData?.companies);
+        }
+
+        function populateSegVendorDropdown(selectedId) {
+            const sel = document.getElementById('seg_vendor_company_id');
+            const companies = _setupData?.companies || [];
+            sel.innerHTML = '<option value="">-- Same as Branch --</option>' +
+                companies.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${esc(c.company_name)} ${c.gst_number ? `(GST: ${c.gst_number})` : ''}</option>`).join('');
+            onSegVendorChange();
+        }
+
+        function onSegVendorChange() {
+            const vid = parseInt(document.getElementById('seg_vendor_company_id').value, 10);
+            const box = document.getElementById('seg_vendor_info_box');
+            const textEl = document.getElementById('seg_vendor_info_text');
+            if (!vid) {
+                box.style.display = 'none';
+                return;
+            }
+            const vc = (_setupData?.companies || []).find(c => c.id === vid);
+            if (vc) {
+                box.style.display = 'block';
+                textEl.innerHTML = `<strong>${esc(vc.company_name)}</strong> &bull; GSTIN: <code>${esc(vc.gst_number || 'NOT SET')}</code> &bull; PAN: <code>${esc(vc.pan_number || 'NOT SET')}</code><br><span class="small">${esc(vc.address || '')}, ${esc(vc.city || '')} ${esc(vc.state || '')}</span>`;
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        function populateSegStaffCheckboxes(assignedEmpIds = []) {
+            const container = document.getElementById('segStaffCheckboxesList');
+            const staff = _setupData?.staff_members || [];
+            if (!staff.length) {
+                container.innerHTML = '<div class="text-muted small p-2">No active staff members found for this company/tenant.</div>';
+                updateSegStaffBadge();
+                return;
+            }
+            container.innerHTML = staff.map(s => {
+                const isChecked = assignedEmpIds.includes(s.id);
+                return `
+                    <div class="form-check d-flex align-items-center justify-content-between p-2 border-bottom">
+                        <div>
+                            <input class="form-check-input seg-staff-chk me-2" type="checkbox" value="${s.id}" id="seg_staff_${s.id}" ${isChecked ? 'checked' : ''} onchange="updateSegStaffBadge()">
+                            <label class="form-check-label fw-semibold" for="seg_staff_${s.id}">
+                                ${esc(s.full_name)} <span class="text-muted small">(${esc(s.emp_code || '')} - ${esc(s.role || 'Staff')})</span>
+                            </label>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="small text-muted me-1">Weight:</span>
+                            <input type="number" class="form-control form-control-sm seg-staff-weight" id="seg_weight_${s.id}" value="1" min="1" max="10" style="width: 55px; padding: 2px 5px;">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            updateSegStaffBadge();
+        }
+
+        function updateSegStaffBadge() {
+            const count = document.querySelectorAll('.seg-staff-chk:checked').length;
+            const badge = document.getElementById('segStaffCountBadge');
+            if (badge) badge.innerText = `${count} Selected`;
+        }
+
+        function openAddSegmentModal() {
+            document.getElementById('segmentModalTitle').innerHTML = '<i class="fas fa-layer-group text-primary me-2"></i>Add Segment / Category';
+            document.getElementById('seg_id').value = '';
+            document.getElementById('seg_name').value = '';
+            document.getElementById('seg_slug').value = '';
+            document.getElementById('seg_desc').value = '';
+            document.getElementById('seg_order').value = '1';
+            populateSegVendorDropdown(null);
+            populateSegStaffCheckboxes([]);
+            _segmentModal.show();
+        }
+
+        function editSegment(sid) {
+            const seg = (_setupData?.segments || []).find(s => s.id === sid);
+            if (!seg) return;
+            document.getElementById('segmentModalTitle').innerHTML = '<i class="fas fa-pen text-primary me-2"></i>Edit Segment / Category';
+            document.getElementById('seg_id').value = seg.id;
+            document.getElementById('seg_company_id').value = seg.company_id;
+            document.getElementById('seg_name').value = seg.name;
+            document.getElementById('seg_slug').value = seg.slug;
+            document.getElementById('seg_icon').value = seg.icon || 'fa-layer-group';
+            document.getElementById('seg_desc').value = seg.description || '';
+            document.getElementById('seg_order').value = seg.display_order || 0;
+            populateSegVendorDropdown(seg.vendor_company_id || null);
+
+            const assignedIds = (seg.staff_members || []).map(m => m.employee_id);
+            populateSegStaffCheckboxes(assignedIds);
+            _segmentModal.show();
+        }
+
+        async function submitSegmentForm() {
+            const sid = document.getElementById('seg_id').value;
+            const name = document.getElementById('seg_name').value.trim();
+            const coId = parseInt(document.getElementById('seg_company_id').value, 10);
+            if (!name) { alert('Segment name is required.'); return; }
+            if (!coId) { alert('Target company is required.'); return; }
+
+            const checkedStaff = [];
+            document.querySelectorAll('.seg-staff-chk:checked').forEach(chk => {
+                const empId = parseInt(chk.value, 10);
+                const weightInput = document.getElementById(`seg_weight_${empId}`);
+                const weight = weightInput ? (parseInt(weightInput.value, 10) || 1) : 1;
+                checkedStaff.push({ employee_id: empId, assignment_weight: weight });
+            });
+
+            const vendorCoId = parseInt(document.getElementById('seg_vendor_company_id').value, 10) || null;
+
+            const payload = {
+                company_id: coId,
+                name: name,
+                slug: document.getElementById('seg_slug').value.trim() || null,
+                icon: document.getElementById('seg_icon').value,
+                description: document.getElementById('seg_desc').value.trim() || null,
+                display_order: parseInt(document.getElementById('seg_order').value, 10) || 0,
+                vendor_company_id: vendorCoId,
+                staff_members: checkedStaff
+            };
+
+            try {
+                const url = sid ? `/api/v1/saas/crm-setup/segments/${sid}` : '/api/v1/saas/crm-setup/segments';
+                const method = sid ? 'PUT' : 'POST';
+                const res = await staffFetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Failed to save segment');
+                }
+                _segmentModal.hide();
+                await loadOverview();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // ── TAB 4: STAFF / SEGMENT ASSIGNMENT ──
+        function renderHandlersTable(handlerRouting, segments, companies) {
+            const tbody = document.getElementById('handlersTableBody');
+            const compMap = {};
+            (companies || []).forEach(c => { compMap[c.id] = c.company_name; });
+
+            if (!segments || segments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Create at least one segment first.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = segments.map(s => {
+                const key = `${s.company_id}_${s.id}`;
+                const routing = handlerRouting ? handlerRouting[key] : null;
+                const members = routing ? routing.members : [];
+
+                return `
+                    <tr>
+                        <td class="fw-bold"><div class="d-flex align-items-center gap-2"><div class="icon-circle" style="width:26px;height:26px;font-size:11px"><i class="fas ${esc(s.icon || 'fa-layer-group')}"></i></div>${esc(s.name)}</div></td>
+                        <td>${esc(compMap[s.company_id] || `Co #${s.company_id}`)}</td>
+                        <td>
+                            ${members.length > 0 ? members.map(m => `
+                                <span class="staff-chip">
+                                    <i class="fas fa-user-circle text-primary"></i> ${esc(m.employee_name)}
+                                    <span class="staff-chip-weight">x${m.assignment_weight}</span>
+                                </span>
+                            `).join('') : '<span class="text-muted small">No staff assigned</span>'}
+                        </td>
+                        <td><span class="badge bg-light text-dark border">${members.length} Staff</span></td>
+                        <td><span class="badge-status ${members.length > 0 ? 'active' : 'inactive'}">${members.length > 0 ? 'Routing Active' : 'Unassigned'}</span></td>
+                        <td style="text-align:right">
+                            <button class="btn btn-primary btn-action-sm" onclick="openAssignStaffForSegment(${s.company_id}, ${s.id})"><i class="fas fa-user-pen me-1"></i> Assign</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openAssignStaffModal() {
+            onAssignCompanyChange();
+            _assignModal.show();
+        }
+
+        function openAssignStaffForSegment(companyId, segmentId) {
+            document.getElementById('assign_company_id').value = companyId;
+            onAssignCompanyChange();
+            document.getElementById('assign_segment_id').value = segmentId;
+            loadCurrentSegmentStaff();
+            _assignModal.show();
+        }
+
+        function onAssignCompanyChange() {
+            const coId = parseInt(document.getElementById('assign_company_id').value, 10);
+            const segs = (_setupData?.segments || []).filter(s => s.company_id === coId);
+            const segSelect = document.getElementById('assign_segment_id');
+            segSelect.innerHTML = segs.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+            loadCurrentSegmentStaff();
+        }
+
+        function loadCurrentSegmentStaff() {
+            const coId = parseInt(document.getElementById('assign_company_id').value, 10);
+            const segId = parseInt(document.getElementById('assign_segment_id').value, 10);
+            const key = `${coId}_${segId}`;
+            const existing = _setupData?.handler_routing ? _setupData.handler_routing[key] : null;
+            const existingMembers = existing ? existing.members : [];
+            const memberWeightMap = {};
+            existingMembers.forEach(m => { memberWeightMap[m.employee_id] = m.assignment_weight; });
+
+            const staffList = _setupData?.staff || [];
+            const container = document.getElementById('staffCheckboxesList');
+
+            if (staffList.length === 0) {
+                container.innerHTML = '<div class="text-muted small p-2">No staff users found in this tenant. Add staff in Staff & Users first.</div>';
+                return;
+            }
+
+            container.innerHTML = staffList.map(emp => {
+                const isChecked = Boolean(memberWeightMap[emp.id]);
+                const weight = memberWeightMap[emp.id] || 1;
+                return `
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-1 border-bottom">
+                        <div class="form-check">
+                            <input class="form-check-input staff-assign-cb" type="checkbox" value="${emp.id}" id="staffCb_${emp.id}" ${isChecked ? 'checked' : ''} style="cursor:pointer;">
+                            <label class="form-check-label fw-bold small ms-1" for="staffCb_${emp.id}" style="cursor:pointer;">
+                                ${esc(emp.full_name)} <span class="text-muted fw-normal">(${esc(emp.emp_code)})</span>
+                            </label>
+                            <div class="text-muted" style="font-size:11px;margin-left:22px">${esc(emp.role)} · ${esc(emp.email || '')}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small text-muted">Weight:</span>
+                            <input type="number" class="form-control form-control-sm text-center" id="staffWeight_${emp.id}" value="${weight}" min="1" max="10" style="width:60px">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function submitStaffAssignment() {
+            const coId = parseInt(document.getElementById('assign_company_id').value, 10);
+            const segId = parseInt(document.getElementById('assign_segment_id').value, 10);
+            if (!coId || !segId) { alert('Please select Company and Segment.'); return; }
+
+            const checkedBoxes = document.querySelectorAll('.staff-assign-cb:checked');
+            const members = Array.from(checkedBoxes).map(cb => {
+                const eid = parseInt(cb.value, 10);
+                const wInput = document.getElementById(`staffWeight_${eid}`);
+                const weight = wInput ? parseInt(wInput.value, 10) || 1 : 1;
+                return { employee_id: eid, assignment_weight: weight };
+            });
+
+            const payload = {
+                company_id: coId,
+                category_id: segId,
+                staff_members: members
+            };
+
+            try {
+                const res = await staffFetch('/api/v1/saas/crm-setup/handlers/assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Failed to save staff assignment');
+                }
+                _assignModal.hide();
+                await loadOverview();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+    </script>
+</body>
+</html>

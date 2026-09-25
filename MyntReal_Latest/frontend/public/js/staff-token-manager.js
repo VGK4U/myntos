@@ -619,8 +619,22 @@
             xhr.send(formData);
         });
     }
-    
+
+    function getToken() {
+        return localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('token');
+    }
+
+    function getUser() {
+        try {
+            return JSON.parse(localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user') || '{}');
+        } catch (e) {
+            return null;
+        }
+    }
+
     window.StaffTokenManager = {
+        getToken,
+        getUser,
         refreshToken,
         staffFetch,
         staffFetchJson,

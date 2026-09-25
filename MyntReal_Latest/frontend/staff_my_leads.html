@@ -585,7 +585,7 @@
                             </div>
                             <div class="col-md-4 col-12">
                                 <label class="form-label">Category</label>
-                                <select class="form-select" id="leadCategory"></select>
+                                <select class="form-select" id="leadCategory" onchange="onLeadCategoryChange()"></select>
                             </div>
                         </div>
                         
@@ -1102,6 +1102,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-success" onclick="openFixAppointmentFromLeadModal()" id="leadModalFixAppointmentBtn">
+                        <i class="fas fa-calendar-check me-1"></i> Fix Appointment
+                    </button>
                     <button type="button" class="btn btn-success" onclick="openCreateTaskFromLeadModal()" id="createTaskFromModalBtn" style="display: none;">
                         <i class="fas fa-tasks me-1"></i> Create Task
                     </button>
@@ -1200,6 +1203,9 @@
                 <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title"><i class="fas fa-user me-2"></i><span id="detailLeadName">Lead Details</span></h5>
                     <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-success" id="detailFixAppointmentBtn" onclick="openFixAppointmentFromLeadDetail()" title="Fix Field Appointment">
+                            <i class="fas fa-calendar-check me-1"></i> Fix Appointment
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="detailHistoryBtn" onclick="if(window._currentViewLeadData)openUniversalHistory({entityType:'crm_lead', entityId:window._currentViewLeadData.id, name:window._currentViewLeadData.name, phone:window._currentViewLeadData.phone, status:window._currentViewLeadData.status, stage:window._currentViewLeadData.stage||window._currentViewLeadData.solar_pipeline_status, category:window._currentViewLeadData.category_name||window._currentViewLeadData.category})" title="Universal History">
                             <i class="fas fa-history me-1"></i> History
                         </button>
@@ -1633,6 +1639,7 @@
     <script src="/public/js/crm-assignee-search.js"></script>
     <script src="/public/js/crm-handler-confirm.js"></script>
     <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
@@ -2248,6 +2255,38 @@
             }
         }
 
+        async function onLeadCategoryChange() {
+            const catSelect = document.getElementById('leadCategory');
+            const catId = parseInt(catSelect?.value, 10);
+            const leadId = document.getElementById('leadId')?.value;
+            const isNew = !leadId;
+
+            if (!catId) return;
+
+            // Check if category has routing pool configured by the company
+            try {
+                const res = await staffFetchJson(`/api/v1/crm/segments/${catId}/routing-pool`);
+                if (res && res.success && res.routing_pool && res.routing_pool.length > 0) {
+                    const pool = res.routing_pool;
+                    const poolNames = pool.map(p => `${p.full_name} (${p.emp_code || ''}, weight:${p.assignment_weight || 1})`).join(', ');
+                    if (isNew) {
+                        const ownerIdEl = document.getElementById('leadPrimaryOwnerId');
+                        if (ownerIdEl) ownerIdEl.value = '';
+                        if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch && typeof primaryOwnerSearch.clear === 'function') {
+                            primaryOwnerSearch.clear();
+                        }
+                        const noteEl = document.getElementById('primaryOwnerNote');
+                        if (noteEl) {
+                            const safePool = String(poolNames).replace(/[&<>"']/g, '');
+                            noteEl.innerHTML = `<span class="text-success"><i class="fas fa-route me-1"></i>Auto-assigned by Company Segment Pool (Weighted Round-Robin): ${safePool}</span>`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[DC-CRM] Failed to resolve segment routing pool:', e);
+            }
+        }
+
         function populateSourceDropdowns() {
             const filterSelect = document.getElementById('filterSource');
             const formSelect = document.getElementById('leadSource');
@@ -2684,6 +2723,7 @@
                     if (headerCountEl) headerCountEl.textContent = `${data.pagination?.total ?? (data.data ? data.data.length : 0)} Leads`;
                     
                     const pageOffset = (page - 1) * (data.pagination?.per_page || 20);
+                    window._cachedLeads = data.data || [];
                     renderLeadsTable(data.data || [], pageOffset);
                     renderPagination(data.pagination || { page: page, pages: 1, total: (data.data || []).length, per_page: 20 });
                 } else {
@@ -2773,6 +2813,9 @@
                         <div class="d-flex gap-1">
                             <button class="btn btn-outline-secondary icon-btn" onclick="event.stopPropagation(); openUniversalHistory({entityType:'crm_lead', entityId:${lead.id}, name:'${safeNameEsc}', phone:'${cleanP}', status:'${lead.status||''}', stage:'${lead.stage||lead.solar_pipeline_status||''}', category:'${safeCatEsc}', assignedTo:'${safeOwnerEsc}'})" title="Universal History">
                                 <i class="fas fa-history"></i>
+                            </button>
+                            <button class="btn btn-outline-success icon-btn" onclick="event.stopPropagation(); openFixAppointmentFromLeadRow(${lead.id})" title="Fix Field Appointment">
+                                <i class="fas fa-calendar-check"></i>
                             </button>
                             <button class="btn btn-outline-primary icon-btn" onclick="event.stopPropagation(); editLead(${lead.id}, ${leadCompanyIdParam})" title="Edit">
                                 <i class="fas fa-edit"></i>
@@ -4526,6 +4569,7 @@
                 
                 if (data.success) {
                     const lead = data.data;
+                    window._currentViewLeadData = lead;
                     selectedLeadCompanyId = lead.company_id || effectiveCompanyId;
                     
                     document.getElementById('detailLeadName').textContent = lead.name;
@@ -6330,6 +6374,89 @@
                 showToast('Error claiming lead: ' + err.message, 'error');
             }
         }
+
+        // ── DC Protocol: Field Appointment Integration for My Leads ──
+        window.openFixAppointmentFromLeadRow = function(leadId) {
+            const lead = (window._cachedLeads || []).find(l => l.id == leadId);
+            if (lead) {
+                window.openFixAppointmentModal({
+                    id: lead.id,
+                    name: lead.name,
+                    phone: lead.phone,
+                    address: lead.address,
+                    city: lead.city,
+                    area: lead.area,
+                    pincode: lead.pincode,
+                    bank_name: lead.bank_name,
+                    bank_branch: lead.bank_branch,
+                    bank_address: lead.bank_address,
+                    google_maps_url: lead.google_maps_url || lead.location_url,
+                    category: lead.category_name || lead.category,
+                    company_id: lead.company_id
+                }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            } else if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({ id: leadId }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            }
+        };
+
+        window.openFixAppointmentFromLeadModal = function() {
+            const leadId = document.getElementById('leadId')?.value;
+            if (!leadId) {
+                alert('Please save the lead first before fixing an appointment.');
+                return;
+            }
+            const name = document.getElementById('leadName')?.value || '';
+            const phone = document.getElementById('leadPhone')?.value || '';
+            const address = document.getElementById('leadAddress')?.value || '';
+            const city = document.getElementById('leadCity')?.value || '';
+            const area = document.getElementById('leadArea')?.value || '';
+            const pincode = document.getElementById('leadPincode')?.value || '';
+            const mapsUrl = document.getElementById('leadGoogleMapsUrl')?.value || '';
+
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({
+                    id: leadId,
+                    name: name,
+                    phone: phone,
+                    address: address,
+                    city: city,
+                    area: area,
+                    pincode: pincode,
+                    google_maps_url: mapsUrl
+                }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            }
+        };
+
+        window.openFixAppointmentFromLeadDetail = function() {
+            if (window._currentViewLeadData && typeof window.openFixAppointmentModal === 'function') {
+                const l = window._currentViewLeadData;
+                window.openFixAppointmentModal({
+                    id: l.id,
+                    name: l.name,
+                    phone: l.phone,
+                    address: l.address,
+                    city: l.city,
+                    area: l.area,
+                    pincode: l.pincode,
+                    bank_name: l.bank_name,
+                    bank_branch: l.bank_branch,
+                    bank_address: l.bank_address,
+                    google_maps_url: l.google_maps_url,
+                    category: l.category_name || l.category,
+                    company_id: l.company_id
+                }, () => {
+                    if (typeof window.renderLeadFieldAppointments === 'function') {
+                        window.renderLeadFieldAppointments(l.id, 'detailFieldAppointmentsList');
+                    }
+                });
+            }
+        };
 
         // ─── End DC Protocol N001 ────────────────────────────────────────────────
     </script>

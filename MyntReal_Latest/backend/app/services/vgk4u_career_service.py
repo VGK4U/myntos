@@ -36,7 +36,10 @@ DESIGNATION_REGIONAL_MANAGER = 'Core'
 PROD_QUAL_NONE = 'None'
 PROD_QUAL_BASE = 'Base'
 PROD_QUAL_GM = 'GM Commission Qualified'
-PROD_QUAL_RM = 'RM Commission Qualified'
+PROD_QUAL_EXT = 'Extended Commission Qualified'
+PROD_QUAL_CORE = 'Core Commission Qualified'
+PROD_QUAL_APEX = 'Apex Top Commission Qualified'
+PROD_QUAL_RM = 'Core Commission Qualified'
 
 # Corporate Master Root ID
 ROOT_APEX_PARTNER_ID = 31
@@ -169,33 +172,51 @@ class VGK4UCareerService:
                 career_desig = DESIGNATION_MEMBER
             elif own_files >= 16 and active_legs >= 10:
                 career_desig = DESIGNATION_CORE
-            elif own_files >= 9 and active_legs >= 5:
+            elif own_files >= 10 and active_legs >= 5:
                 career_desig = DESIGNATION_EXTENDED
-            elif own_files >= 4 and active_legs >= 1:
+            elif own_files >= 5 and active_legs >= 1:
                 career_desig = DESIGNATION_SENIOR
             elif own_files >= 1:
                 career_desig = DESIGNATION_CHANNEL_PARTNER
             else:
                 career_desig = DESIGNATION_MEMBER
 
-            # --- B. Personal Production Qualification (Individual Sales) ---
-            # Pure Model: Personal sales commission is flat 6.00% (5.00% Base + 1.00% Brand)
-            # Designation rewards downline team leadership overrides, not higher personal sales rates.
+            # --- B. Personal Direct Sales Commission & Production Qualification ---
             if is_apex:
                 prod_qual = None
-            elif own_files == 0:
-                prod_qual = PROD_QUAL_NONE
-            else:
-                prod_qual = PROD_QUAL_BASE
-
-            # --- C. Effective Personal Sales Rate (Solar) ---
-            if is_apex:
                 effective_personal_rate = 0.0  # Corporate entity; does not earn personal commissions
-            elif own_files == 0:
-                effective_personal_rate = 0.0 # Unlocks 6.0% upon closing 1st file
+            elif own_files >= 1:
+                prod_qual = PROD_QUAL_BASE
+                effective_personal_rate = 5.00  # Pure Model: Flat 5.00% Personal Direct Sales Commission
             else:
-                # Flat 6.00% across all producing designations (5.00% Base + 1.00% Brand Allowance)
-                effective_personal_rate = 6.0
+                prod_qual = PROD_QUAL_NONE
+                effective_personal_rate = 0.0  # Unlocks 5.00% upon closing 1st personal file
+
+            # --- C. Leadership Team Differentials & Direct Sponsor Override ---
+            if is_apex:
+                team_diff_rate = 0.0
+                cum_diff_rate = 0.0
+                sponsor_rate = 0.0
+            elif career_desig == DESIGNATION_CORE:
+                team_diff_rate = 0.50
+                cum_diff_rate = 3.00  # 1.50% (Senior) + 1.00% (Extended) + 0.50% (Core)
+                sponsor_rate = 1.00
+            elif career_desig == DESIGNATION_EXTENDED:
+                team_diff_rate = 1.00
+                cum_diff_rate = 2.50  # 1.50% (Senior) + 1.00% (Extended)
+                sponsor_rate = 1.00
+            elif career_desig == DESIGNATION_SENIOR:
+                team_diff_rate = 1.50
+                cum_diff_rate = 1.50  # 1.50% (Senior)
+                sponsor_rate = 1.00
+            elif career_desig == DESIGNATION_CHANNEL_PARTNER:
+                team_diff_rate = 0.00
+                cum_diff_rate = 0.00
+                sponsor_rate = 1.00
+            else:
+                team_diff_rate = 0.00
+                cum_diff_rate = 0.00
+                sponsor_rate = 0.00
 
             # --- D. Next Career Milestone ---
             if is_apex:
@@ -212,11 +233,11 @@ class VGK4UCareerService:
                     'remaining_legs': 0
                 }
             elif career_desig == DESIGNATION_CHANNEL_PARTNER:
-                rem_files = max(0, 4 - own_files)
+                rem_files = max(0, 5 - own_files)
                 rem_legs = max(0, 1 - active_legs)
                 next_career = {
                     'target_title': DESIGNATION_SENIOR,
-                    'required_files': 4,
+                    'required_files': 5,
                     'current_files': own_files,
                     'remaining': rem_files + rem_legs,
                     'remaining_files': rem_files,
@@ -225,11 +246,11 @@ class VGK4UCareerService:
                     'remaining_legs': rem_legs
                 }
             elif career_desig == DESIGNATION_SENIOR:
-                rem_files = max(0, 9 - own_files)
+                rem_files = max(0, 10 - own_files)
                 rem_legs = max(0, 5 - active_legs)
                 next_career = {
                     'target_title': DESIGNATION_EXTENDED,
-                    'required_files': 9,
+                    'required_files': 10,
                     'current_files': own_files,
                     'remaining': rem_files + rem_legs,
                     'remaining_files': rem_files,
@@ -265,10 +286,10 @@ class VGK4UCareerService:
             # --- E. Next Personal Production Milestone ---
             if is_apex:
                 next_prod = {'target_tier': None, 'required_files': 0, 'current_files': own_files, 'remaining': 0}
-            elif own_files < 1:
-                next_prod = {'target_tier': 'Active Producer (6.0%)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
+            elif own_files >= 1:
+                next_prod = {'target_tier': 'Personal Sales Commission (Flat 5.0%) Qualified', 'required_files': 1, 'current_files': own_files, 'remaining': 0}
             else:
-                next_prod = {'target_tier': 'Active Producer (6.0%)', 'required_files': 1, 'current_files': own_files, 'remaining': 0}
+                next_prod = {'target_tier': 'Active Channel Partner (5.0% Direct Commission)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
 
             sponsor_name = ""
             sponsor_code = ""
@@ -292,6 +313,9 @@ class VGK4UCareerService:
                 'career_designation': career_desig,
                 'personal_prod_qualification': prod_qual,
                 'effective_personal_producer_rate': effective_personal_rate,
+                'team_differential_rate': team_diff_rate,
+                'cumulative_differential_rate': cum_diff_rate,
+                'sponsor_override_rate': sponsor_rate,
                 'next_career_milestone': next_career,
                 'next_personal_milestone': next_prod,
             }

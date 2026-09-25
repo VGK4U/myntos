@@ -2084,10 +2084,17 @@ export class StaffCRMPage {
                   (r.categories || []).forEach((c: any) => empPay[c.slug] = c.incentive_earned || 0);
                   return `
                     <tr style="border-bottom:1px solid #f1f5f9;">
-                      <td style="padding:7px 10px; font-weight:700;">${this.escapeHtml(r.name || '-')} <small style="color:#64748b;">(${this.escapeHtml(r.emp_code || '')})</small></td>
+                      <td style="padding:7px 10px; font-weight:700;">
+                        ${this.escapeHtml(r.name || '-')} <small style="color:#64748b;">(${this.escapeHtml(r.emp_code || '')})</small>
+                        ${r.is_telecaller ? '<span style="background:#e0f2fe; color:#0369a1; padding:1px 4px; border-radius:3px; font-size:9px; margin-left:3px;">TC</span>' : ''}
+                      </td>
                       ${catSlugs.map(s => `<td style="padding:7px 8px; text-align:center;">₹${this.fmtNum(empPay[s] || 0)}</td>`).join('')}
                       <td style="padding:7px 10px; text-align:right; font-weight:800; color:#059669;">₹${this.fmtNum(r.total_incentive_earned || 0)}</td>
-                      <td style="padding:7px 8px; text-align:center;"><span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">Calculated</span></td>
+                      <td style="padding:7px 8px; text-align:center;">
+                        ${r.kra_penalty_applied 
+                          ? '<span style="background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">50% Pen</span>'
+                          : '<span style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">Calculated</span>'}
+                      </td>
                     </tr>
                   `;
                 }).join('')}

@@ -894,6 +894,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-success" onclick="openFixAppointmentFromTeamLeadModal()" id="leadModalFixAppointmentBtn">
+                        <i class="fas fa-calendar-check me-1"></i> Fix Appointment
+                    </button>
                     <button type="button" class="btn btn-info text-white" onclick="openShareLeadModalFromLeadModal()" id="shareLeadFromModalBtn" style="display: none;">
                         <i class="fas fa-share-alt me-1"></i> Share Details
                     </button>
@@ -1241,6 +1244,9 @@
                                         <button class="btn btn-outline-info btn-sm" onclick="editLeadFromDetail()">
                                             <i class="fas fa-edit me-1"></i>Edit Lead
                                         </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="openFixAppointmentFromTeamDetail()">
+                                            <i class="fas fa-calendar-check me-1"></i>Fix Appointment
+                                        </button>
                                         <button class="btn btn-success btn-sm" onclick="openCreateTaskFromQuickAction()">
                                             <i class="fas fa-tasks me-1"></i>Create Task
                                         </button>
@@ -1370,6 +1376,8 @@
     <script src="/public/js/share-lead-modal.js?v=20260916"></script>
     <script src="/public/js/wa-send-modal.js"></script>
     <script src="/public/js/crm-assignee-search.js"></script>
+    <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
     <script src="/shared/staff_inactivity_manager.js"></script>
     <script src="/staff_header.js"></script>
@@ -2123,7 +2131,7 @@
                     const startIdx = (page - 1) * perPage;
                     const paginatedLeads = allLeads.slice(startIdx, startIdx + perPage);
                     const totalPages = Math.ceil(allLeads.length / perPage);
-                    
+                    window._cachedLeads = paginatedLeads;
                     renderLeadsTable(paginatedLeads);
                     renderPagination({
                         page: page,
@@ -2135,6 +2143,7 @@
                     // Single company mode
                     const data = await apiCall(baseEndpoint);
                     if (data.success) {
+                        window._cachedLeads = data.data || [];
                         renderLeadsTable(data.data);
                         renderPagination(data.pagination);
                     }
@@ -2183,6 +2192,9 @@
                     <td style="font-size: 11px; text-align: center;">${daysSince}</td>
                     <td>
                         <div class="d-flex gap-1">
+                            <button class="btn btn-outline-success icon-btn" onclick="event.stopPropagation(); openFixAppointmentFromTeamLeadRow(${lead.id})" title="Fix Field Appointment">
+                                <i class="fas fa-calendar-check"></i>
+                            </button>
                             <button class="btn btn-outline-primary icon-btn" onclick="event.stopPropagation(); editLead(${lead.id}, ${leadCompanyIdParam})" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -5097,6 +5109,85 @@
                 await staffFetch(`/api/v1/crm/leads/${leadId}/log-whatsapp-share?company_id=${companyId}&share_type=vgk_creds`, { method: 'POST' });
             } catch(e) {}
         }
+
+        // ── DC Protocol: Field Appointment Integration for Team Leads ──
+        window.openFixAppointmentFromTeamLeadRow = function(leadId) {
+            const lead = (window._cachedLeads || []).find(l => l.id == leadId);
+            if (lead && typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({
+                    id: lead.id,
+                    name: lead.name,
+                    phone: lead.phone,
+                    address: lead.address,
+                    city: lead.city,
+                    area: lead.area,
+                    pincode: lead.pincode,
+                    bank_name: lead.bank_name,
+                    bank_branch: lead.bank_branch,
+                    bank_address: lead.bank_address,
+                    google_maps_url: lead.google_maps_url || lead.location_url,
+                    category: lead.category_name || lead.category,
+                    company_id: lead.company_id
+                }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            } else if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({ id: leadId }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            }
+        };
+
+        window.openFixAppointmentFromTeamLeadModal = function() {
+            const leadId = document.getElementById('leadId')?.value;
+            if (!leadId) {
+                alert('Please save the lead first before fixing an appointment.');
+                return;
+            }
+            const name = document.getElementById('leadName')?.value || '';
+            const phone = document.getElementById('leadPhone')?.value || '';
+            const address = document.getElementById('leadAddress')?.value || '';
+            const city = document.getElementById('leadCity')?.value || '';
+            const area = document.getElementById('leadArea')?.value || '';
+            const pincode = document.getElementById('leadPincode')?.value || '';
+            const mapsUrl = document.getElementById('leadGoogleMapsUrl')?.value || '';
+
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({
+                    id: leadId,
+                    name: name,
+                    phone: phone,
+                    address: address,
+                    city: city,
+                    area: area,
+                    pincode: pincode,
+                    google_maps_url: mapsUrl
+                }, () => {
+                    if (typeof loadLeads === 'function') loadLeads(currentPage);
+                });
+            }
+        };
+
+        window.openFixAppointmentFromTeamDetail = function() {
+            if (window._currentViewLeadData && typeof window.openFixAppointmentModal === 'function') {
+                const l = window._currentViewLeadData;
+                window.openFixAppointmentModal({
+                    id: l.id,
+                    name: l.name,
+                    phone: l.phone,
+                    address: l.address,
+                    city: l.city,
+                    area: l.area,
+                    pincode: l.pincode,
+                    bank_name: l.bank_name,
+                    bank_branch: l.bank_branch,
+                    bank_address: l.bank_address,
+                    google_maps_url: l.google_maps_url,
+                    category: l.category_name || l.category,
+                    company_id: l.company_id
+                });
+            }
+        };
 
         // ─── End DC Protocol N001 ────────────────────────────────────────────────
     </script>

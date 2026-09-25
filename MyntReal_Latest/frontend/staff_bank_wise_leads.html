@@ -11,6 +11,7 @@
   <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/mnr-map-modal.js"></script>
     <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/crm-field-appointment-modal.js?v=20260925"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -1365,6 +1366,9 @@
                         <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10.5px;font-weight:700">
                             <i class="fas fa-university me-1"></i>Bank
                         </button>
+                        <button class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap ms-1" onclick="openFixAppointmentFromBankLead(${l.id})" title="Fix Field Appointment" style="font-size:10.5px;font-weight:700">
+                            <i class="fas fa-calendar-check me-1"></i>Visit
+                        </button>
                     </td>
                     <td style="color:#059669;font-weight:600">
                         <i class="fas fa-user-gear me-1"></i><span class="clickable-label" onclick="applyCustomFilter('groundSupport', '${escJs(gsStaffName)}')" title="Click to filter by Ground Support: ${esc(gsStaffName)}">${esc(gsStaffName)}</span>${gsSupportCallBtn}
@@ -1444,6 +1448,7 @@
                     <div class="d-flex flex-wrap gap-1 pt-2 border-top">
                         <button class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" style="font-size:11px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                         <button class="btn btn-sm btn-outline-info py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" style="font-size:11px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
+                        <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" onclick="openFixAppointmentFromBankLead(${l.id})" style="font-size:11px;font-weight:700" title="Fix Field Appointment"><i class="fas fa-calendar-check me-1"></i>Visit</button>
                         <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Call</button>
                         <button type="button" class="btn btn-sm py-1 px-2 flex-grow-1" onclick="openLeadHistory(${l.id}, '${escJs(l.customer_name)}', '${cleanCustPhone}')" style="font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe"><i class="fas fa-history me-1"></i>History</button>
                         ${l.ground_source_phone ? `<button type="button" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanGsPhone}', '${escJs(l.ground_source_name)} (Ground Source)')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Source</button>` : ''}
@@ -1462,6 +1467,33 @@
                     name: name || `Lead #${leadId}`,
                     phone: phone || '',
                     category: 'Bank Wise Lead'
+                });
+            }
+        }
+
+        function openFixAppointmentFromBankLead(leadId) {
+            const l = (globalBankLeads || []).find(x => x.id == leadId);
+            if (!l) {
+                if (typeof window.openFixAppointmentModal === 'function') {
+                    window.openFixAppointmentModal({ id: leadId }, () => {
+                        if (typeof loadBankWiseData === 'function') loadBankWiseData();
+                    });
+                }
+                return;
+            }
+            if (typeof window.openFixAppointmentModal === 'function') {
+                window.openFixAppointmentModal({
+                    id: l.id,
+                    name: l.customer_name,
+                    phone: l.phone_number,
+                    city: l.city_district || '',
+                    bank_name: l.bank_name || '',
+                    bank_branch: l.bank_branch || '',
+                    google_maps_url: l.google_maps_url || '',
+                    category: 'Bank Wise Lead',
+                    default_visit_type: 'visit_bank'
+                }, () => {
+                    if (typeof loadBankWiseData === 'function') loadBankWiseData();
                 });
             }
         }
@@ -1735,6 +1767,7 @@
                             <td style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                                 <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
+                                <button class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap ms-1" onclick="openFixAppointmentFromBankLead(${l.id})" title="Fix Field Appointment" style="font-size:10px;font-weight:700"><i class="fas fa-calendar-check me-1"></i>Visit</button>
                             </td>
                             <td><span class="badge bg-info text-dark px-2 py-1" style="font-size:10px;font-weight:700">${esc(stageLabel)}</span></td>
                             <td class="text-end fw-bold text-success">${lVal}</td>

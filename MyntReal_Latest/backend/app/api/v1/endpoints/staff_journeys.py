@@ -284,6 +284,13 @@ async def start_journey(
         StaffAttendance.date == today
     ).first()
 
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if _saas_ctx.company:
+            request_data.company_id = _saas_ctx.company.id
+
     # DC Protocol Phase 2: Company selection mandatory for SFMS integration
     if not request_data.company_id:
         raise HTTPException(
@@ -1095,7 +1102,14 @@ async def get_all_journeys(
     - VGK/HR see all journeys
     """
     from app.utils.staff_hierarchy import has_direct_reports
-    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        is_saas_admin = _saas_ctx.is_tenant_admin
+    else:
+        is_saas_admin = False
+
     is_manager = has_direct_reports(current_user.id, db, StaffEmployee)
     is_vgk4u_or_hr = current_user.role and (
         current_user.role.hierarchy_level >= 150 or 
@@ -1103,7 +1117,7 @@ async def get_all_journeys(
         current_user.role.role_code in ['hr', 'ea']
     )
     
-    if not is_manager and not is_vgk4u_or_hr:
+    if not is_manager and not is_vgk4u_or_hr and not is_saas_admin:
         raise HTTPException(status_code=403, detail="Only those with direct reports or HR/VGK4U can view all journeys")
 
     # DC Protocol (Feb 25, 2026): Use get_team_member_ids to exclude self + hidden accounts
@@ -1513,9 +1527,18 @@ async def get_journey_companies(
     
     DC Protocol (Phase 2): Company selection mandatory for SFMS integration
     """
-    companies = db.query(AssociatedCompany).filter(
-        AssociatedCompany.is_active == True
-    ).order_by(AssociatedCompany.company_name).all()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if _saas_ctx.company:
+            companies = [_saas_ctx.company]
+        else:
+            companies = []
+    else:
+        companies = db.query(AssociatedCompany).filter(
+            AssociatedCompany.is_active == True
+        ).order_by(AssociatedCompany.company_name).all()
     
     return {
         "success": True,
@@ -1557,7 +1580,14 @@ async def get_hr_journeys(
     if not is_manager and not is_vgk4u_or_hr:
         raise HTTPException(status_code=403, detail="Only those with direct reports or HR/VGK4U can view HR journey data")
 
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     query = db.query(StaffJourney)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        query = query.filter(StaffJourney.company_id == _saas_ctx.company.id)
 
     if start_date:
         query = query.filter(StaffJourney.date >= datetime.strptime(start_date, '%Y-%m-%d').date())

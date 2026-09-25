@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central Integration Management — MyntOS</title>
+    <!-- Fonts & Bootstrap 5 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- MyntOS Core Scripts -->
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --primary-glow: rgba(79, 70, 229, 0.25);
+            --bg-page: #0b0f19;
+            --surface: #111827;
+            --surface-card: #1f2937;
+            --surface-elevated: #283548;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.3);
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --accent-cyan: #06b6d4;
+            --accent-violet: #8b5cf6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            margin-left: 0;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-top: 75px;
+            min-height: 100vh;
+            background: radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.06) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
+                        var(--bg-page);
+        }
+
+        .sidebar-expanded .main-content {
+            margin-left: 260px;
+        }
+
+        .content-area {
+            padding: 24px 32px 60px 32px;
+            max-width: 1720px;
+            margin: 0 auto;
+        }
+
+        /* Access Denied Guard Box */
+        .access-denied-container {
+            display: none;
+            padding: 80px 24px;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .access-denied-card {
+            background: var(--surface);
+            border: 1px solid var(--danger);
+            border-radius: 20px;
+            padding: 48px 32px;
+            box-shadow: 0 20px 40px rgba(239, 68, 68, 0.15);
+        }
+
+        /* Banner */
+        .page-banner {
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.8) 0%, rgba(17, 24, 39, 0.95) 100%);
+            border: 1px solid var(--border-highlight);
+            border-radius: 20px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-banner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .banner-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .banner-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge-guard {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .badge-rule6 {
+            background: rgba(6, 182, 212, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Client Selector Control */
+        .client-selector-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(17, 24, 39, 0.85);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .client-selector-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+
+        .client-dropdown {
+            background-color: var(--surface-card);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13.5px;
+            font-weight: 600;
+            min-width: 260px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .client-dropdown:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .client-dropdown optgroup {
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        .client-dropdown option {
+            background: var(--surface-card);
+            color: white;
+            font-weight: 500;
+            padding: 6px;
+        }
+
+        .client-type-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .type-internal { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); }
+        .type-external { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+        /* KPI Mini Cards */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-highlight);
+        }
+
+        .kpi-card-left { display: flex; flex-direction: column; }
+        .kpi-num { font-size: 26px; font-weight: 800; line-height: 1.1; color: #ffffff; }
+        .kpi-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+        .kpi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .kpi-icon-1 { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .kpi-icon-2 { background: rgba(6, 182, 212, 0.15); color: #38bdf8; }
+        .kpi-icon-3 { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .kpi-icon-4 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        /* Dynamic Tabs */
+        .tabs-header-container {
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+
+        .integration-tabs {
+            display: flex;
+            gap: 6px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            min-width: max-content;
+        }
+
+        .integration-tab-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .integration-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .integration-tab-btn.active {
+            color: #ffffff;
+            border-bottom-color: var(--primary-light);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .tab-badge {
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: 700;
+        }
+
+        .integration-tab-btn.active .tab-badge {
+            background: var(--primary-light);
+            color: white;
+        }
+
+        /* Actions Bar */
+        .tab-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-action-custom {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-action-custom:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-action-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            border: 1px solid var(--primary-light);
+            color: white;
+        }
+
+        .btn-action-primary:hover {
+            box-shadow: 0 4px 15px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+
+        /* Provider Cards Grid */
+        .providers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+            gap: 24px;
+        }
+
+        .provider-card {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+        }
+
+        .provider-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .provider-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .provider-icon-box {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #818cf8;
+            flex-shrink: 0;
+        }
+
+        .provider-title-wrap { flex: 1; }
+        .provider-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .provider-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .provider-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        /* Connections Container inside Card */
+        .connections-container {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .connection-item {
+            background: var(--surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .connection-item:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .connection-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .connection-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .connection-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-conn-action {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-conn-action:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-conn-test {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.3);
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .btn-conn-test:hover {
+            background: rgba(56, 189, 248, 0.2);
+            color: #e0f2fe;
+        }
+
+        .connection-details-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 10px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+        }
+
+        .preview-field {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .preview-key {
+            font-size: 9.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .preview-val {
+            color: #cbd5e1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empty-connections-notice {
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .provider-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* Master Matrix Table */
+        .matrix-table-card {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .matrix-filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .matrix-search-input {
+            background: var(--surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: white;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13.5px;
+            min-width: 280px;
+            outline: none;
+        }
+        .matrix-search-input:focus {
+            border-color: var(--primary-light);
+        }
+
+        .matrix-table-wrap {
+            max-height: 70vh;
+            overflow: auto;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12.5px;
+        }
+
+        .matrix-table thead th {
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-weight: 700;
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        .matrix-table thead th.th-sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 12;
+            background: #162032;
+        }
+
+        .matrix-table tbody tr {
+            transition: background 0.15s;
+        }
+
+        .matrix-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .matrix-table tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            white-space: nowrap;
+        }
+
+        .matrix-table tbody td.td-sticky-col {
+            position: sticky;
+            left: 0;
+            background: var(--surface);
+            z-index: 5;
+            font-weight: 600;
+        }
+        .matrix-table tbody tr:hover td.td-sticky-col {
+            background: #1a2233;
+        }
+
+        .cell-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .cell-status-pill:hover {
+            transform: scale(1.05);
+        }
+
+        .status-pill-active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-pill-platform { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .status-pill-none { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px dashed rgba(255, 255, 255, 0.1); }
+        .status-pill-inactive { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* Modal Customizations */
+        .modal-content-custom {
+            background-color: var(--surface);
+            border: 1px solid var(--border-highlight);
+            color: var(--text-primary);
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-header-custom {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 20px 24px;
+        }
+
+        .modal-body-custom {
+            padding: 24px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer-custom {
+            border-top: 1px solid var(--border-subtle);
+            padding: 16px 24px;
+        }
+
+        .form-label-custom {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-control-custom, .form-select-custom {
+            background-color: var(--surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: white;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13.5px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-control-custom:focus, .form-select-custom:focus {
+            background-color: var(--surface-card);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            color: white;
+        }
+
+        .form-hint {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Password toggle button */
+        .btn-pw-toggle {
+            background: var(--surface-card);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-left: none;
+            color: var(--text-secondary);
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+        }
+        .btn-pw-toggle:hover {
+            color: white;
+        }
+
+        /* Test Result Modal Box */
+        .test-result-box {
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+        }
+        .test-box-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+        .test-box-failed {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        /* Toast notifications */
+        .toast-container-custom {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .custom-toast {
+            background: var(--surface);
+            border: 1px solid var(--border-highlight);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13.5px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-page); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        
+        <!-- ACCESS DENIED SCREEN (For unauthorized users) -->
+        <div class="access-denied-container" id="accessDeniedScreen">
+            <div class="access-denied-card">
+                <i class="fas fa-shield-halved text-danger" style="font-size: 54px; margin-bottom: 20px;"></i>
+                <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Access Restricted</h2>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; line-height: 1.6;">
+                    Central Integration Management contains sensitive platform and tenant credentials.<br>
+                    This console is strictly restricted to <strong>MR10001</strong> (System Administrator) and <strong>MR10016</strong> (Yaswanth).
+                </p>
+                <a href="/staff/progress" class="btn btn-action-custom btn-action-primary">
+                    <i class="fas fa-arrow-left"></i> Return to Staff Progress
+                </a>
+            </div>
+        </div>
+
+        <!-- MAIN AUTHORIZED CONSOLE -->
+        <div class="content-area" id="mainConsoleArea" style="display: none;">
+            
+            <!-- Banner -->
+            <div class="page-banner">
+                <div>
+                    <h1 class="banner-title">
+                        <i class="fas fa-plug text-primary"></i> Central Integration Management
+                    </h1>
+                    <div class="banner-subtitle">
+                        <span>Multi-Tenant, Provider-Agnostic External Integration Hub</span>
+                        <span class="badge-guard"><i class="fas fa-lock me-1"></i> MR10001 & MR10016 Strictly</span>
+                        <span class="badge-rule6" title="Rule 6: Frozen Telephony Architecture"><i class="fas fa-phone me-1"></i> Rule 6: Telephony Lock Active</span>
+                    </div>
+                </div>
+
+                <!-- Client Selector -->
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="client-selector-box">
+                        <span class="client-selector-label"><i class="fas fa-building me-1"></i> Tenant Context:</span>
+                        <select id="clientSelector" class="client-dropdown" onchange="onClientChanged()">
+                            <option value="">Loading Clients...</option>
+                        </select>
+                        <span id="clientTypeBadge" class="client-type-badge type-internal">Internal</span>
+                    </div>
+
+                    <button class="btn-action-custom" onclick="loadAllIntegrationData()" title="Reload Data">
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i> Refresh
+                    </button>
+                    <button class="btn-action-custom" onclick="reseedRegistryPrompt()" title="Verify and reseed missing provider definitions">
+                        <i class="fas fa-seedling text-success"></i> Reseed Registry
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Counters -->
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-card-left">
+                        <span class="kpi-num" id="kpiCategories">7</span>
+                        <span class="kpi-label">Categories</span>
+                    </div>
+                    <div class="kpi-icon-wrap kpi-icon-1"><i class="fas fa-layer-group"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-left">
+                        <span class="kpi-num" id="kpiProviders">14</span>
+                        <span class="kpi-label">Registered Providers</span>
+                    </div>
+                    <div class="kpi-icon-wrap kpi-icon-2"><i class="fas fa-network-wired"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-left">
+                        <span class="kpi-num" id="kpiClientConnections">0</span>
+                        <span class="kpi-label">Client Custom Accounts</span>
+                    </div>
+                    <div class="kpi-icon-wrap kpi-icon-3"><i class="fas fa-link"></i></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-left">
+                        <span class="kpi-num" id="kpiFallbackActive">0</span>
+                        <span class="kpi-label">Platform Fallbacks</span>
+                    </div>
+                    <div class="kpi-icon-wrap kpi-icon-4"><i class="fas fa-shield-alt"></i></div>
+                </div>
+            </div>
+
+            <!-- Dynamic Category Navigation Tabs -->
+            <div class="tabs-header-container">
+                <ul class="integration-tabs" id="categoryTabsList">
+                    <li>
+                        <button class="integration-tab-btn active" data-tab="matrix" onclick="switchCategoryTab('matrix')">
+                            <i class="fas fa-th-large"></i> Master Matrix
+                        </button>
+                    </li>
+                    <!-- Dynamic categories injected here via API -->
+                    <li>
+                        <button class="integration-tab-btn" data-tab="audit" onclick="switchCategoryTab('audit')">
+                            <i class="fas fa-history"></i> Audit Logs
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- TAB 1: MASTER MATRIX -->
+            <div class="tab-panel-container" id="panelMatrix">
+                <div class="matrix-table-card">
+                    <div class="matrix-filter-bar">
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="text" class="matrix-search-input" id="matrixSearch" placeholder="Search clients by name or code..." oninput="filterMatrixTable()">
+                            <select class="form-select-custom" id="matrixTypeFilter" onchange="filterMatrixTable()" style="min-width: 160px;">
+                                <option value="ALL">All Clients</option>
+                                <option value="INTERNAL">Internal Only</option>
+                                <option value="EXTERNAL">External (SaaS) Only</option>
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary" style="font-size: 13px;" id="matrixCountBadge">Showing clients</span>
+                        </div>
+                    </div>
+
+                    <div class="matrix-table-wrap">
+                        <table class="matrix-table" id="matrixTable">
+                            <thead id="matrixThead">
+                                <!-- Dynamic headers injected here -->
+                            </thead>
+                            <tbody id="matrixTbody">
+                                <tr>
+                                    <td colspan="15" class="text-center py-5 text-muted">Loading Master Integrations Matrix...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2..N: DYNAMIC CATEGORY PROVIDERS (Swapped dynamically) -->
+            <div class="tab-panel-container" id="panelCategory" style="display: none;">
+                <div class="tab-actions">
+                    <span id="activeCategoryTitle" class="text-secondary" style="font-size: 14px; font-weight: 600;"></span>
+                </div>
+                <div class="providers-grid" id="providersGrid">
+                    <!-- Dynamic provider cards injected here -->
+                </div>
+            </div>
+
+            <!-- TAB AUDIT LOGS -->
+            <div class="tab-panel-container" id="panelAudit" style="display: none;">
+                <div class="matrix-table-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 style="font-size: 16px; font-weight: 700; margin: 0;"><i class="fas fa-shield-alt text-primary me-2"></i> Integration Audit Trail</h4>
+                        <button class="btn-action-custom" onclick="loadAuditLogs()"><i class="fas fa-sync-alt"></i> Refresh Logs</button>
+                    </div>
+                    <div class="matrix-table-wrap">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Actor</th>
+                                    <th>Client / Tenant</th>
+                                    <th>Integration</th>
+                                    <th>Action</th>
+                                    <th>Connection Name</th>
+                                    <th>IP Address</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogsTbody">
+                                <tr><td colspan="8" class="text-center py-4 text-muted">Loading audit logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- DYNAMIC CONNECTION MODAL (SCHEMA-DRIVEN) -->
+    <div class="modal fade" id="connectionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content modal-content-custom">
+                <div class="modal-header modal-header-custom">
+                    <div>
+                        <h5 class="modal-title font-weight-bold" id="connectionModalTitle" style="font-weight: 800; font-size: 18px;">
+                            Configure Integration
+                        </h5>
+                        <p class="text-muted mb-0" id="connectionModalSubtitle" style="font-size: 12.5px;">Schema-driven credentials configuration</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <form id="connectionForm" onsubmit="handleSaveConnection(event)">
+                    <div class="modal-body modal-body-custom">
+                        <input type="hidden" id="formConnectionId" value="">
+                        <input type="hidden" id="formIntegrationCode" value="">
+                        <input type="hidden" id="formTenantId" value="">
+
+                        <!-- Common Standard Fields -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label-custom">Connection Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-custom" id="formConnectionName" placeholder="e.g. Primary Production Account" required>
+                                <div class="form-hint">A recognizable label for this credential set</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label-custom">Environment</label>
+                                <select class="form-select form-select-custom" id="formEnvironment">
+                                    <option value="production">Production</option>
+                                    <option value="sandbox">Sandbox / Staging</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch pt-2">
+                                    <input class="form-check-input" type="checkbox" id="formIsActive" checked>
+                                    <label class="form-check-label ms-2" for="formIsActive" style="font-size: 13.5px;">Connection Active</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch pt-2">
+                                    <input class="form-check-input" type="checkbox" id="formIsDefault">
+                                    <label class="form-check-label ms-2" for="formIsDefault" style="font-size: 13.5px;">Primary / Default for this Client</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr style="border-color: rgba(255,255,255,0.08); margin: 20px 0;">
+
+                        <!-- Dynamic Schema Fields Container -->
+                        <div id="dynamicSchemaFieldsContainer">
+                            <!-- Populated dynamically via definition.configuration_schema -->
+                        </div>
+
+                        <!-- Live Inline Test Result Box -->
+                        <div id="inlineTestResultBox" style="display: none;"></div>
+
+                    </div>
+                    <div class="modal-footer modal-footer-custom justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-action-custom" id="btnModalTestCreds" onclick="testCurrentFormCredentials()">
+                                <i class="fas fa-bolt text-warning"></i> Test Live Connection
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-action-custom" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-action-custom btn-action-primary" id="btnSaveConnection">
+                                <i class="fas fa-save me-1"></i> Save Connection
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONNECTION TEST RESULT MODAL -->
+    <div class="modal fade" id="testResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-custom">
+                <div class="modal-header modal-header-custom">
+                    <h5 class="modal-title font-weight-bold" id="testModalTitle">
+                        <i class="fas fa-bolt text-warning me-2"></i> Connection Diagnostic Result
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body modal-body-custom" id="testModalBody">
+                    <!-- Populated dynamically -->
+                </div>
+                <div class="modal-footer modal-footer-custom">
+                    <button type="button" class="btn btn-action-custom" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container-custom" id="toastContainer"></div>
+
+    <!-- Bootstrap Bundle & Staff Layout Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/menu-master.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/staff_sidebar.js"></script>
+
+    <script>
+        // Global State
+        let currentUser = null;
+        let allClients = [];
+        let internalClients = [];
+        let externalClients = [];
+        let selectedClientId = 1; // Default to Platform Default (Client 1)
+        let categories = [];
+        let definitions = [];
+        let matrixData = null;
+        let activeTab = 'matrix'; // 'matrix', category_code, or 'audit'
+        let clientConnections = {}; // Map of integration_code -> [connections]
+        let currentModalDefinition = null;
+
+        // Modals
+        let connModalInstance = null;
+        let testModalInstance = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 1. Always init Sidebar and Header first so user navigation is always operational
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('Central Integration Management', 'fas fa-plug');
+                StaffHeader.init();
+            }
+
+            connModalInstance = new bootstrap.Modal(document.getElementById('connectionModal'));
+            testModalInstance = new bootstrap.Modal(document.getElementById('testResultModal'));
+
+            // 2. Check RBAC & authorize
+            const isAuthorized = await verifyAdminAccess();
+            if (!isAuthorized) {
+                return;
+            }
+
+            // 3. Load clients and categories
+            await loadAllIntegrationData();
+        });
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 1. RBAC Guard: STRICTLY MR10001 and MR10016
+        // ─────────────────────────────────────────────────────────────────────────
+        async function verifyAdminAccess() {
+            try {
+                let token = (typeof StaffTokenManager !== 'undefined' && typeof StaffTokenManager.getToken === 'function')
+                    ? StaffTokenManager.getToken()
+                    : (localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('token'));
+
+                // Try to get cached user from storage
+                let cachedUser = null;
+                try {
+                    const raw = localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user');
+                    if (raw) cachedUser = JSON.parse(raw);
+                } catch(e) {}
+
+                if (cachedUser) {
+                    currentUser = cachedUser;
+                }
+
+                // Fetch current user details from API if staffFetch is available
+                if (typeof staffFetch === 'function') {
+                    try {
+                        const res = await staffFetch('/api/v1/staff/auth/me');
+                        if (res && res.ok) {
+                            const data = await res.json();
+                            currentUser = data.employee || data.user || currentUser;
+                        }
+                    } catch (e) {
+                        console.warn('[INTEGRATIONS] /staff/auth/me fallback to cachedUser:', e);
+                    }
+                }
+
+                // Resolve empCode with multiple field fallbacks
+                let empCode = (currentUser?.emp_code || currentUser?.employee_code || currentUser?.username || '').trim().toUpperCase();
+
+                // If empCode still empty, inspect JWT token directly
+                if (!empCode && token && token.includes('.')) {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        empCode = (payload.sub || payload.emp_code || payload.employee_code || payload.username || '').trim().toUpperCase();
+                    } catch(e) {}
+                }
+
+                console.log('[INTEGRATIONS] Resolved empCode:', empCode);
+
+                const isAllowed = empCode === 'MR10001' || empCode === 'MR10016' || empCode.includes('MR10001') || empCode.includes('MR10016') || (typeof window.isMR10001 === 'function' && window.isMR10001());
+
+                if (!isAllowed) {
+                    document.getElementById('accessDeniedScreen').style.display = 'block';
+                    document.getElementById('mainConsoleArea').style.display = 'none';
+                    return false;
+                }
+
+                document.getElementById('accessDeniedScreen').style.display = 'none';
+                document.getElementById('mainConsoleArea').style.display = 'block';
+                return true;
+            } catch (err) {
+                console.error('[INTEGRATIONS] Auth error:', err);
+                document.getElementById('accessDeniedScreen').style.display = 'block';
+                document.getElementById('mainConsoleArea').style.display = 'none';
+                return false;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 2. Load Core Data: Clients, Categories, Definitions, Matrix
+        // ─────────────────────────────────────────────────────────────────────────
+        async function loadAllIntegrationData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            try {
+                // 1. Fetch Clients
+                const clientsRes = await staffFetch('/api/v1/integrations/clients');
+                if (clientsRes.ok) {
+                    const cData = await clientsRes.json();
+                    internalClients = cData.internal_clients || [];
+                    externalClients = cData.external_clients || [];
+                    allClients = cData.all_clients || [];
+                    populateClientSelector();
+                }
+
+                // 2. Fetch Categories
+                const catsRes = await staffFetch('/api/v1/integrations/categories');
+                if (catsRes.ok) {
+                    const catData = await catsRes.json();
+                    categories = catData.categories || [];
+                    document.getElementById('kpiCategories').textContent = categories.length;
+                    renderCategoryTabs();
+                }
+
+                // 3. Fetch Definitions
+                const defsRes = await staffFetch('/api/v1/integrations/definitions');
+                if (defsRes.ok) {
+                    const defData = await defsRes.json();
+                    definitions = defData.definitions || [];
+                    document.getElementById('kpiProviders').textContent = definitions.length;
+                }
+
+                // 4. Fetch Client Connections for active selected client
+                await loadConnectionsForSelectedClient();
+
+                // 5. Fetch Master Matrix
+                await loadMasterMatrix();
+
+            } catch (err) {
+                console.error('[INTEGRATIONS] Load error:', err);
+                showToast('Failed to load integration configuration: ' + err.message, 'danger');
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            }
+        }
+
+        function populateClientSelector() {
+            const sel = document.getElementById('clientSelector');
+            sel.innerHTML = '';
+
+            // Group 1: Internal
+            const optGroupInt = document.createElement('optgroup');
+            optGroupInt.label = '🏢 Internal Clients (Platform Default)';
+            internalClients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.client_name} (${c.client_code})`;
+                if (c.id === selectedClientId) opt.selected = true;
+                optGroupInt.appendChild(opt);
+            });
+            sel.appendChild(optGroupInt);
+
+            // Group 2: External
+            const optGroupExt = document.createElement('optgroup');
+            optGroupExt.label = `🌐 External Clients (${externalClients.length} SaaS Tenants)`;
+            externalClients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.client_name} (${c.client_code})`;
+                if (c.id === selectedClientId) opt.selected = true;
+                optGroupExt.appendChild(opt);
+            });
+            sel.appendChild(optGroupExt);
+
+            updateClientTypeBadge();
+        }
+
+        function updateClientTypeBadge() {
+            const badge = document.getElementById('clientTypeBadge');
+            const client = allClients.find(c => c.id === selectedClientId);
+            if (client && client.is_internal) {
+                badge.className = 'client-type-badge type-internal';
+                badge.textContent = 'Internal Client';
+            } else {
+                badge.className = 'client-type-badge type-external';
+                badge.textContent = 'External SaaS Tenant';
+            }
+        }
+
+        async function onClientChanged() {
+            const sel = document.getElementById('clientSelector');
+            selectedClientId = parseInt(sel.value, 10);
+            updateClientTypeBadge();
+
+            // Reload connections and refresh views
+            await loadConnectionsForSelectedClient();
+            if (activeTab === 'matrix') {
+                renderMatrixTable();
+            } else if (activeTab === 'audit') {
+                loadAuditLogs();
+            } else {
+                renderCategoryProviders(activeTab);
+            }
+        }
+
+        async function loadConnectionsForSelectedClient() {
+            try {
+                const res = await staffFetch(`/api/v1/integrations/connections?tenant_id=${selectedClientId}&include_platform=true`);
+                if (res.ok) {
+                    const data = await res.json();
+                    clientConnections = {};
+                    (data.connections || []).forEach(c => {
+                        clientConnections.setdefault = clientConnections.setdefault || {};
+                        if (!clientConnections[c.integration_code]) {
+                            clientConnections[c.integration_code] = [];
+                        }
+                        clientConnections[c.integration_code].push(c);
+                    });
+
+                    // Update KPIs
+                    const customCount = (data.connections || []).filter(c => c.tenant_id === selectedClientId).length;
+                    const fallbackCount = (data.connections || []).filter(c => c.tenant_id === 1 && selectedClientId !== 1).length;
+                    document.getElementById('kpiClientConnections').textContent = customCount;
+                    document.getElementById('kpiFallbackActive').textContent = fallbackCount;
+                }
+            } catch (err) {
+                console.error('[INTEGRATIONS] Error loading connections:', err);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 3. Tab Navigation & Dynamic Rendering
+        // ─────────────────────────────────────────────────────────────────────────
+        function renderCategoryTabs() {
+            const tabsList = document.getElementById('categoryTabsList');
+            // Keep Matrix as first, Audit as last
+            let html = `
+                <li>
+                    <button class="integration-tab-btn ${activeTab === 'matrix' ? 'active' : ''}" data-tab="matrix" onclick="switchCategoryTab('matrix')">
+                        <i class="fas fa-th-large"></i> Master Matrix
+                    </button>
+                </li>
+            `;
+
+            categories.forEach(cat => {
+                const isActive = activeTab === cat.category_code;
+                html += `
+                    <li>
+                        <button class="integration-tab-btn ${isActive ? 'active' : ''}" data-tab="${cat.category_code}" onclick="switchCategoryTab('${cat.category_code}')">
+                            <i class="${cat.icon || 'fas fa-plug'}"></i> ${cat.display_name}
+                        </button>
+                    </li>
+                `;
+            });
+
+            html += `
+                <li>
+                    <button class="integration-tab-btn ${activeTab === 'audit' ? 'active' : ''}" data-tab="audit" onclick="switchCategoryTab('audit')">
+                        <i class="fas fa-history"></i> Audit Logs
+                    </button>
+                </li>
+            `;
+
+            tabsList.innerHTML = html;
+        }
+
+        function switchCategoryTab(tabKey) {
+            activeTab = tabKey;
+            renderCategoryTabs();
+
+            const pMatrix = document.getElementById('panelMatrix');
+            const pCategory = document.getElementById('panelCategory');
+            const pAudit = document.getElementById('panelAudit');
+
+            if (tabKey === 'matrix') {
+                pMatrix.style.display = 'block';
+                pCategory.style.display = 'none';
+                pAudit.style.display = 'none';
+                renderMatrixTable();
+            } else if (tabKey === 'audit') {
+                pMatrix.style.display = 'none';
+                pCategory.style.display = 'none';
+                pAudit.style.display = 'block';
+                loadAuditLogs();
+            } else {
+                pMatrix.style.display = 'none';
+                pCategory.style.display = 'block';
+                pAudit.style.display = 'none';
+                renderCategoryProviders(tabKey);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 4. Category Provider Cards & Multi-Connection Management
+        // ─────────────────────────────────────────────────────────────────────────
+        function renderCategoryProviders(categoryCode) {
+            const cat = categories.find(c => c.category_code === categoryCode);
+            const titleEl = document.getElementById('activeCategoryTitle');
+            if (cat) {
+                titleEl.innerHTML = `<i class="${cat.icon} text-primary me-2"></i> Category: <strong>${cat.display_name}</strong> — ${cat.description || ''}`;
+            }
+
+            const grid = document.getElementById('providersGrid');
+            const catDefs = definitions.filter(d => d.category_code === categoryCode);
+
+            if (catDefs.length === 0) {
+                grid.innerHTML = `<div class="col-12 py-5 text-center text-muted">No provider definitions found in this category.</div>`;
+                return;
+            }
+
+            let cardsHtml = '';
+            catDefs.forEach(idef => {
+                const conns = clientConnections[idef.integration_code] || [];
+                // Filter connections belonging directly to this tenant
+                const tenantConns = conns.filter(c => c.tenant_id === selectedClientId);
+                const platformConns = conns.filter(c => c.tenant_id === 1);
+                const isUsingPlatformFallback = (selectedClientId !== 1) && (tenantConns.length === 0) && (platformConns.length > 0);
+
+                cardsHtml += `
+                    <div class="provider-card">
+                        <div>
+                            <div class="provider-header">
+                                <div class="provider-icon-box">
+                                    <i class="${idef.icon || 'fas fa-plug'}"></i>
+                                </div>
+                                <div class="provider-title-wrap">
+                                    <h3 class="provider-title">
+                                        ${idef.display_name}
+                                        ${idef.integration_code === 'plivo' ? '<span class="badge-rule6" title="Rule 6 Protected"><i class="fas fa-shield-alt"></i> Rule 6</span>' : ''}
+                                    </h3>
+                                    <div class="provider-badges">
+                                        <span class="badge bg-secondary" style="font-size: 10px;">${idef.provider_name}</span>
+                                        <span class="badge bg-dark border border-secondary" style="font-size: 10px;">Auth: ${idef.auth_type}</span>
+                                        ${idef.supports_multiple_connections ? '<span class="badge bg-info text-dark" style="font-size: 10px;">Multi-Account</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <p class="provider-desc">${idef.description || 'Configured via standard adapter.'}</p>
+
+                            <!-- Connections Container -->
+                            <div class="connections-container">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                        Configured Accounts (${tenantConns.length})
+                                    </span>
+                                    ${isUsingPlatformFallback ? '<span class="badge bg-primary" style="font-size: 10.5px;"><i class="fas fa-shield-alt me-1"></i> Inheriting Platform Default</span>' : ''}
+                                </div>
+                `;
+
+                if (tenantConns.length > 0) {
+                    tenantConns.forEach(conn => {
+                        const masked = conn.masked_credentials || {};
+                        let previewKeysHtml = '';
+                        Object.keys(masked).slice(0, 3).forEach(k => {
+                            previewKeysHtml += `
+                                <div class="preview-field" title="${k}: ${masked[k]}">
+                                    <span class="preview-key">${k}</span>
+                                    <span class="preview-val">${masked[k]}</span>
+                                </div>
+                            `;
+                        });
+
+                        cardsHtml += `
+                            <div class="connection-item">
+                                <div class="connection-item-header">
+                                    <div class="connection-name">
+                                        <i class="fas fa-key text-warning" style="font-size: 12px;"></i>
+                                        ${conn.connection_name}
+                                        ${conn.is_default ? '<span class="badge bg-warning text-dark" style="font-size: 9.5px;"><i class="fas fa-star me-1"></i> Default</span>' : ''}
+                                        <span class="badge ${conn.is_active ? 'bg-success' : 'bg-danger'}" style="font-size: 9.5px;">${conn.is_active ? 'ACTIVE' : 'INACTIVE'}</span>
+                                    </div>
+                                    <div class="connection-actions">
+                                        <button class="btn-conn-action btn-conn-test" onclick="testConnectionLive(${conn.id})" title="Test this connection live">
+                                            <i class="fas fa-bolt"></i> Test
+                                        </button>
+                                        <button class="btn-conn-action" onclick="openEditConnectionModal(${conn.id})" title="Edit credentials">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        ${!conn.is_default ? `
+                                            <button class="btn-conn-action" onclick="setConnectionDefault(${conn.id})" title="Set as default">
+                                                <i class="far fa-star"></i> Set Default
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn-conn-action text-danger" onclick="deleteConnectionConfirm(${conn.id}, '${conn.connection_name}')" title="Delete connection">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Masked Settings Preview -->
+                                <div class="connection-details-preview">
+                                    ${previewKeysHtml || '<span class="text-muted">No custom settings configured.</span>'}
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center" style="font-size: 11px; color: var(--text-muted);">
+                                    <span>Last tested: ${conn.last_tested_at ? formatDateTime(conn.last_tested_at) : 'Never'}</span>
+                                    <span class="${conn.last_test_status === 'SUCCESS' ? 'text-success' : (conn.last_test_status === 'FAILED' ? 'text-danger' : 'text-muted')}">
+                                        <i class="fas fa-circle" style="font-size: 8px;"></i> ${conn.last_test_status || 'UNTESTED'}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else if (isUsingPlatformFallback) {
+                    const pConn = platformConns[0];
+                    cardsHtml += `
+                        <div class="empty-connections-notice" style="border-color: rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.05);">
+                            <div class="text-primary mb-1" style="font-weight: 700;"><i class="fas fa-info-circle me-1"></i> Active via Platform Default Fallback</div>
+                            <div>Inheriting connection <strong>"${pConn.connection_name}"</strong> from Platform Primary.</div>
+                            <div class="mt-2">
+                                <button class="btn-action-custom btn-action-primary" style="padding: 4px 10px; font-size: 11.5px;" onclick="openNewConnectionModal('${idef.integration_code}')">
+                                    <i class="fas fa-plus"></i> Add Client-Specific Connection
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    cardsHtml += `
+                        <div class="empty-connections-notice">
+                            <div>No connection configured for this client.</div>
+                        </div>
+                    `;
+                }
+
+                cardsHtml += `
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="provider-footer">
+                            <span class="text-muted" style="font-size: 12px;">Code: <code>${idef.integration_code}</code></span>
+                            <button class="btn-action-custom btn-action-primary" style="font-size: 12.5px; padding: 6px 14px;" onclick="openNewConnectionModal('${idef.integration_code}')">
+                                <i class="fas fa-plus"></i> ${tenantConns.length > 0 && !idef.supports_multiple_connections ? 'Edit Connection' : 'Add Connection'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = cardsHtml;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 5. Master Integrations Matrix
+        // ─────────────────────────────────────────────────────────────────────────
+        async function loadMasterMatrix() {
+            try {
+                const res = await staffFetch('/api/v1/integrations/matrix');
+                if (res.ok) {
+                    const data = await res.json();
+                    matrixData = data.data;
+                    renderMatrixTable();
+                }
+            } catch (err) {
+                console.error('[INTEGRATIONS] Matrix load error:', err);
+            }
+        }
+
+        function renderMatrixTable() {
+            if (!matrixData) return;
+
+            const thead = document.getElementById('matrixThead');
+            const tbody = document.getElementById('matrixTbody');
+            const defs = matrixData.definitions || [];
+            const rows = matrixData.matrix || matrixData.rows || [];
+
+            // Build Head
+            let headHtml = `
+                <tr>
+                    <th class="th-sticky-col">Client / Tenant</th>
+                    <th>Type</th>
+                    <th>Status</th>
+            `;
+            defs.forEach(d => {
+                headHtml += `
+                    <th title="${d.display_name} (${d.category_code})">
+                        <i class="${d.icon || 'fas fa-plug'} me-1 text-primary"></i> ${d.display_name}
+                    </th>
+                `;
+            });
+            headHtml += `</tr>`;
+            thead.innerHTML = headHtml;
+
+            // Filter rows based on search and type
+            const q = (document.getElementById('matrixSearch').value || '').trim().toLowerCase();
+            const typeFilter = document.getElementById('matrixTypeFilter').value;
+
+            const filteredRows = rows.filter(r => {
+                if (typeFilter === 'INTERNAL' && !r.is_internal) return false;
+                if (typeFilter === 'EXTERNAL' && r.is_internal) return false;
+                if (q) {
+                    const matchName = (r.client_name || '').toLowerCase().includes(q);
+                    const matchCode = (r.client_code || '').toLowerCase().includes(q);
+                    return matchName || matchCode;
+                }
+                return true;
+            });
+
+            document.getElementById('matrixCountBadge').textContent = `Showing ${filteredRows.length} of ${rows.length} clients`;
+
+            if (filteredRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${defs.length + 3}" class="text-center py-4 text-muted">No matching clients found.</td></tr>`;
+                return;
+            }
+
+            let bodyHtml = '';
+            filteredRows.forEach(r => {
+                const isSelectedClient = r.client_id === selectedClientId;
+                bodyHtml += `
+                    <tr style="${isSelectedClient ? 'background: rgba(99, 102, 241, 0.12);' : ''}">
+                        <td class="td-sticky-col">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="${r.is_internal ? 'fas fa-building text-primary' : 'fas fa-store text-info'}"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: white;">${r.client_name}</div>
+                                    <div style="font-size: 10.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">${r.client_code}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${r.is_internal ? 'bg-primary' : 'bg-secondary'}" style="font-size: 10px;">
+                                ${r.is_internal ? 'INTERNAL' : 'EXTERNAL'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${r.status === 'ACTIVE' ? 'bg-success' : 'bg-warning'}" style="font-size: 10px;">
+                                ${r.status || 'ACTIVE'}
+                            </span>
+                        </td>
+                `;
+
+                defs.forEach(d => {
+                    const cell = (r.integrations || {})[d.integration_code] || { status: 'Not Configured', has_custom: false, connection_count: 0 };
+                    let pillClass = 'status-pill-none';
+                    let pillText = cell.status;
+                    let pillIcon = 'far fa-circle';
+
+                    if (cell.has_custom) {
+                        pillClass = 'status-pill-active';
+                        pillIcon = 'fas fa-check-circle';
+                    } else if (cell.status === 'Platform Default') {
+                        pillClass = 'status-pill-platform';
+                        pillIcon = 'fas fa-shield-alt';
+                    } else if (cell.status === 'INACTIVE') {
+                        pillClass = 'status-pill-inactive';
+                        pillIcon = 'fas fa-times-circle';
+                    }
+
+                    bodyHtml += `
+                        <td>
+                            <span class="cell-status-pill ${pillClass}" onclick="jumpToProvider('${d.category_code}', ${r.client_id}, '${d.integration_code}')" title="Click to manage ${d.display_name} for ${r.client_name}">
+                                <i class="${pillIcon}"></i> ${pillText}
+                            </span>
+                        </td>
+                    `;
+                });
+
+                bodyHtml += `</tr>`;
+            });
+
+            tbody.innerHTML = bodyHtml;
+        }
+
+        function filterMatrixTable() {
+            renderMatrixTable();
+        }
+
+        function jumpToProvider(categoryCode, clientId, integrationCode) {
+            // Select client
+            selectedClientId = clientId;
+            document.getElementById('clientSelector').value = clientId;
+            updateClientTypeBadge();
+
+            // Switch to that category tab
+            switchCategoryTab(categoryCode);
+            showToast(`Switched context to client & provider`, 'info');
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 6. Dynamic Schema-Driven Modal & CRUD Operations
+        // ─────────────────────────────────────────────────────────────────────────
+        function openNewConnectionModal(integrationCode) {
+            const idef = definitions.find(d => d.integration_code === integrationCode);
+            if (!idef) return;
+            currentModalDefinition = idef;
+
+            const client = allClients.find(c => c.id === selectedClientId) || { client_name: 'Selected Client' };
+
+            document.getElementById('connectionModalTitle').innerHTML = `
+                <i class="${idef.icon} text-primary me-2"></i> Configure ${idef.display_name}
+            `;
+            document.getElementById('connectionModalSubtitle').textContent = `Client: ${client.client_name} (${client.client_code || ''})`;
+
+            document.getElementById('formConnectionId').value = '';
+            document.getElementById('formIntegrationCode').value = integrationCode;
+            document.getElementById('formTenantId').value = selectedClientId;
+            document.getElementById('formConnectionName').value = `${client.client_name} - ${idef.display_name}`;
+            document.getElementById('formEnvironment').value = 'production';
+            document.getElementById('formIsActive').checked = true;
+            document.getElementById('formIsDefault').checked = true;
+            document.getElementById('inlineTestResultBox').style.display = 'none';
+
+            // Build dynamic fields based on schema
+            renderDynamicSchemaFields(idef.configuration_schema || [], {});
+
+            connModalInstance.show();
+        }
+
+        function openEditConnectionModal(connectionId) {
+            let foundConn = null;
+            Object.values(clientConnections).forEach(list => {
+                const match = list.find(c => c.id === connectionId);
+                if (match) foundConn = match;
+            });
+
+            if (!foundConn) return;
+            const idef = definitions.find(d => d.integration_code === foundConn.integration_code);
+            if (!idef) return;
+            currentModalDefinition = idef;
+
+            const client = allClients.find(c => c.id === foundConn.tenant_id) || { client_name: 'Selected Client' };
+
+            document.getElementById('connectionModalTitle').innerHTML = `
+                <i class="${idef.icon} text-primary me-2"></i> Edit ${idef.display_name} Connection
+            `;
+            document.getElementById('connectionModalSubtitle').textContent = `Client: ${client.client_name} | ID: #${foundConn.id}`;
+
+            document.getElementById('formConnectionId').value = foundConn.id;
+            document.getElementById('formIntegrationCode').value = foundConn.integration_code;
+            document.getElementById('formTenantId').value = foundConn.tenant_id;
+            document.getElementById('formConnectionName').value = foundConn.connection_name;
+            document.getElementById('formEnvironment').value = foundConn.environment || 'production';
+            document.getElementById('formIsActive').checked = foundConn.is_active;
+            document.getElementById('formIsDefault').checked = foundConn.is_default;
+            document.getElementById('inlineTestResultBox').style.display = 'none';
+
+            // Pass masked credentials to form builder
+            renderDynamicSchemaFields(idef.configuration_schema || [], foundConn.masked_credentials || {});
+
+            connModalInstance.show();
+        }
+
+        function renderDynamicSchemaFields(schema, existingValues) {
+            const container = document.getElementById('dynamicSchemaFieldsContainer');
+            if (!schema || schema.length === 0) {
+                container.innerHTML = `<div class="text-muted text-center py-3">No custom configuration schema fields declared.</div>`;
+                return;
+            }
+
+            let html = '<div class="row g-3">';
+            schema.forEach(field => {
+                const key = field.key;
+                const label = field.label || key;
+                const isSecret = !!field.is_secret;
+                const isRequired = !!field.required;
+                const val = existingValues[key] || '';
+                const type = field.type || (isSecret ? 'password' : 'string');
+
+                html += `<div class="col-md-6">`;
+                html += `<label class="form-label-custom">${label} ${isRequired ? '<span class="text-danger">*</span>' : ''}</label>`;
+
+                if (type === 'password' || isSecret) {
+                    html += `
+                        <div class="input-group">
+                            <input type="password" class="form-control form-control-custom schema-input" 
+                                id="schema_${key}" data-key="${key}" data-is-secret="true" 
+                                value="${val}" placeholder="${val ? '••••••••' : 'Enter secret'}" ${isRequired && !val ? 'required' : ''}>
+                            <button class="btn btn-pw-toggle" type="button" onclick="togglePasswordVisibility('schema_${key}')">
+                                <i class="fas fa-eye" id="eye_schema_${key}"></i>
+                            </button>
+                        </div>
+                    `;
+                } else if (type === 'select') {
+                    html += `<select class="form-select form-select-custom schema-input" id="schema_${key}" data-key="${key}">`;
+                    (field.options || []).forEach(opt => {
+                        const optVal = typeof opt === 'object' ? opt.value : opt;
+                        const optLabel = typeof opt === 'object' ? opt.label : opt;
+                        html += `<option value="${optVal}" ${optVal === val ? 'selected' : ''}>${optLabel}</option>`;
+                    });
+                    html += `</select>`;
+                } else if (type === 'textarea') {
+                    html += `<textarea class="form-control form-control-custom schema-input" id="schema_${key}" data-key="${key}" rows="2" placeholder="${field.description || ''}">${val}</textarea>`;
+                } else if (type === 'boolean') {
+                    html += `
+                        <div class="form-check form-switch pt-2">
+                            <input class="form-check-input schema-input" type="checkbox" id="schema_${key}" data-key="${key}" ${val ? 'checked' : ''}>
+                            <label class="form-check-label ms-2" for="schema_${key}">${field.description || label}</label>
+                        </div>
+                    `;
+                } else {
+                    html += `<input type="text" class="form-control form-control-custom schema-input" id="schema_${key}" data-key="${key}" value="${val}" placeholder="${field.description || ''}" ${isRequired ? 'required' : ''}>`;
+                }
+
+                if (field.description && type !== 'boolean') {
+                    html += `<div class="form-hint">${field.description}</div>`;
+                }
+                html += `</div>`;
+            });
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const eye = document.getElementById('eye_' + inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (eye) { eye.classList.remove('fa-eye'); eye.classList.add('fa-eye-slash'); }
+            } else {
+                input.type = 'password';
+                if (eye) { eye.classList.remove('fa-eye-slash'); eye.classList.add('fa-eye'); }
+            }
+        }
+
+        // Collect Schema Inputs
+        function extractCredentialsFromForm() {
+            const creds = {};
+            document.querySelectorAll('.schema-input').forEach(input => {
+                const key = input.dataset.key;
+                if (!key) return;
+
+                if (input.type === 'checkbox') {
+                    creds[key] = input.checked;
+                } else {
+                    const val = input.value.trim();
+                    // If secret field contains bullet placeholder, pass empty or bullet so backend preserves existing
+                    creds[key] = val;
+                }
+            });
+            return creds;
+        }
+
+        async function handleSaveConnection(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSaveConnection');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Saving...`;
+
+            try {
+                const connId = document.getElementById('formConnectionId').value;
+                const integrationCode = document.getElementById('formIntegrationCode').value;
+                const tenantId = parseInt(document.getElementById('formTenantId').value, 10);
+                const connectionName = document.getElementById('formConnectionName').value.trim();
+                const environment = document.getElementById('formEnvironment').value;
+                const isActive = document.getElementById('formIsActive').checked;
+                const isDefault = document.getElementById('formIsDefault').checked;
+
+                const credentials = extractCredentialsFromForm();
+
+                const payload = {
+                    tenant_id: tenantId,
+                    integration_code: integrationCode,
+                    connection_name: connectionName,
+                    environment: environment,
+                    is_active: isActive,
+                    is_default: isDefault,
+                    credentials: credentials
+                };
+
+                let res;
+                if (connId) {
+                    res = await staffFetch(`/api/v1/integrations/connections/${connId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await staffFetch('/api/v1/integrations/connections', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Failed to save connection');
+                }
+
+                showToast(`Connection "${connectionName}" saved successfully!`, 'success');
+                connModalInstance.hide();
+
+                // Refresh state
+                await loadConnectionsForSelectedClient();
+                await loadMasterMatrix();
+                if (activeTab !== 'matrix' && activeTab !== 'audit') {
+                    renderCategoryProviders(activeTab);
+                }
+
+            } catch (err) {
+                console.error('[INTEGRATIONS] Save error:', err);
+                showToast(err.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save me-1"></i> Save Connection`;
+            }
+        }
+
+        async function setConnectionDefault(connectionId) {
+            try {
+                const res = await staffFetch(`/api/v1/integrations/connections/${connectionId}/set-default`, {
+                    method: 'POST'
+                });
+                if (!res.ok) throw new Error('Failed to set default connection');
+                showToast('Connection set as primary default', 'success');
+                await loadConnectionsForSelectedClient();
+                await loadMasterMatrix();
+                if (activeTab !== 'matrix' && activeTab !== 'audit') renderCategoryProviders(activeTab);
+            } catch (err) {
+                showToast(err.message, 'danger');
+            }
+        }
+
+        async function deleteConnectionConfirm(connectionId, name) {
+            if (!confirm(`Are you sure you want to delete connection "${name}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const res = await staffFetch(`/api/v1/integrations/connections/${connectionId}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error('Failed to delete connection');
+                showToast(`Connection deleted`, 'info');
+                await loadConnectionsForSelectedClient();
+                await loadMasterMatrix();
+                if (activeTab !== 'matrix' && activeTab !== 'audit') renderCategoryProviders(activeTab);
+            } catch (err) {
+                showToast(err.message, 'danger');
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 7. Live Connection Testing
+        // ─────────────────────────────────────────────────────────────────────────
+        async function testConnectionLive(connectionId) {
+            showToast('Testing live connection...', 'info');
+
+            try {
+                const res = await staffFetch(`/api/v1/integrations/connections/${connectionId}/test`, {
+                    method: 'POST'
+                });
+                const result = await res.json();
+
+                renderTestResultModal(result);
+                testModalInstance.show();
+
+                // Update row in state
+                await loadConnectionsForSelectedClient();
+                if (activeTab !== 'matrix' && activeTab !== 'audit') renderCategoryProviders(activeTab);
+
+            } catch (err) {
+                renderTestResultModal({
+                    success: false,
+                    message: 'Network or client error: ' + err.message
+                });
+                testModalInstance.show();
+            }
+        }
+
+        async function testCurrentFormCredentials() {
+            const btn = document.getElementById('btnModalTestCreds');
+            const resultBox = document.getElementById('inlineTestResultBox');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Testing...`;
+            resultBox.style.display = 'none';
+
+            try {
+                const connId = document.getElementById('formConnectionId').value;
+                if (!connId) {
+                    resultBox.className = 'test-result-box test-box-failed';
+                    resultBox.innerHTML = `<strong>Note:</strong> Please save this connection first before running live adapter verification.`;
+                    resultBox.style.display = 'block';
+                    return;
+                }
+
+                const res = await staffFetch(`/api/v1/integrations/connections/${connId}/test`, {
+                    method: 'POST'
+                });
+                const result = await res.json();
+                const testRes = result.test_result || result;
+                const isSuccess = !!(result.success && testRes.status !== 'FAILED');
+                const latency = testRes.latency_ms || result.latency_ms || 0;
+                const msg = testRes.message || result.message || '';
+
+                if (isSuccess) {
+                    resultBox.className = 'test-result-box test-box-success';
+                    resultBox.innerHTML = `
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-check-circle text-success" style="font-size: 16px;"></i>
+                            <strong>Connection Successful! (${latency} ms)</strong>
+                        </div>
+                        <div>${msg || 'Provider API responded with HTTP 200 OK'}</div>
+                    `;
+                } else {
+                    resultBox.className = 'test-result-box test-box-failed';
+                    resultBox.innerHTML = `
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-times-circle text-danger" style="font-size: 16px;"></i>
+                            <strong>Connection Test Failed (${latency} ms)</strong>
+                        </div>
+                        <div>${msg || 'Provider rejected credentials or timed out.'}</div>
+                    `;
+                }
+                resultBox.style.display = 'block';
+            } catch (err) {
+                resultBox.className = 'test-result-box test-box-failed';
+                resultBox.innerHTML = `<strong>Error:</strong> ${err.message}`;
+                resultBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-bolt text-warning"></i> Test Live Connection`;
+            }
+        }
+
+        function renderTestResultModal(result) {
+            const body = document.getElementById('testModalBody');
+            const testRes = result.test_result || result;
+            const isSuccess = !!(result.success && testRes.status !== 'FAILED');
+            const latency = testRes.latency_ms || result.latency_ms || 0;
+            const msg = testRes.message || result.message || '';
+            const statusText = testRes.status || result.status || (isSuccess ? 'SUCCESS' : 'FAILED');
+            const details = testRes.details || result.details || null;
+
+            let html = `
+                <div class="text-center py-3">
+                    <i class="${isSuccess ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger'}" style="font-size: 50px;"></i>
+                    <h4 class="mt-3" style="font-weight: 800;">${isSuccess ? 'Connection Succeeded' : 'Connection Failed'}</h4>
+                    <p class="text-secondary" style="font-size: 13.5px;">${msg}</p>
+                </div>
+                
+                <div class="test-result-box ${isSuccess ? 'test-box-success' : 'test-box-failed'}">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Latency:</span>
+                        <strong>${latency} ms</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Status:</span>
+                        <strong>${statusText}</strong>
+                    </div>
+                    ${details ? `
+                        <div class="mt-2 pt-2 border-top border-secondary">
+                            <span class="text-muted">Diagnostic Details:</span>
+                            <pre class="mt-1 mb-0" style="color: inherit; font-size: 11.5px; max-height: 180px; overflow: auto;">${JSON.stringify(details, null, 2)}</pre>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            body.innerHTML = html;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 8. Audit Logs
+        // ─────────────────────────────────────────────────────────────────────────
+        async function loadAuditLogs() {
+            const tbody = document.getElementById('auditLogsTbody');
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading audit logs...</td></tr>`;
+
+            try {
+                const res = await staffFetch(`/api/v1/integrations/audit-logs?tenant_id=${selectedClientId}&limit=50`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const logs = data.logs || [];
+
+                    if (logs.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">No audit logs found for this client context.</td></tr>`;
+                        return;
+                    }
+
+                    let html = '';
+                    logs.forEach(log => {
+                        html += `
+                            <tr>
+                                <td style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px;">${formatDateTime(log.created_at)}</td>
+                                <td><span class="badge bg-secondary">${log.actor_emp_code || 'SYSTEM'}</span></td>
+                                <td>${log.tenant_name || ('Client #' + log.tenant_id)}</td>
+                                <td><strong>${log.integration_code}</strong></td>
+                                <td><span class="badge ${getAuditActionBadgeClass(log.action)}">${log.action}</span></td>
+                                <td>${log.connection_name || '-'}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px;">${log.ip_address || '-'}</td>
+                                <td style="font-size: 11.5px; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis;">
+                                    ${JSON.stringify(log.details || {})}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">Failed to load audit logs: ${err.message}</td></tr>`;
+            }
+        }
+
+        function getAuditActionBadgeClass(action) {
+            switch (action) {
+                case 'CREATE': return 'bg-success';
+                case 'UPDATE': return 'bg-info text-dark';
+                case 'DELETE': return 'bg-danger';
+                case 'SET_DEFAULT': return 'bg-warning text-dark';
+                case 'TOGGLE_STATUS': return 'bg-secondary';
+                default: return 'bg-dark border border-secondary';
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // 9. Reseed Prompt
+        // ─────────────────────────────────────────────────────────────────────────
+        async function reseedRegistryPrompt() {
+            if (!confirm("This will verify default categories and definitions against the central registry. Existing client credentials and connections will NOT be touched. Proceed?")) {
+                return;
+            }
+
+            try {
+                const res = await staffFetch('/api/v1/integrations/reseed', { method: 'POST' });
+                if (res.ok) {
+                    showToast('Central registry reseeded successfully!', 'success');
+                    await loadAllIntegrationData();
+                } else {
+                    throw new Error('Reseed failed');
+                }
+            } catch (err) {
+                showToast('Reseed error: ' + err.message, 'danger');
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Utilities: Toasts & Dates
+        // ─────────────────────────────────────────────────────────────────────────
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'custom-toast';
+            
+            let icon = 'fas fa-info-circle text-info';
+            if (type === 'success') icon = 'fas fa-check-circle text-success';
+            if (type === 'danger') icon = 'fas fa-exclamation-triangle text-danger';
+            if (type === 'warning') icon = 'fas fa-exclamation-circle text-warning';
+
+            toast.innerHTML = `
+                <i class="${icon}" style="font-size: 18px;"></i>
+                <div style="flex: 1;">${message}</div>
+                <button type="button" class="btn-close btn-close-white" style="font-size: 10px;" onclick="this.parentElement.remove()"></button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.4s ease-out';
+                setTimeout(() => toast.remove(), 400);
+            }, 4500);
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            try {
+                const d = new Date(isoString);
+                return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + 
+                       d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            } catch (e) {
+                return isoString;
+            }
+        }
+    </script>
+</body>
+</html>

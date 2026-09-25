@@ -1115,6 +1115,25 @@ def reject_cash_income(db: Session, entry_id: int, company_id: int, rejected_by_
         return {'success': False, 'error': 'Entry not found or not in DRAFT status'}
 
     now = _get_ist()
+
+    # If wallet was credited at DRAFT creation, reverse it
+    if entry.partner_id and entry.commission_amount:
+        from app.models.staff_accounts import OfficialPartner
+        partner = db.query(OfficialPartner).filter(OfficialPartner.id == entry.partner_id).with_for_update().first()
+        if partner:
+            comm_amt = Decimal(str(entry.commission_amount or 0))
+            wb = partner.vgk_cash_wallet or Decimal('0')
+            wa = max(Decimal('0'), wb - comm_amt)
+            partner.vgk_cash_wallet = wa
+            _log_wallet_txn(
+                db, partner.id, company_id,
+                txn_type='ADJUSTMENT', direction='DR', amount=comm_amt,
+                wallet_before=wb, wallet_after=wa,
+                ref_type='VGK_CASH_INCOME', ref_id=entry.id,
+                description=f'Reversal on rejection — {entry.entry_number}',
+                staff_id=rejected_by_id,
+            )
+
     entry.status           = 'CANCELLED'
     entry.confirmed_by_id  = rejected_by_id
     entry.confirmed_at     = now
@@ -2486,6 +2505,21 @@ def mark_paid_cash_income(
                         logger.info(
                             f'[VGK-MARK-PAID] {entry.kind} points debit: '
                             f'partner={_cp.id} entry={entry.entry_number} debit={float(_debit):.2f}'
+                        )
+
+                    # Wallet debit on external disbursement (bank transfer / cash payment)
+                    _w_curr = _cp.vgk_cash_wallet or Decimal('0')
+                    _w_debit = min(_net_due, _w_curr)
+                    if _w_debit > Decimal('0'):
+                        _w_after = _w_curr - _w_debit
+                        _cp.vgk_cash_wallet = _w_after
+                        _log_wallet_txn(
+                            db, _cp.id, (_cp.company_id or entry.company_id),
+                            txn_type='ADJUSTMENT', direction='DR', amount=_w_debit,
+                            wallet_before=_w_curr, wallet_after=_w_after,
+                            ref_type='VGK_CASH_INCOME', ref_id=entry.id,
+                            description=f'Disbursed via {pm} ({utr or "cash"}) — {entry.entry_number}',
+                            staff_id=paid_by_id,
                         )
         except Exception as _comm_pts_e:
             logger.warning(f'[VGK-MARK-PAID] {entry.kind} points debit failed (non-fatal): {_comm_pts_e}')

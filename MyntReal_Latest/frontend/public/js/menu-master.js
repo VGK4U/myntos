@@ -16,6 +16,16 @@
 var _win = typeof window !== 'undefined' ? window : {};
 var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
   {
+    section_code: "CORE_WORKSPACE",
+    section_label: "CORE WORKSPACE",
+    order: 0.5,
+    items: [
+      { menu_code: "TENANT_COMPANY_PROFILE", label: "Company Profile", route: "/staff/my-tenant", icon: "fas fa-building", audience: ["STAFF", "SAAS"] },
+      { menu_code: "TENANT_STAFF_MANAGEMENT", label: "Staff & Users", route: "/staff/tenant-users", icon: "fas fa-users-gear", audience: ["STAFF", "SAAS"] },
+      { menu_code: "TENANT_CRM_WORKFLOW_SETUP", label: "CRM / Workflow Setup", route: "/staff/saas-crm-settings", icon: "fas fa-sliders", audience: ["STAFF", "SAAS"] }
+    ]
+  },
+  {
     section_code: "PROGRESS",
     section_label: "PROGRESS",
     order: 1,
@@ -33,8 +43,16 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     order: 2,
     subSections: [
       {
+        sub_section_code: "HR_EMPLOYEES",
+        sub_section_label: "Employee Management",
+        items: [
+          { menu_code: "HRMS_EMPLOYEES", label: "Employees", route: "/staff/employees", icon: "fas fa-users", audience: ["STAFF", "SAAS"] },
+          { menu_code: "HRMS_EMPLOYEE_PROFILE", label: "Employee Profile", route: "/staff/employees?view=profile", icon: "fas fa-id-card", audience: ["STAFF", "SAAS"] }
+        ]
+      },
+      {
         sub_section_code: "HR_ATTENDANCE",
-        sub_section_label: "Attendance",
+        sub_section_label: "Attendance & Leave",
         items: [
           { menu_code: "IN_OUT_TIME", label: "In/Out Time", route: "/staff/my-attendance", audience: ["STAFF"] },
           { menu_code: "MY_LEAVES", label: "My Leaves", route: "/staff/my-leaves", audience: ["STAFF"] },
@@ -81,14 +99,29 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     section_label: "CRM & LEADS",
     order: 4,
     items: [
-      { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "/staff/crm/dashboard", audience: ["STAFF"] },
-      { menu_code: "MY_LEADS", label: "My Leads", route: "/staff/my-leads", audience: ["STAFF"] },
-      { menu_code: "STAFF_LEADS", label: "Staff Leads", route: "/staff/leads", audience: ["STAFF"] },
+      { menu_code: "ALL_CRM_LEADS", label: "All Leads", route: "/staff/crm/leads", icon: "fas fa-address-book", audience: ["STAFF"] },
+      { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "/staff/crm/dashboard", icon: "fas fa-chart-line", audience: ["STAFF", "SAAS"] },
+      { menu_code: "MY_LEADS", label: "My Leads", route: "/staff/my-leads", icon: "fas fa-user-check", audience: ["STAFF", "SAAS"] },
+      { menu_code: "STAFF_LEADS", label: "Staff Leads", route: "/staff/leads", icon: "fas fa-users", audience: ["STAFF", "SAAS"] },
       { menu_code: "CRM_SETTINGS", label: "CRM Settings", route: "/staff/crm/settings", audience: ["STAFF"] },
-      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", audience: ["STAFF"] },
+      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", icon: "fas fa-phone-volume", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
       { menu_code: "STAFF_CATALOG_LIBRARY", label: "Catalog Library", route: "/staff/catalog-library", icon: "fas fa-book-open", audience: ["STAFF"] }
+    ]
+  },
+  {
+    section_code: "SOLAR_EV",
+    section_label: "WORKFLOWS",
+    order: 4.5,
+    items: [
+      { menu_code: "WORKFLOW_EXEC_DASHBOARD", label: "Executive Dashboard", route: "/staff/executive-dashboard", icon: "fas fa-chart-pie", audience: ["STAFF", "SAAS"] },
+      { menu_code: "WORKFLOW_CATEGORY_LEADS", label: "Category-wise Leads", route: "/staff/mnr-leads", icon: "fas fa-layer-group", audience: ["STAFF", "SAAS"] },
+      { menu_code: "SOLAR_VENDORS", label: "Vendors & Partners", route: "/staff/solar-vendors", icon: "fas fa-hard-hat", audience: ["STAFF"] },
+      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "/staff/solar-leads", icon: "fas fa-solar-panel", audience: ["STAFF"] },
+      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "/staff/ev-b2b-leads", icon: "fas fa-truck", audience: ["STAFF"] },
+      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "/staff/ev-b2c-leads", icon: "fas fa-car", audience: ["STAFF"] },
+      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "/staff/ev-spares-leads", icon: "fas fa-cogs", audience: ["STAFF"] }
     ]
   },
   {
@@ -120,6 +153,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     order: 7,
     items: [
       { menu_code: "MY_MOBILITY_JOURNEYS", label: "My Mobility & Journeys", route: "/staff/my-journeys", audience: ["STAFF"] },
+      { menu_code: "FIELD_APPOINTMENTS", label: "Field Appointments", route: "/staff/field-appointments", audience: ["STAFF"] },
       { menu_code: "TEAM_LIVE_MAP", label: "Team Live Map", route: "/staff/team-live-tracker", audience: ["STAFF"] },
       { menu_code: "TEAM_JOURNEYS_CLAIMS", label: "Team Journeys & Claims", route: "/staff/team-journeys", audience: ["STAFF"] },
       { menu_code: "ALL_MOBILITY_LOG", label: "All Mobility & Location Log", route: "/staff/all-location-tracker", audience: ["STAFF"] }
@@ -257,6 +291,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "COMMUNITY_SERVICES", label: "Community Services", route: "/staff/accounts/community-services", audience: ["STAFF"] },
       { menu_code: "staff_razorpay_dashboard", label: "Razorpay Executive", route: "/staff/configuration/razorpay", audience: ["STAFF"] },
       { menu_code: "staff_a1top_dashboard", label: "A1Top Executive", route: "/staff/configuration/a1top", audience: ["STAFF"] },
+      { menu_code: "CENTRAL_INTEGRATIONS", label: "Integrations", route: "/staff/configuration/integrations", icon: "fas fa-plug", audience: ["STAFF", "VGK4U"] },
       { menu_code: "CALL_FLOW_STUDIO", label: "Call Flow Studio", route: "/staff/call-flow-studio", icon: "fas fa-diagram-project", audience: ["STAFF", "VGK4U"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
       { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },

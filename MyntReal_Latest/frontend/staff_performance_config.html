@@ -2405,9 +2405,24 @@ function renderAchievements(rows) {
       </td>`;
     }).join('');
 
-    // KRA Status column
+    // KRA / Compliance Status column
     let kraStatusCell = '';
-    if (!emp.kra_total) {
+    if (emp.is_telecaller) {
+      const isPen = emp.kra_penalty_applied || (emp.penalty_reasons && emp.penalty_reasons.length > 0);
+      const penColor = isPen ? '#dc2626' : '#059669';
+      const penLabel = isPen ? '50% Pen.' : (emp.compliance_multiplier > 1.0 ? '120% Rate' : '100% Rate');
+      const penReasonStr = (emp.penalty_reasons && emp.penalty_reasons.length) ? `<div style="font-size:0.65rem;color:#dc2626;font-weight:600;">${emp.penalty_reasons.join(', ')}</div>` : '';
+      kraStatusCell = `<td style="padding:8px 12px;text-align:center;">
+        <span class="badge" style="background:${isPen ? '#fee2e2' : '#d1fae5'};color:${penColor};font-size:0.7rem;font-weight:700;">Telecaller</span>
+        <div style="font-size:0.72rem;color:#374151;margin-top:2px;">
+          KRA: <b>${emp.kra_percentage}%</b><br>
+          Qual: <b>${emp.quality_percentage}%</b><br>
+          TS: <b>${emp.timesheet_percentage}%</b>
+        </div>
+        <div style="font-weight:700;font-size:0.75rem;color:${penColor};margin-top:2px;">${penLabel}</div>
+        ${penReasonStr}
+      </td>`;
+    } else if (!emp.kra_total) {
       kraStatusCell = `<td style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600;">—</td>`;
     } else {
       const kraColor = emp.kra_percentage >= 80 ? '#059669' : '#dc2626';

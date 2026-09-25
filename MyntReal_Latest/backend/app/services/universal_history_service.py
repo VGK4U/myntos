@@ -1327,8 +1327,64 @@ class UniversalHistoryService:
                 db.rollback()
                 logger.warning(f"[UniversalHistory] CRMLeadAssignment query failed: {_e}")
 
+        # 4b. Field Appointments & Supporting Staff Visits
+        if subfilter in ("all", "appointments", "visits"):
+            try:
+                from app.models.crm_field_appointment import CRMFieldAppointment
+                appts = (
+                    db.query(CRMFieldAppointment)
+                    .filter(CRMFieldAppointment.lead_id == entity_id)
+                    .order_by(CRMFieldAppointment.created_at.desc())
+                    .limit(50)
+                    .all()
+                )
+                for ap in appts:
+                    v_type_title = (ap.visit_type or "visit").replace('_', ' ').title()
+                    status_title = (ap.status or "assigned").replace('_', ' ').title()
+                    dt_created = ap.created_at
+                    author_name = ap.creator.full_name if ap.creator else "Tele-caller"
+                    assignee_name = ap.assigned_to.full_name if ap.assigned_to else "Staff"
+
+                    detail_parts = [
+                        f"Type: {v_type_title}",
+                        f"Assigned To: {assignee_name}",
+                        f"Status: {status_title}",
+                        f"Date: {ap.appointment_date}"
+                    ]
+                    if ap.purpose:
+                        detail_parts.append(f"Purpose: {ap.purpose}")
+                    if ap.telecaller_instructions:
+                        detail_parts.append(f"Instructions: {ap.telecaller_instructions}")
+                    if ap.outcome_summary:
+                        detail_parts.append(f"Outcome: {ap.outcome_summary}")
+                    if ap.is_gps_verified:
+                        detail_parts.append(f"GPS Verified ({ap.visit_latitude:.4f}, {ap.visit_longitude:.4f})")
+                    if ap.photo_path:
+                        detail_parts.append(f"Evidence Photo Attached")
+
+                    items.append({
+                        "id": f"appt_{ap.id}",
+                        "category": "appointment",
+                        "event_type": f"Appointment: {status_title}",
+                        "title": f"Field Appointment ({v_type_title})",
+                        "author_name": author_name,
+                        "author_type": "staff",
+                        "timestamp": dt_created.isoformat() if dt_created else None,
+                        "datetime_obj": dt_created,
+                        "old_val": None,
+                        "new_val": f"{status_title} - {assignee_name}",
+                        "details": " | ".join(detail_parts),
+                        "photo_url": ap.photo_path or ap.compressed_photo_path,
+                        "is_gps_verified": ap.is_gps_verified,
+                        "appointment_code": ap.appointment_code,
+                    })
+            except Exception as _ae:
+                db.rollback()
+                logger.warning(f"[UniversalHistory] CRMFieldAppointment query failed: {_ae}")
+
         # 5. Calls (Included in All Changes and Calls subfilter)
         if subfilter in ("all", "calls"):
+
             try:
                 calls_res = cls.get_calls_history(db=db, entity_info=entity_info, page=1, limit=100, current_user=current_user)
                 for c in (calls_res.get("items") or []):

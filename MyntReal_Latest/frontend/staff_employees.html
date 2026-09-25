@@ -1111,31 +1111,58 @@
             }
             
             await initialDataPromise;
+            
+            // Check for profile view query param (?view=profile or ?id=123)
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('view') === 'profile' || urlParams.get('tab') === 'profile') {
+                    const targetId = urlParams.get('id') || currentUserId;
+                    if (targetId) {
+                        setTimeout(() => editEmployee(parseInt(targetId)), 150);
+                    }
+                }
+            } catch (_) {}
         });
         
+        function isSaaSViewer() {
+            try {
+                if (typeof StaffSidebar !== 'undefined' && StaffSidebar.isSaaSTenant) return true;
+                const u = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                return Boolean(u.is_saas_tenant || ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER'].includes(u.staff_type));
+            } catch (_) {
+                return false;
+            }
+        }
+        
         function applyRoleBasedUI() {
-            // DC: VGK4U Supreme and HR can add employees
+            // DC: VGK4U Supreme, HR, and SaaS Tenant Admin can add employees
             const addBtn = document.querySelector('.card-header .btn-primary');
-            if (addBtn && !ADD_EDIT_ROLES.includes(currentUserRole)) {
+            const isTenantAdmin = Boolean(isSaaSViewer() && (currentUserRoleCode === 'tenant_admin' || currentUserRole === 'admin' || (JSON.parse(localStorage.getItem('staff_user') || '{}').staff_type === 'TENANT_ADMIN')));
+            if (addBtn && !ADD_EDIT_ROLES.includes(currentUserRole) && !isTenantAdmin) {
                 addBtn.style.display = 'none';
             }
         }
         
         function canEditEmployees() {
-            // DC: VGK4U Supreme and HR can edit employees
-            return ADD_EDIT_ROLES.includes(currentUserRole);
+            // DC: VGK4U Supreme, HR, and SaaS Tenant Admin can edit employees
+            const isTenantAdmin = Boolean(isSaaSViewer() && (currentUserRoleCode === 'tenant_admin' || currentUserRole === 'admin' || (JSON.parse(localStorage.getItem('staff_user') || '{}').staff_type === 'TENANT_ADMIN')));
+            return ADD_EDIT_ROLES.includes(currentUserRole) || isTenantAdmin;
         }
         
         function canResetPasswords() {
-            // DC: VGK4U, Key Leadership, HR, and EA can reset passwords
-            return PASSWORD_RESET_ROLES.includes(currentUserRole);
+            // DC: VGK4U, Key Leadership, HR, EA, and SaaS Tenant Admin can reset passwords
+            const isTenantAdmin = Boolean(isSaaSViewer() && (currentUserRoleCode === 'tenant_admin' || currentUserRole === 'admin' || (JSON.parse(localStorage.getItem('staff_user') || '{}').staff_type === 'TENANT_ADMIN')));
+            return PASSWORD_RESET_ROLES.includes(currentUserRole) || isTenantAdmin;
         }
         
         function canResetPasswordFor(emp) {
             // DC: Check if current user can reset password for this employee
             // Allow if: (1) resetting own password, OR
-            //           (2) user is in PASSWORD_RESET_ROLES AND has higher hierarchy level
+            //           (2) SaaS Tenant Admin for their organization, OR
+            //           (3) user is in PASSWORD_RESET_ROLES AND has higher hierarchy level
             if (emp.id === currentUserId) return true;  // Self-reset always allowed
+            const isTenantAdmin = Boolean(isSaaSViewer() && (currentUserRoleCode === 'tenant_admin' || currentUserRole === 'admin' || (JSON.parse(localStorage.getItem('staff_user') || '{}').staff_type === 'TENANT_ADMIN')));
+            if (isTenantAdmin) return true;
             
             if (!PASSWORD_RESET_ROLES.includes(currentUserRole)) return false;
             
@@ -1527,7 +1554,7 @@
                     const code = (emp.employee_code || emp.emp_code || '').toUpperCase();
                     const name = (emp.full_name || '').toLowerCase();
                     if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
-                    if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
+                    if (!isSaaSViewer() && ['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
                     return true;
                 })
                 .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
@@ -1653,7 +1680,7 @@
                 const code = (emp.employee_code || emp.emp_code || '').toUpperCase();
                 const name = (emp.full_name || '').toLowerCase();
                 if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
-                if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
+                if (!isSaaSViewer() && ['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
 
                 const matchSearch = !search || 
                     emp.full_name.toLowerCase().includes(search) ||
@@ -1721,7 +1748,7 @@
                 const code = (e.employee_code || e.emp_code || '').toUpperCase();
                 const name = (e.full_name || '').toLowerCase();
                 if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
-                if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(e.staff_type)) return false;
+                if (!isSaaSViewer() && ['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(e.staff_type)) return false;
                 return true;
             });
             const total = employees.length;

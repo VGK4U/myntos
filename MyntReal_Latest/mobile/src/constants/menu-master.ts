@@ -22,6 +22,33 @@ export interface SidebarSection {
 
 export const MENU_MASTER: SidebarSection[] = [
   {
+    "section_code": "CORE_WORKSPACE",
+    "section_label": "CORE WORKSPACE",
+    "order": 0.5,
+    "items": [
+      {
+        "menu_code": "TENANT_COMPANY_PROFILE",
+        "label": "Company Profile",
+        "route": "/staff/my-tenant",
+        "icon": "fas fa-building",
+        "audience": [
+          "STAFF",
+          "SAAS"
+        ]
+      },
+      {
+        "menu_code": "TENANT_STAFF_MANAGEMENT",
+        "label": "Staff & Users",
+        "route": "/staff/tenant-users",
+        "icon": "fas fa-users-gear",
+        "audience": [
+          "STAFF",
+          "SAAS"
+        ]
+      }
+    ]
+  },
+  {
     "section_code": "PROGRESS",
     "section_label": "PROGRESS",
     "order": 1,
@@ -75,8 +102,34 @@ export const MENU_MASTER: SidebarSection[] = [
     "order": 2,
     "subSections": [
       {
+        "sub_section_code": "HR_EMPLOYEES",
+        "sub_section_label": "Employee Management",
+        "items": [
+          {
+            "menu_code": "HRMS_EMPLOYEES",
+            "label": "Employees",
+            "route": "/staff/employees",
+            "icon": "fas fa-users",
+            "audience": [
+              "STAFF",
+              "SAAS"
+            ]
+          },
+          {
+            "menu_code": "HRMS_EMPLOYEE_PROFILE",
+            "label": "Employee Profile",
+            "route": "/staff/employees?view=profile",
+            "icon": "fas fa-id-card",
+            "audience": [
+              "STAFF",
+              "SAAS"
+            ]
+          }
+        ]
+      },
+      {
         "sub_section_code": "HR_ATTENDANCE",
-        "sub_section_label": "Attendance",
+        "sub_section_label": "Attendance & Leave",
         "items": [
           {
             "menu_code": "IN_OUT_TIME",
@@ -287,27 +340,52 @@ export const MENU_MASTER: SidebarSection[] = [
     "order": 4,
     "items": [
       {
+        "menu_code": "ALL_CRM_LEADS",
+        "label": "All Leads",
+        "route": "/staff/crm/leads",
+        "icon": "fas fa-address-book",
+        "audience": [
+          "STAFF"
+        ]
+      },
+      {
         "menu_code": "MY_CRM_DASHBOARD",
         "label": "CRM Dashboard",
         "route": "/staff/crm/dashboard",
+        "icon": "fas fa-chart-line",
         "audience": [
-          "STAFF"
+          "STAFF",
+          "SAAS"
         ]
       },
       {
         "menu_code": "MY_LEADS",
         "label": "My Leads",
         "route": "/staff/my-leads",
+        "icon": "fas fa-user-check",
         "audience": [
-          "STAFF"
+          "STAFF",
+          "SAAS"
         ]
       },
       {
         "menu_code": "STAFF_LEADS",
         "label": "Staff Leads",
         "route": "/staff/leads",
+        "icon": "fas fa-users",
         "audience": [
-          "STAFF"
+          "STAFF",
+          "SAAS"
+        ]
+      },
+      {
+        "menu_code": "TENANT_CRM_WORKFLOW_SETUP",
+        "label": "CRM / Workflow Setup",
+        "route": "/staff/saas-crm-settings",
+        "icon": "fas fa-sliders",
+        "audience": [
+          "STAFF",
+          "SAAS"
         ]
       },
       {
@@ -322,6 +400,7 @@ export const MENU_MASTER: SidebarSection[] = [
         "menu_code": "AUTO_DIALER",
         "label": "Auto Dialer",
         "route": "/staff/dialer",
+        "icon": "fas fa-phone-volume",
         "audience": [
           "STAFF"
         ]
@@ -347,6 +426,78 @@ export const MENU_MASTER: SidebarSection[] = [
         "label": "Catalog Library",
         "route": "/staff/catalog-library",
         "icon": "fas fa-book-open",
+        "audience": [
+          "STAFF"
+        ]
+      }
+    ]
+  },
+  {
+    "section_code": "SOLAR_EV",
+    "section_label": "WORKFLOWS",
+    "order": 4.5,
+    "items": [
+      {
+        "menu_code": "WORKFLOW_EXEC_DASHBOARD",
+        "label": "Executive Dashboard",
+        "route": "/staff/executive-dashboard",
+        "icon": "fas fa-chart-pie",
+        "audience": [
+          "STAFF",
+          "SAAS"
+        ]
+      },
+      {
+        "menu_code": "WORKFLOW_CATEGORY_LEADS",
+        "label": "Category-wise Leads",
+        "route": "/staff/mnr-leads",
+        "icon": "fas fa-layer-group",
+        "audience": [
+          "STAFF",
+          "SAAS"
+        ]
+      },
+      {
+        "menu_code": "SOLAR_VENDORS",
+        "label": "Vendors & Partners",
+        "route": "/staff/solar-vendors",
+        "icon": "fas fa-hard-hat",
+        "audience": [
+          "STAFF"
+        ]
+      },
+      {
+        "menu_code": "SOLAR_LEADS",
+        "label": "Solar Leads",
+        "route": "/staff/solar-leads",
+        "icon": "fas fa-solar-panel",
+        "audience": [
+          "STAFF"
+        ]
+      },
+      {
+        "menu_code": "EV_B2B_LEADS",
+        "label": "EV B2B Leads",
+        "route": "/staff/ev-b2b-leads",
+        "icon": "fas fa-truck",
+        "audience": [
+          "STAFF"
+        ]
+      },
+      {
+        "menu_code": "EV_B2C_LEADS",
+        "label": "EV B2C Leads",
+        "route": "/staff/ev-b2c-leads",
+        "icon": "fas fa-car",
+        "audience": [
+          "STAFF"
+        ]
+      },
+      {
+        "menu_code": "EV_SPARES_LEADS",
+        "label": "EV Spares Leads",
+        "route": "/staff/ev-spares-leads",
+        "icon": "fas fa-cogs",
         "audience": [
           "STAFF"
         ]
@@ -450,6 +601,16 @@ export const MENU_MASTER: SidebarSection[] = [
         "route": "/staff/my-journeys",
         "audience": [
           "STAFF"
+        ]
+      },
+      {
+        "menu_code": "FIELD_APPOINTMENTS",
+        "label": "Field Appointments",
+        "route": "/staff/field-appointments",
+        "icon": "fas fa-calendar-check",
+        "audience": [
+          "STAFF",
+          "VGK4U"
         ]
       },
       {
@@ -1094,6 +1255,16 @@ export const MENU_MASTER: SidebarSection[] = [
         "route": "/staff/configuration/a1top",
         "audience": [
           "STAFF"
+        ]
+      },
+      {
+        "menu_code": "CENTRAL_INTEGRATIONS",
+        "label": "Integrations",
+        "route": "/staff/configuration/integrations",
+        "icon": "fas fa-plug",
+        "audience": [
+          "STAFF",
+          "VGK4U"
         ]
       },
       {

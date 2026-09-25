@@ -153,7 +153,7 @@ def build_sidebar_tree(menus: list, granted_menu_codes: Set[str] = None) -> List
         # Get section info from database fields
         section_id = menu.get("sidebar_section") or menu.get("menu_category") or "other"
         section_title = menu.get("sidebar_section_title") or section_id.upper().replace('_', ' ').replace('-', ' ')
-        section_order = menu.get("sidebar_section_order") or 999
+        section_order = menu.get("sidebar_section_order") if menu.get("sidebar_section_order") is not None else 999
         parent_section = menu.get("parent_section")
         is_submenu = menu.get("is_submenu", False)
         
@@ -584,6 +584,21 @@ CANONICAL_MENU_REGISTRY = [
         'sidebar_section': 'crm',
         'sidebar_section_title': 'CRM & LEADS',
         'sidebar_section_order': 4,
+    },
+    {
+        'menu_code': 'FIELD_APPOINTMENTS',
+        'menu_name': 'Field Appointments',
+        'menu_description': 'Field Appointments & Supporting Staff Workflow for physical bank and customer visits',
+        'route_path': '/staff/field-appointments',
+        'menu_category': 'staff',
+        'menu_icon': 'fas fa-calendar-check',
+        'display_order': 159,
+        'is_default_visible': True,
+        'is_default_accessible': True,
+        'audience_scope': 'staff',
+        'sidebar_section': 'journey-tracking',
+        'sidebar_section_title': 'JOURNEY TRACKING',
+        'sidebar_section_order': 8,
     },
     {
         'menu_code': 'ai_calling',
@@ -3718,6 +3733,35 @@ async def get_my_menus(
             "message": "SaaS Segment Administrator Access"
         }
 
+    # DC-SAAS-TENANT-RESOLVER-001 (Sep 2026): Authoritative SaaS Tenant Entitlement & Menu Resolver
+    from app.services.saas_tenant_resolver import resolve_tenant_context, get_saas_menu_tree
+    tenant_ctx = resolve_tenant_context(db, current_user)
+    if tenant_ctx.is_saas_tenant:
+        saas_menus, saas_routes, saas_categorized = get_saas_menu_tree(tenant_ctx)
+        sidebar_tree = build_sidebar_tree(saas_menus)
+        comp_name = tenant_ctx.company.company_name if tenant_ctx.company else "SaaS Tenant"
+        return {
+            'success': True,
+            'company_id': current_user.base_company_id,
+            'employee_id': employee_id,
+            'employee_code': current_user.emp_code,
+            'employee_name': current_user.full_name,
+            'staff_type': current_user.staff_type,
+            'admin_scope': 'CLIENT_SPECIFIC' if tenant_ctx.is_tenant_admin else 'CLIENT_STAFF',
+            'is_supreme': False,
+            'is_saas_tenant': True,
+            'total_menus': len(saas_menus),
+            'menus': saas_menus,
+            'allowed_paths': list(saas_routes),
+            'sidebar_tree': sidebar_tree,
+            'categorized': saas_categorized,
+            'categories': list(saas_categorized.keys()),
+            'unified_mode': True,
+            'structure_version': 'saas-tenant',
+            'message': f'SaaS Tenant Access for {comp_name}'
+        }
+
+
     # VGK4U Supreme & Key Leadership Access Bypass - Full access to all menus via Registry
     # DC Jan 2026: Accept VGK4U, KEY_LEADERSHIP, KEY LEADERSHIP, EA, RVZ_SUPREME for full access
     if current_user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA'] or (hasattr(current_user, 'emp_code') and current_user.emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025', 'MR10017']) or (current_user.role and current_user.role.role_code in ['key_leadership', 'leadership_role', 'ea', 'vgk4u', 'super_admin']):
@@ -3735,9 +3779,17 @@ async def get_my_menus(
             sec_title = (menu.sidebar_section_title or '').lower()
             cat = (menu.menu_category or '').lower()
 
+            # Global Directive: Central Integrations ONLY for MR10001 and MR10016
+            if menu.menu_code in ('staff_configuration_integrations', 'CENTRAL_INTEGRATIONS') or getattr(menu, 'route_path', '') == '/staff/configuration/integrations':
+                if user_emp_code not in ('MR10001', 'MR10016'):
+                    continue
+            elif user_emp_code == 'MR10016':
+                # MR10016 only gets integrations from config, nothing else from meta/account/config/saas/internal
+                if any(x in sec_code or x in sec_title or x in cat for x in ['meta', 'account', 'config', 'saas', 'internal']):
+                    continue
             # Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, VGK SAAS, INTERNAL for all EXCEPT MR10001 and MR10025
             # DC Protocol: Expense Entries is explicitly EXEMPTED so all active staff have self-service access
-            if user_emp_code not in ('MR10001', 'MR10025'):
+            elif user_emp_code not in ('MR10001', 'MR10025'):
                 if menu.menu_code not in ('sfms_expense_entries', 'staff_accounts_expense_entries'):
                     if any(x in sec_code or x in sec_title or x in cat for x in ['meta', 'account', 'config', 'saas', 'internal']):
                         continue
@@ -3805,14 +3857,18 @@ async def get_my_menus(
     
     # DC Protocol Apr 2026: Department-based auto-grant for Store/Accounts staff.
     # Any employee in a department whose name contains 'store' or 'accounts' automatically
+    # DC Protocol Apr 2026: Department-based auto-grant for Store/Accounts staff.
+    # Any employee in a department whose name contains 'store' or 'accounts' automatically
     # receives view access to the EV Spares PO page and Procurement page, regardless of
     # whether an explicit menu-settings grant exists.
-    # DC Protocol May 2026: Extended to grant My Earnings to Sales / Accounts / Leadership / EA.
+    # DC Protocol May 2026: Extended to grant My Earnings and Auto Dialer to Sales / Accounts / Leadership / EA.
     _DEPT_AUTO_GRANT_MENUS = {
         'store':      ['staff_zynova_ev_po', 'sfms_procurement'],
         'accounts':   ['staff_zynova_ev_po', 'sfms_procurement', 'staff_my_lead_incentives'],
-        'sales':      ['staff_my_lead_incentives'],
-        'leadership': ['staff_my_lead_incentives'],
+        'sales':      ['staff_my_lead_incentives', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'tele sales': ['staff_my_lead_incentives', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'tele':       ['staff_my_lead_incentives', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'leadership': ['staff_my_lead_incentives', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
         'management': ['staff_my_lead_incentives'],
         'executive':  ['staff_my_lead_incentives'],
     }
@@ -3835,12 +3891,16 @@ async def get_my_menus(
     # DC Protocol May 2026: Role-based auto-grant for My Earnings and Bank Wise Leads.
     # Key Leadership, EA, Executive Admin, Accounts, and Sales role_codes get My Earnings visibility.
     _ROLE_AUTO_GRANT_MENUS = {
-        'key_leadership': ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
+        'key_leadership': ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
         'ea':             ['staff_my_lead_incentives'],
         'executive_admin':['staff_my_lead_incentives'],
         'accounts':       ['staff_my_lead_incentives'],
-        'sales':          ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
-        'leadership':     ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS'],
+        'sales':          ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'tele':           ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'telecaller':     ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'incharge':       ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'counselor':      ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
+        'leadership':     ['staff_my_lead_incentives', 'MNR_BANK_WISE_LEADS', 'staff_auto_dialer', 'AUTO_DIALER', 'staff_dialer'],
     }
     try:
         _role_code = (getattr(current_user.role, 'role_code', '') if current_user.role else '') or ''
@@ -3885,7 +3945,10 @@ async def get_my_menus(
 
         # DC Protocol: Auto-grant VGK_TEAM_MEMBERS, Auto Dialer, Catalog Library & Call Quality Review to Sales & Tele Sales departments
         _dept_name_lower = (getattr(current_user.department, 'name', '') or '').lower()
-        if current_user.department_id in (1, 13, 14, 19) or 'sale' in _dept_name_lower or 'sale' in _role_lower or 'leader' in _role_lower or 'director' in _role_lower or 'manager' in _role_lower:
+        if (current_user.department_id in (1, 13, 14, 19) or
+            any(k in _dept_name_lower for k in ('sale', 'tele', 'outbound', 'calling', 'counselor')) or
+            any(k in _role_lower for k in ('sale', 'tele', 'incharge', 'counselor', 'leader', 'director', 'manager')) or
+            _emp_code_upper in ('MN10009', 'MN10019', 'MN10008', 'MN10010', 'MR10036', 'MR10022', 'MN10017', 'MN10016')):
             _dept_auto_codes.update([
                 'VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members',
                 'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER',
@@ -3893,11 +3956,37 @@ async def get_my_menus(
                 'call_quality_review'
             ])
 
+        # DC Protocol Sep 2026: Sales & Tele Sales staff default WORKFLOW & Leads access (Ravi MN10019 & all sales staff)
+        _is_sales_member = (
+            current_user.department_id in (13, 19) or
+            'sale' in _dept_name_lower or
+            'tele' in _dept_name_lower or
+            'sale' in _role_lower or
+            'tele' in _role_lower or
+            _emp_code_upper in ('MN10019', 'MN10009', 'MN10008', 'MN10010', 'MR10036', 'MR10022', 'MN10017', 'MN10016')
+        )
+        if _is_sales_member:
+            _dept_auto_codes.update([
+                'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER',
+                'section_solar_ev', 'WORKFLOW_EXEC_DASHBOARD', 'WORKFLOW_CATEGORY_LEADS',
+                'SOLAR_VENDORS', 'SOLAR_LEADS', 'EV_B2B_LEADS', 'EV_B2C_LEADS', 'EV_SPARES_LEADS',
+                'staff_executive_dashboard', 'staff_mnr_leads', 'mnr_leads', 'mnr_leads_master',
+                'staff_solar_vendors', 'staff_solar_leads', 'mnr_solar_leads',
+                'staff_ev_b2b_leads', 'mnr_ev_b2b_leads', 'staff_ev_b2c_leads', 'mnr_ev_b2c_leads',
+                'staff_ev_spares_leads', 'mnr_ev_spares_leads', 'MNR_EXECUTIVE_DASHBOARD',
+                'MNR_CATEGORY_LEADS', 'MNR_REAL_DREAMS_LEADS', 'staff_real_dreams_leads',
+                'MNR_INSURANCE_LEADS', 'staff_insurance_leads', 'MNR_ETC_LEADS', 'staff_etc_leads',
+                'MNR_BANK_WISE_LEADS', 'staff_bank_wise_leads', 'staff_field_sales',
+                'MY_LEADS', 'staff_my_leads', 'STAFF_LEADS', 'staff_leads', 'ALL_CRM_LEADS',
+                'crm_leads', 'rvz_crm_leads', 'MY_CRM_DASHBOARD', 'staff_crm_dashboard',
+                'staff_team_leads', 'staff_crm_team_leads'
+            ])
+
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
-            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
         elif _emp_code_upper == 'MN10008':
-            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:
@@ -4123,6 +4212,17 @@ async def get_my_menus(
                 all_menus.append(sdm)
                 existing_routes.add(sdm.route_path)
 
+    # DC Architecture Sep 2026: Guaranteed Auto Dialer access for ALL sales personnel
+    if _is_sales_member and '/staff/dialer' not in existing_routes:
+        dialer_menu = db.query(StaffMenuRegistry).filter(
+            StaffMenuRegistry.route_path == '/staff/dialer',
+            StaffMenuRegistry.is_active == True
+        ).first()
+        if dialer_menu:
+            all_menus.append(dialer_menu)
+            existing_routes.add(dialer_menu.route_path)
+            logger.info(f"[DC-SALES-AUTO-DIALER] Guaranteed Auto Dialer menu injected for employee {employee_id} ({current_user.emp_code})")
+
     # DC Protocol (Jul 2026): Freelancer Only Leads access restriction
     if current_user.staff_type == 'FREELANCER' and getattr(current_user, 'freelancer_access_mode', 'default') == 'only_leads':
         allowed_codes = {
@@ -4169,8 +4269,8 @@ async def get_my_menus(
                 'CRM': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP'},
                 'SERVICE_TICKETS': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
                 'SERVICE': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
-                'SOLAR_EV': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA', 'STAFF_MNR_USER_ZYNOVA'},
-                'SOLAR': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA'},
+                'SOLAR_EV': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA', 'STAFF_MNR_USER_ZYNOVA', 'WORKFLOWS'},
+                'SOLAR': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA', 'WORKFLOWS'},
                 'ACCOUNTS_GST': {'ACCOUNTS', 'SFMS', 'FINANCIAL ACCOUNTING', 'LEDGERS'},
                 'ACCOUNTS': {'ACCOUNTS', 'SFMS', 'FINANCIAL ACCOUNTING', 'LEDGERS'},
                 'INVENTORY': {'INVENTORY', 'SFMS_INVENTORY', 'STOCK', 'WAREHOUSE'},
@@ -4208,6 +4308,14 @@ async def get_my_menus(
             if m.route_path != '/staff/leads' and (m.menu_code or '').lower() not in ('staff_leads', 'leads_master', 'staff_leads_master')
         ]
         logger.info(f"[DC-RESTRICT-STAFF-LEADS] Stripped staff_leads page from menu response for {_curr_emp_code}")
+
+    # Central Integration Management: STRICTLY for MR10001 and MR10016
+    if getattr(current_user, 'emp_code', '') not in ('MR10001', 'MR10016'):
+        all_menus = [
+            m for m in all_menus
+            if m.menu_code not in ('staff_configuration_integrations', 'CENTRAL_INTEGRATIONS')
+            and getattr(m, 'route_path', '') != '/staff/configuration/integrations'
+        ]
 
     categorized = {}
     menu_list = []
@@ -4893,7 +5001,7 @@ async def sync_sidebar_to_registry_legacy(
         'task-management': ('TASK MANAGEMENT', 5, ['/staff/tasks/assigned-by-me-v2', '/staff/tasks/assigned-to-me', '/staff/tasks/team-activities', '/staff/tasks/tracker', '/staff/team-activities', '/staff/manager-review', '/staff/task-review']),
         'kra-management': ('KRA MANAGEMENT', 6, ['/staff/my-kras', '/staff/kra-templates', '/staff/kra-tracking-sheet', '/staff/kra-review']),
         'timesheet': ('TIMESHEET', 7, ['/staff/my-timesheet', '/staff/timesheet-approval']),
-        'journey-tracking': ('JOURNEY TRACKING', 8, ['/staff/my-journeys', '/staff/team-journeys', '/staff/all-journeys', '/staff/vgk4u-journeys']),
+        'journey-tracking': ('JOURNEY TRACKING', 8, ['/staff/my-journeys', '/staff/team-journeys', '/staff/all-journeys', '/staff/vgk4u-journeys', '/staff/field-appointments']),
         'location-tracking': ('LOCATION TRACKING', 9, ['/staff/my-location-history', '/staff/team-location-tracker']),
         'my-earnings': ('MY EARNINGS', 19, []),
         'reimbursement': ('REIMBURSEMENT', 10, ['/staff/accounts/my-reimbursements', '/staff/accounts/reimbursement-approvals']),
@@ -4902,7 +5010,7 @@ async def sync_sidebar_to_registry_legacy(
         'official-partners': ('BUSINESS PARTNERS', 13, ['/staff/partners/orders', '/staff/partners/pricing', '/staff/partners/approval', '/staff/partners/routing', '/staff/partners/fulfillment', '/staff/partners/dispatch', '/staff/partners/invoices', '/staff/partners/payments']),
         'internal': ('INTERNAL', 30, ['/staff/nda-versions', '/staff/nda-acceptance-audit', '/staff/nda-pending', '/staff/promoters', '/staff/promo-nda-editor', '/staff/promo-nda-audit', '/staff/internal-menu-access', '/rvz/terms-conditions-management', '/rvz/terms-versions', '/rvz/terms-editor', '/rvz/terms-audit', '/staff/mnr/terms-versions', '/staff/mnr/terms-editor', '/staff/mnr/terms-audit']),
         'nda-management': ('INTERNAL', 30, []),
-        'configuration': ('CONFIGURATION', 15, ['/staff/departments', '/staff/accounts/companies', '/staff/partners/master', '/staff/accounts/segments', '/staff/accounts/hsn', '/staff/signup-categories', '/rvz/menu-access-config', '/staff/sidebar-sync', '/staff/crm/ai-calling', '/staff/whatsapp-config', '/staff/configuration/razorpay', '/staff/configuration/a1top']),
+        'configuration': ('CONFIGURATION', 15, ['/staff/departments', '/staff/accounts/companies', '/staff/partners/master', '/staff/accounts/segments', '/staff/accounts/hsn', '/staff/signup-categories', '/rvz/menu-access-config', '/staff/sidebar-sync', '/staff/crm/ai-calling', '/staff/whatsapp-config', '/staff/configuration/razorpay', '/staff/configuration/a1top', '/staff/configuration/integrations']),
         'vgk4u': ('ZYNOVA', 16, ['/rvz/real-dreams/marketplace', '/rvz/real-dreams', '/rvz/real-dreams/partners', '/rvz/real-dreams/properties', '/staff/incentives/points', '/staff/incentives/approvals', '/staff/incentives/vgk4u', '/staff/vgk4u/real-estate', '/staff/vgk4u/insurance', '/staff/zynova', '/rvz/real-dreams-dashboard', '/rvz/real-dreams-partners', '/rvz/real-dreams-properties', '/real-dreams/marketplace', '/real-dreams/property', '/real-dreams/compare', '/staff/vgk4u/purchase-orders', '/staff/marketplace-config', '/staff/vgk4u/etc-students', '/staff/marketplace/codes-segments']),
         'mnr': ('MNR', 17, [
             # MNR Users subsection
@@ -5036,6 +5144,7 @@ async def sync_sidebar_to_registry_legacy(
         ('/staff/team-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8),
         ('/staff/all-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8),
         ('/staff/vgk4u-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8),
+        ('/staff/field-appointments', 'journey-tracking', 'JOURNEY TRACKING', 8),
         # Location - Section 9
         ('/staff/my-location', 'location-tracking', 'LOCATION TRACKING', 9),
         ('/staff/team-location', 'location-tracking', 'LOCATION TRACKING', 9),
@@ -5063,6 +5172,7 @@ async def sync_sidebar_to_registry_legacy(
         ('/rvz/menu-access', 'configuration', 'CONFIGURATION', 15),
         ('/staff/configuration/razorpay', 'configuration', 'CONFIGURATION', 15),
         ('/staff/configuration/a1top', 'configuration', 'CONFIGURATION', 15),
+        ('/staff/configuration/integrations', 'configuration', 'CONFIGURATION', 15),
         ('/staff/performance-config', 'hr', 'HR', 22),
         ('/staff/crm/ai-calling', 'configuration', 'CONFIGURATION', 15),
         ('/staff/whatsapp-config', 'configuration', 'CONFIGURATION', 15),

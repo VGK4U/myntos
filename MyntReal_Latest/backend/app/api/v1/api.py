@@ -57,7 +57,11 @@ from app.api.v1.endpoints import (
     digital_catalogs,
     mobile_telephony_api,
     crm_universal_history,
+    crm_field_appointments,
+    central_integrations,
 )
+
+
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
 
@@ -204,6 +208,7 @@ api_router.include_router(partner_auth.router, tags=["Partner Authentication"])
 # Universal CRM/Lead Management System (DC Protocol - Dec 08, 2025)
 api_router.include_router(crm.router, prefix="/crm", tags=["Universal CRM - Lead Management"])
 api_router.include_router(crm_universal_history.router, prefix="/crm/universal-history", tags=["CRM - Universal History"])
+api_router.include_router(crm_field_appointments.router, prefix="/crm/field-appointments", tags=["CRM - Field Appointments & Supporting Staff"])
 api_router.include_router(bank_contacts.router, prefix="/crm", tags=["CRM - Bank Branch Contacts"])
 api_router.include_router(crm_settings.router, prefix="/crm/settings", tags=["CRM Settings & Handler Routing"])
 
@@ -289,6 +294,13 @@ api_router.include_router(operator_calls.router, prefix="/operator-calls", tags=
 
 # Promoter / Influencer Referral System (DC Protocol Apr 2026)
 api_router.include_router(promo.router, prefix="/promo", tags=["Promoter Referral System"])
+
+# Central Integration Management (Strictly MR10001 & MR10016)
+api_router.include_router(central_integrations.router)
+
+# SaaS CRM & Workflow Setup (DC_SAAS_CRM_SETUP_001)
+from app.api.v1.endpoints import saas_crm_setup
+api_router.include_router(saas_crm_setup.router, prefix="/saas/crm-setup", tags=["SaaS CRM & Workflow Setup"])
 
 @api_router.get("/health")
 async def api_health():

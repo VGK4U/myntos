@@ -1127,13 +1127,25 @@
                 return;
             }
 
+            const emp = (employeeHandlers.find(e => e.id === empId)) || 
+                        (optionsData.active_staff ? optionsData.active_staff.find(e => e.id === empId) : null);
+            const deptId = emp ? emp.department_id : null;
+
             const selectedCatIds = Array.from(document.querySelectorAll('#categoryCheckboxes .category-checkbox:checked')).map(cb => parseInt(cb.value));
 
             const payload = {
                 employee_id: empId,
                 company_id: coId,
+                department_id: deptId,
                 category_ids: selectedCatIds
             };
+
+            const saveBtn = document.querySelector('#assignModal .modal-footer .btn-primary');
+            const originalBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            }
 
             try {
                 const res = await staffFetchJson('/api/v1/crm/settings/employee-handlers/assign', {
@@ -1151,7 +1163,13 @@
                 }
             } catch (err) {
                 console.error('Error saving employee categories:', err);
-                showToast('Failed to save category assignments', 'error');
+                const errMsg = err?.message || err?.detail || 'Failed to save category assignments';
+                showToast(errMsg, 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalBtnHtml;
+                }
             }
         }
 
@@ -1171,7 +1189,8 @@
                 }
             } catch (err) {
                 console.error('Error removing category assignment:', err);
-                showToast('Failed to remove category assignment', 'error');
+                const errMsg = err?.message || err?.detail || 'Failed to remove category assignment';
+                showToast(errMsg, 'error');
             }
         }
 
@@ -1225,7 +1244,8 @@
                 }
             } catch (err) {
                 console.error('Delete error:', err);
-                showToast('Delete operation failed', 'error');
+                const errMsg = err?.message || err?.detail || 'Delete operation failed';
+                showToast(errMsg, 'error');
             }
             deleteTarget = { type: null, id: null };
         }

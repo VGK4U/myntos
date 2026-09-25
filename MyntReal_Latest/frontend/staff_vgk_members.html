@@ -3613,6 +3613,11 @@ function _renderMeDetailTable(partnerId){
           ${TH('Level / Role', 'level', 'center')}
           ${TH('Customer Name', 'name')}
           ${TH('Entry Kind', 'kind', 'center')}
+          ${TH('Balance Gross ₹', 'balance_gross', 'right', 'color:#2563eb')}
+          ${TH('Admin (8%)', '', 'right')}
+          ${TH('TDS (2%)', '', 'right')}
+          ${TH('Net (90%)', 'net', 'right')}
+          ${TH('Status', 'status', 'center')}
           ${TH('Deal Value ₹', 'deal_value', 'right', 'color:#4b5563')}
           ${TH('Calc %', '', 'center', 'color:#4b5563')}
           ${TH('Gross ₹', 'gross', 'right')}
@@ -3620,11 +3625,6 @@ function _renderMeDetailTable(partnerId){
           ${TH('Stage 2 Adv.', '', 'right', 'color:#d97706')}
           ${TH('Lost Adv. ₹', 'lost_lead_deduction', 'right', 'color:#dc2626')}
           ${TH('Advance Paid ₹', 'advance_paid', 'right', 'color:#d97706')}
-          ${TH('Balance Gross ₹', 'balance_gross', 'right', 'color:#2563eb')}
-          ${TH('Admin (8%)', '', 'right')}
-          ${TH('TDS (2%)', '', 'right')}
-          ${TH('Net (90%)', 'net', 'right')}
-          ${TH('Status', 'status', 'center')}
         </tr>
       </thead>
       <tbody>
@@ -3720,6 +3720,11 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:center">
                 <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;font-weight:500">${kindLabelText}</span>
               </td>
+              <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
+              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
               <td style="padding:7px 10px;text-align:right;color:#4b5563;font-weight:600">${dealValHtml}</td>
               <td style="padding:7px 10px;text-align:center;color:#4b5563;font-weight:600">${commPctHtml}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${grossAmt>0?_meInr(grossAmt):'—'}</td>
@@ -3727,11 +3732,6 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${stg2Html}</td>
               <td style="padding:7px 10px;text-align:right;color:#dc2626;font-weight:600">${lostDedHtml}</td>
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaidHtml}</td>
-              <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
             </tr>`;
           }).join('');
 
@@ -3745,6 +3745,11 @@ function _renderMeDetailTable(partnerId){
             </td>
             <td style="padding:6px 10px;color:#4c1d95;font-weight:800;font-size:11.5px">${group.client_name}</td>
             <td style="padding:6px 10px;text-align:center"><span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px">LEAD SUB-TOTAL</span></td>
+            <td style="padding:6px 10px;text-align:right;color:#2563eb">${subBalGross > 0 ? _meInr(subBalGross) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#059669;font-weight:900">${subNet > 0 ? _meInr(subNet) : '—'}</td>
+            <td></td>
             <td style="padding:6px 10px;text-align:right;color:#4b5563">${subDealVal > 0 ? _meInr(subDealVal) : '—'}</td>
             <td style="padding:6px 10px;text-align:center;color:#9ca3af">—</td>
             <td style="padding:6px 10px;text-align:right;color:#4c1d95;font-weight:800">${subGross > 0 ? _meInr(subGross) : '—'}</td>
@@ -3752,11 +3757,6 @@ function _renderMeDetailTable(partnerId){
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subStg2 > 0 ? _meInr(subStg2) : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#dc2626">${subLostDed > 0 ? `-${_meInr(subLostDed)}` : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdvPaid > 0 ? _meInr(subAdvPaid) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#2563eb">${subBalGross > 0 ? _meInr(subBalGross) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#059669;font-weight:900">${subNet > 0 ? _meInr(subNet) : '—'}</td>
-            <td></td>
           </tr>`;
 
           return entryRowsHtml + subtotalRowHtml;
@@ -3766,6 +3766,11 @@ function _renderMeDetailTable(partnerId){
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
           <td colspan="7" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
+          <td></td>
           <td style="padding:8px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
           <td></td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
@@ -3773,11 +3778,6 @@ function _renderMeDetailTable(partnerId){
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totStg2>0?_meInr(totStg2):'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
-          <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
-          <td></td>
         </tr>
       </tfoot>
     </table></div>`;
@@ -4217,13 +4217,6 @@ function _lvDetailRowHtml(lid, entries){
         <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:${e.community_id?'#e0f2fe':'#f3f4f6'};color:${e.community_id?'#0369a1':'#6b7280'};font-weight:${e.community_id?'700':'500'}">${kindBadge}</span>
         ${commBadgeHtml}
       </td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#4b5563;font-weight:600">${dealValHtml}</td>
-      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#4b5563;font-weight:600">${commPctHtml}</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#374151;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg1Html}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg2Html}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626;font-weight:600">${lostDedHtml}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
@@ -4231,6 +4224,13 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px">
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
       </td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#4b5563;font-weight:600">${dealValHtml}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#4b5563;font-weight:600">${commPctHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#374151;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg1Html}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg2Html}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626;font-weight:600">${lostDedHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
     </tr>`;
   }).join('');
 
@@ -4242,6 +4242,11 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px;text-align:center">Level / Role</td>
     <td style="padding:6px 10px">Member</td>
     <td style="padding:6px 10px;text-align:center">Entry Kind</td>
+    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross ₹</td>
+    <td style="padding:6px 10px;text-align:right">Admin (8%)</td>
+    <td style="padding:6px 10px;text-align:right">TDS (2%)</td>
+    <td style="padding:6px 10px;text-align:right">Net (90%)</td>
+    <td style="padding:6px 10px">Status</td>
     <td style="padding:6px 10px;text-align:right">Deal Value ₹</td>
     <td style="padding:6px 10px;text-align:center">Calc %</td>
     <td style="padding:6px 10px;text-align:right">Gross ₹</td>
@@ -4249,11 +4254,6 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px;text-align:right;color:#d97706">Stage 2 Adv.</td>
     <td style="padding:6px 10px;text-align:right;color:#dc2626">Lost Adv. ₹</td>
     <td style="padding:6px 10px;text-align:right;color:#d97706">Advance Paid ₹</td>
-    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross ₹</td>
-    <td style="padding:6px 10px;text-align:right">Admin (8%)</td>
-    <td style="padding:6px 10px;text-align:right">TDS (2%)</td>
-    <td style="padding:6px 10px;text-align:right">Net (90%)</td>
-    <td style="padding:6px 10px">Status</td>
   </tr>`;
 
   const totGross    = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+(e.commission_amount||0)),0);
@@ -4311,6 +4311,11 @@ function _lvDetailRowHtml(lid, entries){
       ${subHead}${rows}
       <tr style="background:#f0f0fb;font-weight:700">
         <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
+        <td style="padding:7px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
+        <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
+        <td></td>
         <td style="padding:7px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
         <td></td>
         <td style="padding:7px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
@@ -4318,11 +4323,6 @@ function _lvDetailRowHtml(lid, entries){
         <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg2>0?_meInr(totStg2):'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
-        <td></td>
       </tr>
     </table>
   </td></tr>`;

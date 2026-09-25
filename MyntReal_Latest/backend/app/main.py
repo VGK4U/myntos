@@ -4733,6 +4733,7 @@ def _startup_worker():
                     "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS vendor_logo_url VARCHAR(500)",
                     # staff_employees missing columns
                     "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC'",
+                    "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS assigned_modules JSONB DEFAULT '[]'::jsonb",
                     # associated_companies missing columns
                     "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL'",
                     "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb",
@@ -9971,6 +9972,47 @@ def _startup_worker():
             """))
             _db_incfg3.commit()
             print("[DC_STAFF_INCFG_003] ✅ May 2026 B2B split + ETC min-target fix applied", flush=True)
+
+            # DC_STAFF_INCFG_SEP2026: September 2026 Master Seed
+            _seed_sep2026 = [
+                (1, 9, 2026, 'solar',           'Solar',            'Solar Rooftop & Projects',       10, 'count',  5000.0, 250.0, 2500.0, 'fixed_per_unit', 1.50, 2.0),
+                (1, 9, 2026, 'training',        'ETC Students',     'Training and course admissions', 25, 'count',  5.0,    2.0,   3.5,    'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'ev_b2c',          'EV B2C',           'Direct EV customer sales',        5, 'count',  2.0,    0.5,   1.0,    'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'ev_b2b_new',      'EV B2B - New',     'Any new partner and 1st deal',   10, 'count',  2.0,    0.5,   1.0,    'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'ev_b2b_existing', 'EV B2B - Existing', 'From next deal to same partner', 10, 'count',  0.5,    0.25,  0.5,    'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'insurance',       'Insurance',        'Insurance policies',             100000, 'amount', 1.0, 0.5, 0.75,   'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'service_spares',  'Service Spares',   'Service spares billing',         50000, 'amount', 3.0, 1.0, 2.0,    'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'service_revenue', 'Service Revenue',  'Service labor billing',          20000, 'amount', 15.0, 2.5, 10.0,  'percentage',     1.50, 1.50),
+                (1, 9, 2026, 'real_estate',     'Real Estate',      'Real estate and plots',          1000000, 'amount', 0.50, 0.10, 0.25, 'percentage', 1.50, 1.50),
+            ]
+            for _r in _seed_sep2026:
+                _db_incfg3.execute(text("""
+                    INSERT INTO staff_incentive_config
+                        (company_id, month, year, category_slug, category_label, description,
+                         min_target_value, min_target_unit, incentive_rate_without_support,
+                         incentive_rate_with_support, incentive_rate_direct_work,
+                         incentive_type, bonus_trigger_value, bonus_multiplier, is_active)
+                    VALUES
+                        (:co, :mo, :yr, :slug, :lbl, :desc, :min_v, :min_u, :r_no, :r_wi, :r_dw, :itype, :btrig, :bmul, TRUE)
+                    ON CONFLICT (company_id, month, year, category_slug)
+                    DO UPDATE SET
+                        category_label = EXCLUDED.category_label,
+                        description = EXCLUDED.description,
+                        min_target_value = EXCLUDED.min_target_value,
+                        min_target_unit = EXCLUDED.min_target_unit,
+                        incentive_rate_without_support = EXCLUDED.incentive_rate_without_support,
+                        incentive_rate_with_support = EXCLUDED.incentive_rate_with_support,
+                        incentive_rate_direct_work = EXCLUDED.incentive_rate_direct_work,
+                        incentive_type = EXCLUDED.incentive_type,
+                        bonus_trigger_value = EXCLUDED.bonus_trigger_value,
+                        bonus_multiplier = EXCLUDED.bonus_multiplier,
+                        is_active = TRUE,
+                        updated_at = NOW()
+                """), dict(co=_r[0], mo=_r[1], yr=_r[2], slug=_r[3], lbl=_r[4], desc=_r[5],
+                           min_v=_r[6], min_u=_r[7], r_no=_r[8], r_wi=_r[9], r_dw=_r[10],
+                           itype=_r[11], btrig=_r[12], bmul=_r[13]))
+            _db_incfg3.commit()
+            print("[DC_STAFF_INCFG_SEP2026] ✅ September 2026 incentive config seeded", flush=True)
         finally:
             _db_incfg3.close()
     except Exception as _incfg3_e:
@@ -11220,6 +11262,151 @@ def _startup_worker():
         print("[DC-VGK-MEMBERS-SALES-001] ✅ VGK members page (view-only) granted to Sales department staff", flush=True)
     except Exception as _vms_e:
         print(f"[DC-VGK-MEMBERS-SALES-001] ⚠️ (non-fatal) {_vms_e}", flush=True)
+
+    # DC-FIELD-APPOINTMENTS-INIT-001: Ensure crm_field_appointments table and sidebar menu permissions.
+    # Adds "Field Appointments" to FIELD_LOCATION_TRACKING (Journeys menu) and grants access to
+    # all sales staff, tele-callers, and key leadership team members across companies.
+    try:
+        with engine.begin() as _fa_conn:
+            _fa_conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS crm_field_appointments (
+                    id SERIAL PRIMARY KEY,
+                    tenant_id INTEGER REFERENCES platform_clients(id) ON DELETE SET NULL,
+                    company_id INTEGER NOT NULL REFERENCES associated_companies(id),
+                    appointment_code VARCHAR(32) NOT NULL UNIQUE,
+                    lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                    visit_type VARCHAR(32) NOT NULL DEFAULT 'visit_customer',
+                    purpose TEXT,
+                    status VARCHAR(32) NOT NULL DEFAULT 'assigned',
+                    appointment_date DATE NOT NULL,
+                    preferred_time VARCHAR(50),
+                    scheduled_start_time TIMESTAMP,
+                    assigned_to_id INTEGER NOT NULL REFERENCES staff_employees(id) ON DELETE RESTRICT,
+                    created_by_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
+                    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    reassignment_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    bank_name VARCHAR(200),
+                    bank_branch VARCHAR(200),
+                    bank_address TEXT,
+                    bank_contact_person VARCHAR(200),
+                    bank_contact_phone VARCHAR(50),
+                    bank_google_maps_url TEXT,
+                    customer_address TEXT,
+                    customer_city VARCHAR(100),
+                    customer_area VARCHAR(200),
+                    customer_pincode VARCHAR(20),
+                    customer_google_maps_url TEXT,
+                    other_location_title VARCHAR(256),
+                    other_location_address TEXT,
+                    other_contact_person VARCHAR(200),
+                    other_contact_phone VARCHAR(50),
+                    other_google_maps_url TEXT,
+                    telecaller_instructions TEXT,
+                    reached_at TIMESTAMP,
+                    reached_latitude FLOAT,
+                    reached_longitude FLOAT,
+                    reached_accuracy_meters FLOAT,
+                    started_at TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    outcome_status VARCHAR(50),
+                    outcome_summary TEXT,
+                    reschedule_reason TEXT,
+                    rescheduled_to_date DATE,
+                    cancel_reason TEXT,
+                    photo_path VARCHAR(500),
+                    compressed_photo_path VARCHAR(500),
+                    photo_uploaded_at TIMESTAMP,
+                    visit_latitude FLOAT,
+                    visit_longitude FLOAT,
+                    gps_accuracy_meters FLOAT,
+                    device_captured_at TIMESTAMP,
+                    is_gps_verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    visited_on_time BOOLEAN,
+                    timesheet_entry_id INTEGER,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS ix_crm_field_appts_lead ON crm_field_appointments(lead_id);
+                CREATE INDEX IF NOT EXISTS ix_crm_field_appts_company ON crm_field_appointments(company_id);
+                CREATE INDEX IF NOT EXISTS ix_crm_field_appts_assigned ON crm_field_appointments(assigned_to_id, status, appointment_date);
+                CREATE INDEX IF NOT EXISTS ix_crm_field_appts_status_date ON crm_field_appointments(status, appointment_date);
+                CREATE INDEX IF NOT EXISTS ix_crm_field_appts_created_by ON crm_field_appointments(created_by_id);
+
+                -- Ensure FIELD_APPOINTMENTS in staff_menu_master for every associated company
+                INSERT INTO staff_menu_master (
+                    company_id, menu_code, menu_name, menu_description, route_path,
+                    menu_category, menu_icon, display_order, audience_scope, is_active,
+                    is_default_visible, is_default_accessible, sidebar_section, sidebar_section_title
+                )
+                SELECT ac.id, 'FIELD_APPOINTMENTS', 'Field Appointments',
+                       'Field Appointments & Supporting Staff Workflow for physical bank and customer visits',
+                       '/staff/field-appointments', 'staff', 'fas fa-calendar-check',
+                       159, 'staff', true, true, true, 'journey-tracking', 'JOURNEY TRACKING'
+                FROM associated_companies ac
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM staff_menu_master smm
+                    WHERE smm.company_id = ac.id AND smm.menu_code = 'FIELD_APPOINTMENTS'
+                );
+
+                -- Align any existing FIELD_APPOINTMENTS rows in staff_menu_master to journey-tracking
+                UPDATE staff_menu_master
+                SET sidebar_section = 'journey-tracking',
+                    sidebar_section_title = 'JOURNEY TRACKING',
+                    is_default_visible = true,
+                    is_default_accessible = true,
+                    display_order = 159
+                WHERE menu_code = 'FIELD_APPOINTMENTS';
+
+                -- Ensure FIELD_APPOINTMENTS in staff_menu_registry
+                INSERT INTO staff_menu_registry (
+                    menu_code, menu_name, menu_description, route_path,
+                    menu_category, menu_icon, display_order, audience_scope, source, is_active,
+                    is_default_visible, is_default_accessible, sidebar_section, sidebar_section_title, sidebar_section_order
+                )
+                SELECT 'FIELD_APPOINTMENTS', 'Field Appointments',
+                       'Field Appointments & Supporting Staff Workflow for physical bank and customer visits',
+                       '/staff/field-appointments', 'staff', 'fas fa-calendar-check',
+                       159, 'staff', 'canonical_registry', true, true, true, 'journey-tracking', 'JOURNEY TRACKING', 8
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM staff_menu_registry WHERE menu_code = 'FIELD_APPOINTMENTS'
+                );
+
+                -- Grant Field Appointments menu access to:
+                -- 1. All sales & telecaller staff (roles/departments matching sales, telecaller, field)
+                -- 2. All key leadership, managers, and supreme admins (hierarchy_level >= 50 or leadership roles)
+                INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit)
+                SELECT smm.company_id, se.id, smm.id, true, true
+                FROM staff_employees se
+                JOIN staff_roles sr ON sr.id = se.role_id
+                LEFT JOIN staff_departments sd ON sd.id = se.department_id
+                JOIN staff_menu_master smm ON smm.menu_code = 'FIELD_APPOINTMENTS'
+                WHERE se.status = 'active'
+                  AND se.is_deleted = false
+                  AND (
+                      sr.role_code IN ('sales_incharge', 'sales', 'telecaller', 'field_sales', 'telecaller_field', 'bdm', 'key_leadership', 'ea', 'vgk4u', 'vgk4u_supreme', 'super_admin', 'admin', 'director', 'manager', 'executive_admin')
+                      OR sr.hierarchy_level >= 50
+                      OR sd.name ILIKE '%sale%'
+                      OR sd.name ILIKE '%tele%'
+                      OR sd.name ILIKE '%field%'
+                      OR sr.role_name ILIKE '%sale%'
+                      OR sr.role_name ILIKE '%tele%'
+                  )
+                  AND smm.company_id IN (
+                      SELECT DISTINCT company_id FROM staff_employee_menu_settings s2
+                      WHERE s2.employee_id = se.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM staff_employee_menu_settings s3
+                      WHERE s3.company_id = smm.company_id
+                        AND s3.employee_id = se.id
+                        AND s3.menu_id = smm.id
+                  );
+            """))
+        print("[DC-FIELD-APPOINTMENTS-INIT-001] ✅ Field Appointments table, menus, and access grants initialized successfully", flush=True)
+    except Exception as _fa_e:
+        print(f"[DC-FIELD-APPOINTMENTS-INIT-001] ⚠️ (non-fatal) {_fa_e}", flush=True)
+
 
     # DC-PI-DATE-FIX-001: Fix party_ledger transaction_dates for purchase invoice VENDOR_TXN
     # CREDIT entries where the date was set to upload/confirmation date instead of vendor_invoice_date.
@@ -16897,6 +17084,16 @@ async def health_check():
         "schema": schema_status,
         "missing_columns": missing_columns if missing_columns else None
     }
+
+
+@app.get("/staff/field-appointments", include_in_schema=False)
+async def serve_staff_field_appointments():
+    from fastapi.responses import FileResponse
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_file = os.path.join(_workspace_root, "frontend", "staff_field_appointments.html")
+    if os.path.exists(target_file):
+        return FileResponse(target_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/staff/progress", include_in_schema=False)

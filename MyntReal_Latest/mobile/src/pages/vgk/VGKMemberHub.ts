@@ -71,7 +71,8 @@ export class VGKMemberHubPage {
 
   async init(): Promise<void> {
     const params = routerService.getRouteParams();
-    const activeTab = params.tab || 'earnings';
+    let activeTab = params.tab || 'earnings';
+    if (activeTab === 'career') activeTab = 'mycard';
     
     const tabTitles: Record<string, string> = {
       earnings: 'VGK4U Member Hub',
@@ -125,7 +126,8 @@ export class VGKMemberHubPage {
     const subtitle = code ? `${name} (${code})` : name;
 
     const params = routerService.getRouteParams();
-    const activeTab = params.tab || 'earnings';
+    let activeTab = params.tab || 'earnings';
+    if (activeTab === 'career') activeTab = 'mycard';
     
     const tabTitles: Record<string, string> = {
       earnings: 'VGK4U Member Hub',
@@ -141,8 +143,7 @@ export class VGKMemberHubPage {
       bonanza: 'Bonanza Rewards',
       vendors: 'Vendor Shops',
       media: 'Media Hub',
-      orders: 'Orders',
-      career: 'Career & Milestones'
+      orders: 'Orders'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
@@ -168,7 +169,8 @@ export class VGKMemberHubPage {
     const subtitle = code ? `${name} (${code})` : name;
 
     const params = routerService.getRouteParams();
-    const activeTab = params.tab || 'earnings';
+    let activeTab = params.tab || 'earnings';
+    if (activeTab === 'career') activeTab = 'mycard';
     
     const tabTitles: Record<string, string> = {
       earnings: 'VGK4U Member Hub',

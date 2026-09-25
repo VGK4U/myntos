@@ -24,10 +24,10 @@ from sqlalchemy.dialects.postgresql import insert
 
 SOLAR_V2_RANKS = [
     {"position": "Member", "stars": 0, "req_active_team": 0, "pct": 0.00, "amount": 0.00},
-    {"position": "Channel Partner", "stars": 0, "req_active_team": 0, "pct": 6.00, "amount": 12000.00},
-    {"position": "Manager", "stars": 0, "req_active_team": 1, "pct": 7.50, "amount": 15000.00},
-    {"position": "General Manager", "stars": 0, "req_active_team": 5, "pct": 8.50, "amount": 17000.00},
-    {"position": "Regional Manager", "stars": 0, "req_active_team": 10, "pct": 9.00, "amount": 18000.00},
+    {"position": "Channel Partner", "stars": 0, "req_active_team": 0, "pct": 5.00, "amount": 10000.00},
+    {"position": "Manager", "stars": 0, "req_active_team": 1, "pct": 6.50, "amount": 13000.00},
+    {"position": "General Manager", "stars": 0, "req_active_team": 5, "pct": 7.50, "amount": 15000.00},
+    {"position": "Regional Manager", "stars": 0, "req_active_team": 10, "pct": 8.00, "amount": 16000.00},
 ]
 
 
@@ -195,12 +195,12 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         gap = max(0, 10 - activated_team_cnt)
         progress_pct = round(min(100.0, (activated_team_cnt / 10.0) * 100.0), 1)
     elif activated_team_cnt >= 1:
-        rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 7.50, 15000.00
+        rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 6.50, 13000.00
         next_rank, next_req = 'General Manager', 5
         gap = max(0, 5 - activated_team_cnt)
         progress_pct = round(min(100.0, (activated_team_cnt / 5.0) * 100.0), 1)
     else:
-        rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 6.00, 12000.00
+        rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 5.00, 10000.00
         next_rank, next_req = 'Manager', 1
         gap = max(0, 1 - activated_team_cnt)
         progress_pct = round(min(100.0, (activated_team_cnt / 1.0) * 100.0), 1)
@@ -215,8 +215,8 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         effective_desig = 'Regional Manager'
 
     eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
-    resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.5 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.0 else 0
-    resolved_amt = 18000.0 if eff_rate >= 9.0 else 17000.0 if eff_rate >= 8.5 else 15000.0 if eff_rate >= 7.5 else 12000.0 if eff_rate >= 6.0 else 0.0
+    resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.0 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.5 else 0 if eff_rate < 5.0 else 0
+    resolved_amt = 18000.0 if eff_rate >= 9.0 else 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
 
     return {
         "partner_id": partner_id,
@@ -375,20 +375,20 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
             continue
             
         if activated_team_cnt >= 10:
-            rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 0, 9.00, 18000.00
+            rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 0, 8.00, 16000.00
             next_rank, next_req, gap, progress_pct = None, None, 0, 100.0
         elif activated_team_cnt >= 5:
-            rank_code, pos_name, stars, pct, amt = 'RANK_3', 'General Manager', 0, 8.50, 17000.00
+            rank_code, pos_name, stars, pct, amt = 'RANK_3', 'General Manager', 0, 7.50, 15000.00
             next_rank, next_req = 'Regional Manager', 10
             gap = max(0, 10 - activated_team_cnt)
             progress_pct = round(min(100.0, (activated_team_cnt / 10.0) * 100.0), 1)
         elif activated_team_cnt >= 1:
-            rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 7.50, 15000.00
+            rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 6.50, 13000.00
             next_rank, next_req = 'General Manager', 5
             gap = max(0, 5 - activated_team_cnt)
             progress_pct = round(min(100.0, (activated_team_cnt / 5.0) * 100.0), 1)
         else:
-            rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 6.00, 12000.00
+            rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 5.00, 10000.00
             next_rank, next_req = 'Manager', 1
             gap = max(0, 1 - activated_team_cnt)
             progress_pct = round(min(100.0, (activated_team_cnt / 1.0) * 100.0), 1)
@@ -403,8 +403,8 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
             effective_desig = 'Regional Manager'
 
         eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
-        resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.5 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.0 else 0
-        resolved_amt = 18000.0 if eff_rate >= 9.0 else 17000.0 if eff_rate >= 8.5 else 15000.0 if eff_rate >= 7.5 else 12000.0 if eff_rate >= 6.0 else 0.0
+        resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.0 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.5 else 0 if eff_rate < 5.0 else 0
+        resolved_amt = 18000.0 if eff_rate >= 9.0 else 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
 
         results[partner_id] = {
             "partner_id": partner_id,

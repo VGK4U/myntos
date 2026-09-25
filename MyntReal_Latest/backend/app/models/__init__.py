@@ -538,3 +538,14 @@ from app.models.digital_catalog import (
     CatalogItem,
     CatalogLeadSend
 )
+
+# Field Appointments & Supporting Staff (Sep 2026)
+from app.models.crm_field_appointment import CRMFieldAppointment
+
+# Dynamic Central Integration Management Framework (Sep 2026)
+from app.models.integration_framework import (
+    IntegrationCategory,
+    IntegrationDefinition,
+    IntegrationConnection,
+    IntegrationAuditLog
+)

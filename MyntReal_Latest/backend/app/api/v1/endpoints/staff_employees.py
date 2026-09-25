@@ -257,6 +257,29 @@ def get_valid_staff_filter():
     )
 
 
+def _assert_staff_tenant_access(target_staff: StaffEmployee, db: Session, current_user: StaffEmployee) -> None:
+    """Enforces SaaS tenant module entitlement and company isolation for staff employee operations."""
+    if not target_staff:
+        return
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    saas_ctx = resolve_tenant_context(db, current_user)
+    if saas_ctx.is_saas_tenant:
+        saas_ctx.require_module('STAFF_HRMS')
+        cid = saas_ctx.company.id if saas_ctx.company else None
+        if not cid:
+            raise HTTPException(status_code=403, detail="Access denied: No company assigned to tenant context.")
+        from app.models.staff import StaffCompanyMembership
+        is_same_company = (target_staff.base_company_id == cid) or (
+            db.query(StaffCompanyMembership).filter(
+                StaffCompanyMembership.staff_id == target_staff.id,
+                StaffCompanyMembership.company_id == cid,
+                StaffCompanyMembership.is_active == True
+            ).first() is not None
+        )
+        if not is_same_company:
+            raise HTTPException(status_code=403, detail="Access denied: Employee belongs to another organization.")
+
+
 @router.get("/employees/subordinates", summary="Get subordinates for KRA assignment")
 async def get_subordinates(
     current_user: StaffEmployee = Depends(get_current_staff_user),
@@ -266,12 +289,31 @@ async def get_subordinates(
     Get employees that current user can assign KRAs to
     DC: Managers see their direct reports, VGK4U/HR see all active employees
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
-    
+
     query = db.query(StaffEmployee).filter(
         StaffEmployee.status == 'active',
         get_valid_staff_filter()
     )
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        query = query.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
     
     if role_code in VIEW_ALL_ROLES:
         pass
@@ -313,10 +355,29 @@ async def get_team_members(
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     hierarchy_level = current_user.role.hierarchy_level if current_user.role else 0
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     base_filter = [
         StaffEmployee.status == 'active',
         get_valid_staff_filter()
     ]
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        base_filter.append(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
     
     if hierarchy_level >= 150 or role_code in VIEW_ALL_ROLES:
         employees = db.query(StaffEmployee).filter(
@@ -367,11 +428,31 @@ async def list_employees(
     - Leadership Role / Team Leader / Manager: Direct reports only (based on reporting_manager_id)
     - Senior/Junior Executive: No access to Employees menu (should not reach here)
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     query = db.query(StaffEmployee).filter(get_valid_staff_filter())
     
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     
     # DC: Apply role-based visibility filtering - Aligned with user's data
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        query = query.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
+    
     if role_code in VIEW_ALL_ROLES or current_user.emp_code == "MR10001":
         # Key Leadership and HR can see all employees
         pass
@@ -483,8 +564,29 @@ async def get_employees_directory(
     #         detail="Only VGK4U Supreme, Key Leadership, Admin, or HR can access employee directory"
     #     )
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
     stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
+    
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        co_filter = or_(
+            StaffEmployee.base_company_id == cid,
+            StaffEmployee.id.in_(
+                db.query(StaffCompanyMembership.staff_id).filter(
+                    StaffCompanyMembership.company_id == cid,
+                    StaffCompanyMembership.is_active == True
+                )
+            )
+        )
+        query = query.filter(co_filter)
+        stats_base = stats_base.filter(co_filter)
+
     if role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
         query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
         stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
@@ -580,11 +682,31 @@ async def list_managers(
     List all employees who are managers (have direct reports)
     DC Protocol: For filter dropdowns in attendance sheet and other pages
     """
-    manager_ids = db.query(StaffEmployee.reporting_manager_id).filter(
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
+    mq = db.query(StaffEmployee.reporting_manager_id).filter(
         StaffEmployee.status == 'active',
         StaffEmployee.reporting_manager_id.isnot(None),
         get_valid_staff_filter()
-    ).distinct().all()
+    )
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        mq = mq.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
+    manager_ids = mq.distinct().all()
     
     manager_id_list = [m[0] for m in manager_ids if m[0]]
     
@@ -625,6 +747,7 @@ async def get_employee(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     role_code = current_user.role.role_code if current_user.role else "employee"
     
@@ -885,6 +1008,19 @@ async def create_employee(
     """
     role_code = current_user.role.role_code if current_user.role else None
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if not _saas_ctx.is_tenant_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only tenant administrators can add staff members."
+            )
+        if _saas_ctx.company:
+            data.base_company_id = _saas_ctx.company.id
+            data.data_companies = [_saas_ctx.company.id]
+    
     # DC Protocol: Menu-based access control - page assignment = full access
     # if role_code not in ADD_EDIT_ROLES:
     #     raise HTTPException(
@@ -1018,6 +1154,19 @@ async def create_employee(
     
     db.add(employee)
     db.flush()
+    
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        membership = StaffCompanyMembership(
+            staff_id=employee.id,
+            company_id=_saas_ctx.company.id,
+            tenant_id=getattr(_saas_ctx.company, 'tenant_id', None),
+            role_id=data.role_id,
+            is_active=True,
+            is_primary=True,
+            segment_access=['ALL']
+        )
+        db.add(membership)
     
     # DC Protocol (Dec 06, 2025): Handle module assignment
     # Only assign modules if explicitly provided - do NOT auto-assign defaults
@@ -1169,6 +1318,7 @@ async def update_employee(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     # DC: Prevent self-demotion or role escalation
     if employee.id == current_user.id and data.role_id and data.role_id != employee.role_id:
@@ -1589,6 +1739,7 @@ async def reset_employee_password(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     if not is_self_reset and not current_user.can_manage(employee):
         raise HTTPException(
@@ -2140,6 +2291,11 @@ async def get_my_kyc(
     Get current employee's KYC record
     DC: Self-service KYC access
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     kyc = db.query(StaffEmployeeKyc).filter_by(employee_id=current_user.id).first()
     
     return {
@@ -2250,6 +2406,11 @@ async def list_pending_kyc(
     #         detail="Only VGK4U Supreme, Key Leadership, Admin, or HR can access KYC approvals"
     #     )
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     query = db.query(StaffEmployeeKyc)
     stats_base = db.query(StaffEmployeeKyc)
     if role_code not in KYC_APPROVAL_ROLES and role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
@@ -3473,6 +3634,7 @@ async def deactivate_employee(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     # Check protected employee
     if employee.emp_code in PROTECTED_EMPLOYEE_CODES:
@@ -3612,6 +3774,7 @@ async def mark_employee_resigned(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     # Check protected employee
     if employee.emp_code in PROTECTED_EMPLOYEE_CODES:
@@ -3745,6 +3908,7 @@ async def reactivate_employee(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Employee not found"
         )
+    _assert_staff_tenant_access(employee, db, current_user)
     
     # Check current status - only allow reactivation from deactivated, inactive, suspended
     if employee.status == 'active':

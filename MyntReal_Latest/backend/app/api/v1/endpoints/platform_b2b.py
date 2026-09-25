@@ -16,12 +16,14 @@ actor_staff_id, before/after JSON, IST timestamps.
 from __future__ import annotations
 
 import logging
-import json
+import os
+import re
+import uuid
 from datetime import date
 from decimal import Decimal
 from typing import Optional, List, Dict, Any, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, status, UploadFile, File
 from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -31,7 +33,8 @@ from app.core.config import settings
 from app.core.security import SecurityManager
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.models.staff import (
-    StaffEmployee, StaffRole, StaffDepartment, StaffEmployeeModule, StaffModuleMaster, generate_employee_code
+    StaffEmployee, StaffRole, StaffDepartment, StaffEmployeeModule, StaffModuleMaster, generate_employee_code,
+    StaffCompanyMembership
 )
 from app.models.staff_accounts import AssociatedCompany
 from app.models.base import get_indian_time
@@ -2330,12 +2333,24 @@ class TenantUserCreateIn(BaseModel):
 
 
 class TenantUserStatusUpdateIn(BaseModel):
-    status: str = Field(..., pattern="^(active|deactivated|paused)$")
+    status: str = Field(..., pattern="^(active|deactivated|paused|inactive)$")
     reason: Optional[str] = None
 
 
 class TenantUserModulesUpdateIn(BaseModel):
     assigned_modules: List[str] = Field(default_factory=list)
+
+
+class TenantCompanyProfileUpdateIn(BaseModel):
+    signatory_name: Optional[str] = Field(None, max_length=200)
+    signatory_designation: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=20)
+    email: Optional[str] = Field(None, max_length=200)
+    website: Optional[str] = Field(None, max_length=200)
+    address: Optional[str] = None
+    city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
+    pincode: Optional[str] = Field(None, max_length=10)
 
 
 def require_tenant_admin_context(
@@ -2353,23 +2368,332 @@ def require_tenant_admin_context(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff user has no associated company")
 
     company = db.query(AssociatedCompany).filter_by(id=staff.base_company_id).first()
-    if not company or not company.client_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff company is not linked to a SaaS tenant")
+    if not company:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff company not found")
 
-    client = db.query(PlatformClient).filter_by(id=company.client_id).first()
+    # Seamless resolution: if client_id is None (e.g. onboarded via Accounts), link or create PlatformClient
+    if not company.client_id:
+        client = db.query(PlatformClient).filter(
+            (PlatformClient.client_code == company.company_code) |
+            (PlatformClient.client_name == company.company_name)
+        ).first()
+        if not client:
+            client = PlatformClient(
+                client_code=company.company_code,
+                client_name=company.company_name,
+                contact_name=company.signatory_name or staff.full_name or company.company_name,
+                contact_email=company.email or staff.email or f"{company.company_code.lower()}@tenant.local",
+                contact_phone=company.phone or staff.phone or "9999999999",
+                status="active",
+                is_internal=False,
+                billing_currency="INR",
+            )
+            db.add(client)
+            db.flush()
+        company.client_id = client.id
+        db.commit()
+    else:
+        client = db.query(PlatformClient).filter_by(id=company.client_id).first()
+
     if not client or client.status != "active":
         raise HTTPException(status.HTTP_403_FORBIDDEN, f"Tenant client '{company.client_id}' is not active")
+
+    # Ensure active PlatformSubscription exists for this tenant
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    if not sub:
+        sub = PlatformSubscription(
+            client_id=client.id,
+            plan_id=1,
+            billing_currency="INR",
+            billing_cycle="monthly",
+            status="active",
+            seat_count=10,
+            starts_on=date.today(),
+        )
+        db.add(sub)
+        db.flush()
+
+        lic_mods = company.licensed_modules or ['CRM_LEADS', 'SOLAR_EV']
+        for mod_code in lic_mods:
+            pm = db.query(PlatformModule).filter_by(module_code=mod_code).first()
+            if not pm:
+                pm = PlatformModule(
+                    module_code=mod_code,
+                    module_name=mod_code.replace('_', ' ').title(),
+                    is_active=True
+                )
+                db.add(pm)
+                db.flush()
+            psm = PlatformSubscriptionModule(
+                subscription_id=sub.id,
+                module_id=pm.id,
+                enabled=True
+            )
+            db.add(psm)
+        db.commit()
 
     # Verify Tenant Admin authority
     role = staff.role
     role_code = (getattr(role, "role_code", "") or "").lower()
     hierarchy_level = int(getattr(role, "hierarchy_level", 0) or 0)
     is_super = getattr(staff, "is_super_admin", False)
+    staff_type = (getattr(staff, "staff_type", "") or "").upper()
 
-    if not is_super and role_code not in ("tenant_admin", "super_admin", "admin") and hierarchy_level < 80:
+    if not is_super and role_code not in ("tenant_admin", "super_admin", "admin", "saas_segment_admin") and staff_type not in ("TENANT_ADMIN", "SAAS_CLIENT", "SAAS_SEGMENT_ADMIN") and hierarchy_level < 80:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Tenant Administrator authority required")
 
     return staff, client, company
+
+
+@router.get("/tenant/company-profile")
+def get_tenant_company_profile(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the authenticated Tenant's full company profile, branding, and subscription summary.
+    Guaranteed zero cross-tenant data leakage.
+    """
+    staff, client, company = ctx
+    sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
+    seat_limit = sub.seat_count if sub else 10
+    active_users = db.query(StaffEmployee).filter(
+        StaffEmployee.base_company_id == company.id,
+        StaffEmployee.status == "active"
+    ).count()
+
+    return {
+        "ok": True,
+        "company": {
+            "id": company.id,
+            "client_id": client.id,
+            "company_code": company.company_code,
+            "company_name": company.company_name,
+            "company_type": company.company_type,
+            "company_segment": company.company_segment or "SEGMENT_B_SAAS",
+            "gst_number": company.gst_number,
+            "pan_number": company.pan_number,
+            "cin_number": company.cin_number,
+            "phone": company.phone,
+            "email": company.email,
+            "website": company.website,
+            "address": company.address,
+            "city": company.city,
+            "state": company.state,
+            "pincode": company.pincode,
+            "logo_path": company.logo_path,
+            "signatory_name": company.signatory_name,
+            "signatory_designation": company.signatory_designation,
+            "licensed_modules": company.licensed_modules or [],
+            "seat_limit": seat_limit,
+            "active_users_count": active_users,
+            "status": client.status,
+            "is_active": company.is_active,
+        }
+    }
+
+
+@router.put("/tenant/company-profile")
+def update_tenant_company_profile(
+    payload: TenantCompanyProfileUpdateIn,
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates editable profile attributes on the authenticated Tenant's AssociatedCompany.
+    Strictly prevents editing read-only legal identity fields (company_code, GSTIN, PAN, CIN, ID).
+    """
+    staff, client, company = ctx
+    before = {
+        "phone": company.phone,
+        "email": company.email,
+        "signatory_name": company.signatory_name,
+        "address": company.address,
+    }
+
+    if payload.phone is not None:
+        clean_phone = re.sub(r"\D", "", payload.phone)
+        if len(clean_phone) > 10:
+            clean_phone = clean_phone[-10:]
+        if len(clean_phone) != 10:
+            raise HTTPException(400, "Mobile number must be a valid 10-digit number")
+        company.phone = clean_phone
+        client.contact_phone = clean_phone
+
+    if payload.email is not None:
+        if payload.email and "@" not in payload.email:
+            raise HTTPException(400, "Invalid email address format")
+        company.email = payload.email.strip().lower() if payload.email else None
+        client.contact_email = company.email
+
+    if payload.signatory_name is not None:
+        company.signatory_name = payload.signatory_name.strip()
+        client.contact_name = company.signatory_name
+
+    if payload.signatory_designation is not None:
+        company.signatory_designation = payload.signatory_designation.strip()
+
+    if payload.website is not None:
+        company.website = payload.website.strip()
+
+    if payload.address is not None:
+        company.address = payload.address.strip()
+
+    if payload.city is not None:
+        company.city = payload.city.strip()
+
+    if payload.state is not None:
+        company.state = payload.state.strip()
+
+    if payload.pincode is not None:
+        clean_pin = re.sub(r"\D", "", payload.pincode)
+        company.pincode = clean_pin[:6]
+
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_PROFILE",
+        action="UPDATE",
+        entity_id=company.id,
+        before=before,
+        after={
+            "phone": company.phone,
+            "email": company.email,
+            "signatory_name": company.signatory_name,
+            "address": company.address,
+        }
+    )
+    db.commit()
+    db.refresh(company)
+
+    return {
+        "ok": True,
+        "message": "Company profile updated successfully",
+        "company": {
+            "id": company.id,
+            "company_name": company.company_name,
+            "phone": company.phone,
+            "email": company.email,
+            "website": company.website,
+            "address": company.address,
+            "city": company.city,
+            "state": company.state,
+            "pincode": company.pincode,
+            "signatory_name": company.signatory_name,
+            "signatory_designation": company.signatory_designation,
+            "logo_path": company.logo_path,
+        }
+    }
+
+
+@router.post("/tenant/company-logo")
+async def upload_tenant_company_logo(
+    file: UploadFile = File(...),
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Uploads and replaces company logo for the authenticated Tenant.
+    Enforces MIME type check, 2MB size limit, tenant isolation, and storage persistence.
+    """
+    from app.services.object_storage import storage_service
+
+    staff, client, company = ctx
+    MAX_SIZE = 2 * 1024 * 1024  # 2MB
+    ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml", "image/gif"}
+
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(400, "Logo image file exceeds 2MB limit")
+
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in ALLOWED_TYPES:
+        raise HTTPException(400, "Invalid image format. Allowed: PNG, JPEG, WEBP, SVG, GIF")
+
+    ext_map = {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/webp": ".webp",
+        "image/svg+xml": ".svg",
+        "image/gif": ".gif"
+    }
+    ext = ext_map.get(content_type, ".png")
+    safe_filename = f"tenant_{company.id}_{uuid.uuid4().hex[:12]}{ext}"
+    storage_key = f"tenant_logos/{safe_filename}"
+
+    # Upload to storage service
+    storage_service.upload_file(storage_key, content)
+
+    # Local disk fallback so local dev without S3 credentials immediately resolves
+    try:
+        backend_storage_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "storage")
+        local_dir = os.path.join(backend_storage_root, "tenant_logos")
+        os.makedirs(local_dir, exist_ok=True)
+        with open(os.path.join(local_dir, safe_filename), "wb") as f:
+            f.write(content)
+    except Exception as e:
+        logger.warning(f"Local storage mirror write failed: {e}")
+
+    logo_url = f"/storage/{storage_key}"
+    before_logo = company.logo_path
+    company.logo_path = logo_url
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_LOGO",
+        action="UPDATE",
+        entity_id=company.id,
+        before={"logo_path": before_logo},
+        after={"logo_path": logo_url}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Company logo uploaded successfully",
+        "logo_path": logo_url
+    }
+
+
+@router.delete("/tenant/company-logo")
+def delete_tenant_company_logo(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Removes the company logo for the authenticated Tenant.
+    """
+    staff, client, company = ctx
+    before_logo = company.logo_path
+    company.logo_path = None
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_LOGO",
+        action="DELETE",
+        entity_id=company.id,
+        before={"logo_path": before_logo},
+        after={"logo_path": None}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Company logo removed successfully"
+    }
 
 
 @router.get("/tenant/users")
@@ -2388,7 +2712,7 @@ def get_tenant_users(
 
     # Get active subscription
     sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
-    seat_limit = sub.seat_count if sub else 1
+    seat_limit = sub.seat_count if sub else 10
     active_count = sum(1 for u in users if u.status == "active")
 
     user_list = []
@@ -2407,6 +2731,7 @@ def get_tenant_users(
             "hierarchy_level": u_role.hierarchy_level if u_role else 0,
             "status": u.status,
             "base_company_id": u.base_company_id,
+            "assigned_modules": u.assigned_modules or [],
             "is_root_admin": bool(u_role and u_role.role_code == "tenant_admin" and u.id == staff.id),
             "created_at": u.date_of_joining.isoformat() if u.date_of_joining else None,
         })
@@ -2432,30 +2757,94 @@ def get_tenant_entitled_modules(
     """
     staff, client, company = ctx
     sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
-    if not sub:
-        return {"ok": True, "entitled_modules": []}
 
-    mods = db.query(PlatformModule).join(
-        PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
-    ).filter(
-        PlatformSubscriptionModule.subscription_id == sub.id,
-        PlatformSubscriptionModule.enabled == True,
-        PlatformModule.is_active == True,
-    ).all()
+    MODULE_DEFINITIONS = {
+        "CRM_LEADS": {
+            "name": "CRM & Leads",
+            "category": "sales",
+            "icon": "fas fa-funnel-dollar",
+            "description": "Lead management, sales pipelines, source tracking, and conversion analytics"
+        },
+        "SOLAR_EV": {
+            "name": "Workflows",
+            "category": "operations",
+            "icon": "fas fa-diagram-project",
+            "description": "Multi-stage operational workflows, category tracking, and project execution"
+        },
+        "ACCOUNTS_FINANCE": {
+            "name": "Accounts & GST",
+            "category": "finance",
+            "icon": "fas fa-file-invoice-dollar",
+            "description": "Invoicing, GST filing, payment receipts, party ledgers, and credit aging"
+        },
+        "INVENTORY_STOCK": {
+            "name": "Stock & Warehouse",
+            "category": "logistics",
+            "icon": "fas fa-boxes",
+            "description": "Inventory tracking, stock transfers, bill of materials, and procurement"
+        },
+        "STAFF_HRMS": {
+            "name": "Staff HRMS & GPS",
+            "category": "hr",
+            "icon": "fas fa-user-check",
+            "description": "Employee attendance, leave management, GPS tracking, and performance"
+        },
+        "SERVICE_TICKETS": {
+            "name": "Service & Tickets",
+            "category": "operations",
+            "icon": "fas fa-tools",
+            "description": "Service request ticketing, warranty management, and support resolution"
+        },
+        "WHATSAPP": {
+            "name": "WhatsApp Integration",
+            "category": "communication",
+            "icon": "fab fa-whatsapp",
+            "description": "Automated messaging, WhatsApp bot triggers, and multi-agent chat inbox"
+        },
+        "META_ADS": {
+            "name": "Meta Ads & Campaigns",
+            "category": "marketing",
+            "icon": "fab fa-facebook",
+            "description": "Facebook/Instagram lead gen ad campaigns and direct lead synchronization"
+        }
+    }
+
+    entitled_codes = set()
+    if sub:
+        mods = db.query(PlatformModule).join(
+            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
+        ).filter(
+            PlatformSubscriptionModule.subscription_id == sub.id,
+            PlatformSubscriptionModule.enabled == True,
+            PlatformModule.is_active == True,
+        ).all()
+        for m in mods:
+            entitled_codes.add(m.module_code)
+
+    if company.licensed_modules and isinstance(company.licensed_modules, list):
+        for code in company.licensed_modules:
+            entitled_codes.add(code)
+
+    result_modules = []
+    for code in sorted(list(entitled_codes)):
+        meta = MODULE_DEFINITIONS.get(code, {
+            "name": code.replace('_', ' ').title(),
+            "category": "general",
+            "icon": "fas fa-cube",
+            "description": f"Subscription module {code}"
+        })
+        result_modules.append({
+            "module_code": code,
+            "module_name": meta["name"],
+            "category": meta["category"],
+            "icon": meta["icon"],
+            "description": meta["description"],
+        })
 
     return {
         "ok": True,
         "tenant_id": client.id,
-        "entitled_modules": [
-            {
-                "module_id": m.id,
-                "module_code": m.module_code,
-                "module_name": m.module_name,
-                "category": m.category,
-                "description": m.description,
-            }
-            for m in mods
-        ]
+        "entitled_modules": result_modules
     }
 
 
@@ -2550,14 +2939,8 @@ def create_tenant_user(
 
     # ── 3. AUTHORITATIVE MODULE ENTITLEMENT CHECK ───────────────────────────
     if payload.assigned_modules:
-        entitled_sub_mods = db.query(PlatformModule.module_code).join(
-            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
-        ).filter(
-            PlatformSubscriptionModule.subscription_id == sub.id,
-            PlatformSubscriptionModule.enabled == True,
-            PlatformModule.is_active == True,
-        ).all()
-        entitled_codes = {m[0] for m in entitled_sub_mods}
+        entitled_res = get_tenant_entitled_modules(ctx, db)
+        entitled_codes = {m["module_code"] for m in entitled_res.get("entitled_modules", [])}
 
         for mod_code in payload.assigned_modules:
             if mod_code not in entitled_codes:
@@ -2592,9 +2975,22 @@ def create_tenant_user(
         requires_password_change=True,
         base_company_id=company.id,  # STRICTLY LOCKED
         data_companies=[company.id], # STRICTLY LOCKED
+        assigned_modules=payload.assigned_modules or [],
     )
     db.add(new_user)
     db.flush()
+
+    # Authoritative operational membership
+    membership = StaffCompanyMembership(
+        staff_id=new_user.id,
+        company_id=company.id,
+        tenant_id=client.id,
+        is_primary=True,
+        is_active=True,
+        role_id=target_role.id,
+        segment_access=payload.assigned_modules or [],
+    )
+    db.add(membership)
 
     # ── 7. AUDIT LOGGING ─────────────────────────────────────────────────────
     _audit(
@@ -2628,7 +3024,7 @@ def create_tenant_user(
             "role_name": target_role.role_name,
             "status": new_user.status,
             "base_company_id": new_user.base_company_id,
-            "assigned_modules": payload.assigned_modules or [],
+            "assigned_modules": new_user.assigned_modules or [],
         }
     }
 
@@ -2658,7 +3054,7 @@ def update_tenant_user_status(
         raise HTTPException(400, "Cannot deactivate the currently logged-in root administrator account")
 
     before_status = target_user.status
-    target_user.status = payload.status
+    target_user.status = "paused" if payload.status == "inactive" else payload.status
     target_user.status_changed_at = get_indian_time()
     target_user.status_changed_by = admin_staff.id
     target_user.status_change_reason = payload.reason or f"Status changed to {payload.status} by Tenant Admin"
@@ -2715,14 +3111,8 @@ def update_tenant_user_modules(
         raise HTTPException(400, "Tenant does not have an active subscription")
 
     if payload.assigned_modules:
-        entitled_sub_mods = db.query(PlatformModule.module_code).join(
-            PlatformSubscriptionModule, PlatformSubscriptionModule.module_id == PlatformModule.id
-        ).filter(
-            PlatformSubscriptionModule.subscription_id == sub.id,
-            PlatformSubscriptionModule.enabled == True,
-            PlatformModule.is_active == True,
-        ).all()
-        entitled_codes = {m[0] for m in entitled_sub_mods}
+        entitled_res = get_tenant_entitled_modules(ctx, db)
+        entitled_codes = {m["module_code"] for m in entitled_res.get("entitled_modules", [])}
 
         for mod_code in payload.assigned_modules:
             if mod_code not in entitled_codes:
@@ -2730,6 +3120,24 @@ def update_tenant_user_modules(
                     400,
                     f"Module assignment denied: Module '{mod_code}' is not purchased or active for this tenant."
                 )
+
+    target_user.assigned_modules = payload.assigned_modules
+    membership = db.query(StaffCompanyMembership).filter_by(
+        staff_id=target_user.id, company_id=company.id
+    ).first()
+    if membership:
+        membership.segment_access = payload.assigned_modules
+    else:
+        membership = StaffCompanyMembership(
+            staff_id=target_user.id,
+            company_id=company.id,
+            tenant_id=client.id,
+            is_primary=True,
+            is_active=True,
+            role_id=target_user.role_id,
+            segment_access=payload.assigned_modules or [],
+        )
+        db.add(membership)
 
     _audit(
         db,

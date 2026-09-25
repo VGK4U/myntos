@@ -29,7 +29,7 @@ from app.api.v1.endpoints.crm_dialer import _resolve_phones_batch
 # CT Protocol: Roles with full org visibility in call tracking (not limited to their downline)
 CT_FULL_ACCESS = {
     'vgk4u', 'key_leadership', 'leadership_role', 'ea', 'hr', 'accounts',
-    'super_admin', 'admin', 'tenant_admin', 'saas_segment_admin', 'management', 'director'
+    'super_admin', 'admin', 'management', 'director'
 }
 
 
@@ -48,6 +48,68 @@ def is_ct_full_access(user) -> bool:
     if ct_role in CT_FULL_ACCESS:
         return True
     return False
+
+
+def resolve_call_tracking_scope(db: Session, current_user):
+    """
+    Multi-tenant isolation for call tracking.
+    Returns (is_saas: bool, allowed_staff_ids: list[int], allowed_company_ids: list[int]).
+    - If user belongs to SaaS tenant:
+        - Scopes staff to only tenant staff.
+        - If tenant_admin, allowed_staff_ids = all active tenant staff IDs.
+        - If non-admin staff, allowed_staff_ids = downline intersected with tenant staff IDs (or [current_user.id]).
+        - Scopes companies to only tenant company IDs.
+    - If internal platform user:
+        - Returns (False, [], []).
+    """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    from app.models.staff_accounts import AssociatedCompany
+
+    staff = current_user if isinstance(current_user, StaffEmployee) else db.query(StaffEmployee).filter(StaffEmployee.id == current_user.id).first()
+    if not staff:
+        return False, [], []
+
+    tenant_ctx = resolve_tenant_context(db, staff)
+    if not tenant_ctx.is_saas_tenant:
+        return False, [], []
+
+    # Enforce CRM & Leads module entitlement for SaaS tenant
+    tenant_ctx.require_module('CRM_LEADS')
+
+    # SaaS Tenant scoping
+    company_ids = []
+    if tenant_ctx.client:
+        tenant_cos = db.query(AssociatedCompany.id).filter(AssociatedCompany.client_id == tenant_ctx.client.id).all()
+        company_ids = [c[0] for c in tenant_cos]
+    if tenant_ctx.company and tenant_ctx.company.id not in company_ids:
+        company_ids.append(tenant_ctx.company.id)
+    if not company_ids and staff.base_company_id:
+        company_ids.append(staff.base_company_id)
+
+    # Resolve all staff belonging to this tenant
+    staff_q = db.query(StaffEmployee.id).filter(
+        StaffEmployee.status == 'active',
+        StaffEmployee.is_deleted == False,
+        or_(
+            StaffEmployee.tenant_id == (tenant_ctx.client.id if tenant_ctx.client else -1),
+            StaffEmployee.base_company_id.in_(company_ids)
+        )
+    )
+    all_tenant_staff_ids = [r[0] for r in staff_q.all()]
+    if staff.id not in all_tenant_staff_ids:
+        all_tenant_staff_ids.append(staff.id)
+
+    is_admin = tenant_ctx.is_tenant_admin or (hasattr(staff, 'role') and staff.role and getattr(staff.role, 'role_code', '').lower() in {'tenant_admin', 'admin', 'super_admin'})
+    if is_admin:
+        allowed_staff_ids = all_tenant_staff_ids
+    else:
+        # Non-admin tenant staff: check reporting downline
+        downline = get_team_member_ids(staff, db, StaffEmployee) or [staff.id]
+        allowed_staff_ids = [sid for sid in downline if sid in set(all_tenant_staff_ids)]
+        if not allowed_staff_ids:
+            allowed_staff_ids = [staff.id]
+
+    return True, allowed_staff_ids, company_ids
 from datetime import datetime, timedelta, date
 from typing import Optional
 import pytz
@@ -471,6 +533,12 @@ async def get_lead_call_history(
     if not hasattr(current_user, 'emp_code'):
         raise HTTPException(status_code=403, detail="Staff access required")
 
+    # Multi-tenant isolation for call history
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, current_user)
+    if is_saas:
+        if lead.company_id and saas_company_ids and lead.company_id not in set(saas_company_ids):
+            raise HTTPException(status_code=403, detail="Lead not found in your tenant")
+
     norm_phone = normalize_phone(lead.phone)
     norm_alt = normalize_phone(lead.alternate_phone)
 
@@ -486,7 +554,14 @@ async def get_lead_call_history(
     )
 
     query = db.query(StaffCallLog).filter(base_filter)
+    if is_saas:
+        if saas_company_ids:
+            query = query.filter(StaffCallLog.company_id.in_(saas_company_ids))
+        if saas_staff_ids:
+            query = query.filter(StaffCallLog.staff_id.in_(saas_staff_ids))
     if staff_id:
+        if is_saas and staff_id not in set(saas_staff_ids):
+            raise HTTPException(status_code=403, detail="Staff member not in your tenant")
         query = query.filter(StaffCallLog.staff_id == staff_id)
     if call_type:
         query = query.filter(StaffCallLog.call_type == call_type.upper())
@@ -901,12 +976,10 @@ async def get_call_management_overview(
         date_to = now.strftime('%Y-%m-%d')
 
     # CT Protocol: Role-based team scoping
-    # CT_FULL_ACCESS roles → full org visibility | all others → their reporting downline only
-    is_full_access = is_ct_full_access(current_user)
-    team_scope_ids = None  # None = unrestricted (FULL_ACCESS)
-    if not is_full_access:
-        team_scope_ids = get_team_member_ids(current_user, db, StaffEmployee)
-        if not team_scope_ids:
+    # Multi-tenant isolation for call tracking
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, staff)
+    if is_saas:
+        if not saas_staff_ids or not saas_company_ids:
             return {
                 "success": True,
                 "overview": {"total_calls":0,"total_duration_seconds":0,"incoming":0,"outgoing":0,"missed":0,"unique_numbers":0,"crm_matched":0,"active_staff":0,"avg_daily_talk_time":0},
@@ -914,12 +987,29 @@ async def get_call_management_overview(
                 "date_range": {"from": date_from, "to": date_to},
                 "filters_applied": {"department_id": department_id, "reporting_manager_id": reporting_manager_id, "call_type": call_type, "staff_id": staff_id, "phone_number": phone_number}
             }
+        team_scope_ids = saas_staff_ids
+        is_full_access = False
+    else:
+        is_full_access = is_ct_full_access(current_user)
+        team_scope_ids = None  # None = unrestricted (FULL_ACCESS)
+        if not is_full_access:
+            team_scope_ids = get_team_member_ids(current_user, db, StaffEmployee)
+            if not team_scope_ids:
+                return {
+                    "success": True,
+                    "overview": {"total_calls":0,"total_duration_seconds":0,"incoming":0,"outgoing":0,"missed":0,"unique_numbers":0,"crm_matched":0,"active_staff":0,"avg_daily_talk_time":0},
+                    "per_staff": [], "daily_trend": [], "staff_list": [], "departments": [], "managers": [],
+                    "date_range": {"from": date_from, "to": date_to},
+                    "filters_applied": {"department_id": department_id, "reporting_manager_id": reporting_manager_id, "call_type": call_type, "staff_id": staff_id, "phone_number": phone_number}
+                }
 
     filtered_staff_ids = None
     if department_id or reporting_manager_id:
         staff_q = db.query(StaffEmployee.id).filter(
             StaffEmployee.status == 'active'
         )
+        if is_saas:
+            staff_q = staff_q.filter(StaffEmployee.id.in_(saas_staff_ids))
         if department_id:
             staff_q = staff_q.filter(StaffEmployee.department_id == department_id)
         if reporting_manager_id:
@@ -936,9 +1026,16 @@ async def get_call_management_overview(
         StaffCallLog.call_date >= date_from,
         StaffCallLog.call_date <= date_to
     )
+    if is_saas:
+        base = base.filter(
+            StaffCallLog.staff_id.in_(saas_staff_ids),
+            StaffCallLog.company_id.in_(saas_company_ids)
+        )
     if staff_id:
         # Prevent non-FULL_ACCESS managers from viewing staff outside their team
-        if team_scope_ids is not None and staff_id not in set(team_scope_ids):
+        if is_saas and staff_id not in set(saas_staff_ids):
+            raise HTTPException(status_code=403, detail="Access denied: staff member not in your tenant")
+        elif team_scope_ids is not None and staff_id not in set(team_scope_ids):
             raise HTTPException(status_code=403, detail="Access denied: staff member not in your team")
         base = base.filter(StaffCallLog.staff_id == staff_id)
     elif filtered_staff_ids is not None:
@@ -1003,18 +1100,22 @@ async def get_call_management_overview(
     sync_map = {}
     if staff_ids:
         dept_cache = {}
+        staff_filter = [
+            StaffEmployee.id.in_(staff_ids),
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+        ]
+        if not is_saas:
+            staff_filter.extend([
+                StaffEmployee.emp_code != 'MR10001',
+                ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+                or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
+            ])
         rows = db.query(
             StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code,
             StaffEmployee.department_id, StaffEmployee.reporting_manager_id,
             StaffEmployee.call_tracking_enabled
-        ).filter(
-            StaffEmployee.id.in_(staff_ids),
-            StaffEmployee.status == 'active',
-            StaffEmployee.is_deleted == False,
-            StaffEmployee.emp_code != 'MR10001',
-            ~StaffEmployee.emp_code.like('EMP_TEST_%'),
-            or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
-        ).all()
+        ).filter(*staff_filter).all()
         dept_ids = list({r.department_id for r in rows if r.department_id})
         if dept_ids:
             depts = db.query(StaffDepartment.id, StaffDepartment.name).filter(StaffDepartment.id.in_(dept_ids)).all()
@@ -1154,35 +1255,51 @@ async def get_call_management_overview(
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
     ).group_by(StaffCallLog.call_date).order_by(StaffCallLog.call_date.desc()).limit(60).all()
 
-    staff_list_q = db.query(
-        StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code, StaffEmployee.call_tracking_enabled
-    ).filter(
-        StaffEmployee.status == 'active',
-        StaffEmployee.is_deleted == False,
-        StaffEmployee.emp_code != 'MR10001',
-        ~StaffEmployee.emp_code.like('EMP_TEST_%'),
-        or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
-    )
-    if team_scope_ids is not None:
-        staff_list_q = staff_list_q.filter(StaffEmployee.id.in_(team_scope_ids))
-    staff_list = staff_list_q.order_by(StaffEmployee.full_name).all()
-
-    departments = db.query(StaffDepartment.id, StaffDepartment.name).filter(
-        StaffDepartment.is_active == True
-    ).order_by(StaffDepartment.name).all()
-
-    managers = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).filter(
-        StaffEmployee.status == 'active',
-        StaffEmployee.is_deleted == False,
-        StaffEmployee.emp_code != 'MR10001',
-        ~StaffEmployee.emp_code.like('EMP_TEST_%'),
-        or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])),
-        StaffEmployee.id.in_(
-            db.query(distinct(StaffEmployee.reporting_manager_id)).filter(
-                StaffEmployee.reporting_manager_id.isnot(None)
-            )
+    if is_saas:
+        staff_list_q = db.query(
+            StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code, StaffEmployee.call_tracking_enabled
+        ).filter(
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            StaffEmployee.id.in_(saas_staff_ids)
         )
-    ).order_by(StaffEmployee.full_name).all()
+        staff_list = staff_list_q.order_by(StaffEmployee.full_name).all()
+        departments = []
+        managers = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).filter(
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            StaffEmployee.id.in_(saas_staff_ids)
+        ).order_by(StaffEmployee.full_name).all()
+    else:
+        staff_list_q = db.query(
+            StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code, StaffEmployee.call_tracking_enabled
+        ).filter(
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            StaffEmployee.emp_code != 'MR10001',
+            ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+            or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
+        )
+        if team_scope_ids is not None:
+            staff_list_q = staff_list_q.filter(StaffEmployee.id.in_(team_scope_ids))
+        staff_list = staff_list_q.order_by(StaffEmployee.full_name).all()
+
+        departments = db.query(StaffDepartment.id, StaffDepartment.name).filter(
+            StaffDepartment.is_active == True
+        ).order_by(StaffDepartment.name).all()
+
+        managers = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).filter(
+            StaffEmployee.status == 'active',
+            StaffEmployee.is_deleted == False,
+            StaffEmployee.emp_code != 'MR10001',
+            ~StaffEmployee.emp_code.like('EMP_TEST_%'),
+            or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])),
+            StaffEmployee.id.in_(
+                db.query(distinct(StaffEmployee.reporting_manager_id)).filter(
+                    StaffEmployee.reporting_manager_id.isnot(None)
+                )
+            )
+        ).order_by(StaffEmployee.full_name).all()
 
     # DC Protocol (Apr 2026): Batch-fetch VGK Created + WA Shares per staff for same date range
     vgk_map_ct: dict = {}
@@ -1406,13 +1523,20 @@ async def get_call_slot_breakdown(
         date_to = today.strftime('%Y-%m-%d')
 
     # CT Protocol: Role-based team scoping — mirrors management/overview exactly
-    is_full_access = is_ct_full_access(current_user)
-    team_scope_ids = None
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, staff)
+    if is_saas:
+        if not saas_staff_ids or not saas_company_ids:
+            return {"success": True, "slot_summary": {}, "per_staff_slots": [], "date_range": {"from": date_from, "to": date_to}}
+        team_scope_ids = saas_staff_ids
+        is_full_access = False
+    else:
+        is_full_access = is_ct_full_access(current_user)
+        team_scope_ids = None
 
-    if not is_full_access:
-        team_scope_ids = get_team_member_ids(current_user, db, StaffEmployee)
-        if not team_scope_ids:
-            team_scope_ids = [current_user.id]
+        if not is_full_access:
+            team_scope_ids = get_team_member_ids(current_user, db, StaffEmployee)
+            if not team_scope_ids:
+                team_scope_ids = [current_user.id]
 
     from datetime import date as _date_cls
     try:
@@ -1434,7 +1558,12 @@ async def get_call_slot_breakdown(
         StaffCallLog.call_date >= date_from,
         StaffCallLog.call_date <= date_to,
     )
-    if team_scope_ids is not None:
+    if is_saas:
+        q = q.filter(
+            StaffCallLog.staff_id.in_(saas_staff_ids),
+            StaffCallLog.company_id.in_(saas_company_ids)
+        )
+    elif team_scope_ids is not None:
         q = q.filter(StaffCallLog.staff_id.in_(team_scope_ids))
     logs = q.all()
 
@@ -1719,7 +1848,11 @@ async def get_staff_call_details(
         raise HTTPException(status_code=404, detail="Staff record not found")
 
     # CT Protocol: scope check — CT_FULL_ACCESS see any staff; others only their downline or self
-    if not is_ct_full_access(viewer) and target_staff_id != current_user.id:
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, viewer)
+    if is_saas:
+        if target_staff_id not in set(saas_staff_ids):
+            raise HTTPException(status_code=403, detail="Access denied: staff member not in your tenant")
+    elif not is_ct_full_access(viewer) and target_staff_id != current_user.id:
         allowed_ids = get_team_member_ids(current_user, db, StaffEmployee)
         if not allowed_ids or target_staff_id not in set(allowed_ids):
             raise HTTPException(status_code=403, detail="Access denied: staff member not in your team")
@@ -1774,6 +1907,8 @@ async def get_staff_call_details(
         StaffCallLog.call_date >= date_from,
         StaffCallLog.call_date <= date_to
     )
+    if is_saas and saas_company_ids:
+        query = query.filter(StaffCallLog.company_id.in_(saas_company_ids))
     if call_type:
         query = query.filter(StaffCallLog.call_type == call_type.upper())
     if phone_number:
@@ -2106,24 +2241,33 @@ async def stream_call_recording(
     if not recording:
         raise HTTPException(status_code=404, detail="Recording not found")
 
-    is_admin = False
-    try:
-        from app.core.security import HybridUserContext
-        is_admin = HybridUserContext(current_user).has_admin_access()
-    except Exception:
-        pass
-
-    allowed = (
-        is_admin
-        or recording.company_id is None
-        or staff.base_company_id is None
-        or recording.company_id == staff.base_company_id
-        or recording.staff_id == staff.id
-    )
-    if not allowed:
-        has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
-        if not has_log:
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, staff)
+    if is_saas:
+        recording_in_tenant = (
+            (recording.staff_id and recording.staff_id in set(saas_staff_ids)) or
+            (recording.company_id and recording.company_id in set(saas_company_ids))
+        )
+        if not recording_in_tenant:
             raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+    else:
+        is_admin = False
+        try:
+            from app.core.security import HybridUserContext
+            is_admin = HybridUserContext(current_user).has_admin_access()
+        except Exception:
+            pass
+
+        allowed = (
+            is_admin
+            or recording.company_id is None
+            or staff.base_company_id is None
+            or recording.company_id == staff.base_company_id
+            or recording.staff_id == staff.id
+        )
+        if not allowed:
+            has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
+            if not has_log:
+                raise HTTPException(status_code=403, detail="Not authorized to access this recording")
 
     s3_key = (recording.storage_path or "").replace('\\', '/')
     if s3_key.startswith("http://") or s3_key.startswith("https://"):
@@ -2171,24 +2315,33 @@ async def get_recording_metadata(
     if not recording:
         raise HTTPException(status_code=404, detail="Recording not found")
 
-    is_admin = False
-    try:
-        from app.core.security import HybridUserContext
-        is_admin = HybridUserContext(current_user).has_admin_access()
-    except Exception:
-        pass
-
-    allowed = (
-        is_admin
-        or recording.company_id is None
-        or staff.base_company_id is None
-        or recording.company_id == staff.base_company_id
-        or recording.staff_id == staff.id
-    )
-    if not allowed:
-        has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
-        if not has_log:
+    is_saas, saas_staff_ids, saas_company_ids = resolve_call_tracking_scope(db, staff)
+    if is_saas:
+        recording_in_tenant = (
+            (recording.staff_id and recording.staff_id in set(saas_staff_ids)) or
+            (recording.company_id and recording.company_id in set(saas_company_ids))
+        )
+        if not recording_in_tenant:
             raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+    else:
+        is_admin = False
+        try:
+            from app.core.security import HybridUserContext
+            is_admin = HybridUserContext(current_user).has_admin_access()
+        except Exception:
+            pass
+
+        allowed = (
+            is_admin
+            or recording.company_id is None
+            or staff.base_company_id is None
+            or recording.company_id == staff.base_company_id
+            or recording.staff_id == staff.id
+        )
+        if not allowed:
+            has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
+            if not has_log:
+                raise HTTPException(status_code=403, detail="Not authorized to access this recording")
 
     staff_info = db.query(StaffEmployee.full_name, StaffEmployee.emp_code).filter(
         StaffEmployee.id == recording.staff_id

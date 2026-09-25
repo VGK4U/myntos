@@ -35,6 +35,7 @@ INSERT INTO pdf_canonical_routes (route_path, section_id, section_title, section
 ('/staff/my-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8, NULL, false, NULL, 'My Journeys', 'fas fa-route'),
 ('/staff/team-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8, NULL, false, NULL, 'Team Journeys', 'fas fa-map-marked-alt'),
 ('/staff/vgk4u-journeys', 'journey-tracking', 'JOURNEY TRACKING', 8, NULL, false, NULL, 'VGK4U Journeys', 'fas fa-car'),
+('/staff/field-appointments', 'journey-tracking', 'JOURNEY TRACKING', 8, NULL, false, NULL, 'Field Appointments', 'fas fa-calendar-check'),
 ('/staff/my-location-history', 'location-tracking', 'LOCATION TRACKING', 9, NULL, false, NULL, 'My Location History', 'fas fa-map-marker-alt'),
 ('/staff/team-location-tracker', 'location-tracking', 'LOCATION TRACKING', 9, NULL, false, NULL, 'Team Location Tracker', 'fas fa-map-pin'),
 ('/staff/accounts/my-reimbursements', 'reimbursement', 'REIMBURSEMENT', 10, NULL, false, NULL, 'My Reimbursement Claims', 'fas fa-receipt'),

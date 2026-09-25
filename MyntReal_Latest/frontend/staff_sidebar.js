@@ -114,9 +114,12 @@ window.StaffSidebar = window.StaffSidebar || {
                 this._parseAndSetDynamicConfig(JSON.parse(cachedRegistry));
             }
             if (this.userData) {
-                const staffType = this.userData.staff_type || '';
+                const staffType = (this.userData.staff_type || '').toUpperCase();
                 const empCode = this.userData.emp_code || '';
-                const roleCode = (this.userData.role?.role_code || '').toLowerCase();
+                const roleCode = (this.userData.role?.role_code || this.userData.role_code || '').toLowerCase();
+                if (roleCode.startsWith('tenant_') || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT') {
+                    this.isSaaSTenant = true;
+                }
                 const supremeVariants = ["VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U Supreme", "VGK4U_EA", "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA"];
                 if ((staffType && supremeVariants.includes(staffType)) || ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) || ['key_leadership', 'vgk4u', 'ea'].includes(roleCode)) {
                     this.allowedMenuPaths = '*';
@@ -160,8 +163,37 @@ window.StaffSidebar = window.StaffSidebar || {
             return;
         }
 
-        this.updateHeaderUserInfo();
         await this.loadAllowedMenus();
+
+        // P0-8 Route Authorization Guard for SaaS Tenants
+        if (this.isSaaSTenant && this.allowedMenuPaths instanceof Set && this.allowedMenuPaths.size > 0) {
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            const internalRestrictedPaths = [
+                '/staff/employees', '/staff/employee-directory', '/staff/offboarding-transfer',
+                '/staff/progress', '/staff/dashboard', '/staff/overview', '/staff/tasks', '/staff/kra-status',
+                '/staff/timesheet', '/staff/my-timesheet', '/staff/training-videos',
+                '/staff/my-kyc', '/staff/kyc-approvals', '/staff/field-tracking',
+                '/staff/operator-calls', '/staff/dialer', '/staff/call-quality-review',
+                '/staff/telephony-studio', '/staff/softphone-center', '/staff/audio-prompts',
+                '/staff/studio-numbers', '/staff/studio-webhooks',
+                '/staff/catalog-library', '/staff/marketplace', '/staff/mnr',
+                '/staff/crm/dashboard', '/staff/crm/leads', '/staff/my-leads', '/staff/leads',
+                '/staff/executive-dashboard', '/staff/mnr-leads', '/staff/category-leads', '/staff/solar-vendors',
+                '/staff/saas-crm-settings', '/staff/my-tenant/crm-setup',
+                '/staff/service-dashboard', '/staff/service-queue', '/staff/service-tickets',
+                '/staff/service-reports', '/staff/service-procurement'
+            ];
+            const isCoreWorkspaceRoute = currentPath === '/staff/my-tenant' ||
+                currentPath === '/staff/tenant-users';
+
+            const isRestricted = !isCoreWorkspaceRoute && internalRestrictedPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'));
+            if (isRestricted && !this.allowedMenuPaths.has(currentPath)) {
+                console.warn('[DC-SAAS-GUARD] Unauthorized internal or unentitled page access blocked:', currentPath);
+                window.location.replace('/staff/my-tenant');
+                return;
+            }
+        }
+
         await this.applyTrainingGate();
         if (typeof _menuMasterReady !== 'undefined') await _menuMasterReady;
 
@@ -183,6 +215,8 @@ window.StaffSidebar = window.StaffSidebar || {
     applyTrainingGate: async function() {
         try {
             if (!this.allowedMenuPaths || this.allowedMenuPaths === '*') return;
+            // SaaS tenants are corporate clients and not internal trainees
+            if (this.isSaaSTenant || (this.userData && ['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(this.userData.staff_type))) return;
             const token = localStorage.getItem('staff_token');
             if (!token) return;
             const resp = await fetch('/api/v1/staff/accounts/training/status', {
@@ -366,6 +400,7 @@ window.StaffSidebar = window.StaffSidebar || {
                 const data = await staffFetchJson(apiUrl);
                 
                 if (data.success) {
+                    this.isSaaSTenant = Boolean(data.is_saas_tenant);
                     if (data.total_menus === 0) {
                         // Zero-access: No menus granted
                         this.allowedMenuPaths = new Set();
@@ -374,38 +409,42 @@ window.StaffSidebar = window.StaffSidebar || {
                     } else {
                         // Build set of allowed route paths (unified across companies)
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
-                        this.allowedMenuPaths.add('/staff/whatsapp-center');
-                        this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
-                        this.allowedMenuPaths.add('/staff/crm/whatsapp-bot');
-                        this.allowedMenuPaths.add('/staff/softphone-center');
-                        this.allowedMenuPaths.add('/staff/softphone-hub');
-                        this.allowedMenuPaths.add('/staff/softphone');
-                        this.allowedMenuPaths.add('/staff/incoming-calls');
-                        this.allowedMenuPaths.add('/staff/call-flow-studio');
-                        this.allowedMenuPaths.add('/staff/call-flow');
-                        this.allowedMenuPaths.add('/staff/dialer');
-                        this.allowedMenuPaths.add('/staff/auto-dialer');
-                        this.allowedMenuPaths.add('/staff/my-leads');
-                        this.allowedMenuPaths.add('/staff/configuration/catalog');
-                        this.allowedMenuPaths.add('/staff/catalog-library');
-                        this.allowedMenuPaths.add('/staff/catalog');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
-                        this.allowedMenuCodes.add('CRM_WA_INBOX');
-                        this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
-                        this.allowedMenuCodes.add('WHATSAPP_CONFIG');
-                        this.allowedMenuCodes.add('SOFTPHONE_CENTER');
-                        this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
-                        this.allowedMenuCodes.add('INCOMING_CALLS');
-                        this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
-                        this.allowedMenuCodes.add('AUTO_DIALER');
-                        this.allowedMenuCodes.add('staff_auto_dialer');
-                        this.allowedMenuCodes.add('MY_LEADS');
-                        this.allowedMenuCodes.add('staff_my_leads');
-                        this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
-                        this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                        if (!this.isSaaSTenant) {
+                            this.allowedMenuPaths.add('/staff/whatsapp-center');
+                            this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
+                            this.allowedMenuPaths.add('/staff/crm/whatsapp-bot');
+                            this.allowedMenuPaths.add('/staff/softphone-center');
+                            this.allowedMenuPaths.add('/staff/softphone-hub');
+                            this.allowedMenuPaths.add('/staff/softphone');
+                            this.allowedMenuPaths.add('/staff/incoming-calls');
+                            this.allowedMenuPaths.add('/staff/call-flow-studio');
+                            this.allowedMenuPaths.add('/staff/call-flow');
+                            this.allowedMenuPaths.add('/staff/dialer');
+                            this.allowedMenuPaths.add('/staff/auto-dialer');
+                            this.allowedMenuPaths.add('/staff/my-leads');
+                            this.allowedMenuPaths.add('/staff/configuration/catalog');
+                            this.allowedMenuPaths.add('/staff/catalog-library');
+                            this.allowedMenuPaths.add('/staff/catalog');
+                            this.allowedMenuPaths.add('/staff/field-appointments');
+                            this.allowedMenuCodes.add('CRM_WA_INBOX');
+                            this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
+                            this.allowedMenuCodes.add('WHATSAPP_CONFIG');
+                            this.allowedMenuCodes.add('SOFTPHONE_CENTER');
+                            this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
+                            this.allowedMenuCodes.add('INCOMING_CALLS');
+                            this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
+                            this.allowedMenuCodes.add('AUTO_DIALER');
+                            this.allowedMenuCodes.add('staff_auto_dialer');
+                            this.allowedMenuCodes.add('MY_LEADS');
+                            this.allowedMenuCodes.add('staff_my_leads');
+                            this.allowedMenuCodes.add('FIELD_APPOINTMENTS');
+                            this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
+                            this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                        }
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
-                        console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');
+                        console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ', is_saas_tenant:', this.isSaaSTenant, ')');
                         console.log('[DC-SIDEBAR] Debug: First 10 allowed paths:', Array.from(this.allowedMenuPaths).slice(0, 10));
                     }
                 } else {
@@ -427,39 +466,42 @@ window.StaffSidebar = window.StaffSidebar || {
                 
                 if (response.ok) {
                     const data = await response.json();
+                    this.isSaaSTenant = Boolean(data.is_saas_tenant);
                     if (data.total_menus === 0) {
                         this.allowedMenuPaths = new Set();
                         this.zeroAccessMessage = data.message || 'No menu access granted.';
                     } else {
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
-                        this.allowedMenuPaths.add('/staff/whatsapp-center');
-                        this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
-                        this.allowedMenuPaths.add('/staff/softphone-center');
-                        this.allowedMenuPaths.add('/staff/softphone-hub');
-                        this.allowedMenuPaths.add('/staff/softphone');
-                        this.allowedMenuPaths.add('/staff/incoming-calls');
-                        this.allowedMenuPaths.add('/staff/call-flow-studio');
-                        this.allowedMenuPaths.add('/staff/call-flow');
-                        this.allowedMenuPaths.add('/staff/dialer');
-                        this.allowedMenuPaths.add('/staff/auto-dialer');
-                        this.allowedMenuPaths.add('/staff/my-leads');
-                        this.allowedMenuPaths.add('/staff/configuration/catalog');
-                        this.allowedMenuPaths.add('/staff/catalog-library');
-                        this.allowedMenuPaths.add('/staff/catalog');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
-                        this.allowedMenuCodes.add('CRM_WA_INBOX');
-                        this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
-                        this.allowedMenuCodes.add('WHATSAPP_CONFIG');
-                        this.allowedMenuCodes.add('SOFTPHONE_CENTER');
-                        this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
-                        this.allowedMenuCodes.add('INCOMING_CALLS');
-                        this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
-                        this.allowedMenuCodes.add('AUTO_DIALER');
-                        this.allowedMenuCodes.add('staff_auto_dialer');
-                        this.allowedMenuCodes.add('MY_LEADS');
-                        this.allowedMenuCodes.add('staff_my_leads');
-                        this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
-                        this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                        if (!this.isSaaSTenant) {
+                            this.allowedMenuPaths.add('/staff/whatsapp-center');
+                            this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
+                            this.allowedMenuPaths.add('/staff/softphone-center');
+                            this.allowedMenuPaths.add('/staff/softphone-hub');
+                            this.allowedMenuPaths.add('/staff/softphone');
+                            this.allowedMenuPaths.add('/staff/incoming-calls');
+                            this.allowedMenuPaths.add('/staff/call-flow-studio');
+                            this.allowedMenuPaths.add('/staff/call-flow');
+                            this.allowedMenuPaths.add('/staff/dialer');
+                            this.allowedMenuPaths.add('/staff/auto-dialer');
+                            this.allowedMenuPaths.add('/staff/my-leads');
+                            this.allowedMenuPaths.add('/staff/configuration/catalog');
+                            this.allowedMenuPaths.add('/staff/catalog-library');
+                            this.allowedMenuPaths.add('/staff/catalog');
+                            this.allowedMenuCodes.add('CRM_WA_INBOX');
+                            this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
+                            this.allowedMenuCodes.add('WHATSAPP_CONFIG');
+                            this.allowedMenuCodes.add('SOFTPHONE_CENTER');
+                            this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
+                            this.allowedMenuCodes.add('INCOMING_CALLS');
+                            this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
+                            this.allowedMenuCodes.add('AUTO_DIALER');
+                            this.allowedMenuCodes.add('staff_auto_dialer');
+                            this.allowedMenuCodes.add('MY_LEADS');
+                            this.allowedMenuCodes.add('staff_my_leads');
+                            this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
+                            this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                        }
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                     }
@@ -787,6 +829,18 @@ window.StaffSidebar = window.StaffSidebar || {
         const allowedPaths = this.allowedMenuPaths;
         const hasRouteAccess = allowedPaths && allowedPaths instanceof Set && allowedPaths.size > 0;
         
+        const empCode = (this.userData?.emp_code || '').toUpperCase();
+        const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
+        const staffType = (this.userData?.staff_type || '').toUpperCase();
+        const isPlatformAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
+                            ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
+                            ['super_admin', 'saas_segment_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+        const isSaaSAdmin = isPlatformAdmin;
+        const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+        const isInternalType = staffType && internalTypes.includes(staffType);
+        const isInternalCompany = this.userData?.base_company_id && [1, 2, 3, 4, 88].includes(Number(this.userData.base_company_id));
+        const isSaaSTenant = Boolean(this.isSaaSTenant) || (!isPlatformAdmin && (roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || this.userData?.company_segment === 'SEGMENT_B_SAAS'));
+
         let expenseInDashboard = false;
         if (this.rawMenus) {
             const expMenu = this.rawMenus.find(m => m.route_path === '/staff/accounts/expense-entries');
@@ -794,7 +848,7 @@ window.StaffSidebar = window.StaffSidebar || {
                 expenseInDashboard = true;
             }
         }
-        if (!expenseInDashboard && this.userData && hasRouteAccess && allowedPaths.has('/staff/accounts/expense-entries')) {
+        if (!expenseInDashboard && this.userData && hasRouteAccess && allowedPaths.has('/staff/accounts/expense-entries') && !isSaaSTenant) {
             const deptName = (this.userData.department_name || '').toLowerCase();
             const isAccounts = deptName.includes('account') || deptName === 'act';
             if (!isAccounts) {
@@ -802,39 +856,44 @@ window.StaffSidebar = window.StaffSidebar || {
             }
         }
         
-        const empCode = (this.userData?.emp_code || '').toUpperCase();
-        const roleCode = (this.userData?.role?.role_code || '').toLowerCase();
-        const staffType = (this.userData?.staff_type || '').toUpperCase();
-        const isSaaSAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
-                            ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
-                            ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
-        const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
-        const isInternalType = staffType && internalTypes.includes(staffType);
-        const isInternalCompany = this.userData?.base_company_id && [1, 2, 3, 4, 88].includes(Number(this.userData.base_company_id));
-        const isSaaSTenant = !isSaaSAdmin && !isInternalType && !isInternalCompany && (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || this.userData?.company_segment === 'SEGMENT_B_SAAS');
-        
         for (const section of menuMaster) {
             const sCode = (section.section_code || '').toUpperCase();
             const sTitle = (section.section_label || section.title || section.id || '').toUpperCase();
-            const isSaasSection = sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('SAAS');
+            const isSaasSection = sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS');
+            const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE';
             
-            // For SaaS tenants, completely exclude internal platform and group company sections
+            // For SaaS tenants, completely exclude internal corporate and group company sections
             if (isSaaSTenant) {
-                const saasRestricted = ['MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER', 'INTERNAL'];
-                if (saasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
-                    if (!isSaasSection) {
+                if (!isCoreWorkspace) {
+                    const hasHrmsAccess = Boolean(hasRouteAccess && (allowedPaths.has('/staff/attendance-sheet') || allowedPaths.has('/staff/my-attendance')));
+                    const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
+                    const saasRestricted = [
+                        'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
+                        'PARTNER', 'INTERNAL', 'VGK_SAAS', 'PROGRESS', 'STAFF_DASHBOARD',
+                        'BUSINESS_PARTNERS', 'CONFIGURATION', 'META_ADS', 'MNR_USER_SIDEBAR', 'VGK_TEAM'
+                    ];
+                    if (!hasHrmsAccess) {
+                        saasRestricted.push(...hrmsSections);
+                    }
+                    if (saasRestricted.some(k => sCode === k || sCode.includes(k) || sTitle === k || sTitle.includes(k))) {
                         continue;
                     }
                 }
             }
             
             // Global Directive: Remove META ADS, ACCOUNTS, CONFIGURATION, INTERNAL for general staff
-            // MYNTOS SAAS is preserved for all administrators (MR10018, MR10001, MR10025, SAAS_SEGMENT_ADMIN, etc.)
-            if (!isSaaSAdmin) {
-                const globalRestrictedKeywords = ['META', 'ACCOUNT', 'CONFIG', 'SAAS', 'INTERNAL'];
-                if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
-                    console.log('[DC-SIDEBAR-RESTRICT] Hiding section for staff', empCode, ':', sTitle);
-                    continue;
+            // MYNTOS SAAS is preserved for platform administrators (MR10018, MR10001, MR10025, SAAS_SEGMENT_ADMIN, etc.)
+            if (!isPlatformAdmin) {
+                if (isSaaSTenant) {
+                    if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS')) {
+                        continue;
+                    }
+                } else {
+                    const globalRestrictedKeywords = ['META', 'ACCOUNT', 'CONFIG', 'SAAS', 'INTERNAL'];
+                    if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+                        console.log('[DC-SIDEBAR-RESTRICT] Hiding section for staff', empCode, ':', sTitle);
+                        continue;
+                    }
                 }
             } else {
                 // For SaaS Admins, only restrict non-applicable internal sections if not super user
@@ -858,12 +917,21 @@ window.StaffSidebar = window.StaffSidebar || {
             const sectionItems = [];
             const sectionSubSections = [];
             const isStaffDashboardSection = (section.section_code === 'STAFF_DASHBOARD' || section.section_label === 'STAFF DASHBOARD');
+            const isCrmSection = (section.section_code === 'CRM_LEADS' || section.section_code === 'CRM' || section.section_label === 'CRM & LEADS');
             
             // Process regular items
             if (section.items) {
                 for (const item of section.items) {
                     // DC Protocol: Match by route_path (reliable) instead of menu_code (format mismatch)
-                    let shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                    let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || (allowedPaths && allowedPaths.has(item.route));
+                    if (isCoreWorkspace) {
+                        if (item.route === '/staff/my-tenant') {
+                            shouldInclude = true;
+                        } else if (item.route === '/staff/tenant-users') {
+                            const isTenantAdmin = roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || isPlatformAdmin;
+                            shouldInclude = isTenantAdmin;
+                        }
+                    }
                     
                     // Access restriction: Razorpay & A1Top dashboards only for MR10001 and Accounts department
                     if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {
@@ -871,6 +939,14 @@ window.StaffSidebar = window.StaffSidebar || {
                         const deptName = this.userData?.department_name || '';
                         const isAllowed = (empId === 'MR10001') || (deptName.toLowerCase() === 'accounts');
                         if (!isAllowed) {
+                            shouldInclude = false;
+                        }
+                    }
+
+                    // Access restriction: Central Integrations ONLY for MR10001 and MR10016
+                    if (item.route === '/staff/configuration/integrations' || item.menu_code === 'CENTRAL_INTEGRATIONS') {
+                        const empId = (this.userData?.emp_code || this.userData?.employee_code || this.userData?.employee_id || '').toUpperCase();
+                        if (empId !== 'MR10001' && empId !== 'MR10016') {
                             shouldInclude = false;
                         }
                     }
@@ -892,13 +968,23 @@ window.StaffSidebar = window.StaffSidebar || {
                         });
                     }
                 }
-                if (isStaffDashboardSection) {
+                if (!isSaaSTenant && isStaffDashboardSection) {
                     if (!sectionItems.some(i => i.href === '/staff/accounts/expense-entries')) {
                         sectionItems.push({
                             icon: 'fas fa-receipt',
                             label: 'Expense Entries',
                             href: '/staff/accounts/expense-entries',
                             menu_code: 'EXPENSE_ENTRIES'
+                        });
+                    }
+                }
+                if (!isSaaSTenant && isCrmSection) {
+                    if (!sectionItems.some(i => i.href === '/staff/dialer' || i.href === '/staff/auto-dialer' || i.menu_code === 'AUTO_DIALER' || i.menu_code === 'staff_auto_dialer')) {
+                        sectionItems.push({
+                            icon: 'fas fa-phone-volume',
+                            label: 'Auto Dialer',
+                            href: '/staff/dialer',
+                            menu_code: 'AUTO_DIALER'
                         });
                     }
                 }
@@ -914,7 +1000,7 @@ window.StaffSidebar = window.StaffSidebar || {
                             continue;
                         }
                         // DC Protocol: Match by route_path for subSection items too
-                        let shouldInclude = isStaffDashboardSection || !hasRouteAccess || (allowedPaths && allowedPaths.has(item.route));
+                        let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || (allowedPaths && allowedPaths.has(item.route));
                         
                         // Access restriction: Razorpay & A1Top dashboards only for MR10001 and Accounts department
                         if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {
@@ -951,7 +1037,7 @@ window.StaffSidebar = window.StaffSidebar || {
             if (hasItems) {
                 sections.push({
                     id: section.section_code.toLowerCase().replace(/_/g, '-'),
-                    title: section.section_label,
+                    title: (isSaaSTenant && (section.section_code === 'SOLAR_EV' || (section.section_label || '').toUpperCase().includes('SOLAR'))) ? 'WORKFLOWS' : (isSaaSTenant && (section.section_code === 'SERVICE_TICKETS' || (section.section_label || '').toUpperCase().includes('SERVICE')) ? 'SERVICE' : (isSaaSTenant && section.section_code === 'ACCOUNTS' ? 'ACCOUNTS & GST' : (isSaaSTenant && section.section_code === 'HR' ? 'HRMS' : section.section_label))),
                     order: section.order,
                     items: sectionItems,
                     subSections: sectionSubSections
@@ -1161,7 +1247,7 @@ window.StaffSidebar = window.StaffSidebar || {
 
         const isRestrictedFreelancer = this.userData?.staff_type === 'FREELANCER' && this.userData?.freelancer_access_mode === 'only_leads';
 
-        if (!isRestrictedFreelancer) {
+        if (!isRestrictedFreelancer && !this.isSaaSTenant) {
             html += `
                 <a href="/staff/progress" class="nav-item pinned-top-link ${isProgressActive ? 'active' : ''}">
                     <i class="fas fa-chart-line"></i>
@@ -1786,7 +1872,7 @@ var StaffSidebar = window.StaffSidebar;
  * Back Button Component
  * Adds a universal back button to page headers
  */
-const StaffBackButton = {
+window.StaffBackButton = window.StaffBackButton || {
     init: function(containerId = 'backButtonContainer') {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -1809,7 +1895,7 @@ const StaffBackButton = {
 };
 
 // Sidebar CSS Styles (injected into page)
-const StaffSidebarStyles = `
+var StaffSidebarStyles = window.StaffSidebarStyles = window.StaffSidebarStyles || `
 <style id="staffSidebarStyles">
 /* Sidebar Container */
 /* DC Protocol: Fixed height enables .sidebar-nav overflow-y scroll */
@@ -2587,6 +2673,7 @@ html {
     margin-left: 260px !important;
     min-height: 100vh;
     background: #f3f4f6;
+    padding-top: 0 !important;
 }
 
 /* DC_SCROLLBAR_VIS_006: Custom scrollbar for Webkit browsers - ALWAYS VISIBLE */

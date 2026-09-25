@@ -48,13 +48,16 @@ def is_crm_settings_authorized(employee: StaffEmployee) -> bool:
     if hasattr(employee, 'role') and employee.role:
         role_code = (getattr(employee.role, 'role_code', '') or '').strip().lower()
 
+    hierarchy_level = getattr(employee.role, 'hierarchy_level', 0) if hasattr(employee, 'role') and employee.role else 0
+
     if (
         emp_code in ('MR10001', 'MR1001', 'MR10016') or
         employee.id in (1, 16) or
         is_supreme is True or
         'yaswanth' in full_name_lower or
         'yashwanth' in full_name_lower or
-        role_code in ('vgk4u', 'super_admin') or
+        role_code in ('vgk4u', 'super_admin', 'key_leadership', 'leadership_role', 'ea', 'saas_segment_admin', 'tenant_admin') or
+        hierarchy_level >= 90 or
         staff_type in ('VGK4U', 'VGK4U SUPREME', 'RVZ_SUPREME')
     ):
         return True
@@ -765,6 +768,13 @@ def assign_employee_categories(
     Ensures CRMLeadHandler exists and atomically configures CRMLeadHandlerMember.
     Changes immediately update fresh leads visibility in real-time.
     """
+    # Validate admin employee ID for FK safety
+    admin_emp_id = None
+    if admin_user and hasattr(admin_user, 'id') and admin_user.id:
+        exists = db.query(StaffEmployee.id).filter(StaffEmployee.id == admin_user.id).first()
+        if exists:
+            admin_emp_id = admin_user.id
+
     # 1. Validate employee
     emp = db.query(StaffEmployee).filter(StaffEmployee.id == payload.employee_id).first()
     if not emp:
@@ -799,7 +809,7 @@ def assign_employee_categories(
                     department_id=dept_id,
                     category_id=cat_id,
                     is_active=True,
-                    created_by_id=admin_user.id
+                    created_by_id=admin_emp_id
                 )
                 db.add(handler)
                 db.flush()
@@ -816,7 +826,7 @@ def assign_employee_categories(
                     handler_id=handler.id,
                     employee_id=emp.id,
                     is_active=True,
-                    created_by_id=admin_user.id
+                    created_by_id=admin_emp_id
                 )
                 db.add(member)
             else:
@@ -831,11 +841,14 @@ def assign_employee_categories(
         # Fetch all categories that exist for this company
         company_cats = db.query(SignupCategory).filter(SignupCategory.company_id == payload.company_id).all()
         company_cat_ids = {c.id for c in company_cats}
+        # Union with selected_cat_ids to ensure no selected category is skipped
+        all_cat_ids = company_cat_ids.union(selected_cat_ids)
 
-        for cat_id in company_cat_ids:
-            # Find handler
+        for cat_id in all_cat_ids:
+            # Find handler strictly scoped by company_id, target_dept_id, and category_id
             handler = db.query(CRMLeadHandler).filter(
                 CRMLeadHandler.company_id == payload.company_id,
+                CRMLeadHandler.department_id == target_dept_id,
                 CRMLeadHandler.category_id == cat_id
             ).first()
 
@@ -847,7 +860,7 @@ def assign_employee_categories(
                         department_id=target_dept_id,
                         category_id=cat_id,
                         is_active=True,
-                        created_by_id=admin_user.id
+                        created_by_id=admin_emp_id
                     )
                     db.add(handler)
                     db.flush()
@@ -864,7 +877,7 @@ def assign_employee_categories(
                         handler_id=handler.id,
                         employee_id=emp.id,
                         is_active=True,
-                        created_by_id=admin_user.id
+                        created_by_id=admin_emp_id
                     )
                     db.add(member)
                 else:
@@ -872,7 +885,7 @@ def assign_employee_categories(
                 
                 updated_handlers.append(handler.id)
             else:
-                # Unselected for this company -> deactivate if present
+                # Unselected for this company -> deactivate any memberships of this employee for this company & category
                 if handler:
                     member = db.query(CRMLeadHandlerMember).filter(
                         CRMLeadHandlerMember.handler_id == handler.id,
@@ -881,20 +894,39 @@ def assign_employee_categories(
                     if member and member.is_active:
                         member.is_active = False
 
-    # Audit log
-    audit = CRMLeadHandlerAudit(
-        handler_id=None,
-        action="EMPLOYEE_CATEGORIES_SYNC",
-        details=json.dumps({
-            "employee_id": emp.id,
-            "emp_code": emp.emp_code,
-            "company_id": payload.company_id,
-            "assigned_category_ids": payload.category_ids or []
-        }),
-        performed_by_id=admin_user.id
-    )
-    db.add(audit)
+                # Also deactivate any legacy memberships under other department handlers for this company & category
+                other_members = db.query(CRMLeadHandlerMember).join(
+                    CRMLeadHandler, CRMLeadHandler.id == CRMLeadHandlerMember.handler_id
+                ).filter(
+                    CRMLeadHandler.company_id == payload.company_id,
+                    CRMLeadHandler.category_id == cat_id,
+                    CRMLeadHandlerMember.employee_id == emp.id,
+                    CRMLeadHandlerMember.is_active == True
+                ).all()
+                for om in other_members:
+                    om.is_active = False
+
+    # Commit business changes first
     db.commit()
+
+    # Audit log (safe against foreign key / logging anomalies)
+    try:
+        audit = CRMLeadHandlerAudit(
+            handler_id=None,
+            action="EMPLOYEE_CATEGORIES_SYNC",
+            details=json.dumps({
+                "employee_id": emp.id,
+                "emp_code": emp.emp_code,
+                "company_id": payload.company_id,
+                "assigned_category_ids": payload.category_ids or []
+            }),
+            performed_by_id=admin_emp_id
+        )
+        db.add(audit)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to record CRM handler audit log: {e}")
+        db.rollback()
 
     return {
         "success": True,
@@ -921,15 +953,26 @@ def remove_employee_category_assignment(
         raise HTTPException(status_code=404, detail="Category assignment not found for this employee.")
 
     member.is_active = False
-
-    audit = CRMLeadHandlerAudit(
-        handler_id=handler_id,
-        action="MEMBER_REMOVE",
-        details=json.dumps({"employee_id": employee_id, "handler_id": handler_id}),
-        performed_by_id=admin_user.id
-    )
-    db.add(audit)
     db.commit()
+
+    admin_emp_id = None
+    if admin_user and hasattr(admin_user, 'id') and admin_user.id:
+        exists = db.query(StaffEmployee.id).filter(StaffEmployee.id == admin_user.id).first()
+        if exists:
+            admin_emp_id = admin_user.id
+
+    try:
+        audit = CRMLeadHandlerAudit(
+            handler_id=handler_id,
+            action="MEMBER_REMOVE",
+            details=json.dumps({"employee_id": employee_id, "handler_id": handler_id}),
+            performed_by_id=admin_emp_id
+        )
+        db.add(audit)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to record CRM handler audit log: {e}")
+        db.rollback()
 
     return {
         "success": True,
@@ -952,15 +995,26 @@ def clear_all_employee_categories(
     count = len(members)
     for m in members:
         m.is_active = False
-
-    audit = CRMLeadHandlerAudit(
-        handler_id=None,
-        action="EMPLOYEE_CATEGORIES_CLEAR",
-        details=json.dumps({"employee_id": employee_id, "cleared_count": count}),
-        performed_by_id=admin_user.id
-    )
-    db.add(audit)
     db.commit()
+
+    admin_emp_id = None
+    if admin_user and hasattr(admin_user, 'id') and admin_user.id:
+        exists = db.query(StaffEmployee.id).filter(StaffEmployee.id == admin_user.id).first()
+        if exists:
+            admin_emp_id = admin_user.id
+
+    try:
+        audit = CRMLeadHandlerAudit(
+            handler_id=None,
+            action="EMPLOYEE_CATEGORIES_CLEAR",
+            details=json.dumps({"employee_id": employee_id, "cleared_count": count}),
+            performed_by_id=admin_emp_id
+        )
+        db.add(audit)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to record CRM handler audit log: {e}")
+        db.rollback()
 
     return {
         "success": True,

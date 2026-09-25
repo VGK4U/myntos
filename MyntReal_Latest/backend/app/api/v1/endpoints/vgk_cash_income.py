@@ -319,6 +319,125 @@ def release_entry(
 # MEMBER ENDPOINT
 # ────────────────────────────────────────────────────────────────────────────
 
+@router.get('/member/income-entries')
+def get_member_itemized_income_entries(
+    status: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """Parity endpoint for VGK member portal to view own itemized income entries,
+    matching the staff VGK members date-grouped breakdown.
+    """
+    from app.api.v1.endpoints.vgk_team import fetch_member_income_entries_data
+    return fetch_member_income_entries_data(
+        partner_id=current_member.id,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        db=db
+    )
+
+
+@router.get('/member/downline-team-entries')
+def get_member_downline_team_entries(
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """Direct downline team members (first-line referrals) and their earnings/file data.
+    Single source of data matching the Member View layout.
+    """
+    from app.api.v1.endpoints.vgk_team import fetch_member_income_entries_data
+    from app.models.crm import CRMLead
+    from sqlalchemy import or_
+    
+    mid = current_member.id
+    children = db.query(OfficialPartner).filter(
+        OfficialPartner.parent_partner_id == mid
+    ).order_by(OfficialPartner.id.asc()).all()
+    
+    downline_data = []
+    for ch in children:
+        # Lead count
+        total_leads = db.query(CRMLead).filter(
+            or_(
+                CRMLead.associated_partner_id == ch.id,
+                CRMLead.created_by_id == str(ch.id)
+            )
+        ).count()
+        
+        # Qualifying files count (strictly subsidy_pending or completed)
+        qualifying_files = db.query(CRMLead).filter(
+            or_(
+                CRMLead.associated_partner_id == ch.id,
+                CRMLead.created_by_id == str(ch.id)
+            ),
+            or_(
+                CRMLead.status == 'completed',
+                CRMLead.solar_pipeline_status.in_(['subsidy_pending', 'completed'])
+            )
+        ).count()
+        
+        # Income entries
+        ie_result = fetch_member_income_entries_data(partner_id=ch.id, db=db)
+        entries = ie_result.get("data", [])
+        
+        non_can = [e for e in entries if e.get("status") != 'CANCELLED']
+        tot_gross = sum(e.get("commission_amount", 0) for e in non_can)
+        tot_deal = sum(e.get("deal_value", 0) for e in non_can)
+        tot_net = sum(e.get("net_payout", 0) for e in non_can)
+        
+        l0_bonus = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 0 or e.get("kind") in ('SLAB_BONUS', 'EXTRA_COMMISSION', 'ADVANCE', 'DVR_ADVANCE'))
+        l1_source = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 1 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE'))
+        l2_senior = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 2 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE'))
+        l3_extended = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 3)
+        l4_core = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 4)
+        l5_support = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 5)
+        l6_showroom = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 6)
+        
+        installed_files = db.query(CRMLead).filter(
+            or_(
+                CRMLead.associated_partner_id == ch.id,
+                CRMLead.created_by_id == str(ch.id)
+            ),
+            or_(
+                CRMLead.status.in_(['completed', 'installed', 'subsidy_pending']),
+                CRMLead.solar_pipeline_status.in_(['completed', 'installed', 'subsidy_pending', 'net_meter_done', 'balance_received'])
+            )
+        ).count()
+        
+        downline_data.append({
+            "partner_id": ch.id,
+            "partner_code": ch.partner_code,
+            "partner_name": ch.partner_name,
+            "phone": ch.phone,
+            "city": ch.city or "—",
+            "is_paid_activation": bool(ch.is_paid_activation),
+            "total_leads": total_leads,
+            "qualifying_files": qualifying_files,
+            "installed_files": installed_files,
+            "l0_bonus": l0_bonus,
+            "l1_source": l1_source,
+            "l2_senior": l2_senior,
+            "l3_extended": l3_extended,
+            "l4_core": l4_core,
+            "l5_support": l5_support,
+            "l6_showroom": l6_showroom,
+            "total_gross": tot_gross,
+            "total_deal": tot_deal,
+            "total_net": tot_net,
+            "entries_count": len(entries),
+            "entries": entries
+        })
+        
+    return {
+        "success": True,
+        "total_children": len(downline_data),
+        "data": downline_data
+    }
+
+
 @router.get('/member/cash-income')
 def member_cash_income(
     page: int = Query(1, ge=1),
@@ -684,6 +803,7 @@ def member_wallet(
     return {
         'success':        True,
         'wallet_balance': float(getattr(current_member, 'vgk_cash_wallet', 0) or 0),
+        'points_balance': points_balance,
         'earned_total':   earned_total,
         'total':          total,
         'page':           page,

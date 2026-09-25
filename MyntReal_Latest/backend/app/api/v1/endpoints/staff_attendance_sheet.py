@@ -826,11 +826,29 @@ def get_monthly_attendance(
     if end_date < start_date:
         raise HTTPException(status_code=400, detail="to_date cannot be before from_date")
     
-    # DC_ACTIVE_EMP_ONLY: Filter active/inactive employees for target month
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     emp_filters = build_employee_status_filters(emp_status or "active", start_date, end_date)
     emp_query = db.query(StaffEmployee).filter(
         func.upper(func.coalesce(StaffEmployee.emp_code, '')) != 'MR10001'
     )
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        emp_query = emp_query.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
     if emp_filters:
         emp_query = emp_query.filter(and_(*emp_filters))
         
@@ -1179,6 +1197,23 @@ def get_manager_team_data(
     manager = db.query(StaffEmployee).filter(StaffEmployee.id == manager_id).first()
     if not manager:
         raise HTTPException(status_code=404, detail="Manager not found")
+
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if _saas_ctx.company:
+            from app.models.staff import StaffCompanyMembership
+            cid = _saas_ctx.company.id
+            is_same = (manager.base_company_id == cid) or (
+                db.query(StaffCompanyMembership).filter(
+                    StaffCompanyMembership.staff_id == manager.id,
+                    StaffCompanyMembership.company_id == cid,
+                    StaffCompanyMembership.is_active == True
+                ).first() is not None
+            )
+            if not is_same:
+                raise HTTPException(status_code=403, detail="Access denied: Manager belongs to another organization.")
     
     team_ids = get_team_member_ids(manager, db, StaffEmployee)
     all_team_ids = list(set([manager_id] + list(team_ids)))
@@ -1618,6 +1653,11 @@ def get_attendance_summary(
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     # Get all attendance records for date range
     query = db.query(StaffAttendanceSheet).filter(
         and_(
@@ -1625,6 +1665,20 @@ def get_attendance_summary(
             StaffAttendanceSheet.date <= end_date
         )
     )
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        from app.models.staff import StaffCompanyMembership
+        cid = _saas_ctx.company.id
+        query = query.join(StaffEmployee, StaffAttendanceSheet.employee_id == StaffEmployee.id).filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
     
     # Apply optional filters - DC Protocol (Dec 04, 2025): Use recursive downline
     if manager_id:

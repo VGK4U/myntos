@@ -81,6 +81,10 @@ window.StaffHeader = window.StaffHeader || {
                 margin-left: 0;
             }
             
+            .main-content {
+                padding-top: 0 !important;
+            }
+            
             @media (max-width: 768px) {
                 .top-header {
                     margin-left: 0 !important;
@@ -860,19 +864,36 @@ window.StaffHeader = window.StaffHeader || {
             }
         }
 
-        // For SaaS tenant workspaces, dynamically replace header logo & hide internal platform campaign widgets
-        if (isTenantAdmin) {
+        // For SaaS tenant workspaces, dynamically render customer's company logo & name, hide internal widgets
+        const isTenant = isTenantAdmin || userData.is_tenant_admin || (userData.base_company_id && ![1, 2, 3, 4, 88].includes(Number(userData.base_company_id))) || ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT'].includes(staffType);
+        if (isTenant) {
             const logoEl = document.querySelector('.header-logo');
             if (logoEl) {
-                const compName = userData.base_company_name || 'Zynova Cloud';
+                const compName = userData.base_company_name || 'My Tenant';
+                const compLogo = userData.company_logo || window.__TENANT_LOGO_URL || null;
                 const parent = logoEl.parentElement;
-                if (parent && !parent.querySelector('.tenant-header-brand')) {
+                
+                let brandEl = parent ? parent.querySelector('.tenant-header-brand') : null;
+                if (!brandEl && parent) {
+                    brandEl = document.createElement('div');
+                    brandEl.className = 'tenant-header-brand';
+                    brandEl.style.cssText = 'display:flex;align-items:center;gap:10px;';
+                    logoEl.insertAdjacentElement('afterend', brandEl);
+                }
+                
+                if (brandEl) {
                     logoEl.style.display = 'none';
-                    const brandSpan = document.createElement('span');
-                    brandSpan.className = 'tenant-header-brand';
-                    brandSpan.style.cssText = 'font-weight:800;font-size:15px;color:#ffffff;letter-spacing:0.4px;display:flex;align-items:center;gap:7px;';
-                    brandSpan.innerHTML = `<i class="fas fa-cube" style="color:#38bdf8;font-size:16px;"></i> ${compName}`;
-                    logoEl.insertAdjacentElement('afterend', brandSpan);
+                    if (compLogo) {
+                        brandEl.innerHTML = `
+                            <img src="${compLogo}" alt="${compName}" class="header-logo tenant-logo" style="height:36px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:2px;" onerror="this.onerror=null; this.outerHTML='<span style=\\'display:inline-flex;width:32px;height:32px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:16px;\\'><i class=\\'fas fa-building\\'></i></span>';">
+                            <span style="font-weight:700;font-size:15px;color:#ffffff;letter-spacing:0.3px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
+                        `;
+                    } else {
+                        brandEl.innerHTML = `
+                            <span style="display:inline-flex;width:32px;height:32px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:16px;"><i class="fas fa-building"></i></span>
+                            <span style="font-weight:700;font-size:15px;color:#ffffff;letter-spacing:0.3px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
+                        `;
+                    }
                 }
             }
             const badges = document.getElementById('activeCommunitySevaBadges');
@@ -1459,6 +1480,24 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     })();
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = typeof StaffHeader !== 'undefined' ? StaffHeader : (typeof window !== 'undefined' ? window.StaffHeader : null);
-}
+    // Listen for dynamic tenant logo updates across pages
+    window.addEventListener('tenant-logo-updated', function(evt) {
+        if (evt.detail && evt.detail.logo_path) {
+            window.__TENANT_LOGO_URL = evt.detail.logo_path;
+            try {
+                const raw = localStorage.getItem('staff_user');
+                if (raw) {
+                    const u = JSON.parse(raw);
+                    u.company_logo = evt.detail.logo_path;
+                    localStorage.setItem('staff_user', JSON.stringify(u));
+                }
+            } catch(e) {}
+            if (window.StaffHeader && typeof window.StaffHeader.updateHeaderUserInfo === 'function') {
+                window.StaffHeader.updateHeaderUserInfo();
+            }
+        }
+    });
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = typeof StaffHeader !== 'undefined' ? StaffHeader : (typeof window !== 'undefined' ? window.StaffHeader : null);
+    }

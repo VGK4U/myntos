@@ -2313,6 +2313,7 @@ def run_schema_bootstrap():
     bootstrap_partner_cap_bypass()
     bootstrap_community_association_name()
     bootstrap_community_idol_photo()
+    bootstrap_central_integration_framework()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:
@@ -2734,6 +2735,96 @@ def bootstrap_automation_relational_schema():
         raise
     finally:
         _db.close()
+
+
+def bootstrap_central_integration_framework():
+    """DC Protocol Sep 2026: Bootstrap Central Integration Management tables."""
+    from app.core.database import SessionLocal
+    _db = SessionLocal()
+    try:
+        _db.execute(text("""
+            CREATE TABLE IF NOT EXISTS integration_categories (
+                id SERIAL PRIMARY KEY,
+                category_code VARCHAR(64) UNIQUE NOT NULL,
+                display_name VARCHAR(128) NOT NULL,
+                description TEXT,
+                icon VARCHAR(64) NOT NULL DEFAULT 'fas fa-plug',
+                display_order INTEGER NOT NULL DEFAULT 10,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS integration_definitions (
+                id SERIAL PRIMARY KEY,
+                integration_code VARCHAR(64) UNIQUE NOT NULL,
+                category_code VARCHAR(64) NOT NULL REFERENCES integration_categories(category_code) ON DELETE CASCADE,
+                display_name VARCHAR(128) NOT NULL,
+                provider_name VARCHAR(128) NOT NULL,
+                description TEXT,
+                icon VARCHAR(64) NOT NULL DEFAULT 'fas fa-cube',
+                auth_type VARCHAR(64) NOT NULL DEFAULT 'api_key',
+                supports_platform_connection BOOLEAN NOT NULL DEFAULT TRUE,
+                supports_tenant_connection BOOLEAN NOT NULL DEFAULT TRUE,
+                supports_multiple_connections BOOLEAN NOT NULL DEFAULT FALSE,
+                supports_oauth BOOLEAN NOT NULL DEFAULT FALSE,
+                supports_webhooks BOOLEAN NOT NULL DEFAULT FALSE,
+                supports_connection_test BOOLEAN NOT NULL DEFAULT TRUE,
+                supports_enable_disable BOOLEAN NOT NULL DEFAULT TRUE,
+                configuration_schema JSONB NOT NULL DEFAULT '[]'::jsonb,
+                status_rules JSONB DEFAULT '{}'::jsonb,
+                adapter_class VARCHAR(128),
+                display_order INTEGER NOT NULL DEFAULT 10,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS integration_connections (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER REFERENCES platform_clients(id) ON DELETE CASCADE,
+                integration_code VARCHAR(64) NOT NULL REFERENCES integration_definitions(integration_code) ON DELETE CASCADE,
+                connection_name VARCHAR(128) NOT NULL,
+                scope VARCHAR(32) NOT NULL DEFAULT 'tenant',
+                auth_type VARCHAR(64) NOT NULL DEFAULT 'api_key',
+                encrypted_credentials TEXT,
+                public_configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
+                provider_account_id VARCHAR(128),
+                status VARCHAR(32) NOT NULL DEFAULT 'not_configured',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                is_default BOOLEAN NOT NULL DEFAULT FALSE,
+                last_tested_at TIMESTAMP WITH TIME ZONE,
+                last_test_result JSONB,
+                created_by VARCHAR(64),
+                updated_by VARCHAR(64),
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_int_conn_tenant_code ON integration_connections(tenant_id, integration_code);
+            CREATE INDEX IF NOT EXISTS ix_int_conn_scope_code ON integration_connections(scope, integration_code);
+
+            CREATE TABLE IF NOT EXISTS integration_audit_logs (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER REFERENCES platform_clients(id) ON DELETE SET NULL,
+                integration_code VARCHAR(64) NOT NULL,
+                connection_id INTEGER,
+                action VARCHAR(64) NOT NULL,
+                actor_emp_code VARCHAR(64) NOT NULL,
+                actor_ip VARCHAR(64),
+                details JSONB,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+        """))
+        _db.commit()
+        logger.info("[SCHEMA BOOTSTRAP] ✅ Central Integration Framework tables bootstrapped successfully")
+    except Exception as e:
+        _db.rollback()
+        logger.error(f"[SCHEMA BOOTSTRAP] ❌ Error bootstrapping integration tables: {e}")
+        raise
+    finally:
+        _db.close()
+
 
 
 # DC Protocol (ARCHITECTURAL FIX - Sep 2026):

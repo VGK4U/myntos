@@ -7,6 +7,7 @@
 export function getStoredToken(): string {
   if (typeof window === 'undefined') return '';
   return (
+    localStorage.getItem('vgk_token') ||
     localStorage.getItem('auth_token') ||
     localStorage.getItem('staff_token') ||
     localStorage.getItem('token') ||

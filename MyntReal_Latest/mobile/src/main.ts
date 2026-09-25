@@ -82,6 +82,7 @@ import { StaffLeadSourcesPage } from './pages/StaffLeadSourcesPage';
 import { StaffTeamLeadsPage } from './pages/StaffTeamLeadsPage';
 import { StaffWhatsAppInboxPage } from './pages/StaffWhatsAppInboxPage';
 import { StaffBankWiseLeadsPage } from './pages/StaffBankWiseLeadsPage';
+import { StaffFieldAppointmentsPage } from './pages/StaffFieldAppointmentsPage';
 // New Tasks Section Pages
 import { TasksAssignedPage } from './pages/TasksAssignedPage';
 import { TasksReceivedPage } from './pages/TasksReceivedPage';
@@ -824,6 +825,7 @@ class MNRApp {
 
   private showLogin(): void {
     this.appContainer.innerHTML = '';
+    this.appContainer.className = 'login-layout';
     this.appContainer.appendChild(this.pageContainer);
     const loginPage = new LoginPage(this.pageContainer);
     loginPage.init();
@@ -834,8 +836,9 @@ class MNRApp {
     const portal = authState.user?.portal || 'staff';
     portalService.setPortal(portal).catch(() => {});
 
-    // Guard: If app layout is already mounted and active, do not recreate DOM or reset route
-    if (this.appContainer.classList.contains('app-layout') && this.pageContainer.parentElement) {
+    // Guard: If app layout is already mounted with tabs and NOT on login page, do not recreate DOM or reset route
+    const isLoginPageActive = !this.tabsContainer.parentElement || !!this.pageContainer.querySelector('#loginBtn, .login-page, .login-container');
+    if (!isLoginPageActive && this.appContainer.classList.contains('app-layout') && this.pageContainer.parentElement) {
       console.log('[DC_APP] App layout already active — preserving current route:', routerService.getCurrentRoute());
       return;
     }
@@ -1012,6 +1015,10 @@ class MNRApp {
       case 'field-sales':
       case 'staff-field-sales':
         page = new StaffBankWiseLeadsPage(this.pageContainer);
+        break;
+      case 'field-appointments':
+      case 'staff-field-appointments':
+        page = new StaffFieldAppointmentsPage(this.pageContainer);
         break;
       case 'executive-dashboard':
         page = new ExecutiveDashboardPage(this.pageContainer);
@@ -1493,6 +1500,13 @@ class MNRApp {
         break;
       case 'partner-new-order':
         page = new PartnerOrders(this.pageContainer);
+        break;
+
+      case 'staff-my-tenant':
+        page = new StaffEmbedPage(this.pageContainer, { url: '/staff/my-tenant', title: 'Company Profile' });
+        break;
+      case 'staff-tenant-users':
+        page = new StaffEmbedPage(this.pageContainer, { url: '/staff/tenant-users', title: 'Staff & Users' });
         break;
 
       case 'embed-view':

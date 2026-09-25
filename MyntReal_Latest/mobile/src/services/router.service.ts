@@ -29,6 +29,9 @@ export type PageRoute =
   | 'staff-crm'
   | 'staff-team-leads'
   | 'change-password'
+  // SaaS Tenant Core Workspace
+  | 'staff-my-tenant'
+  | 'staff-tenant-users'
   // Staff Dashboard Section - New
   | 'staff-training-videos'
   | 'staff-employees'
@@ -68,6 +71,8 @@ export type PageRoute =
   // Timesheet Section - New
   | 'staff-timesheet-approval'
   // Journeys Section - New
+  | 'field-appointments'
+  | 'staff-field-appointments'
   | 'staff-all-journeys'
   | 'staff-vgk4u-journeys'
   | 'staff-vgk-members'
@@ -273,6 +278,8 @@ class RouterService {
     'staff-catalog-library': { id: 'staff-catalog-library', title: 'Catalog Library', icon: 'book-open', showInTabs: false, portal: 'staff' },
     'catalog': { id: 'catalog', title: 'Digital Catalog', icon: 'book-open', showInTabs: false, portal: 'staff' },
     'change-password': { id: 'change-password', title: 'Change Password', icon: 'lock', showInTabs: false, portal: 'staff' },
+    'staff-my-tenant': { id: 'staff-my-tenant', title: 'Company Profile', icon: 'briefcase', showInTabs: false, portal: 'staff' },
+    'staff-tenant-users': { id: 'staff-tenant-users', title: 'Staff & Users', icon: 'users', showInTabs: false, portal: 'staff' },
     // Staff Dashboard Section - New Routes
     'staff-employees': { id: 'staff-employees', title: 'Employees', icon: 'users', showInTabs: false, portal: 'staff' },
     'staff-training-videos': { id: 'staff-training-videos', title: 'Training Videos', icon: 'play-circle', showInTabs: false, portal: 'staff' },
@@ -319,6 +326,8 @@ class RouterService {
     // Timesheet Section - New Routes
     'staff-timesheet-approval': { id: 'staff-timesheet-approval', title: 'Timesheet Approval', icon: 'check', showInTabs: false, portal: 'staff' },
     // Journeys Section - New Routes
+    'field-appointments': { id: 'field-appointments', title: 'Field Appointments', icon: 'check-square', showInTabs: false, portal: 'staff' },
+    'staff-field-appointments': { id: 'staff-field-appointments', title: 'Field Appointments', icon: 'check-square', showInTabs: false, portal: 'staff' },
     'staff-all-journeys': { id: 'staff-all-journeys', title: 'All Journeys', icon: 'map', showInTabs: false, portal: 'staff' },
     'staff-vgk4u-journeys': { id: 'staff-vgk4u-journeys', title: 'VGK4U Journeys', icon: 'truck', showInTabs: false, portal: 'staff' },
     'staff-vgk-members': { id: 'staff-vgk-members', title: 'VGK Channel Partners', icon: 'users', showInTabs: false, portal: 'staff' },

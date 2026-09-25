@@ -582,7 +582,8 @@ class TicketService:
         spares_required: bool = False,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        staff_id: Optional[int] = None
+        staff_id: Optional[int] = None,
+        company_id: Optional[int] = None
     ) -> ServiceTicket:
         """Create new EV service ticket with full customer and product details"""
         try:
@@ -593,6 +594,7 @@ class TicketService:
             base_tat_hours = 24 if ticket_type == 'technical' else 48
             tat_due = TicketService.calculate_tat_due(created_date, base_tat_hours)
             
+            final_company_id = company_id if company_id is not None else _derive_ticket_company_id(db, partner_id=partner_id)
             ticket = ServiceTicket(
                 ticket_id=ticket_id,
                 user_id=user_id,
@@ -628,9 +630,7 @@ class TicketService:
                 tat_committed_at=created_date,
                 tat_due_at=tat_due,
                 tat_base_hours=base_tat_hours,
-                # [DC_DAR_003] Derive company from partner at creation time;
-                # later refreshed when a technician/manager is assigned.
-                company_id=_derive_ticket_company_id(db, partner_id=partner_id),
+                company_id=final_company_id,
             )
             
             db.add(ticket)
@@ -1435,7 +1435,8 @@ class TicketService:
         service_center_id: Optional[int] = None,
         sub_status_filter: Optional[str] = None,
         ticket_type_filter: Optional[str] = None,
-        staff_id_filter: Optional[int] = None
+        staff_id_filter: Optional[int] = None,
+        company_id: Optional[int] = None
     ) -> List[ServiceTicket]:
         """Get tickets for service team queue
         DC Protocol Mar 2026: Eager-load relationships to guarantee technician/manager
@@ -1443,6 +1444,7 @@ class TicketService:
         DC Protocol Mar 2026 (RBAC): staff_id_filter restricts results to tickets where
         the caller is the assigned service_manager OR service_technician.
         Privileged roles (key_leadership, vgk4u, manager, service_head) pass None to see all tickets.
+        DC SaaS Expansion (Sep 2026): company_id isolates tickets for SaaS tenant organization.
         """
         from app.models.staff_accounts import OfficialPartner
         from app.models.staff import StaffEmployee
@@ -1466,6 +1468,8 @@ class TicketService:
             )
         )
         
+        if company_id is not None:
+            query = query.filter(ServiceTicket.company_id == company_id)
         if service_center_id:
             query = query.filter(ServiceTicket.partner_id == service_center_id)
         if sub_status_filter:
