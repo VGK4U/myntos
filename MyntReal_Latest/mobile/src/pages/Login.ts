@@ -673,7 +673,7 @@ export class LoginPage {
   private async loadAnnouncements(): Promise<void> {
     try {
       // DC Protocol: Use apiService for proper API base URL handling in mobile context
-      const response = await apiService.getPublic<any>('/feedback/public/announcements?limit=10');
+      const response = await apiService.getPublic<any>('/feedback/public/announcements?limit=5&destination=announcement');
       if (response.success && response.data) {
         this.announcements = response.data.items || response.data || [];
         if (this.activeTab === 'announcements') {

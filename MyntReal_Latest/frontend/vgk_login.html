@@ -1582,9 +1582,8 @@
 
     async function loadVGKAnnouncements() {
         try {
-            /* Fetch ALL VGK-visible announcements — no category filter so all
-               shoutout types (VGK4U Shoutouts, Incentive, etc.) appear */
-            let url = '/api/v1/feedback/public/announcements?limit=20&platform=vgk';
+            /* Fetch VGK announcements (announcements + both, max 5, non-expired) */
+            let url = '/api/v1/feedback/public/announcements?limit=5&platform=vgk&destination=announcement';
 
             const resp = await fetch(url);
             const data = await resp.json();

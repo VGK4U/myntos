@@ -692,12 +692,12 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
           (category_id, submission_type, title, description, status,
            is_visible, visible_to, user_id, submitted_at, approved_at,
            approved_by, approved_media_count, rejected_media_count,
-           shares_count, views_count, display_order)
+           shares_count, views_count, display_order, target_destination)
         VALUES
           (:cat, 'TEXT', :title, :desc, 'APPROVED',
            true, :vto, :uid, :now, :now,
            'VGK-SYS', 1, 0,
-           0, 0, NULL)
+           0, 0, NULL, 'shoutout')
         RETURNING id
     """), {
         'cat': category_id, 'title': title, 'desc': desc_with_ref,
@@ -721,6 +721,11 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
         """), {'sid': sub_id, 'fp': card_storage_key, 'now': now})
 
     db.flush()
+    try:
+        from app.api.v1.endpoints.feedback import invalidate_public_announcements_cache
+        invalidate_public_announcements_cache()
+    except Exception:
+        pass
     return sub_id
 
 
@@ -1444,21 +1449,9 @@ def _do_celebration(db, entry_id: int):
         except Exception as e:
             logger.warning(f'[EARNER-CARD] Upload exception for {tmp_key}: {e}')
 
-    # 5. Publish shoutout announcement
-    is_vgk = str(partner_code or '').upper().startswith('VGK')
-    shoutout_visible_to   = 'vgk' if is_vgk else 'mnr'
-    shoutout_category_name = VGK_SHOUTOUT_CATEGORY_NAME if is_vgk else MNR_SHOUTOUT_CATEGORY_NAME
-    try:
-        system_uid  = _ensure_system_user(db)
-        category_id = _ensure_shoutout_category(db, shoutout_category_name)
-        _publish_shoutout(db, entry_id, category_id, system_uid,
-                          partner_name, partner_code, gross, card_storage_key,
-                          visible_to=shoutout_visible_to)
-        db.commit()
-        logger.info(f'[EARNER-CARD] Shoutout published ({shoutout_visible_to}) for entry {entry_id}')
-    except Exception as e:
-        db.rollback()
-        logger.warning(f'[EARNER-CARD] Shoutout publish failed: {e}')
+    # 5. [DISABLED - NO AUTO-POST POLICY]: Announcements/Shoutouts are published ONLY via explicit
+    # staff action ("Post to Portal" in Member-Wise Banner Generation). Background automated jobs must NOT auto-post.
+    logger.info(f'[EARNER-CARD] Shoutout auto-post bypassed by business policy for entry {entry_id}')
 
     # 6. Send WhatsApp trigger
     try:
@@ -1638,12 +1631,9 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
     system_uid = _ensure_system_user(db)
     category_id = _ensure_shoutout_category(db, shoutout_category_name)
 
-    sub_id = _publish_shoutout(
-        db, min_id, category_id, system_uid,
-        partner_name, partner_code, batch_gross, card_storage_key,
-        visible_to=shoutout_visible_to
-    )
-    db.commit()
+    # 10. [DISABLED - NO AUTO-POST POLICY]: Announcements/Shoutouts are published ONLY via explicit
+    # staff action ("Post to Portal" in Member-Wise Banner Generation). Background automated jobs must NOT auto-post.
+    sub_id = None
 
     # 11. Stamp duplicate protection tags in notes
     if sub_id:

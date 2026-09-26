@@ -5913,6 +5913,7 @@ def fetch_member_income_entries_data(
             "  COALESCE(e.income_date::text, e.created_at::date::text, e.confirmed_at::date::text) AS entry_date, "
             "  COALESCE(e.commission_pct, 0)::float        AS commission_pct, "
             "  COALESCE(e.commission_amount, 0)::float     AS commission_amount, "
+            "  COALESCE(e.advance_adjusted_amount, 0)::float AS advance_adjusted_amount, "
             "  COALESCE(e.admin_charges, 0)::float         AS admin_charges, "
             "  COALESCE(e.tds_amount, 0)::float            AS tds_amount, "
             "  COALESCE(e.net_payout, 0)::float            AS net_payout, "
@@ -5956,6 +5957,7 @@ def fetch_member_income_entries_data(
                 "  COALESCE(a.released_at::date, a.created_at::date)::text AS entry_date, "
                 "  0::float                AS commission_pct, "
                 "  a.advance_amount::float AS commission_amount, "
+                "  COALESCE(a.adjustment_amount, 0)::float AS advance_adjusted_amount, "
                 "  (a.advance_amount * 0.08)::float AS admin_charges, "
                 "  (a.advance_amount * 0.02)::float AS tds_amount, "
                 "  (a.advance_amount * 0.90)::float AS net_payout, "
@@ -6323,7 +6325,8 @@ def fetch_member_income_entries_data(
         is_paid_st = r.status in ('PAID', 'RELEASED', 'VERIFIED')
         pmt_date = r.entry_date if is_paid_st else None
 
-        # Prior advance deduction for Final Commission entries
+        # Prior advance deduction for Final Commission entries & Stage 1 recovery on Stage 2 DVR_ADVANCE entries
+        adv_adjusted = float(getattr(r, "advance_adjusted_amount", 0) or 0.0)
         stage1_adv = 0.0
         stage2_adv = 0.0
         adv_paid   = 0.0
@@ -6332,20 +6335,26 @@ def fetch_member_income_entries_data(
             stage1_adv = float(adv_info.get("stage1", 0.0))
             stage2_adv = float(adv_info.get("stage2", 0.0))
             adv_paid   = float(adv_info.get("total", 0.0))
+        elif _resolved_kind == 'DVR_ADVANCE':
+            # For Stage 2 DVR_ADVANCE entries, advance_adjusted_amount is the Stage 1 recovery deduction for this receipt
+            stage1_adv = adv_adjusted
+            stage2_adv = 0.0
+            adv_paid   = adv_adjusted
+
         gross_amt = float(r.commission_amount)
         
         lost_lead_deduction = lost_ded_map.get(int(r.id), 0.0)
-        tot_adv_deducted = adv_paid + lost_lead_deduction
+        tot_adv_deducted = (adv_paid if _resolved_kind == 'COMMISSION' else adv_adjusted) + lost_lead_deduction
         bal_gross = max(0.0, round(gross_amt - tot_adv_deducted, 2))
 
-        if lost_lead_deduction > 0 or adv_paid > 0:
+        # Authoritative backend values: use stored financial values from database if present
+        admin_charges = float(r.admin_charges or 0.0)
+        tds_amount = float(r.tds_amount or 0.0)
+        net_payout = float(r.net_payout or 0.0)
+        if admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
             admin_charges = round(bal_gross * 0.08, 2)
             tds_amount = round(bal_gross * 0.02, 2)
             net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
-        else:
-            admin_charges = float(r.admin_charges)
-            tds_amount = float(r.tds_amount)
-            net_payout = float(r.net_payout)
 
         return {
             "id":                int(r.id),
@@ -6361,6 +6370,7 @@ def fetch_member_income_entries_data(
             "calc_base":         commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": gross_amt,
+            "advance_adjusted_amount": adv_adjusted,
             "stage1_adv":        stage1_adv,
             "stage2_adv":        stage2_adv,
             "lost_lead_deduction": lost_lead_deduction,
@@ -6666,6 +6676,7 @@ def lead_income_members_detail(
             "    0 "
             "  )::float AS base_value, "
             "  COALESCE(e.commission_amount,0)::float AS commission_amount, "
+            "  COALESCE(e.advance_adjusted_amount,0)::float AS advance_adjusted_amount, "
             "  COALESCE(e.net_payout,0)::float        AS net_payout, "
             "  COALESCE(e.admin_charges,0)::float     AS admin_charges, "
             "  COALESCE(e.tds_amount,0)::float        AS tds_amount, "
@@ -6737,6 +6748,7 @@ def lead_income_members_detail(
             pct = round(amt / bv * 100.0, 2)
 
         _kind_upper = (r.kind or 'COMMISSION').upper()
+        adv_adjusted = float(getattr(r, "advance_adjusted_amount", 0) or 0.0)
         stage1_adv = 0.0
         stage2_adv = 0.0
         adv_paid   = 0.0
@@ -6748,7 +6760,25 @@ def lead_income_members_detail(
                 adv_paid   = float(adv_info.get("total", 0.0))
             else:
                 adv_paid   = float(adv_info)
-        bal_gross = max(0.0, round(amt - adv_paid, 2))
+        elif _kind_upper == 'DVR_ADVANCE':
+            # For Stage 2 DVR_ADVANCE entries, advance_adjusted_amount is the Stage 1 recovery deduction for this receipt
+            stage1_adv = adv_adjusted
+            stage2_adv = 0.0
+            adv_paid   = adv_adjusted
+
+        bal_gross = max(0.0, round(amt - (adv_paid if _kind_upper == 'COMMISSION' else adv_adjusted), 2))
+
+        # Authoritative stored backend values
+        admin_charges = float(r.admin_charges or 0.0)
+        tds_amount = float(r.tds_amount or 0.0)
+        net_payout = float(r.net_payout or 0.0)
+        if admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
+            admin_charges = round(bal_gross * 0.08, 2)
+            tds_amount = round(bal_gross * 0.02, 2)
+            net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
+
+        # Deal value vs calc basis
+        basis_val = float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv
 
         res_data.append({
             "id":                int(r.id),
@@ -6761,17 +6791,18 @@ def lead_income_members_detail(
             "trigger_date":      r.trigger_date,
             "payment_date":      r.payment_date,
             "commission_pct":    pct,
-            "deal_value":        float(r.deal_value_total_val) if r.deal_value_total_val > 0 else bv,
-            "base_value":        float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv,
-            "calc_base":         float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv,
+            "deal_value":        basis_val if (_kind_upper == 'DVR_ADVANCE' and basis_val > 0) else (float(r.deal_value_total_val) if r.deal_value_total_val > 0 else bv),
+            "base_value":        basis_val,
+            "calc_base":         basis_val,
             "commission_amount": amt,
+            "advance_adjusted_amount": adv_adjusted,
             "stage1_adv":        stage1_adv,
             "stage2_adv":        stage2_adv,
             "advance_paid":      adv_paid,
             "balance_gross":     bal_gross,
-            "net_payout":        float(r.net_payout),
-            "admin_charges":     float(r.admin_charges),
-            "tds_amount":        float(r.tds_amount),
+            "net_payout":        net_payout,
+            "admin_charges":     admin_charges,
+            "tds_amount":        tds_amount,
             "partner_code":      r.partner_code,
             "partner_name":      r.partner_name,
             "community_id":      int(r.community_id) if r.community_id is not None else None,

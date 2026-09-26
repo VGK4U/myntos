@@ -2322,6 +2322,63 @@ def bootstrap_company_royalty_points():
         db.close()
 
 
+def bootstrap_feedback_submissions_destination_and_expiry():
+    """
+    DC Protocol (Sep 2026): Add target_destination and expires_at to feedback_submissions
+    Supports Banner -> Announcement / Shoutout publication with automatic query-time expiry.
+    """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        res = db.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'feedback_submissions' 
+              AND column_name IN ('target_destination', 'expires_at')
+        """)).fetchall()
+        existing = {r[0] for r in res}
+
+        if 'target_destination' not in existing:
+            db.execute(text("""
+                ALTER TABLE feedback_submissions 
+                ADD COLUMN target_destination VARCHAR(20) NOT NULL DEFAULT 'both';
+            """))
+            db.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_feedback_sub_target_dest 
+                ON feedback_submissions (target_destination);
+            """))
+            db.execute(text("""
+                UPDATE feedback_submissions 
+                SET target_destination = 'shoutout' 
+                WHERE category_id = 11 AND target_destination = 'both';
+            """))
+            db.execute(text("""
+                UPDATE feedback_submissions 
+                SET target_destination = 'announcement' 
+                WHERE category_id != 11 AND target_destination = 'both';
+            """))
+            db.commit()
+            logger.info("[SCHEMA BOOTSTRAP] ✅ Added target_destination column and backfilled")
+
+        if 'expires_at' not in existing:
+            db.execute(text("""
+                ALTER TABLE feedback_submissions 
+                ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE NULL;
+            """))
+            db.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_feedback_sub_expires_at 
+                ON feedback_submissions (expires_at);
+            """))
+            db.commit()
+            logger.info("[SCHEMA BOOTSTRAP] ✅ Added expires_at column to feedback_submissions")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[SCHEMA BOOTSTRAP] ❌ Error in bootstrap_feedback_submissions_destination_and_expiry: {e}")
+        raise
+    finally:
+        db.close()
+
+
 def run_schema_bootstrap():
     """
     Run all schema bootstrap operations
@@ -2330,6 +2387,7 @@ def run_schema_bootstrap():
     from app.core.database import SessionLocal
     logger.info("[SCHEMA BOOTSTRAP] Starting schema bootstrap...")
     bootstrap_background_jobs_schema()
+    bootstrap_feedback_submissions_destination_and_expiry()
     backfill_job_handler_metadata()
     bootstrap_sfms_credit_tables()
     bootstrap_sfms_seed_data()

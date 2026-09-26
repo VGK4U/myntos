@@ -72,6 +72,40 @@
 .tpt-lead-row:hover {
   background: #f8fafc;
 }
+/* ── Sub-table horizontal scroll & prominent scrollbar ── */
+.me-subtable-scroll-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: scroll !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  background: #fff;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: #7c3aed #f1f5f9;
+}
+.me-subtable-scroll-wrap::-webkit-scrollbar {
+  height: 12px !important;
+  display: block !important;
+  -webkit-appearance: none;
+}
+.me-subtable-scroll-wrap::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+.me-subtable-scroll-wrap::-webkit-scrollbar-thumb {
+  background: #7c3aed !important;
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
+}
+.me-subtable-scroll-wrap::-webkit-scrollbar-thumb:hover {
+  background: #6d28d9 !important;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { overflow-x: hidden; width: 100%; max-width: 100vw; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -2818,8 +2852,8 @@ function _renderMeTable(rows){
       <td style="padding:8px 12px">${statusPills||'<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
     </tr>
     <tr id="me-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
-      <td colspan="10" style="padding:0;background:#f5f3ff">
-        <div id="me-detail-${m.id}" style="padding:14px 28px"></div>
+      <td colspan="10" style="padding:0;background:#f5f3ff;max-width:0;width:100%;box-sizing:border-box">
+        <div id="me-detail-${m.id}" style="padding:14px 20px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0"></div>
       </td>
     </tr>`;
   }).join('');
@@ -3197,8 +3231,8 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px">${statusPills||'<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
     </tr>
     <tr id="ied-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
-      <td colspan="19" style="padding:0;background:#f5f3ff">
-        <div id="ied-detail-${m.id}" style="padding:14px 28px"></div>
+      <td colspan="19" style="padding:0;background:#f5f3ff;max-width:0;width:100%;box-sizing:border-box">
+        <div id="ied-detail-${m.id}" style="padding:14px 20px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0"></div>
       </td>
     </tr>`;
   }).join('');
@@ -3511,7 +3545,9 @@ function _renderMeDetailTable(partnerId){
     const totStg1         = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
-      return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.stage1_adv||0) : 0);
+      if (_k === 'COMMISSION' || _k === 'SENIOR_COMM') return s + parseFloat(e.stage1_adv || 0);
+      if (_k === 'DVR_ADVANCE') return s + parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0);
+      return s;
     }, 0);
     const totStg2         = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
@@ -3525,7 +3561,9 @@ function _renderMeDetailTable(partnerId){
     const totAdvPaid      = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
-      return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.advance_paid||0) : 0);
+      if (_k === 'COMMISSION' || _k === 'SENIOR_COMM') return s + parseFloat(e.advance_paid || 0);
+      if (_k === 'DVR_ADVANCE') return s + parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0);
+      return s;
     }, 0);
     const totBalGross     = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
@@ -3533,7 +3571,8 @@ function _renderMeDetailTable(partnerId){
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
+      const isDvr = (_k === 'DVR_ADVANCE');
+      const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
       return s + bal;
     }, 0);
@@ -3543,9 +3582,11 @@ function _renderMeDetailTable(partnerId){
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
+      const isDvr = (_k === 'DVR_ADVANCE');
+      const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      return s + Math.round(bal * 0.08);
+      const adm = (e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08);
+      return s + adm;
     }, 0);
     const totTds          = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
@@ -3553,28 +3594,36 @@ function _renderMeDetailTable(partnerId){
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
+      const isDvr = (_k === 'DVR_ADVANCE');
+      const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      return s + Math.round(bal * 0.02);
+      const tds = (e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02);
+      return s + tds;
     }, 0);
     const totNet          = Math.max(0, totBalGross - totAdmin - totTds);
     const totRcvNet       = rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e) => {
+      const net = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0) ? parseFloat(e.net_payout) : null;
+      if (net !== null) return s + net;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
+      const isDvr = (_k === 'DVR_ADVANCE');
+      const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
       const adm = Math.round(bal * 0.08);
       const tds = Math.round(bal * 0.02);
       return s + Math.max(0, Math.round(bal - adm - tds));
     }, 0);
     const totPendingNet   = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e) => {
+      const net = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0) ? parseFloat(e.net_payout) : null;
+      if (net !== null) return s + net;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
       const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
-      const adv = isC ? parseFloat(e.advance_paid || 0) : 0;
+      const isDvr = (_k === 'DVR_ADVANCE');
+      const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
       const adm = Math.round(bal * 0.08);
       const tds = Math.round(bal * 0.02);
@@ -3591,19 +3640,27 @@ function _renderMeDetailTable(partnerId){
       return `<th onclick="_setMeSubSort(${partnerId}, '${toggleKey}')" style="padding:7px 10px;text-align:${align};color:${isCur?'#4c1d95':'#6b7280'};font-weight:700;font-size:10.5px;text-transform:uppercase;cursor:pointer;user-select:none;${extra}">${txt}${icon}</th>`;
     };
 
+    const cardEl = detail.closest('.tab-panel') || document.getElementById('tabIncomeDash') || document.getElementById('tabEarnings') || document.body;
+    const availW = Math.max(320, (cardEl.clientWidth || (window.innerWidth - 300)) - 60);
+
     detail.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <span style="font-size:12px;font-weight:700;color:#7c3aed">
         <i class="fas fa-layer-group me-1"></i>Date-wise Lead &amp; Income Breakdown — ${rows.length}${rows.length<totalAll?' of '+totalAll:''} entr${totalAll===1?'y':'ies'} (Common Filters Applied)
       </span>
-      <div style="display:flex;align-items:center;gap:12px;font-size:11.5px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:11.5px;flex-wrap:wrap">
+        <div style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;padding:3px 8px;border-radius:6px;border:1px solid #e5e7eb">
+          <span style="font-size:10.5px;font-weight:700;color:#6b7280"><i class="fas fa-arrows-alt-h me-1"></i>Scroll Table:</span>
+          <button type="button" onclick="document.getElementById('me-scroll-wrap-${partnerId}')?.scrollBy({left:-350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll left">‹ Left</button>
+          <button type="button" onclick="document.getElementById('me-scroll-wrap-${partnerId}')?.scrollBy({left:350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll right">Right ›</button>
+        </div>
         <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-weight:700">Released/Paid: ${_meInr(totRcvNet)}</span>
         <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:6px;font-weight:700">Pending: ${_meInr(totPendingNet)}</span>
         <button onclick="generateMemberPoster('${partnerId}')" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.4)"><i class="fas fa-image"></i> Generate Achievement Poster</button>
       </div>
     </div>
-    <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <div id="me-scroll-wrap-${partnerId}" class="me-subtable-scroll-wrap" style="width:100%;max-width:${availW}px;box-sizing:border-box">
+    <table style="width:100%;min-width:1450px;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
           ${TH('Submit Date', 'submit_date')}
@@ -3613,11 +3670,6 @@ function _renderMeDetailTable(partnerId){
           ${TH('Level / Role', 'level', 'center')}
           ${TH('Customer Name', 'name')}
           ${TH('Entry Kind', 'kind', 'center')}
-          ${TH('Balance Gross ₹', 'balance_gross', 'right', 'color:#2563eb')}
-          ${TH('Admin (8%)', '', 'right')}
-          ${TH('TDS (2%)', '', 'right')}
-          ${TH('Net (90%)', 'net', 'right')}
-          ${TH('Status', 'status', 'center')}
           ${TH('Deal Value ₹', 'deal_value', 'right', 'color:#4b5563')}
           ${TH('Calc %', '', 'center', 'color:#4b5563')}
           ${TH('Gross ₹', 'gross', 'right')}
@@ -3625,6 +3677,11 @@ function _renderMeDetailTable(partnerId){
           ${TH('Stage 2 Adv. <i class="fas fa-info-circle text-xs" title="Stage 2 Advance is calculated incrementally on validated payment receipts (effective 25-Sep-2026) across all 5 commission layers according to the active canonical commission structure, with pro-rata Stage 1 advance recovery on L1 and L2."></i>', '', 'right', 'color:#d97706')}
           ${TH('Lost Adv. ₹', 'lost_lead_deduction', 'right', 'color:#dc2626')}
           ${TH('Advance Paid ₹', 'advance_paid', 'right', 'color:#d97706')}
+          ${TH('Balance Gross ₹', 'balance_gross', 'right', 'color:#2563eb')}
+          ${TH('Admin (8%)', '', 'right')}
+          ${TH('TDS (2%)', '', 'right')}
+          ${TH('Net (90%)', 'net', 'right')}
+          ${TH('Status', 'status', 'center')}
         </tr>
       </thead>
       <tbody>
@@ -3663,10 +3720,13 @@ function _renderMeDetailTable(partnerId){
             
             const _k = String(e.kind || 'COMMISSION').toUpperCase();
             const isComm   = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+            const isDvr    = (_k === 'DVR_ADVANCE');
             const dealVal  = parseFloat(e.deal_value || e.base_value || 0);
             const commPct  = parseFloat(e.commission_pct || 0);
             const grossAmt = parseFloat(e.commission_amount || 0);
-            const stg1Adv  = isComm ? parseFloat(e.stage1_adv || 0) : 0;
+            
+            // Advance recovery: for COMMISSION, read prior stage1/stage2 advances; for DVR_ADVANCE, read advance_adjusted_amount
+            const stg1Adv  = isComm ? parseFloat(e.stage1_adv || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
             const stg2Adv  = isComm ? parseFloat(e.stage2_adv || 0) : 0;
             
             // 50% Max Cap Lost Lead Advance Deduction Rule (Applies to all earning entry kinds)
@@ -3676,12 +3736,21 @@ function _renderMeDetailTable(partnerId){
               lostDedAmt = max50Cap;
             }
             
-            const advPaid  = isComm ? (stg1Adv + stg2Adv + lostDedAmt) : lostDedAmt;
-            const balGross = isComm ? ((e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid)) : Math.max(0, grossAmt - lostDedAmt);
+            const advPaid  = isComm ? (stg1Adv + stg2Adv + lostDedAmt) : (isDvr ? (stg1Adv + lostDedAmt) : lostDedAmt);
+            const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) 
+              ? parseFloat(e.balance_gross) 
+              : ((isComm || isDvr) ? Math.max(0, grossAmt - (isComm ? (stg1Adv + stg2Adv) : stg1Adv) - lostDedAmt) : Math.max(0, grossAmt - lostDedAmt));
 
-            let adminVal = Math.round(balGross * 0.08);
-            let tdsVal   = Math.round(balGross * 0.02);
-            let netVal   = Math.max(0, Math.round(balGross - adminVal - tdsVal));
+            // Authoritative stored backend values
+            let adminVal = (e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0)
+              ? parseFloat(e.admin_charges)
+              : Math.round(balGross * 0.08);
+            let tdsVal   = (e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0)
+              ? parseFloat(e.tds_amount)
+              : Math.round(balGross * 0.02);
+            let netVal   = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0)
+              ? parseFloat(e.net_payout)
+              : Math.max(0, Math.round(balGross - adminVal - tdsVal));
 
             if (e.status !== 'CANCELLED') {
               if (!leadDealValueRecorded && dealVal > 0) {
@@ -3692,17 +3761,17 @@ function _renderMeDetailTable(partnerId){
               subStg1 += stg1Adv;
               subStg2 += stg2Adv;
               subLostDed += lostDedAmt;
-              subAdvPaid += (stg1Adv + stg2Adv);
+              subAdvPaid += (isComm ? (stg1Adv + stg2Adv) : stg1Adv);
               subBalGross += balGross;
             }
 
             const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
             const commPctHtml  = commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—';
-            const stg1Html     = isComm ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+            const stg1Html     = (isComm || isDvr) ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
             const stg2Html     = isComm ? (stg2Adv > 0 ? _meInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
             const lostDedHtml  = (lostDedAmt > 0 ? `<span style="color:#dc2626;font-weight:700">-${_meInr(lostDedAmt)}</span>` : '—');
-            const advPaidHtml  = isComm ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
-            const balGrossHtml = balGross > 0 ? _meInr(balGross) : (isComm ? '—' : '<span style="color:#9ca3af;font-size:10px">N/A</span>');
+            const advPaidHtml  = (isComm || isDvr) ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+            const balGrossHtml = balGross > 0 ? _meInr(balGross) : ((isComm || isDvr) ? '—' : '<span style="color:#9ca3af;font-size:10px">N/A</span>');
 
             const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
             const resolvedPmtDate = e.payment_date || (isPaidSt ? (e.trigger_date || e.income_date) : null);
@@ -3720,11 +3789,6 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:center">
                 <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;font-weight:500">${kindLabelText}</span>
               </td>
-              <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
               <td style="padding:7px 10px;text-align:right;color:#4b5563;font-weight:600">${dealValHtml}</td>
               <td style="padding:7px 10px;text-align:center;color:#4b5563;font-weight:600">${commPctHtml}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${grossAmt>0?_meInr(grossAmt):'—'}</td>
@@ -3732,12 +3796,17 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${stg2Html}</td>
               <td style="padding:7px 10px;text-align:right;color:#dc2626;font-weight:600">${lostDedHtml}</td>
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaidHtml}</td>
+              <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
+              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
             </tr>`;
           }).join('');
 
-          const subAdmin = Math.round(subBalGross * 0.08);
-          const subTds   = Math.round(subBalGross * 0.02);
-          const subNet   = Math.max(0, Math.round(subBalGross - subAdmin - subTds));
+          const subAdmin = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+((e.admin_charges!==undefined&&e.admin_charges!==null&&parseFloat(e.admin_charges)>0)?parseFloat(e.admin_charges):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.08)),0);
+          const subTds   = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+((e.tds_amount!==undefined&&e.tds_amount!==null&&parseFloat(e.tds_amount)>0)?parseFloat(e.tds_amount):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.02)),0);
+          const subNet   = Math.max(0, subBalGross - subAdmin - subTds);
 
           const subtotalRowHtml = `<tr style="background:#f5f3ff;border-top:1.5px dashed #c4b5fd;border-bottom:2px solid #ddd6fe;font-weight:800">
             <td colspan="5" style="padding:6px 10px;text-align:left;color:#5b21b6;font-size:11px">
@@ -3745,11 +3814,6 @@ function _renderMeDetailTable(partnerId){
             </td>
             <td style="padding:6px 10px;color:#4c1d95;font-weight:800;font-size:11.5px">${group.client_name}</td>
             <td style="padding:6px 10px;text-align:center"><span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px">LEAD SUB-TOTAL</span></td>
-            <td style="padding:6px 10px;text-align:right;color:#2563eb">${subBalGross > 0 ? _meInr(subBalGross) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#059669;font-weight:900">${subNet > 0 ? _meInr(subNet) : '—'}</td>
-            <td></td>
             <td style="padding:6px 10px;text-align:right;color:#4b5563">${subDealVal > 0 ? _meInr(subDealVal) : '—'}</td>
             <td style="padding:6px 10px;text-align:center;color:#9ca3af">—</td>
             <td style="padding:6px 10px;text-align:right;color:#4c1d95;font-weight:800">${subGross > 0 ? _meInr(subGross) : '—'}</td>
@@ -3757,6 +3821,11 @@ function _renderMeDetailTable(partnerId){
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subStg2 > 0 ? _meInr(subStg2) : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#dc2626">${subLostDed > 0 ? `-${_meInr(subLostDed)}` : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdvPaid > 0 ? _meInr(subAdvPaid) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#2563eb">${subBalGross > 0 ? _meInr(subBalGross) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#059669;font-weight:900">${subNet > 0 ? _meInr(subNet) : '—'}</td>
+            <td></td>
           </tr>`;
 
           return entryRowsHtml + subtotalRowHtml;
@@ -3766,11 +3835,6 @@ function _renderMeDetailTable(partnerId){
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
           <td colspan="7" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
-          <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
-          <td></td>
           <td style="padding:8px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
           <td></td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
@@ -3778,9 +3842,27 @@ function _renderMeDetailTable(partnerId){
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totStg2>0?_meInr(totStg2):'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
+          <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
+          <td></td>
         </tr>
       </tfoot>
     </table></div>`;
+
+  setTimeout(() => {
+    const wrap = document.getElementById('me-scroll-wrap-' + partnerId);
+    if (wrap && !wrap._hasWheel) {
+      wrap._hasWheel = true;
+      wrap.addEventListener('wheel', (ev) => {
+        if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
+          ev.preventDefault();
+          wrap.scrollLeft += ev.deltaY * 1.5;
+        }
+      }, { passive: false });
+    }
+  }, 50);
 }
 
 function _renderMePagination(total, pg, pageSize){
@@ -4174,27 +4256,35 @@ function _lvDetailRowHtml(lid, entries){
       }
     }
 
-    const isComm      = ((e.kind || 'COMMISSION').toUpperCase() === 'COMMISSION');
+    const _k          = String(e.kind || 'COMMISSION').toUpperCase();
+    const isComm      = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+    const isDvr       = (_k === 'DVR_ADVANCE');
     const dealVal     = parseFloat(e.deal_value || e.base_value || 0);
     const commPct     = parseFloat(e.commission_pct || calcPct || 0);
-    const grossAmt    = e.commission_amount || 0;
-    const stg1Adv     = isComm ? parseFloat(e.stage1_adv || 0) : 0;
+    const grossAmt    = parseFloat(e.commission_amount || 0);
+    const stg1Adv     = (isComm || isDvr) ? parseFloat(e.stage1_adv || (isDvr ? e.advance_adjusted_amount : 0) || 0) : 0;
     const stg2Adv     = isComm ? parseFloat(e.stage2_adv || 0) : 0;
     const lostLeadDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
-    const advPaid     = isComm ? parseFloat(e.advance_paid || 0) : 0;
+    const advPaid     = (isComm || isDvr) ? parseFloat(e.advance_paid || (isDvr ? e.advance_adjusted_amount : 0) || 0) : 0;
     const balGross    = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid - lostLeadDed);
 
     const baseForDeductions = balGross;
-    let adminVal = Math.round(baseForDeductions * 0.08);
-    let tdsVal   = Math.round(baseForDeductions * 0.02);
-    let netVal   = Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
+    let adminVal = (e.admin_charge !== undefined && e.admin_charge !== null && parseFloat(e.admin_charge) > 0)
+      ? parseFloat(e.admin_charge)
+      : ((e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(baseForDeductions * 0.08));
+    let tdsVal   = (e.tds_deduction !== undefined && e.tds_deduction !== null && parseFloat(e.tds_deduction) > 0)
+      ? parseFloat(e.tds_deduction)
+      : ((e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(baseForDeductions * 0.02));
+    let netVal   = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0)
+      ? parseFloat(e.net_payout)
+      : Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
 
     const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
     const commPctHtml  = commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—';
-    const stg1Html     = isComm ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+    const stg1Html     = (isComm || isDvr) ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const stg2Html     = isComm ? (stg2Adv > 0 ? _meInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const lostDedHtml  = lostLeadDed > 0 ? `-${_meInr(lostLeadDed)}` : '—';
-    const advPaidHtml  = isComm ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
+    const advPaidHtml  = (isComm || isDvr) ? (advPaid > 0 ? _meInr(advPaid) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const balGrossHtml = balGross > 0 ? _meInr(balGross) : '—';
 
     const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
@@ -4217,13 +4307,6 @@ function _lvDetailRowHtml(lid, entries){
         <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:${e.community_id?'#e0f2fe':'#f3f4f6'};color:${e.community_id?'#0369a1':'#6b7280'};font-weight:${e.community_id?'700':'500'}">${kindBadge}</span>
         ${commBadgeHtml}
       </td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
-      <td style="padding:8px 10px">
-        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
-      </td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#4b5563;font-weight:600">${dealValHtml}</td>
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#4b5563;font-weight:600">${commPctHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#374151;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
@@ -4231,6 +4314,13 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg2Html}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626;font-weight:600">${lostDedHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:center">
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
+      </td>
     </tr>`;
   }).join('');
 
@@ -4242,11 +4332,6 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px;text-align:center">Level / Role</td>
     <td style="padding:6px 10px">Member</td>
     <td style="padding:6px 10px;text-align:center">Entry Kind</td>
-    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross ₹</td>
-    <td style="padding:6px 10px;text-align:right">Admin (8%)</td>
-    <td style="padding:6px 10px;text-align:right">TDS (2%)</td>
-    <td style="padding:6px 10px;text-align:right">Net (90%)</td>
-    <td style="padding:6px 10px">Status</td>
     <td style="padding:6px 10px;text-align:right">Deal Value ₹</td>
     <td style="padding:6px 10px;text-align:center">Calc %</td>
     <td style="padding:6px 10px;text-align:right">Gross ₹</td>
@@ -4254,19 +4339,26 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px;text-align:right;color:#d97706">Stage 2 Adv.</td>
     <td style="padding:6px 10px;text-align:right;color:#dc2626">Lost Adv. ₹</td>
     <td style="padding:6px 10px;text-align:right;color:#d97706">Advance Paid ₹</td>
+    <td style="padding:6px 10px;text-align:right;color:#2563eb">Balance Gross ₹</td>
+    <td style="padding:6px 10px;text-align:right">Admin (8%)</td>
+    <td style="padding:6px 10px;text-align:right">TDS (2%)</td>
+    <td style="padding:6px 10px;text-align:right">Net (90%)</td>
+    <td style="padding:6px 10px;text-align:center">Status</td>
   </tr>`;
 
-  const totGross    = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+(e.commission_amount||0)),0);
-  const totDealVal  = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+(e.deal_value||e.base_value||0)),0);
+  const totGross    = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
+  const totDealVal  = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
   const totStg1     = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    return s + (isC ? (e.stage1_adv || 0) : 0);
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    if (_k === 'COMMISSION' || _k === 'SENIOR_COMM') return s + parseFloat(e.stage1_adv || 0);
+    if (_k === 'DVR_ADVANCE') return s + parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0);
+    return s;
   }, 0);
   const totStg2     = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    return s + (isC ? (e.stage2_adv || 0) : 0);
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    return s + ((_k==='COMMISSION'||_k==='SENIOR_COMM') ? parseFloat(e.stage2_adv || 0) : 0);
   }, 0);
   const totLostDed  = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
@@ -4274,57 +4366,83 @@ function _lvDetailRowHtml(lid, entries){
   }, 0);
   const totAdvPaid  = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    return s + (isC ? (e.advance_paid || 0) : 0);
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    if (_k === 'COMMISSION' || _k === 'SENIOR_COMM') return s + parseFloat(e.advance_paid || 0);
+    if (_k === 'DVR_ADVANCE') return s + parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0);
+    return s;
   }, 0);
   const totBalGross = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const gross = e.commission_amount || 0;
+    const gross = parseFloat(e.commission_amount || 0);
     const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    const adv = isC ? (e.advance_paid || 0) : 0;
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+    const isDvr = (_k === 'DVR_ADVANCE');
+    const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
     const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
     return s + bal;
   }, 0);
   const totAdmin    = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const gross = e.commission_amount || 0;
+    const gross = parseFloat(e.commission_amount || 0);
     const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    const adv = isC ? (e.advance_paid || 0) : 0;
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+    const isDvr = (_k === 'DVR_ADVANCE');
+    const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
     const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-    return s + Math.round(bal * 0.08);
+    const adm = (e.admin_charge !== undefined && e.admin_charge !== null && parseFloat(e.admin_charge) > 0)
+      ? parseFloat(e.admin_charge)
+      : ((e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08));
+    return s + adm;
   }, 0);
   const totTds      = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
-    const gross = e.commission_amount || 0;
+    const gross = parseFloat(e.commission_amount || 0);
     const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
-    const isC = ((e.kind||'COMMISSION').toUpperCase()==='COMMISSION');
-    const adv = isC ? (e.advance_paid || 0) : 0;
+    const _k = String(e.kind || 'COMMISSION').toUpperCase();
+    const isC = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+    const isDvr = (_k === 'DVR_ADVANCE');
+    const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
     const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-    return s + Math.round(bal * 0.02);
+    const tds = (e.tds_deduction !== undefined && e.tds_deduction !== null && parseFloat(e.tds_deduction) > 0)
+      ? parseFloat(e.tds_deduction)
+      : ((e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02));
+    return s + tds;
   }, 0);
   const totNet      = Math.max(0, totBalGross - totAdmin - totTds);
 
-  return `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:0;background:#f9fafb">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      ${subHead}${rows}
-      <tr style="background:#f0f0fb;font-weight:700">
-        <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
-        <td></td>
-        <td style="padding:7px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
-        <td></td>
-        <td style="padding:7px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg1>0?_meInr(totStg1):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg2>0?_meInr(totStg2):'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
-      </tr>
-    </table>
+  return `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:0;background:#f9fafb;max-width:0;width:100%;box-sizing:border-box">
+    <div style="padding:10px 14px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f3f4f6;border-radius:6px 6px 0 0;border:1px solid #ddd6fe;border-bottom:none">
+        <span style="font-size:11px;font-weight:700;color:#5b21b6"><i class="fas fa-layer-group me-1"></i>Member Breakdown for Lead #${lid} (${filtered.length} entries)</span>
+        <div style="display:inline-flex;align-items:center;gap:4px">
+          <span style="font-size:10.5px;font-weight:700;color:#6b7280"><i class="fas fa-arrows-alt-h me-1"></i>Scroll Table:</span>
+          <button type="button" onclick="document.getElementById('lv-scroll-wrap-${lid}')?.scrollBy({left:-350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll left">‹ Left</button>
+          <button type="button" onclick="document.getElementById('lv-scroll-wrap-${lid}')?.scrollBy({left:350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll right">Right ›</button>
+        </div>
+      </div>
+      <div id="lv-scroll-wrap-${lid}" class="me-subtable-scroll-wrap" style="width:100%;max-width:100%;box-sizing:border-box;margin-top:0">
+      <table style="width:100%;min-width:1450px;border-collapse:collapse;font-size:12px">
+        ${subHead}${rows}
+        <tr style="background:#f0f0fb;font-weight:700">
+          <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
+          <td></td>
+          <td style="padding:7px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg1>0?_meInr(totStg1):'—'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg2>0?_meInr(totStg2):'—'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#059669">${_meInr(totNet)}</td>
+          <td></td>
+        </tr>
+      </table>
+      </div>
+    </div>
   </td></tr>`;
 }
 
@@ -4344,6 +4462,18 @@ function _lvRenderDetail(lid, entries){
       }
     }
   }
+  setTimeout(() => {
+    const wrap = document.getElementById('lv-scroll-wrap-' + lid);
+    if (wrap && !wrap._hasWheel) {
+      wrap._hasWheel = true;
+      wrap.addEventListener('wheel', (ev) => {
+        if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
+          ev.preventDefault();
+          wrap.scrollLeft += ev.deltaY * 1.5;
+        }
+      }, { passive: false });
+    }
+  }, 50);
 }
 
 function _lvRenderPagination(pg, total){
@@ -9209,66 +9339,291 @@ async function testShareToNumber() {
 }
 window.testShareToNumber = testShareToNumber;
 
-async function postPosterAnnouncement() {
-  if (typeof window.postPosterAnnouncement === 'function' && window.postPosterAnnouncement !== postPosterAnnouncement) {
-    return await window.postPosterAnnouncement();
-  }
+let _currentPosterBlob = null;
+let _currentPosterDataUrl = null;
+
+async function openPostToPortalModal() {
   const container = document.getElementById('posterCanvasWrapper');
-  if(!container) { toast('Poster preview not ready', 'error'); return; }
+  const customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+  
+  if (!container && !customImg) {
+    if (typeof toast === 'function') toast('Poster preview not ready', 'error');
+    else alert('Poster preview not ready');
+    return;
+  }
 
-  const shareDetails = getPosterShareDetails();
-  const partnerName = shareDetails.partnerName;
-  const partnerOverall = shareDetails.partnerOverall;
-  const partnerToday = shareDetails.partnerToday;
+  const shareDetails = (typeof getPosterShareDetails === 'function') ? getPosterShareDetails() : {};
+  const partnerName = shareDetails.partnerName || 'Partner';
+  
+  const titleInput = document.getElementById('postPortalTitle');
+  const descInput = document.getElementById('postPortalDescription');
+  const memberTitle = document.getElementById('postPortalSummaryMember');
+  const thumbImg = document.getElementById('postPortalThumbnail');
+  const thumbIcon = document.getElementById('postPortalThumbIcon');
+  const statusDiv = document.getElementById('postPortalStatus');
+  const expirySelect = document.getElementById('postExpirySelect');
+  const customWrapper = document.getElementById('customExpiryWrapper');
+  const destBoth = document.querySelector('input[name="postDestinationRadio"][value="both"]');
 
-  if(!confirm(`📣 POST ANNOUNCEMENT ON LOGIN SCREEN\n--------------------------------------------------\n• Member Name: ${partnerName}\n• Today's Earning: ${partnerToday}\n• Overall Earning: ${partnerOverall}\n\nDo you want to publish this Achievement Poster announcement to the Login Screen slideshow now?`)) return;
+  if (titleInput) titleInput.value = `🎉 Achievement: ${partnerName}`;
+  if (descInput) descInput.value = shareDetails.text || '';
+  if (memberTitle) memberTitle.textContent = `${partnerName} — Achievement Banner`;
+  if (statusDiv) { statusDiv.style.display = 'none'; statusDiv.textContent = ''; }
+  if (expirySelect) expirySelect.value = '5d';
+  if (customWrapper) customWrapper.style.display = 'none';
+  if (destBoth) destBoth.checked = true;
+  onPostDestinationChange();
+  onPostExpiryChange();
 
-  const spinner = document.getElementById('posterSpinner');
-  if (spinner) spinner.style.display = 'flex';
+  // Load preview thumbnail
+  _currentPosterBlob = null;
+  _currentPosterDataUrl = null;
+
+  if (customImg) {
+    _currentPosterDataUrl = customImg;
+    if (thumbImg) {
+      thumbImg.src = customImg;
+      thumbImg.style.display = 'block';
+      if (thumbIcon) thumbIcon.style.display = 'none';
+    }
+  } else if (container) {
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (canvas) {
+        const dataUrl = safeToDataURL(canvas);
+        _currentPosterDataUrl = dataUrl;
+        if (thumbImg && dataUrl) {
+          thumbImg.src = dataUrl;
+          thumbImg.style.display = 'block';
+          if (thumbIcon) thumbIcon.style.display = 'none';
+        }
+      }
+    } catch (e) {
+      console.warn('Could not generate instant thumbnail preview:', e);
+    }
+  }
+
+  const modal = document.getElementById('postToPortalModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closePostToPortalModal() {
+  const modal = document.getElementById('postToPortalModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function onPostDestinationChange() {
+  const radios = document.querySelectorAll('input[name="postDestinationRadio"]');
+  radios.forEach(r => {
+    const parentLabel = r.closest('label');
+    if (parentLabel) {
+      if (r.checked) {
+        parentLabel.style.borderColor = '#6366f1';
+        parentLabel.style.background = '#eef2ff';
+        parentLabel.style.boxShadow = '0 0 0 2px rgba(99,102,241,0.2)';
+      } else {
+        parentLabel.style.borderColor = '#d1d5db';
+        parentLabel.style.background = '#ffffff';
+        parentLabel.style.boxShadow = 'none';
+      }
+    }
+  });
+}
+
+function onPostExpiryChange() {
+  const sel = document.getElementById('postExpirySelect');
+  const customWrap = document.getElementById('customExpiryWrapper');
+  const explain = document.getElementById('expiryExplanationText');
+  const customInput = document.getElementById('customExpiryInput');
+  if (!sel) return;
+
+  if (sel.value === 'custom') {
+    if (customWrap) customWrap.style.display = 'block';
+    if (customInput && !customInput.value) {
+      const defDate = new Date(Date.now() + 5 * 86400 * 1000);
+      customInput.value = defDate.toISOString().slice(0, 16);
+    }
+    if (explain) explain.textContent = 'ℹ️ Specify an exact date & time when this post should be unlisted.';
+  } else {
+    if (customWrap) customWrap.style.display = 'none';
+    const expMap = {
+      '24h': 'ℹ️ Announcement will be automatically retired after 24 hours.',
+      '3d': 'ℹ️ Announcement will be automatically retired after 3 days.',
+      '5d': 'ℹ️ Announcement will be automatically retired after 5 days (recommended).',
+      '7d': 'ℹ️ Announcement will be automatically retired after 7 days.',
+      '30d': 'ℹ️ Announcement will be automatically retired after 30 days.',
+      'never': 'ℹ️ Post will remain permanently visible until manually deleted.'
+    };
+    if (explain) explain.textContent = expMap[sel.value] || '';
+  }
+}
+
+async function submitPostToPortal() {
+  const titleInput = document.getElementById('postPortalTitle');
+  const descInput = document.getElementById('postPortalDescription');
+  const expirySelect = document.getElementById('postExpirySelect');
+  const customInput = document.getElementById('customExpiryInput');
+  const statusDiv = document.getElementById('postPortalStatus');
+  const btnSubmit = document.getElementById('btnConfirmPostPortal');
+  const btnSubmitText = document.getElementById('btnConfirmPostPortalText');
+  const btnCancel = document.getElementById('btnCancelPostPortal');
+
+  const title = (titleInput ? titleInput.value : '').trim();
+  if (!title) {
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#dc2626';
+      statusDiv.textContent = '⚠️ Please enter an announcement title.';
+    }
+    return;
+  }
+
+  const selectedRadio = document.querySelector('input[name="postDestinationRadio"]:checked');
+  const destination = selectedRadio ? selectedRadio.value : 'both';
+
+  // Calculate expires_at ISO string
+  let expiresAtIso = null;
+  const expVal = expirySelect ? expirySelect.value : '5d';
+  const nowMs = Date.now();
+  if (expVal === '24h') {
+    expiresAtIso = new Date(nowMs + 24 * 3600 * 1000).toISOString();
+  } else if (expVal === '3d') {
+    expiresAtIso = new Date(nowMs + 3 * 86400 * 1000).toISOString();
+  } else if (expVal === '5d') {
+    expiresAtIso = new Date(nowMs + 5 * 86400 * 1000).toISOString();
+  } else if (expVal === '7d') {
+    expiresAtIso = new Date(nowMs + 7 * 86400 * 1000).toISOString();
+  } else if (expVal === '30d') {
+    expiresAtIso = new Date(nowMs + 30 * 86400 * 1000).toISOString();
+  } else if (expVal === 'custom' && customInput && customInput.value) {
+    expiresAtIso = new Date(customInput.value).toISOString();
+  } else if (expVal === 'never') {
+    expiresAtIso = '';
+  }
+
+  // Obtain image blob
+  let blob = _currentPosterBlob;
+  if (!blob) {
+    const customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+    if (customImg) {
+      try {
+        blob = await (await fetch(customImg)).blob();
+      } catch (e) {
+        console.warn('Custom image blob error:', e);
+      }
+    }
+    if (!blob) {
+      const container = document.getElementById('posterCanvasWrapper');
+      if (container) {
+        try {
+          const canvas = await capturePosterCanvas(container);
+          if (canvas) {
+            const dataUrl = safeToDataURL(canvas);
+            if (dataUrl) {
+              blob = await (await fetch(dataUrl)).blob();
+            }
+          }
+        } catch (cErr) {
+          console.error('Canvas capture error:', cErr);
+        }
+      }
+    }
+  }
+
+  if (!blob) {
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#dc2626';
+      statusDiv.textContent = '❌ Failed to capture poster image. Please try again.';
+    }
+    return;
+  }
+
+  // Set loading UI
+  if (btnSubmit) btnSubmit.disabled = true;
+  if (btnCancel) btnCancel.disabled = true;
+  if (btnSubmitText) btnSubmitText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…';
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = '#eff6ff';
+    statusDiv.style.color = '#1d4ed8';
+    statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading banner &amp; publishing…';
+  }
+
+  const shareDetails = (typeof getPosterShareDetails === 'function') ? getPosterShareDetails() : {};
+  const partnerName = shareDetails.partnerName || 'Partner';
+  const cleanPartnerName = partnerName.replace(/\s+/g, '_');
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', descInput ? descInput.value : '');
+  formData.append('category_id', destination === 'shoutout' ? '11' : '11');
+  formData.append('submission_type', 'photo');
+  formData.append('destination', destination);
+  if (expiresAtIso) {
+    formData.append('expires_at', expiresAtIso);
+  }
+  formData.append('visible_to', 'vgk');
+  formData.append('force', 'true');
+  formData.append('files', blob, `${cleanPartnerName}_Achievement.png`);
+
+  const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
+  const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
 
   try {
-    const canvas = await capturePosterCanvas(container);
-    if (!canvas) throw new Error('Failed to capture poster canvas');
-
-    const dataUrl = safeToDataURL(canvas);
-    let blob = null;
-    if (dataUrl) {
-      blob = await (await fetch(dataUrl)).blob();
-    }
-
-    const shareText = shareDetails.text;
-
-    const formData = new FormData();
-    formData.append('title', `🎉 Achievement Poster: ${partnerName}`);
-    formData.append('description', shareText);
-    formData.append('category_id', '1');
-    formData.append('submission_type', 'photo');
-    formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
-
-    const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
-    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-
-    const r = await fetch(`${apiBase}/feedback/staff/submit`, {
+    const res = await fetch(`${apiBase}/feedback/submit-staff-announcement`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + tok },
       body: formData
     });
-    const d = await r.json();
+    const data = await res.json();
 
-    if (spinner) spinner.style.display = 'none';
-
-    if (!r.ok || (!d.success && d.status !== 'success')) {
-      throw new Error(d.detail || d.message || 'Failed to submit announcement');
+    if (!res.ok || (!data.success && data.status !== 'success')) {
+      throw new Error(data.detail || data.message || 'Failed to submit announcement');
     }
 
-    alert(`✅ ANNOUNCEMENT POSTED SUCCESSFULLY!\n--------------------------------------------------\nMember: ${partnerName}\nAchievement poster announcement is now live on the login screen slideshow!`);
-    toast('✅ Announcement published to login screen!', 'success');
-  } catch(err) {
-    if (spinner) spinner.style.display = 'none';
-    console.error('Post Announcement error:', err);
-    toast('Failed to post announcement: ' + err.message, 'error');
+    if (statusDiv) {
+      statusDiv.style.background = '#ecfdf5';
+      statusDiv.style.color = '#047857';
+      statusDiv.innerHTML = '✅ Successfully published to MyntOS!';
+    }
+    if (typeof toast === 'function') toast('✅ Published to MyntOS Portal successfully!', 'success');
+    else alert('✅ Published to MyntOS Portal successfully!');
+
+    setTimeout(() => {
+      closePostToPortalModal();
+      if (btnSubmit) btnSubmit.disabled = false;
+      if (btnCancel) btnCancel.disabled = false;
+      if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
+    }, 1200);
+
+  } catch (err) {
+    console.error('Portal submit error:', err);
+    if (statusDiv) {
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#dc2626';
+      statusDiv.textContent = '❌ ' + (err.message || 'Error publishing post');
+    }
+    if (typeof toast === 'function') toast('Error publishing: ' + err.message, 'error');
+    if (btnSubmit) btnSubmit.disabled = false;
+    if (btnCancel) btnCancel.disabled = false;
+    if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
   }
 }
+
+// Backwards compatibility alias
+async function postPosterAnnouncement() {
+  return openPostToPortalModal();
+}
+
+window.openPostToPortalModal = openPostToPortalModal;
+window.closePostToPortalModal = closePostToPortalModal;
+window.onPostDestinationChange = onPostDestinationChange;
+window.onPostExpiryChange = onPostExpiryChange;
+window.submitPostToPortal = submitPostToPortal;
+window.postPosterAnnouncement = openPostToPortalModal;
 
 function showDirectWaShareDialog({ memberName, memberPhone, seniorName, seniorPhone, msgText }) {
   const old = document.getElementById('directWaShareModal');
@@ -10466,9 +10821,120 @@ function _renderCommDetailTable(partnerId) {
       <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
       <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
       <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
-      <button onclick="postPosterAnnouncement()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post Announcement</button>
+      <button onclick="openPostToPortalModal()" id="btnPostToPortal" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
       <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
+  </div>
+</div>
+
+<!-- ── POST TO PORTAL (ANNOUNCEMENT / SHOUTOUT) MODAL ── -->
+<div id="postToPortalModal" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+  <div style="background:#ffffff;border-radius:16px;width:100%;max-width:540px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)">
+    
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c7d2fe">
+          <i class="fas fa-bullhorn me-1"></i> MyntOS Portal Publisher
+        </div>
+        <div style="font-size:17px;font-weight:900;color:#ffffff;margin-top:2px">
+          Publish Announcement / Shoutout
+        </div>
+      </div>
+      <button onclick="closePostToPortalModal()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center">&times;</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:18px 20px;overflow-y:auto;flex:1;background:#f9fafb;display:flex;flex-direction:column;gap:16px">
+      
+      <!-- Target Destination Selection -->
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <i class="fas fa-share-alt" style="color:#6366f1"></i> Target Destination <span style="color:#ef4444">*</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <label style="border:1.5px solid #6366f1;border-radius:10px;padding:10px 8px;cursor:pointer;background:#eef2ff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;transition:all 0.15s;box-shadow:0 0 0 2px rgba(99,102,241,0.2)" id="destLabelBoth">
+            <input type="radio" name="postDestinationRadio" value="both" checked onchange="onPostDestinationChange()" style="margin:0">
+            <span style="font-size:12px;font-weight:700;color:#1e293b">Both</span>
+            <span style="font-size:9.5px;color:#64748b;line-height:1.2">Login &amp; Portal</span>
+          </label>
+          <label style="border:1.5px solid #d1d5db;border-radius:10px;padding:10px 8px;cursor:pointer;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;transition:all 0.15s" id="destLabelAnnouncement">
+            <input type="radio" name="postDestinationRadio" value="announcement" onchange="onPostDestinationChange()" style="margin:0">
+            <span style="font-size:12px;font-weight:700;color:#1e293b">Announcement</span>
+            <span style="font-size:9.5px;color:#64748b;line-height:1.2">Login Carousel</span>
+          </label>
+          <label style="border:1.5px solid #d1d5db;border-radius:10px;padding:10px 8px;cursor:pointer;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;transition:all 0.15s" id="destLabelShoutout">
+            <input type="radio" name="postDestinationRadio" value="shoutout" onchange="onPostDestinationChange()" style="margin:0">
+            <span style="font-size:12px;font-weight:700;color:#1e293b">Shoutouts</span>
+            <span style="font-size:9.5px;color:#64748b;line-height:1.2">Member Tab</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Expiry Duration Selector -->
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <i class="fas fa-hourglass-half" style="color:#f59e0b"></i> Display Expiry <span style="color:#ef4444">*</span>
+        </label>
+        <select id="postExpirySelect" onchange="onPostExpiryChange()" style="width:100%;padding:9px 12px;font-size:12.5px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;color:#1e293b;font-weight:600">
+          <option value="24h">24 Hours (1 Day)</option>
+          <option value="3d">3 Days</option>
+          <option value="5d" selected>5 Days (Default - Recommended)</option>
+          <option value="7d">7 Days (1 Week)</option>
+          <option value="30d">30 Days (1 Month)</option>
+          <option value="never">No Expiry (Active Until Manually Removed)</option>
+          <option value="custom">Custom Date &amp; Time…</option>
+        </select>
+        <div id="customExpiryWrapper" style="display:none;margin-top:8px">
+          <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:3px">Specify Expiration Date &amp; Time:</label>
+          <input type="datetime-local" id="customExpiryInput" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff">
+        </div>
+        <div id="expiryExplanationText" style="font-size:11px;color:#64748b;margin-top:4px">
+          ℹ️ Announcement will be automatically retired after 5 days (recommended).
+        </div>
+      </div>
+
+      <!-- Title Input -->
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:4px;display:block">
+          Announcement / Shoutout Title <span style="color:#ef4444">*</span>
+        </label>
+        <input type="text" id="postPortalTitle" style="width:100%;padding:9px 12px;font-size:12.5px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;color:#1e293b;font-weight:600" placeholder="e.g. 🎉 Achievement: Partner Name">
+      </div>
+
+      <!-- Caption / Description Input -->
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:4px;display:block">
+          Caption / Description
+        </label>
+        <textarea id="postPortalDescription" rows="3" style="width:100%;padding:9px 12px;font-size:12px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;color:#1e293b;font-family:inherit;resize:vertical" placeholder="Enter shoutout / announcement details…"></textarea>
+      </div>
+
+      <!-- Thumbnail & Summary Row -->
+      <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px">
+        <div id="postPortalThumbContainer" style="width:52px;height:52px;border-radius:8px;background:#1e293b;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid #cbd5e1">
+          <img id="postPortalThumbnail" src="" style="width:100%;height:100%;object-fit:cover;display:none" alt="Poster Preview">
+          <i id="postPortalThumbIcon" class="fas fa-image" style="color:#94a3b8;font-size:18px"></i>
+        </div>
+        <div style="font-size:11.5px;color:#475569;line-height:1.4">
+          <div style="font-weight:700;color:#1e293b" id="postPortalSummaryMember">Partner Achievement Banner</div>
+          <div id="postPortalSummaryInfo">Reuses exact finalized creative image without regeneration.</div>
+        </div>
+      </div>
+
+      <!-- Status Toast / Alert within Modal -->
+      <div id="postPortalStatus" style="display:none;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600"></div>
+
+    </div>
+
+    <!-- Footer Actions -->
+    <div style="background:#f3f4f6;padding:12px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0">
+      <button type="button" onclick="closePostToPortalModal()" id="btnCancelPostPortal" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button type="button" onclick="submitPostToPortal()" id="btnConfirmPostPortal" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(99,102,241,0.3)">
+        <i class="fas fa-paper-plane"></i> <span id="btnConfirmPostPortalText">Publish to Portal</span>
+      </button>
+    </div>
+
   </div>
 </div>
 

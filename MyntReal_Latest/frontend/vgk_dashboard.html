@@ -9889,7 +9889,7 @@
                     if (el) el.textContent = d.total != null ? d.total : '—';
                 }).catch(() => {});
         }
-        fetch('/api/v1/feedback/public/announcements?platform=vgk&limit=20')
+        fetch('/api/v1/feedback/public/announcements?platform=vgk&destination=shoutout&limit=5')
             .then(r => r.json()).then(d => {
                 const el = document.getElementById('mCnt-shoutouts');
                 if (el) el.textContent = Array.isArray(d) ? d.length : '—';
@@ -9924,7 +9924,7 @@
         grid.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px"><i class="fas fa-spinner fa-spin fa-2x" style="display:block;margin-bottom:12px"></i>Loading…</div>';
         try {
             if (type === 'shoutouts') {
-                const r = await fetch('/api/v1/feedback/public/announcements?platform=vgk&limit=20');
+                const r = await fetch('/api/v1/feedback/public/announcements?platform=vgk&destination=shoutout&limit=5');
                 const d = await r.json();
                 if (!r.ok) throw new Error('Failed to load announcements');
                 const items = Array.isArray(d) ? d : [];

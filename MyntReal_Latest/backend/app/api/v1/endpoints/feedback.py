@@ -86,6 +86,8 @@ class SubmissionResponse(BaseModel):
     media: List[MediaResponse]  # Frontend expects 'media'
     user_name: str
     user_id: str
+    target_destination: Optional[str] = 'both'
+    expires_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -118,6 +120,8 @@ class AnnouncementResponse(BaseModel):
 
     # Audience targeting
     visible_to: str = 'both'  # 'mnr', 'vgk', or 'both'
+    target_destination: Optional[str] = 'both'  # 'announcement', 'shoutout', 'both'
+    expires_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -601,17 +605,23 @@ async def submit_staff_announcement(
     description: str = Form(None),
     category_id: int = Form(...),
     submission_type: str = Form(...),  # 'video', 'photo', or 'text'
+    destination: str = Form("both"),  # 'announcement', 'shoutout', or 'both'
+    expires_at: Optional[str] = Form(None),  # ISO datetime string or empty
+    visible_to: Optional[str] = Form(None),  # 'vgk', 'mnr', 'both'
+    force: bool = Form(False),
     files: List[UploadFile] = File(default=None),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_staff_user)
 ):
     """
-    DC Protocol (Jan 23, 2026): Staff announcement submission with Supreme auto-approval
+    DC Protocol (Jan 23, 2026 / Upgraded Sep 2026): Staff announcement submission with Supreme auto-approval
+    - Supports target_destination: 'announcement', 'shoutout', 'both'
+    - Supports query-time expires_at timestamp
     - Supreme staff (VGK4U_SUPREME, RVZ_SUPREME, VGK4U, VGK4U_EA) get immediate approval
     - Media limits: 1-10 images, videos up to 3 minutes
     - All uploads go to Object Storage for persistence
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     from app.models.staff import StaffEmployee
     
     # Validate staff user
@@ -634,6 +644,27 @@ async def submit_staff_announcement(
     if submission_type not in ["video", "photo", "text"]:
         raise HTTPException(status_code=400, detail="Invalid submission type")
     
+    # Validate destination
+    clean_dest = (destination or 'both').lower().strip()
+    if clean_dest not in ('announcement', 'shoutout', 'both'):
+        clean_dest = 'both'
+
+    # Parse expires_at if provided
+    parsed_expires_at = None
+    if expires_at and expires_at.strip():
+        try:
+            from dateutil import parser as dt_parser
+            parsed_expires_at = dt_parser.parse(expires_at.strip())
+            if parsed_expires_at.tzinfo is None:
+                parsed_expires_at = parsed_expires_at.replace(tzinfo=timezone.utc)
+        except Exception as e:
+            logger.warning(f"Could not parse expires_at '{expires_at}': {e}")
+
+    # Resolve visible_to
+    clean_visible = (visible_to or '').lower().strip()
+    if clean_visible not in ('vgk', 'mnr', 'both'):
+        clean_visible = 'vgk' if clean_dest == 'shoutout' else 'both'
+
     # Validate file requirements
     if submission_type == "text":
         if not description or len(description.strip()) < 10:
@@ -656,22 +687,24 @@ async def submit_staff_announcement(
     if not admin_user:
         raise HTTPException(status_code=500, detail="No valid user found to associate announcement")
     
-    from datetime import datetime, timezone
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    now_utc = datetime.now(timezone.utc)
+    today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Duplicate Guard: Prevent duplicate announcements created on the same day
+    # Duplicate Guard: Prevent duplicate announcements created on the same day if still active
     existing_dup = db.query(FeedbackSubmission).filter(
         FeedbackSubmission.title == title,
-        FeedbackSubmission.submitted_at >= today_start
+        FeedbackSubmission.submitted_at >= today_start,
+        FeedbackSubmission.is_deleted == False
     ).first()
-    if existing_dup:
-        return {
-            "success": True,
-            "duplicate": True,
-            "message": "Announcement already posted today",
-            "submission_id": existing_dup.id,
-            "status": "stopped"
-        }
+    if existing_dup and (existing_dup.expires_at is None or existing_dup.expires_at > now_utc):
+        if not force:
+            return {
+                "success": True,
+                "duplicate": True,
+                "message": "Announcement already posted today",
+                "submission_id": existing_dup.id,
+                "status": "stopped"
+            }
 
     # Staff announcements (including posters) are auto-approved for immediate login page display
     initial_status = SubmissionStatus.APPROVED
@@ -683,9 +716,12 @@ async def submit_staff_announcement(
         title=title,
         description=description,
         status=initial_status,
-        is_visible=True,  # Immediately visible on Login Page
+        is_visible=True,  # Immediately visible on Login Page / Dashboard
         approved_at=datetime.utcnow(),
-        approved_by=str(current_user.id)
+        approved_by=str(current_user.id),
+        target_destination=clean_dest,
+        expires_at=parsed_expires_at,
+        visible_to=clean_visible
     )
     db.add(submission)
     db.flush()
@@ -757,13 +793,17 @@ async def submit_staff_announcement(
                 raise HTTPException(status_code=400, detail=f"Failed to upload {file.filename}: {str(e)}")
     
     db.commit()
+    invalidate_public_announcements_cache()
     
     status_msg = "approved and visible" if is_supreme else "pending review"
     return {
+        "success": True,
         "message": f"Announcement created successfully ({status_msg})",
         "submission_id": submission.id,
         "status": submission.status.value,
         "is_visible": submission.is_visible,
+        "target_destination": submission.target_destination,
+        "expires_at": submission.expires_at.isoformat() if submission.expires_at else None,
         "auto_approved": is_supreme
     }
 
@@ -1810,6 +1850,11 @@ async def share_announcement(
 _PUBLIC_ANNOUNCEMENTS_CACHE = {}
 _PUBLIC_ANNOUNCEMENTS_CACHE_TTL = 60.0  # 60 seconds
 
+def invalidate_public_announcements_cache():
+    """DC Protocol: Explicitly invalidate public announcements in-memory cache"""
+    global _PUBLIC_ANNOUNCEMENTS_CACHE
+    _PUBLIC_ANNOUNCEMENTS_CACHE.clear()
+
 _PUBLIC_CATEGORIES_CACHE = (0.0, [])
 _PUBLIC_CATEGORIES_CACHE_TTL = 120.0  # 120 seconds
 
@@ -1818,18 +1863,23 @@ def get_public_announcements(
     limit: int = 5,
     category_id: Optional[int] = None,
     platform: Optional[str] = None,
+    destination: Optional[str] = None,
+    days: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """
-    DC_ANNOUNCE_001: Public announcements endpoint (WVV-compliant, no auth required)
+    DC_ANNOUNCE_001 (Upgraded Sep 2026): Public announcements endpoint (WVV-compliant, no auth required)
     Supports GET and HEAD requests for proxy infrastructure compatibility
-    Returns visible, approved announcements with metadata (ratings, shares, views)
-    Limited to 5 announcements by default, max 20
-    Optional category_id filter: when provided, returns only that category (e.g. VGK4U Shoutouts)
-    DC Protocol: Optimized with in-memory TTL caching + synchronous thread pool execution for sub-millisecond response
+    Returns visible, approved, non-expired announcements / shoutouts.
+    - Default limit: 5 (or up to 50)
+    - Supports destination filter: 'announcement', 'shoutout', 'both'
+    - Supports days filter: e.g. last 5 days
+    - Query-time automatic expiry enforcement (expires_at > now or expires_at is null)
+    - In-memory cache with instant expiry eviction
     """
     import time
-    from sqlalchemy import func
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import func, or_, text as _text
     from sqlalchemy.orm import joinedload
     from app.models.feedback import AnnouncementRating
 
@@ -1838,23 +1888,48 @@ def get_public_announcements(
     if limit < 1:
         limit = 5
 
-    cache_key = f"{limit}:{category_id}:{platform}"
+    cache_key = f"{limit}:{category_id}:{platform}:{destination}:{days}"
     now = time.time()
+    now_utc = datetime.now(timezone.utc)
+
     if cache_key in _PUBLIC_ANNOUNCEMENTS_CACHE:
         cached_ts, cached_resp = _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key]
         if now - cached_ts < _PUBLIC_ANNOUNCEMENTS_CACHE_TTL:
-            return cached_resp
+            # Check if any cached item expired since caching
+            has_expired = False
+            for itm in cached_resp:
+                if itm.expires_at and itm.expires_at <= now_utc:
+                    has_expired = True
+                    break
+            if not has_expired:
+                return cached_resp
 
     base_filter = [
         FeedbackSubmission.is_visible == True,
-        FeedbackSubmission.status == SubmissionStatus.APPROVED
+        FeedbackSubmission.status == SubmissionStatus.APPROVED,
+        or_(FeedbackSubmission.is_deleted == False, FeedbackSubmission.is_deleted == None),
+        # Expiry rule: Active only if expires_at is NULL or expires_at > now
+        or_(FeedbackSubmission.expires_at == None, FeedbackSubmission.expires_at > now_utc)
     ]
     if category_id:
         base_filter.append(FeedbackSubmission.category_id == category_id)
+
+    # Destination filtering (Announcement vs Shoutout vs Both)
+    if destination:
+        dest_clean = destination.lower().strip()
+        if dest_clean in ('announcement', 'shoutout'):
+            base_filter.append(FeedbackSubmission.target_destination.in_([dest_clean, 'both']))
+        elif dest_clean == 'both':
+            base_filter.append(FeedbackSubmission.target_destination.in_(['announcement', 'shoutout', 'both']))
+
+    # Optional days window (e.g. last 5 days)
+    if days and days > 0:
+        cutoff = now_utc - timedelta(days=days)
+        base_filter.append(FeedbackSubmission.submitted_at >= cutoff)
+
     try:
         # Audience targeting: filter by platform if provided
         if platform in ('mnr', 'vgk'):
-            from sqlalchemy import or_, text as _text
             if platform == 'vgk':
                 _vgk_cat_rows = db.execute(
                     _text("SELECT id FROM feedback_categories WHERE LOWER(name) LIKE '%vgk%shoutout%' OR LOWER(name) LIKE '%vgk4u shoutout%'")
@@ -1936,7 +2011,9 @@ def get_public_announcements(
                 total_ratings=total_ratings_value,
                 shares_count=ann.shares_count or 0,
                 views_count=ann.views_count or 0,
-                visible_to=getattr(ann, 'visible_to', 'both') or 'both'
+                visible_to=getattr(ann, 'visible_to', 'both') or 'both',
+                target_destination=getattr(ann, 'target_destination', 'both') or 'both',
+                expires_at=getattr(ann, 'expires_at', None)
             ))
 
         _PUBLIC_ANNOUNCEMENTS_CACHE[cache_key] = (now, response_list)

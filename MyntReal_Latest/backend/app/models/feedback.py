@@ -94,6 +94,15 @@ class FeedbackSubmission(Base):
     # 'both' → visible to everyone (default)
     visible_to = Column(String(10), default='both', nullable=False, index=True)
 
+    # Publication destination targeting (DC Protocol Sep 2026: Banner -> Announcement / Shoutout publication)
+    # 'announcement' → Appears in Announcements feeds
+    # 'shoutout'     → Appears in VGK4U Shoutouts feeds
+    # 'both'         → Appears in both Announcement and Shoutout feeds
+    target_destination = Column(String(20), default='both', nullable=False, index=True)
+
+    # Expiry timestamp (NULL = never expires; otherwise inactive when expires_at <= NOW())
+    expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
     # Soft Delete (Dec 2025) - DC Protocol compliant with restore capability
     is_deleted = Column(Boolean, default=False, index=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
