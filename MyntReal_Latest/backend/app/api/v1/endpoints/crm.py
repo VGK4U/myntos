@@ -15519,19 +15519,25 @@ def validate_transaction(
         db.refresh(txn)
         txn_dict = txn.to_dict()
 
-        # DC-DVR-ADV-TXN-HOOK-001 (Jul 2026): Trigger DVR advance when payment is validated.
-        # validate_transaction updates deal_value_received directly (not via update_lead),
-        # so the secondary hook in update_lead never fires.  Fire it here instead.
-        if lead and (lead.deal_value_received or 0) > 0:
+        # DC-STAGE2-PMT-TXN-HOOK-001 (Sep 2026): Trigger Payment-Based Stage 2 advance on transaction validation.
+        # Calculates applicable percentage on this actual payment amount across 5 layers with Option C pro-rata Stage 1 recovery.
+        if lead and (txn.amount or 0) > 0:
             try:
-                from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_txn_fn
-                _dvr_txn_res = _dvr_txn_fn(db, lead.id)
-                if _dvr_txn_res.get('created'):
-                    logger.info(f'[DC-DVR-ADV-TXN] Lead {lead.id}: DVR advances {_dvr_txn_res.get("entry_numbers")} created via txn validation')
+                from app.services.vgk_solar_advance import process_payment_stage2_advance as _proc_s2_fn
+                from decimal import Decimal
+                _s2_txn_res = _proc_s2_fn(
+                    db=db,
+                    lead_id=lead.id,
+                    transaction_id=txn.id,
+                    payment_amount=Decimal(str(txn.amount or 0)),
+                    transaction_date=txn.transaction_date or txn.validated_at or now
+                )
+                if _s2_txn_res.get('created'):
+                    logger.info(f'[STAGE2-ADV-TXN] Lead {lead.id} Txn #{txn.id}: Stage 2 advances {_s2_txn_res.get("entry_numbers")} created via payment validation')
                 else:
-                    logger.debug(f'[DC-DVR-ADV-TXN] Lead {lead.id}: {_dvr_txn_res.get("reason")}')
-            except Exception as _dvr_txn_e:
-                logger.warning(f'[DC-DVR-ADV-TXN] Hook failed for lead {lead.id}: {_dvr_txn_e}')
+                    logger.debug(f'[STAGE2-ADV-TXN] Lead {lead.id} Txn #{txn.id}: {_s2_txn_res.get("reason")}')
+            except Exception as _s2_txn_e:
+                logger.warning(f'[STAGE2-ADV-TXN] Hook failed for lead {lead.id} txn #{txn.id}: {_s2_txn_e}')
 
         # VGK Self-Business Points hook (every ₹5,00,000 DVR = 50,000 points)
         if lead and getattr(lead, 'associated_partner_id', None) and (lead.deal_value_received or 0) > 0:
@@ -15645,6 +15651,12 @@ def validate_transaction(
         txn.validated_at = now
         txn.rejection_reason = action_data.rejection_reason
         message = 'Transaction rejected'
+        
+        try:
+            from app.services.vgk_solar_advance import cancel_payment_stage2_advance as _cancel_s2
+            _cancel_s2(db, txn.id, cancelled_by_id=current_employee.id, reason=action_data.rejection_reason)
+        except Exception as _c_err:
+            logger.warning(f"[STAGE2-ADV] cancel hook error for txn #{txn.id}: {_c_err}")
         
     else:
         raise HTTPException(status_code=400, detail="Invalid action. Use 'validate' or 'reject'")

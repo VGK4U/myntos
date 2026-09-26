@@ -34,6 +34,7 @@ class VGKCashIncomeEntry(BaseModel):
 
     partner_id             = Column(Integer, ForeignKey('official_partners.id', ondelete='CASCADE'), nullable=False, index=True)
     source_lead_id         = Column(Integer, ForeignKey('crm_leads.id', ondelete='SET NULL'), nullable=True, index=True)
+    source_transaction_id  = Column(Integer, nullable=True, index=True)  # DC_VGK_STAGE2_PAYMENT_ADVANCE_001
     category_id            = Column(Integer, ForeignKey('signup_categories.id', ondelete='SET NULL'), nullable=True)
     bonanza_id             = Column(Integer, ForeignKey('bonanza.id', ondelete='SET NULL'), nullable=True)
 
@@ -59,6 +60,8 @@ class VGKCashIncomeEntry(BaseModel):
     # Universal Incentive Engine: program tracking & advance adjustment deduction
     program_version         = Column(String(30), nullable=False, default='v1_legacy')
     advance_adjusted_amount = Column(Numeric(15, 2), nullable=False, default=0)
+    earning_basis_type      = Column(String(50), nullable=True)
+    earning_basis_amount    = Column(Numeric(15, 2), nullable=True)
 
     confirmed_by_id        = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
     confirmed_at           = Column(DateTime, nullable=True)

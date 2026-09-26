@@ -3952,8 +3952,13 @@ class IncomeEntryService:
                     if (_dvr_lead_chk and
                             _dvr_lead_chk.associated_partner_id and
                             float(_dvr_lead_chk.deal_value_received or 0) > 0):
-                        from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_ie_fn
-                        _dvr_res = _dvr_ie_fn(db, _dvr_lead_id)
+                        if getattr(entry, 'crm_transaction_id', None):
+                            from app.services.vgk_solar_advance import process_payment_stage2_advance as _s2_ie_fn
+                            _entry_amt = Decimal(str(entry.amount or 0))
+                            _dvr_res = _s2_ie_fn(db, _dvr_lead_id, entry.crm_transaction_id, _entry_amt, entry.income_date or get_indian_time())
+                        else:
+                            from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_ie_fn
+                            _dvr_res = _dvr_ie_fn(db, _dvr_lead_id)
                         import logging as _dvr_lg
                         if _dvr_res.get('created'):
                             _dvr_lg.getLogger(__name__).info(

@@ -53,14 +53,26 @@ class VGK4UWaterfallEngine:
         cls, db: Session, category_slug: str, version_label: str = DEFAULT_VERSION
     ) -> Optional[VGK4UCategoryCommissionConfig]:
         """
-        Fetch active category commission configuration.
+        Fetch active category commission configuration with alias resolution.
         """
         slug = (category_slug or 'solar').strip().lower()
+        if slug in ('training', 'etc'):
+            slug = 'etc-training'
+        elif slug in ('real_estate', 'real-estate', 'realestate'):
+            slug = 'real-dreams'
+
         cfg = db.query(VGK4UCategoryCommissionConfig).filter(
             VGK4UCategoryCommissionConfig.category_slug == slug,
             VGK4UCategoryCommissionConfig.version_label == version_label,
             VGK4UCategoryCommissionConfig.is_active == True,
         ).first()
+
+        if not cfg:
+            # Fallback matching slug without version_label
+            cfg = db.query(VGK4UCategoryCommissionConfig).filter(
+                VGK4UCategoryCommissionConfig.category_slug == slug,
+                VGK4UCategoryCommissionConfig.is_active == True,
+            ).first()
 
         if not cfg:
             # Fallback to solar if unknown
@@ -192,29 +204,8 @@ class VGK4UWaterfallEngine:
             'notes': f'Producer Personal Sales Commission ({effective_producer_pct}%)'
         })
 
-        # 4. Dynamic Roll-Up Team Leadership Overrides (3.00% Pool)
         remaining_differential_pool = max_network_pool - effective_producer_pct
         current_tier_rate = effective_producer_pct
-
-        # Rates per tier:
-        # Senior: sponsor_rate_cfg (1.50%)
-        # Extended: mgr_diff_rate (1.00%)
-        # Core: gm_diff_rate (0.50%)
-        senior_rate = sponsor_rate_cfg if sponsor_rate_cfg > Decimal('0.00') else Decimal('1.50')
-        extended_rate = mgr_diff_rate if mgr_diff_rate > Decimal('0.00') else Decimal('1.00')
-        core_rate = gm_diff_rate if gm_diff_rate > Decimal('0.00') else Decimal('0.50')
-
-        senior_allocated = False
-        extended_allocated = False
-        core_allocated = False
-
-        # If producer absorbed any tiers (e.g. higher producer rate):
-        if effective_producer_pct >= (base_rate + senior_rate):
-            senior_allocated = True
-        if effective_producer_pct >= (base_rate + senior_rate + extended_rate):
-            extended_allocated = True
-        if effective_producer_pct >= max_network_pool:
-            core_allocated = True
 
         def _get_rank_order(career_desig: Optional[str], is_apex: bool = False) -> int:
             if is_apex:
@@ -230,8 +221,56 @@ class VGK4UWaterfallEngine:
                 return 1
             return 0
 
-        # Traverse upline chain starting with direct sponsor
+        # 4. Direct Sponsor Override (Decision 3 - Immediate Direct Sponsor ONLY)
+        # Paid ONLY to the immediate parent of L1 Producer. Requires active Channel Partner (Rank >= 1).
+        # NEVER paid to indirect uplines. If missing/inactive/unqualified, sweeps to APEX_REMAINDER.
         resolved_sponsor_id = direct_sponsor_id or producer_status.get('parent_partner_id')
+        if sponsor_rate_cfg > Decimal('0.00') and not is_apex_producer and resolved_sponsor_id:
+            s_info = career_status_map.get(resolved_sponsor_id)
+            if s_info and s_info.get('is_active', False):
+                s_rank = _get_rank_order(s_info.get('career_designation'), s_info.get('is_apex_node', False))
+                if s_rank >= 1:
+                    sp_pct = min(sponsor_rate_cfg, remaining_differential_pool)
+                    if sp_pct > Decimal('0.00'):
+                        sp_gross = (deal_val * (sp_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        sp_ded = cls.compute_deductions(sp_gross)
+                        allocations.append({
+                            'role': 'DIRECT_SPONSOR_OVERRIDE',
+                            'level': 2,
+                            'partner_id': resolved_sponsor_id,
+                            'partner_code': s_info['partner_code'],
+                            'partner_name': s_info['partner_name'],
+                            'career_designation': s_info['career_designation'],
+                            'personal_prod_qualification': s_info['personal_prod_qualification'],
+                            'commission_pct': sp_pct,
+                            'commission_amount': sp_gross,
+                            'admin_charges': sp_ded['admin'],
+                            'tds_amount': sp_ded['tds'],
+                            'net_payout': sp_ded['net'],
+                            'is_differential': False,
+                            'notes': f'Direct Sponsor Override (+{sp_pct}%)'
+                        })
+                        remaining_differential_pool -= sp_pct
+                        current_tier_rate += sp_pct
+
+        # 5. Dynamic Roll-Up Leadership Differentials (Decision 4 - Senior 1.50%, Extended 1.00%, Core 0.50%)
+        senior_rate = mgr_diff_rate
+        extended_rate = gm_diff_rate
+        core_rate = rm_diff_rate
+
+        senior_allocated = False
+        extended_allocated = False
+        core_allocated = False
+
+        # If producer absorbed any tiers (e.g. higher producer rate):
+        if effective_producer_pct >= (base_rate + senior_rate):
+            senior_allocated = True
+        if effective_producer_pct >= (base_rate + senior_rate + extended_rate):
+            extended_allocated = True
+        if effective_producer_pct >= max_network_pool:
+            core_allocated = True
+
+        # Traverse upline chain starting with immediate parent
         curr_partner_id = resolved_sponsor_id
         visited_parents = {producer_partner_id}
 
@@ -245,6 +284,10 @@ class VGK4UWaterfallEngine:
             if not p_info:
                 break
 
+            if not p_info.get('is_active', False):
+                curr_partner_id = p_info.get('parent_partner_id')
+                continue
+
             p_career = p_info.get('career_designation')
             p_is_apex = p_info.get('is_apex_node', False) or (curr_partner_id == ROOT_APEX_PARTNER_ID)
             p_rank = _get_rank_order(p_career, p_is_apex)
@@ -252,20 +295,20 @@ class VGK4UWaterfallEngine:
             claimed_pct = Decimal('0.00')
             notes_parts = []
 
-            # 1. Senior Override (1.50%)
-            if p_rank >= 2 and not senior_allocated:
+            # 1. Senior Differential (1.50%)
+            if p_rank >= 2 and not senior_allocated and senior_rate > Decimal('0.00'):
                 claimed_pct += senior_rate
                 senior_allocated = True
-                notes_parts.append(f'Senior Override (+{senior_rate}%)')
+                notes_parts.append(f'Senior Differential (+{senior_rate}%)')
 
-            # 2. Extended Override (1.00%)
-            if p_rank >= 3 and not extended_allocated:
+            # 2. Extended Differential (1.00%)
+            if p_rank >= 3 and not extended_allocated and extended_rate > Decimal('0.00'):
                 claimed_pct += extended_rate
                 extended_allocated = True
                 notes_parts.append(f'Extended Differential (+{extended_rate}%)')
 
-            # 3. Core Override (0.50%)
-            if p_rank >= 4 and not core_allocated:
+            # 3. Core Differential (0.50%)
+            if p_rank >= 4 and not core_allocated and core_rate > Decimal('0.00'):
                 claimed_pct += core_rate
                 core_allocated = True
                 notes_parts.append(f'Core Differential (+{core_rate}%)')
@@ -276,11 +319,7 @@ class VGK4UWaterfallEngine:
                     alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     ded = cls.compute_deductions(alloc_gross)
 
-                    is_direct_sponsor = (curr_partner_id == resolved_sponsor_id)
-                    if is_direct_sponsor:
-                        role_name = 'DIRECT_SPONSOR_OVERRIDE'
-                        level_num = 2
-                    elif p_rank >= 4:
+                    if p_rank >= 4:
                         role_name = 'RM_DIFFERENTIAL'
                         level_num = 4
                     elif p_rank >= 3:

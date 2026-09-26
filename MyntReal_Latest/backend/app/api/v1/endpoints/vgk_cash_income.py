@@ -1517,7 +1517,8 @@ def unified_action(
                         inner_rel = _rel_dvr(
                             db=db, lead_id=entry.source_lead_id,
                             partner_id=entry.partner_id, level=entry.level,
-                            released_by_id=current_employee.id, notes=notes
+                            released_by_id=current_employee.id, notes=notes,
+                            source_transaction_id=getattr(entry, 'source_transaction_id', None)
                         )
                     if not inner_rel.get('success') and not inner_rel.get('already_released'):
                         raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Advance release failed'))

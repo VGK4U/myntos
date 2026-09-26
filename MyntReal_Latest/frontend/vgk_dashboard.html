@@ -8394,7 +8394,7 @@
                                 <th style="${headerStyle};text-align:center;color:#4b5563">Calc %</th>
                                 ${thSort('Gross ₹', 'gross', 'right')}
                                 <th style="${headerStyle};text-align:right;color:#d97706">Stage 1 Adv.</th>
-                                <th style="${headerStyle};text-align:right;color:#d97706">Stage 2 Adv.</th>
+                                <th style="${headerStyle};text-align:right;color:#d97706" title="Stage 2 Advance is calculated incrementally on validated payment receipts (effective 25-Sep-2026) across all 5 commission layers according to the active canonical commission structure, with pro-rata Stage 1 advance recovery on L1 and L2.">Stage 2 Adv. <i class="fas fa-info-circle" style="font-size:10px"></i></th>
                                 <th style="${headerStyle};text-align:right;color:#dc2626">Lost Adv. ₹</th>
                                 ${thSort('Advance Paid ₹', 'advance_paid', 'right', 'color:#d97706')}
                             </tr>
@@ -12065,7 +12065,7 @@ function vgkAcctWhatsApp() {
                     <!-- Tab 1: In-Progress Files -->
                     <div class="tab-pane fade show active" id="ciAdvTabInProgress" role="tabpanel">
                         <div class="alert alert-info py-2 px-3 mb-3" style="font-size:11.5px;border-radius:8px">
-                            <i class="fas fa-info-circle me-1"></i> These advance payouts were released during Stage 1 / Stage 2 and will be adjusted against the final Stage 3 completion payouts.
+                            <i class="fas fa-info-circle me-1"></i> Stage 1 advances are CIBIL-based; Stage 2 advances are calculated incrementally on validated payment receipts (effective from 25-Sep-2026) across all 5 commission layers, with pro-rata Stage 1 advance recovery on L1 and L2. Any unadjusted balances are settled at final completion.
                         </div>
                         <div class="table-responsive" style="max-height:420px">
                             <table class="table table-sm table-hover align-middle mb-0" style="font-size:11.5px;background:#fff;border-radius:8px;overflow:hidden">

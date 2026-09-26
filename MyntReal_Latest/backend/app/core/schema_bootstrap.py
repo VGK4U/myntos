@@ -2012,6 +2012,54 @@ def bootstrap_slab_advance_auto_cols():
     except Exception as e:
         db.rollback()
         logger.error(f"[DC_BONANZA_SLABWISE_AUTO_001] ❌ Failed to add slab advance columns: {e}")
+
+def bootstrap_vgk_stage2_payment_advances():
+    """
+    DC_VGK_STAGE2_PAYMENT_ADVANCE_001 (Sep 2026):
+    Enable multi-layer payment-based Stage 2 advances and pro-rata Stage 1 advance recovery (Option C).
+    - source_transaction_id on vgk_solar_cibil_advances & vgk_cash_income_entries
+    - remaining_stage1_advance on crm_leads
+    - Updated unique indexes to allow multiple Stage 2 advances per lead while guaranteeing
+      strict idempotency per transaction.
+    """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        db.execute(text("""
+            ALTER TABLE vgk_solar_cibil_advances ADD COLUMN IF NOT EXISTS source_transaction_id INTEGER;
+            CREATE INDEX IF NOT EXISTS ix_vsca_source_txn ON vgk_solar_cibil_advances(source_transaction_id);
+
+            ALTER TABLE vgk_cash_income_entries ADD COLUMN IF NOT EXISTS source_transaction_id INTEGER;
+            CREATE INDEX IF NOT EXISTS ix_vci_source_txn ON vgk_cash_income_entries(source_transaction_id);
+
+            ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS remaining_stage1_advance NUMERIC(12,2) NOT NULL DEFAULT 0.00;
+            ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS remaining_stage1_advance_l1 NUMERIC(12,2);
+            ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS remaining_stage1_advance_l2 NUMERIC(12,2);
+
+            DROP INDEX IF EXISTS uq_vgk_cibil_adv_lead_level_kind;
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_vgk_cibil_adv_lead_level_kind_legacy 
+              ON vgk_solar_cibil_advances (lead_id, level, kind) 
+              WHERE status <> 'RECOVERED' AND source_transaction_id IS NULL;
+
+            DROP INDEX IF EXISTS uq_vsca_txn_level_kind;
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_vsca_txn_partner_level_kind 
+              ON vgk_solar_cibil_advances (source_transaction_id, partner_id, level, kind) 
+              WHERE source_transaction_id IS NOT NULL AND status <> 'RECOVERED';
+
+            DROP INDEX IF EXISTS uq_vgk_cash_income_lead_partner_level_kind;
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_vgk_cash_income_lead_partner_level_kind 
+              ON vgk_cash_income_entries (company_id, source_lead_id, partner_id, level, kind, COALESCE(source_transaction_id, 0), COALESCE(bonanza_id, 0)) 
+              WHERE status <> 'CANCELLED';
+
+            ALTER TABLE vgk_solar_cibil_advances DROP CONSTRAINT IF EXISTS vgk_solar_adv_status_chk;
+            ALTER TABLE vgk_solar_cibil_advances ADD CONSTRAINT vgk_solar_adv_status_chk 
+              CHECK (status IN ('PENDING', 'RELEASED', 'RECOVERED', 'ADJUSTED', 'DEFICIT', 'CANCELLED'));
+        """))
+        db.commit()
+        logger.info("[DC_VGK_STAGE2_PAYMENT_ADVANCE_001] ✅ Stage 2 payment-based advance schema ensured")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[DC_VGK_STAGE2_PAYMENT_ADVANCE_001] ❌ Failed to bootstrap Stage 2 advance schema: {e}")
     finally:
         db.close()
 
@@ -2314,6 +2362,7 @@ def run_schema_bootstrap():
     bootstrap_community_association_name()
     bootstrap_community_idol_photo()
     bootstrap_central_integration_framework()
+    bootstrap_vgk_stage2_payment_advances()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:

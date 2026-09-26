@@ -77,6 +77,7 @@ class VGK4UCategoryCommissionConfig(BaseModel):
     unallocated_balance_pct = Column(Numeric(5, 2), nullable=False, default=0.00)
     admin_charge_pct = Column(Numeric(5, 2), nullable=False, default=8.00)
     tds_pct = Column(Numeric(5, 2), nullable=False, default=2.00)
+    earning_basis_type = Column(String(50), nullable=False, default='PAYMENT_RECEIVED')
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

@@ -60,7 +60,9 @@ def get_cap_status(db: Session, partner_id: int, company_id: int) -> dict:
         """), params).fetchone()
 
         eligible_files = int(eligible_row.cnt) if eligible_row else 0
-        cap_limit = eligible_files // 2
+        # DC-ADV-CAP-CEIL-001: Ensure active files allow at least 1 advance rather than
+        # 1 // 2 = 0 which erroneously blocked partners on their initial file.
+        cap_limit = max(1, (eligible_files + 1) // 2) if eligible_files > 0 else 0
 
         paid_row = db.execute(text("""
             SELECT COUNT(*) AS cnt

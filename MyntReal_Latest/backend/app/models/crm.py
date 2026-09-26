@@ -211,6 +211,9 @@ class CRMLead(BaseModel):
     complete_date = Column(Date, nullable=True)  # DC-COMPLETE-DATE-001: Completion/handover date for solar leads
     first_dvr_confirmed_at = Column(DateTime, nullable=True)  # DC-SOLAR-DVR-ADV-20260701-001: system timestamp when DVR advance was created
     first_payment_received_date = Column(Date, nullable=True)  # DC-FIRST-PMT-001: earliest validated crm_lead_transactions.transaction_date for this lead
+    remaining_stage1_advance = Column(Numeric(12, 2), nullable=False, default=0, server_default='0.00')  # DC_VGK_STAGE2_PAYMENT_ADVANCE_001 (Sep 2026)
+    remaining_stage1_advance_l1 = Column(Numeric(12, 2), nullable=True)  # Stage 1 L1 Producer remaining balance (Sep 2026)
+    remaining_stage1_advance_l2 = Column(Numeric(12, 2), nullable=True)  # Stage 1 L2 Direct Sponsor remaining balance (Sep 2026)
     # CIBIL validation fields (DC Protocol Apr 2026) — gate for ₹1,000 Solar Advance
     cibil_confirmed = Column(Boolean, default=False, nullable=False, server_default='false')
     cibil_score = Column(Integer, nullable=True)  # Must be >= 600 for advance eligibility

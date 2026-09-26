@@ -63,17 +63,19 @@ class TestSolarDVRAdvancePipeline(unittest.TestCase):
             # Insert test partners
             # Partner 99152 has parent_partner_id = 99031 in official_partners
             cls.db.execute(text("""
-                INSERT INTO official_partners (id, partner_code, partner_name, phone, parent_partner_id, company_id, vgk_cash_wallet, vgk_points_balance, category, is_active, created_at, updated_at)
+                INSERT INTO official_partners (id, partner_code, partner_name, phone, parent_partner_id, company_id, vgk_cash_wallet, vgk_points_balance, category, is_active, kyc_status, bank_details_status, created_at, updated_at)
                 VALUES 
-                    (99152, 'TEST_P152', 'Test Partner Direct', '9999990152', 99031, 4, 0.00, 50000.00, 'VGK_TEAM', true, NOW(), NOW()),
-                    (99031, 'TEST_P031', 'Test Partner Senior Parent', '9999990031', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, NOW(), NOW()),
-                    (99032, 'TEST_P032', 'Test Partner Explicit Senior', '9999990032', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, NOW(), NOW()),
-                    (99221, 'TEST_P221', 'Test Partner Support', '9999990221', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, NOW(), NOW())
+                    (99152, 'TEST_P152', 'Test Partner Direct', '9999990152', 99031, 4, 0.00, 50000.00, 'VGK_TEAM', true, 'Approved', 'Approved', NOW(), NOW()),
+                    (99031, 'TEST_P031', 'Test Partner Senior Parent', '9999990031', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, 'Approved', 'Approved', NOW(), NOW()),
+                    (99032, 'TEST_P032', 'Test Partner Explicit Senior', '9999990032', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, 'Approved', 'Approved', NOW(), NOW()),
+                    (99221, 'TEST_P221', 'Test Partner Support', '9999990221', NULL, 4, 0.00, 50000.00, 'VGK_TEAM', true, 'Approved', 'Approved', NOW(), NOW())
                 ON CONFLICT (id) DO UPDATE SET 
                     parent_partner_id = EXCLUDED.parent_partner_id,
                     vgk_points_balance = 50000.00,
                     category = 'VGK_TEAM',
                     is_active = true,
+                    kyc_status = 'Approved',
+                    bank_details_status = 'Approved',
                     updated_at = NOW()
             """))
             cls.cleanup_partner_ids.extend([99152, 99031, 99032, 99221])
@@ -485,6 +487,180 @@ class TestSolarDVRAdvancePipeline(unittest.TestCase):
 
         advs = db.execute(text("SELECT id, level FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND kind = 'DVR_ADVANCE'"), {"lid": lead_id}).fetchall()
         self.assertEqual(len(advs), 2)
+
+    def test_18_advance_payout_not_blocked_by_zero_points_balance(self):
+        """TEST 18: Milestone advances (kind=ADVANCE) can be marked PAID even when partner points balance is 0."""
+        from app.services.vgk_cash_income import mark_paid_cash_income
+        from app.models.vgk_cash_income import VGKCashIncomeEntry
+        db = self.db
+        lead_id = 99014
+        partner_id = 99152
+
+        # Ensure partner has 0 points
+        db.execute(text("UPDATE official_partners SET vgk_points_balance = 0.00, vgk_cash_wallet = 1000.00 WHERE id = :pid"), {"pid": partner_id})
+        db.commit()
+
+        # Create a mock ADVANCE cash income entry in RELEASED status
+        entry = VGKCashIncomeEntry(
+            company_id=4,
+            entry_number="VCI-TEST-ADV-001",
+            partner_id=partner_id,
+            source_lead_id=lead_id,
+            kind="ADVANCE",
+            level=1,
+            commission_amount=Decimal('1000.00'),
+            net_payout=Decimal('900.00'),
+            status="RELEASED",
+            notes="Test advance entry"
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+
+        res = mark_paid_cash_income(
+            db=db,
+            entry_id=entry.id,
+            company_id=4,
+            paid_by_id=1,
+            payment_mode="BANK",
+            utr="TESTUTR123456",
+            notes="Testing advance payout with zero points"
+        )
+
+        self.assertTrue(res.get('success'), f"Advance payout failed: {res}")
+        self.assertEqual(res.get('payment_mode'), 'BANK')
+
+        # Clean up
+        db.execute(text("DELETE FROM vgk_points_ledger WHERE reference_type = 'VGK_CASH_INCOME' AND reference_id = :eid"), {"eid": entry.id})
+        db.execute(text("DELETE FROM vgk_wallet_transactions WHERE ref_type = 'VGK_CASH_INCOME' AND ref_id = :eid"), {"eid": entry.id})
+        db.execute(text("DELETE FROM vgk_cash_income_entries WHERE id = :eid"), {"eid": entry.id})
+        db.commit()
+
+    def test_19_commission_payout_still_gated_by_points_capacity(self):
+        """TEST 19: Full COMMISSION entries remain protected by points capacity gate when points are insufficient."""
+        from app.services.vgk_cash_income import mark_paid_cash_income
+        from app.models.vgk_cash_income import VGKCashIncomeEntry
+        db = self.db
+        lead_id = 99015
+        partner_id = 99152
+
+        # Ensure partner has 0 points
+        db.execute(text("UPDATE official_partners SET vgk_points_balance = 0.00 WHERE id = :pid"), {"pid": partner_id})
+        db.commit()
+
+        # Create a COMMISSION entry
+        entry = VGKCashIncomeEntry(
+            company_id=4,
+            entry_number="VCI-TEST-COMM-001",
+            partner_id=partner_id,
+            source_lead_id=lead_id,
+            kind="COMMISSION",
+            level=1,
+            commission_amount=Decimal('5000.00'),
+            net_payout=Decimal('4500.00'),
+            status="RELEASED",
+            notes="Test commission entry"
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+
+        res = mark_paid_cash_income(
+            db=db,
+            entry_id=entry.id,
+            company_id=4,
+            paid_by_id=1,
+            payment_mode="BANK",
+            utr="TESTUTR999999",
+            notes="Testing commission payout with zero points"
+        )
+
+        # Should be blocked
+        self.assertFalse(res.get('success'))
+        self.assertEqual(res.get('error'), 'INSUFFICIENT_POINTS_FOR_PAYOUT')
+
+        # Clean up
+        db.execute(text("DELETE FROM vgk_cash_income_entries WHERE id = :eid"), {"eid": entry.id})
+        db.commit()
+
+    def test_20_single_file_partner_not_blocked_by_50_pct_cap(self):
+        """TEST 20: Partner with 1 active file has cap_limit >= 1 and is not capped on their first file."""
+        from app.services.vgk_advance_cap import get_cap_status
+        db = self.db
+        partner_id = 99152
+
+        # Insert 1 eligible advance lead
+        lead_id = 99016
+        self._create_test_lead(lead_id=lead_id, sps='with_bank', dvr=0.0)
+        db.execute(text("""
+            INSERT INTO vgk_solar_cibil_advances
+                (company_id, lead_id, partner_id, entry_number, advance_amount, status, level, kind)
+            VALUES
+                (4, :lid, :pid, 'VSCA-TEST-CAP-1', 1000.00, 'PENDING', 1, 'ADVANCE')
+        """), {"lid": lead_id, "pid": partner_id})
+        db.commit()
+
+        status = get_cap_status(db, partner_id=partner_id, company_id=4)
+        self.assertGreaterEqual(status.get('eligible_files', 0), 1)
+        self.assertGreaterEqual(status.get('cap_limit', 0), 1)
+        self.assertFalse(status.get('is_capped'), "Partner with 1 eligible file should not be capped")
+
+        # Clean up
+        db.execute(text("DELETE FROM vgk_solar_cibil_advances WHERE entry_number = 'VSCA-TEST-CAP-1'"))
+        db.execute(text("DELETE FROM crm_leads WHERE id = :lid"), {"lid": lead_id})
+        db.commit()
+
+    def test_21_dvr_advance_release_not_blocked_by_zero_points(self):
+        """TEST 21: release_dvr_advance succeeds even if partner has 0 points balance (DC-NO-PTS-GATE-002)."""
+        db = self.db
+        lead_id = 99017
+        partner_id = 99152
+
+        # Create test lead & DVR advance row
+        self._create_test_lead(lead_id=lead_id, sps='installation_pending', dvr=100000.00)
+        db.execute(text("""
+            INSERT INTO vgk_solar_cibil_advances
+                (company_id, lead_id, partner_id, entry_number, advance_amount, status, level, kind)
+            VALUES
+                (4, :lid, :pid, 'VSCA-TEST-DVR-001', 1000.00, 'PENDING', 1, 'DVR_ADVANCE')
+        """), {"lid": lead_id, "pid": partner_id})
+        # Set partner points to 0
+        db.execute(text("UPDATE official_partners SET vgk_points_balance = 0.00 WHERE id = :pid"), {"pid": partner_id})
+        db.commit()
+
+        res = release_dvr_advance(db, lead_id=lead_id, partner_id=partner_id, level=1, released_by_id=1)
+        self.assertTrue(res.get('success'), f"release_dvr_advance should succeed with 0 points: {res}")
+
+        # Clean up
+        db.execute(text("DELETE FROM vgk_wallet_transactions WHERE ref_type = 'VGK_DVR_ADV' AND partner_id = :pid"), {"pid": partner_id})
+        db.execute(text("DELETE FROM vgk_solar_cibil_advances WHERE entry_number = 'VSCA-TEST-DVR-001'"))
+        db.execute(text("DELETE FROM crm_leads WHERE id = :lid"), {"lid": lead_id})
+        db.commit()
+
+    def test_22_deficit_advance_can_be_released(self):
+        """TEST 22: release_advance can process and heal legacy DEFICIT status advance rows."""
+        from app.services.vgk_solar_advance import release_advance
+        db = self.db
+        lead_id = 99018
+        partner_id = 99152
+
+        self._create_test_lead(lead_id=lead_id, sps='with_bank', dvr=0.0)
+        db.execute(text("""
+            INSERT INTO vgk_solar_cibil_advances
+                (company_id, lead_id, partner_id, entry_number, advance_amount, status, level, kind)
+            VALUES
+                (4, :lid, :pid, 'VSCA-TEST-DEF-001', 1000.00, 'DEFICIT', 1, 'ADVANCE')
+        """), {"lid": lead_id, "pid": partner_id})
+        db.commit()
+
+        res = release_advance(db, lead_id=lead_id, released_by_id=1, _level=1)
+        self.assertTrue(res.get('success'), f"release_advance should succeed for DEFICIT status: {res}")
+
+        # Clean up
+        db.execute(text("DELETE FROM vgk_wallet_transactions WHERE ref_type = 'VGK_SOLAR_ADV' AND partner_id = :pid"), {"pid": partner_id})
+        db.execute(text("DELETE FROM vgk_solar_cibil_advances WHERE entry_number = 'VSCA-TEST-DEF-001'"))
+        db.execute(text("DELETE FROM crm_leads WHERE id = :lid"), {"lid": lead_id})
+        db.commit()
 
 
 if __name__ == '__main__':
