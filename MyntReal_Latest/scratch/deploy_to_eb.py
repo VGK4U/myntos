@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.35-saas-workforce-hrms-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.36-universal-commission-stage2-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -70,7 +70,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.35: SaaS Workforce Management / HRMS Platform, multi-tenant isolation, company-scoped org & tasks, and 4-platform parity'[:190],
+    Description='MyntOS v2.4.36: Universal 9% commission model, payment-based Stage 2 advance engine, pro-rata Stage 1 recovery, KYC/Bank payout gate, and 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")
