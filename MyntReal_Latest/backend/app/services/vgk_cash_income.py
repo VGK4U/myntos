@@ -27,7 +27,7 @@ No negative impact on existing vgk_team_income_entries or points ledger.
 """
 
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -66,7 +66,7 @@ def _next_entry_number(db: Session, company_id: int) -> str:
 
 
 def _resolve_category_slug(db: Session, lead) -> str:
-    """Resolve signup category ID or pipeline to standard category slug."""
+    """Resolve signup category ID or pipeline to standard canonical category slug."""
     if getattr(lead, 'solar_pipeline_status', None):
         return 'solar'
     cat_id = getattr(lead, 'category_id', None)
@@ -77,9 +77,9 @@ def _resolve_category_slug(db: Session, lead) -> str:
     if cat_id in (1, 2, 5, 14, 15, 16, 31, 32, 33, 43, 44, 45):
         return 'ev'
     if cat_id in (3, 13, 30, 42):
-        return 'training'
+        return 'etc-training'
     if cat_id in (4, 18, 35, 47):
-        return 'real_estate'
+        return 'real-dreams'
     if cat_id in (7, 17, 34, 46):
         return 'insurance'
     try:
@@ -91,9 +91,9 @@ def _resolve_category_slug(db: Session, lead) -> str:
             if 'ev' in cname:
                 return 'ev'
             if 'training' in cname or 'etc' in cname:
-                return 'training'
+                return 'etc-training'
             if 'real' in cname or 'dream' in cname:
-                return 'real_estate'
+                return 'real-dreams'
             if 'insur' in cname:
                 return 'insurance'
     except Exception as _ce:
@@ -132,18 +132,27 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
 
     company_id = lead.company_id
     category_id = lead.category_id
-    deal_total  = Decimal(str(lead.deal_value_total or 0))
-    deal_ex_tax = Decimal(str(lead.deal_value_excl_tax or 0))
-
-    _dvr = Decimal(str(lead.deal_value_received or 0))
-    commission_base = _dvr if _dvr > 0 else deal_total
-
-    if commission_base <= 0:
-        logger.info(f'[VGK4U-CI] Lead {lead.id} has zero commission base — skipping')
-        return 0
-
     category_slug = _resolve_category_slug(db, lead)
     _is_solar = (category_slug == 'solar')
+    cat_cfg = VGK4UWaterfallEngine.get_category_config(db, category_slug)
+    earning_basis_type = getattr(cat_cfg, 'earning_basis_type', 'PAYMENT_RECEIVED') if cat_cfg else 'PAYMENT_RECEIVED'
+
+    deal_total  = Decimal(str(lead.deal_value_total or 0))
+    deal_ex_tax = Decimal(str(lead.deal_value_excl_tax or 0))
+    _dvr = Decimal(str(lead.deal_value_received or 0))
+
+    if earning_basis_type == 'COMMISSION_RECEIVED':
+        # DC-EARNING-BASIS-20260925: For commission-receipt categories (Insurance, Real Estate),
+        # only the company's actual commission income received counts as the VGK4U earning basis.
+        # Underlying project/policy value must NEVER be used as the distribution basis.
+        commission_base = _dvr
+    else:
+        # For MRP/selling-value categories (Solar, EV, EV Spares, Training)
+        commission_base = _dvr if _dvr > 0 else deal_total
+
+    if commission_base <= 0:
+        logger.info(f'[VGK4U-CI] Lead {lead.id} ({category_slug}) has zero commission base (basis_type={earning_basis_type}, dvr={_dvr}) — skipping')
+        return 0
 
     if _is_solar:
         _SOLAR_COMM_STAGES = {
@@ -340,6 +349,8 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
             deal_value_excl_tax   = deal_ex_tax,
             confirmed_final_value = Decimal(str(_cfv)) if (_cfv is not None) else None,
             solar_value           = Decimal(str(_sv)) if (_sv is not None and _sv > 0) else None,
+            earning_basis_type    = earning_basis_type,
+            earning_basis_amount  = commission_base,
             commission_pct        = alloc.get('commission_pct', Decimal('0')),
             commission_amount     = comm_amt,
             admin_charges         = admin_amt,
@@ -350,26 +361,70 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
             status                = 'DRAFT',
             kind                  = 'COMMISSION',
             program_version       = 'v2_sep2026',
-            notes                 = f"VGK4U {role} ({alloc.get('career_designation') or ''}/{alloc.get('personal_prod_qualification') or ''})",
+            notes                 = f"VGK4U {role} ({alloc.get('career_designation') or ''}/{alloc.get('personal_prod_qualification') or ''}) [{earning_basis_type}]",
         )
         db.add(entry)
         db.flush()
 
-        # Credit wallet immediately per DC-VGK-FLOW-001
-        _wb_d = partner.vgk_cash_wallet or Decimal('0')
-        _wa_d = _wb_d + comm_amt
-        partner.vgk_cash_wallet = _wa_d
-        partner.updated_at = _now_d
-        _log_wallet_txn(
-            db, partner.id, company_id,
-            txn_type='INCOME_CREDIT', direction='CR', amount=comm_amt,
-            wallet_before=_wb_d, wallet_after=_wa_d,
-            ref_type='VGK_CASH_INCOME', ref_id=entry.id,
-            description=f'VGK4U Income credited (DRAFT) — {entry.entry_number}',
-            staff_id=None,
-        )
+        # DC-COLLISION-PREVENTION-20260925: Reconcile and deduct previously released advances
+        # (Stage 1 and Stage 2) for this partner on this lead so no double payout occurs.
+        adv_rows = db.execute(text("""
+            SELECT id, advance_amount, COALESCE(adjustment_amount, 0) as adjustment_amount
+            FROM vgk_solar_cibil_advances
+            WHERE lead_id = :lid AND partner_id = :pid
+              AND kind IN ('ADVANCE', 'DVR_ADVANCE')
+              AND status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID')
+        """), {'lid': lead.id, 'pid': partner.id}).fetchall()
+
+        unadjusted_adv = Decimal('0.00')
+        for ar in adv_rows:
+            unadj = max(Decimal('0.00'), Decimal(str(ar.advance_amount or 0)) - Decimal(str(ar.adjustment_amount or 0)))
+            unadjusted_adv += unadj
+
+        actual_adj = min(unadjusted_adv, comm_amt)
+        net_credit_amount = max(Decimal('0.00'), comm_amt - actual_adj)
+
+        if actual_adj > Decimal('0.00'):
+            entry.advance_adjusted_amount = actual_adj
+            entry.notes = f"{entry.notes} [Advance Deducted: ₹{float(actual_adj):.2f}]"
+            rem_to_mark = actual_adj
+            now_naive = _now_d.replace(tzinfo=None)
+            for ar in adv_rows:
+                if rem_to_mark <= Decimal('0.00'):
+                    break
+                ar_unadj = max(Decimal('0.00'), Decimal(str(ar.advance_amount or 0)) - Decimal(str(ar.adjustment_amount or 0)))
+                adj_this = min(rem_to_mark, ar_unadj)
+                if adj_this > Decimal('0.00'):
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                            adjustment_entry_id = :eid,
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                            adjusted_at = :now,
+                            updated_at = :now
+                        WHERE id = :aid
+                    """), {'adj': float(adj_this), 'eid': entry.id, 'now': now_naive, 'aid': ar.id})
+                    rem_to_mark -= adj_this
+
+            if level == 1:
+                db.execute(text("UPDATE crm_leads SET remaining_stage1_advance = 0 WHERE id = :lid"), {'lid': lead.id})
+
+        # Credit wallet with net_credit_amount (comm_amt less previously credited advances)
+        if net_credit_amount > Decimal('0.00'):
+            _wb_d = partner.vgk_cash_wallet or Decimal('0')
+            _wa_d = _wb_d + net_credit_amount
+            partner.vgk_cash_wallet = _wa_d
+            partner.updated_at = _now_d
+            _log_wallet_txn(
+                db, partner.id, company_id,
+                txn_type='INCOME_CREDIT', direction='CR', amount=net_credit_amount,
+                wallet_before=_wb_d, wallet_after=_wa_d,
+                ref_type='VGK_CASH_INCOME', ref_id=entry.id,
+                description=f'VGK4U Income credited (DRAFT) — {entry.entry_number}' + (f' (net of ₹{float(actual_adj):.2f} advance)' if actual_adj > 0 else ''),
+                staff_id=None,
+            )
         created += 1
-        logger.info(f'[VGK4U-CI] DRAFT created+credited: lead={lead.id} L{level} ({role}) partner={partner.partner_code} ₹{float(comm_amt)}')
+        logger.info(f'[VGK4U-CI] DRAFT created+credited: lead={lead.id} L{level} ({role}) partner={partner.partner_code} gross=₹{float(comm_amt)} net_credit=₹{float(net_credit_amount)} adj=₹{float(actual_adj)}')
 
     # Brand Incentive (Level 11) for Solar
     solar_brand_id = getattr(lead, 'solar_brand_id', None)
@@ -2323,13 +2378,44 @@ def mark_paid_cash_income(
     if pm == 'BANK' and not utr:
         return {'success': False, 'error': 'UTR is required for BANK payments'}
 
+    # HARD PAYOUT GATE — KYC AND BANK DETAILS APPROVAL:
+    # A payout CANNOT be marked PAID unless the partner's KYC status is 'Approved'
+    # AND bank_details_status is 'Approved'.
+    if not force and entry.partner_id:
+        from app.models.staff_accounts import OfficialPartner as _OP_Gate
+        _gate_partner = db.query(_OP_Gate).filter(_OP_Gate.id == entry.partner_id).with_for_update().first()
+        if _gate_partner:
+            kyc_st = (_gate_partner.kyc_status or '').strip()
+            bank_st = (_gate_partner.bank_details_status or '').strip()
+            if kyc_st != 'Approved' or bank_st != 'Approved':
+                logger.warning(
+                    f"[VGK-PAYOUT-GATE] Payout blocked for entry {entry.entry_number} (partner {_gate_partner.id}): "
+                    f"KYC ({kyc_st}) or Bank Details ({bank_st}) not Approved."
+                )
+                return {
+                    'success': False,
+                    'error': 'KYC_OR_BANK_NOT_APPROVED',
+                    'message': (
+                        f"Partner payout blocked: KYC status is '{kyc_st}' and Bank Details status is '{bank_st}'. "
+                        f"Both KYC and Bank Details must be 'Approved' before payout can be marked PAID."
+                    ),
+                    'kyc_status': kyc_st,
+                    'bank_details_status': bank_st,
+                    'entry_number': entry.entry_number,
+                }
+
     # PRE-FLIGHT PAYOUT CAPACITY GATE:
     # A cash earning CANNOT be released as PAID unless the partner has sufficient points
     # to cover the full applicable net payout (avail >= net_due).
+    # EXCEPTION (DC-ADV-PTS-GATE-BYPASS-001):
+    # Upfront milestone advances (ADVANCE, DVR_ADVANCE, BRAND_ADVANCE) are operational incentive
+    # advances triggered at early milestones (e.g. bank verification) before deal completion points
+    # exist. They must NOT be blocked by points capacity.
+    _is_milestone_advance = entry.kind in ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE')
     _net_due_gate = entry.net_payout if (entry.net_payout and entry.net_payout > 0) else (Decimal(str(entry.commission_amount or 0)) * Decimal('0.90'))
     _net_due_gate = Decimal(str(_net_due_gate))
 
-    if entry.partner_id and _net_due_gate > Decimal('0'):
+    if not _is_milestone_advance and entry.partner_id and _net_due_gate > Decimal('0'):
         from app.models.staff_accounts import OfficialPartner as _OP_Gate
         _gate_partner = db.query(_OP_Gate).filter(_OP_Gate.id == entry.partner_id).with_for_update().first()
         if _gate_partner:
@@ -2762,19 +2848,31 @@ def record_dvr_advance_as_income_row(
     _adv_level   = int(getattr(advance_row, 'level', 1) or 1)
     advance_base = Decimal(str(getattr(advance_row, 'advance_amount', 0) or 0))
     _lead_id     = getattr(advance_row, 'lead_id', None)
+    _src_txn_id  = getattr(advance_row, 'source_transaction_id', None)
+    _adj_amt     = Decimal(str(getattr(advance_row, 'adjustment_amount', 0) or 0))
+    _comm_pct    = Decimal(str(getattr(advance_row, 'commission_pct', 0) or 0))
 
-    # Idempotency: one DVR_ADVANCE VCI per (partner, lead, level)
-    existing = db.execute(text("""
-        SELECT id FROM vgk_cash_income_entries
-        WHERE partner_id=:pid AND source_lead_id=:lid AND level=:lv AND kind='DVR_ADVANCE'
-        LIMIT 1
-    """), {'pid': partner.id, 'lid': _lead_id, 'lv': _adv_level}).fetchone()
+    # Idempotency: per source_transaction_id if present, else legacy per (partner, lead, level)
+    if _src_txn_id:
+        existing = db.execute(text("""
+            SELECT id FROM vgk_cash_income_entries
+            WHERE source_transaction_id=:tid AND partner_id=:pid AND level=:lv AND kind='DVR_ADVANCE'
+            LIMIT 1
+        """), {'tid': _src_txn_id, 'pid': partner.id, 'lv': _adv_level}).fetchone()
+    else:
+        existing = db.execute(text("""
+            SELECT id FROM vgk_cash_income_entries
+            WHERE partner_id=:pid AND source_lead_id=:lid AND level=:lv AND kind='DVR_ADVANCE'
+              AND source_transaction_id IS NULL
+            LIMIT 1
+        """), {'pid': partner.id, 'lid': _lead_id, 'lv': _adv_level}).fetchone()
+
     if existing:
         return {'success': True, 'idempotent': True, 'income_entry_id': existing.id}
 
-    # Conflict guard — unique constraint uq_vgk_cash_income_lead_partner_level_kind covers
-    # (company_id, partner_id, source_lead_id, level, kind). ADVANCE and DVR_ADVANCE have
-    # different kind values so they CAN coexist at the same level (DC-DVR-L1-COEXIST-001).
+    # Conflict guard — unique constraint covers
+    # (company_id, source_lead_id, partner_id, level, kind, source_transaction_id, bonanza_id).
+    # ADVANCE and DVR_ADVANCE have different kind values so they CAN coexist at the same level.
     # Only COMMISSION/SENIOR_COMM/SLAB_BONUS/etc. at the same level genuinely block this slot.
     _conflict = db.execute(text("""
         SELECT id, kind, status FROM vgk_cash_income_entries
@@ -2794,26 +2892,39 @@ def record_dvr_advance_as_income_row(
 
     _notes = (
         f'DVR Advance mirror (advance#{getattr(advance_row,"id","?")} '
-        f'{getattr(advance_row,"entry_number","?")})'
+        f'{getattr(advance_row,"entry_number","?")}'
+        + (f' txn#{_src_txn_id}' if _src_txn_id else '')
+        + (f' adj ₹{float(_adj_amt):.2f}' if _adj_amt > 0 else '')
+        + ')'
     )
+
+    taxable_base = max(Decimal('0'), advance_base - _adj_amt)
+    admin_charges = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    tds_amount = ((taxable_base - admin_charges) * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    net_payout = max(Decimal('0'), taxable_base - admin_charges - tds_amount)
+
     entry = VGKCashIncomeEntry(
         company_id              = company_id,
         entry_number            = _next_entry_number(db, company_id),
         partner_id              = partner.id,
         source_lead_id          = _lead_id,
+        source_transaction_id   = _src_txn_id,
         category_id             = None,
         level                   = _adv_level,
-        deal_value_total        = 0,
+        deal_value_total        = getattr(advance_row, 'underlying_value', 0) or 0,
         deal_value_excl_tax     = 0,
-        commission_pct          = 0,
+        earning_basis_type      = getattr(advance_row, 'earning_basis_type', None),
+        earning_basis_amount    = getattr(advance_row, 'earning_basis_amount', None),
+        commission_pct          = _comm_pct,
         commission_amount       = advance_base,
+        advance_adjusted_amount = _adj_amt,
         points_debit_required   = 0,
         points_actually_debited = 0,
         kind                    = 'DVR_ADVANCE',
         status                  = 'PENDING',
-        admin_charges           = (advance_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01')),
-        tds_amount              = (advance_base * TDS_PCT          / Decimal('100')).quantize(Decimal('0.01')),
-        net_payout              = advance_base - (advance_base * (ADMIN_CHARGE_PCT + TDS_PCT) / Decimal('100')).quantize(Decimal('0.01')),
+        admin_charges           = admin_charges,
+        tds_amount              = tds_amount,
+        net_payout              = net_payout,
         confirmed_by_id         = released_by_id,
         confirmed_at            = _get_ist(),
         income_date             = _get_ist().date(),

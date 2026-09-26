@@ -21,12 +21,16 @@ Walk-in saves, lead updates, and commission calculations are never rolled back d
 """
 
 import logging
-from decimal import Decimal
-from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
+from datetime import datetime, date
+from typing import Optional, List, Dict, Any, Union
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
+
+# DC-VGK-STAGE2-CUTOFF-20260925: Hard business effective date for payment-based Stage 2 advances
+STAGE2_EFFECTIVE_DATE = datetime(2026, 9, 25, 0, 0, 0)
 
 # DC-SOLAR-SPEC-20260911: Stage 1 Advance (With Bank + CIBIL >= 700 + Ground Source set)
 # L1 (Ground Source): 1000, L2 (Senior): 500 — per VGK Commission & Advance Payment Logic.
@@ -236,18 +240,9 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
         return {'created': False, 'reason': str(e)}
 
 
-def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
+def _legacy_check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
     """
-    DC-SOLAR-DVR-ADV-20260701-001 / DC-SOLAR-SPEC-20260710: Stage 2 Advance
-    ("First Payment Received").
-
-    When a solar lead's DVR > 0 is confirmed in vgk_cash_income_entries for the
-    first time, auto-creates and releases:
-      L1 (direct partner,  associated_partner_id): ₹500
-      L5 (field support,   vgk_field_support_id):  ₹1,000
-
-    Separate from and additive to the Stage-1 CIBIL advance (kind='ADVANCE').
-    Kind = 'DVR_ADVANCE'. Idempotent per (lead, partner, level). Non-blocking.
+    Legacy Stage 2 Advance logic for transactions / events <= 2026-09-23.
     """
     DVR_L1_AMOUNT = Decimal('1000.00')
     DVR_L2_AMOUNT = Decimal('500.00')
@@ -262,8 +257,6 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
 
         if not lead:
             return {'created': False, 'reason': 'Lead not found'}
-        # DC-SOLAR-MULTICOMP-DVR-001: accept all solar categories across all 4 companies
-        # (6=MNR, 19=co2, 36=co3, 48=co4). Prev guard was != 6, silently skipping companies 2-4.
         _SOLAR_CAT_IDS_ADV = (6, 19, 36, 48)
         if (lead.category_id or 0) not in _SOLAR_CAT_IDS_ADV:
             return {'created': False, 'reason': f'Not solar (category_id={lead.category_id})'}
@@ -274,11 +267,6 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
         if dvr <= 0:
             return {'created': False, 'reason': 'DVR is zero'}
 
-        # DC-FIX-DVR-GATE-001 (Jul 2026): Removed income_row gate.
-        # Previously required a vgk_cash_income_entries row to exist, but after
-        # DC-SOLAR-STAGE-GATE-001 COMMISSION entries are blocked until sps='completed',
-        # making Stage-2 DVR advance impossible at balance_received / installation_pending.
-        # DVR > 0 + associated_partner_id is the correct and sufficient eligibility signal.
         now_ist = _get_ist().replace(tzinfo=None)
 
         first_dvr_at = lead.first_dvr_confirmed_at
@@ -294,7 +282,6 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
             first_dvr_at = first_dvr_at.replace(tzinfo=None)
 
         l1_partner_id = lead.associated_partner_id
-        # Resolve L2 Senior Upliner: lead.team_senior_partner_id with fallback to official_partners.parent_partner_id
         l2_partner_id = lead.team_senior_partner_id
         if not l2_partner_id and l1_partner_id:
             try:
@@ -349,9 +336,7 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
                 f'lead {lead_id} partner {partner_id} DVR=₹{float(dvr)}'
             )
 
-            # Mirror the DVR advance into vgk_cash_income_entries as PENDING
             try:
-                # Fetch the newly created advance row to pass to mirroring
                 adv_row = db.execute(text(
                     "SELECT id, entry_number, partner_id, lead_id, advance_amount, company_id, COALESCE(level,1) AS level "
                     "FROM vgk_solar_cibil_advances WHERE entry_number = :en"
@@ -366,8 +351,6 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
 
             created_numbers.append(entry_number)
 
-        # DC-STAGE1-DEFERRED-CATCHUP: If Stage 1 advance was held back due to low CIBIL (<700),
-        # trigger it now along with Stage 2 advance!
         try:
             s1_exists = db.execute(text(
                 "SELECT id FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND kind = 'ADVANCE' LIMIT 1"
@@ -388,7 +371,7 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
         return {'created': False, 'reason': 'All DVR advances already existed'}
 
     except Exception as e:
-        logger.warning(f'[DVR-ADV] check_and_create_dvr_advance failed for lead {lead_id}: {e}')
+        logger.warning(f'[DVR-ADV] _legacy_check_and_create_dvr_advance failed for lead {lead_id}: {e}')
         try:
             db.rollback()
         except Exception:
@@ -396,22 +379,710 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
         return {'created': False, 'reason': str(e)}
 
 
+def process_payment_stage2_advance(
+    db: Session,
+    lead_id: int,
+    transaction_id: int,
+    payment_amount: Decimal,
+    transaction_date: Optional[Union[datetime, date]] = None,
+    notes: Optional[str] = None,
+) -> dict:
+    """
+    VGK4U Stage 2 Advance Engine (Payment-Event Based, Effective 24 September 2026).
+    
+    1. Effective Date Guard: Payments prior to 2026-09-24 follow legacy DVR process.
+    2. Dynamic 5 Commission Layers (L1 Producer, L2 Manager/Sponsor, L3 GM, L4 RM, L5 Field Support).
+       Rates dynamically resolved from active canonical commission configuration.
+    3. Option C (Pro-Rata Stage 1 Advance Recovery):
+       Proposed = (Original L1 Stage 1 * (Payment Amount / Deal Value Total)).
+       Actual = min(Proposed, Remaining Stage 1 Balance, L1 Stage 2 Gross).
+       Final payment: proposed clears entire remaining Stage 1 balance.
+       Adjustment applies ONLY against L1 (Producer). Uplines (L2..L5) receive 100% without reduction.
+    4. Strict idempotency anchored to source_transaction_id.
+    """
+    from app.services.vgk4u_career_service import ROOT_APEX_PARTNER_ID
+    from app.services.vgk4u_waterfall_engine import VGK4UWaterfallEngine
+    from app.services.vgk_cash_income import record_dvr_advance_as_income_row
+
+    try:
+        now_ist = _get_ist().replace(tzinfo=None)
+
+        # 1. Effective Cutoff Check
+        txn_dt = transaction_date
+        if txn_dt is not None:
+            if isinstance(txn_dt, date) and not isinstance(txn_dt, datetime):
+                txn_dt = datetime.combine(txn_dt, datetime.min.time())
+            elif hasattr(txn_dt, 'tzinfo') and txn_dt.tzinfo is not None:
+                txn_dt = txn_dt.replace(tzinfo=None)
+        else:
+            try:
+                t_row = db.execute(text(
+                    "SELECT transaction_date, validated_at, created_at FROM crm_lead_transactions WHERE id = :tid"
+                ), {'tid': transaction_id}).fetchone()
+                if t_row:
+                    raw_d = t_row.transaction_date or t_row.validated_at or t_row.created_at
+                    if raw_d:
+                        if isinstance(raw_d, date) and not isinstance(raw_d, datetime):
+                            txn_dt = datetime.combine(raw_d, datetime.min.time())
+                        elif hasattr(raw_d, 'tzinfo') and raw_d.tzinfo is not None:
+                            txn_dt = raw_d.replace(tzinfo=None)
+                        else:
+                            txn_dt = raw_d
+            except Exception as _te:
+                logger.debug(f"[STAGE2-ADV] Could not query txn #{transaction_id}: {_te}")
+
+        effective_dt = txn_dt or now_ist
+
+        if effective_dt < STAGE2_EFFECTIVE_DATE:
+            logger.info(
+                f"[STAGE2-ADV] Transaction #{transaction_id} date {effective_dt} is prior to cutoff {STAGE2_EFFECTIVE_DATE}. "
+                f"Routing to legacy check_and_create_dvr_advance."
+            )
+            return _legacy_check_and_create_dvr_advance(db, lead_id)
+
+        # 2. Idempotency Guard
+        existing_advs = db.execute(text("""
+            SELECT id, entry_number, status, level FROM vgk_solar_cibil_advances
+            WHERE source_transaction_id = :tid AND kind = 'DVR_ADVANCE'
+        """), {'tid': transaction_id}).fetchall()
+        if existing_advs:
+            logger.info(f"[STAGE2-ADV] Transaction #{transaction_id} already has Stage 2 advance(s) — skipping duplicate.")
+            return {
+                'created': False,
+                'reason': f'Stage 2 advance already processed for transaction {transaction_id}',
+                'existing_ids': [r.id for r in existing_advs]
+            }
+
+        # 3. Payment Amount Validation
+        amt = Decimal(str(payment_amount or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if amt <= 0:
+            return {'created': False, 'reason': 'Payment amount must be greater than 0'}
+
+        # 4. Lead & Partner Eligibility
+        lead = db.execute(text("""
+            SELECT id, company_id, category_id, associated_partner_id,
+                   team_senior_partner_id, team_extended_partner_id, team_core_partner_id,
+                   vgk_field_support_id, deal_value_total, deal_value_received,
+                   deal_value_balance, solar_value, deal_value, remaining_stage1_advance,
+                   solar_pipeline_status, first_dvr_confirmed_at
+            FROM crm_leads WHERE id = :lid
+        """), {'lid': lead_id}).fetchone()
+
+        if not lead:
+            return {'created': False, 'reason': 'Lead not found'}
+
+        from app.services.vgk_cash_income import _resolve_category_slug
+        category_slug = _resolve_category_slug(db, lead)
+        cat_cfg = VGK4UWaterfallEngine.get_category_config(db, category_slug)
+        earning_basis_type = getattr(cat_cfg, 'earning_basis_type', 'PAYMENT_RECEIVED') if cat_cfg else 'PAYMENT_RECEIVED'
+        underlying_val = Decimal(str(lead.deal_value_total or lead.solar_value or lead.deal_value or 0))
+
+        if not lead.associated_partner_id:
+            return {'created': False, 'reason': 'No associated VGK partner'}
+
+        # Stamp first_dvr_confirmed_at if not set
+        if lead.first_dvr_confirmed_at is None:
+            db.execute(text(
+                "UPDATE crm_leads SET first_dvr_confirmed_at = :fda "
+                "WHERE id = :lid AND first_dvr_confirmed_at IS NULL"
+            ), {'fda': now_ist, 'lid': lead_id})
+            db.commit()
+
+        # 5. Resolve 5 Canonical Layers using Waterfall Engine (Universal 9% Network Model)
+        wf_allocations = []
+        try:
+            wf_res = VGK4UWaterfallEngine.calculate_commission_structure(
+                db=db,
+                producer_partner_id=lead.associated_partner_id,
+                deal_value=amt,
+                category_slug=category_slug,
+                direct_sponsor_id=lead.team_senior_partner_id,
+                support_partner_id=lead.vgk_field_support_id,
+                is_end_to_end_support=bool(lead.vgk_field_support_id),
+                showroom_partner_id=None,
+            )
+            if isinstance(wf_res, dict) and wf_res.get('allocations'):
+                wf_allocations = wf_res['allocations']
+        except Exception as _wf_err:
+            logger.warning(f"[STAGE2-ADV] Waterfall engine error for lead {lead_id}: {_wf_err}")
+
+        # Map allocations into canonical 5 layers keyed by (target_lvl, pid)
+        layer_map = {}
+        for alloc in wf_allocations:
+            lvl = alloc.get('level')
+            role = alloc.get('role')
+            pid = alloc.get('partner_id')
+            if not pid or pid == ROOT_APEX_PARTNER_ID or role == 'APEX_REMAINDER':
+                continue
+            if role == 'SHOWROOM' or lvl == 6:
+                continue
+
+            if role == 'PRODUCER' or lvl == 1:
+                target_lvl = 1
+            elif role in ('DIRECT_SPONSOR_OVERRIDE', 'MANAGER_DIFFERENTIAL') or lvl == 2:
+                target_lvl = 2
+            elif role == 'GM_DIFFERENTIAL' or lvl == 3:
+                target_lvl = 3
+            elif role == 'RM_DIFFERENTIAL' or lvl == 4:
+                target_lvl = 4
+            elif role in ('FIELD_SUPPORT', 'FULL_SUPPORT') or lvl in (5, 7):
+                target_lvl = 5
+            else:
+                continue
+
+            target_key = (target_lvl, pid)
+            if target_key not in layer_map:
+                layer_map[target_key] = {
+                    'level': target_lvl,
+                    'partner_id': pid,
+                    'role': role,
+                    'commission_pct': Decimal(str(alloc.get('commission_pct', 0))),
+                    'commission_amount': Decimal(str(alloc.get('commission_amount', 0))),
+                }
+            else:
+                layer_map[target_key]['commission_pct'] += Decimal(str(alloc.get('commission_pct', 0)))
+                layer_map[target_key]['commission_amount'] += Decimal(str(alloc.get('commission_amount', 0)))
+                if role not in layer_map[target_key]['role']:
+                    layer_map[target_key]['role'] = f"{layer_map[target_key]['role']}+{role}"
+
+        # Fallback L1 Producer (5.00%) if not resolved
+        l1_entries = [alloc for k, alloc in layer_map.items() if k[0] == 1]
+        if not l1_entries and lead.associated_partner_id:
+            cfg = cat_cfg or VGK4UWaterfallEngine.get_category_config(db, category_slug)
+            l1_pct = Decimal(str(cfg.producer_base_pct if cfg else '5.00'))
+            l1_amt = (amt * l1_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            target_key = (1, lead.associated_partner_id)
+            layer_map[target_key] = {
+                'level': 1, 'partner_id': lead.associated_partner_id, 'role': 'PRODUCER',
+                'commission_pct': l1_pct, 'commission_amount': l1_amt
+            }
+            l1_entries = [layer_map[target_key]]
+
+        # 6. Option C: Pro-Rata Stage 1 Advance Recovery (applied independently against L1 and L2)
+        # Stage 1 Advance Pool: L1 = ₹1,000, L2 = ₹500. Total = ₹1,500.
+        l1_entry = l1_entries[0] if l1_entries else None
+        l1_gross = l1_entry['commission_amount'] if l1_entry else Decimal('0.00')
+
+        l2_entries = [alloc for k, alloc in layer_map.items() if k[0] == 2 and 'DIRECT_SPONSOR_OVERRIDE' in alloc.get('role', '')]
+        if not l2_entries:
+            l2_entries = [alloc for k, alloc in layer_map.items() if k[0] == 2]
+        l2_entry = l2_entries[0] if l2_entries else None
+        l2_gross = l2_entry['commission_amount'] if l2_entry else Decimal('0.00')
+
+        # Query existing Stage 1 advance records for L1 and L2
+        s1_l1_row = db.execute(text("""
+            SELECT id, advance_amount, COALESCE(adjustment_amount, 0) as adjustment_amount
+            FROM vgk_solar_cibil_advances
+            WHERE lead_id = :lid AND level = 1 AND kind = 'ADVANCE'
+              AND status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID')
+            ORDER BY id ASC LIMIT 1
+        """), {'lid': lead_id}).fetchone()
+
+        s1_l2_row = db.execute(text("""
+            SELECT id, advance_amount, COALESCE(adjustment_amount, 0) as adjustment_amount
+            FROM vgk_solar_cibil_advances
+            WHERE lead_id = :lid AND level = 2 AND kind = 'ADVANCE'
+              AND status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID')
+            ORDER BY id ASC LIMIT 1
+        """), {'lid': lead_id}).fetchone()
+
+        # Determine remaining and original Stage 1 amounts for L1
+        if s1_l1_row:
+            orig_s1_l1 = Decimal(str(s1_l1_row.advance_amount or 1000.00))
+            rem_s1_l1 = max(Decimal('0.00'), orig_s1_l1 - Decimal(str(s1_l1_row.adjustment_amount or 0)))
+        elif getattr(lead, 'remaining_stage1_advance_l1', None) is not None:
+            rem_s1_l1 = Decimal(str(lead.remaining_stage1_advance_l1 or 0))
+            orig_s1_l1 = Decimal('1000.00') if rem_s1_l1 > 0 else Decimal('0.00')
+        else:
+            rem_s1_l1 = Decimal('0.00')
+            orig_s1_l1 = Decimal('0.00')
+
+        # Determine remaining and original Stage 1 amounts for L2
+        if s1_l2_row:
+            orig_s1_l2 = Decimal(str(s1_l2_row.advance_amount or 500.00))
+            rem_s1_l2 = max(Decimal('0.00'), orig_s1_l2 - Decimal(str(s1_l2_row.adjustment_amount or 0)))
+        elif getattr(lead, 'remaining_stage1_advance_l2', None) is not None:
+            rem_s1_l2 = Decimal(str(lead.remaining_stage1_advance_l2 or 0))
+            orig_s1_l2 = Decimal('500.00') if rem_s1_l2 > 0 else Decimal('0.00')
+        else:
+            rem_s1_l2 = Decimal('0.00')
+            orig_s1_l2 = Decimal('0.00')
+
+        # Fallback if lead.remaining_stage1_advance exists on crm_leads without L1/L2 breakdown
+        if rem_s1_l1 == 0 and rem_s1_l2 == 0 and getattr(lead, 'remaining_stage1_advance', 0):
+            tot_rem = Decimal(str(lead.remaining_stage1_advance or 0))
+            if tot_rem > Decimal('0.00'):
+                rem_s1_l1 = min(Decimal('1000.00'), tot_rem)
+                orig_s1_l1 = Decimal('1000.00')
+                rem_s1_l2 = max(Decimal('0.00'), tot_rem - rem_s1_l1)
+                orig_s1_l2 = Decimal('500.00') if rem_s1_l2 > 0 else Decimal('0.00')
+
+        actual_adj_l1 = Decimal('0.00')
+        actual_adj_l2 = Decimal('0.00')
+        new_rem_s1_l1 = rem_s1_l1
+        new_rem_s1_l2 = rem_s1_l2
+
+        if rem_s1_l1 > 0 or rem_s1_l2 > 0:
+            deal_total = Decimal(str(lead.deal_value_total or lead.solar_value or lead.deal_value or 0))
+            if deal_total <= 0:
+                deal_total = amt
+
+            payment_ratio = min(Decimal('1.0'), amt / deal_total)
+
+            deal_bal = Decimal(str(lead.deal_value_balance)) if lead.deal_value_balance is not None else None
+            dvr_so_far = Decimal(str(lead.deal_value_received or 0))
+            is_final_payment = False
+            if deal_bal is not None and deal_bal <= Decimal('0'):
+                is_final_payment = True
+            elif dvr_so_far >= deal_total and deal_total > Decimal('0'):
+                is_final_payment = True
+
+            # L1 proposed & actual recovery (capped at L1 remaining and L1 Stage 2 gross)
+            if rem_s1_l1 > 0:
+                if is_final_payment:
+                    proposed_adj_l1 = rem_s1_l1
+                else:
+                    proposed_adj_l1 = (orig_s1_l1 * payment_ratio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                actual_adj_l1 = min(proposed_adj_l1, rem_s1_l1, l1_gross)
+                new_rem_s1_l1 = rem_s1_l1 - actual_adj_l1
+
+            # L2 proposed & actual recovery (capped at L2 remaining and L2 Stage 2 gross)
+            if rem_s1_l2 > 0:
+                if is_final_payment:
+                    proposed_adj_l2 = rem_s1_l2
+                else:
+                    proposed_adj_l2 = (orig_s1_l2 * payment_ratio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                actual_adj_l2 = min(proposed_adj_l2, rem_s1_l2, l2_gross)
+                new_rem_s1_l2 = rem_s1_l2 - actual_adj_l2
+
+            # Update crm_leads remaining balances
+            db.execute(text("""
+                UPDATE crm_leads
+                SET remaining_stage1_advance = :tot_rem,
+                    remaining_stage1_advance_l1 = :l1_rem,
+                    remaining_stage1_advance_l2 = :l2_rem
+                WHERE id = :lid
+            """), {
+                'tot_rem': float(new_rem_s1_l1 + new_rem_s1_l2),
+                'l1_rem': float(new_rem_s1_l1),
+                'l2_rem': float(new_rem_s1_l2),
+                'lid': lead_id,
+            })
+
+            # Update L1 Stage 1 advance record
+            if actual_adj_l1 > Decimal('0.00'):
+                if s1_l1_row:
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                            adjusted_at = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN :now ELSE adjusted_at END,
+                            updated_at = :now
+                        WHERE id = :aid
+                    """), {'adj': float(actual_adj_l1), 'aid': s1_l1_row.id, 'now': now_ist})
+                else:
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                            adjusted_at = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN :now ELSE adjusted_at END,
+                            updated_at = :now
+                        WHERE lead_id = :lid AND level = 1 AND kind = 'ADVANCE'
+                    """), {'adj': float(actual_adj_l1), 'lid': lead_id, 'now': now_ist})
+
+            # Update L2 Stage 1 advance record
+            if actual_adj_l2 > Decimal('0.00'):
+                if s1_l2_row:
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                            adjusted_at = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN :now ELSE adjusted_at END,
+                            updated_at = :now
+                        WHERE id = :aid
+                    """), {'adj': float(actual_adj_l2), 'aid': s1_l2_row.id, 'now': now_ist})
+                else:
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                            adjusted_at = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN :now ELSE adjusted_at END,
+                            updated_at = :now
+                        WHERE lead_id = :lid AND level = 2 AND kind = 'ADVANCE'
+                    """), {'adj': float(actual_adj_l2), 'lid': lead_id, 'now': now_ist})
+
+        # 7. Create Stage 2 advance records in vgk_solar_cibil_advances and mirror to vgk_cash_income_entries
+        created_numbers = []
+
+        class _AdvRowWrapper:
+            def __init__(self, r, pct, src_tid):
+                self._r = r
+                self.commission_pct = pct
+                self.source_transaction_id = src_tid
+            def __getattr__(self, name):
+                return getattr(self._r, name)
+
+        for key in sorted(layer_map.keys(), key=lambda x: (x[0], x[1])):
+            alloc = layer_map[key]
+            lvl = alloc['level']
+            partner_id = alloc['partner_id']
+            comm_pct = alloc['commission_pct']
+            adv_gross = alloc['commission_amount']
+
+            if lvl == 1:
+                layer_adj = actual_adj_l1
+            elif lvl == 2 and (alloc.get('role') == 'DIRECT_SPONSOR_OVERRIDE' or not any(k[0] == 2 and 'DIRECT_SPONSOR_OVERRIDE' in layer_map[k].get('role', '') for k in layer_map)):
+                layer_adj = actual_adj_l2
+            else:
+                layer_adj = Decimal('0.00')
+
+            entry_number = _next_advance_number(db)
+            adv_notes = notes or (
+                f"Stage 2 Advance ({comm_pct}%) on Txn #{transaction_id} (₹{float(amt):.2f}) [{earning_basis_type}]"
+                + (f" [Stage 1 Adj: ₹{float(layer_adj):.2f}]" if layer_adj > 0 else "")
+            )
+
+            db.execute(text("""
+                INSERT INTO vgk_solar_cibil_advances
+                    (company_id, lead_id, partner_id, entry_number, advance_amount,
+                     adjustment_amount, status, stage_at_eligibility, cibil_score_at_check,
+                     level, kind, notes, source_transaction_id, earning_basis_type,
+                     earning_basis_amount, underlying_value, created_at, updated_at)
+                VALUES
+                    (:cid, :lid, :pid, :en, :amt,
+                     :adj, 'PENDING', 'payment_validated', NULL,
+                     :lv, 'DVR_ADVANCE', :notes, :tid, :ebt,
+                     :eba, :uv, :now, :now)
+            """), {
+                'cid': lead.company_id or 4,
+                'lid': lead_id,
+                'pid': partner_id,
+                'en': entry_number,
+                'amt': float(adv_gross),
+                'adj': float(layer_adj) if layer_adj > 0 else None,
+                'lv': lvl,
+                'notes': adv_notes,
+                'tid': transaction_id,
+                'ebt': earning_basis_type,
+                'eba': float(amt),
+                'uv': float(underlying_val),
+                'now': now_ist,
+            })
+            db.flush()
+
+            adv_row = db.execute(text("""
+                SELECT id, entry_number, partner_id, lead_id, advance_amount,
+                       company_id, COALESCE(level,1) AS level, source_transaction_id,
+                       adjustment_amount, earning_basis_type, earning_basis_amount, underlying_value
+                FROM vgk_solar_cibil_advances WHERE entry_number = :en
+            """), {'en': entry_number}).fetchone()
+
+            if adv_row:
+                record_dvr_advance_as_income_row(db, _AdvRowWrapper(adv_row, comm_pct, transaction_id), released_by_id=None)
+
+            created_numbers.append(entry_number)
+
+        # Deferred Stage 1 catch-up if needed
+        try:
+            s1_exists = db.execute(text(
+                "SELECT id FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND kind = 'ADVANCE' LIMIT 1"
+            ), {'lid': lead_id}).fetchone()
+            if not s1_exists:
+                logger.info(f'[STAGE2-ADV] Triggering deferred Stage 1 advance catch-up for lead {lead_id}')
+                _s1_res = check_and_create_advance(
+                    db, lead_id, bypass_cibil=True,
+                    notes="Stage 1 advance auto-triggered at Stage 2 payment (deferred catch-up)"
+                )
+                if _s1_res.get('created') and _s1_res.get('entry_numbers'):
+                    created_numbers.extend(_s1_res['entry_numbers'])
+        except Exception as _s1_err:
+            logger.warning(f'[STAGE2-ADV] Stage 1 deferred catch-up failed for lead {lead_id}: {_s1_err}')
+
+        db.commit()
+        logger.info(
+            f"[STAGE2-ADV] Created {len(created_numbers)} Stage 2 advance(s) for lead {lead_id}, "
+            f"txn #{transaction_id}, payment ₹{float(amt)}: {created_numbers}, L1 Adj: ₹{float(actual_adj_l1)}, L2 Adj: ₹{float(actual_adj_l2)}"
+        )
+        return {
+            'created': True,
+            'transaction_id': transaction_id,
+            'payment_amount': float(amt),
+            'entry_numbers': created_numbers,
+            'stage1_adjusted': float(actual_adj_l1 + actual_adj_l2),
+            'stage1_adjusted_l1': float(actual_adj_l1),
+            'stage1_adjusted_l2': float(actual_adj_l2),
+            'remaining_stage1': float(new_rem_s1_l1 + new_rem_s1_l2),
+            'remaining_stage1_l1': float(new_rem_s1_l1),
+            'remaining_stage1_l2': float(new_rem_s1_l2),
+        }
+
+    except Exception as e:
+        logger.warning(f'[STAGE2-ADV] process_payment_stage2_advance failed for lead {lead_id} txn {transaction_id}: {e}')
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return {'created': False, 'reason': str(e)}
+
+
+def cancel_payment_stage2_advance(
+    db: Session,
+    transaction_id: int,
+    cancelled_by_id: Optional[int] = None,
+    reason: Optional[str] = None
+) -> dict:
+    """
+    Rollback and cancel Stage 2 advances associated with an unvalidated or rejected transaction.
+    - Recovers advance from partner wallet if already released.
+    - Restores remaining_stage1_advance on crm_leads if Stage 1 was adjusted against this transaction.
+    - Cancels vgk_cash_income_entries.
+    """
+    from app.models.staff_accounts import OfficialPartner
+    now = _get_ist()
+    now_naive = now.replace(tzinfo=None)
+
+    try:
+        advs = db.execute(text("""
+            SELECT id, lead_id, partner_id, advance_amount, status, entry_number, company_id,
+                   adjustment_amount, level
+            FROM vgk_solar_cibil_advances
+            WHERE source_transaction_id = :tid AND kind = 'DVR_ADVANCE'
+            FOR UPDATE
+        """), {'tid': transaction_id}).fetchall()
+
+        if not advs:
+            return {'cancelled': False, 'reason': f'No Stage 2 advances found for transaction {transaction_id}'}
+
+        cancelled_count = 0
+        restored_adj_total = Decimal('0.00')
+
+        for adv in advs:
+            partner = db.query(OfficialPartner).filter(
+                OfficialPartner.id == adv.partner_id
+            ).with_for_update().first()
+
+            # If advance was released, recover net payout from wallet
+            if adv.status in ('RELEASED', 'STAGE1_APPROVED', 'PAID') and partner:
+                gross = Decimal(str(adv.advance_amount or 0))
+                adj = Decimal(str(adv.adjustment_amount or 0))
+                net_to_recover = max(Decimal('0'), gross - adj)
+
+                wallet_before = partner.vgk_cash_wallet or Decimal('0')
+                if wallet_before >= net_to_recover:
+                    wallet_after = wallet_before - net_to_recover
+                    rec_status = 'RECOVERED'
+                    rec_amt = net_to_recover
+                else:
+                    wallet_after = Decimal('0')
+                    rec_status = 'DEFICIT'
+                    rec_amt = wallet_before
+
+                partner.vgk_cash_wallet = wallet_after
+                partner.updated_at = now
+
+                _txn_company_id = partner.company_id or adv.company_id or 4
+                db.execute(text("""
+                    UPDATE vgk_solar_cibil_advances SET
+                        status = :st,
+                        recovery_amount = :ra,
+                        wallet_before_recovery = :wb,
+                        wallet_after_recovery  = :wa,
+                        recovered_by_id = :rid,
+                        recovered_at    = :now,
+                        recovery_reason = :rr,
+                        updated_at      = :now
+                    WHERE id = :aid
+                """), {
+                    'st': rec_status, 'ra': float(rec_amt),
+                    'wb': float(wallet_before), 'wa': float(wallet_after),
+                    'rid': cancelled_by_id, 'now': now_naive,
+                    'rr': reason or f'Transaction #{transaction_id} unvalidated/cancelled',
+                    'aid': adv.id,
+                })
+
+                if rec_amt > Decimal('0.00'):
+                    _log_wallet_txn(
+                        db, partner_id=partner.id, company_id=_txn_company_id,
+                        txn_type='SOLAR_ADV_RECOVERY', direction='DR', amount=rec_amt,
+                        wallet_before=wallet_before, wallet_after=wallet_after,
+                        ref_type='VGK_DVR_ADV', ref_id=adv.id,
+                        description=f'DVR Advance recovery on txn #{transaction_id} cancellation — {adv.entry_number}',
+                        staff_id=cancelled_by_id,
+                    )
+            else:
+                db.execute(text("""
+                    UPDATE vgk_solar_cibil_advances
+                    SET status = 'CANCELLED',
+                        recovery_reason = :rr,
+                        updated_at = :now
+                    WHERE id = :aid
+                """), {
+                    'rr': reason or f'Transaction #{transaction_id} unvalidated/cancelled',
+                    'now': now_naive,
+                    'aid': adv.id
+                })
+
+            # If Stage 1 was adjusted against this transaction, restore it independently to L1 and L2
+            if adv.adjustment_amount and Decimal(str(adv.adjustment_amount)) > 0:
+                adj_to_restore = Decimal(str(adv.adjustment_amount))
+                restored_adj_total += adj_to_restore
+                adv_lvl = adv.level or 1
+
+                if adv_lvl == 1:
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET remaining_stage1_advance = remaining_stage1_advance + :adj,
+                            remaining_stage1_advance_l1 = COALESCE(remaining_stage1_advance_l1, 0) + :adj
+                        WHERE id = :lid
+                    """), {'adj': float(adj_to_restore), 'lid': adv.lead_id})
+
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = GREATEST(0, COALESCE(adjustment_amount, 0) - :adj),
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) - :adj) < advance_amount THEN 'RELEASED' ELSE status END,
+                            updated_at = :now
+                        WHERE lead_id = :lid AND level = 1 AND kind = 'ADVANCE'
+                    """), {'adj': float(adj_to_restore), 'lid': adv.lead_id, 'now': now_naive})
+
+                elif adv_lvl == 2:
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET remaining_stage1_advance = remaining_stage1_advance + :adj,
+                            remaining_stage1_advance_l2 = COALESCE(remaining_stage1_advance_l2, 0) + :adj
+                        WHERE id = :lid
+                    """), {'adj': float(adj_to_restore), 'lid': adv.lead_id})
+
+                    db.execute(text("""
+                        UPDATE vgk_solar_cibil_advances
+                        SET adjustment_amount = GREATEST(0, COALESCE(adjustment_amount, 0) - :adj),
+                            status = CASE WHEN (COALESCE(adjustment_amount, 0) - :adj) < advance_amount THEN 'RELEASED' ELSE status END,
+                            updated_at = :now
+                        WHERE lead_id = :lid AND level = 2 AND kind = 'ADVANCE'
+                    """), {'adj': float(adj_to_restore), 'lid': adv.lead_id, 'now': now_naive})
+
+            cancelled_count += 1
+
+        # Cancel vgk_cash_income_entries
+        db.execute(text("""
+            UPDATE vgk_cash_income_entries
+            SET status = 'CANCELLED',
+                cancelled_reason = :rr,
+                updated_at = :now
+            WHERE source_transaction_id = :tid AND kind = 'DVR_ADVANCE'
+        """), {
+            'rr': reason or f'Transaction #{transaction_id} unvalidated/cancelled',
+            'now': now_naive,
+            'tid': transaction_id,
+        })
+
+        db.commit()
+        logger.info(
+            f"[STAGE2-ADV] Cancelled {cancelled_count} Stage 2 advance(s) for txn #{transaction_id}, "
+            f"restored Stage 1 adjustment: ₹{float(restored_adj_total):.2f}"
+        )
+        return {
+            'cancelled': True,
+            'count': cancelled_count,
+            'cancelled_count': cancelled_count,
+            'restored_stage1_adjustment': float(restored_adj_total)
+        }
+
+    except Exception as e:
+        logger.warning(f"[STAGE2-ADV] cancel_payment_stage2_advance failed for txn #{transaction_id}: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return {'cancelled': False, 'reason': str(e)}
+
+
+def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
+    """
+    Stage 2 Advance Entry Point.
+    - If lead has validated transactions on or after STAGE2_EFFECTIVE_DATE (24-Sep-2026),
+      processes any unhandled transactions through process_payment_stage2_advance.
+    - If lead has transactions <= 23-Sep-2026, routes to canonical legacy DVR advance logic.
+    """
+    try:
+        # Check for validated transactions on this lead
+        txns = db.execute(text("""
+            SELECT id, amount, transaction_date, validated_at, created_at
+            FROM crm_lead_transactions
+            WHERE lead_id = :lid AND validation_status = 'validated'
+            ORDER BY id ASC
+        """), {'lid': lead_id}).fetchall()
+
+        if txns:
+            # Check if any transaction is >= STAGE2_EFFECTIVE_DATE
+            cutoff_date = STAGE2_EFFECTIVE_DATE.date()
+            post_cutoff_txns = []
+            for t in txns:
+                td = t.transaction_date or t.validated_at or t.created_at
+                if td:
+                    t_date = td.date() if hasattr(td, 'date') else td
+                    if t_date >= cutoff_date:
+                        post_cutoff_txns.append(t)
+
+            if post_cutoff_txns:
+                created_any = False
+                all_numbers = []
+                for t in post_cutoff_txns:
+                    res = process_payment_stage2_advance(
+                        db=db, lead_id=lead_id, transaction_id=t.id,
+                        payment_amount=Decimal(str(t.amount or 0)),
+                        transaction_date=t.transaction_date or t.validated_at or t.created_at
+                    )
+                    if res.get('created'):
+                        created_any = True
+                        all_numbers.extend(res.get('entry_numbers', []))
+                if created_any:
+                    return {'created': True, 'entry_numbers': all_numbers}
+                return {'created': False, 'reason': 'All post-cutoff transaction advances already exist'}
+
+        # Fallback to legacy DVR advance logic
+        return _legacy_check_and_create_dvr_advance(db, lead_id)
+
+    except Exception as e:
+        logger.warning(f"[STAGE2-ADV] check_and_create_dvr_advance dispatch error for lead {lead_id}: {e}")
+        return _legacy_check_and_create_dvr_advance(db, lead_id)
+
+
 def release_dvr_advance(
     db: Session, lead_id: int, partner_id: int, level: int,
     released_by_id: int = None, notes: str = None,
+    source_transaction_id: Optional[int] = None,
+    adv_id: Optional[int] = None,
 ) -> dict:
     """
-    DC-SOLAR-DVR-ADV-20260701-001: Release a PENDING DVR_ADVANCE record.
-    Credits advance_amount to partner wallet. L1 also gets slab bonus if an
-    active slab_wise bonanza with advance_count_basis='DVR'/'BOTH' exists.
+    Release a PENDING DVR_ADVANCE record.
+    Supports specific advance ID, transaction ID, or lead/partner/level matching.
+    Credits net advance amount (gross advance minus Stage 1 pro-rata adjustment)
+    to partner wallet, deducting 8% admin charges and 2% TDS.
     """
     try:
-        adv = db.execute(text("""
-            SELECT id, partner_id, advance_amount, status, entry_number, company_id
-            FROM vgk_solar_cibil_advances
-            WHERE lead_id=:lid AND level=:lv AND kind='DVR_ADVANCE' AND partner_id=:pid
-            FOR UPDATE
-        """), {'lid': lead_id, 'lv': level, 'pid': partner_id}).fetchone()
+        if adv_id:
+            adv = db.execute(text("""
+                SELECT id, partner_id, advance_amount, status, entry_number, company_id,
+                       adjustment_amount, source_transaction_id
+                FROM vgk_solar_cibil_advances
+                WHERE id = :aid FOR UPDATE
+            """), {'aid': adv_id}).fetchone()
+        elif source_transaction_id:
+            adv = db.execute(text("""
+                SELECT id, partner_id, advance_amount, status, entry_number, company_id,
+                       adjustment_amount, source_transaction_id
+                FROM vgk_solar_cibil_advances
+                WHERE source_transaction_id = :tid AND level = :lv AND kind = 'DVR_ADVANCE' AND partner_id = :pid
+                FOR UPDATE
+            """), {'tid': source_transaction_id, 'lv': level, 'pid': partner_id}).fetchone()
+        else:
+            adv = db.execute(text("""
+                SELECT id, partner_id, advance_amount, status, entry_number, company_id,
+                       adjustment_amount, source_transaction_id
+                FROM vgk_solar_cibil_advances
+                WHERE lead_id = :lid AND level = :lv AND kind = 'DVR_ADVANCE' AND partner_id = :pid
+                ORDER BY id DESC LIMIT 1 FOR UPDATE
+            """), {'lid': lead_id, 'lv': level, 'pid': partner_id}).fetchone()
 
         if not adv:
             return {'success': False, 'error': 'No DVR_ADVANCE record found'}
@@ -428,21 +1099,22 @@ def release_dvr_advance(
         if not partner:
             return {'success': False, 'error': 'Partner not found'}
 
-        _txn_company_id = partner.company_id or adv.company_id
-        amount = Decimal(str(adv.advance_amount))
+        _txn_company_id = partner.company_id or adv.company_id or 4
+        gross_amount = Decimal(str(adv.advance_amount))
+        adj_amount = Decimal(str(getattr(adv, 'adjustment_amount', 0) or 0))
+        amount = max(Decimal('0'), gross_amount - adj_amount)
 
-        _pre_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
-        _pre_tds   = (amount * Decimal('0.02')).quantize(Decimal('0.01'))
+        _pre_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        _pre_tds   = ((amount - _pre_admin) * Decimal('0.02')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         _pre_net   = amount - _pre_admin - _pre_tds
         _avail_pts = partner.vgk_points_balance or Decimal('0')
+        # DC-NO-PTS-GATE-002: Points balance is informational for DVR advance release
+        # (mirrors DC-NO-PTS-GATE-001 in release_advance). Advance release is not blocked by points.
         if _avail_pts < _pre_net:
-            return {
-                'success': False,
-                'error': (
-                    f"Partner's VGK Points ({float(_avail_pts):.0f} pts) < "
-                    f"net DVR advance payout (₹{float(_pre_net):.2f})."
-                ),
-            }
+            logger.info(
+                f"[VGK-DVR-ADV] Informational: Partner {partner.id} points ({float(_avail_pts):.0f}) < "
+                f"net DVR advance (₹{float(_pre_net):.2f}). Proceeding with release."
+            )
 
         now = _get_ist()
         wallet_before = partner.vgk_cash_wallet or Decimal('0')
@@ -889,7 +1561,7 @@ def release_advance(db: Session, lead_id: int, released_by_id: int, notes: str =
 
         if not adv:
             return {'success': False, 'error': 'No advance record found for this lead'}
-        if adv.status != 'PENDING':
+        if adv.status not in ('PENDING', 'DEFICIT'):
             if adv.status in ('RELEASED', 'STAGE1_APPROVED', 'STAGE2_PAID', 'PAID'):
                 logger.info(f'[VGK-SOLAR-ADV] Advance {adv.id} is already {adv.status}; skipping duplicate release.')
                 return {'success': True, 'already_released': True, 'message': f'Advance was already {adv.status}'}
@@ -935,6 +1607,25 @@ def release_advance(db: Session, lead_id: int, released_by_id: int, notes: str =
             'rid': released_by_id, 'now': now.replace(tzinfo=None),
             'notes': notes, 'aid': adv.id,
         })
+
+        if _level in (1, 2):
+            try:
+                if _level == 1:
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET remaining_stage1_advance = COALESCE(remaining_stage1_advance, 0) + :amt,
+                            remaining_stage1_advance_l1 = COALESCE(remaining_stage1_advance_l1, 0) + :amt
+                        WHERE id = :lid
+                    """), {'amt': float(amount), 'lid': lead_id})
+                elif _level == 2:
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET remaining_stage1_advance = COALESCE(remaining_stage1_advance, 0) + :amt,
+                            remaining_stage1_advance_l2 = COALESCE(remaining_stage1_advance_l2, 0) + :amt
+                        WHERE id = :lid
+                    """), {'amt': float(amount), 'lid': lead_id})
+            except Exception as _r_err:
+                logger.warning(f"[VGK-SOLAR-ADV] Could not increment remaining_stage1_advance on lead {lead_id}: {_r_err}")
 
         _log_wallet_txn(
             db, partner_id=partner.id, company_id=_txn_company_id,
@@ -1145,6 +1836,26 @@ def recover_advance(db: Session, lead_id: int, reason: str = None, recovered_by_
                 'rr': reason or 'Lead cancelled/rejected', 'aid': adv.id,
             })
 
+            # DC-ADV-RECOVER-MIRROR-CANCEL-001: Auto-cancel mirrored vgk_cash_income_entries
+            # to prevent orphaned or duplicate payouts if advance is recovered.
+            db.execute(text("""
+                UPDATE vgk_cash_income_entries
+                   SET status = 'CANCELLED',
+                       cancelled_reason = :cr,
+                       notes = COALESCE(notes, '') || ' | Auto-cancelled via advance recovery (' || :entry_no || ')',
+                       updated_at = :now
+                 WHERE source_lead_id = :lid
+                   AND partner_id = :pid
+                   AND kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE')
+                   AND status NOT IN ('PAID', 'CANCELLED')
+            """), {
+                'lid': lead_id,
+                'pid': adv.partner_id,
+                'entry_no': adv.entry_number,
+                'cr': f'Advance {adv.entry_number} recovered ({new_status})',
+                'now': now.replace(tzinfo=None),
+            })
+
             if recovery_amt > 0:
                 _log_wallet_txn(
                     db, partner_id=partner.id, company_id=_txn_company_id,
@@ -1178,70 +1889,105 @@ def recover_advance(db: Session, lead_id: int, reason: str = None, recovered_by_
         return {'success': False, 'error': str(e)}
 
 
-def apply_adjustment_at_completion(db: Session, lead_id: int, cash_income_entry_id: int) -> dict:
+def apply_adjustment_at_completion(db: Session, lead_id: int, cash_income_entry_id: Optional[int] = None) -> dict:
     """
     Called when the final cash income draft is generated (lead completed, balance = 0).
-    If a RELEASED advance exists, deducts ₹1,000 from that cash income entry's net payout
-    by recording an adjustment on the advance record.
-    The cash income entry's commission_amount is reduced by ₹1,000 (minimum ₹0).
-    Status → ADJUSTED.
+    Reconciles and deducts any previously released advances (Stage 1 / Stage 2) for the entry's partner,
+    preventing double payment. Status → ADJUSTED.
     """
     try:
-        advs = db.execute(text("""
-            SELECT id, partner_id, advance_amount, status, entry_number, kind
-            FROM vgk_solar_cibil_advances
-            WHERE lead_id = :lid AND level = 1 AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status = 'RELEASED'
-            FOR UPDATE
-        """), {'lid': lead_id}).fetchall()
-
-        if not advs:
-            return {'adjusted': False, 'reason': 'No released L1 advance (CIBIL or DVR) to adjust'}
+        if not cash_income_entry_id:
+            # Reconcile L1 draft by default if entry_id not specified
+            l1_entry = db.execute(text(
+                "SELECT id FROM vgk_cash_income_entries WHERE source_lead_id = :lid AND level = 1 AND status = 'DRAFT' ORDER BY id ASC LIMIT 1"
+            ), {'lid': lead_id}).fetchone()
+            if not l1_entry:
+                return {'adjusted': False, 'reason': 'No L1 draft income entry found to adjust'}
+            cash_income_entry_id = l1_entry.id
 
         entry = db.execute(text("""
-            SELECT id, commission_amount FROM vgk_cash_income_entries
+            SELECT id, partner_id, level, commission_amount, advance_adjusted_amount FROM vgk_cash_income_entries
             WHERE id = :eid FOR UPDATE
         """), {'eid': cash_income_entry_id}).fetchone()
 
         if not entry:
             return {'adjusted': False, 'reason': 'Cash income entry not found'}
 
+        advs = db.execute(text("""
+            SELECT id, partner_id, advance_amount, COALESCE(adjustment_amount, 0) as adjustment_amount, status, entry_number, kind
+            FROM vgk_solar_cibil_advances
+            WHERE lead_id = :lid AND partner_id = :pid
+              AND kind IN ('ADVANCE', 'DVR_ADVANCE')
+              AND status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID')
+            FOR UPDATE
+        """), {'lid': lead_id, 'pid': entry.partner_id}).fetchall()
+
+        if not advs:
+            return {'adjusted': False, 'reason': f'No released advance to adjust for partner {entry.partner_id}'}
+
         original_commission = Decimal(str(entry.commission_amount or 0))
-        total_advance_amt = sum(Decimal(str(a.advance_amount or 0)) for a in advs)
-        adjusted_commission = max(Decimal('0'), original_commission - total_advance_amt)
-        actual_adjustment = original_commission - adjusted_commission
+        total_unadj_adv = sum(max(Decimal('0'), Decimal(str(a.advance_amount or 0)) - Decimal(str(a.adjustment_amount or 0))) for a in advs)
+
+        if total_unadj_adv <= Decimal('0.00'):
+            return {'adjusted': False, 'reason': 'All advances already adjusted'}
+
+        actual_adjustment = min(total_unadj_adv, original_commission)
+        adjusted_commission = max(Decimal('0'), original_commission - actual_adjustment)
 
         now = _get_ist()
+        now_naive = now.replace(tzinfo=None)
+
         db.execute(text("""
             UPDATE vgk_cash_income_entries
-            SET commission_amount = :new_amt, updated_at = :now
+            SET commission_amount = :new_amt,
+                advance_adjusted_amount = COALESCE(advance_adjusted_amount, 0) + :adj,
+                updated_at = :now
             WHERE id = :eid
-        """), {'new_amt': float(adjusted_commission), 'now': now.replace(tzinfo=None), 'eid': cash_income_entry_id})
+        """), {'new_amt': float(adjusted_commission), 'adj': float(actual_adjustment), 'now': now_naive, 'eid': cash_income_entry_id})
 
+        rem_to_mark = actual_adjustment
         for adv in advs:
-            db.execute(text("""
-                UPDATE vgk_solar_cibil_advances SET
-                    status = 'ADJUSTED',
-                    adjustment_amount = :adj,
-                    adjustment_entry_id = :eid,
-                    adjusted_at = :now,
-                    updated_at  = :now
-                WHERE id = :aid
-            """), {
-                'adj': float(adv.advance_amount or 0),
-                'eid': cash_income_entry_id,
-                'now': now.replace(tzinfo=None),
-                'aid': adv.id,
-            })
+            if rem_to_mark <= Decimal('0.00'):
+                break
+            adv_unadj = max(Decimal('0'), Decimal(str(adv.advance_amount or 0)) - Decimal(str(adv.adjustment_amount or 0)))
+            adj_this = min(rem_to_mark, adv_unadj)
+            if adj_this > Decimal('0.00'):
+                db.execute(text("""
+                    UPDATE vgk_solar_cibil_advances SET
+                        status = CASE WHEN (COALESCE(adjustment_amount, 0) + :adj) >= advance_amount THEN 'ADJUSTED' ELSE status END,
+                        adjustment_amount = COALESCE(adjustment_amount, 0) + :adj,
+                        adjustment_entry_id = :eid,
+                        adjusted_at = :now,
+                        updated_at  = :now
+                    WHERE id = :aid
+                """), {
+                    'adj': float(adj_this),
+                    'eid': cash_income_entry_id,
+                    'now': now_naive,
+                    'aid': adv.id,
+                })
+                rem_to_mark -= adj_this
+
+        if entry.level == 1:
+            db.execute(text("UPDATE crm_leads SET remaining_stage1_advance_l1 = 0 WHERE id = :lid"), {'lid': lead_id})
+        elif entry.level == 2:
+            db.execute(text("UPDATE crm_leads SET remaining_stage1_advance_l2 = 0 WHERE id = :lid"), {'lid': lead_id})
+
+        db.execute(text("""
+            UPDATE crm_leads
+            SET remaining_stage1_advance = COALESCE(remaining_stage1_advance_l1, 0) + COALESCE(remaining_stage1_advance_l2, 0)
+            WHERE id = :lid
+        """), {'lid': lead_id})
 
         db.commit()
         logger.info(
-            f'[VGK-SOLAR-ADV] ADJUSTED {adv.entry_number}: '
+            f'[VGK-SOLAR-ADV] Reconciled advances for lead {lead_id} partner {entry.partner_id}: '
             f'commission ₹{float(original_commission)} → ₹{float(adjusted_commission)} '
             f'(deducted ₹{float(actual_adjustment)}) via income entry {cash_income_entry_id}'
         )
         return {
             'adjusted': True,
-            'entry_number': adv.entry_number,
+            'entry_id': cash_income_entry_id,
             'original_commission': float(original_commission),
             'adjustment_amount': float(actual_adjustment),
             'adjusted_commission': float(adjusted_commission),

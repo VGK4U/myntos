@@ -50,10 +50,23 @@ def apply_extra_commission_if_active(
     Returns:
         {'applied': int, 'skipped': int}
     """
+    from datetime import datetime, timedelta
     from app.services.vgk_cash_income import _next_entry_number, _get_ist
 
     applied = 0
     skipped = 0
+
+    # DC-BONANZA-PERMANENT-FREEZE-20260921:
+    # Bonanza Extra Commission is permanently disabled from 21-Sep-2026 00:00 IST onwards.
+    now_ist = _get_ist().replace(tzinfo=None)
+    BONANZA_EXTRA_COMMISSION_CUTOFF = datetime(2026, 9, 21, 0, 0, 0)
+    if now_ist >= BONANZA_EXTRA_COMMISSION_CUTOFF:
+        logger.info(
+            f"[BONANZA-CUTOFF] Bonanza Extra Commission is permanently disabled effective "
+            f"{BONANZA_EXTRA_COMMISSION_CUTOFF.strftime('%Y-%m-%d %H:%M:%S')} IST. "
+            f"Skipping trigger '{trigger_event}' for lead {getattr(lead, 'id', '?')}."
+        )
+        return {'applied': 0, 'skipped': 0, 'reason': 'Bonanza Extra Commission permanently disabled as of 21-Sep-2026 00:00 IST'}
 
     try:
         lead_id     = lead.id
@@ -94,7 +107,6 @@ def apply_extra_commission_if_active(
             bz_start = _bz.start_date.date() if hasattr(_bz.start_date, 'date') else _bz.start_date
             bz_end = _bz.end_date.date() if hasattr(_bz.end_date, 'date') else _bz.end_date
 
-            from datetime import timedelta
             bz_end_with_grace = bz_end + timedelta(days=grace)
 
             def is_date_eligible(trig):
@@ -111,6 +123,8 @@ def apply_extra_commission_if_active(
                     return False
                 if hasattr(check_dt, 'date'):
                     check_dt = check_dt.date()
+                if check_dt >= datetime(2026, 9, 21).date():
+                    return False
                 return bz_start <= check_dt <= bz_end_with_grace
 
             try:
