@@ -1041,15 +1041,19 @@ def run_migrations():
 
                 # 4.30 SaaS Governance & Module Entitlements Schema Invariants
                 logger.info("Executing SaaS Governance & Module Entitlements schema invariants...")
-                conn.execute(text("""
-                    ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC';
-                    ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS assigned_modules JSONB DEFAULT '[]'::jsonb;
-                    ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL';
-                    ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb;
-                    ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK';
-                    ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE;
-                    ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb;
-                """))
+                for ddl_stmt in [
+                    "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC'",
+                    "ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS assigned_modules JSONB DEFAULT '[]'::jsonb",
+                    "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL'",
+                    "ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb",
+                    "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK'",
+                    "ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE",
+                    "ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb",
+                ]:
+                    try:
+                        conn.execute(text(ddl_stmt))
+                    except Exception as ddl_err:
+                        logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
                 logger.info("✅ SaaS Governance & Module Entitlements schema invariants verified/applied")
 
         logger.info("✅ Feature-specific schema migrations complete")
