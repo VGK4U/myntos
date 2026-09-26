@@ -545,10 +545,16 @@ def process_payment_stage2_advance(
                 if role not in layer_map[target_key]['role']:
                     layer_map[target_key]['role'] = f"{layer_map[target_key]['role']}+{role}"
 
-        # Fallback L1 Producer (5.00%) if not resolved
+        cfg = cat_cfg or VGK4UWaterfallEngine.get_category_config(db, category_slug)
+
+        def _get_parent(pid):
+            if not pid:
+                return None
+            return db.execute(text("SELECT parent_partner_id FROM official_partners WHERE id = :pid"), {'pid': pid}).scalar()
+
+        # Guarantee L1 Source (5.00%)
         l1_entries = [alloc for k, alloc in layer_map.items() if k[0] == 1]
         if not l1_entries and lead.associated_partner_id:
-            cfg = cat_cfg or VGK4UWaterfallEngine.get_category_config(db, category_slug)
             l1_pct = Decimal(str(cfg.producer_base_pct if cfg else '5.00'))
             l1_amt = (amt * l1_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             target_key = (1, lead.associated_partner_id)
@@ -557,6 +563,59 @@ def process_payment_stage2_advance(
                 'commission_pct': l1_pct, 'commission_amount': l1_amt
             }
             l1_entries = [layer_map[target_key]]
+
+        # Resolve unilevel uplines
+        l1_pid = lead.associated_partner_id
+        l2_pid = lead.team_senior_partner_id or _get_parent(l1_pid)
+        l3_pid = _get_parent(l2_pid) if l2_pid else None
+        l4_pid = _get_parent(l3_pid) if l3_pid else None
+        l5_pid = lead.vgk_field_support_id or ROOT_APEX_PARTNER_ID
+
+        # Guarantee L2 Senior (1.50%)
+        l2_entries = [alloc for k, alloc in layer_map.items() if k[0] == 2]
+        if not l2_entries and l2_pid:
+            l2_pct = Decimal(str(cfg.sponsor_override_pct if cfg else '1.50'))
+            l2_amt = (amt * l2_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            target_key = (2, l2_pid)
+            layer_map[target_key] = {
+                'level': 2, 'partner_id': l2_pid, 'role': 'SENIOR_UPLINE',
+                'commission_pct': l2_pct, 'commission_amount': l2_amt
+            }
+            l2_entries = [layer_map[target_key]]
+
+        # Guarantee L3 Extended (1.00%)
+        l3_entries = [alloc for k, alloc in layer_map.items() if k[0] == 3]
+        if not l3_entries and l3_pid:
+            l3_pct = Decimal(str(cfg.manager_diff_pct if cfg else '1.00'))
+            l3_amt = (amt * l3_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            target_key = (3, l3_pid)
+            layer_map[target_key] = {
+                'level': 3, 'partner_id': l3_pid, 'role': 'EXTENDED_DIFFERENTIAL',
+                'commission_pct': l3_pct, 'commission_amount': l3_amt
+            }
+
+        # Guarantee L4 Core (0.50%)
+        l4_entries = [alloc for k, alloc in layer_map.items() if k[0] == 4]
+        if not l4_entries and l4_pid:
+            l4_pct = Decimal(str(cfg.gm_diff_pct if cfg else '0.50'))
+            l4_amt = (amt * l4_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            target_key = (4, l4_pid)
+            layer_map[target_key] = {
+                'level': 4, 'partner_id': l4_pid, 'role': 'CORE_DIFFERENTIAL',
+                'commission_pct': l4_pct, 'commission_amount': l4_amt
+            }
+
+        # Guarantee L5 Support (1.50%)
+        l5_entries = [alloc for k, alloc in layer_map.items() if k[0] == 5]
+        if not l5_entries and l5_pid:
+            l5_pct = Decimal(str(cfg.support_end_to_end_pct if cfg else '1.50'))
+            if l5_pct > Decimal('0.00'):
+                l5_amt = (amt * l5_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                target_key = (5, l5_pid)
+                layer_map[target_key] = {
+                    'level': 5, 'partner_id': l5_pid, 'role': 'FIELD_SUPPORT',
+                    'commission_pct': l5_pct, 'commission_amount': l5_amt
+                }
 
         # 6. Option C: Pro-Rata Stage 1 Advance Recovery (applied independently against L1 and L2)
         # Stage 1 Advance Pool: L1 = ₹1,000, L2 = ₹500. Total = ₹1,500.

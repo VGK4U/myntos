@@ -2379,6 +2379,56 @@ def bootstrap_feedback_submissions_destination_and_expiry():
         db.close()
 
 
+def bootstrap_canonical_5tier_commission_hierarchy():
+    """
+    DC Protocol (Sep 2026): Enforce Canonical Commission Hierarchy across all categories:
+    - L1 Source: 5.00%
+    - L2 Senior: 1.50%
+    - L3 Extended: 1.00%
+    - L4 Core: 0.50%
+    - L5 Support: 1.50% (Solar, EV, Training, EV Spares; Real Estate & Insurance based on staff pool)
+    - L6 Showroom: 3.50% (on Solar, triggered at final payment)
+    - Brand Commission: ₹2,000 for qualifying brands (triggered at final payment)
+    - Network Pool: 8.00% (5% + 1.5% + 1% + 0.5% = 8.00%)
+    """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        categories = [
+            ('solar',        5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 3.50, 8.00, 'PAYMENT_RECEIVED'),
+            ('ev',           5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),
+            ('etc-training', 5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),
+            ('ev-spares',    5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),
+            ('real-dreams',  5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'COMMISSION_RECEIVED'),
+            ('insurance',    5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'COMMISSION_RECEIVED'),
+        ]
+        for slug, pb, sp, mg, gm, rm, sup, sh, mp, basis in categories:
+            db.execute(text("""
+                UPDATE vgk4u_category_commission_configs
+                SET producer_base_pct = :pb,
+                    sponsor_override_pct = :sp,
+                    manager_diff_pct = :mg,
+                    gm_diff_pct = :gm,
+                    rm_diff_pct = :rm,
+                    support_end_to_end_pct = :sup,
+                    showroom_pct = :sh,
+                    max_network_pool_pct = :mp,
+                    earning_basis_type = :basis,
+                    updated_at = NOW()
+                WHERE category_slug = :slug AND is_active = true
+            """), {
+                'slug': slug, 'pb': pb, 'sp': sp, 'mg': mg, 'gm': gm, 'rm': rm,
+                'sup': sup, 'sh': sh, 'mp': mp, 'basis': basis
+            })
+        db.commit()
+        logger.info("[SCHEMA BOOTSTRAP] ✅ Synchronized Canonical 5-Tier Commission Hierarchy")
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[SCHEMA BOOTSTRAP] Could not sync canonical commission configs: {e}")
+    finally:
+        db.close()
+
+
 def run_schema_bootstrap():
     """
     Run all schema bootstrap operations
@@ -2388,6 +2438,7 @@ def run_schema_bootstrap():
     logger.info("[SCHEMA BOOTSTRAP] Starting schema bootstrap...")
     bootstrap_background_jobs_schema()
     bootstrap_feedback_submissions_destination_and_expiry()
+    bootstrap_canonical_5tier_commission_hierarchy()
     backfill_job_handler_metadata()
     bootstrap_sfms_credit_tables()
     bootstrap_sfms_seed_data()

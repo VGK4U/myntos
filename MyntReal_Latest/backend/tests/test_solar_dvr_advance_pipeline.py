@@ -51,7 +51,7 @@ class TestSolarDVRAdvancePipeline(unittest.TestCase):
         # Setup base partners: Direct partner L1 (99152), Senior partner L2 (99031), Field support L5 (99221)
         try:
             # Clean old test data
-            cls.db.execute(text("DELETE FROM vgk_wallet_transactions WHERE partner_id IN (99152, 99031, 99221, 99032)"))
+            cls.db.execute(text("DELETE FROM vgk_wallet_transactions WHERE partner_id IN (99152, 99031, 99221, 99032) OR ref_type IN ('VGK_DVR_ADV', 'VGK_ADVANCE')"))
             cls.db.execute(text("DELETE FROM vgk_cash_income_entries WHERE source_lead_id >= 99000"))
             cls.db.execute(text("DELETE FROM vgk_solar_cibil_advances WHERE lead_id >= 99000"))
             cls.db.execute(text("DELETE FROM income_entries WHERE lead_id >= 99000 OR entry_number LIKE 'TEST-INC-%'"))
@@ -382,7 +382,7 @@ class TestSolarDVRAdvancePipeline(unittest.TestCase):
         txns = db.execute(text("""
             SELECT t.id FROM vgk_wallet_transactions t
             JOIN vgk_solar_cibil_advances a ON t.ref_id = a.id
-            WHERE a.lead_id = :lid AND a.kind = 'DVR_ADVANCE'
+            WHERE a.lead_id = :lid AND a.kind = 'DVR_ADVANCE' AND t.ref_type = 'VGK_DVR_ADV'
         """), {"lid": lead_id}).fetchall()
         self.assertEqual(len(txns), 0)
 

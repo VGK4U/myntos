@@ -6215,7 +6215,7 @@ def fetch_member_income_entries_data(
         brand_name_map = {}
 
     result = []
-    _lvl_labels_map = {0:'Comm', 1:'Source', 2:'Senior', 3:'Extended', 4:'Core', 5:'Support'}
+    _lvl_labels_map = {0:'Comm', 1:'Source', 2:'Senior', 3:'Extended', 4:'Core', 5:'Support', 6:'Showroom'}
 
     def _build_row(r, is_vsca: bool = False, is_bp: bool = False):
         _li    = lead_info.get(r.source_lead_id) if r.source_lead_id else None
