@@ -5159,8 +5159,20 @@ def job_bi_hourly_sales_performance_report():
     logger.info("📊 DC-SALES-PERF-001: Triggering bi-hourly sales performance report to WhatsApp Group...")
     db = SessionLocal()
     try:
-        res = dispatch_bi_hourly_sales_performance_report(db)
-        logger.info(f"✅ DC-SALES-PERF-001: Group report dispatch result: {res}")
+        from sqlalchemy import text
+        lock = db.execute(text("SELECT pg_try_advisory_lock(88890077)")).scalar()
+        if not lock:
+            logger.info("⏸️ [DC-SALES-PERF-001] Another worker holds the advisory lock (88890077). Skipping duplicate execution.")
+            return
+
+        try:
+            res = dispatch_bi_hourly_sales_performance_report(db)
+            logger.info(f"✅ DC-SALES-PERF-001: Group report dispatch result: {res}")
+        finally:
+            try:
+                db.execute(text("SELECT pg_advisory_unlock(88890077)"))
+            except Exception:
+                pass
     except Exception as exc:
         logger.error(f"❌ DC-SALES-PERF-001: Group report dispatch failed: {exc}")
     finally:

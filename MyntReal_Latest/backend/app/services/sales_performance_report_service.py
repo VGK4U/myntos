@@ -505,6 +505,25 @@ def dispatch_bi_hourly_sales_performance_report(
         create_execution, record_dispatch, finalize_execution, get_job_targets
     )
 
+    from sqlalchemy import text
+
+    # DC-DEDUP-001: Deduplication guard for automated scheduler triggers
+    # Prevents duplicate executions if triggered twice within 15 minutes for the same slot
+    if trigger_type == "AUTO_SCHEDULER":
+        try:
+            recent_exec = db.execute(text("""
+                SELECT id, started_at FROM automation_execution
+                WHERE job_id = 'wa_bihourly_sales_perf_report'
+                  AND started_at >= NOW() - INTERVAL '15 minutes'
+                  AND status IN ('SENT', 'SUCCESS', 'RUNNING')
+                ORDER BY started_at DESC LIMIT 1
+            """)).fetchone()
+            if recent_exec:
+                logger.warning(f"⏸️ [DC-DEDUP-001] Suppressed duplicate bi-hourly report: already executed recently ({recent_exec[0]} at {recent_exec[1]})")
+                return {"success": True, "skipped": True, "reason": "already_executed_recently", "recent_execution_id": recent_exec[0]}
+        except Exception as dedup_chk_err:
+            logger.warning(f"[DC-DEDUP-001] Duplicate check notice: {dedup_chk_err}")
+
     msg = generate_bi_hourly_performance_message(db, slot_name=slot_name)
     logger.info(f"📊 Dispatching sales performance update for slot {slot_name}...")
 
@@ -527,6 +546,7 @@ def dispatch_bi_hourly_sales_performance_report(
         metadata={"slot_name": slot_name}
     )
 
+    ist_now_slot = _get_ist_now().strftime("%Y%m%d_%H")
     last_res = None
     for tg in target_list:
         ident = tg["identifier"]
@@ -540,7 +560,8 @@ def dispatch_bi_hourly_sales_performance_report(
             job_name="Sales Team 2-Hour Report & Leaderboard",
             trigger_type=trigger_type,
             db=db,
-            execution_id=execution.id
+            execution_id=execution.id,
+            idempotency_key=f"bihourly_{ist_now_slot}_{ident}"
         )
         last_res = res
         is_succ = isinstance(res, dict) and res.get("success") is True and not res.get("queued")

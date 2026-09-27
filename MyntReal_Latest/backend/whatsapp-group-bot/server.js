@@ -112,6 +112,19 @@ let lastMessageSentTimestamp = 0;
 const NEW_CONNECTION_COOLDOWN_MS = 25000; // 25s post-scan stabilization cooldown
 let consecutiveAuthFailures = 0;
 
+// ── DC-DEDUP-003: In-Memory Idempotency & Deduplication Cache (TTL 5 minutes) ─
+const recentDispatchedMessageHashes = new Map();
+
+function cleanDeduplicationCache() {
+    const now = Date.now();
+    for (const [key, timestamp] of recentDispatchedMessageHashes.entries()) {
+        if (now - timestamp > 300000) { // 5 minutes TTL
+            recentDispatchedMessageHashes.delete(key);
+        }
+    }
+}
+setInterval(cleanDeduplicationCache, 60000);
+
 let isProcessingQueue = false;
 async function processOutboundQueue() {
     if (isProcessingQueue || !sock || connectionStatus !== 'connected') return;
@@ -143,6 +156,29 @@ async function processOutboundQueue() {
                 let cleanPhone = String(target).replace(/\D/g, '');
                 if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
                 target = `${cleanPhone}@s.whatsapp.net`;
+            }
+
+            // DC-DEDUP-003: Suppress queued duplicate if already sent directly within last 3 minutes
+            const qMsgSnippet = String(item.message || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+            const qDedupKey = `${target}_${qMsgSnippet}`;
+            if (recentDispatchedMessageHashes.has(qDedupKey) && (Date.now() - recentDispatchedMessageHashes.get(qDedupKey) < 180000)) {
+                console.log(`🛡️ [DEDUP-GUARD] Suppressed queued duplicate dispatch to ${target}: '${qDedupKey}'`);
+                try {
+                    await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            queue_id: item.id,
+                            status: 'sent',
+                            result_payload: {
+                                duplicate_suppressed: true,
+                                target_jid: target,
+                                timestamp: Date.now()
+                            }
+                        })
+                    });
+                } catch (e) {}
+                continue;
             }
 
             // Anti-ban pacing: Wait between consecutive messages (10–18 seconds jittered delay)
@@ -194,6 +230,7 @@ async function processOutboundQueue() {
 
                 const sentMsg = await sock.sendMessage(target, contentPayload);
                 lastMessageSentTimestamp = Date.now();
+                recentDispatchedMessageHashes.set(qDedupKey, Date.now());
                 const wamid = sentMsg?.key?.id || null;
                 console.log(`✅ [ANTI-BAN-PACING] Successfully dispatched queued message #${item.id} to ${target} (WAMID: ${wamid})`);
 
@@ -1547,6 +1584,23 @@ app.post('/api/send-group-message', async (req, res) => {
             return res.status(400).json({ success: false, error: "message or media parameter required" });
         }
 
+        // DC-DEDUP-003: Idempotency deduplication guard (prevents duplicate triggers within 3 minutes)
+        const dedupTarget = groupId || req.body.groupName || req.body.inviteCode || 'group';
+        const msgSnippet = String(message || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+        const dedupKey = req.body.idempotency_key || `${dedupTarget}_${msgSnippet}`;
+
+        if (recentDispatchedMessageHashes.has(dedupKey) && (Date.now() - recentDispatchedMessageHashes.get(dedupKey) < 180000)) {
+            console.log(`🛡️ [DEDUP-GUARD] Suppressed duplicate group dispatch within 3 minutes: '${dedupKey}'`);
+            return res.json({
+                success: true,
+                dedup_suppressed: true,
+                sent_count: 1,
+                failed_count: 0,
+                results: [{ success: true, message_id: 'dedup_suppressed_' + Date.now(), suppressed: true }],
+                message: 'Duplicate dispatch suppressed by idempotency guard'
+            });
+        }
+
         if (!ALLOW_LOCAL_SOCKET) {
             console.log(`[WA-BOT] 🛡️ [DEV-STANDBY] Mocked group message dispatch: ${message || '[Media]'}`);
             return res.json({
@@ -1815,6 +1869,7 @@ app.post('/api/send-group-message', async (req, res) => {
             try {
                 const sendRes = await sock.sendMessage(destinationJid, contentPayload, sendOptions);
                 sentCount++;
+                recentDispatchedMessageHashes.set(dedupKey, Date.now());
                 logDispatchToBackend(destinationJid, message || '[Media Attachment]', req.body.groupName || 'Sales Team Group');
                 results.push({
                     intended_target: rawCode,

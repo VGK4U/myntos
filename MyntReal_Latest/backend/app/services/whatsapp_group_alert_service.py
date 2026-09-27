@@ -36,7 +36,9 @@ def send_group_bot_message(
     trigger_type: Optional[str] = None,
     db: Optional[Session] = None,
     execution_id: Optional[str] = None,
-    force_queue: bool = False
+    force_queue: bool = False,
+    idempotency_key: Optional[str] = None,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
@@ -89,31 +91,34 @@ def send_group_bot_message(
         payload["trigger_type"] = trigger_type
     if execution_id:
         payload["execution_id"] = execution_id
+    if idempotency_key or kwargs.get("idempotency_key"):
+        payload["idempotency_key"] = idempotency_key or kwargs.get("idempotency_key")
 
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
-    urls = []
+    # DC-DEDUP-002: Use single canonical endpoint to prevent sequential double-posting across localhost loopback aliases
     if env_url:
-        urls.append(env_url)
-    urls.extend([
-        "http://127.0.0.1:5002/api/send-group-message",
-        "http://localhost:5002/api/send-group-message"
-    ])
+        primary_url = env_url.rstrip("/")
+        if not primary_url.endswith("/api/send-group-message"):
+            primary_url += "/api/send-group-message"
+    else:
+        primary_url = "http://127.0.0.1:5002/api/send-group-message"
 
     last_exc = None
-    for url in urls:
-        try:
-            resp = requests.post(url, json=payload, timeout=15)
-            raw = resp.json()
-            if resp.status_code == 200 and raw.get("success"):
-                return {"success": True, "data": raw}
-            else:
-                logger.warning(f"Group Bot API response from {url}: {resp.status_code} - {resp.text}")
-                last_exc = raw.get("error") or resp.text
-                # Break to fallback database enqueueing so message is never lost
-                break
-        except Exception as exc:
-            last_exc = exc
-            continue
+    try:
+        # 35-second timeout gives ample headroom for WhatsApp group resolution and socket transmission
+        resp = requests.post(primary_url, json=payload, timeout=35)
+        raw = resp.json()
+        if resp.status_code == 200 and raw.get("success"):
+            return {"success": True, "data": raw}
+        else:
+            logger.warning(f"Group Bot API response from {primary_url}: {resp.status_code} - {resp.text}")
+            last_exc = raw.get("error") or resp.text
+    except requests.exceptions.ReadTimeout as rt_exc:
+        # Request reached the bot and socket dispatch was initiated. Do NOT re-dispatch or fallback-queue to prevent duplicate message!
+        logger.warning(f"[WA-GROUP-ALERT] ReadTimeout from Bot Gateway ({rt_exc}). Message was already handed to bot; suppressing duplicate retry.")
+        return {"success": True, "queued": False, "uncertain": True, "message": "Dispatched to bot gateway, awaiting network ack"}
+    except Exception as exc:
+        last_exc = exc
 
     logger.warning(f"WhatsApp Group Bot Gateway dispatch not completed ({last_exc}); falling back to queue...")
 

@@ -29,7 +29,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.40-kyc-grace-member-view-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.42-dedup-group-dispatch-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -116,7 +116,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.40: KYC 3-payment grace policy, Extra Commission gating fix, Anushka/Nandana Stage-1 & Subash/Accounts payment authority, 3-Option unified view'[:190],
+    Description='MyntOS v2.4.42: Fix duplicate WhatsApp 2-hour report trigger & dispatch, advisory lock & in-memory idempotency deduplication'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")
