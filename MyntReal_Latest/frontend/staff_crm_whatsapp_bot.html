@@ -999,8 +999,11 @@
             const counter = document.getElementById('tplStatsCounter');
             if (counter) {
                 const approvedCount = allTemplatesCache.filter(t => t.is_meta_approved || t.meta_approval_status === 'APPROVED').length;
-                const internalCount = allTemplatesCache.length - approvedCount;
-                counter.innerHTML = `Showing <b>${filtered.length}</b> of <b>${allTemplatesCache.length        function renderTemplateCards(templates) {
+                counter.innerHTML = `Showing <b>${filtered.length}</b> of <b>${allTemplatesCache.length}</b> Templates`;
+            }
+        }
+
+        function renderTemplateCards(templates) {
             const container = document.getElementById('tplCardsContainer');
             if (!container) return;
 
@@ -1096,10 +1099,6 @@
                             </div>
                         </td>
                     </tr>
-                `;
-            }).join('');
-        }                  </div>
-                    </div>
                 `;
             }).join('');
         }
