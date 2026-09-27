@@ -322,6 +322,17 @@ def run_migrations():
                     )
                 """))
                 conn.execute(text("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint WHERE conname = 'uq_veh_color_in_batch_model_color'
+                        ) THEN
+                            ALTER TABLE veh_color_in 
+                            ADD CONSTRAINT uq_veh_color_in_batch_model_color UNIQUE (batch_id, model_id, color_id);
+                        END IF;
+                    END $$;
+                """))
+                conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS veh_color_out (
                         id           SERIAL PRIMARY KEY,
                         batch_id     INTEGER NOT NULL REFERENCES veh_color_batches(id) ON DELETE CASCADE,

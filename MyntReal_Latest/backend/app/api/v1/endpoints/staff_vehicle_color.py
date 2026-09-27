@@ -384,30 +384,46 @@ def upsert_in_entry(
                 f"remaining {remaining}. Requested {payload.qty}.")
 
     try:
-        db.execute(text("""
-            INSERT INTO veh_color_in
-                (batch_id, model_id, color_id, qty,
-                 party_type, party_ref_id, party_name, company_tag_id,
-                 created_by, created_at, updated_at)
-            VALUES (:bid, :mid, :coid, :qty,
-                    :pt, :prid, :pname, :ctag,
-                    :cb, :now, :now)
-            ON CONFLICT (batch_id, model_id, color_id)
-            DO UPDATE SET
-                qty           = EXCLUDED.qty,
-                party_type    = EXCLUDED.party_type,
-                party_ref_id  = EXCLUDED.party_ref_id,
-                party_name    = EXCLUDED.party_name,
-                company_tag_id= EXCLUDED.company_tag_id,
-                updated_at    = EXCLUDED.updated_at,
-                created_by    = EXCLUDED.created_by
-        """), {
-            "bid": payload.batch_id, "mid": payload.model_id, "coid": payload.color_id,
-            "qty": payload.qty,
-            "pt": payload.party_type, "prid": payload.party_ref_id,
-            "pname": payload.party_name, "ctag": payload.company_tag_id,
-            "cb": current_user.emp_code, "now": _ist_now()
-        })
+        existing = db.execute(text("""
+            SELECT id FROM veh_color_in
+            WHERE batch_id = :bid AND model_id = :mid AND color_id = :coid
+        """), {"bid": payload.batch_id, "mid": payload.model_id, "coid": payload.color_id}).fetchone()
+
+        now = _ist_now()
+        if existing:
+            db.execute(text("""
+                UPDATE veh_color_in
+                SET qty           = :qty,
+                    party_type    = :pt,
+                    party_ref_id  = :prid,
+                    party_name    = :pname,
+                    company_tag_id= :ctag,
+                    updated_at    = :now,
+                    created_by    = :cb
+                WHERE id = :id
+            """), {
+                "id": existing[0],
+                "qty": payload.qty,
+                "pt": payload.party_type, "prid": payload.party_ref_id,
+                "pname": payload.party_name, "ctag": payload.company_tag_id,
+                "cb": current_user.emp_code, "now": now
+            })
+        else:
+            db.execute(text("""
+                INSERT INTO veh_color_in
+                    (batch_id, model_id, color_id, qty,
+                     party_type, party_ref_id, party_name, company_tag_id,
+                     created_by, created_at, updated_at)
+                VALUES (:bid, :mid, :coid, :qty,
+                        :pt, :prid, :pname, :ctag,
+                        :cb, :now, :now)
+            """), {
+                "bid": payload.batch_id, "mid": payload.model_id, "coid": payload.color_id,
+                "qty": payload.qty,
+                "pt": payload.party_type, "prid": payload.party_ref_id,
+                "pname": payload.party_name, "ctag": payload.company_tag_id,
+                "cb": current_user.emp_code, "now": now
+            })
         db.commit()
         return {"ok": True}
     except Exception as e:
