@@ -307,9 +307,19 @@ class ApiService {
           throw error;
         }
         
+        const errDetail: any = data?.detail;
+        let resolvedError = `HTTP ${response.status}`;
+        if (typeof errDetail === 'string') {
+          resolvedError = errDetail;
+        } else if (typeof errDetail === 'object' && errDetail !== null) {
+          resolvedError = errDetail.message || errDetail.error || (Array.isArray(errDetail) ? errDetail.map((e: any) => e.msg || e.message).join(', ') : JSON.stringify(errDetail));
+        } else if (data?.message) {
+          resolvedError = data.message;
+        }
+
         return {
           success: false,
-          error: data?.detail || `HTTP ${response.status}`,
+          error: resolvedError,
           status: response.status
         };
       }

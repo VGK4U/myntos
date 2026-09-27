@@ -843,7 +843,11 @@ export class SoftphonePage {
     const effectiveLeadId = this.selectedLeadId ?? null;
     const res = await telephonyService.startCall(cleanNumber, this.selectedContactName, effectiveLeadId);
     if (!res.success) {
-      alert(res.error || 'Failed to place call');
+      const rawErr: any = res.error;
+      const errorMsg = typeof rawErr === 'object' && rawErr !== null
+        ? (rawErr.message || rawErr.detail || (typeof rawErr.error === 'string' ? rawErr.error : JSON.stringify(rawErr)))
+        : (rawErr || 'Failed to place call');
+      alert(errorMsg);
       this.isInCall = false;
       this.render();
       return;
