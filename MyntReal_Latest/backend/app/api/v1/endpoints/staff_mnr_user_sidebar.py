@@ -1203,21 +1203,23 @@ async def get_all_announcements_staff(
     
     from app.models.feedback import FeedbackSubmission, SubmissionStatus, FeedbackCategory, FeedbackMedia, AnnouncementRating
     from sqlalchemy import func as sql_func
-    
+
+    subq_ratings = db.query(
+        AnnouncementRating.submission_id,
+        sql_func.coalesce(sql_func.avg(AnnouncementRating.rating), 0).label('average_rating'),
+        sql_func.count(AnnouncementRating.id).label('total_ratings')
+    ).group_by(AnnouncementRating.submission_id).subquery()
+
     query = db.query(
         FeedbackSubmission,
         User.name.label('user_name'),
         User.city.label('city'),
-        sql_func.coalesce(sql_func.avg(AnnouncementRating.rating), 0).label('average_rating'),
-        sql_func.count(AnnouncementRating.id).label('total_ratings')
+        sql_func.coalesce(subq_ratings.c.average_rating, 0).label('average_rating'),
+        sql_func.coalesce(subq_ratings.c.total_ratings, 0).label('total_ratings')
     ).outerjoin(
         User, FeedbackSubmission.user_id == User.id
     ).outerjoin(
-        AnnouncementRating, FeedbackSubmission.id == AnnouncementRating.submission_id
-    ).group_by(
-        FeedbackSubmission.id,
-        User.name,
-        User.city
+        subq_ratings, FeedbackSubmission.id == subq_ratings.c.submission_id
     )
     
     # Status filter

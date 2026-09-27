@@ -236,14 +236,23 @@
       return null;
     }
     
+    // DC Protocol: Canonical staff token extractor
+    function getStaffToken() {
+      return localStorage.getItem('staff_token') ||
+             localStorage.getItem('access_token') ||
+             sessionStorage.getItem('staff_token') ||
+             sessionStorage.getItem('session_token') ||
+             getCookie('staff_token') ||
+             (typeof sessionToken !== 'undefined' ? sessionToken : null) ||
+             '';
+    }
+    window.getStaffToken = getStaffToken;
+
     // Pre-detect staff type and emp_code from cookie/token
     (function() {
       try {
-        const token = sessionStorage.getItem('session_token') || 
-                     sessionStorage.getItem('staff_token') || 
-                     getCookie('staff_token') ||
-                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
-        if (token) {
+        const token = getStaffToken();
+        if (token && token.includes('.')) {
           const payload = JSON.parse(atob(token.split('.')[1]));
           window.currentStaffType = payload.staff_type || payload.user_type || null;
           window.currentEmpCode = payload.emp_code || null;
@@ -270,11 +279,8 @@
 
     async function detectStaffType() {
       try {
-        // DC Protocol: Check multiple token sources
-        const token = sessionStorage.getItem('session_token') || 
-                     sessionStorage.getItem('staff_token') ||
-                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
-        if (token) {
+        const token = getStaffToken();
+        if (token && token.includes('.')) {
           const payload = JSON.parse(atob(token.split('.')[1]));
           window.currentStaffType = payload.staff_type || payload.user_type || null;
           window.currentEmpCode = payload.emp_code || null;
@@ -318,11 +324,7 @@
 
       try {
         currentFilters = filters;
-        // DC Protocol (Jan 24, 2026): Use staff MNR user endpoint with menu access check
-        // instead of admin-only /feedback/announcements/staff
-        const token = sessionStorage.getItem('session_token') || 
-                     sessionStorage.getItem('staff_token') ||
-                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
+        const token = getStaffToken();
         const params = new URLSearchParams();
         if (filters.category_id) params.append('category_id', filters.category_id);
         if (filters.start_date) params.append('start_date', filters.start_date);
@@ -1246,9 +1248,7 @@
           }
         }
         
-        const token = sessionStorage.getItem('session_token') || 
-                     sessionStorage.getItem('staff_token') || 
-                     getCookie('staff_token');
+        const token = getStaffToken();
         
         const response = await fetch('/api/v1/feedback/staff/submit', {
           method: 'POST',
