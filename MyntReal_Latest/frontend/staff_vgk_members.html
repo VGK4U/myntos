@@ -8854,21 +8854,48 @@ function getPosterShareDetails() {
   return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
 }
 
-function shareOnWhatsApp() {
+async function resolvePosterImagePayload(container) {
+  // 1. Priority: Uploaded custom creative
+  let customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
+  if (customImg) {
+    let blob = null;
+    try {
+      blob = await (await fetch(customImg)).blob();
+    } catch (e) {
+      console.warn('[Poster export] Custom creative blob error:', e);
+    }
+    return { dataUrl: customImg, blob: blob, source: 'uploaded' };
+  }
+
+  // 2. Fallback: Auto-generated canvas poster
+  if (!container) container = document.getElementById('posterCanvasWrapper');
+  if (container) {
+    try {
+      const canvas = await capturePosterCanvas(container);
+      if (canvas) {
+        const dataUrl = safeToDataURL(canvas);
+        let blob = null;
+        try {
+          if (dataUrl) blob = await (await fetch(dataUrl)).blob();
+        } catch (e) {
+          console.warn('[Poster export] Canvas blob conversion error:', e);
+        }
+        return { dataUrl: dataUrl, blob: blob, source: 'generated' };
+      }
+    } catch (err) {
+      console.error('[Poster export] Poster canvas capture error:', err);
+    }
+  }
+
+  return { dataUrl: null, blob: null, source: 'none' };
+}
+window.resolvePosterImagePayload = resolvePosterImagePayload;
+
+async function shareOnWhatsApp() {
   const container = document.getElementById('posterCanvasWrapper');
   const shareDetails = getPosterShareDetails();
   const partnerName = shareDetails.partnerName;
   const text = shareDetails.text;
-
-  // Check if custom uploaded creative image is present:
-  const customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage;
-
-  if (!customImg) {
-    // Text only: directly open WhatsApp with default template message!
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-    return;
-  }
 
   // Open the window immediately to bypass browser popup blockers
   const shareWindow = window.open('', '_blank');
@@ -8880,39 +8907,37 @@ function shareOnWhatsApp() {
   if (spinner) {
     spinner.style.display = 'flex';
     const spText = spinner.querySelector('div div');
-    if (spText) spText.textContent = 'Preparing WhatsApp share & download...';
+    if (spText) spText.textContent = 'Preparing WhatsApp share & poster...';
   }
 
-  const proceedWithImageBlob = async (blob, dUrl) => {
-    if (spinner) spinner.style.display = 'none';
-    if (dUrl) {
-      try {
-        const link = document.createElement('a');
-        link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
-        link.href = dUrl;
-        link.click();
-      } catch(e){}
-    }
-    if (blob && navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ [blob.type || 'image/png']: blob })
-        ]);
-        alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
-      } catch(e){}
-    }
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    if (shareWindow) {
-      shareWindow.location.href = url;
-    } else {
-      window.open(url, '_blank');
-    }
-  };
+  const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
 
-  fetch(customImg)
-    .then(r => r.blob())
-    .then(blob => proceedWithImageBlob(blob, customImg))
-    .catch(() => proceedWithImageBlob(null, customImg));
+  if (spinner) spinner.style.display = 'none';
+
+  if (dataUrl) {
+    try {
+      const link = document.createElement('a');
+      link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch(e){}
+  }
+
+  if (blob && navigator.clipboard && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type || 'image/png']: blob })
+      ]);
+      alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
+    } catch(e){}
+  }
+
+  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  if (shareWindow) {
+    shareWindow.location.href = url;
+  } else {
+    window.open(url, '_blank');
+  }
 }
 
 function showLiveDispatchStatusModal(targets, partnerName) {
@@ -9039,30 +9064,20 @@ async function shareDefaultChannel() {
     { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
   ];
 
-  // 1. OPEN STATUS MODAL IMMEDIATELY
-  showLiveDispatchStatusModal(dispatchTargets, partnerName);
-
   const spinner = document.getElementById('posterSpinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Rendering and preparing poster broadcast...';
+  }
+
+  // Two-Tier Fallback: 1. Uploaded Custom Creative -> 2. Auto-Generated Canvas Poster
+  const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
+
   if (spinner) spinner.style.display = 'none';
 
-  let dataUrl = null;
-  let blob = null;
-
-  // Determine image to send:
-  // If staff uploaded a custom creative image, USE THAT UPLOADED IMAGE!
-  // If NO creative uploaded, send default message (dataUrl = null)!
-  const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
-  if (customImage) {
-    dataUrl = customImage;
-    try {
-      blob = await (await fetch(dataUrl)).blob();
-    } catch (bErr) {
-      console.warn("Custom creative image blob conversion error:", bErr);
-    }
-  } else {
-    dataUrl = null;
-    blob = null;
-  }
+  // 1. OPEN STATUS MODAL IMMEDIATELY
+  showLiveDispatchStatusModal(dispatchTargets, partnerName);
 
   const fetchWithTimeout = async (url, opts = {}, ms = 10000) => {
     const controller = new AbortController();
@@ -9304,11 +9319,14 @@ async function testShareToNumber() {
   const shareText = shareDetails.text;
 
   const spinner = document.getElementById('posterSpinner');
-  if (spinner) spinner.style.display = 'flex';
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Rendering and preparing poster image for test send...';
+  }
 
-  // If a custom creative image was uploaded, USE THAT UPLOADED IMAGE!
-  // If NO creative uploaded, send default message (dataUrl = null)!
-  const dataUrl = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
+  // Two-Tier Fallback: 1. Uploaded Custom Creative -> 2. Auto-Generated Canvas Poster
+  const { dataUrl, source } = await resolvePosterImagePayload(container);
 
   if (spinner) spinner.style.display = 'none';
 
@@ -9320,7 +9338,8 @@ async function testShareToNumber() {
     });
     const json = await res.json();
     if (json.success) {
-      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${dataUrl ? 'Uploaded Image 🖼️' : 'Text Only (Default Message)'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+      const attachDesc = dataUrl ? (source === 'uploaded' ? 'Uploaded Custom Creative 🖼️' : 'Auto-Generated Celebration Poster 🖼️') : 'Text Only (Default Message)';
+      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
     } else {
       const errNotice = json.error || 'WhatsApp bot not connected';
       const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
@@ -10565,8 +10584,8 @@ function _renderCommDetailTable(partnerId) {
                   <i class="fas fa-trash-alt me-1"></i>Remove
                 </button>
               </div>
-              <div id="customCreativeNotice" style="font-size:9.5px;color:#4b5563;margin-top:6px;line-height:1.3">
-                ℹ️ If no creative is uploaded, WhatsApp will send the default text message.
+              <div id="customCreativeNotice" style="font-size:9.5px;color:#047857;margin-top:6px;line-height:1.3">
+                ℹ️ Auto-generated celebration poster will be dispatched with message (or upload custom creative to override).
               </div>
             </div>
           </div>
@@ -10806,8 +10825,8 @@ function _renderCommDetailTable(partnerId) {
             <button type="button" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(5,150,105,0.4)">
               <i class="fas fa-plus"></i> Select Image File
             </button>
-            <div style="color:#64748b;font-size:10.5px;margin-top:16px;max-width:300px;line-height:1.4">
-              ℹ️ If no creative is uploaded, WhatsApp will send the <strong>default message</strong> without an image attachment.
+            <div style="color:#059669;font-size:10.5px;margin-top:16px;max-width:300px;line-height:1.4">
+              ℹ️ Auto-generated celebration poster will be dispatched with message (or upload custom creative to override).
             </div>
           </div>
         </div>

@@ -1421,6 +1421,43 @@
     return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
   }
 
+  async function resolvePosterImagePayload(container) {
+    // 1. Priority: Uploaded custom creative
+    let customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
+    if (customImg) {
+      let blob = null;
+      try {
+        blob = await (await fetch(customImg)).blob();
+      } catch (e) {
+        console.warn('[Poster export] Custom creative blob error:', e);
+      }
+      return { dataUrl: customImg, blob: blob, source: 'uploaded' };
+    }
+
+    // 2. Fallback: Auto-generated canvas poster
+    if (!container) container = document.getElementById('posterCanvasWrapper');
+    if (container) {
+      try {
+        const canvas = await capturePosterCanvas(container);
+        if (canvas) {
+          const dataUrl = safeToDataURL(canvas);
+          let blob = null;
+          try {
+            if (dataUrl) blob = await (await fetch(dataUrl)).blob();
+          } catch (e) {
+            console.warn('[Poster export] Canvas blob conversion error:', e);
+          }
+          return { dataUrl: dataUrl, blob: blob, source: 'generated' };
+        }
+      } catch (err) {
+        console.error('[Poster export] Poster canvas capture error:', err);
+      }
+    }
+
+    return { dataUrl: null, blob: null, source: 'none' };
+  }
+  window.resolvePosterImagePayload = resolvePosterImagePayload;
+
   async function testShareToNumber() {
     const container = document.getElementById('posterCanvasWrapper');
     if (!container) return;
@@ -1443,10 +1480,14 @@
     const shareText = shareDetails.text;
 
     const spinner = document.getElementById('posterSpinner');
-    if (spinner) spinner.style.display = 'flex';
+    if (spinner) {
+      spinner.style.display = 'flex';
+      const spText = spinner.querySelector('div div');
+      if (spText) spText.textContent = 'Rendering and preparing poster image for test send...';
+    }
 
-    // If an image was uploaded by staff, USE THAT UPLOADED IMAGE!
-    let dataUrl = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
+    // Two-Tier Fallback: 1. Uploaded Custom Creative -> 2. Auto-Generated Canvas Poster
+    const { dataUrl, source } = await resolvePosterImagePayload(container);
 
     if (spinner) spinner.style.display = 'none';
 
@@ -1458,7 +1499,8 @@
       });
       const json = await res.json();
       if (json.success) {
-        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${dataUrl ? 'Uploaded Image 🖼️' : 'Text Only (Default Message)'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+        const attachDesc = dataUrl ? (source === 'uploaded' ? 'Uploaded Custom Creative 🖼️' : 'Auto-Generated Celebration Poster 🖼️') : 'Text Only (Default Message)';
+        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
       } else {
         const errNotice = json.error || 'WhatsApp bot not connected';
         const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
@@ -1537,55 +1579,48 @@
     });
   }
 
-  function shareOnWhatsApp() {
+  async function shareOnWhatsApp() {
     const container = document.getElementById('posterCanvasWrapper');
     const shareDetails = getPosterShareDetails();
     const partnerName = shareDetails.partnerName;
     const text = shareDetails.text;
 
-    // Check if custom uploaded creative image is present:
-    const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
-
-    if (!customImage) {
-      // Text only: directly open WhatsApp with default template message!
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-      window.open(url, '_blank');
-      return;
-    }
-
+    // Open the window immediately to bypass browser popup blockers
     const shareWindow = window.open('', '_blank');
     if (shareWindow) {
       shareWindow.document.write('<html><head><title>Loading WhatsApp...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f3f4f6;color:#374151;} .loader{border:4px solid #e5e7eb;border-top:4px solid #25d366;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin-bottom:16px;} @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style></head><body><div style="text-align:center"><div class="loader" style="margin:0 auto 16px;"></div><div>Preparing your WhatsApp share & download... Please wait.</div></div></body></html>');
     }
 
     const spinner = document.getElementById('posterSpinner');
-    if (spinner) spinner.style.display = 'flex';
+    if (spinner) {
+      spinner.style.display = 'flex';
+      const spText = spinner.querySelector('div div');
+      if (spText) spText.textContent = 'Preparing WhatsApp share & poster...';
+    }
 
-    const proceedWithImageBlob = async (blob, dUrl) => {
-      if (spinner) spinner.style.display = 'none';
-      if (dUrl) {
-        try {
-          const link = document.createElement('a');
-          link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
-          link.href = dUrl;
-          link.click();
-        } catch (e) {}
-      }
-      if (blob && navigator.clipboard && window.ClipboardItem) {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ [blob.type || 'image/png']: blob })]);
-          alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
-        } catch (e) {}
-      }
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-      if (shareWindow) shareWindow.location.href = url;
-      else window.open(url, '_blank');
-    };
+    const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
 
-    fetch(customImage)
-      .then(r => r.blob())
-      .then(blob => proceedWithImageBlob(blob, customImage))
-      .catch(() => proceedWithImageBlob(null, customImage));
+    if (spinner) spinner.style.display = 'none';
+
+    if (dataUrl) {
+      try {
+        const link = document.createElement('a');
+        link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) {}
+    }
+
+    if (blob && navigator.clipboard && window.ClipboardItem) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type || 'image/png']: blob })]);
+        alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
+      } catch (e) {}
+    }
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (shareWindow) shareWindow.location.href = url;
+    else window.open(url, '_blank');
   }
 
   async function shareDefaultChannel() {
@@ -1623,26 +1658,21 @@
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
 
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) {
+      spinner.style.display = 'flex';
+      const spText = spinner.querySelector('div div');
+      if (spText) spText.textContent = 'Rendering and preparing poster broadcast...';
+    }
+
+    // Two-Tier Fallback: 1. Uploaded Custom Creative -> 2. Auto-Generated Canvas Poster
+    const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
+
+    if (spinner) spinner.style.display = 'none';
+
     // Show Live Broadcast Status Modal IMMEDIATELY
     console.log('[MYNTOS SHARE DEBUG] 3. Opening Live Dispatch Status Modal immediately');
     showLiveDispatchStatusModal(dispatchTargets, partnerName);
-
-    const spinner = document.getElementById('posterSpinner');
-    if (spinner) spinner.style.display = 'none';
-
-    let dataUrl = null;
-    let blob = null;
-
-    const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
-    if (customImage) {
-      dataUrl = customImage;
-      try {
-        blob = await (await fetch(dataUrl)).blob();
-      } catch (bErr) {}
-    } else {
-      dataUrl = null;
-      blob = null;
-    }
 
     const fetchWithTimeout = async (url, opts = {}, ms = 10000) => {
       const controller = new AbortController();
