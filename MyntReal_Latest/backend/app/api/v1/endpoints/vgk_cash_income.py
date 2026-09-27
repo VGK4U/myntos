@@ -1151,22 +1151,34 @@ def unified_list(
     _role_raw = getattr(current_employee, 'role_code', '') or ''
     role = str(_role_raw or '').lower()
     _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip()
+    _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
 
-    is_privileged = is_super or _emp_code in ('MR10001', 'MR10025') or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
+    # Specific authorized personnel per executive protocol
+    _is_anushka = _emp_code == 'MR10036' or 'anushka' in _emp_name
+    _is_nandana = _emp_code in ('MN10009', 'MN10010') or 'nandana' in _emp_name
+    _is_subash  = _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subash' in _emp_name
+    _is_mr10001 = _emp_code == 'MR10001'
+
+    is_privileged = is_super or _is_mr10001 or _is_subash or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
     can_sales    = is_privileged or 'sales' in dept or 'crm' in dept
-    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept
-    can_pay      = is_privileged or 'finance' in dept or 'bank' in dept or 'account' in dept or 'store' in dept
+    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept or getattr(current_employee, 'department_id', None) == 15
+    
+    # Stage 1 Approval Authority: Anushka, Nandana, Accounts Department, and Leadership
+    can_stage1   = is_privileged or can_accounts or _is_anushka or _is_nandana
+    
+    # Payment Authority (Mark Paid): Subash, Accounts Department, Key Leadership, and MR10001
+    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or 'finance' in dept or 'bank' in dept
 
     def _actions_for(e):
         # DC-NO-RELEASE-001: Release button removed. All income flows PENDING->Stage1->Stage2(Paid).
         acts = []
         if e.status == 'DRAFT' and (can_sales or is_privileged):
             acts += ['confirm', 'reject']
-        if e.status in ('PENDING', 'RELEASED') and (can_accounts or is_privileged):
+        if e.status in ('PENDING', 'RELEASED') and can_stage1:
             # RELEASED kept as backward-compat alias for PENDING (DB entries pre-migration)
             acts += ['stage1_approve', 'reject']
         # DC-VGK-STAGE1-001: Stage 1 is MANDATORY for ALL users — no skip, even for super staff.
-        if e.status == 'STAGE1_APPROVED' and (can_pay or is_privileged):
+        if e.status == 'STAGE1_APPROVED' and can_pay:
             acts += ['mark_paid', 'reject']
         if is_privileged:
             acts = list(dict.fromkeys(acts))
@@ -1454,6 +1466,32 @@ def unified_action(
 
     results = []
     is_super = is_super_skip_user(current_employee)
+
+    _dept_raw = getattr(current_employee, 'department', '') or ''
+    if hasattr(_dept_raw, 'value'):
+        _dept_raw = _dept_raw.value
+    elif hasattr(_dept_raw, 'name'):
+        _dept_raw = _dept_raw.name
+    dept = str(_dept_raw or '').lower()
+    _role_raw = getattr(current_employee, 'role_code', '') or ''
+    role = str(_role_raw or '').lower()
+    _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip()
+    _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
+
+    _is_anushka = _emp_code == 'MR10036' or 'anushka' in _emp_name
+    _is_nandana = _emp_code in ('MN10009', 'MN10010') or 'nandana' in _emp_name
+    _is_subash  = _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subash' in _emp_name
+    _is_mr10001 = _emp_code == 'MR10001'
+
+    is_privileged = is_super or _is_mr10001 or _is_subash or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
+    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept or getattr(current_employee, 'department_id', None) == 15
+    can_stage1   = is_privileged or can_accounts or _is_anushka or _is_nandana
+    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or 'finance' in dept or 'bank' in dept
+
+    if act == 'stage1_approve' and not can_stage1:
+        raise HTTPException(status_code=403, detail="Unauthorized: Stage 1 approval authority is assigned to Anushka, Nandana, Accounts Department, or Leadership")
+    if act == 'mark_paid' and not can_pay:
+        raise HTTPException(status_code=403, detail="Unauthorized: Payment authority is assigned to Subash, Accounts Department, Key Leadership, or MR10001")
 
     for target_id in ids_to_process:
         entry = db.query(VGKCashIncomeEntry).filter(

@@ -3075,6 +3075,7 @@ class OfficialPartner(BaseModel):
 
     # DC Protocol Mar 2026: KYC status for VGK/Partner members (mirrors User.kyc_status)
     kyc_status = Column(String(30), nullable=True, default='Not Submitted')
+    kyc_grace_payments_used = Column(Integer, nullable=False, default=0)
 
     # [DC-VGK-DOB] Date of Birth fields — member-editable, stored as DATE
     dob_document = Column(Date, nullable=True)   # DOB as printed on Aadhaar / PAN

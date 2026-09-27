@@ -193,7 +193,11 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
   </select>
 
   <button class="btn-act" onclick="clearDateFilter()" style="background:#f3f4f6;color:#6b7280;border:1.5px solid #d1fae5;padding:4px 8px;font-size:11px" title="Clear date filters"><i class="fas fa-times"></i></button>
-  <button class="btn-act" id="btnGroupToggle" onclick="toggleGroupView()" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe;padding:4px 8px;font-size:11px"><i class="fas fa-sitemap me-1"></i>3-Level Accordion View</button>
+  <div class="btn-group me-2" role="group" aria-label="View Modes" style="display:inline-flex;border-radius:8px;overflow:hidden;border:1.5px solid #c7d2fe;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+    <button type="button" class="btn-act" id="btnViewDateAcc" onclick="setViewMode('date_accordion')" style="background:#4338ca;color:#ffffff;padding:5px 10px;font-size:11px;font-weight:700;border:none;" title="Date → Member → Entries"><i class="fas fa-sitemap me-1"></i>3-Level Accordion View</button>
+    <button type="button" class="btn-act" id="btnViewMemberAcc" onclick="setViewMode('member_accordion')" style="background:#e0e7ff;color:#3730a3;padding:5px 10px;font-size:11px;font-weight:700;border:none;border-left:1px solid #c7d2fe;" title="Group directly by Member across all dates"><i class="fas fa-user-friends me-1"></i>Member-wise View</button>
+    <button type="button" class="btn-act" id="btnViewFlat" onclick="setViewMode('flat')" style="background:#e0e7ff;color:#3730a3;padding:5px 10px;font-size:11px;font-weight:700;border:none;border-left:1px solid #c7d2fe;" title="Direct flat list"><i class="fas fa-list me-1"></i>Flat View</button>
+  </div>
   <button class="btn-act btn-confirm" onclick="loadList()" style="padding:4px 10px;font-size:11px"><i class="fas fa-redo me-1"></i> Refresh</button>
 </div>
 
@@ -873,13 +877,33 @@ function _summaryFromRows(rows){
   return Object.values(agg);
 }
 
-let GROUP_VIEW = true;
+let VIEW_MODE = 'date_accordion'; // 'date_accordion', 'member_accordion', 'flat'
+
+function setViewMode(mode){
+  VIEW_MODE = mode;
+  const bDate = document.getElementById('btnViewDateAcc');
+  const bMember = document.getElementById('btnViewMemberAcc');
+  const bFlat = document.getElementById('btnViewFlat');
+  
+  if(bDate){
+    bDate.style.background = mode === 'date_accordion' ? '#4338ca' : '#e0e7ff';
+    bDate.style.color = mode === 'date_accordion' ? '#ffffff' : '#3730a3';
+  }
+  if(bMember){
+    bMember.style.background = mode === 'member_accordion' ? '#4338ca' : '#e0e7ff';
+    bMember.style.color = mode === 'member_accordion' ? '#ffffff' : '#3730a3';
+  }
+  if(bFlat){
+    bFlat.style.background = mode === 'flat' ? '#4338ca' : '#e0e7ff';
+    bFlat.style.color = mode === 'flat' ? '#ffffff' : '#3730a3';
+  }
+  renderTable(ROWS);
+}
 
 function toggleGroupView(){
-  GROUP_VIEW = !GROUP_VIEW;
-  const btn = document.getElementById('btnGroupToggle');
-  if(btn) btn.innerHTML = GROUP_VIEW ? '<i class="fas fa-list me-1"></i>Flat View' : '<i class="fas fa-sitemap me-1"></i>3-Level Accordion View';
-  renderTable(ROWS);
+  if(VIEW_MODE === 'date_accordion') setViewMode('member_accordion');
+  else if(VIEW_MODE === 'member_accordion') setViewMode('flat');
+  else setViewMode('date_accordion');
 }
 
 function toggleAcc(cls){
@@ -946,8 +970,53 @@ function renderTable(rows){
     return;
   }
 
-  if(!GROUP_VIEW){
+  if(VIEW_MODE === 'flat'){
     tb.innerHTML = rows.map(r => renderRowHtml(r)).join('');
+    return;
+  }
+
+  if(VIEW_MODE === 'member_accordion'){
+    // DC-MEMBER-WISE-VIEW-001: Group all filtered entries directly by Member
+    const memberMap = {};
+    for(const r of rows){
+      const m = calcRowMetrics(r);
+      const partnerKey = (r.partner_code || r.partner_name || 'UNASSIGNED').replace(/[^a-zA-Z0-9]/g, '_');
+      const partnerName = r.partner_name || r.partner_code || 'Unassigned';
+      const partnerCode = r.partner_code || '';
+      const partnerId = r.partner_id || r.partner_code || r.id;
+
+      if(!memberMap[partnerKey]){
+        memberMap[partnerKey] = {
+          key: partnerKey, name: partnerName, code: partnerCode, partnerId: partnerId,
+          net: 0, gross: 0, count: 0, entries: []
+        };
+      }
+      memberMap[partnerKey].net += m.netVal;
+      memberMap[partnerKey].gross += m.grossAmt;
+      memberMap[partnerKey].count++;
+      memberMap[partnerKey].entries.push(r);
+    }
+
+    let html = '';
+    const sortedMembers = Object.values(memberMap).sort((a,b) => b.net - a.net);
+    for(const pGroup of sortedMembers){
+      const pCls = 'm-group-' + pGroup.key;
+      html += `<tr style="background:#eff6ff;cursor:pointer;border-top:2px solid #bfdbfe;" onclick="toggleAcc('${pCls}')">
+        <td colspan="19" style="padding:10px 14px;font-weight:800;color:#1e40af;font-size:13px;">
+          <input type="checkbox" class="grp-chk me-2" onclick="event.stopPropagation(); toggleGroupCheckboxes(this, '${pCls}')" title="Select all entries for this member">
+          <i class="fas fa-chevron-down me-2" style="font-size:11px;"></i><i class="fas fa-user-circle me-2" style="color:#2563eb"></i> ${pGroup.name} ${pGroup.code ? '<small style="color:#64748b">('+pGroup.code+')</small>' : ''}
+          <button onclick="event.stopPropagation(); generateMemberPoster('${pGroup.partnerId || pGroup.code}')" style="margin-left:8px;padding:2px 8px;border-radius:6px;border:1px solid #a7f3d0;background:#ecfdf5;cursor:pointer;font-size:11px;font-weight:700;color:#065f46" title="Generate Achievement Poster"><i class="fas fa-image me-1"></i>Generate Achievement Poster</button>
+          <span class="badge bg-primary ms-2">${pGroup.count} entries</span>
+          <span class="ms-3" style="color:#1e40af;font-weight:800">Net Payout: ${fmt(pGroup.net)}</span>
+          <span class="ms-2" style="color:#6b7280;font-size:11px;">Gross: ${fmt(pGroup.gross)}</span>
+        </td>
+      </tr>`;
+
+      for(const entry of pGroup.entries){
+        html += renderRowHtml(entry, pCls);
+      }
+    }
+    tb.innerHTML = html;
     return;
   }
 

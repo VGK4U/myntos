@@ -1244,7 +1244,7 @@ def release_cash_income(
     # must only be released once solar_pipeline_status = 'completed'.
     # ADVANCE / DVR_ADVANCE / BRAND_ADVANCE / SLAB_BONUS / ADJUSTMENT kinds are
     # exempt — they follow their own release rules.
-    _ADVANCE_KINDS = {'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'ADJUSTMENT'}
+    _ADVANCE_KINDS = {'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'ADJUSTMENT', 'EXTRA_COMMISSION'}
     if not force and (entry.kind or 'COMMISSION') not in _ADVANCE_KINDS and entry.source_lead_id:
         _lead_row = db.execute(
             text("SELECT category_id, solar_pipeline_status FROM crm_leads WHERE id=:lid"),
@@ -2378,9 +2378,9 @@ def mark_paid_cash_income(
     if pm == 'BANK' and not utr:
         return {'success': False, 'error': 'UTR is required for BANK payments'}
 
-    # HARD PAYOUT GATE — KYC AND BANK DETAILS APPROVAL:
-    # A payout CANNOT be marked PAID unless the partner's KYC status is 'Approved'
-    # AND bank_details_status is 'Approved'.
+    # HARD PAYOUT GATE — KYC AND BANK DETAILS APPROVAL (WITH 3-PAYMENT GRACE POLICY):
+    # Payout is allowed without approved KYC/Bank Details for up to 3 payments (grace period for new and existing members).
+    # Beyond 3 grace payments, both KYC and Bank Details must be 'Approved'.
     if not force and entry.partner_id:
         from app.models.staff_accounts import OfficialPartner as _OP_Gate
         _gate_partner = db.query(_OP_Gate).filter(_OP_Gate.id == entry.partner_id).with_for_update().first()
@@ -2388,30 +2388,40 @@ def mark_paid_cash_income(
             kyc_st = (_gate_partner.kyc_status or '').strip()
             bank_st = (_gate_partner.bank_details_status or '').strip()
             if kyc_st != 'Approved' or bank_st != 'Approved':
-                logger.warning(
-                    f"[VGK-PAYOUT-GATE] Payout blocked for entry {entry.entry_number} (partner {_gate_partner.id}): "
-                    f"KYC ({kyc_st}) or Bank Details ({bank_st}) not Approved."
-                )
-                return {
-                    'success': False,
-                    'error': 'KYC_OR_BANK_NOT_APPROVED',
-                    'message': (
-                        f"Partner payout blocked: KYC status is '{kyc_st}' and Bank Details status is '{bank_st}'. "
-                        f"Both KYC and Bank Details must be 'Approved' before payout can be marked PAID."
-                    ),
-                    'kyc_status': kyc_st,
-                    'bank_details_status': bank_st,
-                    'entry_number': entry.entry_number,
-                }
+                _grace_used = getattr(_gate_partner, 'kyc_grace_payments_used', 0) or 0
+                if _grace_used < 3:
+                    _gate_partner.kyc_grace_payments_used = _grace_used + 1
+                    logger.info(
+                        f"[VGK-PAYOUT-KYC-GRACE] Payout allowed under KYC grace ({_gate_partner.kyc_grace_payments_used}/3) "
+                        f"for entry {entry.entry_number} (partner {_gate_partner.id}, code {_gate_partner.partner_code})."
+                    )
+                    entry.notes = ((entry.notes or '') + f" | [KYC Grace {_gate_partner.kyc_grace_payments_used}/3]").strip(' |')
+                else:
+                    logger.warning(
+                        f"[VGK-PAYOUT-GATE] Payout blocked for entry {entry.entry_number} (partner {_gate_partner.id}): "
+                        f"KYC ({kyc_st}) or Bank Details ({bank_st}) not Approved. Grace limit of 3 payments reached."
+                    )
+                    return {
+                        'success': False,
+                        'error': 'KYC_OR_BANK_NOT_APPROVED',
+                        'message': (
+                            f"Partner payout blocked: KYC status is '{kyc_st}' and Bank Details status is '{bank_st}'. "
+                            f"The 3-payment KYC grace limit has been reached ({_grace_used}/3 used). "
+                            f"Both KYC and Bank Details must be 'Approved' before payout can be marked PAID."
+                        ),
+                        'kyc_status': kyc_st,
+                        'bank_details_status': bank_st,
+                        'entry_number': entry.entry_number,
+                    }
 
     # PRE-FLIGHT PAYOUT CAPACITY GATE:
     # A cash earning CANNOT be released as PAID unless the partner has sufficient points
     # to cover the full applicable net payout (avail >= net_due).
     # EXCEPTION (DC-ADV-PTS-GATE-BYPASS-001):
-    # Upfront milestone advances (ADVANCE, DVR_ADVANCE, BRAND_ADVANCE) are operational incentive
-    # advances triggered at early milestones (e.g. bank verification) before deal completion points
+    # Upfront milestone advances (ADVANCE, DVR_ADVANCE, BRAND_ADVANCE, EXTRA_COMMISSION) are operational incentive
+    # advances triggered at early milestones (e.g. bank verification / file submitted) before deal completion points
     # exist. They must NOT be blocked by points capacity.
-    _is_milestone_advance = entry.kind in ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE')
+    _is_milestone_advance = entry.kind in ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'EXTRA_COMMISSION')
     _net_due_gate = entry.net_payout if (entry.net_payout and entry.net_payout > 0) else (Decimal(str(entry.commission_amount or 0)) * Decimal('0.90'))
     _net_due_gate = Decimal(str(_net_due_gate))
 
