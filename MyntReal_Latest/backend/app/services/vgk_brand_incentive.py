@@ -325,6 +325,12 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
         if not solar_brand_id:
             return 0
 
+        if getattr(lead, 'associated_partner_id', None):
+            _ptype = db.execute(text("SELECT partner_type FROM official_partners WHERE id = :pid"), {'pid': lead.associated_partner_id}).scalar()
+            if _ptype == 'FREELANCER':
+                logger.info(f'[VGK-BRAND-COMM] Lead {lead.id} associated_partner_id {lead.associated_partner_id} is Freelancer — zero brand commission')
+                return 0
+
         brand = db.execute(text("""
             SELECT id, brand_name, l1_amount, l2_amount, l5_amount, is_active
             FROM vgk_incentive_brands WHERE id = :bid

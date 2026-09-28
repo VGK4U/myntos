@@ -582,6 +582,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
   <button class="page-tab active" id="tabBtnMembers" onclick="switchTab('members')">
     <i class="fas fa-users"></i> Members
   </button>
+  <button class="page-tab" id="tabBtnFreelancers" onclick="switchTab('freelancers')">
+    <i class="fas fa-user-tag"></i> Freelancers
+  </button>
   <button class="page-tab" id="tabBtnDashboard" onclick="switchTab('dashboard')">
     <i class="fas fa-chart-line"></i> Executive Dashboard
   </button>
@@ -754,6 +757,102 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 </div>
 </div>
 <!-- /tabMembers -->
+
+<!-- ── Freelancers Tab ── -->
+<div id="tabFreelancers" class="tab-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h3 style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 4px 0;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-user-tag" style="color:#0284c7"></i> Freelancers Management
+      </h3>
+      <p style="font-size:13px;color:#64748b;margin:0">Directly supported non-MLM field contributors and ground source originators</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="addFreelancerBtn" onclick="openAddFreelancerModal()" style="background:#0284c7;color:white;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(2,132,199,0.3)">
+        <i class="fas fa-plus"></i> Add Freelancer
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:14px;margin-bottom:18px">
+    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #0284c7">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px">Total Freelancers</div>
+      <div style="font-size:24px;font-weight:800;color:#0f172a" id="flStatTotal">0</div>
+    </div>
+    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #16a34a">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px">With Communication</div>
+      <div style="font-size:24px;font-weight:800;color:#16a34a" id="flStatWithComm">0</div>
+    </div>
+    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #d97706">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px">Without Communication</div>
+      <div style="font-size:24px;font-weight:800;color:#d97706" id="flStatWithoutComm">0</div>
+    </div>
+    <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #7c3aed">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px">Originated Leads</div>
+      <div style="font-size:24px;font-weight:800;color:#7c3aed" id="flStatTotalLeads">0</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar" style="margin-bottom:18px">
+    <div class="fgroup">
+      <label>Search Freelancers</label>
+      <input class="form-control" id="flSearchInput" placeholder="Name, phone, code…" style="min-width:200px" oninput="debounceFlSearch()" onkeydown="if(event.key==='Enter'){loadFreelancers(1);}">
+    </div>
+    <div class="fgroup">
+      <label>Classification</label>
+      <select class="form-select" id="flClassificationFilter" onchange="loadFreelancers(1)">
+        <option value="">All Classifications</option>
+        <option value="WITH_COMMUNICATION">With Communication</option>
+        <option value="WITHOUT_COMMUNICATION">Without Communication</option>
+      </select>
+    </div>
+    <div class="fgroup">
+      <label>Status</label>
+      <select class="form-select" id="flStatusFilter" onchange="loadFreelancers(1)">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+    <div class="fgroup" style="align-self:flex-end">
+      <button class="btn btn-sm btn-outline-secondary" onclick="resetFlFilters()" style="padding:7px 14px;border-radius:8px;font-size:12.5px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
+        <i class="fas fa-undo me-1"></i> Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3><i class="fas fa-list me-2" style="color:#0284c7"></i>Freelancer Registry</h3>
+      <span id="flTableCountBadge" style="font-size:12px;font-weight:600;color:#64748b">Loading...</span>
+    </div>
+    <div class="table-scroll-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Freelancer Code</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Classification</th>
+            <th>VGK Support ID</th>
+            <th>Status</th>
+            <th>Originated Leads</th>
+            <th>Created At</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="flTableBody">
+          <tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8">Loading Freelancers...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="flPaginationBar"></div>
+  </div>
+</div>
+<!-- /tabFreelancers -->
 
 <!-- ── Executive Dashboard Tab ── -->
 <div id="tabDashboard" class="tab-panel">
@@ -1450,6 +1549,175 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
     </div>
   </div>
   <div class="side-panel-body" id="sidePanelBody"></div>
+</div>
+
+<!-- Freelancer Side Panel -->
+<div class="side-panel" id="freelancerSidePanel" style="width:480px;max-width:95vw">
+  <div class="side-panel-header" style="background:linear-gradient(135deg,#0284c7,#0369a1)">
+    <h4 id="flSidePanelTitle"><i class="fas fa-user-tag me-2"></i>Freelancer Details</h4>
+    <button onclick="closeFreelancerSidePanel()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="side-panel-body" id="flSidePanelBody" style="padding:18px">
+    <div style="text-align:center;padding:40px;color:#94a3b8">Loading details...</div>
+  </div>
+</div>
+
+<!-- Add Freelancer Modal -->
+<div class="modal-overlay" id="addFreelancerModal">
+<div class="modal-box" style="max-width:560px">
+  <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+    <h4 style="color:#0f172a;font-size:16px;font-weight:700">
+      <i class="fas fa-user-tag me-2" style="color:#0284c7"></i>Add New Freelancer
+    </h4>
+    <button onclick="closeAddFreelancerModal()" style="background:none;border:none;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#0369a1">
+      <i class="fas fa-info-circle me-1"></i> Freelancers are separate from the VGK hierarchy (no sponsor, no upline, no downline, no MLM commissions). They are tagged directly to a VGK Support ID. Code sequence starts at <strong>FL08220001</strong>.
+    </div>
+    
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Full Name *</label>
+      <input class="form-control" id="addFlName" placeholder="e.g. Ramesh Kumar" required style="width:100%">
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Mobile Number *</label>
+      <input class="form-control" id="addFlPhone" placeholder="10-digit mobile number" maxlength="15" required style="width:100%">
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">VGK Support ID (Channel Partner) *</label>
+      <input class="form-control" id="addFlSupportSearch" placeholder="Type name, phone or VGK code to search…" oninput="searchFlSupportPartners(this.value, 'addFlSupportDropdown', 'addFlSupportId', 'addFlSupportSelected')" autocomplete="off">
+      <div id="addFlSupportDropdown" style="border:1px solid #e2e8f0;border-radius:8px;max-height:160px;overflow-y:auto;display:none;margin-top:4px;background:white;box-shadow:0 4px 12px rgba(0,0,0,.1);position:relative;z-index:100"></div>
+      <input type="hidden" id="addFlSupportId">
+      <div id="addFlSupportSelected" style="margin-top:6px;font-size:12.5px;color:#0284c7;font-weight:600"></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:8px;display:block">Freelancer Classification *</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label style="border:1.5px solid #22c55e;background:#f0fdf4;border-radius:10px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px" id="lblWithComm">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#16a34a">
+            <input type="radio" name="addFlClassification" value="WITH_COMMUNICATION" checked onchange="updateClassificationCardStyles()"> With Communication
+          </div>
+          <span style="font-size:11px;color:#64748b">Automated CRM &amp; WhatsApp notifications sent to leads</span>
+        </label>
+        <label style="border:1.5px solid #cbd5e1;background:#fff;border-radius:10px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px" id="lblWithoutComm">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#d97706">
+            <input type="radio" name="addFlClassification" value="WITHOUT_COMMUNICATION" onchange="updateClassificationCardStyles()"> Without Communication
+          </div>
+          <span style="font-size:11px;color:#64748b">All automated WhatsApp &amp; system triggers blocked for leads</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Email (Optional)</label>
+        <input class="form-control" id="addFlEmail" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">City / District (Optional)</label>
+        <input class="form-control" id="addFlCity" placeholder="City name">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Address (Optional)</label>
+      <input class="form-control" id="addFlAddress" placeholder="Street / Area">
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Notes (Optional)</label>
+      <textarea class="form-control" id="addFlNotes" rows="2" placeholder="Internal operational remarks…"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer" style="padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px">
+    <button class="btn btn-secondary" onclick="closeAddFreelancerModal()" style="padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+    <button class="btn btn-primary" onclick="submitAddFreelancer()" id="submitAddFlBtn" style="background:#0284c7;color:white;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+      <i class="fas fa-check me-1"></i> Create Freelancer
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- Edit Freelancer Modal -->
+<div class="modal-overlay" id="editFreelancerModal">
+<div class="modal-box" style="max-width:560px">
+  <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+    <h4 style="color:#0f172a;font-size:16px;font-weight:700">
+      <i class="fas fa-edit me-2" style="color:#0284c7"></i>Edit Freelancer <span id="editFlCodeHeader" style="color:#64748b;font-weight:400"></span>
+    </h4>
+    <button onclick="closeEditFreelancerModal()" style="background:none;border:none;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <input type="hidden" id="editFlId">
+    
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Full Name *</label>
+      <input class="form-control" id="editFlName" required style="width:100%">
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Mobile Number *</label>
+      <input class="form-control" id="editFlPhone" maxlength="15" required style="width:100%">
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">
+        VGK Support ID (Reassignment is logged in audit trail)
+      </label>
+      <input class="form-control" id="editFlSupportSearch" placeholder="Search by name, phone or code to reassign…" oninput="searchFlSupportPartners(this.value, 'editFlSupportDropdown', 'editFlSupportId', 'editFlSupportSelected')" autocomplete="off">
+      <div id="editFlSupportDropdown" style="border:1px solid #e2e8f0;border-radius:8px;max-height:160px;overflow-y:auto;display:none;margin-top:4px;background:white;box-shadow:0 4px 12px rgba(0,0,0,.1);position:relative;z-index:100"></div>
+      <input type="hidden" id="editFlSupportId">
+      <div id="editFlSupportSelected" style="margin-top:6px;font-size:12.5px;color:#0284c7;font-weight:600"></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Freelancer Classification</label>
+      <select class="form-select" id="editFlClassification" style="width:100%">
+        <option value="WITH_COMMUNICATION">WITH_COMMUNICATION (Automated CRM/WhatsApp messages permitted)</option>
+        <option value="WITHOUT_COMMUNICATION">WITHOUT_COMMUNICATION (All automated messaging suppressed)</option>
+      </select>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Email</label>
+        <input class="form-control" id="editFlEmail">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">City</label>
+        <input class="form-control" id="editFlCity">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Address</label>
+      <input class="form-control" id="editFlAddress">
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Status</label>
+      <select class="form-select" id="editFlStatus" style="width:100%">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Notes</label>
+      <textarea class="form-control" id="editFlNotes" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer" style="padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px">
+    <button class="btn btn-secondary" onclick="closeEditFreelancerModal()" style="padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+    <button class="btn btn-primary" onclick="submitEditFreelancer()" id="submitEditFlBtn" style="background:#0284c7;color:white;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+      <i class="fas fa-save me-1"></i> Save Changes
+    </button>
+  </div>
+</div>
 </div>
 
 <!-- Full View Modal — full-screen team tree -->
@@ -2283,7 +2551,10 @@ function debounceME(){ clearTimeout(_meDebTimer); _meDebTimer = setTimeout(()=>l
 function switchTab(tab) {
   if (tab === 'earnings') tab = 'incomeDash';
   const isTpt = tab === 'topPartnersTab';
+  const isFl  = tab === 'freelancers';
   document.getElementById('tabMembers').classList.toggle('active', tab === 'members');
+  const tabFl = document.getElementById('tabFreelancers');
+  if (tabFl) tabFl.classList.toggle('active', isFl);
   document.getElementById('tabDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabTopPartnersTab').classList.toggle('active', isTpt);
   const tabEarn = document.getElementById('tabEarnings'); if (tabEarn) tabEarn.classList.remove('active');
@@ -2291,6 +2562,8 @@ function switchTab(tab) {
   document.getElementById('tabLeadView').classList.toggle('active', tab === 'leadView');
   document.getElementById('tabCommServices').classList.toggle('active', tab === 'commServices');
   document.getElementById('tabBtnMembers').classList.toggle('active', tab === 'members');
+  const tabBtnFl = document.getElementById('tabBtnFreelancers');
+  if (tabBtnFl) tabBtnFl.classList.toggle('active', isFl);
   document.getElementById('tabBtnDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabBtnTopPartnersTab').classList.toggle('active', isTpt);
   const tabBtnEarn = document.getElementById('tabBtnEarnings'); if (tabBtnEarn) tabBtnEarn.classList.remove('active');
@@ -2299,11 +2572,569 @@ function switchTab(tab) {
   document.getElementById('tabBtnCommServices').classList.toggle('active', tab === 'commServices');
   const tickEl = document.getElementById('tptFooterTickerContainer');
   if (tickEl) tickEl.style.display = isTpt ? 'block' : 'none';
+  if (isFl && !_flLoaded) loadFreelancers(1);
   if (tab === 'dashboard' && !_execDashLoaded) loadExecutiveDashboard();
   if (isTpt && !_tptLoaded) loadTopPartnersTable(1);
   if (tab === 'incomeDash' && !_iedLoaded) { loadIedSegments(); loadIncomeDash(1); }
   if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); _lvLoadCommunityServices(); loadLeadView(1); }
   if (tab === 'commServices' && !_commLoaded) loadCommServicesTab(1);
+}
+
+// ── DC-VGK-FREELANCERS-TAB: Freelancers Tab Controller ──
+let _flLoaded = false;
+let _flPage = 1;
+let _flSearchDebTimer = null;
+let _flSupportDebTimer = null;
+let _flCachedMembers = {};
+
+function debounceFlSearch() {
+  clearTimeout(_flSearchDebTimer);
+  _flSearchDebTimer = setTimeout(() => loadFreelancers(1), 400);
+}
+
+function resetFlFilters() {
+  const s = document.getElementById('flSearchInput'); if (s) s.value = '';
+  const c = document.getElementById('flClassificationFilter'); if (c) c.value = '';
+  const st = document.getElementById('flStatusFilter'); if (st) st.value = '';
+  loadFreelancers(1);
+}
+
+async function loadFreelancers(page = 1) {
+  _flPage = page;
+  const tbody = document.getElementById('flTableBody');
+  if (!tbody) return;
+
+  const search = (document.getElementById('flSearchInput')?.value || '').trim();
+  const classification = (document.getElementById('flClassificationFilter')?.value || '').trim();
+  const status = (document.getElementById('flStatusFilter')?.value || '').trim();
+
+  const params = new URLSearchParams({ page: String(page), page_size: '20' });
+  if (search) params.append('search', search);
+  if (classification) params.append('classification', classification);
+  if (status !== '') params.append('is_active', status === 'active' ? 'true' : 'false');
+
+  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b">
+    <i class="fas fa-spinner fa-spin fa-2x mb-2" style="color:#0284c7"></i>
+    <div style="font-weight:600;font-size:13px;margin-top:6px">Loading Freelancers...</div>
+  </td></tr>`;
+
+  try {
+    const res = await staffFetch(API + '/vgk/freelancers?' + params.toString());
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.detail || data.error || 'Failed to load freelancers', 'error');
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#dc2626">
+        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+        <div style="font-weight:700">${esc(data.detail || 'Error loading freelancers')}</div>
+      </td></tr>`;
+      return;
+    }
+
+    _flLoaded = true;
+    const pagination = data.pagination || {};
+    const meta = data.meta || {};
+    const items = data.data || [];
+
+    // Update KPI counters
+    const statTotal = document.getElementById('flStatTotal');
+    if (statTotal) statTotal.textContent = pagination.total ?? items.length;
+    const statWith = document.getElementById('flStatWithComm');
+    if (statWith) statWith.textContent = meta.total_with_communication ?? 0;
+    const statWithout = document.getElementById('flStatWithoutComm');
+    if (statWithout) statWithout.textContent = meta.total_without_communication ?? 0;
+    const statLeads = document.getElementById('flStatTotalLeads');
+    if (statLeads) statLeads.textContent = meta.total_originated_leads ?? 0;
+
+    const countBadge = document.getElementById('flTableCountBadge');
+    if (countBadge) {
+      const total = pagination.total ?? items.length;
+      countBadge.textContent = total > 0 ? `${total} total freelancers` : '0 freelancers';
+    }
+
+    if (!items.length) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#64748b">
+        <div style="font-size:32px;color:#cbd5e1;margin-bottom:8px"><i class="fas fa-user-tag"></i></div>
+        <div style="font-weight:700;font-size:14px;color:#334155">No Freelancers Found</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">No freelancer records match the current filters.</div>
+      </td></tr>`;
+      renderFlPagination(0, 1, 20);
+      return;
+    }
+
+    items.forEach(fl => { _flCachedMembers[fl.id] = fl; });
+
+    tbody.innerHTML = items.map(fl => {
+      const isWithComm = fl.freelancer_classification === 'WITH_COMMUNICATION';
+      const classBadge = isWithComm
+        ? `<span style="background:#dcfce7;color:#15803d;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><i class="fas fa-comment-dots"></i> With Comm</span>`
+        : `<span style="background:#fef3c7;color:#b45309;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><i class="fas fa-comment-slash"></i> Without Comm</span>`;
+
+      const statusBadge = fl.is_active
+        ? `<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">Active</span>`
+        : `<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">Inactive</span>`;
+
+      const supportDisplay = fl.vgk_support_code
+        ? `<div><div style="font-weight:600;color:#1e293b;font-size:12.5px">${esc(fl.vgk_support_name || 'N/A')}</div><div style="font-size:11px;color:#64748b;font-weight:600">${esc(fl.vgk_support_code)}</div></div>`
+        : `<span style="color:#94a3b8;font-size:12px">—</span>`;
+
+      return `<tr>
+        <td><strong style="color:#0284c7;letter-spacing:0.04em">${esc(fl.partner_code)}</strong></td>
+        <td>
+          <div style="font-weight:700;color:#0f172a">${esc(fl.partner_name)}</div>
+          ${fl.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(fl.city)}</div>` : ''}
+        </td>
+        <td style="font-family:monospace;font-size:12.5px">${esc(fl.phone || '—')}</td>
+        <td>${classBadge}</td>
+        <td>${supportDisplay}</td>
+        <td>${statusBadge}</td>
+        <td><span style="font-weight:800;color:#7c3aed;background:#f5f3ff;padding:2px 8px;border-radius:10px">${fl.originated_leads_count ?? fl.leads_count ?? 0}</span></td>
+        <td style="font-size:11.5px;color:#64748b">${fmtDate(fl.created_at)}</td>
+        <td style="text-align:right">
+          <div style="display:inline-flex;gap:6px;align-items:center">
+            <button onclick="viewFreelancerDetails(${fl.id})" title="View Details" style="background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+              <i class="fas fa-eye me-1"></i>View
+            </button>
+            <button onclick="openEditFreelancerModal(${fl.id})" title="Edit Freelancer" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+              <i class="fas fa-pencil-alt me-1"></i>Edit
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    renderFlPagination(pagination.total || items.length, page, 20);
+  } catch (err) {
+    console.error('Error loading freelancers:', err);
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#dc2626">Network error loading freelancers</td></tr>`;
+  }
+}
+
+function renderFlPagination(total, page, pageSize) {
+  const container = document.getElementById('flPaginationBar');
+  if (!container) return;
+  const totalPages = Math.ceil(total / pageSize) || 1;
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = `<div style="display:flex;gap:6px;align-items:center;justify-content:center;padding:12px 0">`;
+  if (page > 1) {
+    html += `<button onclick="loadFreelancers(${page - 1})" style="padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;background:white;font-size:12px;cursor:pointer">Prev</button>`;
+  }
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+      const active = i === page;
+      html += `<button onclick="loadFreelancers(${i})" style="padding:4px 10px;border-radius:6px;border:1px solid ${active ? '#0284c7' : '#cbd5e1'};background:${active ? '#0284c7' : 'white'};color:${active ? 'white' : '#334155'};font-size:12px;font-weight:${active ? '700' : '400'};cursor:pointer">${i}</button>`;
+    } else if (i === page - 3 || i === page + 3) {
+      html += `<span style="padding:0 4px;color:#94a3b8">…</span>`;
+    }
+  }
+  if (page < totalPages) {
+    html += `<button onclick="loadFreelancers(${page + 1})" style="padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;background:white;font-size:12px;cursor:pointer">Next</button>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function searchFlSupportPartners(query, dropdownId, hiddenInputId, selectedDisplayId) {
+  clearTimeout(_flSupportDebTimer);
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  const q = (query || '').trim();
+  if (q.length < 2) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+  _flSupportDebTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(API + '/vgk/members/search?purpose=freelancer_support&q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const results = (data.success && data.data) ? data.data : (Array.isArray(data) ? data : []);
+      if (!results.length) {
+        dropdown.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:12px;text-align:center">No active Channel Partners found</div>';
+        dropdown.style.display = 'block';
+        return;
+      }
+      dropdown.innerHTML = results.map(p => `
+        <div onclick="selectFlSupportPartner(${p.id}, '${esc(p.partner_code)}', '${esc(p.partner_name)}', '${dropdownId}', '${hiddenInputId}', '${selectedDisplayId}')"
+             style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:12.5px"
+             onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+          <div style="font-weight:700;color:#0f172a">${esc(p.partner_name)} <span style="font-weight:400;color:#0284c7">(${esc(p.partner_code)})</span></div>
+          <div style="font-size:11px;color:#64748b">${esc(p.phone || '')} · ${esc(p.designation_tier || 'Channel Partner')}</div>
+        </div>
+      `).join('');
+      dropdown.style.display = 'block';
+    } catch (e) {
+      console.error('Error searching support partners:', e);
+    }
+  }, 300);
+}
+
+function selectFlSupportPartner(id, code, name, dropdownId, hiddenInputId, selectedDisplayId) {
+  const hiddenInput = document.getElementById(hiddenInputId);
+  if (hiddenInput) hiddenInput.value = id;
+  const display = document.getElementById(selectedDisplayId);
+  if (display) display.innerHTML = `<i class="fas fa-check-circle me-1"></i> Selected: <strong>${name}</strong> (${code})`;
+  const dropdown = document.getElementById(dropdownId);
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+function openAddFreelancerModal() {
+  ['addFlName','addFlPhone','addFlEmail','addFlCity','addFlAddress','addFlNotes','addFlSupportSearch','addFlSupportId'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const selDisplay = document.getElementById('addFlSupportSelected');
+  if (selDisplay) selDisplay.innerHTML = '';
+  const rWith = document.querySelector('input[name="addFlClassification"][value="WITH_COMMUNICATION"]');
+  if (rWith) rWith.checked = true;
+  updateClassificationCardStyles();
+  const modal = document.getElementById('addFreelancerModal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeAddFreelancerModal() {
+  const modal = document.getElementById('addFreelancerModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function updateClassificationCardStyles() {
+  const selected = document.querySelector('input[name="addFlClassification"]:checked')?.value;
+  const lblWith = document.getElementById('lblWithComm');
+  const lblWithout = document.getElementById('lblWithoutComm');
+  if (lblWith) {
+    if (selected === 'WITH_COMMUNICATION') {
+      lblWith.style.borderColor = '#22c55e';
+      lblWith.style.background = '#f0fdf4';
+    } else {
+      lblWith.style.borderColor = '#cbd5e1';
+      lblWith.style.background = '#fff';
+    }
+  }
+  if (lblWithout) {
+    if (selected === 'WITHOUT_COMMUNICATION') {
+      lblWithout.style.borderColor = '#d97706';
+      lblWithout.style.background = '#fffbeb';
+    } else {
+      lblWithout.style.borderColor = '#cbd5e1';
+      lblWithout.style.background = '#fff';
+    }
+  }
+}
+
+async function submitAddFreelancer() {
+  const name = (document.getElementById('addFlName')?.value || '').trim();
+  const phone = (document.getElementById('addFlPhone')?.value || '').trim().replace(/\D/g, '');
+  const supportId = document.getElementById('addFlSupportId')?.value;
+  const classification = document.querySelector('input[name="addFlClassification"]:checked')?.value || 'WITH_COMMUNICATION';
+  const email = (document.getElementById('addFlEmail')?.value || '').trim();
+  const city = (document.getElementById('addFlCity')?.value || '').trim();
+  const address = (document.getElementById('addFlAddress')?.value || '').trim();
+  const notes = (document.getElementById('addFlNotes')?.value || '').trim();
+
+  if (!name) { showToast('Full name is required', 'error'); return; }
+  if (!phone || phone.length < 10) { showToast('Valid 10-digit mobile number is required', 'error'); return; }
+  if (!supportId) { showToast('Please select a VGK Support ID (Channel Partner)', 'error'); return; }
+
+  const btn = document.getElementById('submitAddFlBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Creating...'; }
+
+  try {
+    const res = await staffFetch(API + '/vgk/freelancers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        partner_name: name,
+        phone,
+        vgk_support_id: parseInt(supportId, 10),
+        freelancer_classification: classification,
+        email: email || null,
+        city: city || null,
+        address: address || null,
+        notes: notes || null
+      })
+    });
+    const d = await res.json();
+    if (d.success) {
+      showToast(`Freelancer created successfully! Code: ${d.data?.partner_code || ''}`, 'success');
+      closeAddFreelancerModal();
+      loadFreelancers(1);
+    } else {
+      showToast(d.detail || d.error || 'Failed to create freelancer', 'error');
+    }
+  } catch (e) {
+    console.error('Error creating freelancer:', e);
+    showToast('Network error creating freelancer', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-1"></i> Create Freelancer'; }
+  }
+}
+
+function closeFreelancerSidePanel() {
+  const panel = document.getElementById('freelancerSidePanel');
+  if (panel) panel.classList.remove('open');
+}
+
+async function viewFreelancerDetails(flId) {
+  const panel = document.getElementById('freelancerSidePanel');
+  const body = document.getElementById('flSidePanelBody');
+  const title = document.getElementById('flSidePanelTitle');
+  if (!panel || !body) return;
+
+  panel.classList.add('open');
+  body.innerHTML = `<div style="text-align:center;padding:50px 20px;color:#64748b">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#0284c7"></i>
+    <div style="font-weight:600">Loading Freelancer Record…</div>
+  </div>`;
+
+  try {
+    const res = await staffFetch(API + '/vgk/freelancers/' + flId);
+    const data = await res.json();
+    if (!data.success) {
+      body.innerHTML = `<div style="padding:20px;color:#dc2626;text-align:center">
+        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+        <div>${esc(data.detail || 'Failed to load details')}</div>
+      </div>`;
+      return;
+    }
+
+    const fl = data.data || {};
+    const support = data.support_partner || {};
+    const originatedLeads = data.originated_leads || [];
+    const leadStats = data.lead_stats || {};
+    const auditLogs = data.scope_logs || [];
+
+    if (title) title.innerHTML = `<i class="fas fa-user-tag me-2"></i>${esc(fl.partner_code)} · ${esc(fl.partner_name)}`;
+
+    const isWithComm = fl.freelancer_classification === 'WITH_COMMUNICATION';
+
+    body.innerHTML = `
+      <!-- Invariant Shield Banner -->
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+        <i class="fas fa-shield-alt" style="color:#0284c7;font-size:18px;margin-top:2px"></i>
+        <div style="font-size:12px;color:#1e40af;line-height:1.4">
+          <strong>Non-MLM Ground Source Participant</strong><br>
+          Freelancers originate CRM leads directly. Strictly excluded from downlines, sponsor commissions, waterfall allocations, and career progression.
+        </div>
+      </div>
+
+      <!-- Quick Profile Card -->
+      <div style="background:#f8fafc;border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid #e2e8f0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <h4 style="font-size:16px;font-weight:800;color:#0f172a;margin:0 0 2px 0">${esc(fl.partner_name)}</h4>
+            <span style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.04em">${esc(fl.partner_code)}</span>
+          </div>
+          <span style="background:${fl.is_active ? '#e0f2fe' : '#f1f5f9'};color:${fl.is_active ? '#0369a1' : '#64748b'};padding:3px 10px;border-radius:12px;font-size:11.5px;font-weight:700">
+            ${fl.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <div style="font-size:12.5px;color:#475569;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><i class="fas fa-phone me-1" style="color:#64748b"></i> ${esc(fl.phone || '—')}</div>
+          <div><i class="fas fa-envelope me-1" style="color:#64748b"></i> ${esc(fl.email || '—')}</div>
+          <div><i class="fas fa-map-marker-alt me-1" style="color:#64748b"></i> ${esc(fl.city || '—')}</div>
+          <div><i class="fas fa-calendar-alt me-1" style="color:#64748b"></i> Enrolled: ${fmtDate(fl.created_at)}</div>
+        </div>
+      </div>
+
+      <!-- Communication Policy Card -->
+      <div style="background:${isWithComm ? '#f0fdf4' : '#fffbeb'};border:1px solid ${isWithComm ? '#bbf7d0' : '#fde68a'};border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:${isWithComm ? '#166534' : '#92400e'};text-transform:uppercase;letter-spacing:0.04em">
+            Communication Gate
+          </span>
+          <span style="background:${isWithComm ? '#dcfce7' : '#fef3c7'};color:${isWithComm ? '#15803d' : '#b45309'};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">
+            ${esc(fl.freelancer_classification || 'WITH_COMMUNICATION')}
+          </span>
+        </div>
+        <div style="font-size:12px;color:${isWithComm ? '#15803d' : '#b45309'}">
+          ${isWithComm
+            ? '✓ Automated CRM WhatsApp messages and lead status notifications are enabled for leads originated by this Freelancer.'
+            : '⚠ All automated WhatsApp triggers and system notifications are STRICTLY SUPPRESSED for leads originated by this Freelancer.'}
+        </div>
+      </div>
+
+      <!-- VGK Support ID Card -->
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">
+          <i class="fas fa-hands-helping me-1" style="color:#0284c7"></i> Assigned VGK Support ID (Channel Partner)
+        </div>
+        ${support && support.id ? `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13.5px;font-weight:700;color:#0f172a">${esc(support.partner_name)}</div>
+              <div style="font-size:12px;color:#0284c7;font-weight:600">${esc(support.partner_code)} · ${esc(support.designation_tier || 'Channel Partner')}</div>
+              <div style="font-size:11.5px;color:#64748b;margin-top:2px"><i class="fas fa-phone me-1"></i>${esc(support.phone || '')}</div>
+            </div>
+            <button onclick="openEditFreelancerModal(${fl.id})" style="border:1px solid #cbd5e1;background:#f8fafc;color:#334155;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+              Reassign
+            </button>
+          </div>
+        ` : `
+          <div style="color:#dc2626;font-size:12px;font-weight:600">No Support Partner Assigned!</div>
+        `}
+      </div>
+
+      <!-- Originated Leads Summary -->
+      <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:#334155;text-transform:uppercase">
+            <i class="fas fa-bullseye me-1" style="color:#7c3aed"></i> Ground Source Lead Performance
+          </div>
+          <span style="font-size:12px;font-weight:800;color:#7c3aed">${leadStats.total || 0} Total Leads</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;text-align:center;margin-bottom:12px">
+          <div style="background:#f8fafc;padding:8px;border-radius:8px">
+            <div style="font-size:16px;font-weight:800;color:#0f172a">${leadStats.pipeline || 0}</div>
+            <div style="font-size:10.5px;color:#64748b">Pipeline</div>
+          </div>
+          <div style="background:#f0fdf4;padding:8px;border-radius:8px">
+            <div style="font-size:16px;font-weight:800;color:#16a34a">${leadStats.won || 0}</div>
+            <div style="font-size:10.5px;color:#166534">Won</div>
+          </div>
+          <div style="background:#fef2f2;padding:8px;border-radius:8px">
+            <div style="font-size:16px;font-weight:800;color:#dc2626">${leadStats.lost || 0}</div>
+            <div style="font-size:10.5px;color:#991b1b">Lost</div>
+          </div>
+        </div>
+
+        ${originatedLeads.length ? `
+          <div style="font-size:11.5px;font-weight:700;color:#64748b;margin-bottom:6px">Recent Originated Leads:</div>
+          <div style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:8px">
+            ${originatedLeads.slice(0, 10).map(l => `
+              <div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+                <div>
+                  <strong style="color:#0f172a">${esc(l.lead_name || 'Unnamed Lead')}</strong>
+                  <span style="color:#64748b;font-size:11px">(${esc(l.phone || '')})</span>
+                </div>
+                <span style="font-size:11px;padding:1px 6px;border-radius:6px;background:#f1f5f9;color:#334155">${esc(l.stage || 'Lead')}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div style="font-size:12px;color:#94a3b8;text-align:center;padding:10px">No leads originated yet.</div>`}
+      </div>
+
+      <!-- Audit History -->
+      ${auditLogs.length ? `
+        <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+          <div style="font-size:11.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">
+            <i class="fas fa-history me-1"></i> Audit Trail &amp; Reassignments
+          </div>
+          <div style="font-size:11.5px;color:#334155">
+            ${auditLogs.map(log => `
+              <div style="padding:6px 0;border-bottom:1px solid #f1f5f9">
+                <div style="font-weight:600">${esc(log.action || 'Updated')} by ${esc(log.actor_name || 'Staff')}</div>
+                <div style="color:#64748b;font-size:10.5px">${fmtDateTime(log.created_at)} — ${esc(log.description || '')}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    `;
+  } catch (err) {
+    console.error('Error fetching freelancer details:', err);
+    body.innerHTML = `<div style="padding:20px;color:#dc2626;text-align:center">Network error loading details</div>`;
+  }
+}
+
+function openEditFreelancerModal(flId) {
+  const fl = _flCachedMembers[flId];
+  if (!fl) {
+    staffFetch(API + '/vgk/freelancers/' + flId).then(r => r.json()).then(d => {
+      if (d.success) _populateEditModal(d.data, d.support_partner);
+    });
+    return;
+  }
+  _populateEditModal(fl);
+}
+
+function _populateEditModal(fl, support) {
+  document.getElementById('editFlId').value = fl.id;
+  document.getElementById('editFlCodeHeader').textContent = `(${fl.partner_code})`;
+  document.getElementById('editFlName').value = fl.partner_name || '';
+  document.getElementById('editFlPhone').value = fl.phone || '';
+  document.getElementById('editFlClassification').value = fl.freelancer_classification || 'WITH_COMMUNICATION';
+  document.getElementById('editFlEmail').value = fl.email || '';
+  document.getElementById('editFlCity').value = fl.city || '';
+  document.getElementById('editFlAddress').value = fl.address || '';
+  document.getElementById('editFlStatus').value = fl.is_active ? 'true' : 'false';
+  document.getElementById('editFlNotes').value = fl.notes || '';
+
+  const supId = fl.vgk_support_id || (support ? support.id : '');
+  const supCode = fl.vgk_support_code || (support ? support.partner_code : '');
+  const supName = fl.vgk_support_name || (support ? support.partner_name : '');
+  document.getElementById('editFlSupportId').value = supId || '';
+  document.getElementById('editFlSupportSearch').value = '';
+  const selDisplay = document.getElementById('editFlSupportSelected');
+  if (selDisplay) {
+    selDisplay.innerHTML = supId ? `<i class="fas fa-check-circle me-1"></i> Current Support: <strong>${supName}</strong> (${supCode})` : '';
+  }
+
+  const modal = document.getElementById('editFreelancerModal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeEditFreelancerModal() {
+  const modal = document.getElementById('editFreelancerModal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function submitEditFreelancer() {
+  const id = document.getElementById('editFlId')?.value;
+  if (!id) return;
+
+  const name = (document.getElementById('editFlName')?.value || '').trim();
+  const phone = (document.getElementById('editFlPhone')?.value || '').trim().replace(/\D/g, '');
+  const supportId = document.getElementById('editFlSupportId')?.value;
+  const classification = document.getElementById('editFlClassification')?.value;
+  const email = (document.getElementById('editFlEmail')?.value || '').trim();
+  const city = (document.getElementById('editFlCity')?.value || '').trim();
+  const address = (document.getElementById('editFlAddress')?.value || '').trim();
+  const isActive = document.getElementById('editFlStatus')?.value === 'true';
+  const notes = (document.getElementById('editFlNotes')?.value || '').trim();
+
+  if (!name) { showToast('Name is required', 'error'); return; }
+  if (!phone || phone.length < 10) { showToast('Valid 10-digit phone number is required', 'error'); return; }
+
+  const btn = document.getElementById('submitEditFlBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...'; }
+
+  try {
+    const payload = {
+      partner_name: name,
+      phone,
+      freelancer_classification: classification,
+      email: email || null,
+      city: city || null,
+      address: address || null,
+      is_active: isActive,
+      notes: notes || null
+    };
+    if (supportId) payload.vgk_support_id = parseInt(supportId, 10);
+
+    const res = await staffFetch(API + '/vgk/freelancers/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (d.success) {
+      showToast('Freelancer updated successfully', 'success');
+      closeEditFreelancerModal();
+      loadFreelancers(_flPage);
+      const sidePanel = document.getElementById('freelancerSidePanel');
+      if (sidePanel && sidePanel.classList.contains('open')) {
+        viewFreelancerDetails(id);
+      }
+    } else {
+      showToast(d.detail || d.error || 'Failed to update freelancer', 'error');
+    }
+  } catch (e) {
+    console.error('Error updating freelancer:', e);
+    showToast('Network error updating freelancer', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i> Save Changes'; }
+  }
 }
 
 // ── DC-VGK-TOP-PARTNERS-TAB-001: Top Partners Leaderboard Tab Controller ──
@@ -6611,7 +7442,9 @@ async function submitAddMember() {
 
 function _initApp() {
   try {
-    const _autoTab = window._EMBED_AUTOTAB || '';
+    const urlParams = new URLSearchParams(window.location.search);
+    const _tabParam = urlParams.get('tab');
+    const _autoTab = window._EMBED_AUTOTAB || _tabParam || '';
     if (_autoTab && _autoTab !== 'members') {
       switchTab(_autoTab);
     } else {

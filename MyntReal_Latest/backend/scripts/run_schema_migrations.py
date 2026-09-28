@@ -1067,6 +1067,34 @@ def run_migrations():
                         logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
                 logger.info("✅ SaaS Governance & Module Entitlements schema invariants verified/applied")
 
+                # 4.31 VGK Freelancer Segment & KYC Grace Period Invariants
+                logger.info("Executing VGK Freelancer Segment & KYC Grace Period schema invariants...")
+                for ddl_stmt in [
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS partner_type VARCHAR(50) DEFAULT 'CHANNEL_PARTNER'",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS freelancer_classification VARCHAR(50) NULL",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_support_id INTEGER REFERENCES official_partners(id) NULL",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS kyc_grace_payments_used INTEGER NOT NULL DEFAULT 0",
+                    "CREATE INDEX IF NOT EXISTS ix_official_partners_partner_type ON official_partners(partner_type)",
+                    "CREATE INDEX IF NOT EXISTS ix_official_partners_freelancer_classification ON official_partners(freelancer_classification)",
+                    "CREATE INDEX IF NOT EXISTS ix_official_partners_vgk_support_id ON official_partners(vgk_support_id)",
+                    """CREATE TABLE IF NOT EXISTS platform_change_scope_logs (
+                        id SERIAL PRIMARY KEY,
+                        target_module VARCHAR(100) NOT NULL,
+                        target_id INTEGER NULL,
+                        action VARCHAR(100) NOT NULL,
+                        old_value TEXT NULL,
+                        new_value TEXT NULL,
+                        changed_by_user_id INTEGER NULL,
+                        metadata JSONB NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    )"""
+                ]:
+                    try:
+                        conn.execute(text(ddl_stmt))
+                    except Exception as ddl_err:
+                        logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
+                logger.info("✅ VGK Freelancer Segment & KYC Grace Period schema invariants verified/applied")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
@@ -1124,7 +1152,7 @@ def run_migrations():
                 raise RuntimeError("Gate Failed: crm_leads missing tenant_id column")
 
             # Check 3: required tables exist
-            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances', 'mobile_device_sessions', 'mobile_device_push_tokens']
+            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances', 'mobile_device_sessions', 'mobile_device_push_tokens', 'platform_change_scope_logs']
             res_tbls = conn.execute(text(f"""
                 SELECT table_name FROM information_schema.tables 
                 WHERE table_name IN ({', '.join(repr(t) for t in required_tables)})
@@ -1133,6 +1161,16 @@ def run_migrations():
             missing_tbls = set(required_tables) - found_tbls
             if missing_tbls:
                 raise RuntimeError(f"Gate Failed: Missing required tables: {missing_tbls}")
+
+            # Check 3b: official_partners columns
+            partner_cols = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'official_partners' AND column_name IN ('partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used')
+            """)).fetchall()
+            found_partner_cols = {r[0] for r in partner_cols}
+            required_partner_cols = {'partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used'}
+            if not required_partner_cols.issubset(found_partner_cols):
+                raise RuntimeError(f"Gate Failed: official_partners missing required columns. Missing: {required_partner_cols - found_partner_cols}")
 
             # Check 4: Idempotent backfill and verification: no unexpected NULLs in tenant_id
             conn.execute(text("""

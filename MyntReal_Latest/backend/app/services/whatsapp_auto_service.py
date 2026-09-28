@@ -638,6 +638,21 @@ def send_auto_whatsapp(
         logger.info("[WA-AUTO] Paused — skipping %s for %s", event_key, phone)
         return
 
+    # Freelancer Communication Invariant: Check if lead Ground Source has WITHOUT_COMMUNICATION
+    _eff_lead_id = lead_id or (context.get('lead_id') if isinstance(context, dict) else None)
+    if _eff_lead_id:
+        try:
+            from app.models.crm import CRMLead
+            from app.models.staff_accounts import OfficialPartner
+            _lead_chk = db.query(CRMLead).filter(CRMLead.id == _eff_lead_id).first()
+            if _lead_chk and _lead_chk.associated_partner_id:
+                _fl_chk = db.query(OfficialPartner).filter(OfficialPartner.id == _lead_chk.associated_partner_id).first()
+                if _fl_chk and getattr(_fl_chk, 'partner_type', None) == 'FREELANCER' and getattr(_fl_chk, 'freelancer_classification', None) == 'WITHOUT_COMMUNICATION':
+                    logger.info("[WA-AUTO] Suppressed %s for lead %s (Freelancer Ground Source WITHOUT_COMMUNICATION)", event_key, _eff_lead_id)
+                    return {"sent": False, "reason": "suppressed_by_freelancer_without_communication"}
+        except Exception as _fe:
+            logger.debug(f"[WA-AUTO] Freelancer communication suppression check error: {_fe}")
+
     # Dedup check
     dedup = _dedup_key(event_key, f"{lead_id or phone}")
     if _is_duplicate(dedup):
@@ -1073,6 +1088,14 @@ def send_lead_welcome(
                 from app.models.crm import CRMLead
                 lead_obj = db.query(CRMLead).get(lead_id)
                 if lead_obj:
+                    # Freelancer Communication Invariant: Check if lead Ground Source has WITHOUT_COMMUNICATION
+                    if lead_obj.associated_partner_id:
+                        from app.models.staff_accounts import OfficialPartner
+                        _fl_chk = db.query(OfficialPartner).filter(OfficialPartner.id == lead_obj.associated_partner_id).first()
+                        if _fl_chk and getattr(_fl_chk, 'partner_type', None) == 'FREELANCER' and getattr(_fl_chk, 'freelancer_classification', None) == 'WITHOUT_COMMUNICATION':
+                            logger.info("[WA-WELCOME] Suppressed welcome for lead %s (Freelancer Ground Source WITHOUT_COMMUNICATION)", lead_id)
+                            return {"success": False, "reason": "suppressed_by_freelancer_setting"}
+
                     if lead_obj.category_id == 16 or lead_obj.company_id == 2 or 'etc' in (lead_obj.tags or '').lower() or 'training' in (lead_obj.tags or '').lower():
                         is_etc_training = True
                     if (getattr(lead_obj, 'company_id', None) == 4 or

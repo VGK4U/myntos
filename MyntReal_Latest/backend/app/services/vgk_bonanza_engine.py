@@ -82,8 +82,10 @@ def get_qualifying_leads_for_partner(
     """), {'bid': bonanza.id}).fetchall()
     brand_ids = [r[0] for r in brand_rows] if brand_rows else None
 
-    # Fetch partner code
-    pt_row = db.execute(text("SELECT partner_code FROM official_partners WHERE id = :pid"), {'pid': partner_id}).fetchone()
+    # Fetch partner code & type
+    pt_row = db.execute(text("SELECT partner_code, partner_type FROM official_partners WHERE id = :pid"), {'pid': partner_id}).fetchone()
+    if not pt_row or pt_row[1] == 'FREELANCER':
+        return {"completed_count": 0, "qualifying_lead_ids": [], "eligible": False}
     partner_code = pt_row[0] if pt_row else str(partner_id)
 
     # Build query

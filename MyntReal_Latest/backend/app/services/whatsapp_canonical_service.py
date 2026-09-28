@@ -326,6 +326,20 @@ class WhatsAppCanonicalService:
         Dispatches an automated trigger ensuring strict template mapping and parameter validation.
         FAIL-CLOSED: If template is missing or unapproved, REJECTS freeform text fallback to prevent 131047 errors.
         """
+        # 0. Freelancer Communication Invariant: Check if lead Ground Source has WITHOUT_COMMUNICATION
+        if lead_id:
+            try:
+                from app.models.crm import CRMLead
+                from app.models.staff_accounts import OfficialPartner
+                _lead = db.query(CRMLead).get(lead_id)
+                if _lead and _lead.associated_partner_id:
+                    _fl = db.query(OfficialPartner).filter(OfficialPartner.id == _lead.associated_partner_id).first()
+                    if _fl and getattr(_fl, 'partner_type', None) == 'FREELANCER' and getattr(_fl, 'freelancer_classification', None) == 'WITHOUT_COMMUNICATION':
+                        logger.info(f"[WA-CANONICAL] Suppressed automated trigger '{event_key}' for lead {lead_id} (Freelancer Ground Source WITHOUT_COMMUNICATION)")
+                        return {"success": False, "reason": "suppressed_by_freelancer_setting", "status": "suppressed"}
+            except Exception as _fe:
+                logger.debug(f"[WA-CANONICAL] Freelancer suppression check error: {_fe}")
+
         # 1. Validation of Template Mapping
         if not template or not template.meta_template_name or not template.is_meta_approved:
             tmpl_name = getattr(template, 'name', 'None') if template else 'None'

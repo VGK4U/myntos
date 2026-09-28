@@ -71,6 +71,15 @@ def apply_award_gift_trigger_if_active(
             5: _l5_id,
         }
 
+        # Freelancer Invariant: Freelancers never participate in awards or bonanzas
+        pids = [pid for pid in level_partner_map.values() if pid]
+        if pids:
+            fl_rows = db.execute(text("SELECT id FROM official_partners WHERE id = ANY(:pids) AND partner_type = 'FREELANCER'"), {'pids': pids}).fetchall()
+            fl_set = {r[0] for r in fl_rows}
+            for lvl, pid in list(level_partner_map.items()):
+                if pid in fl_set:
+                    level_partner_map[lvl] = None
+
         if not any(level_partner_map.values()):
             return {'logged': 0, 'claims_created': 0, 'skipped': 0}
 

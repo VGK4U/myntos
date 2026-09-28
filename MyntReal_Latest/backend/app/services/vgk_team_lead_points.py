@@ -83,6 +83,14 @@ def award_direct_team_lead_points(db: Session, lead_id: int) -> dict:
             'lead_id': lead_id,
         }
 
+    if getattr(producer, 'partner_type', None) == 'FREELANCER':
+        return {
+            'success': True,
+            'skipped': True,
+            'reason': f'Producer {producer.partner_code} is a FREELANCER — 0 points awarded',
+            'lead_id': lead_id,
+        }
+
     # 4. Direct Sponsor resolution & eligibility
     sponsor_id = producer.parent_partner_id
     if not sponsor_id:

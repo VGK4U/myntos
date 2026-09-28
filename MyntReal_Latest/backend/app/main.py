@@ -330,13 +330,23 @@ def add_vgk_team_columns():
         with engine.connect() as conn:
             partner_cols = [
                 ("parent_partner_id", "INTEGER REFERENCES official_partners(id) ON DELETE SET NULL"),
+                ("vgk_support_id", "INTEGER REFERENCES official_partners(id) ON DELETE RESTRICT"),
+                ("freelancer_classification", "VARCHAR(30)"),
                 ("vgk_role", "VARCHAR(30)"),
                 ("vgk_points_balance", "NUMERIC(15,2) NOT NULL DEFAULT 0"),
                 ("vgk_activated_at", "TIMESTAMP"),
                 # [DC-VGK-DOB] Date of Birth fields added Apr 2026
                 ("dob_document", "DATE"),
                 ("dob_actual",   "DATE"),
+                ("kyc_grace_payments_used", "INTEGER NOT NULL DEFAULT 0"),
             ]
+            try:
+                conn.execute(text("ALTER TABLE official_partners ALTER COLUMN partner_type TYPE VARCHAR(30)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_official_partners_freelancer ON official_partners(category, partner_type)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_official_partners_support_id ON official_partners(vgk_support_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_official_partners_freelancer_cls ON official_partners(freelancer_classification)"))
+            except Exception as _fe:
+                logging.debug(f"[DC-VGK-FREELANCER-INIT] Index/type setup: {_fe}")
             for col_name, col_def in partner_cols:
                 try:
                     exists = conn.execute(text(
@@ -16781,6 +16791,65 @@ def _startup_worker():
             _dtl_db.close()
     except Exception as _dtl_e2:
         print(f"[DC-VGK-POINTS-V2-TEAM-LEAD] ⚠️ outer: {_dtl_e2}", flush=True)
+
+    # DC-DVR-EXTRA-COMM-UNBLOCK-20260927: Backfill any unmirrored DVR advances
+    # that were blocked by the conflict check due to coexisting EXTRA_COMMISSION.
+    try:
+        _dvr_unblock_key = 'dc_dvr_mirror_extra_comm_unblock_20260927'
+        if _dvr_unblock_key not in _applied_keys:
+            _dub_db = SessionLocal()
+            try:
+                from app.services.vgk_cash_income import record_dvr_advance_as_income_row as _dub_dvr_fn
+                _dub_rows = _dub_db.execute(text("""
+                    SELECT vsca.id, vsca.lead_id, vsca.partner_id, vsca.level,
+                           vsca.advance_amount, vsca.entry_number, vsca.company_id,
+                           vsca.source_transaction_id, vsca.adjustment_amount,
+                           vsca.earning_basis_type, vsca.earning_basis_amount, vsca.underlying_value,
+                           vsca.released_by_id, vsca.status
+                    FROM   vgk_solar_cibil_advances vsca
+                    WHERE  vsca.kind   = 'DVR_ADVANCE'
+                      AND  vsca.status IN ('PENDING', 'RELEASED', 'APPROVED', 'STAGE1_APPROVED')
+                      AND  NOT EXISTS (
+                               SELECT 1 FROM vgk_cash_income_entries vci
+                               WHERE  vci.source_lead_id = vsca.lead_id
+                                 AND  vci.partner_id     = vsca.partner_id
+                                 AND  vci.level          = vsca.level
+                                 AND  vci.kind           = 'DVR_ADVANCE'
+                                 AND  (vci.source_transaction_id = vsca.source_transaction_id OR (vsca.source_transaction_id IS NULL AND vci.source_transaction_id IS NULL))
+                                 AND  vci.status        != 'CANCELLED'
+                           )
+                    ORDER BY vsca.id
+                """)).fetchall()
+                _dub_ok = 0
+                for _dr in _dub_rows:
+                    try:
+                        _dub_sp = _dub_db.begin_nested()
+                        _res = _dub_dvr_fn(_dub_db, _dr, released_by_id=_dr.released_by_id)
+                        _dub_sp.commit()
+                        _dub_db.commit()
+                        if _res.get('success') or _res.get('idempotent'):
+                            _dub_ok += 1
+                            print(f"[DC-DVR-UNBLOCK-20260927] ✅ Mirrored DVR advance {_dr.entry_number} for lead={_dr.lead_id} L{_dr.level}", flush=True)
+                        else:
+                            print(f"[DC-DVR-UNBLOCK-20260927] ⚠️ Result for {_dr.entry_number}: {_res}", flush=True)
+                    except Exception as _dr_err:
+                        try: _dub_db.rollback()
+                        except Exception: pass
+                        print(f"[DC-DVR-UNBLOCK-20260927] ⚠️ Failed for {_dr.entry_number}: {_dr_err}", flush=True)
+                _dub_db.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k) ON CONFLICT DO NOTHING"),
+                    {'k': _dvr_unblock_key}
+                )
+                _dub_db.commit()
+                print(f"[DC-DVR-UNBLOCK-20260927] ✅ Backfill complete: {_dub_ok}/{len(_dub_rows)} DVR advances mirrored", flush=True)
+            except Exception as _dub_e:
+                print(f"[DC-DVR-UNBLOCK-20260927] ⚠️ {_dub_e}", flush=True)
+                try: _dub_db.rollback()
+                except Exception: pass
+            finally:
+                _dub_db.close()
+    except Exception as _dub_e2:
+        print(f"[DC-DVR-UNBLOCK-20260927] ⚠️ outer: {_dub_e2}", flush=True)
 
     try:
         seed_bank_wise_leads_menu()

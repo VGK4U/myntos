@@ -29,7 +29,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.43-softphone-error-fix-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.46-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -44,28 +44,36 @@ prod_db_url = os.environ.get('PROD_DATABASE_URL')
 if prod_db_url:
     os.environ['DATABASE_URL'] = prod_db_url
 
-try:
-    backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
-    if backend_path not in sys.path:
-        sys.path.insert(0, backend_path)
-    from scripts.run_schema_migrations import run_migrations
-    run_migrations()
-    print("✅ Pre-deployment database migrations successfully synchronized.")
-
+migration_success = False
+for mig_attempt in range(1, 4):
     try:
-        from alembic.config import Config as AlembicConfig
-        from alembic import command
-        alembic_cfg = AlembicConfig(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
-        if prod_db_url:
-            alembic_cfg.set_main_option("sqlalchemy.url", prod_db_url)
-        command.upgrade(alembic_cfg, "head")
-        print("✅ Alembic migrations successfully upgraded to head.")
-    except Exception as alembic_err:
-        print(f"ℹ️ Alembic upgrade notice (standalone runner handled schema): {alembic_err}")
-except Exception as mig_err:
-    print(f"❌ CRITICAL PRE-DEPLOYMENT MIGRATION FAILURE: {mig_err}")
-    print("🛑 DEPLOYMENT ABORTED: Production database schema cannot be verified or migrated.")
-    sys.exit(1)
+        backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from scripts.run_schema_migrations import run_migrations
+        run_migrations()
+        print("✅ Pre-deployment database migrations successfully synchronized.")
+        migration_success = True
+
+        try:
+            from alembic.config import Config as AlembicConfig
+            from alembic import command
+            alembic_cfg = AlembicConfig(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+            if prod_db_url:
+                alembic_cfg.set_main_option("sqlalchemy.url", prod_db_url)
+            command.upgrade(alembic_cfg, "head")
+            print("✅ Alembic migrations successfully upgraded to head.")
+        except Exception as alembic_err:
+            print(f"ℹ️ Alembic upgrade notice (standalone runner handled schema): {alembic_err}")
+        break
+    except Exception as mig_err:
+        print(f"⚠️ Pre-deployment migration attempt {mig_attempt} warning: {mig_err}")
+        if mig_attempt < 3:
+            time.sleep(3)
+        else:
+            print(f"❌ CRITICAL PRE-DEPLOYMENT MIGRATION FAILURE: {mig_err}")
+            print("🛑 DEPLOYMENT ABORTED: Production database schema cannot be verified or migrated.")
+            sys.exit(1)
 
 total_size = os.path.getsize(ZIP_PATH)
 print(f"Uploading {ZIP_PATH} ({total_size} bytes / {total_size / (1024*1024):.2f} MB) to s3://{S3_BUCKET}/{S3_KEY}...")
@@ -116,7 +124,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.42: Fix duplicate WhatsApp 2-hour report trigger & dispatch, advisory lock & in-memory idempotency deduplication'[:190],
+    Description='MyntOS v2.4.46: Freelancer segment implementation & hardening, KYC grace period schema synchronization, 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")

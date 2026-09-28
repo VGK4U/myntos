@@ -132,6 +132,13 @@ class VGK4UWaterfallEngine:
         if deal_val <= 0:
             return {'success': False, 'error': 'Deal value must be greater than 0', 'allocations': []}
 
+        # Check if producer is a Freelancer
+        from app.models.staff_accounts import OfficialPartner
+        producer_partner = db.query(OfficialPartner).filter(OfficialPartner.id == producer_partner_id).first()
+        if producer_partner and getattr(producer_partner, 'partner_type', None) == 'FREELANCER':
+            logger.info(f'[VGK-WATERFALL] Producer {producer_partner_id} is Freelancer — zero waterfall allocations')
+            return {'success': True, 'skipped': True, 'reason': f'Producer {producer_partner_id} is Freelancer — zero waterfall allocations', 'allocations': []}
+
         # 1. Resolve Producer Career & Qualification Status
         career_status_map = VGK4UCareerService.get_bulk_partner_career_status(db)
         producer_status = career_status_map.get(producer_partner_id)

@@ -13,12 +13,13 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, Field
 from decimal import Decimal
+import math
 
 logger = logging.getLogger(__name__)
 
 from app.core.database import get_db
 from app.core.config import get_safe_base_url
-from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest, VGKPointsLedger, VGKUplineChangeLog
+from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest, VGKPointsLedger, VGKUplineChangeLog, PlatformChangeScopeLog
 from app.models.signup_category import SignupCategory
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.core.security import get_current_user_hybrid_with_partner
@@ -127,6 +128,30 @@ def _next_vgk_partner_code(db: Session, company_id: int) -> str:
         if not exists:
             return code
     raise ValueError("Could not generate unique VGK partner code")
+
+
+def _next_freelancer_code(db: Session) -> str:
+    """
+    Concurrency-safe sequential Freelancer code generator starting at FL08220001.
+    Uses PostgreSQL transaction advisory lock to guarantee sequence uniqueness.
+    """
+    try:
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtext('freelancer_partner_code_seq'));"))
+        max_num = db.execute(text("""
+            SELECT COALESCE(MAX(CAST(SUBSTRING(partner_code FROM 7) AS INTEGER)), 0)
+            FROM official_partners 
+            WHERE partner_code ~ '^FL0822[0-9]+$'
+        """)).scalar() or 0
+        next_num = max_num + 1
+        return f"FL0822{next_num:04d}"
+    except Exception as e:
+        logger.error(f"[FREELANCER-CODE] Error generating code with lock: {e}")
+        max_num = db.execute(text("""
+            SELECT COALESCE(MAX(CAST(SUBSTRING(partner_code FROM 7) AS INTEGER)), 0)
+            FROM official_partners 
+            WHERE partner_code ~ '^FL0822[0-9]+$'
+        """)).scalar() or 0
+        return f"FL0822{max_num + 1:04d}"
 
 
 def _next_vgk_entry_number(db: Session, company_id: int, prefix: str = None) -> str:
@@ -293,20 +318,66 @@ class VGKMemberUpdate(BaseModel):
     status_note: Optional[str] = None
 
 
+class FreelancerCreate(BaseModel):
+    partner_name: str = Field(..., min_length=2, max_length=200)
+    phone: str = Field(..., min_length=10, max_length=15)
+    vgk_support_id: int
+    freelancer_classification: str = Field(..., description="WITH_COMMUNICATION or WITHOUT_COMMUNICATION")
+    email: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    address: Optional[str] = None
+    pincode: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class FreelancerUpdate(BaseModel):
+    partner_name: Optional[str] = None
+    phone: Optional[str] = Field(None, max_length=30)
+    email: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    address: Optional[str] = None
+    pincode: Optional[str] = None
+    freelancer_classification: Optional[str] = None
+    vgk_support_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+
+
 @router.get("/members/search")
 def search_vgk_members(
     q: str = Query("", description="Name, phone or partner code search"),
     active_only: bool = Query(True, description="True = active members only (default). False = include inactive."),
+    purpose: Optional[str] = Query(None, description="ground_source | freelancer_support | referrer | sponsor | upline | vgk_member"),
     db: Session = Depends(get_db)
 ):
     """Search VGK members, staff, and influencers — used by CRM dropdowns and signup referrals."""
     results_list = []
     seen_codes = set()
     term = f"%{q.strip()}%" if q.strip() else ""
+    p_norm = (purpose or "").strip().lower()
 
     # 1. Query OfficialPartner (VGK Members)
     query_partners = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-    if active_only:
+
+    if p_norm == 'freelancer_support':
+        # DC Protocol: A VGK Support Partner must be a valid, active Channel Partner (never a Freelancer)
+        query_partners = query_partners.filter(
+            or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER'),
+            OfficialPartner.is_active == True
+        )
+    elif p_norm in ('referrer', 'sponsor', 'upline', 'vgk_member'):
+        # Freelancers cannot sponsor, refer, act as uplines, or be returned as standard VGK members
+        query_partners = query_partners.filter(or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER'))
+    elif p_norm == 'ground_source':
+        # Ground Source attribution supports BOTH Channel Partners and Freelancers
+        pass
+    else:
+        # Default / unspecified: default to standard VGK Channel Partners (exclude Freelancers)
+        query_partners = query_partners.filter(or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER'))
+
+    if active_only or p_norm == 'freelancer_support':
         query_partners = query_partners.filter(OfficialPartner.is_active == True)
     if term:
         query_partners = query_partners.filter(or_(
@@ -322,7 +393,9 @@ def search_vgk_members(
         
         # Determine type
         m_type = 'vgk_member'
-        if m.vgk_role in ('MENTOR', 'VGK_MENTOR'):
+        if getattr(m, 'partner_type', None) == 'FREELANCER':
+            m_type = 'freelancer'
+        elif m.vgk_role in ('MENTOR', 'VGK_MENTOR'):
             m_type = 'staff'
             
         results_list.append({
@@ -331,64 +404,69 @@ def search_vgk_members(
             "phone": m.phone,
             "partner_code": m.partner_code,
             "is_active": m.is_active,
-            "type": m_type
+            "type": m_type,
+            "partner_type": getattr(m, 'partner_type', 'CHANNEL_PARTNER'),
+            "freelancer_classification": getattr(m, 'freelancer_classification', None)
         })
 
-    # 2. Query StaffEmployee
-    query_staff = db.query(StaffEmployee)
-    if active_only:
-        query_staff = query_staff.filter(StaffEmployee.status.ilike('active'))
-    if term:
-        query_staff = query_staff.filter(or_(
-            StaffEmployee.full_name.ilike(term),
-            StaffEmployee.phone.ilike(term),
-            StaffEmployee.emp_code.ilike(term)
-        ))
-    staff_members = query_staff.order_by(StaffEmployee.full_name).limit(30).all()
-    
-    for s in staff_members:
-        code = (s.emp_code or '').strip().upper()
-        if code in seen_codes:
-            continue
-        seen_codes.add(code)
-        results_list.append({
-            "id": None,
-            "partner_name": s.full_name,
-            "phone": s.phone,
-            "partner_code": s.emp_code,
-            "is_active": (s.status.lower() == 'active'),
-            "type": 'staff'
-        })
-
-    # 3. Query PromoInfluencer
-    try:
-        from app.models.promo import PromoInfluencer
-        query_inf = db.query(PromoInfluencer)
+    # Only query Staff and Influencers if purpose is NOT freelancer_support, sponsor, or upline
+    # (Support IDs, sponsors, and uplines MUST be an OfficialPartner with an integer database ID)
+    if p_norm not in ('freelancer_support', 'sponsor', 'upline'):
+        # 2. Query StaffEmployee
+        query_staff = db.query(StaffEmployee)
         if active_only:
-            query_inf = query_inf.filter(PromoInfluencer.status.ilike('active'))
+            query_staff = query_staff.filter(StaffEmployee.status.ilike('active'))
         if term:
-            query_inf = query_inf.filter(or_(
-                PromoInfluencer.name.ilike(term),
-                PromoInfluencer.phone.ilike(term),
-                PromoInfluencer.referral_code.ilike(term)
+            query_staff = query_staff.filter(or_(
+                StaffEmployee.full_name.ilike(term),
+                StaffEmployee.phone.ilike(term),
+                StaffEmployee.emp_code.ilike(term)
             ))
-        influencers = query_inf.order_by(PromoInfluencer.name).limit(30).all()
+        staff_members = query_staff.order_by(StaffEmployee.full_name).limit(30).all()
         
-        for inf in influencers:
-            code = (inf.referral_code or '').strip().upper()
+        for s in staff_members:
+            code = (s.emp_code or '').strip().upper()
             if code in seen_codes:
                 continue
             seen_codes.add(code)
             results_list.append({
                 "id": None,
-                "partner_name": inf.name,
-                "phone": inf.phone,
-                "partner_code": inf.referral_code,
-                "is_active": (inf.status.lower() == 'active'),
-                "type": 'influencer'
+                "partner_name": s.full_name,
+                "phone": s.phone,
+                "partner_code": s.emp_code,
+                "is_active": (s.status.lower() == 'active'),
+                "type": 'staff'
             })
-    except Exception as e:
-        logger.warning(f"Error searching influencers in search_vgk_members: {e}")
+
+        # 3. Query PromoInfluencer
+        try:
+            from app.models.promo import PromoInfluencer
+            query_inf = db.query(PromoInfluencer)
+            if active_only:
+                query_inf = query_inf.filter(PromoInfluencer.status.ilike('active'))
+            if term:
+                query_inf = query_inf.filter(or_(
+                    PromoInfluencer.name.ilike(term),
+                    PromoInfluencer.phone.ilike(term),
+                    PromoInfluencer.referral_code.ilike(term)
+                ))
+            influencers = query_inf.order_by(PromoInfluencer.name).limit(30).all()
+            
+            for inf in influencers:
+                code = (inf.referral_code or '').strip().upper()
+                if code in seen_codes:
+                    continue
+                seen_codes.add(code)
+                results_list.append({
+                    "id": None,
+                    "partner_name": inf.name,
+                    "phone": inf.phone,
+                    "partner_code": inf.referral_code,
+                    "is_active": (inf.status.lower() == 'active'),
+                    "type": 'influencer'
+                })
+        except Exception as e:
+            logger.warning(f"Error searching influencers in search_vgk_members: {e}")
 
     return {
         "success": True,
@@ -423,7 +501,10 @@ def list_vgk_members(
     from datetime import date, timedelta
     page = int(page) if isinstance(page, (int, str)) and str(page).isdigit() else 1
     page_size = int(page_size) if isinstance(page_size, (int, str)) and str(page_size).isdigit() else 25
-    query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+    query = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER')
+    )
 
     # [DC-VGK-RBAC-001] Strict member visibility: Ordinary staff only see members registered by them or assigned to them
     if not _has_full_vgk_visibility(current_user):
@@ -990,6 +1071,471 @@ def list_vgk_members(
         "has_full_visibility": _has_full_vgk_visibility(current_user),
         "data": items,
         "members": items
+    }
+
+
+# ── [DC-VGK-FREELANCER-001] Dedicated Freelancer Segment Endpoints ───────────
+
+@router.get("/freelancers")
+def list_freelancers(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    classification: Optional[str] = Query(None),
+    support_id: Optional[int] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated Freelancer list endpoint.
+    Strictly partitions Freelancers away from normal Channel Partners.
+    """
+    query = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        OfficialPartner.partner_type == 'FREELANCER'
+    )
+
+    if not _has_full_vgk_visibility(current_user):
+        query = query.filter(or_(
+            OfficialPartner.assigned_staff_id == current_user.id,
+            OfficialPartner.registered_by_emp_code == current_user.emp_code
+        ))
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(or_(
+            OfficialPartner.partner_name.ilike(term),
+            OfficialPartner.partner_code.ilike(term),
+            OfficialPartner.phone.ilike(term)
+        ))
+
+    if classification and classification.strip():
+        query = query.filter(OfficialPartner.freelancer_classification == classification.strip().upper())
+
+    if support_id:
+        query = query.filter(OfficialPartner.vgk_support_id == support_id)
+
+    if is_active is not None:
+        query = query.filter(OfficialPartner.is_active == is_active)
+
+    total = query.count()
+    freelancers = query.order_by(OfficialPartner.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    # Bulk fetch support partner details
+    support_ids = list({f.vgk_support_id for f in freelancers if f.vgk_support_id})
+    supports_map = {}
+    if support_ids:
+        supports = db.query(OfficialPartner).filter(OfficialPartner.id.in_(support_ids)).all()
+        supports_map = {s.id: s for s in supports}
+
+    # Bulk fetch originated lead counts
+    fl_ids = [f.id for f in freelancers]
+    lead_counts = {}
+    if fl_ids:
+        lead_rows = db.execute(text("""
+            SELECT associated_partner_id, COUNT(*) 
+            FROM crm_leads 
+            WHERE associated_partner_id = ANY(:fids)
+            GROUP BY associated_partner_id
+        """), {'fids': fl_ids}).fetchall()
+        lead_counts = {r[0]: r[1] for r in lead_rows}
+
+    items = []
+    for f in freelancers:
+        sup = supports_map.get(f.vgk_support_id)
+        items.append({
+            "id": f.id,
+            "partner_code": f.partner_code,
+            "partner_name": f.partner_name,
+            "phone": f.phone,
+            "email": f.email,
+            "city": f.city,
+            "state": f.state,
+            "address": f.address,
+            "pincode": f.pincode,
+            "is_active": f.is_active,
+            "freelancer_classification": f.freelancer_classification or 'WITH_COMMUNICATION',
+            "vgk_support_id": f.vgk_support_id,
+            "vgk_support_code": sup.partner_code if sup else None,
+            "vgk_support_name": sup.partner_name if sup else None,
+            "vgk_support_phone": sup.phone if sup else None,
+            "originated_leads_count": lead_counts.get(f.id, 0),
+            "created_at": f.created_at.isoformat() if f.created_at else None
+        })
+
+    return {
+        "success": True,
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if page_size else 1
+    }
+
+
+@router.post("/freelancers", status_code=201)
+def create_freelancer(
+    payload: FreelancerCreate,
+    current_user: StaffEmployee = Depends(require_vgk_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated Freelancer creation endpoint.
+    Guarantees:
+      - Sequential code generation starting at FL08220001
+      - parent_partner_id IS ALWAYS NULL (no hierarchy / upline)
+      - Direct support tagged to a valid Channel Partner
+      - Strict classification (WITH_COMMUNICATION vs WITHOUT_COMMUNICATION)
+      - Zero MLM points / income entries created
+    """
+    from app.utils.phone_otp import normalize_phone_10
+
+    raw_phone = payload.phone.strip()
+    phone = normalize_phone_10(raw_phone) or raw_phone
+    if not phone or len(phone) < 10:
+        raise HTTPException(status_code=400, detail="Please provide a valid 10-digit mobile number.")
+
+    # Phone uniqueness check
+    existing = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(OfficialPartner.phone == phone, OfficialPartner.phone == raw_phone)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Phone number already registered with partner {existing.partner_code} ({existing.partner_name}).")
+
+    # Classification validation
+    cls_val = (payload.freelancer_classification or '').strip().upper()
+    if cls_val not in ('WITH_COMMUNICATION', 'WITHOUT_COMMUNICATION'):
+        raise HTTPException(status_code=400, detail="Invalid classification. Must be WITH_COMMUNICATION or WITHOUT_COMMUNICATION.")
+
+    # Validate Support ID
+    support = db.query(OfficialPartner).filter(OfficialPartner.id == payload.vgk_support_id).first()
+    if not support:
+        raise HTTPException(status_code=400, detail="VGK Support Partner not found.")
+    if support.category != 'VGK_TEAM':
+        raise HTTPException(status_code=400, detail="Support partner must be a VGK Member.")
+    if not support.is_active:
+        raise HTTPException(status_code=400, detail="Selected Support Partner is inactive.")
+    if getattr(support, 'partner_type', None) == 'FREELANCER':
+        raise HTTPException(status_code=400, detail="A Freelancer cannot be assigned as a Support ID. Support must be a Channel Partner.")
+
+    # Generate concurrency-safe sequential Freelancer code
+    code = _next_freelancer_code(db)
+
+    company_id = support.company_id or _get_staff_company_id(current_user)
+
+    freelancer = OfficialPartner(
+        company_id=company_id,
+        partner_code=code,
+        partner_name=format_proper_name(payload.partner_name.strip()),
+        phone=phone,
+        email=payload.email.strip() if payload.email else None,
+        category='VGK_TEAM',
+        partner_type='FREELANCER',
+        parent_partner_id=None,  # STRICT INVARIANT: Freelancers NEVER have parent/upline
+        vgk_support_id=support.id,
+        freelancer_classification=cls_val,
+        city=payload.city.strip() if payload.city else None,
+        state=payload.state.strip() if payload.state else None,
+        address=payload.address.strip() if payload.address else None,
+        pincode=payload.pincode.strip() if payload.pincode else None,
+        is_active=True,
+        is_business_activated=False,
+        is_paid_activation=False,
+        is_loyal_coupon=False,
+        vgk_points_balance=Decimal('0'),
+        vgk_cash_wallet=Decimal('0'),
+        vgk_cash_earned_total=Decimal('0'),
+        current_position='Freelancer',
+        vgk4u_current_designation='Freelancer',
+        registered_by_emp_code=current_user.emp_code if current_user else None,
+        created_by_id=current_user.id if current_user else None,
+        status_note=payload.notes.strip() if payload.notes else None,
+        created_at=get_indian_time(),
+        updated_at=get_indian_time()
+    )
+    db.add(freelancer)
+    db.flush()
+
+    # Governance Audit Log
+    try:
+        log = PlatformChangeScopeLog(
+            change_title=f"Created Freelancer {code}",
+            change_category="FREELANCER_ONBOARDING",
+            scope_type="SEGMENT_A",
+            target_tenant_id=company_id,
+            target_module="VGK_FREELANCER",
+            new_value={
+                "code": code,
+                "name": freelancer.partner_name,
+                "phone": freelancer.phone,
+                "support_id": support.id,
+                "support_code": support.partner_code,
+                "classification": cls_val
+            },
+            created_by_id=current_user.id if current_user else None,
+            created_by_name=current_user.full_name if current_user else None,
+            notes=f"Freelancer {code} created under Support Partner {support.partner_code} ({support.partner_name})"
+        )
+        db.add(log)
+    except Exception as _ae:
+        logger.warning(f"[FREELANCER-AUDIT] Could not create audit log: {_ae}")
+
+    db.commit()
+    db.refresh(freelancer)
+
+    return {
+        "success": True,
+        "message": f"Freelancer {code} created successfully",
+        "data": {
+            "id": freelancer.id,
+            "partner_code": freelancer.partner_code,
+            "partner_name": freelancer.partner_name,
+            "partner_type": freelancer.partner_type,
+            "category": freelancer.category,
+            "parent_partner_id": freelancer.parent_partner_id,
+            "phone": freelancer.phone,
+            "email": freelancer.email,
+            "is_active": freelancer.is_active,
+            "freelancer_classification": freelancer.freelancer_classification,
+            "vgk_support_id": freelancer.vgk_support_id,
+            "vgk_support_code": support.partner_code,
+            "vgk_support_name": support.partner_name,
+            "created_at": freelancer.created_at.isoformat() if freelancer.created_at else None
+        }
+    }
+
+
+@router.get("/freelancers/{freelancer_id}")
+def get_freelancer_detail(
+    freelancer_id: int = Path(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated Freelancer detail view.
+    Suppresses all MLM tree, commission, and MLM wallet cards.
+    Provides originated leads list and audit history.
+    """
+    fl = db.query(OfficialPartner).filter(
+        OfficialPartner.id == freelancer_id,
+        OfficialPartner.category == 'VGK_TEAM',
+        OfficialPartner.partner_type == 'FREELANCER'
+    ).first()
+    if not fl:
+        raise HTTPException(status_code=404, detail="Freelancer not found")
+
+    if not _has_full_vgk_visibility(current_user):
+        if fl.assigned_staff_id != current_user.id and fl.registered_by_emp_code != current_user.emp_code:
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to view this Freelancer.")
+
+    support = db.query(OfficialPartner).filter(OfficialPartner.id == fl.vgk_support_id).first() if fl.vgk_support_id else None
+
+    # Fetch originated CRM leads
+    leads_raw = db.execute(text("""
+        SELECT id, name, phone, status, solar_pipeline_status, deal_value_total, deal_value_received, created_at
+        FROM crm_leads 
+        WHERE associated_partner_id = :fid
+        ORDER BY id DESC
+    """), {'fid': fl.id}).fetchall()
+
+    status_counts = {}
+    recent_leads = []
+    for r in leads_raw:
+        st = (r[3] or 'new').strip().lower()
+        status_counts[st] = status_counts.get(st, 0) + 1
+        if len(recent_leads) < 15:
+            recent_leads.append({
+                "id": r[0],
+                "name": r[1],
+                "phone": r[2],
+                "status": r[3],
+                "solar_pipeline_status": r[4],
+                "deal_value_total": float(r[5] or 0),
+                "deal_value_received": float(r[6] or 0),
+                "created_at": r[7].isoformat() if r[7] else None
+            })
+
+    # Fetch audit logs
+    audit_logs = []
+    try:
+        a_rows = db.execute(text("""
+            SELECT change_title, notes, created_by_name, created_at
+            FROM platform_change_scope_logs
+            WHERE target_module = 'VGK_FREELANCER'
+              AND (new_value->>'code' = :code OR old_value->>'code' = :code OR notes ILIKE :code_term)
+            ORDER BY id DESC
+            LIMIT 10
+        """), {'code': fl.partner_code, 'code_term': f"%{fl.partner_code}%"}).fetchall()
+        for a in a_rows:
+            audit_logs.append({
+                "title": a[0],
+                "notes": a[1],
+                "changed_by": a[2],
+                "timestamp": a[3].isoformat() if a[3] else None
+            })
+    except Exception as _ae:
+        logger.debug(f"[FREELANCER-DETAIL] Audit logs lookup: {_ae}")
+
+    return {
+        "success": True,
+        "data": {
+            "id": fl.id,
+            "partner_code": fl.partner_code,
+            "partner_name": fl.partner_name,
+            "phone": fl.phone,
+            "email": fl.email,
+            "city": fl.city,
+            "state": fl.state,
+            "address": fl.address,
+            "pincode": fl.pincode,
+            "is_active": fl.is_active,
+            "freelancer_classification": fl.freelancer_classification or 'WITH_COMMUNICATION',
+            "support": {
+                "id": support.id,
+                "partner_code": support.partner_code,
+                "partner_name": support.partner_name,
+                "phone": support.phone,
+                "email": support.email
+            } if support else None,
+            "registered_by_emp_code": fl.registered_by_emp_code,
+            "created_at": fl.created_at.isoformat() if fl.created_at else None,
+            "leads_summary": {
+                "total_count": len(leads_raw),
+                "status_counts": status_counts,
+                "recent_leads": recent_leads
+            },
+            "audit_trail": audit_logs
+        }
+    }
+
+
+@router.patch("/freelancers/{freelancer_id}")
+def update_freelancer(
+    freelancer_id: int = Path(...),
+    payload: FreelancerUpdate = Body(...),
+    current_user: StaffEmployee = Depends(require_vgk_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Dedicated Freelancer update endpoint.
+    Permits updating contact information, classification, active state, and Support ID reassignment.
+    STRICT INVARIANT: parent_partner_id remains NULL and cannot be set.
+    """
+    from app.utils.phone_otp import normalize_phone_10
+
+    fl = db.query(OfficialPartner).filter(
+        OfficialPartner.id == freelancer_id,
+        OfficialPartner.category == 'VGK_TEAM',
+        OfficialPartner.partner_type == 'FREELANCER'
+    ).first()
+    if not fl:
+        raise HTTPException(status_code=404, detail="Freelancer not found")
+
+    old_support_id = fl.vgk_support_id
+    old_cls = fl.freelancer_classification
+
+    if payload.partner_name is not None and payload.partner_name.strip():
+        fl.partner_name = format_proper_name(payload.partner_name.strip())
+
+    if payload.phone is not None and payload.phone.strip():
+        raw_p = payload.phone.strip()
+        norm_p = normalize_phone_10(raw_p) or raw_p
+        # Uniqueness check
+        existing = db.query(OfficialPartner).filter(
+            OfficialPartner.id != fl.id,
+            OfficialPartner.category == 'VGK_TEAM',
+            or_(OfficialPartner.phone == norm_p, OfficialPartner.phone == raw_p)
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Phone number already registered with partner {existing.partner_code} ({existing.partner_name}).")
+        fl.phone = norm_p
+
+    if payload.email is not None:
+        fl.email = payload.email.strip() if payload.email else None
+    if payload.city is not None:
+        fl.city = payload.city.strip() if payload.city else None
+    if payload.state is not None:
+        fl.state = payload.state.strip() if payload.state else None
+    if payload.address is not None:
+        fl.address = payload.address.strip() if payload.address else None
+    if payload.pincode is not None:
+        fl.pincode = payload.pincode.strip() if payload.pincode else None
+    if payload.is_active is not None:
+        fl.is_active = bool(payload.is_active)
+    if payload.notes is not None:
+        fl.status_note = payload.notes.strip() if payload.notes else None
+
+    if payload.freelancer_classification is not None:
+        new_cls = payload.freelancer_classification.strip().upper()
+        if new_cls not in ('WITH_COMMUNICATION', 'WITHOUT_COMMUNICATION'):
+            raise HTTPException(status_code=400, detail="Invalid classification. Must be WITH_COMMUNICATION or WITHOUT_COMMUNICATION.")
+        fl.freelancer_classification = new_cls
+
+    # Support ID Reassignment
+    support_changed = False
+    new_support = None
+    if payload.vgk_support_id is not None and payload.vgk_support_id != fl.vgk_support_id:
+        if payload.vgk_support_id == fl.id:
+            raise HTTPException(status_code=400, detail="A Freelancer cannot be their own Support ID.")
+        new_support = db.query(OfficialPartner).filter(OfficialPartner.id == payload.vgk_support_id).first()
+        if not new_support:
+            raise HTTPException(status_code=400, detail="Selected Support Partner not found.")
+        if new_support.category != 'VGK_TEAM':
+            raise HTTPException(status_code=400, detail="Support partner must be a VGK Member.")
+        if not new_support.is_active:
+            raise HTTPException(status_code=400, detail="Selected Support Partner is inactive.")
+        if getattr(new_support, 'partner_type', None) == 'FREELANCER':
+            raise HTTPException(status_code=400, detail="A Freelancer cannot be assigned as Support ID.")
+
+        fl.vgk_support_id = new_support.id
+        support_changed = True
+
+    # Invariant: parent_partner_id MUST remain NULL
+    fl.parent_partner_id = None
+    fl.updated_at = get_indian_time()
+
+    # Log audit entry
+    try:
+        changes = []
+        if support_changed and new_support:
+            changes.append(f"Reassigned support to {new_support.partner_code} ({new_support.partner_name})")
+        if payload.freelancer_classification and payload.freelancer_classification != old_cls:
+            changes.append(f"Classification changed from {old_cls} to {fl.freelancer_classification}")
+
+        if changes:
+            log = PlatformChangeScopeLog(
+                change_title=f"Updated Freelancer {fl.partner_code}",
+                change_category="FREELANCER_UPDATE",
+                scope_type="SEGMENT_A",
+                target_tenant_id=fl.company_id,
+                target_module="VGK_FREELANCER",
+                old_value={"support_id": old_support_id, "classification": old_cls, "code": fl.partner_code},
+                new_value={"support_id": fl.vgk_support_id, "classification": fl.freelancer_classification, "code": fl.partner_code},
+                created_by_id=current_user.id if current_user else None,
+                created_by_name=current_user.full_name if current_user else None,
+                notes="; ".join(changes)
+            )
+            db.add(log)
+    except Exception as _ae:
+        logger.warning(f"[FREELANCER-UPDATE-AUDIT] Could not create audit log: {_ae}")
+
+    db.commit()
+    db.refresh(fl)
+
+    return {
+        "success": True,
+        "message": f"Freelancer {fl.partner_code} updated successfully",
+        "data": {
+            "id": fl.id,
+            "partner_code": fl.partner_code,
+            "partner_name": fl.partner_name,
+            "phone": fl.phone,
+            "freelancer_classification": fl.freelancer_classification,
+            "vgk_support_id": fl.vgk_support_id,
+            "is_active": fl.is_active
+        }
     }
 
 
@@ -1584,6 +2130,8 @@ def create_vgk_member(
         ).first()
         if not parent:
             raise HTTPException(status_code=400, detail="Upline (parent partner) not found or not a VGK member")
+        if getattr(parent, 'partner_type', None) == 'FREELANCER':
+            raise HTTPException(status_code=400, detail="A Freelancer cannot be an upline/sponsor")
 
     partner_code = _next_vgk_partner_code(db, company_id)
     password_hash = None
@@ -1608,6 +2156,7 @@ def create_vgk_member(
         phone=phone,
         email=payload.email,
         category='VGK_TEAM',
+        partner_type='CHANNEL_PARTNER',
         is_active=False,
         phone_verified=phone_verified,
         parent_partner_id=payload.parent_partner_id,
@@ -1987,6 +2536,9 @@ def get_vgk_member_tree(
     ).first()
     if not member:
         raise HTTPException(status_code=404, detail="VGK member not found")
+
+    if getattr(member, 'partner_type', None) == 'FREELANCER':
+        raise HTTPException(status_code=400, detail="Freelancers do not participate in network hierarchy or MLM tree view.")
 
     # [DC-VGK-RBAC-001] Strict visibility guard for tree view
     if not _has_full_vgk_visibility(current_user):
@@ -4959,7 +5511,7 @@ def vgk_executive_dashboard(
                        TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'DD Mon') AS label,
                        COUNT(*) AS cnt
                 FROM official_partners
-                WHERE category = 'VGK_TEAM'
+                WHERE category = 'VGK_TEAM' AND (partner_type IS NULL OR partner_type != 'FREELANCER')
                   AND created_at >= :from_d AND created_at <= :to_d
                 GROUP BY ym, label ORDER BY ym
             """), {"from_d": from_d, "to_d": to_d}).fetchall()
@@ -4971,7 +5523,7 @@ def vgk_executive_dashboard(
                        TO_CHAR(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'Mon YYYY') AS label,
                        COUNT(*) AS cnt
                 FROM official_partners
-                WHERE category = 'VGK_TEAM'
+                WHERE category = 'VGK_TEAM' AND (partner_type IS NULL OR partner_type != 'FREELANCER')
                   AND created_at >= :since
                 GROUP BY ym, label ORDER BY ym
             """), {"since": since_12m}).fetchall()
@@ -5044,16 +5596,16 @@ def vgk_executive_dashboard(
 
     # ── Member totals ─────────────────────────────────────────────────────────
     try:
-        total_members  = db.execute(text("SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM'")).scalar() or 0
-        active_members = db.execute(text("SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND is_active=true")).scalar() or 0
+        total_members  = db.execute(text("SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND (partner_type IS NULL OR partner_type != 'FREELANCER')")).scalar() or 0
+        active_members = db.execute(text("SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND is_active=true AND (partner_type IS NULL OR partner_type != 'FREELANCER')")).scalar() or 0
         if is_filtered:
             new_in_period = db.execute(text(
-                "SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM'"
+                "SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND (partner_type IS NULL OR partner_type != 'FREELANCER')"
                 " AND created_at >= :from_d AND created_at <= :to_d"
             ), {"from_d": from_d, "to_d": to_d}).scalar() or 0
         else:
             new_in_period = db.execute(text(
-                "SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND created_at >= :start"
+                "SELECT COUNT(*) FROM official_partners WHERE category='VGK_TEAM' AND (partner_type IS NULL OR partner_type != 'FREELANCER') AND created_at >= :start"
             ), {"start": today.replace(day=1).isoformat()}).scalar() or 0
     except Exception:
         total_members = active_members = new_in_period = 0
@@ -5077,6 +5629,7 @@ def vgk_executive_dashboard(
                 LEFT JOIN staff_employees se ON se.emp_code = op.registered_by_emp_code
                 LEFT JOIN official_partners op_ref ON op_ref.partner_code = op.registered_by_emp_code
                 WHERE op.category = 'VGK_TEAM'
+                  AND (op.partner_type IS NULL OR op.partner_type != 'FREELANCER')
                   AND op.registered_by_emp_code IS NOT NULL
                   AND op.created_at >= :from_d AND op.created_at <= :to_d
                 GROUP BY op.registered_by_emp_code, se.full_name, op_ref.partner_name
@@ -5093,6 +5646,7 @@ def vgk_executive_dashboard(
                 LEFT JOIN staff_employees se ON se.emp_code = op.registered_by_emp_code
                 LEFT JOIN official_partners op_ref ON op_ref.partner_code = op.registered_by_emp_code
                 WHERE op.category = 'VGK_TEAM'
+                  AND (op.partner_type IS NULL OR op.partner_type != 'FREELANCER')
                   AND op.registered_by_emp_code IS NOT NULL
                 GROUP BY op.registered_by_emp_code, se.full_name, op_ref.partner_name
                 ORDER BY total DESC
@@ -5185,7 +5739,10 @@ def member_earnings_dashboard(
     norm_df = _normalize_date_str(date_from)
     norm_dt = _normalize_date_str(date_to)
 
-    query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+    query = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        _or(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER')
+    )
     if partner_id:
         query = query.filter(OfficialPartner.id == partner_id)
         earners_only = False
@@ -5712,7 +6269,7 @@ def member_earnings_dashboard(
             kind = e["kind"]
             e_gross = e["gross"]
             adv_paid = 0.0
-            if kind not in ('ADVANCE', 'DVR_ADVANCE') and e["source_lead_id"] and e["level"] is not None:
+            if kind not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS', 'BRAND_ADVANCE', 'ADJUSTMENT') and e["source_lead_id"] and e["level"] is not None:
                 adv_paid = adv_map_bulk.get((int(e["source_lead_id"]), int(e["level"])), 0.0)
             
             lost_ded = m_lost_ded_map.get(e.get("id"), 0.0)

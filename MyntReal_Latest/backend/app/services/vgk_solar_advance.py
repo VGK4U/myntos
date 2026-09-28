@@ -111,6 +111,11 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
         if not l1_partner_id:
             return {'created': False, 'reason': 'No Ground Source (L1) partner set'}
 
+        from app.models.staff_accounts import OfficialPartner
+        l1_p = db.query(OfficialPartner).filter(OfficialPartner.id == l1_partner_id).first()
+        if l1_p and getattr(l1_p, 'partner_type', None) == 'FREELANCER':
+            return {'created': False, 'eligible': False, 'reason': 'Freelancer leads not eligible for solar advance'}
+
         pipeline = (lead.solar_pipeline_status or '').strip()
 
         if not bypass_cibil and pipeline not in ELIGIBLE_STAGES:
@@ -262,6 +267,10 @@ def _legacy_check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
             return {'created': False, 'reason': f'Not solar (category_id={lead.category_id})'}
         if not lead.associated_partner_id:
             return {'created': False, 'reason': 'No associated VGK partner'}
+
+        _ptype = db.execute(text("SELECT partner_type FROM official_partners WHERE id = :pid"), {'pid': lead.associated_partner_id}).scalar()
+        if _ptype == 'FREELANCER':
+            return {'created': False, 'eligible': False, 'reason': 'Freelancer leads not eligible for solar advance'}
 
         dvr = Decimal(str(lead.deal_value_received or 0))
         if dvr <= 0:
@@ -479,6 +488,10 @@ def process_payment_stage2_advance(
 
         if not lead.associated_partner_id:
             return {'created': False, 'reason': 'No associated VGK partner'}
+
+        _ptype = db.execute(text("SELECT partner_type FROM official_partners WHERE id = :pid"), {'pid': lead.associated_partner_id}).scalar()
+        if _ptype == 'FREELANCER':
+            return {'created': False, 'eligible': False, 'reason': 'Freelancer leads not eligible for solar advance'}
 
         # Stamp first_dvr_confirmed_at if not set
         if lead.first_dvr_confirmed_at is None:
@@ -1295,7 +1308,8 @@ def release_dvr_advance(
                 from app.services.vgk_cash_income import record_dvr_advance_as_income_row as _dvr_mirror_fn
                 _adv_full = db.execute(text(
                     "SELECT id, entry_number, partner_id, lead_id, advance_amount, "
-                    "company_id, COALESCE(level,1) AS level "
+                    "company_id, COALESCE(level,1) AS level, source_transaction_id, "
+                    "adjustment_amount, earning_basis_type, earning_basis_amount, underlying_value "
                     "FROM vgk_solar_cibil_advances WHERE id=:i"
                 ), {'i': adv.id}).fetchone()
                 if _adv_full:

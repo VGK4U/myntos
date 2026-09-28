@@ -116,6 +116,11 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
         logger.info(f'[VGK4U-CI] Lead {lead.id} has no associated_partner_id — skipping cash income')
         return 0
 
+    _prod_check = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+    if _prod_check and getattr(_prod_check, 'partner_type', None) == 'FREELANCER':
+        logger.info(f'[VGK4U-CI] Lead {lead.id} associated_partner_id {lead.associated_partner_id} is Freelancer — skipping waterfall drafts')
+        return 0
+
     lead_st = (lead.status or '').strip().lower()
     lead_sps = (getattr(lead, 'solar_pipeline_status', '') or '').strip().lower()
     valid_statuses = ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
@@ -326,7 +331,7 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
             VGKCashIncomeEntry.partner_id     == partner.id,
             VGKCashIncomeEntry.level          == level,
             VGKCashIncomeEntry.status         != 'CANCELLED',
-            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
+            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'EXTRA_COMMISSION', 'ADJUSTMENT']),
         ).first()
         if exists:
             logger.info(f'[VGK4U-CI] Lead {lead.id} L{level} entry already exists (status={exists.status}) — skipping')
@@ -511,6 +516,14 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         if l_date >= date(2026, 9, 8):
             is_vgk4u = True
 
+    # Freelancer Invariant: Freelancer leads NEVER generate cash income drafts
+    from app.models.staff_accounts import OfficialPartner
+    if getattr(lead, 'associated_partner_id', None):
+        _producer = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+        if _producer and getattr(_producer, 'partner_type', None) == 'FREELANCER':
+            logger.info(f"[VGK-CI] Lead {getattr(lead, 'id', None)} associated_partner_id {_producer.partner_code} is Freelancer — zero cash income drafts")
+            return 0
+
     # VGK Self-Business Points hook (every ₹5,00,000 DVR = 50,000 points)
     try:
         from app.services.vgk_self_business_points import process_incremental_self_business_points
@@ -545,6 +558,11 @@ def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
 
     if not lead.associated_partner_id:
         logger.info(f'[VGK-CI] Lead {lead.id} has no associated_partner_id — skipping cash income')
+        return 0
+
+    _prod_check = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+    if _prod_check and getattr(_prod_check, 'partner_type', None) == 'FREELANCER':
+        logger.info(f'[VGK-CI] Lead {lead.id} associated_partner_id {lead.associated_partner_id} is Freelancer — skipping legacy drafts')
         return 0
 
     # DC-STRICT-COMM-GATE-2026: Final Commission (COMMISSION kind) entries must ONLY be generated when:
@@ -653,7 +671,7 @@ def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
     _all_active_comms = db.query(VGKCashIncomeEntry).filter(
         VGKCashIncomeEntry.company_id     == company_id,
         VGKCashIncomeEntry.source_lead_id == lead.id,
-        VGKCashIncomeEntry.kind.notin_(['ADJUSTMENT', 'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
+        VGKCashIncomeEntry.kind.notin_(['ADJUSTMENT', 'ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'EXTRA_COMMISSION']),
         VGKCashIncomeEntry.status.notin_(['CANCELLED']),
     ).all()
     
@@ -908,7 +926,7 @@ def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
             VGKCashIncomeEntry.partner_id     == partner.id,
             VGKCashIncomeEntry.level          == level,
             VGKCashIncomeEntry.status         != 'CANCELLED',
-            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
+            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS', 'EXTRA_COMMISSION', 'ADJUSTMENT']),
         ).first()
         if exists:
             logger.info(f'[VGK-CI] Lead {lead.id} L{level} entry already exists (kind={exists.kind}, status={exists.status}) — skipping')
@@ -2655,6 +2673,8 @@ def record_solar_advance_as_income_row(
     partner = db.query(OfficialPartner).filter(OfficialPartner.id == advance_row.partner_id).first()
     if not partner:
         return {'success': False, 'error': 'partner missing'}
+    if getattr(partner, 'partner_type', None) == 'FREELANCER':
+        return {'success': False, 'skipped': True, 'reason': 'Freelancer partner not eligible for cash income advances'}
     # DC-FIX-SOLAR-CO-001: Solar advances always belong to MyntReal (company_id=4).
     # The lead/advance may be created under any company (MNR=3, etc.) but the
     # income entry and wallet credit must always sit under MyntReal so it shows
@@ -2693,7 +2713,7 @@ def record_solar_advance_as_income_row(
     _conflict = db.execute(text("""
         SELECT id, kind, status FROM vgk_cash_income_entries
         WHERE company_id=:cid AND partner_id=:pid AND source_lead_id=:lid AND level=:lv
-          AND COALESCE(kind,'DRAFT') NOT IN ('ADVANCE', 'DVR_ADVANCE') AND status != 'CANCELLED'
+          AND COALESCE(kind,'DRAFT') NOT IN ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'BRAND_ADVANCE', 'SLAB_BONUS', 'ADJUSTMENT') AND status != 'CANCELLED'
         LIMIT 1
     """), {
         'cid': company_id,
@@ -2829,7 +2849,7 @@ def seed_default_income_ledgers(db: Session, company_id: int) -> dict:
 def record_dvr_advance_as_income_row(
     db: Session,
     advance_row,
-    released_by_id: int,
+    released_by_id: int = None,
 ) -> dict:
     """
     DC-DVR-VCI-MIRROR-001 (Jul 2026): Mirror a RELEASED DVR_ADVANCE row from
@@ -2852,6 +2872,8 @@ def record_dvr_advance_as_income_row(
     partner = db.query(OfficialPartner).filter(OfficialPartner.id == advance_row.partner_id).first()
     if not partner:
         return {'success': False, 'error': 'partner missing'}
+    if getattr(partner, 'partner_type', None) == 'FREELANCER':
+        return {'success': False, 'skipped': True, 'reason': 'Freelancer partner not eligible for DVR advances'}
 
     # DC-FIX-SOLAR-CO-001: Solar income always under MyntReal (company_id=4).
     company_id   = 4
@@ -2887,7 +2909,7 @@ def record_dvr_advance_as_income_row(
     _conflict = db.execute(text("""
         SELECT id, kind, status FROM vgk_cash_income_entries
         WHERE company_id=:cid AND partner_id=:pid AND source_lead_id=:lid AND level=:lv
-          AND COALESCE(kind,'COMMISSION') NOT IN ('DVR_ADVANCE', 'ADVANCE') AND status != 'CANCELLED'
+          AND COALESCE(kind,'COMMISSION') NOT IN ('DVR_ADVANCE', 'ADVANCE', 'EXTRA_COMMISSION', 'BRAND_ADVANCE', 'SLAB_BONUS', 'ADJUSTMENT') AND status != 'CANCELLED'
         LIMIT 1
     """), {
         'cid': company_id, 'pid': partner.id, 'lid': _lead_id, 'lv': _adv_level,

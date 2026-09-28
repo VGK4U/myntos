@@ -90,7 +90,8 @@ def get_current_vgk_member(request: Request, db: Session = Depends(get_db)) -> O
         try:
             partner = db.query(OfficialPartner).filter(
                 OfficialPartner.id == partner_id,
-                OfficialPartner.category == 'VGK_TEAM'
+                OfficialPartner.category == 'VGK_TEAM',
+                or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER')
             ).first()
         except SQLAlchemyError as db_err:
             logger.error(f"[VGK-AUTH-DB] Database failure in get_current_vgk_member: {db_err}")
@@ -130,7 +131,7 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
         )
     ).first()
 
-    if not partner:
+    if not partner or getattr(partner, 'partner_type', None) == 'FREELANCER':
         return VGKLoginResponse(success=False, message="Invalid credentials")
 
     # [DC-VGK-BLOCKED-001] Prevent login for blocked partners

@@ -3030,6 +3030,9 @@ class OfficialPartner(BaseModel):
 
     # VGK Team fields (DC Protocol Mar 2026)
     parent_partner_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Freelancer Segment fields (Sep 2026)
+    vgk_support_id = Column(Integer, ForeignKey('official_partners.id', ondelete='RESTRICT'), nullable=True, index=True)
+    freelancer_classification = Column(String(30), nullable=True, index=True)  # 'WITH_COMMUNICATION' | 'WITHOUT_COMMUNICATION'
     vgk_role = Column(String(30), nullable=True)
     vgk_points_balance = Column(Numeric(15, 2), nullable=False, default=0)
     cumulative_self_business_dvr = Column(Numeric(14, 2), nullable=False, default=0)
@@ -3198,6 +3201,8 @@ class OfficialPartner(BaseModel):
             'specialized_equipment_list': self.specialized_equipment_list,
             'service_center_sla_hours': self.service_center_sla_hours,
             'parent_partner_id': self.parent_partner_id,
+            'vgk_support_id': getattr(self, 'vgk_support_id', None),
+            'freelancer_classification': getattr(self, 'freelancer_classification', None),
             'vgk_role': self.vgk_role,
             'vgk_points_balance': float(self.vgk_points_balance) if self.vgk_points_balance else 0,
             'cumulative_self_business_dvr': float(self.cumulative_self_business_dvr) if getattr(self, 'cumulative_self_business_dvr', None) else 0,

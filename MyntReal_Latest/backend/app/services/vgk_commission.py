@@ -140,11 +140,6 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
         if not lead or not lead.is_vgk_program:
             return False
 
-        category_id = lead.category_id if hasattr(lead, 'category_id') else None
-        if not category_id:
-            logger.info(f"[VGK-COMM] Lead {lead_id} has no category_id — skipping commission")
-            return False
-
         # ── Resolve L1 early (needed for paid/non-paid config selection) ──
         _l1_early = None
         if lead.primary_owner_type == 'partner' and lead.primary_owner_id:
@@ -157,6 +152,16 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
                 OfficialPartner.id == lead.associated_partner_id,
                 OfficialPartner.category == 'VGK_TEAM'
             ).first()
+
+        # Freelancer Invariant: Freelancer leads NEVER trigger VGK commissions
+        if _l1_early and getattr(_l1_early, 'partner_type', None) == 'FREELANCER':
+            logger.info(f"[VGK-COMM] Lead {lead_id} belongs to Freelancer {_l1_early.partner_code} — skipping all VGK commission calculations")
+            return True
+
+        category_id = lead.category_id if hasattr(lead, 'category_id') else None
+        if not category_id:
+            logger.info(f"[VGK-COMM] Lead {lead_id} has no category_id — skipping commission")
+            return False
 
         is_paid = bool(getattr(_l1_early, 'is_paid_activation', False)) if _l1_early else False
 
@@ -182,7 +187,7 @@ def calculate_vgk_commissions(db: Session, lead_id: int, transaction_id: int, re
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         def make_entry(partner: OfficialPartner, level: int, pct: Decimal, flat_amt: Decimal = Decimal('0'), comm_type: str = 'PCT') -> None:
-            if not partner or partner.category != 'VGK_TEAM' or not partner.is_active:
+            if not partner or partner.category != 'VGK_TEAM' or not partner.is_active or getattr(partner, 'partner_type', None) == 'FREELANCER':
                 return
             if comm_type == 'AMOUNT':
                 commission = flat_amt.quantize(Decimal('0.01'))

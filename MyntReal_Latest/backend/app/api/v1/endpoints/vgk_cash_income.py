@@ -155,7 +155,7 @@ def _enrich_entry_bulk(
     d['category_name'] = cat_map.get(entry.category_id, '—') if entry.category_id else '—'
 
     # Advance resolution (Solar Advance / CIBIL Advance)
-    if adv_map and entry.source_lead_id and entry.level and (entry.kind or '').upper() not in ('ADVANCE', 'DVR_ADVANCE'):
+    if adv_map and entry.source_lead_id and entry.level and (entry.kind or '').upper() not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS', 'BRAND_ADVANCE', 'ADJUSTMENT'):
         adv_info = adv_map.get((int(entry.source_lead_id), int(entry.level)), {})
         d['stage1_adv']    = float(adv_info.get('stage1', 0.0))
         d['stage2_adv']    = float(adv_info.get('stage2', 0.0))
@@ -389,8 +389,8 @@ def get_member_downline_team_entries(
         tot_net = sum(e.get("net_payout", 0) for e in non_can)
         
         l0_bonus = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 0 or e.get("kind") in ('SLAB_BONUS', 'EXTRA_COMMISSION', 'ADVANCE', 'DVR_ADVANCE'))
-        l1_source = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 1 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE'))
-        l2_senior = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 2 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE'))
+        l1_source = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 1 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
+        l2_senior = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 2 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
         l3_extended = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 3)
         l4_core = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 4)
         l5_support = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 5)

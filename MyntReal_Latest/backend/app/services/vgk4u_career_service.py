@@ -75,6 +75,7 @@ class VGK4UCareerService:
                    is_apex_node, vgk4u_current_designation, vgk4u_personal_prod_qualification
             FROM official_partners
             WHERE category = 'VGK_TEAM'
+              AND COALESCE(partner_type, 'CHANNEL_PARTNER') != 'FREELANCER'
             ORDER BY id
         """
         partners_raw = db.execute(text(query_partners)).fetchall()

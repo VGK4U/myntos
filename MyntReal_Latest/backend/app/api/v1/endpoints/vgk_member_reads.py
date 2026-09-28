@@ -94,6 +94,11 @@ def _guard_vgk4u_access(current_user, aud: Audience) -> None:
     rows because ``resolve_company_id_from_user`` returns None for MNR
     users — i.e. a data-leak. We reject MNR/User callers up-front.
     """
+    if isinstance(current_user, OfficialPartner) and getattr(current_user, 'partner_type', None) == 'FREELANCER':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Freelancers are not permitted to access VGK member data.",
+        )
     if isinstance(current_user, (StaffEmployee, OfficialPartner)):
         return
     raise HTTPException(
