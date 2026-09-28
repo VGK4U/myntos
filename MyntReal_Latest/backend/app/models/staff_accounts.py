@@ -2950,6 +2950,7 @@ class OfficialPartner(BaseModel):
     
     contact_person = Column(String(200), nullable=True)
     phone = Column(String(20), nullable=True)
+    alternate_phone = Column(String(20), nullable=True)
     email = Column(String(200), nullable=True)
     whatsapp_number = Column(String(20), nullable=True)
     
@@ -2965,7 +2966,9 @@ class OfficialPartner(BaseModel):
     pan_number = Column(String(15), nullable=True)
     
     address = Column(Text, nullable=True)
+    area = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)
     pincode = Column(String(10), nullable=True)
     zone = Column(String(50), nullable=True)
@@ -3166,6 +3169,7 @@ class OfficialPartner(BaseModel):
             'partner_type': self.partner_type,
             'contact_person': self.contact_person,
             'phone': self.phone,
+            'alternate_phone': self.alternate_phone,
             'email': self.email,
             'whatsapp_number': self.whatsapp_number,
             'contact_person_1_name': self.contact_person_1_name,
@@ -3177,7 +3181,9 @@ class OfficialPartner(BaseModel):
             'gst_number': self.gst_number,
             'pan_number': self.pan_number,
             'address': self.address,
+            'area': self.area,
             'city': self.city,
+            'district': self.district,
             'state': self.state,
             'pincode': self.pincode,
             'zone': self.zone,

@@ -29,7 +29,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.46-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.47-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -40,6 +40,7 @@ if not os.path.exists(ZIP_PATH):
 # DC Protocol: Always synchronize database schema prior to deployment version switch
 print("Running pre-deployment database schema synchronization...")
 os.environ['ALLOW_PROD_DB_ACCESS'] = '1'
+os.environ['SKIP_SCHEMA_BOOTSTRAP'] = '1'
 prod_db_url = os.environ.get('PROD_DATABASE_URL')
 if prod_db_url:
     os.environ['DATABASE_URL'] = prod_db_url

@@ -1573,7 +1573,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
   </div>
   <div class="modal-body" style="padding:20px">
     <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#0369a1">
-      <i class="fas fa-info-circle me-1"></i> Freelancers are separate from the VGK hierarchy (no sponsor, no upline, no downline, no MLM commissions). They are tagged directly to a VGK Support ID. Code sequence starts at <strong>FL08220001</strong>.
+      <i class="fas fa-info-circle me-1"></i> Freelancers are separate from the VGK hierarchy (no sponsor, no upline, no downline, no MLM commissions). They are tagged directly to a VGK Support ID. Code sequence starts at <strong>FL08180001</strong>.
     </div>
     
     <div class="form-group" style="margin-bottom:14px">
@@ -1581,9 +1581,15 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <input class="form-control" id="addFlName" placeholder="e.g. Ramesh Kumar" required style="width:100%">
     </div>
 
-    <div class="form-group" style="margin-bottom:14px">
-      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Mobile Number *</label>
-      <input class="form-control" id="addFlPhone" placeholder="10-digit mobile number" maxlength="15" required style="width:100%">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Primary Mobile Number *</label>
+        <input class="form-control" id="addFlPhone" placeholder="10-digit mobile number" maxlength="15" required style="width:100%">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Alternate Contact (Optional)</label>
+        <input class="form-control" id="addFlAlternatePhone" placeholder="Alternate mobile number" maxlength="15" style="width:100%">
+      </div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px">
@@ -1618,14 +1624,33 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <input class="form-control" id="addFlEmail" placeholder="email@example.com">
       </div>
       <div class="form-group">
-        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">City / District (Optional)</label>
-        <input class="form-control" id="addFlCity" placeholder="City name">
+        <label style="font-size:12px;font-weight:600;color:#334155;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+          <span>Area Pincode</span>
+          <span id="addFlPincodeStatus" style="font-size:11px;font-weight:normal"></span>
+        </label>
+        <input class="form-control" id="addFlPincode" placeholder="6-digit PIN code" maxlength="6" oninput="lookupFlPincode(this.value, 'add')">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Area / Post Office</label>
+        <input list="addFlAreaList" class="form-control" id="addFlArea" placeholder="Area / Locality">
+        <datalist id="addFlAreaList"></datalist>
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">District / City</label>
+        <input class="form-control" id="addFlCity" placeholder="District / City">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">State</label>
+        <input class="form-control" id="addFlState" placeholder="State">
       </div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px">
-      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Address (Optional)</label>
-      <input class="form-control" id="addFlAddress" placeholder="Street / Area">
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Street / Flat / Door Address (Optional)</label>
+      <input class="form-control" id="addFlAddress" placeholder="Street name, building, house no.">
     </div>
 
     <div class="form-group" style="margin-bottom:0">
@@ -1659,9 +1684,15 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <input class="form-control" id="editFlName" required style="width:100%">
     </div>
 
-    <div class="form-group" style="margin-bottom:14px">
-      <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Mobile Number *</label>
-      <input class="form-control" id="editFlPhone" maxlength="15" required style="width:100%">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Primary Mobile Number *</label>
+        <input class="form-control" id="editFlPhone" maxlength="15" required style="width:100%">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Alternate Contact</label>
+        <input class="form-control" id="editFlAlternatePhone" maxlength="15" style="width:100%">
+      </div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px">
@@ -1688,13 +1719,32 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <input class="form-control" id="editFlEmail">
       </div>
       <div class="form-group">
-        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">City</label>
-        <input class="form-control" id="editFlCity">
+        <label style="font-size:12px;font-weight:600;color:#334155;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+          <span>Area Pincode</span>
+          <span id="editFlPincodeStatus" style="font-size:11px;font-weight:normal"></span>
+        </label>
+        <input class="form-control" id="editFlPincode" maxlength="6" oninput="lookupFlPincode(this.value, 'edit')">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Area / Post Office</label>
+        <input list="editFlAreaList" class="form-control" id="editFlArea" placeholder="Area">
+        <datalist id="editFlAreaList"></datalist>
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">District / City</label>
+        <input class="form-control" id="editFlCity" placeholder="District">
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">State</label>
+        <input class="form-control" id="editFlState" placeholder="State">
       </div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px">
-      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Address</label>
+      <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Street / Flat / Door Address</label>
       <input class="form-control" id="editFlAddress">
     </div>
 
@@ -2681,9 +2731,12 @@ async function loadFreelancers(page = 1) {
         <td><strong style="color:#0284c7;letter-spacing:0.04em">${esc(fl.partner_code)}</strong></td>
         <td>
           <div style="font-weight:700;color:#0f172a">${esc(fl.partner_name)}</div>
-          ${fl.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(fl.city)}</div>` : ''}
+          ${fl.area || fl.district || fl.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc([fl.area, fl.district || fl.city, fl.pincode].filter(Boolean).join(', '))}</div>` : ''}
         </td>
-        <td style="font-family:monospace;font-size:12.5px">${esc(fl.phone || '—')}</td>
+        <td style="font-family:monospace;font-size:12.5px">
+          <div>${esc(fl.phone || '—')}</div>
+          ${fl.alternate_phone ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-phone-alt me-1"></i>${esc(fl.alternate_phone)}</div>` : ''}
+        </td>
         <td>${classBadge}</td>
         <td>${supportDisplay}</td>
         <td>${statusBadge}</td>
@@ -2780,10 +2833,60 @@ function selectFlSupportPartner(id, code, name, dropdownId, hiddenInputId, selec
   if (dropdown) dropdown.style.display = 'none';
 }
 
+async function lookupFlPincode(pincode, mode) {
+  pincode = (pincode || '').replace(/\D/g, '');
+  const statusEl = document.getElementById(mode === 'add' ? 'addFlPincodeStatus' : 'editFlPincodeStatus');
+  const cityEl = document.getElementById(mode === 'add' ? 'addFlCity' : 'editFlCity');
+  const stateEl = document.getElementById(mode === 'add' ? 'addFlState' : 'editFlState');
+  const areaEl = document.getElementById(mode === 'add' ? 'addFlArea' : 'editFlArea');
+  const dataList = document.getElementById(mode === 'add' ? 'addFlAreaList' : 'editFlAreaList');
+
+  if (pincode.length !== 6) {
+    if (statusEl) statusEl.textContent = '';
+    return;
+  }
+
+  if (statusEl) statusEl.innerHTML = '<span style="color:#0284c7"><i class="fas fa-spinner fa-spin"></i> Checking...</span>';
+
+  try {
+    const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const offices = data[0].PostOffice;
+        const first = offices[0];
+        const district = first.District || first.Block || first.Division || '';
+        const state = first.State || '';
+
+        if (cityEl) cityEl.value = district;
+        if (stateEl) stateEl.value = state;
+
+        if (dataList) {
+          dataList.innerHTML = offices.map(o => `<option value="${esc(o.Name)}">`).join('');
+        }
+        if (areaEl && (!areaEl.value || areaEl.value.trim() === '')) {
+          areaEl.value = first.Name || '';
+        }
+
+        if (statusEl) statusEl.innerHTML = `<span style="color:#16a34a"><i class="fas fa-check-circle"></i> ${esc(district)}, ${esc(state)}</span>`;
+        return;
+      }
+    }
+    if (statusEl) statusEl.innerHTML = '<span style="color:#d97706"><i class="fas fa-exclamation-circle"></i> PIN not found</span>';
+  } catch (e) {
+    console.error('Error looking up pincode:', e);
+    if (statusEl) statusEl.innerHTML = '';
+  }
+}
+
 function openAddFreelancerModal() {
-  ['addFlName','addFlPhone','addFlEmail','addFlCity','addFlAddress','addFlNotes','addFlSupportSearch','addFlSupportId'].forEach(id => {
+  ['addFlName','addFlPhone','addFlAlternatePhone','addFlEmail','addFlPincode','addFlArea','addFlCity','addFlState','addFlAddress','addFlNotes','addFlSupportSearch','addFlSupportId'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const pinStatus = document.getElementById('addFlPincodeStatus');
+  if (pinStatus) pinStatus.innerHTML = '';
+  const areaList = document.getElementById('addFlAreaList');
+  if (areaList) areaList.innerHTML = '';
   const selDisplay = document.getElementById('addFlSupportSelected');
   if (selDisplay) selDisplay.innerHTML = '';
   const rWith = document.querySelector('input[name="addFlClassification"][value="WITH_COMMUNICATION"]');
@@ -2825,10 +2928,14 @@ function updateClassificationCardStyles() {
 async function submitAddFreelancer() {
   const name = (document.getElementById('addFlName')?.value || '').trim();
   const phone = (document.getElementById('addFlPhone')?.value || '').trim().replace(/\D/g, '');
+  const alternatePhone = (document.getElementById('addFlAlternatePhone')?.value || '').trim();
   const supportId = document.getElementById('addFlSupportId')?.value;
   const classification = document.querySelector('input[name="addFlClassification"]:checked')?.value || 'WITH_COMMUNICATION';
   const email = (document.getElementById('addFlEmail')?.value || '').trim();
+  const pincode = (document.getElementById('addFlPincode')?.value || '').trim().replace(/\D/g, '');
+  const area = (document.getElementById('addFlArea')?.value || '').trim();
   const city = (document.getElementById('addFlCity')?.value || '').trim();
+  const state = (document.getElementById('addFlState')?.value || '').trim();
   const address = (document.getElementById('addFlAddress')?.value || '').trim();
   const notes = (document.getElementById('addFlNotes')?.value || '').trim();
 
@@ -2846,10 +2953,15 @@ async function submitAddFreelancer() {
       body: JSON.stringify({
         partner_name: name,
         phone,
+        alternate_phone: alternatePhone || null,
         vgk_support_id: parseInt(supportId, 10),
         freelancer_classification: classification,
         email: email || null,
+        pincode: pincode || null,
+        area: area || null,
         city: city || null,
+        district: city || null,
+        state: state || null,
         address: address || null,
         notes: notes || null
       })
@@ -2931,10 +3043,13 @@ async function viewFreelancerDetails(flId) {
         </div>
         <div style="font-size:12.5px;color:#475569;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div><i class="fas fa-phone me-1" style="color:#64748b"></i> ${esc(fl.phone || '—')}</div>
+          <div><i class="fas fa-phone-alt me-1" style="color:#64748b"></i> Alt: ${esc(fl.alternate_phone || '—')}</div>
           <div><i class="fas fa-envelope me-1" style="color:#64748b"></i> ${esc(fl.email || '—')}</div>
-          <div><i class="fas fa-map-marker-alt me-1" style="color:#64748b"></i> ${esc(fl.city || '—')}</div>
+          <div><i class="fas fa-map-pin me-1" style="color:#64748b"></i> PIN: ${esc(fl.pincode || '—')}</div>
+          <div><i class="fas fa-map-marker-alt me-1" style="color:#64748b"></i> ${esc(fl.area ? (fl.area + ', ') : '')}${esc(fl.district || fl.city || '—')}${fl.state ? (', ' + esc(fl.state)) : ''}</div>
           <div><i class="fas fa-calendar-alt me-1" style="color:#64748b"></i> Enrolled: ${fmtDate(fl.created_at)}</div>
         </div>
+        ${fl.address ? `<div style="font-size:12px;color:#64748b;margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0"><i class="fas fa-home me-1"></i> Address: ${esc(fl.address)}</div>` : ''}
       </div>
 
       <!-- Communication Policy Card -->
@@ -3053,12 +3168,21 @@ function _populateEditModal(fl, support) {
   document.getElementById('editFlCodeHeader').textContent = `(${fl.partner_code})`;
   document.getElementById('editFlName').value = fl.partner_name || '';
   document.getElementById('editFlPhone').value = fl.phone || '';
+  document.getElementById('editFlAlternatePhone').value = fl.alternate_phone || '';
   document.getElementById('editFlClassification').value = fl.freelancer_classification || 'WITH_COMMUNICATION';
   document.getElementById('editFlEmail').value = fl.email || '';
-  document.getElementById('editFlCity').value = fl.city || '';
+  document.getElementById('editFlPincode').value = fl.pincode || '';
+  document.getElementById('editFlArea').value = fl.area || '';
+  document.getElementById('editFlCity').value = fl.district || fl.city || '';
+  document.getElementById('editFlState').value = fl.state || '';
   document.getElementById('editFlAddress').value = fl.address || '';
   document.getElementById('editFlStatus').value = fl.is_active ? 'true' : 'false';
-  document.getElementById('editFlNotes').value = fl.notes || '';
+  document.getElementById('editFlNotes').value = fl.notes || fl.status_note || '';
+
+  const pinStatus = document.getElementById('editFlPincodeStatus');
+  if (pinStatus) pinStatus.innerHTML = '';
+  const areaList = document.getElementById('editFlAreaList');
+  if (areaList) areaList.innerHTML = '';
 
   const supId = fl.vgk_support_id || (support ? support.id : '');
   const supCode = fl.vgk_support_code || (support ? support.partner_code : '');
@@ -3085,10 +3209,14 @@ async function submitEditFreelancer() {
 
   const name = (document.getElementById('editFlName')?.value || '').trim();
   const phone = (document.getElementById('editFlPhone')?.value || '').trim().replace(/\D/g, '');
+  const alternatePhone = (document.getElementById('editFlAlternatePhone')?.value || '').trim();
   const supportId = document.getElementById('editFlSupportId')?.value;
   const classification = document.getElementById('editFlClassification')?.value;
   const email = (document.getElementById('editFlEmail')?.value || '').trim();
+  const pincode = (document.getElementById('editFlPincode')?.value || '').trim().replace(/\D/g, '');
+  const area = (document.getElementById('editFlArea')?.value || '').trim();
   const city = (document.getElementById('editFlCity')?.value || '').trim();
+  const state = (document.getElementById('editFlState')?.value || '').trim();
   const address = (document.getElementById('editFlAddress')?.value || '').trim();
   const isActive = document.getElementById('editFlStatus')?.value === 'true';
   const notes = (document.getElementById('editFlNotes')?.value || '').trim();
@@ -3103,9 +3231,14 @@ async function submitEditFreelancer() {
     const payload = {
       partner_name: name,
       phone,
+      alternate_phone: alternatePhone || null,
       freelancer_classification: classification,
       email: email || null,
+      pincode: pincode || null,
+      area: area || null,
       city: city || null,
+      district: city || null,
+      state: state || null,
       address: address || null,
       is_active: isActive,
       notes: notes || null

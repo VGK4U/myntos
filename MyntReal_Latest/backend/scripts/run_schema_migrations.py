@@ -57,14 +57,17 @@ def run_migrations():
         sys.exit(1)
 
     # 3. Run Schema Bootstrap routines
-    try:
-        from app.core.schema_bootstrap import run_schema_bootstrap
-        logger.info("Running schema bootstrap routines...")
-        run_schema_bootstrap()
-        logger.info("✅ Schema bootstrap complete")
-    except Exception as e:
-        logger.error(f"❌ Schema bootstrap failed: {e}")
-        sys.exit(1)
+    if os.environ.get("SKIP_SCHEMA_BOOTSTRAP") != "1":
+        try:
+            from app.core.schema_bootstrap import run_schema_bootstrap
+            logger.info("Running schema bootstrap routines...")
+            run_schema_bootstrap()
+            logger.info("✅ Schema bootstrap complete")
+        except Exception as e:
+            logger.error(f"❌ Schema bootstrap failed: {e}")
+            sys.exit(1)
+    else:
+        logger.info("⏭️ SKIP_SCHEMA_BOOTSTRAP=1: Skipping heavy multi-tenant schema bootstrap for remote pre-deployment run")
 
     # 4. DC Protocol: Explicit Feature Tables & Schema Objects
     # Formerly created at runtime in request handlers / module imports
@@ -1073,6 +1076,9 @@ def run_migrations():
                     "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS partner_type VARCHAR(50) DEFAULT 'CHANNEL_PARTNER'",
                     "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS freelancer_classification VARCHAR(50) NULL",
                     "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS vgk_support_id INTEGER REFERENCES official_partners(id) NULL",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS alternate_phone VARCHAR(20) NULL",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS area VARCHAR(100) NULL",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS district VARCHAR(100) NULL",
                     "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS kyc_grace_payments_used INTEGER NOT NULL DEFAULT 0",
                     "CREATE INDEX IF NOT EXISTS ix_official_partners_partner_type ON official_partners(partner_type)",
                     "CREATE INDEX IF NOT EXISTS ix_official_partners_freelancer_classification ON official_partners(freelancer_classification)",
@@ -1165,10 +1171,10 @@ def run_migrations():
             # Check 3b: official_partners columns
             partner_cols = conn.execute(text("""
                 SELECT column_name FROM information_schema.columns 
-                WHERE table_name = 'official_partners' AND column_name IN ('partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used')
+                WHERE table_name = 'official_partners' AND column_name IN ('partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used', 'alternate_phone', 'area', 'district')
             """)).fetchall()
             found_partner_cols = {r[0] for r in partner_cols}
-            required_partner_cols = {'partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used'}
+            required_partner_cols = {'partner_type', 'freelancer_classification', 'vgk_support_id', 'kyc_grace_payments_used', 'alternate_phone', 'area', 'district'}
             if not required_partner_cols.issubset(found_partner_cols):
                 raise RuntimeError(f"Gate Failed: official_partners missing required columns. Missing: {required_partner_cols - found_partner_cols}")
 

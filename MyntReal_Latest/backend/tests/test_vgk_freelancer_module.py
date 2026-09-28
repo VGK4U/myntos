@@ -2,7 +2,7 @@
 Authoritative Test Suite: VGK4U Freelancer Segment Architecture & Business Rules
 --------------------------------------------------------------------------------
 Verifies all locked invariants:
- 1. Freelancer Creation & Code Sequence (FL08220001, FL08220002...)
+ 1. Freelancer Creation & Code Sequence (FL08180001, FL08180002...)
  2. Invariant: parent_partner_id IS NULL, partner_type == 'FREELANCER', 0 points
  3. Support ID Validation: Must be active Channel Partner, cannot be another Freelancer
  4. Member Search Endpoint: purpose='ground_source' includes FL, purpose='referrer' excludes FL
@@ -133,19 +133,25 @@ class TestVGKFreelancerModule(unittest.TestCase):
         cls.db.close()
 
     def test_01_freelancer_creation_and_code_generation(self):
-        """Rule: Code must start with FL0822 and have 4-digit zero-padded sequence."""
+        """Rule: Code must start with FL0818 and have 4-digit zero-padded sequence."""
         code1 = _next_freelancer_code(self.db)
-        self.assertTrue(code1.startswith("FL0822"))
+        self.assertTrue(code1.startswith("FL0818"))
         num1 = int(code1[6:])
         self.assertGreaterEqual(num1, 1)
 
         payload = FreelancerCreate(
             partner_name="Test Freelancer Alpha",
             phone="9123450001",
+            alternate_phone="9123450099",
             vgk_support_id=self.support_partner.id,
             freelancer_classification="WITH_COMMUNICATION",
             email="fl_alpha@test.com",
-            city="Hyderabad"
+            area="Banjara Hills",
+            city="Hyderabad",
+            district="Hyderabad",
+            state="Telangana",
+            pincode="500034",
+            address="Plot 101, Road No 12"
         )
         res = create_freelancer(payload=payload, current_user=self.admin_staff, db=self.db)
         self.assertTrue(res["success"])
@@ -158,13 +164,23 @@ class TestVGKFreelancerModule(unittest.TestCase):
         self.assertIsNone(fl["parent_partner_id"])
         self.assertEqual(fl["vgk_support_id"], self.support_partner.id)
         self.assertEqual(fl["freelancer_classification"], "WITH_COMMUNICATION")
+        self.assertEqual(fl["alternate_phone"], "9123450099")
+        self.assertEqual(fl["area"], "Banjara Hills")
+        self.assertEqual(fl["city"], "Hyderabad")
+        self.assertEqual(fl["district"], "Hyderabad")
+        self.assertEqual(fl["state"], "Telangana")
+        self.assertEqual(fl["pincode"], "500034")
 
         # Invariant: points must be strictly 0
         db_fl = self.db.query(OfficialPartner).filter(OfficialPartner.id == fl["id"]).first()
         self.assertEqual(int(db_fl.vgk_points_balance or 0), 0)
+        self.assertEqual(db_fl.alternate_phone, "9123450099")
+        self.assertEqual(db_fl.area, "Banjara Hills")
+        self.assertEqual(db_fl.district, "Hyderabad")
+        self.assertEqual(db_fl.pincode, "500034")
 
     def test_02_sequential_code_increment(self):
-        """Rule: Consecutive creations generate incremented sequence (e.g. FL08220002)."""
+        """Rule: Consecutive creations generate incremented sequence (e.g. FL08180002)."""
         payload = FreelancerCreate(
             partner_name="Test Freelancer Beta",
             phone="9123450002",
@@ -421,6 +437,57 @@ class TestVGKFreelancerModule(unittest.TestCase):
         self.assertEqual(audit_log.old_value.get("support_id"), old_support_id)
         self.assertEqual(audit_log.new_value.get("support_id"), new_support_id)
 
+    def test_14_alternate_contact_and_pincode_address_fields(self):
+        """Rule: Alternate contact, pincode, area, district, state update and detail retrieval."""
+        from app.api.v1.endpoints.vgk_team import get_freelancer_detail, list_freelancers
+
+        fl_id = self.created_freelancer_ids[0]
+        update_payload = FreelancerUpdate(
+            alternate_phone="9876543210",
+            pincode="500081",
+            area="HITEC City",
+            city="Hyderabad",
+            district="Ranga Reddy",
+            state="Telangana",
+            address="Building 4, Mindspace"
+        )
+        res = update_freelancer(
+            freelancer_id=fl_id,
+            payload=update_payload,
+            current_user=self.admin_staff,
+            db=self.db
+        )
+        self.assertTrue(res["success"])
+        d = res["data"]
+        self.assertEqual(d["alternate_phone"], "9876543210")
+        self.assertEqual(d["pincode"], "500081")
+        self.assertEqual(d["area"], "HITEC City")
+        self.assertEqual(d["district"], "Ranga Reddy")
+        self.assertEqual(d["state"], "Telangana")
+        self.assertEqual(d["address"], "Building 4, Mindspace")
+
+        # Verify get_freelancer_detail returns the updated fields
+        detail_res = get_freelancer_detail(freelancer_id=fl_id, current_user=self.admin_staff, db=self.db)
+        self.assertTrue(detail_res["success"])
+        detail_data = detail_res["data"]
+        self.assertEqual(detail_data["alternate_phone"], "9876543210")
+        self.assertEqual(detail_data["pincode"], "500081")
+        self.assertEqual(detail_data["area"], "HITEC City")
+        self.assertEqual(detail_data["district"], "Ranga Reddy")
+        self.assertEqual(detail_data["state"], "Telangana")
+        self.assertEqual(detail_data["address"], "Building 4, Mindspace")
+
+        # Verify list_freelancers includes the fields
+        list_res = list_freelancers(page=1, page_size=10, current_user=self.admin_staff, db=self.db)
+        self.assertTrue(list_res["success"])
+        matched = [item for item in list_res["items"] if item["id"] == fl_id]
+        self.assertEqual(len(matched), 1)
+        self.assertEqual(matched[0]["alternate_phone"], "9876543210")
+        self.assertEqual(matched[0]["pincode"], "500081")
+        self.assertEqual(matched[0]["area"], "HITEC City")
+        self.assertEqual(matched[0]["district"], "Ranga Reddy")
+
 
 if __name__ == '__main__':
     unittest.main()
+

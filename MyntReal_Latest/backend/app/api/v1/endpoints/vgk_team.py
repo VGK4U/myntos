@@ -132,7 +132,7 @@ def _next_vgk_partner_code(db: Session, company_id: int) -> str:
 
 def _next_freelancer_code(db: Session) -> str:
     """
-    Concurrency-safe sequential Freelancer code generator starting at FL08220001.
+    Concurrency-safe sequential Freelancer code generator starting at FL08180001.
     Uses PostgreSQL transaction advisory lock to guarantee sequence uniqueness.
     """
     try:
@@ -140,18 +140,18 @@ def _next_freelancer_code(db: Session) -> str:
         max_num = db.execute(text("""
             SELECT COALESCE(MAX(CAST(SUBSTRING(partner_code FROM 7) AS INTEGER)), 0)
             FROM official_partners 
-            WHERE partner_code ~ '^FL0822[0-9]+$'
+            WHERE partner_code ~ '^FL0818[0-9]+$'
         """)).scalar() or 0
         next_num = max_num + 1
-        return f"FL0822{next_num:04d}"
+        return f"FL0818{next_num:04d}"
     except Exception as e:
         logger.error(f"[FREELANCER-CODE] Error generating code with lock: {e}")
         max_num = db.execute(text("""
             SELECT COALESCE(MAX(CAST(SUBSTRING(partner_code FROM 7) AS INTEGER)), 0)
             FROM official_partners 
-            WHERE partner_code ~ '^FL0822[0-9]+$'
+            WHERE partner_code ~ '^FL0818[0-9]+$'
         """)).scalar() or 0
-        return f"FL0822{max_num + 1:04d}"
+        return f"FL0818{max_num + 1:04d}"
 
 
 def _next_vgk_entry_number(db: Session, company_id: int, prefix: str = None) -> str:
@@ -321,10 +321,13 @@ class VGKMemberUpdate(BaseModel):
 class FreelancerCreate(BaseModel):
     partner_name: str = Field(..., min_length=2, max_length=200)
     phone: str = Field(..., min_length=10, max_length=15)
+    alternate_phone: Optional[str] = Field(None, max_length=20)
     vgk_support_id: int
     freelancer_classification: str = Field(..., description="WITH_COMMUNICATION or WITHOUT_COMMUNICATION")
     email: Optional[str] = None
+    area: Optional[str] = None
     city: Optional[str] = None
+    district: Optional[str] = None
     state: Optional[str] = None
     address: Optional[str] = None
     pincode: Optional[str] = None
@@ -334,8 +337,11 @@ class FreelancerCreate(BaseModel):
 class FreelancerUpdate(BaseModel):
     partner_name: Optional[str] = None
     phone: Optional[str] = Field(None, max_length=30)
+    alternate_phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = None
+    area: Optional[str] = None
     city: Optional[str] = None
+    district: Optional[str] = None
     state: Optional[str] = None
     address: Optional[str] = None
     pincode: Optional[str] = None
@@ -1091,6 +1097,14 @@ def list_freelancers(
     Dedicated Freelancer list endpoint.
     Strictly partitions Freelancers away from normal Channel Partners.
     """
+    from fastapi.params import Query as QueryParam
+    page_num = 1 if isinstance(page, QueryParam) or not page else int(page)
+    ps_num = 25 if isinstance(page_size, QueryParam) or not page_size else int(page_size)
+    search_val = None if isinstance(search, QueryParam) else (search.strip() if isinstance(search, str) and search.strip() else None)
+    cls_val = None if isinstance(classification, QueryParam) else (classification.strip().upper() if isinstance(classification, str) and classification.strip() else None)
+    sup_val = None if isinstance(support_id, QueryParam) else support_id
+    active_val = None if isinstance(is_active, QueryParam) else is_active
+
     query = db.query(OfficialPartner).filter(
         OfficialPartner.category == 'VGK_TEAM',
         OfficialPartner.partner_type == 'FREELANCER'
@@ -1102,25 +1116,25 @@ def list_freelancers(
             OfficialPartner.registered_by_emp_code == current_user.emp_code
         ))
 
-    if search and search.strip():
-        term = f"%{search.strip()}%"
+    if search_val:
+        term = f"%{search_val}%"
         query = query.filter(or_(
             OfficialPartner.partner_name.ilike(term),
             OfficialPartner.partner_code.ilike(term),
             OfficialPartner.phone.ilike(term)
         ))
 
-    if classification and classification.strip():
-        query = query.filter(OfficialPartner.freelancer_classification == classification.strip().upper())
+    if cls_val:
+        query = query.filter(OfficialPartner.freelancer_classification == cls_val)
 
-    if support_id:
-        query = query.filter(OfficialPartner.vgk_support_id == support_id)
+    if sup_val:
+        query = query.filter(OfficialPartner.vgk_support_id == sup_val)
 
-    if is_active is not None:
-        query = query.filter(OfficialPartner.is_active == is_active)
+    if active_val is not None:
+        query = query.filter(OfficialPartner.is_active == active_val)
 
     total = query.count()
-    freelancers = query.order_by(OfficialPartner.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    freelancers = query.order_by(OfficialPartner.id.desc()).offset((page_num - 1) * ps_num).limit(ps_num).all()
 
     # Bulk fetch support partner details
     support_ids = list({f.vgk_support_id for f in freelancers if f.vgk_support_id})
@@ -1141,6 +1155,23 @@ def list_freelancers(
         """), {'fids': fl_ids}).fetchall()
         lead_counts = {r[0]: r[1] for r in lead_rows}
 
+    # Calculate overall meta counts for freelancers
+    total_with = db.query(func.count(OfficialPartner.id)).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        OfficialPartner.partner_type == 'FREELANCER',
+        OfficialPartner.freelancer_classification == 'WITH_COMMUNICATION'
+    ).scalar() or 0
+    total_without = db.query(func.count(OfficialPartner.id)).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        OfficialPartner.partner_type == 'FREELANCER',
+        OfficialPartner.freelancer_classification == 'WITHOUT_COMMUNICATION'
+    ).scalar() or 0
+    total_originated = db.execute(text("""
+        SELECT COUNT(*) FROM crm_leads l
+        JOIN official_partners p ON l.associated_partner_id = p.id
+        WHERE p.category = 'VGK_TEAM' AND p.partner_type = 'FREELANCER'
+    """)).scalar() or 0
+
     items = []
     for f in freelancers:
         sup = supports_map.get(f.vgk_support_id)
@@ -1149,8 +1180,11 @@ def list_freelancers(
             "partner_code": f.partner_code,
             "partner_name": f.partner_name,
             "phone": f.phone,
+            "alternate_phone": f.alternate_phone,
             "email": f.email,
+            "area": f.area,
             "city": f.city,
+            "district": f.district,
             "state": f.state,
             "address": f.address,
             "pincode": f.pincode,
@@ -1164,13 +1198,24 @@ def list_freelancers(
             "created_at": f.created_at.isoformat() if f.created_at else None
         })
 
+    pagination_info = {
+        "total": total,
+        "page": page_num,
+        "page_size": ps_num,
+        "total_pages": math.ceil(total / ps_num) if ps_num else 1
+    }
+
     return {
         "success": True,
         "items": items,
+        "data": items,
         "total": total,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": math.ceil(total / page_size) if page_size else 1
+        "pagination": pagination_info,
+        "meta": {
+            "total_with_communication": total_with,
+            "total_without_communication": total_without,
+            "total_originated_leads": total_originated
+        }
     }
 
 
@@ -1183,7 +1228,7 @@ def create_freelancer(
     """
     Dedicated Freelancer creation endpoint.
     Guarantees:
-      - Sequential code generation starting at FL08220001
+      - Sequential code generation starting at FL08180001
       - parent_partner_id IS ALWAYS NULL (no hierarchy / upline)
       - Direct support tagged to a valid Channel Partner
       - Strict classification (WITH_COMMUNICATION vs WITHOUT_COMMUNICATION)
@@ -1203,6 +1248,10 @@ def create_freelancer(
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Phone number already registered with partner {existing.partner_code} ({existing.partner_name}).")
+
+    # Alternate phone normalization if provided
+    raw_alt = (payload.alternate_phone or '').strip()
+    alt_phone = normalize_phone_10(raw_alt) or raw_alt if raw_alt else None
 
     # Classification validation
     cls_val = (payload.freelancer_classification or '').strip().upper()
@@ -1230,13 +1279,16 @@ def create_freelancer(
         partner_code=code,
         partner_name=format_proper_name(payload.partner_name.strip()),
         phone=phone,
+        alternate_phone=alt_phone,
         email=payload.email.strip() if payload.email else None,
         category='VGK_TEAM',
         partner_type='FREELANCER',
         parent_partner_id=None,  # STRICT INVARIANT: Freelancers NEVER have parent/upline
         vgk_support_id=support.id,
         freelancer_classification=cls_val,
+        area=payload.area.strip() if payload.area else None,
         city=payload.city.strip() if payload.city else None,
+        district=payload.district.strip() if payload.district else None,
         state=payload.state.strip() if payload.state else None,
         address=payload.address.strip() if payload.address else None,
         pincode=payload.pincode.strip() if payload.pincode else None,
@@ -1270,6 +1322,7 @@ def create_freelancer(
                 "code": code,
                 "name": freelancer.partner_name,
                 "phone": freelancer.phone,
+                "alternate_phone": freelancer.alternate_phone,
                 "support_id": support.id,
                 "support_code": support.partner_code,
                 "classification": cls_val
@@ -1296,7 +1349,14 @@ def create_freelancer(
             "category": freelancer.category,
             "parent_partner_id": freelancer.parent_partner_id,
             "phone": freelancer.phone,
+            "alternate_phone": freelancer.alternate_phone,
             "email": freelancer.email,
+            "area": freelancer.area,
+            "city": freelancer.city,
+            "district": freelancer.district,
+            "state": freelancer.state,
+            "address": freelancer.address,
+            "pincode": freelancer.pincode,
             "is_active": freelancer.is_active,
             "freelancer_classification": freelancer.freelancer_classification,
             "vgk_support_id": freelancer.vgk_support_id,
@@ -1385,8 +1445,11 @@ def get_freelancer_detail(
             "partner_code": fl.partner_code,
             "partner_name": fl.partner_name,
             "phone": fl.phone,
+            "alternate_phone": fl.alternate_phone,
             "email": fl.email,
+            "area": fl.area,
             "city": fl.city,
+            "district": fl.district,
             "state": fl.state,
             "address": fl.address,
             "pincode": fl.pincode,
@@ -1452,10 +1515,17 @@ def update_freelancer(
             raise HTTPException(status_code=400, detail=f"Phone number already registered with partner {existing.partner_code} ({existing.partner_name}).")
         fl.phone = norm_p
 
+    if payload.alternate_phone is not None:
+        raw_alt = payload.alternate_phone.strip()
+        fl.alternate_phone = normalize_phone_10(raw_alt) or raw_alt if raw_alt else None
     if payload.email is not None:
         fl.email = payload.email.strip() if payload.email else None
+    if payload.area is not None:
+        fl.area = payload.area.strip() if payload.area else None
     if payload.city is not None:
         fl.city = payload.city.strip() if payload.city else None
+    if payload.district is not None:
+        fl.district = payload.district.strip() if payload.district else None
     if payload.state is not None:
         fl.state = payload.state.strip() if payload.state else None
     if payload.address is not None:
@@ -1532,6 +1602,14 @@ def update_freelancer(
             "partner_code": fl.partner_code,
             "partner_name": fl.partner_name,
             "phone": fl.phone,
+            "alternate_phone": fl.alternate_phone,
+            "email": fl.email,
+            "area": fl.area,
+            "city": fl.city,
+            "district": fl.district,
+            "state": fl.state,
+            "address": fl.address,
+            "pincode": fl.pincode,
             "freelancer_classification": fl.freelancer_classification,
             "vgk_support_id": fl.vgk_support_id,
             "is_active": fl.is_active
