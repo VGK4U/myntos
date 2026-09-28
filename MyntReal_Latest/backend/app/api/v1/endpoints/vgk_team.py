@@ -7761,9 +7761,9 @@ def vgk_top_partners_leaderboard_table(
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed'), 0) AS completed_val,
                COALESCE(SUM(
                    CASE 
+                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id AND tx.validation_status IN ('validated', 'posted_to_ledger')) 
+                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id AND tx.validation_status IN ('validated', 'posted_to_ledger'))
                        WHEN cl.deal_value_received > 0 THEN cl.deal_value_received
-                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id) 
-                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id)
                        WHEN cl.first_payment_received_date IS NOT NULL THEN cl.deal_value_total
                        ELSE 0
                    END
@@ -7795,9 +7795,9 @@ def vgk_top_partners_leaderboard_table(
                                                      AND (tcl.installation_date IS NOT NULL OR tcl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR tcl.status = 'completed'){tcl_date_filter}) AS team_completed_count,
                (SELECT COALESCE(SUM(
                    CASE 
+                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id AND tx.validation_status IN ('validated', 'posted_to_ledger')) 
+                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id AND tx.validation_status IN ('validated', 'posted_to_ledger'))
                        WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
-                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id) 
-                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id)
                        WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
                        ELSE 0
                    END

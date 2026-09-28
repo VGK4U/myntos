@@ -3679,19 +3679,20 @@ class IncomeEntryService:
             ).first()
             if crm_txn:
                 if new_status == 'CONFIRMED':
-                    was_already_validated = crm_txn.validation_status == 'validated'
                     crm_txn.validation_status = 'validated'
                     crm_txn.validated_by_id = employee.id
                     crm_txn.validated_at = now
                     lead = db.query(CRMLead).filter(CRMLead.id == crm_txn.lead_id).first()
                     if lead:
-                        if not was_already_validated:
-                            # DC-DVR-DEDUP-001: Only add to received if CRM txn was NOT already
-                            # validated from the CRM side — prevents double-counting when:
-                            # 1) staff validates txn in CRM (crm.py already +amount), then
-                            # 2) confirms the auto-created income entry here.
-                            lead.deal_value_received = (lead.deal_value_received or 0) + float(entry.amount)
-                            lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
+                        # DC-DVR-DEDUP-002: Recompute lead received from ALL validated txns to be idempotent
+                        _txn_validated_sum = db.query(
+                            func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
+                        ).filter(
+                            CRMLeadTransaction.lead_id == lead.id,
+                            CRMLeadTransaction.validation_status.in_(['validated', 'posted_to_ledger'])
+                        ).scalar() or 0
+                        lead.deal_value_received = float(_txn_validated_sum)
+                        lead.deal_value_balance = max(0, float(lead.deal_value_total or 0) - lead.deal_value_received)
                         # DC-FIRST-PMT-001-IE: stamp first_payment_received_date from
                         # the income entry's income_date when payment confirmation comes
                         # via the income-entry path (not crm.py validate_transaction).
@@ -3716,19 +3717,26 @@ class IncomeEntryService:
                         # DC-DVR-FLUSH-001 (Sep 2026): Flush in-memory lead updates so subsequent raw SQL queries
                         # (including check_and_create_dvr_advance) see the updated deal_value_received and first_payment_received_date.
                         db.flush()
-                elif new_status == 'PENDING' and crm_txn.validation_status == 'validated':
+                elif new_status == 'PENDING' and crm_txn.validation_status in ('validated', 'posted_to_ledger'):
+                    crm_txn.validation_status = 'pending'
+                    crm_txn.validated_by_id = None
+                    crm_txn.validated_at = None
+                    db.flush()
                     lead = db.query(CRMLead).filter(CRMLead.id == crm_txn.lead_id).first()
                     if lead:
-                        lead.deal_value_received = max(0, (lead.deal_value_received or 0) - float(entry.amount))
-                        lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
+                        _txn_validated_sum = db.query(
+                            func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
+                        ).filter(
+                            CRMLeadTransaction.lead_id == lead.id,
+                            CRMLeadTransaction.validation_status.in_(['validated', 'posted_to_ledger'])
+                        ).scalar() or 0
+                        lead.deal_value_received = float(_txn_validated_sum)
+                        lead.deal_value_balance = max(0, float(lead.deal_value_total or 0) - lead.deal_value_received)
                         try:
                             from app.services.vgk_self_business_points import reverse_self_business_points
                             reverse_self_business_points(db, lead.id, reason='Income entry unconfirmed to PENDING')
                         except Exception as _rev_sbp_e:
                             logger.warning(f"[VGK-SELF-BUSINESS-PTS] Reversal hook error for lead {lead.id}: {_rev_sbp_e}")
-                    crm_txn.validation_status = 'pending'
-                    crm_txn.validated_by_id = None
-                    crm_txn.validated_at = None
 
         # DC Protocol Mar 2026: Sync spare transaction income entry status
         try:

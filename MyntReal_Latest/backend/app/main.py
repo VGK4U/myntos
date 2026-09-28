@@ -14970,6 +14970,72 @@ def _startup_worker():
     except Exception as _e2:
         print(f"[DC-DVR-DEDUP-001] ⚠️ session error: {_e2}", flush=True)
 
+    # DC-DVR-DEDUP-002 (Sep 2026): Re-reconcile deal_value_received from validated CRM transactions
+    # and correct partner cumulative business volume and lead points_evaluated_dvr.
+    try:
+        from app.core.database import SessionLocal as _SL_DVR2
+        _db_dvr2 = _SL_DVR2()
+        try:
+            _mk_dvr2 = 'dc_dvr_dedup_recalc_20260928'
+            if _mk_dvr2 not in _applied_keys:
+                _rows2 = _db_dvr2.execute(text("""
+                    SELECT lead_id, SUM(amount) AS correct_dvr
+                    FROM crm_lead_transactions
+                    WHERE validation_status IN ('validated', 'posted_to_ledger')
+                    GROUP BY lead_id
+                """)).fetchall()
+                _fixed2 = 0
+                for _r in _rows2:
+                    _lid, _cdvr = _r.lead_id, float(_r.correct_dvr or 0)
+                    _lead = _db_dvr2.execute(
+                        text("SELECT id, deal_value_total, deal_value_received, confirmed_final_value, solar_value, associated_partner_id FROM crm_leads WHERE id = :lid"),
+                        {"lid": _lid}
+                    ).fetchone()
+                    if not _lead:
+                        continue
+                    _dvt = float(_lead.deal_value_total or 0)
+                    _dvr_cur = float(_lead.deal_value_received or 0)
+                    _cfv_cur = _lead.confirmed_final_value
+                    _updates = {}
+                    if abs(_dvr_cur - _cdvr) > 0.01:
+                        _updates["deal_value_received"] = _cdvr
+                        _updates["deal_value_balance"] = max(0, _dvt - _cdvr)
+                        _updates["points_evaluated_dvr"] = _cdvr
+                        # If lead was erroneously marked fully paid / confirmed_final_value due to 2x DVR, revert CFV
+                        if _cfv_cur is not None and _cdvr < _dvt:
+                            _updates["confirmed_final_value"] = None
+                        _fixed2 += 1
+                        # Re-sync partner cumulative_self_business_dvr if associated
+                        _pid = _lead.associated_partner_id
+                        if _pid:
+                            _p_tot_dvr = _db_dvr2.execute(
+                                text("SELECT COALESCE(SUM(t.amount), 0) FROM crm_lead_transactions t JOIN crm_leads l ON l.id = t.lead_id WHERE l.associated_partner_id = :pid AND t.validation_status IN ('validated', 'posted_to_ledger')"),
+                                {"pid": _pid}
+                            ).scalar() or 0
+                            _db_dvr2.execute(
+                                text("UPDATE official_partners SET cumulative_self_business_dvr = :cdvr WHERE id = :pid"),
+                                {"cdvr": _p_tot_dvr, "pid": _pid}
+                            )
+                    if _updates:
+                        _set_parts = ", ".join(f"{k} = :{k}" for k in _updates)
+                        _updates["lid"] = _lid
+                        _db_dvr2.execute(text(f"UPDATE crm_leads SET {_set_parts} WHERE id = :lid"), _updates)
+                _db_dvr2.execute(text("INSERT INTO dc_migrations (key) VALUES (:k)"), {"k": _mk_dvr2})
+                _db_dvr2.commit()
+                print(f"[DC-DVR-DEDUP-002] ✅ Recalculated dvr for {len(_rows2)} leads, fixed {_fixed2} with wrong amounts", flush=True)
+            else:
+                print("[DC-DVR-DEDUP-002] ✅ already applied (skipped)", flush=True)
+        except Exception as _e:
+            print(f"[DC-DVR-DEDUP-002] ⚠️ {_e}", flush=True)
+            try:
+                _db_dvr2.rollback()
+            except Exception:
+                pass
+        finally:
+            _db_dvr2.close()
+    except Exception as _e2:
+        print(f"[DC-DVR-DEDUP-002] ⚠️ session error: {_e2}", flush=True)
+
     # DC-SOURCE-STATUS-001: Add source_status column to party_ledger + account_ledger (idempotent)
     try:
         from sqlalchemy.orm import sessionmaker as _SM_SS

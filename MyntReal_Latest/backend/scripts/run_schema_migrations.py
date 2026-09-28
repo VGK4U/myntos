@@ -1101,6 +1101,42 @@ def run_migrations():
                         logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
                 logger.info("✅ VGK Freelancer Segment & KYC Grace Period schema invariants verified/applied")
 
+                # 4.32 DC-DVR-DEDUP-002: Reconcile deal_value_received on leads and partner DVR
+                logger.info("Executing DC-DVR-DEDUP-002: Reconciling deal_value_received from validated transactions...")
+                conn.execute(text("""
+                    UPDATE crm_leads l
+                    SET deal_value_received = sub.tx_sum,
+                        deal_value_balance = GREATEST(0, COALESCE(l.deal_value_total, 0) - sub.tx_sum),
+                        points_evaluated_dvr = sub.tx_sum,
+                        confirmed_final_value = CASE 
+                            WHEN l.confirmed_final_value IS NOT NULL AND sub.tx_sum < COALESCE(l.deal_value_total, 0) THEN NULL 
+                            ELSE l.confirmed_final_value 
+                        END
+                    FROM (
+                        SELECT lead_id, SUM(amount) AS tx_sum
+                        FROM crm_lead_transactions
+                        WHERE validation_status IN ('validated', 'posted_to_ledger')
+                        GROUP BY lead_id
+                    ) sub
+                    WHERE l.id = sub.lead_id
+                      AND ABS(COALESCE(l.deal_value_received, 0) - sub.tx_sum) > 0.01;
+                """))
+                conn.execute(text("""
+                    UPDATE official_partners op
+                    SET cumulative_self_business_dvr = sub.tot_dvr
+                    FROM (
+                        SELECT l.associated_partner_id, COALESCE(SUM(t.amount), 0) AS tot_dvr
+                        FROM crm_lead_transactions t
+                        JOIN crm_leads l ON l.id = t.lead_id
+                        WHERE l.associated_partner_id IS NOT NULL
+                          AND t.validation_status IN ('validated', 'posted_to_ledger')
+                        GROUP BY l.associated_partner_id
+                    ) sub
+                    WHERE op.id = sub.associated_partner_id
+                      AND ABS(COALESCE(op.cumulative_self_business_dvr, 0) - sub.tot_dvr) > 0.01;
+                """))
+                logger.info("✅ DC-DVR-DEDUP-002 reconciled deal_value_received and partner DVR")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026

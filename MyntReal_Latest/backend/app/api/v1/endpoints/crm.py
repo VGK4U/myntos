@@ -16073,7 +16073,14 @@ def finance_review_transaction(
         txn.finance_notes = review_data.finance_notes
         lead = db.query(CRMLead).filter(CRMLead.id == txn.lead_id).first()
         if lead:
-            lead.deal_value_received = (lead.deal_value_received or 0) + txn.amount
+            # DC-TXN-RCVD-SUM-002: Recompute lead received from ALL validated txns to be idempotent
+            _txn_validated_sum = db.query(
+                func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
+            ).filter(
+                CRMLeadTransaction.lead_id == lead.id,
+                CRMLeadTransaction.validation_status.in_(['validated', 'posted_to_ledger'])
+            ).scalar() or 0
+            lead.deal_value_received = _txn_validated_sum
             lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
 
         income_entry = _auto_create_income_entry(db, txn, lead, current_employee.id)
@@ -16226,14 +16233,6 @@ def finance_review_transaction(
         db.add(ledger_entry)
         db.flush()
         
-        lead = db.query(CRMLead).filter(CRMLead.id == txn.lead_id).first()
-        if txn.validation_status == 'pending':
-            if lead:
-                lead.deal_value_received = (lead.deal_value_received or 0) + txn.amount
-                lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
-        
-        _auto_create_income_entry(db, txn, lead, current_employee.id)
-
         txn.validation_status = 'posted_to_ledger'
         txn.validated_by_id = current_employee.id
         txn.validated_at = now
@@ -16242,6 +16241,20 @@ def finance_review_transaction(
         txn.ledger_party_name = party_name
         txn.ledger_posted_by_id = current_employee.id
         txn.ledger_posted_at = now
+        db.flush()
+
+        lead = db.query(CRMLead).filter(CRMLead.id == txn.lead_id).first()
+        if lead:
+            _txn_validated_sum = db.query(
+                func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
+            ).filter(
+                CRMLeadTransaction.lead_id == lead.id,
+                CRMLeadTransaction.validation_status.in_(['validated', 'posted_to_ledger'])
+            ).scalar() or 0
+            lead.deal_value_received = _txn_validated_sum
+            lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
+        
+        _auto_create_income_entry(db, txn, lead, current_employee.id)
         
         db.commit()
         db.refresh(txn)
