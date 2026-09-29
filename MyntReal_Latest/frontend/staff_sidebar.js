@@ -96,6 +96,16 @@ window.StaffSidebar = window.StaffSidebar || {
         return c === h || (c.startsWith(h + '/') && h.length > 7);
     },
 
+    hasPathAccess: function(allowedPaths, targetRoute) {
+        if (!targetRoute) return false;
+        const paths = allowedPaths !== undefined ? allowedPaths : this.allowedMenuPaths;
+        if (!paths) return false;
+        if (paths === '*') return true;
+        if (paths instanceof Set) return paths.has(targetRoute);
+        if (Array.isArray(paths)) return paths.includes(targetRoute);
+        return false;
+    },
+
     userData: null,
 
     // Initialize sidebar with INSTANT first-paint from local cache
@@ -187,7 +197,7 @@ window.StaffSidebar = window.StaffSidebar || {
                 currentPath === '/staff/tenant-users';
 
             const isRestricted = !isCoreWorkspaceRoute && internalRestrictedPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'));
-            if (isRestricted && !this.allowedMenuPaths.has(currentPath)) {
+            if (isRestricted && !this.hasPathAccess(this.allowedMenuPaths, currentPath)) {
                 console.warn('[DC-SAAS-GUARD] Unauthorized internal or unentitled page access blocked:', currentPath);
                 window.location.replace('/staff/my-tenant');
                 return;
@@ -848,7 +858,7 @@ window.StaffSidebar = window.StaffSidebar || {
                 expenseInDashboard = true;
             }
         }
-        if (!expenseInDashboard && this.userData && hasRouteAccess && allowedPaths.has('/staff/accounts/expense-entries') && !isSaaSTenant) {
+        if (!expenseInDashboard && this.userData && hasRouteAccess && this.hasPathAccess(allowedPaths, '/staff/accounts/expense-entries') && !isSaaSTenant) {
             const deptName = (this.userData.department_name || '').toLowerCase();
             const isAccounts = deptName.includes('account') || deptName === 'act';
             if (!isAccounts) {
@@ -865,7 +875,7 @@ window.StaffSidebar = window.StaffSidebar || {
             // For SaaS tenants, completely exclude internal corporate and group company sections
             if (isSaaSTenant) {
                 if (!isCoreWorkspace) {
-                    const hasHrmsAccess = Boolean(hasRouteAccess && (allowedPaths.has('/staff/attendance-sheet') || allowedPaths.has('/staff/my-attendance')));
+                    const hasHrmsAccess = Boolean(hasRouteAccess && (this.hasPathAccess(allowedPaths, '/staff/attendance-sheet') || this.hasPathAccess(allowedPaths, '/staff/my-attendance')));
                     const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
                     const saasRestricted = [
                         'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
@@ -918,12 +928,13 @@ window.StaffSidebar = window.StaffSidebar || {
             const sectionSubSections = [];
             const isStaffDashboardSection = (section.section_code === 'STAFF_DASHBOARD' || section.section_label === 'STAFF DASHBOARD');
             const isCrmSection = (section.section_code === 'CRM_LEADS' || section.section_code === 'CRM' || section.section_label === 'CRM & LEADS');
+            const isWorkflowSection = (section.section_code === 'SOLAR_EV' || section.section_code === 'WORKFLOWS' || sTitle === 'WORKFLOWS');
             
             // Process regular items
             if (section.items) {
                 for (const item of section.items) {
                     // DC Protocol: Match by route_path (reliable) instead of menu_code (format mismatch)
-                    let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || (allowedPaths && allowedPaths.has(item.route));
+                    let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || this.hasPathAccess(allowedPaths, item.route);
                     if (isCoreWorkspace) {
                         if (item.route === '/staff/my-tenant') {
                             shouldInclude = true;
@@ -954,7 +965,7 @@ window.StaffSidebar = window.StaffSidebar || {
                     // DC Protocol: Staff Leads page restriction list (Nandana MN10009 granted full access per request)
                     if (item.route === '/staff/leads' || item.menu_code === 'LEADS_MASTER' || item.menu_code === 'staff_leads' || item.menu_code === 'STAFF_LEADS') {
                         const empId = (this.userData?.emp_code || this.userData?.employee_code || '').toUpperCase();
-                        if (['MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empId) || (hasRouteAccess && !allowedPaths.has('/staff/leads'))) {
+                        if (['MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empId) || (hasRouteAccess && !this.hasPathAccess(allowedPaths, '/staff/leads'))) {
                             shouldInclude = false;
                         }
                     }
@@ -988,6 +999,22 @@ window.StaffSidebar = window.StaffSidebar || {
                         });
                     }
                 }
+                if (isWorkflowSection && this.rawMenus && Array.isArray(this.rawMenus)) {
+                    const rawWorkflows = this.rawMenus.filter(m => 
+                        (m.menu_category === 'WORKFLOWS' || (m.menu_code && m.menu_code.startsWith('WORKFLOW_'))) &&
+                        this.hasPathAccess(allowedPaths, m.route_path)
+                    );
+                    for (const rw of rawWorkflows) {
+                        if (!sectionItems.some(i => i.href === rw.route_path || i.menu_code === rw.menu_code)) {
+                            sectionItems.push({
+                                icon: rw.icon || rw.menu_icon || 'fas fa-layer-group',
+                                label: rw.menu_name || rw.label,
+                                href: rw.route_path,
+                                menu_code: rw.menu_code
+                            });
+                        }
+                    }
+                }
             }
             
             // Process subSections (for ACCOUNTS, ZYNOVA, MNR, MNR USER SIDEBAR)
@@ -1000,7 +1027,7 @@ window.StaffSidebar = window.StaffSidebar || {
                             continue;
                         }
                         // DC Protocol: Match by route_path for subSection items too
-                        let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || (allowedPaths && allowedPaths.has(item.route));
+                        let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || this.hasPathAccess(allowedPaths, item.route);
                         
                         // Access restriction: Razorpay & A1Top dashboards only for MR10001 and Accounts department
                         if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {

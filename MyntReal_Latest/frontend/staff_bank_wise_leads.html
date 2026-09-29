@@ -2036,6 +2036,7 @@
               {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
               {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW'},
               {type:'annexure_iv',label:'Annexure-IV Work Completion Report'},
+              {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
             ]},
           ],
           co_applicant:[
@@ -2058,6 +2059,7 @@
             {type:'feasibility_letter',label:'Feasibility Letter'},
             {type:'invoice',label:'Invoice'},
             {type:'vendor_gst',label:'Solar Vendor GST (Visionera)'},
+            {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
           ]},
           discom_link:{label:'DISCOM Documents',section:'discom',docs:[
             {type:'annexure_a',label:'Annexure-A'},
@@ -2468,6 +2470,13 @@
               throw new Error(data.detail || 'Dispatch failed');
             }
 
+            if (data.bot_offline && data.wa_me_url) {
+              showToast('ℹ️ Bot offline on server. Opening direct WhatsApp Web link...', 'info');
+              window.open(data.wa_me_url, '_blank');
+              closeShareDocumentsModal();
+              return;
+            }
+
             if (data.dispatch_mode === 'merged') {
               showToast(`✅ Successfully sent Consolidated Docket (${data.verified_count} docs) to +91 ${phone10} via WhatsApp!`, 'success');
             } else {
@@ -2603,6 +2612,7 @@
             {type:'annexure_iv',label:'Annexure-IV Work Completion'},
             {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
             {type:'commissioning_test_report',label:'Commissioning Test Report'},
+            {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
           ]},
           {group:'Co-Applicant Documents', docs:[
             {type:'co_adhar',label:'Aadhaar Card (Co-App)'},

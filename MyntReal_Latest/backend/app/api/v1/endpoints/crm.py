@@ -13904,10 +13904,28 @@ def search_assignees(
     results = []
     search_term = q.strip().lower() if q else ""
     
+    # DC Protocol (Sep 2026): SaaS Tenant Isolation Enforcement
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    tenant_ctx = resolve_tenant_context(db, current_employee)
+    
+    accessible_co_ids = []
+    if company_id:
+        accessible_co_ids = [company_id]
+    elif tenant_ctx.company:
+        accessible_co_ids = [tenant_ctx.company.id]
+    elif current_employee.base_company_id:
+        accessible_co_ids = [current_employee.base_company_id]
+        
+    is_external_saas = tenant_ctx.is_saas_tenant and tenant_ctx.client and not tenant_ctx.client.is_internal
+
     if assignee_type in ['telecaller', 'field_staff']:
         query = db.query(StaffEmployee).filter(
             StaffEmployee.status == 'active'
         )
+        
+        # Enforce tenant scoping: External SaaS Clients strictly see only their company's employees
+        if is_external_saas or company_id or accessible_co_ids:
+            query = query.filter(StaffEmployee.base_company_id.in_(accessible_co_ids))
         
         if search_term:
             query = query.filter(
@@ -13963,11 +13981,14 @@ def search_assignees(
             })
     
     elif assignee_type == 'partner':
-        # Cross-company allowed: All active partners searchable globally
         from app.models.staff_accounts import OfficialPartner
         query = db.query(OfficialPartner).filter(
             OfficialPartner.is_active == True
         )
+        
+        # Enforce tenant isolation for SaaS Client accounts
+        if is_external_saas or company_id or accessible_co_ids:
+            query = query.filter(OfficialPartner.company_id.in_(accessible_co_ids))
         
         if search_term:
             # Use coalesce to handle nullable fields safely in search
@@ -18863,6 +18884,7 @@ SOLAR_DOC_TYPES = {
     'commissioning_test_report':     'Commissioning Test Report: Solar Project 3KW',
     'annexure_iv':                   'Annexure-IV Work Completion Report',
     'bank_submission_letter':        'Bank Submission Letter',
+    'vendor_customer_agreement_annexure_2': 'PM Surya Ghar Annexure-2 Agreement',
     'house_tax':                     'House Tax Receipt',
     'bank_loan_application':         'Bank Loan Application',
     # Co-applicant documents
@@ -18889,6 +18911,7 @@ GENERATABLE_DOC_TYPES = {
     'synchronisation_certificate':  'synchronisation_certificate',
     'annexure_iv':                  'annexure_iv',
     'bank_submission_letter':       'bank_submission_letter',
+    'vendor_customer_agreement_annexure_2': 'vendor_customer_agreement_annexure_2',
 }
 
 
@@ -19523,13 +19546,14 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 # Public token endpoint: /share/{token}/bundle
 # Uses PyMuPDF (fitz) to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
-_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst']
+_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst','vendor_customer_agreement_annexure_2']
 _DISCOM_DOC_TYPES = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
     'bank_book':'Bank Book','house_tax':'House Tax Receipt',
     'quotation':'Quotation','feasibility_letter':'Feasibility Letter','invoice':'Invoice',
     'vendor_gst':'Solar Vendor GST Certificate (Visionera)',
+    'vendor_customer_agreement_annexure_2':'PM Surya Ghar Annexure-2 Agreement',
     'annexure_a':'Annexure-A','annexure_c':'Annexure-C (Project Completion)',
     'annexure_c_technical':'Annexure-C (Technical Details)',
     'synchronisation_certificate':'Synchronisation Certificate',
@@ -19902,6 +19926,7 @@ class ShareSolarDocsWAPayload(BaseModel):
 def share_solar_docs_via_whatsapp(
     lead_id: int,
     payload: ShareSolarDocsWAPayload,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
@@ -20144,7 +20169,58 @@ def share_solar_docs_via_whatsapp(
             err_msg = err_data.get("error") or err_data.get("message") or f"Bot HTTP {r_txt.status_code}"
             raise HTTPException(status_code=502, detail=f"WhatsApp Bot dispatch failed: {err_msg}")
     except requests.exceptions.RequestException as req_err:
-        raise HTTPException(status_code=503, detail=f"WhatsApp Bot service unreachable on port 5002: {str(req_err)}")
+        import secrets
+        import json
+        import urllib.parse
+        logger.warning("[DC-WA-DOC-SHARE] Port 5002 bot unreachable (%s) — activating graceful SaaS fallback link", req_err)
+        
+        # Rollback any stale session state from the long bot connection timeout
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+        safe_staff_name = str(staff_name or getattr(current_employee, 'full_name', '') or getattr(current_employee, 'first_name', '') or 'Staff')
+
+        # 1. Create a 6-hour share token for target_types
+        tok = secrets.token_urlsafe(16)
+        exp = datetime.utcnow() + timedelta(hours=6)
+        db.execute(text("""
+            INSERT INTO crm_lead_share_tokens (token, lead_id, expires_at, created_by_id, created_by_name, doc_filter)
+            VALUES (:tok, :lid, :exp, :cid, :cname, :filter)
+        """), {
+            "tok": tok,
+            "lid": lead_id,
+            "exp": exp,
+            "cid": current_employee.id,
+            "cname": safe_staff_name,
+            "filter": json.dumps(target_types)
+        })
+        db.commit()
+        
+        # 2. Build share URL & pre-filled WhatsApp Web link
+        req_host = (request.headers.get("host") if request else None) or "localhost:3000"
+        proto = "https" if (request and ("https" in request.headers.get("x-forwarded-proto", "") or "443" in req_host)) else "http"
+        base_url = f"{proto}://{req_host}"
+        share_url = f"{base_url}/lead-share.html?token={tok}"
+        
+        wa_text = (
+            f"📑 *{group_label} for {customer_name}*\n"
+            f"Please find the document bundle link below. You can view all documents and download them as a single PDF:\n\n"
+            f"🔗 {share_url}\n\n"
+            f"_(Valid for 6 hours · Shared by {staff_name})_"
+        )
+        quoted_wa_text = urllib.parse.quote(wa_text)
+        wa_me_url = f"https://api.whatsapp.com/send?phone=91{phone10}&text={quoted_wa_text}"
+        
+        return {
+            "success": True,
+            "bot_offline": True,
+            "message": "WhatsApp Bot gateway is offline. Generated direct WhatsApp Web link.",
+            "share_url": share_url,
+            "wa_me_url": wa_me_url,
+            "recipient_phone": phone10
+        }
 
     # 9. Dispatch attachments based on dispatch mode
     sent_docs = []
@@ -20346,13 +20422,9 @@ def get_solar_vendors(
     tenant_ctx = resolve_tenant_context(db, current_employee)
     if tenant_ctx.is_saas_tenant:
         tenant_cos = []
-        if tenant_ctx.client:
-            tenant_cos = db.query(AssociatedCompany).filter(
-                AssociatedCompany.client_id == tenant_ctx.client.id,
-                AssociatedCompany.is_active == True
-            ).order_by(AssociatedCompany.company_name).all()
-        if not tenant_cos and current_employee.base_company_id:
-            co = db.query(AssociatedCompany).filter_by(id=current_employee.base_company_id).first()
+        target_co_id = current_employee.base_company_id or (tenant_ctx.company.id if tenant_ctx.company else None)
+        if target_co_id:
+            co = db.query(AssociatedCompany).filter_by(id=target_co_id).first()
             if co:
                 tenant_cos = [co]
 
@@ -20492,6 +20564,65 @@ def reset_solar_vendor_password(
         db.add(new_op)
         db.commit()
         return {"success": True, "message": f"Portal account created & password set for {vendor.vendor_name} ({vendor.vendor_code})"}
+
+
+_SOLAR_VENDOR_PATCHABLE = {
+    "gst_number", "address", "phone", "email", "city", "state", "pincode",
+    "bank_name", "bank_branch", "account_number", "ifsc_code", "account_holder_name",
+    "mnre_reg_no", "pan_number", "vendor_name"
+}
+
+@router.patch("/solar-vendors/{vendor_id}")
+def patch_solar_vendor(
+    vendor_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    [DC-SOLAR-VENDOR-PATCH] Update solar vendor attributes (address, gst_number, bank details, etc.)
+    from the Missing Data modal or vendor management interface.
+    Handles both AssociatedCompany (for SaaS tenants) and vendor_master (for parent company).
+    """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    from app.models.staff_accounts import AssociatedCompany
+
+    tenant_ctx = resolve_tenant_context(db, current_employee)
+
+    updates = {}
+    for k, v in payload.items():
+        if k in _SOLAR_VENDOR_PATCHABLE:
+            val = str(v).strip() if v is not None else ""
+            if val:
+                updates[k] = val
+
+    if not updates:
+        return {"success": True, "updated": []}
+
+    # Check if this vendor_id is an AssociatedCompany
+    assoc_co = db.query(AssociatedCompany).filter_by(id=vendor_id).first()
+    if assoc_co:
+        for k, v in updates.items():
+            if hasattr(assoc_co, k):
+                setattr(assoc_co, k, v)
+        db.commit()
+        logger.info("[DC-SOLAR-VENDOR-PATCH] Updated AssociatedCompany #%s (%s) with fields: %s by %s",
+                    vendor_id, assoc_co.company_name, list(updates.keys()), current_employee.emp_code)
+        return {"success": True, "updated": list(updates.keys())}
+
+    # Otherwise update vendor_master table
+    set_parts = [f"{k} = :{k}" for k in updates]
+    params = dict(updates)
+    params["vid"] = vendor_id
+    res = db.execute(text(f"UPDATE vendor_master SET {', '.join(set_parts)} WHERE id = :vid"), params)
+    db.commit()
+
+    if res.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Solar vendor not found")
+
+    logger.info("[DC-SOLAR-VENDOR-PATCH] Updated vendor_master #%s with fields: %s by %s",
+                vendor_id, list(updates.keys()), current_employee.emp_code)
+    return {"success": True, "updated": list(updates.keys())}
 
 
 @router.get("/leads/{lead_id}/solar-preflight")
@@ -21004,6 +21135,19 @@ async def generate_solar_doc(
             vendor_dict['account_number'] = getattr(vendor, 'account_number', '') or ''
             vendor_dict['ifsc_code'] = getattr(vendor, 'ifsc_code', '') or ''
             vendor_dict['account_holder_name'] = getattr(vendor, 'company_name', '')
+            vendor_dict['stamp_path'] = getattr(vendor, 'stamp_path', None)
+            vendor_dict['signature_path'] = getattr(vendor, 'signature_path', None)
+            vendor_dict['stamp_image_url'] = getattr(vendor, 'stamp_path', None) or getattr(vendor, 'stamp_image_url', None)
+            vendor_dict['rep_signature_url'] = getattr(vendor, 'signature_path', None) or getattr(vendor, 'rep_signature_url', None)
+
+    is_saas = (
+        getattr(lead, 'company_id', 1) not in (1, 2, 3, 4, 88) or
+        getattr(current_employee, 'base_company_id', 1) not in (1, 2, 3, 4, 88) or
+        getattr(current_employee, 'staff_type', '') in ('TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT')
+    )
+    if is_saas:
+        lead_dict['is_saas_tenant'] = True
+        vendor_dict['is_saas_tenant'] = True
 
     # [DC-SOLAR-FIELD-FALLBACK] Carry kw_size from last quotation into lead context if not on lead record
     if not lead_dict.get("kw_size") and tech_dict.get("last_quote_kw_size"):

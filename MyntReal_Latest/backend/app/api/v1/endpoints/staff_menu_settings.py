@@ -3737,7 +3737,7 @@ async def get_my_menus(
     from app.services.saas_tenant_resolver import resolve_tenant_context, get_saas_menu_tree
     tenant_ctx = resolve_tenant_context(db, current_user)
     if tenant_ctx.is_saas_tenant:
-        saas_menus, saas_routes, saas_categorized = get_saas_menu_tree(tenant_ctx)
+        saas_menus, saas_routes, saas_categorized = get_saas_menu_tree(tenant_ctx, db=db)
         sidebar_tree = build_sidebar_tree(saas_menus)
         comp_name = tenant_ctx.company.company_name if tenant_ctx.company else "SaaS Tenant"
         return {
@@ -4078,7 +4078,7 @@ async def get_my_menus(
         'staff_my_reimbursements', 'MY_REIMBURSEMENT_CLAIMS', 'staff_reimbursements',
         'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals',
         'staff_accounts_expense_entries', 'sfms_expense_entries',
-        'staff_my_leads',
+        'staff_my_leads', 'staff_solar_leads',
         'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports',
         'STAFF_CATALOG_LIBRARY', 'staff_catalog_library', 'DIGITAL_CATALOG_MANAGEMENT', 'digital_catalog'
     }
@@ -4265,8 +4265,8 @@ async def get_my_menus(
             ALLOWED_CORE_SECTIONS = {'PROGRESS', 'STAFF DASHBOARD', 'STAFF-DASHBOARD', 'TASK-MANAGEMENT', 'TASK MANAGEMENT', 'TIMESHEET', 'KRA-MANAGEMENT', 'KRA MANAGEMENT'}
             
             MODULE_SECTION_MAP = {
-                'CRM_LEADS': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP'},
-                'CRM': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP'},
+                'CRM_LEADS': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP', 'MYNT REAL', 'WORKFLOWS'},
+                'CRM': {'CRM', 'CRM & LEADS', 'LEAD MANAGEMENT', 'DIALER', 'WHATSAPP', 'MYNT REAL', 'WORKFLOWS'},
                 'SERVICE_TICKETS': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
                 'SERVICE': {'SERVICE TICKETS', 'SERVICE-TICKETS', 'SERVICE DESK'},
                 'SOLAR_EV': {'SOLAR & EV', 'SOLAR', 'EV', 'EV MOBILITY', 'ZYNOVA', 'STAFF_MNR_USER_ZYNOVA', 'WORKFLOWS'},
@@ -4292,8 +4292,8 @@ async def get_my_menus(
                 
                 # Check if matches any allowed section
                 if any(s in sec or s in sec_title or s in cat for s in allowed_sections):
-                    # Never allow internal platform keywords for tenants
-                    if not any(k in sec or k in sec_title or k in cat for k in ['MNR', 'VGK', 'MYNT', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER']):
+                    # Never allow internal platform keywords for tenants (WORKFLOWS section is allowed)
+                    if sec in ('MYNT_REAL', 'WORKFLOWS') or sec_title in ('WORKFLOWS', 'MYNT REAL') or not any(k in sec or k in sec_title or k in cat for k in ['MNR', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER']):
                         filtered_tenant_menus.append(menu)
             
             all_menus = filtered_tenant_menus

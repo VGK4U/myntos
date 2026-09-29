@@ -2365,6 +2365,12 @@ class TenantCompanyProfileUpdateIn(BaseModel):
     city: Optional[str] = Field(None, max_length=100)
     state: Optional[str] = Field(None, max_length=100)
     pincode: Optional[str] = Field(None, max_length=10)
+    bank_name: Optional[str] = Field(None, max_length=200)
+    bank_branch: Optional[str] = Field(None, max_length=200)
+    account_number: Optional[str] = Field(None, max_length=50)
+    ifsc_code: Optional[str] = Field(None, max_length=20)
+    account_type: Optional[str] = Field(None, max_length=20)
+    upi_id: Optional[str] = Field(None, max_length=100)
 
 
 def require_tenant_admin_context(
@@ -2496,6 +2502,14 @@ def get_tenant_company_profile(
             "state": company.state,
             "pincode": company.pincode,
             "logo_path": company.logo_path,
+            "stamp_image_url": company.stamp_path or getattr(company, 'stamp_image_url', None),
+            "rep_signature_url": company.signature_path or getattr(company, 'rep_signature_url', None),
+            "bank_name": company.bank_name,
+            "bank_branch": company.bank_branch,
+            "account_number": company.account_number,
+            "ifsc_code": company.ifsc_code,
+            "account_type": company.account_type,
+            "upi_id": company.upi_id,
             "signatory_name": company.signatory_name,
             "signatory_designation": company.signatory_designation,
             "licensed_modules": company.licensed_modules or [],
@@ -2562,6 +2576,24 @@ def update_tenant_company_profile(
     if payload.pincode is not None:
         clean_pin = re.sub(r"\D", "", payload.pincode)
         company.pincode = clean_pin[:6]
+
+    if payload.bank_name is not None:
+        company.bank_name = payload.bank_name.strip() if payload.bank_name else None
+
+    if payload.bank_branch is not None:
+        company.bank_branch = payload.bank_branch.strip() if payload.bank_branch else None
+
+    if payload.account_number is not None:
+        company.account_number = payload.account_number.strip() if payload.account_number else None
+
+    if payload.ifsc_code is not None:
+        company.ifsc_code = payload.ifsc_code.strip().upper() if payload.ifsc_code else None
+
+    if payload.account_type is not None:
+        company.account_type = payload.account_type.strip().upper() if payload.account_type else 'CURRENT'
+
+    if payload.upi_id is not None:
+        company.upi_id = payload.upi_id.strip() if payload.upi_id else None
 
     company.updated_at = get_indian_time()
     company.updated_by_id = staff.id
@@ -2708,6 +2740,196 @@ def delete_tenant_company_logo(
         "ok": True,
         "message": "Company logo removed successfully"
     }
+
+
+@router.post("/tenant/company-stamp")
+async def upload_tenant_company_stamp(
+    file: UploadFile = File(...),
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Uploads and replaces company stamp image for the authenticated Tenant.
+    Enforces MIME type check, 2MB size limit, tenant isolation, and storage persistence.
+    """
+    from app.services.object_storage import storage_service
+
+    staff, client, company = ctx
+    MAX_SIZE = 2 * 1024 * 1024  # 2MB
+    ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"}
+
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(400, "Stamp image file exceeds 2MB limit")
+
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in ALLOWED_TYPES:
+        raise HTTPException(400, "Invalid image format. Allowed: PNG, JPEG, WEBP, GIF")
+
+    ext_map = {"image/png": ".png", "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
+    ext = ext_map.get(content_type, ".png")
+    safe_filename = f"stamp_tenant_{company.id}_{uuid.uuid4().hex[:12]}{ext}"
+    storage_key = f"vendor_stamps/{safe_filename}"
+
+    storage_service.upload_file(storage_key, content)
+
+    try:
+        backend_storage_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "storage")
+        local_dir = os.path.join(backend_storage_root, "vendor_stamps")
+        os.makedirs(local_dir, exist_ok=True)
+        with open(os.path.join(local_dir, safe_filename), "wb") as f:
+            f.write(content)
+    except Exception as e:
+        logger.warning(f"Local storage mirror write failed: {e}")
+
+    stamp_url = f"/storage/{storage_key}"
+    before_stamp = company.stamp_path or getattr(company, 'stamp_image_url', None)
+    company.stamp_path = stamp_url
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    db.execute(text("UPDATE associated_companies SET stamp_path = :url, updated_at = :uat WHERE id = :cid"), {"url": stamp_url, "uat": company.updated_at, "cid": company.id})
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_STAMP",
+        action="UPDATE",
+        entity_id=company.id,
+        before={"stamp_image_url": before_stamp},
+        after={"stamp_image_url": stamp_url}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Company stamp uploaded successfully",
+        "stamp_image_url": stamp_url
+    }
+
+
+@router.delete("/tenant/company-stamp")
+def delete_tenant_company_stamp(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    staff, client, company = ctx
+    before_stamp = company.stamp_path or getattr(company, 'stamp_image_url', None)
+    company.stamp_path = None
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    db.execute(text("UPDATE associated_companies SET stamp_path = NULL, updated_at = :uat WHERE id = :cid"), {"uat": company.updated_at, "cid": company.id})
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_STAMP",
+        action="DELETE",
+        entity_id=company.id,
+        before={"stamp_image_url": before_stamp},
+        after={"stamp_image_url": None}
+    )
+    db.commit()
+
+    return {"ok": True, "message": "Company stamp removed successfully"}
+
+
+@router.post("/tenant/company-rep-signature")
+async def upload_tenant_company_rep_signature(
+    file: UploadFile = File(...),
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Uploads and replaces authorized representative signature image for the authenticated Tenant.
+    Enforces MIME type check, 2MB size limit, tenant isolation, and storage persistence.
+    """
+    from app.services.object_storage import storage_service
+
+    staff, client, company = ctx
+    MAX_SIZE = 2 * 1024 * 1024  # 2MB
+    ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"}
+
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(400, "Signature image file exceeds 2MB limit")
+
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in ALLOWED_TYPES:
+        raise HTTPException(400, "Invalid image format. Allowed: PNG, JPEG, WEBP, GIF")
+
+    ext_map = {"image/png": ".png", "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
+    ext = ext_map.get(content_type, ".png")
+    safe_filename = f"rep_sig_tenant_{company.id}_{uuid.uuid4().hex[:12]}{ext}"
+    storage_key = f"vendor_rep_signatures/{safe_filename}"
+
+    storage_service.upload_file(storage_key, content)
+
+    try:
+        backend_storage_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "storage")
+        local_dir = os.path.join(backend_storage_root, "vendor_rep_signatures")
+        os.makedirs(local_dir, exist_ok=True)
+        with open(os.path.join(local_dir, safe_filename), "wb") as f:
+            f.write(content)
+    except Exception as e:
+        logger.warning(f"Local storage mirror write failed: {e}")
+
+    sig_url = f"/storage/{storage_key}"
+    before_sig = company.signature_path or getattr(company, 'rep_signature_url', None)
+    company.signature_path = sig_url
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    db.execute(text("UPDATE associated_companies SET signature_path = :url, updated_at = :uat WHERE id = :cid"), {"url": sig_url, "uat": company.updated_at, "cid": company.id})
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_REP_SIGNATURE",
+        action="UPDATE",
+        entity_id=company.id,
+        before={"rep_signature_url": before_sig},
+        after={"rep_signature_url": sig_url}
+    )
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Authorized signature uploaded successfully",
+        "rep_signature_url": sig_url
+    }
+
+
+@router.delete("/tenant/company-rep-signature")
+def delete_tenant_company_rep_signature(
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    staff, client, company = ctx
+    before_sig = company.signature_path or getattr(company, 'rep_signature_url', None)
+    company.signature_path = None
+    company.updated_at = get_indian_time()
+    company.updated_by_id = staff.id
+
+    db.execute(text("UPDATE associated_companies SET signature_path = NULL, updated_at = :uat WHERE id = :cid"), {"uat": company.updated_at, "cid": company.id})
+
+    _audit(
+        db,
+        actor_staff_id=staff.id,
+        client_id=client.id,
+        entity="COMPANY_REP_SIGNATURE",
+        action="DELETE",
+        entity_id=company.id,
+        before={"rep_signature_url": before_sig},
+        after={"rep_signature_url": None}
+    )
+    db.commit()
+
+    return {"ok": True, "message": "Authorized signature removed successfully"}
 
 
 @router.get("/tenant/users")

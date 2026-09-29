@@ -110,6 +110,37 @@ async def get_categories(
     
     categories = query.order_by(SignupCategory.display_order, SignupCategory.name).all()
     
+    # DC Protocol (Sep 2026): Auto-provision isolated tenant categories if SaaS client company has 0 categories
+    if parsed_company_id is not None and len(categories) == 0:
+        company_exists = db.query(AssociatedCompany).filter(
+            AssociatedCompany.id == parsed_company_id,
+            AssociatedCompany.is_active == True
+        ).first()
+        if company_exists:
+            for cat_data in DEFAULT_SIGNUP_CATEGORIES:
+                try:
+                    new_cat = SignupCategory(
+                        company_id=parsed_company_id,
+                        name=cat_data['name'],
+                        slug=cat_data['slug'],
+                        description=cat_data.get('description', ''),
+                        icon=cat_data.get('icon', ''),
+                        display_order=cat_data.get('display_order', 0),
+                        is_active=True,
+                        requires_documents=False
+                    )
+                    db.add(new_cat)
+                except Exception:
+                    pass
+            try:
+                db.commit()
+                categories = db.query(SignupCategory).filter(
+                    SignupCategory.company_id == parsed_company_id,
+                    SignupCategory.is_active == True
+                ).order_by(SignupCategory.display_order, SignupCategory.name).all()
+            except Exception:
+                db.rollback()
+
     # If all companies requested, deduplicate by name to provide a clean list
     if is_all_companies:
         seen_names = set()

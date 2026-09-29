@@ -2612,6 +2612,7 @@ const SDOC_GROUPS={
       {type:'synchronisation_certificate',label:'Synchronisation Certificate',generatable:true},
       {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW',generatable:true},
       {type:'annexure_iv',label:'Annexure-IV Work Completion Report',generatable:true},
+      {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement',generatable:true},
     ]},
   ],
   co_applicant:[
@@ -2657,6 +2658,7 @@ const SDOC_BUNDLE={
     {type:'feasibility_letter',label:'Feasibility Letter'},
     {type:'invoice',label:'Invoice'},
     {type:'vendor_gst',label:'Solar Vendor GST (Visionera)'},
+    {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
   ]},
   discom_link:{label:'DISCOM Documents',section:'discom',docs:[
     {type:'annexure_a',label:'Annexure-A'},
@@ -2982,6 +2984,13 @@ async function dispatchShareDocumentsViaWa() {
     const data = await res.json();
     if (!res.ok || !data.success) {
       throw new Error(data.detail || 'Dispatch failed');
+    }
+
+    if (data.bot_offline && data.wa_me_url) {
+      showToast('ℹ️ Bot offline on server. Opening direct WhatsApp Web link...', 'info');
+      window.open(data.wa_me_url, '_blank');
+      closeShareDocumentsModal();
+      return;
     }
 
     if (data.dispatch_mode === 'merged') {
@@ -4083,6 +4092,7 @@ const _SLK_GROUPS = [
     {type:'annexure_iv',label:'Annexure-IV Work Completion'},
     {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
     {type:'commissioning_test_report',label:'Commissioning Test Report'},
+    {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
   ]},
   {group:'Co-Applicant Documents', docs:[
     {type:'co_adhar',label:'Aadhaar Card (Co-App)'},

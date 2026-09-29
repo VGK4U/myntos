@@ -168,7 +168,7 @@ def resolve_tenant_context(db: Session, staff: StaffEmployee) -> TenantContext:
     )
 
 
-def get_saas_menu_tree(ctx: TenantContext) -> Tuple[List[Dict[str, Any]], Set[str], Dict[str, List[Dict[str, Any]]]]:
+def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tuple[List[Dict[str, Any]], Set[str], Dict[str, List[Dict[str, Any]]]]:
     """
     Constructs the authoritative SaaS menu tree and route list based on tenant context.
     Strictly adheres to:
@@ -318,8 +318,8 @@ def get_saas_menu_tree(ctx: TenantContext) -> Tuple[List[Dict[str, Any]], Set[st
         allowed_routes.add('/staff/crm/followups')
         allowed_routes.add('/staff/whatsapp-center')
 
-    # 3. WORKFLOWS (Product Display: WORKFLOWS, module code: SOLAR_EV)
-    if ctx.has_module('SOLAR_EV'):
+    # 3. WORKFLOWS (Product Display: WORKFLOWS, module code: SOLAR_EV or CRM)
+    if ctx.has_module('SOLAR_EV') or ctx.has_module('CRM_LEADS'):
         workflow_items = [
             {
                 'id': 99201,
@@ -358,6 +358,67 @@ def get_saas_menu_tree(ctx: TenantContext) -> Tuple[List[Dict[str, Any]], Set[st
                 'can_edit': True
             }
         ]
+
+        # DC Protocol: Dynamic Won Category Workflow Tabs
+        # Whenever a lead is updated to status 'won' in ANY category for this tenant,
+        # create a menu item under WORKFLOWS for that category!
+        CATEGORY_METADATA = {
+            'solar': {'icon': 'fas fa-sun', 'route': '/staff/solar-leads', 'code': 'WORKFLOW_SOLAR_LEADS'},
+            'real-dreams': {'icon': 'fas fa-home', 'route': '/staff/real-dreams-leads', 'code': 'WORKFLOW_REAL_DREAMS_LEADS'},
+            'insurance': {'icon': 'fas fa-shield-alt', 'route': '/staff/insurance-leads', 'code': 'WORKFLOW_INSURANCE_LEADS'},
+            'ev-b2b': {'icon': 'fas fa-building', 'route': '/staff/ev-b2b-leads', 'code': 'WORKFLOW_EV_B2B_LEADS'},
+            'ev-b2c': {'icon': 'fas fa-car', 'route': '/staff/ev-b2c-leads', 'code': 'WORKFLOW_EV_B2C_LEADS'},
+            'ev-spares': {'icon': 'fas fa-cogs', 'route': '/staff/ev-spares-leads', 'code': 'WORKFLOW_EV_SPARES_LEADS'},
+            'etc-training': {'icon': 'fas fa-graduation-cap', 'route': '/staff/etc-leads', 'code': 'WORKFLOW_ETC_LEADS'},
+            'etc': {'icon': 'fas fa-graduation-cap', 'route': '/staff/etc-leads', 'code': 'WORKFLOW_ETC_LEADS'},
+        }
+
+        won_cat_rows = []
+        if db and ctx.company:
+            try:
+                won_cat_rows = db.execute(text("""
+                    SELECT DISTINCT c.slug, c.name
+                    FROM crm_leads l
+                    JOIN signup_categories c ON l.category_id = c.id
+                    WHERE l.company_id = :cid
+                      AND l.status IN ('won', 'won_plus', 'closed_won')
+                """), {"cid": ctx.company.id}).fetchall()
+            except Exception as e:
+                pass
+
+        won_cat_slugs = { (r[0] or '').lower().strip(): r[1] for r in won_cat_rows if r[0] }
+        if 'solar' not in won_cat_slugs:
+            won_cat_slugs['solar'] = 'Solar'
+
+        display_idx = 3
+        for slug, cat_name in won_cat_slugs.items():
+            meta = CATEGORY_METADATA.get(slug, {
+                'icon': 'fas fa-briefcase',
+                'route': f'/staff/{slug}-leads',
+                'code': f'WORKFLOW_{slug.upper().replace("-", "_")}_LEADS'
+            })
+            workflow_items.append({
+                'id': 99200 + display_idx,
+                'menu_code': meta['code'],
+                'menu_name': cat_name,
+                'menu_description': f'Won {cat_name} leads pipeline view and execution tracking',
+                'route_path': meta['route'],
+                'menu_category': 'WORKFLOWS',
+                'menu_icon': meta['icon'],
+                'display_order': display_idx,
+                'sidebar_section': 'workflows',
+                'sidebar_section_title': 'WORKFLOWS',
+                'sidebar_section_order': 2,
+                'parent_section': None,
+                'is_submenu': False,
+                'audience_scope': 'staff',
+                'can_view': True,
+                'can_edit': True
+            })
+            allowed_routes.add(meta['route'])
+            display_idx += 1
+
+        allowed_routes.add('/staff/mnr-leads-master')
         if ctx.is_tenant_admin and not ctx.has_module('CRM_LEADS'):
             workflow_items.append({
                 'id': 99203,
@@ -367,7 +428,7 @@ def get_saas_menu_tree(ctx: TenantContext) -> Tuple[List[Dict[str, Any]], Set[st
                 'route_path': '/staff/saas-crm-settings',
                 'menu_category': 'WORKFLOWS',
                 'menu_icon': 'fas fa-sliders',
-                'display_order': 3,
+                'display_order': display_idx,
                 'sidebar_section': 'workflows',
                 'sidebar_section_title': 'WORKFLOWS',
                 'sidebar_section_order': 2,

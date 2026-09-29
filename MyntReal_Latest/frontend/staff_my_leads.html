@@ -2226,6 +2226,7 @@
             filterSelect.disabled = false;
             
             formSelect.innerHTML = '<option value="">Select Category</option>';
+            let solarCatId = null;
             
             categories.forEach(cat => {
                 if (companyId === 'all') {
@@ -2234,7 +2235,14 @@
                     filterSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
                 }
                 formSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                if (cat.slug === 'solar' || /solar/i.test(cat.name)) {
+                    solarCatId = cat.id;
+                }
             });
+            
+            if (solarCatId && !formSelect.value) {
+                formSelect.value = solarCatId;
+            }
         }
         
         async function loadCategoriesForCompany(formCompanyId) {
@@ -2245,9 +2253,16 @@
                     const formSelect = document.getElementById('leadCategory');
                     if (formSelect) {
                         formSelect.innerHTML = '<option value="">Select Category</option>';
+                        let solarCatId = null;
                         data.categories.forEach(cat => {
                             formSelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                            if (cat.slug === 'solar' || /solar/i.test(cat.name)) {
+                                solarCatId = cat.id;
+                            }
                         });
+                        if (solarCatId && !formSelect.value) {
+                            formSelect.value = solarCatId;
+                        }
                     }
                 }
             } catch (error) {

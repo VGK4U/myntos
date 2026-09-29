@@ -111,6 +111,8 @@ def _styles():
          spaceAfter=2, leading=13)
     _add('BodySmallBold', fontName='Helvetica-Bold', fontSize=9, textColor=BLACK,
          spaceAfter=2, leading=13)
+    _add('BodySmallRightBold', fontName='Helvetica-Bold', fontSize=9, textColor=BLACK,
+         spaceAfter=2, leading=13, alignment=TA_RIGHT)
     _add('CellBody', fontName='Helvetica', fontSize=8.5, textColor=BLACK, leading=12)
     _add('CellBold', fontName='Helvetica-Bold', fontSize=8.5, textColor=BLACK, leading=12)
     _add('DocTitle', fontName='Helvetica-Bold', fontSize=13, textColor=NAVY,
@@ -210,8 +212,15 @@ def _section_header(text):
     return t
 
 
-def _partner_logos_footer(logo_h=7.5*mm, total_w=175*mm):
+def _partner_logos_footer(logo_h=7.5*mm, total_w=175*mm, is_saas_tenant=False, vendor=None, lead=None):
     """Horizontal strip of 3 partner logos for quotation/invoice footer."""
+    is_saas = (
+        is_saas_tenant or
+        (isinstance(vendor, dict) and (vendor.get('is_saas_tenant') or vendor.get('company_id', 1) not in (1, 2, 3, 4, 88))) or
+        (isinstance(lead, dict) and (lead.get('is_saas_tenant') or lead.get('company_id', 1) not in (1, 2, 3, 4, 88)))
+    )
+    if is_saas:
+        return Spacer(total_w, 0.1*mm)
     logos = [
         (LOGO_MYNTREAL, 42*mm, logo_h),
         (LOGO_HARGHAR, 42*mm, logo_h),
@@ -237,15 +246,25 @@ DEFAULT_VISIONERA_REP_SIG_URL = "/storage/vendor_rep_signatures/rep_sig_3_7fd9cc
 
 def _get_vendor_sig_url(vendor: dict) -> str:
     if not isinstance(vendor, dict):
-        return DEFAULT_VISIONERA_REP_SIG_URL
-    url = (vendor.get('rep_signature_url') or vendor.get('tech_signature_url') or '').strip()
-    return url if url else DEFAULT_VISIONERA_REP_SIG_URL
+        return None
+    url = (vendor.get('rep_signature_url') or vendor.get('tech_signature_url') or vendor.get('signature_path') or '').strip()
+    if url:
+        return url
+    is_saas = vendor.get('is_saas_tenant') or vendor.get('company_id', 1) not in (1, 2, 3, 4, 88)
+    if is_saas:
+        return None
+    return DEFAULT_VISIONERA_REP_SIG_URL
 
 def _get_vendor_stamp_url(vendor: dict) -> str:
     if not isinstance(vendor, dict):
-        return DEFAULT_VISIONERA_STAMP_URL
-    url = (vendor.get('stamp_image_url') or '').strip()
-    return url if url else DEFAULT_VISIONERA_STAMP_URL
+        return None
+    url = (vendor.get('stamp_image_url') or vendor.get('stamp_path') or '').strip()
+    if url:
+        return url
+    is_saas = vendor.get('is_saas_tenant') or vendor.get('company_id', 1) not in (1, 2, 3, 4, 88)
+    if is_saas:
+        return None
+    return DEFAULT_VISIONERA_STAMP_URL
 
 
 def _fetch_url_image(url: str, width=38*mm, height=24*mm):
@@ -312,7 +331,7 @@ def _sig_stamp_table(ss, sig_img, stamp_img, sig_label='Authorised Signatory', t
     else:
         sig_cell.append(Spacer(1, 14*mm))
 
-    stamp_cell = [Paragraph('<b>Stamp</b>', ss['BodySmallBold'])]
+    stamp_cell = [Paragraph('<b>Stamp</b>', ss['BodySmallRightBold'])]
     if stamp_img:
         stamp_cell += [Spacer(1, 0.8*mm), stamp_img]
     else:
@@ -579,11 +598,11 @@ def generate_quotation(
     story.append(Spacer(1, sp))
 
     # T&C + Bank details
-    bank_name = vendor.get('bank_name', '')
-    bank_branch = vendor.get('bank_branch', '')
-    acc_no = vendor.get('account_number', '')
-    acc_holder = vendor.get('account_holder_name', '') or vendor.get('vendor_name', '')
-    ifsc = vendor.get('ifsc_code', '')
+    bank_name = (vendor.get('bank_name') or '').strip()
+    bank_branch = (vendor.get('bank_branch') or '').strip()
+    acc_no = (vendor.get('account_number') or '').strip()
+    acc_holder = (vendor.get('account_holder_name') or vendor.get('vendor_name') or vendor.get('company_name') or '').strip()
+    ifsc = (vendor.get('ifsc_code') or '').strip()
 
     tc_lines = [
         '1. Taxes: GST Included',
@@ -591,11 +610,17 @@ def generate_quotation(
         '3. Delivery: 2-4 weeks',
     ]
     tc_para = '\n'.join(tc_lines)
+
+    bank_display = f"{bank_name}, {bank_branch}".strip(" ,") if (bank_name or bank_branch) else "—"
+    acc_no_display = acc_no if acc_no else "—"
+    ifsc_display = ifsc if ifsc else "—"
+    acc_holder_display = acc_holder if acc_holder else "—"
+
     bank_str = (
-        f'<b>A/c Name:</b> {acc_holder}<br/>'
-        f'<b>A/c No.:</b> {acc_no}<br/>'
-        f'<b>Bank:</b> {bank_name}, {bank_branch}<br/>'
-        f'<b>NEFT/RTGS/IFSC:</b> {ifsc}'
+        f'<b>A/c Name:</b> {acc_holder_display}<br/>'
+        f'<b>A/c No.:</b> {acc_no_display}<br/>'
+        f'<b>Bank:</b> {bank_display}<br/>'
+        f'<b>NEFT/RTGS/IFSC:</b> {ifsc_display}'
     )
 
     tc_bank = Table(
@@ -639,9 +664,15 @@ def generate_quotation(
     story.append(Spacer(1, sp))
 
     # Footer
-    story.append(Paragraph('Authorised Partners', ss['FooterTiny']))
-    story.append(Spacer(1, sp))
-    story.append(_partner_logos_footer(_logo_h))
+    is_saas = (
+        vendor.get('is_saas_tenant') or
+        (isinstance(vendor, dict) and vendor.get('company_id', 1) not in (1, 2, 3, 4, 88)) or
+        (isinstance(lead, dict) and lead.get('company_id', 1) not in (1, 2, 3, 4, 88))
+    )
+    if not is_saas:
+        story.append(Paragraph('Authorised Partners', ss['FooterTiny']))
+        story.append(Spacer(1, sp))
+        story.append(_partner_logos_footer(_logo_h, vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -923,7 +954,7 @@ def generate_invoice(
     story.append(_sig_stamp_table(ss, _inv_sig, _inv_stamp, 'Authorised Signatory', total_w=175*mm))
     story.append(Spacer(1, 1*mm))
 
-    story.append(_partner_logos_footer(logo_h=7.5*mm, total_w=175*mm))
+    story.append(_partner_logos_footer(logo_h=7.5*mm, total_w=175*mm, vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1144,7 +1175,7 @@ def generate_co_applicant_quotation(
 
     story.append(Paragraph('Authorised Partners', ss['FooterTiny']))
     story.append(Spacer(1, 1*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1259,7 +1290,7 @@ def generate_annexure_a(lead: dict, vendor: dict, tech: dict) -> bytes:
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1393,7 +1424,7 @@ def generate_annexure_c_completion(lead: dict, vendor: dict, tech: dict) -> byte
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1482,7 +1513,7 @@ def generate_annexure_c_technical(lead: dict, vendor: dict, tech: dict) -> bytes
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1619,7 +1650,7 @@ def generate_commissioning_test_report(lead: dict, vendor: dict, tech: dict) -> 
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1726,7 +1757,7 @@ def generate_synchronisation_certificate(lead: dict, vendor: dict, discom_reg_da
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1888,7 +1919,7 @@ def generate_annexure_iv(lead: dict, vendor: dict, tech: dict) -> bytes:
     story.append(Spacer(1, 4*mm))
     story.append(_computer_generated_note(ss))
     story.append(Spacer(1, 2*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -1982,7 +2013,204 @@ def generate_bank_submission_letter(lead: dict, vendor: dict, remaining_loan_amo
         story.append(Paragraph(f'{cust_phone},', ss['BodySmall']))
 
     story.append(Spacer(1, 6*mm))
-    story.append(_partner_logos_footer())
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ANNEXURE 2: PM SURYA GHAR VENDOR-CUSTOMER AGREEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+def generate_annexure_2_agreement(lead: dict, vendor: dict, tech: dict = None, **kwargs) -> bytes:
+    """
+    Generates Annexure 2: Agreement between Consumer & Vendor for installation
+    of grid connected rooftop solar (RTS) project under PM - Surya Ghar: Muft Bijli Yojana.
+    """
+    tech = tech or {}
+    buf = BytesIO()
+    doc = _doc(buf, top=14*mm, bottom=14*mm, left=14*mm, right=14*mm)
+    ss = _styles()
+    story = []
+
+    # 1. Header & Title
+    story.append(_vendor_letterhead(vendor, ss))
+    story.append(Spacer(1, 4*mm))
+    story.append(Paragraph('Annexure 2', ss['DocTitle']))
+    story.append(Paragraph(
+        'Agreement between Consumer &amp; Vendor for installation of grid connected rooftop solar (RTS) project under PM – Surya Ghar: Muft Bijli Yojana.',
+        ss['BodySmallBold']
+    ))
+    story.append(HRFlowable(width='100%', thickness=1.5, color=NAVY))
+    story.append(Spacer(1, 3*mm))
+
+    # Agreement date
+    _exec_date = date.today()
+    day_str = _exec_date.strftime('%d')
+    month_str = _exec_date.strftime('%B')
+    year_str = _exec_date.strftime('%Y')
+
+    story.append(Paragraph(
+        f'This agreement is executed on <b>{day_str}</b> (Day) <b>{month_str}</b> (Month) <b>{year_str}</b> (Year) '
+        f'for design, supply, installation, commissioning and 5-year comprehensive maintenance of RTS project/system '
+        f'along with warranty under PM Surya Ghar: Muft Bijli Yojana.',
+        ss['BodySmall']
+    ))
+    story.append(Spacer(1, 3*mm))
+
+    # Parties
+    cust_name = (lead.get('customer_name') or lead.get('name') or '—').strip()
+    cust_addr_parts = [lead.get('address'), lead.get('city'), lead.get('state'), lead.get('pincode')]
+    cust_addr = ', '.join([str(p).strip() for p in cust_addr_parts if p and str(p).strip()]) or '—'
+
+    vendor_name = (vendor.get('vendor_name') or vendor.get('company_name') or '—').strip()
+    v_addr_parts = [vendor.get('address'), vendor.get('city'), vendor.get('state'), vendor.get('pincode')]
+    v_addr = ', '.join([str(p).strip() for p in v_addr_parts if p and str(p).strip()]) or '—'
+    v_phone = (vendor.get('phone') or '').strip()
+
+    story.append(Paragraph('<b>Between</b>', ss['BodySmallBold']))
+    story.append(Paragraph(f'<b>{cust_name}</b> (Name of Consumer) having address at <b>{cust_addr}</b>', ss['BodySmall']))
+    story.append(Paragraph('(hereinafter referred to as first Party i.e. /consumer/purchaser/owner of system).', ss['BodySmall']))
+    story.append(Spacer(1, 2*mm))
+
+    story.append(Paragraph('<b>And</b>', ss['BodySmallBold']))
+    v_contact_info = f' Ph: {v_phone}' if v_phone else ''
+    story.append(Paragraph(f'<b>{vendor_name}</b> (Name of Vendor) having registered office at <b>{v_addr}{v_contact_info}</b>', ss['BodySmall']))
+    story.append(Paragraph('(hereinafter referred to as second Party i.e. Vendor/ contractor/ System Integrator).', ss['BodySmall']))
+    story.append(Spacer(1, 3*mm))
+
+    # Recitals
+    story.append(Paragraph('<b>Whereas</b>', ss['BodySmallBold']))
+    story.append(Paragraph(
+        'First Party wishes to install a Grid Connected Rooftop Solar Plant on the rooftop of the residential building '
+        'of the Consumer under PM Surya Ghar: Muft Bijli Yojana.',
+        ss['BodySmall']
+    ))
+    story.append(Spacer(1, 2*mm))
+    story.append(Paragraph('<b>And whereas</b>', ss['BodySmallBold']))
+    story.append(Paragraph(
+        'Second Party has verified availability of appropriate roof and found it feasible to install a Grid Connected '
+        'Roof Top Solar plant and that the second party is willing to design, supply, install, test, commission and '
+        'carry out Operation &amp; Maintenance of the Rooftop Solar plant for 5-year period.',
+        ss['BodySmall']
+    ))
+    story.append(Spacer(1, 3*mm))
+
+    story.append(Paragraph('On this day, the First Party and Second Party agree to the following:', ss['BodySmallBold']))
+    story.append(Spacer(1, 2*mm))
+
+    # First Party Obligations
+    story.append(Paragraph('<b>The First Party hereby undertakes to perform the following activities:</b>', ss['BodySmallBold']))
+    story.append(Spacer(1, 1.5*mm))
+
+    first_party_clauses = [
+        '1. Submission of online application at National Portal for installation of RTS project/system, Submission of application for net-metering and system inspection and upload of the relevant documents on the National Portal of the scheme.',
+        '2. Provide secure storage of the material of the RTS plant delivered at the premises till handover of the system.',
+        '3. Provide access to the Roof Top during installation of the plant, operation & maintenance, testing of the plant and equipment and for meter reading from solar meter, inverter etc.',
+        '4. Provide electricity during plant installation and water for cleaning of the panels.',
+        '5. Report any malfunctioning of the plant to the Vendor during the warranty period.',
+        '6. Pay the amount as per the payment schedule as mutually agreed with the vendor, including any additional amount to the second party for any additional work /customization required depending upon the building condition.'
+    ]
+    for cl in first_party_clauses:
+        story.append(Paragraph(cl, ss['BodySmall']))
+        story.append(Spacer(1, 1*mm))
+
+    story.append(Spacer(1, 3*mm))
+
+    # Second Party Obligations
+    story.append(Paragraph('<b>The Second Party hereby undertakes to perform the following activities:</b>', ss['BodySmallBold']))
+    story.append(Spacer(1, 1.5*mm))
+
+    second_party_clauses = [
+        '1. <b>Standards & Safety:</b> The Vendor must follow all the standards and safety guidelines prescribed under state regulations and technical standards prescribed by MNRE for RTS projects, failing which the vendor is liable for blacklisting from participation in the govt. project/ scheme and other penal actions in accordance with the law. The responsibility of supply, installation and commissioning of the rooftop solar project/system in complete compliance with MNRE scheme guidelines lies with the Vendor.',
+        '2. <b>Site Survey:</b> Site visit, survey and development of detailed project report for installation of RTS system. This also includes, feasibility study of roof, strength of roof and shadow free area. If any additional work or customization is involved for the plant installation as per site condition and requirement of the consumer building, the Vendor shall prepare an estimate and can raise separate invoice including GST in addition to the amount towards standard plant cost. The consumer shall pay the amount for such additional work directly to the Vendor.',
+        '3. <b>Design & Engineering:</b> Design of plant along with drawings and selection of components as per standard provided by the DISCOM/SERC/MNRE for best performance and safety of the plant.',
+        '4. <b>Module and Inverter:</b> The solar modules, including the solar cells, should be manufactured in India. Both the solar modules and inverters shall conform to the relevant standards and specifications prescribed by MNRE. Any other requirement, viz. star labelling (solar modules), quality control orders and standards & labelling (inverters) etc., shall also be complied.',
+        '5. <b>Procurement & Supply:</b> Procurement of complete system as per BIS/IS/IEC standard (whatever applicable) & safety guidelines for installation of rooftop solar plants. The supplied materials should comply with all MNRE standards for release of subsidy.',
+        '6. <b>Installation & Civil work:</b> Complete civil work, structure work and electrical work (including drawings) following all the safety and relevant BIS standards.',
+        '7. <b>Documentation (Technical Catalogues/Warranty Certificates/BIS certificates/other test reports etc):</b> All such documents shall be provided to the consumer for online uploading and submission of technical specifications, IEC/BIS report, Sr. Nos, Warranty card of Solar Panel & Inverter, Layout & Electrical SLD, Structure Design and Drawing, Cable and other detailed documents.',
+        '8. <b>Project completion report (PCR):</b> Assisting the consumer in filling and uploading of signed documents (Consumer & Vendor) on the national portal.',
+        '9. <b>Warranty:</b> System warranty certificates should be provided to the consumer. The complete system should be warranted for 5 years from the date of commissioning by DISCOM. Individual component warranty documents provided by the manufacturer shall be provided to the consumer and all possible assistance should be extended to the consumer for claiming the warranty from the manufacturer.',
+        '10. <b>NET meter & Grid Connectivity:</b> Net meter supply/procurement, testing and approvals shall be in the scope of vendor. Grid connection of the plant shall be in the scope of the vendor.',
+        '11. <b>Testing and Commissioning:</b> The vendor shall be present at the time of testing and commissioning by the DISCOM.',
+        '12. <b>Operation & Maintenance:</b> Five (5) years Comprehensive Operation and Maintenance including overhauling, wear and tear and regular checking of healthiness of system at proper interval shall be in the scope of vendor. The vendor shall also educate the consumer on best practices for cleaning of the modules and system maintenance.',
+        '13. <b>Insurance:</b> Any insurance cost pertaining to material transfer/storage before commissioning of the system shall be in the scope of the vendor.',
+        '14. <b>Applicable Standard:</b> The system must meet the technical standards and specifications notified by MNRE. The vendor is solely responsible to supply component and service which meets the technical standards and specification prescribed by MNRE and State DISCOMs.',
+        '15. <b>Project/system cost & payment terms:</b> The cost of the plant and payment schedule should be mutually discussed and decided between the vendor and consumer. The consumer may opt for milestone-based payment to the vendor and the same shall be included in the agreement.',
+        '16. <b>Dispute:</b> In-case of any dispute between consumer and vendor (in supply/installation/maintenance of system or payment terms), both parties must settle the same mutually or as per law. MNRE/DISCOM shall not be liable for, and would not be a party to any dispute arising between vendor and consumer.',
+        '17. <b>Subsidy / Project Related Documents:</b> Vendor must provide all the documents to consumer and help in uploading the same to National Portal for smooth release of subsidy.',
+        '18. <b>Performance of Plant:</b> The Performance Ratio (PR) of Plant must be 75% at the time of commissioning of the project by DISCOM or its authorized agency. Vendor must provide (returnable basis) radiation sensor with valid calibration certificate of any NABL / International laboratory at the time of commissioning / testing of the plant. Vendor must maintain the PR of the plant till warranty of project i.e. 5 years from the date of commissioning.'
+    ]
+
+    for cl in second_party_clauses:
+        story.append(Paragraph(cl, ss['BodySmall']))
+        story.append(Spacer(1, 1*mm))
+
+    # Clause 19: Mutually Agreed Terms of Payment & Financial Summary
+    _kw_val = lead.get('kw_size') or tech.get('last_quote_kw_size') or '3KW'
+    _final_cost = tech.get('last_quote_final') or tech.get('last_quote_value') or 0
+    _cost_str = f'₹ {float(_final_cost):,.2f}' if _final_cost else 'As per agreed Quotation'
+
+    story.append(Paragraph(
+        f'19. <b>Mutually Agreed Terms of Payment:</b> Total Solar Plant Capacity: <b>{_kw_val}</b> | Total Agreed Project Cost: <b>{_cost_str}</b>. '
+        f'Payment schedule mutually agreed between First Party and Second Party as per milestone invoicing.',
+        ss['BodySmall']
+    ))
+    story.append(Spacer(1, 6*mm))
+
+    # Dual Signatures Block
+    _ann2_sign = _fetch_url_image(vendor.get('rep_signature_url', ''), width=40*mm, height=22*mm)
+    _ann2_stamp = _fetch_url_image(vendor.get('stamp_image_url', ''), width=30*mm, height=30*mm)
+
+    first_party_block = [
+        Paragraph('<b>First Party (Consumer)</b>', ss['BodySmallBold']),
+        Spacer(1, 1*mm),
+        Paragraph(f'<b>Name:</b> {cust_name}', ss['BodySmall']),
+        Paragraph(f'<b>Address:</b> {cust_addr}', ss['BodySmall']),
+        Spacer(1, 1*mm),
+        Paragraph('<b>Sign:</b> ___________________________', ss['BodySmall']),
+        Spacer(1, 1*mm),
+        Paragraph(f'<b>Date:</b> {_exec_date.strftime("%d-%m-%Y")}', ss['BodySmall']),
+    ]
+
+    second_party_stamp_cell = [Paragraph('<b>Stamp</b>', ss['BodySmallRightBold'])]
+    if _ann2_stamp:
+        second_party_stamp_cell += [Spacer(1, 0.8*mm), _ann2_stamp]
+    else:
+        second_party_stamp_cell.append(Spacer(1, 14*mm))
+
+    second_party_block = [
+        Paragraph('<b>Second Party (Vendor)</b>', ss['BodySmallBold']),
+        Spacer(1, 1*mm),
+        Paragraph(f'<b>Name:</b> {vendor_name}', ss['BodySmall']),
+        Paragraph(f'<b>Address:</b> {v_addr}', ss['BodySmall']),
+        Spacer(1, 1*mm),
+        Paragraph('<b>Sign:</b>', ss['BodySmall']),
+        _ann2_sign if _ann2_sign else Spacer(40*mm, 15*mm),
+        Spacer(1, 1*mm),
+        Paragraph(f'<b>Date:</b> {_exec_date.strftime("%d-%m-%Y")}', ss['BodySmall']),
+    ]
+
+    sig_table = Table([
+        [first_party_block, second_party_block]
+    ], colWidths=[88*mm, 87*mm])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LINEABOVE', (0, 0), (-1, 0), 0.5, GREY_BORDER),
+        ('PADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(sig_table)
+    story.append(Spacer(1, 4*mm))
+
+    # Disclaimer
+    story.append(Paragraph(
+        '<i>Disclaimer: This agreement is between vendor and consumer and any dispute related to the same shall not involve any third party including MNRE and Distribution Utilities.</i>',
+        ss['BodySmall']
+    ))
+    story.append(Spacer(1, 3*mm))
+
+    # Footer (suppressed for SaaS tenants)
+    story.append(_partner_logos_footer(vendor=vendor, lead=lead))
 
     doc.build(story)
     return buf.getvalue()
@@ -2000,6 +2228,7 @@ DOC_GENERATORS = {
     'synchronisation_certificate': generate_synchronisation_certificate,
     'annexure_iv': generate_annexure_iv,
     'bank_submission_letter': generate_bank_submission_letter,
+    'vendor_customer_agreement_annexure_2': generate_annexure_2_agreement,
 }
 
 # Required fields per doc type — used by endpoint to return missing-field list

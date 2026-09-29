@@ -435,7 +435,7 @@ async def get_current_user(
     except Exception as db_err:
         from sqlalchemy.exc import SQLAlchemyError
         if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
-            logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user: {db_err}")
+            _sec_logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user: {db_err}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Authentication database service temporarily unavailable. Please try again."

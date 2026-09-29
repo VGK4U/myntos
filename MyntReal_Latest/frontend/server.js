@@ -20007,7 +20007,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       '/staff/real-dreams-leads': 'real-dreams', '/staff/insurance-leads': 'insurance'
     };
     const _segKey = Object.keys(_segTabMap).find(k => url.startsWith(k));
-    res.writeHead(302, { 'Location': '/staff/mnr-leads-master?tab=' + (_segTabMap[_segKey] || 'solar') });
+    res.writeHead(302, { 'Location': '/staff/mnr-leads-master?tab=' + (_segTabMap[_segKey] || 'solar') + '&status=won_plus' });
     res.end();
     return;
 
