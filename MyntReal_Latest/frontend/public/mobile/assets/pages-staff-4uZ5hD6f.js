@@ -17699,35 +17699,35 @@ ${r}`,He=N?W&&!N.toLowerCase().includes("regards,")?`${N}${Ne}`:N:"";await g.pos
           <span style="font-weight: 700; color: #cbd5e1; font-size: 14px;">No field appointments found</span>
           <span style="font-size: 11.5px; color: #64748b;">Try switching period or status filters</span>
         </div>
-      `;return}e.innerHTML=t.map(a=>this.renderAppointmentCard(a)).join(""),this.bindCardActions()}renderAppointmentCard(e){let t="",a="",s="",i="";e.visit_type==="visit_bank"?(t='<span class="fa-type-badge bank">🏦 Option 1: Bank</span>',a=e.bank_name||"Bank Visit",s=[e.bank_branch,e.bank_address,e.bank_contact_person?`Contact: ${e.bank_contact_person}`:""].filter(Boolean).join(" • "),i=e.bank_google_maps_url||""):e.visit_type==="visit_customer"?(t='<span class="fa-type-badge customer">👤 Option 2: Customer</span>',a=e.customer_address||"Customer Location",s=[e.customer_area,e.customer_city,e.customer_pincode].filter(Boolean).join(", "),i=e.customer_google_maps_url||""):(t='<span class="fa-type-badge other">🏢 Option 3: Other</span>',a=e.other_location_title||"Other Official Visit",s=[e.other_location_address,e.other_contact_person?`Contact: ${e.other_contact_person}`:""].filter(Boolean).join(" • "),i=e.other_google_maps_url||"");const o={assigned:{label:"Assigned",cls:"assigned"},accepted:{label:"Accepted",cls:"accepted"},in_progress:{label:"In Progress",cls:"in_progress"},reached:{label:"Reached Location",cls:"reached"},completed:{label:"Completed",cls:"completed"},rescheduled:{label:"Rescheduled",cls:"rescheduled"},unable_to_visit:{label:"Unable to Visit",cls:"unable_to_visit"},cancelled:{label:"Cancelled",cls:"cancelled"}}[e.status]||{label:e.status,cls:"cancelled"},l=e.lead?.name||`Lead #${e.lead_id}`,r=e.lead?.phone||"",d=r.replace(/\D/g,"").slice(-10),p=e.appointment_date,c=e.preferred_time||"Anytime";let m="";if(e.status==="completed"){const v=e.is_gps_verified?'<span class="fa-proof-tag ok">📡 GPS OK</span>':'<span class="fa-proof-tag muted">No GPS</span>',y=e.visited_on_time===!0?'<span class="fa-proof-tag ok">⏱️ On-Time</span>':'<span class="fa-proof-tag warn">⏱️ Delayed</span>';m=`<div class="fa-proof-row">${v} ${y}</div>`}let u="";e.reached_at&&(u=`<div style="font-size: 11.5px; color: #d8b4fe; font-weight: 600;">📍 Reached at ${new Date(e.reached_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})} (GPS recorded)</div>`);let b="";e.status==="assigned"?b=`
+      `;return}e.innerHTML=t.map(a=>this.renderAppointmentCard(a)).join(""),this.bindCardActions()}formatGoogleMapsUrl(e,t,a){if(e&&typeof e=="string"){const i=e.trim();if(i.startsWith("http://")||i.startsWith("https://")||i.startsWith("geo:")||i.startsWith("maps:"))return i;if(i.length>0&&i!=="—")return`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(i)}`}const s=[a,t].filter(i=>i&&String(i).trim()&&String(i).trim()!=="—").map(i=>String(i).trim());return s.length>0?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.join(", "))}`:""}renderAppointmentCard(e){let t="",a="",s="",i=e.resolved_maps_url||"";e.visit_type==="visit_bank"?(t='<span class="fa-type-badge bank">🏦 Option 1: Bank</span>',a=e.bank_name||"Bank Visit",s=[e.bank_branch,e.bank_address,e.bank_contact_person?`Contact: ${e.bank_contact_person}`:""].filter(Boolean).join(" • "),i||(i=e.bank_google_maps_url||"")):e.visit_type==="visit_customer"?(t='<span class="fa-type-badge customer">👤 Option 2: Customer</span>',a=e.customer_address||"Customer Location",s=[e.customer_area,e.customer_city,e.customer_pincode].filter(Boolean).join(", "),i||(i=e.customer_google_maps_url||"")):(t='<span class="fa-type-badge other">🏢 Option 3: Other</span>',a=e.other_location_title||"Other Official Visit",s=[e.other_location_address,e.other_contact_person?`Contact: ${e.other_contact_person}`:""].filter(Boolean).join(" • "),i||(i=e.other_google_maps_url||""));const n=this.formatGoogleMapsUrl(i,s,a),l={assigned:{label:"Assigned",cls:"assigned"},accepted:{label:"Accepted",cls:"accepted"},in_progress:{label:"In Progress",cls:"in_progress"},reached:{label:"Reached Location",cls:"reached"},completed:{label:"Completed",cls:"completed"},rescheduled:{label:"Rescheduled",cls:"rescheduled"},unable_to_visit:{label:"Unable to Visit",cls:"unable_to_visit"},cancelled:{label:"Cancelled",cls:"cancelled"}}[e.status]||{label:e.status,cls:"cancelled"},r=e.lead?.name||`Lead #${e.lead_id}`,d=e.lead?.phone||"",p=d.replace(/\D/g,"").slice(-10),c=e.appointment_date,m=e.preferred_time||"Anytime";let u="";if(e.status==="completed"){const y=e.is_gps_verified?'<span class="fa-proof-tag ok">📡 GPS OK</span>':'<span class="fa-proof-tag muted">No GPS</span>',x=e.visited_on_time===!0?'<span class="fa-proof-tag ok">⏱️ On-Time</span>':'<span class="fa-proof-tag warn">⏱️ Delayed</span>';u=`<div class="fa-proof-row">${y} ${x}</div>`}let b="";e.reached_at&&(b=`<div style="font-size: 11.5px; color: #d8b4fe; font-weight: 600;">📍 Reached at ${new Date(e.reached_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})} (GPS recorded)</div>`);let h="";e.status==="assigned"?h=`
         <button class="fa-wf-btn accept btn-accept" data-id="${e.id}">
           ✓ Accept Appointment
         </button>
-      `:e.status==="accepted"?b=`
+      `:e.status==="accepted"?h=`
         <button class="fa-wf-btn start btn-start" data-id="${e.id}">
           🚀 Start Visit
         </button>
-      `:e.status==="in_progress"?b=`
+      `:e.status==="in_progress"?h=`
         <button class="fa-wf-btn reached btn-reached" data-id="${e.id}">
           📍 Mark Reached (GPS)
         </button>
         <button class="fa-wf-btn complete btn-complete" data-id="${e.id}">
           📸 Complete Visit
         </button>
-      `:e.status==="reached"&&(b=`
+      `:e.status==="reached"&&(h=`
         <button class="fa-wf-btn complete btn-complete" style="width: 100%;" data-id="${e.id}">
           📸 Upload Photo &amp; Complete Visit
         </button>
-      `);let h="";const f=e.photo_url||e.photo_path;return f&&e.status==="completed"&&(h=`
+      `);let f="";const v=e.photo_url||e.photo_path;return v&&e.status==="completed"&&(f=`
         <div class="fa-photo-preview-strip">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="${f}" class="fa-photo-thumb btn-view-photo" data-url="${f}" alt="Proof">
+            <img src="${v}" class="fa-photo-thumb btn-view-photo" data-url="${v}" alt="Proof">
             <div style="font-size: 11px; color: #94a3b8;">
               <div style="font-weight: 700; color: #f1f5f9;">Visit Proof Captured</div>
               <div>${e.outcome_status?e.outcome_status.toUpperCase():"Completed"}</div>
             </div>
           </div>
-          <button style="background: none; border: none; font-size: 12px; color: #34d399; font-weight: 700; cursor: pointer;" class="btn-view-photo" data-url="${f}">View ↗</button>
+          <button style="background: none; border: none; font-size: 12px; color: #34d399; font-weight: 700; cursor: pointer;" class="btn-view-photo" data-url="${v}">View ↗</button>
         </div>
       `),`
       <div class="fa-card">
@@ -17737,26 +17737,26 @@ ${r}`,He=N?W&&!N.toLowerCase().includes("regards,")?`${N}${Ne}`:N:"";await g.pos
             ${t}
             <span class="fa-code">${e.appointment_code}</span>
           </div>
-          <span class="fa-status-pill ${o.cls}">${o.label}</span>
+          <span class="fa-status-pill ${l.cls}">${l.label}</span>
         </div>
 
         <!-- Lead & Contact -->
         <div class="fa-card-lead">
           <div>
-            <div class="fa-lead-name">${l}</div>
-            <div class="fa-lead-phone">${r?"📞 "+r:"No phone"}</div>
+            <div class="fa-lead-name">${r}</div>
+            <div class="fa-lead-phone">${d?"📞 "+d:"No phone"}</div>
           </div>
           <div class="fa-lead-actions">
-            ${d?`
-              <a href="tel:${d}" class="fa-action-btn-circle call" title="Call">
+            ${p?`
+              <a href="tel:${p}" class="fa-action-btn-circle call" title="Call">
                 📞
               </a>
-              <button class="fa-action-btn-circle wa btn-wa" data-phone="${d}" data-name="${l.replace(/"/g,"&quot;")}" data-id="${e.lead_id}" title="WhatsApp">
+              <button class="fa-action-btn-circle wa btn-wa" data-phone="${p}" data-name="${r.replace(/"/g,"&quot;")}" data-id="${e.lead_id}" title="WhatsApp">
                 💬
               </button>
             `:""}
-            ${i?`
-              <a href="${i}" target="_system" class="fa-action-btn-circle maps" title="Google Maps">
+            ${n?`
+              <a href="${n}" target="_system" class="fa-action-btn-circle maps" title="Google Maps">
                 🗺️
               </a>
             `:""}
@@ -17773,16 +17773,16 @@ ${r}`,He=N?W&&!N.toLowerCase().includes("regards,")?`${N}${Ne}`:N:"";await g.pos
 
         <!-- Schedule & Assignee -->
         <div class="fa-meta-row">
-          <div>📅 <b>${p}</b> (${c})</div>
+          <div>📅 <b>${c}</b> (${m})</div>
           <div>👤 ${e.assigned_to?e.assigned_to.full_name:"Staff #"+e.assigned_to_id}</div>
         </div>
 
+        ${b}
         ${u}
-        ${m}
-        ${h}
+        ${f}
 
         <!-- Action Buttons -->
-        ${b?`<div class="fa-workflow-actions">${b}</div>`:""}
+        ${h?`<div class="fa-workflow-actions">${h}</div>`:""}
       </div>
     `}bindCardActions(){const e=this.container.querySelector("#appointments-feed");e&&(e.querySelectorAll(".btn-accept").forEach(t=>{t.addEventListener("click",async a=>{const s=parseInt(a.currentTarget.getAttribute("data-id")||"0");await this.handleStatusUpdate(s,"accept",t)})}),e.querySelectorAll(".btn-start").forEach(t=>{t.addEventListener("click",async a=>{const s=parseInt(a.currentTarget.getAttribute("data-id")||"0");await this.handleStatusUpdate(s,"start_visit",t)})}),e.querySelectorAll(".btn-reached").forEach(t=>{t.addEventListener("click",async a=>{const s=parseInt(a.currentTarget.getAttribute("data-id")||"0");await this.handleMarkReached(s,t)})}),e.querySelectorAll(".btn-complete").forEach(t=>{t.addEventListener("click",a=>{const s=parseInt(a.currentTarget.getAttribute("data-id")||"0"),i=this.appointments.find(n=>n.id===s);i&&this.openCompletionModal(i)})}),e.querySelectorAll(".btn-wa").forEach(t=>{t.addEventListener("click",a=>{const s=a.currentTarget,i=s.getAttribute("data-phone")||"",n=s.getAttribute("data-name")||"",o=parseInt(s.getAttribute("data-id")||"0");ge.open({leadId:o,name:n,phone:i})})}),e.querySelectorAll(".btn-view-photo").forEach(t=>{t.addEventListener("click",a=>{const s=a.currentTarget.getAttribute("data-url");s&&window.open(s,"_blank")})}))}async handleStatusUpdate(e,t,a){if(t==="start_visit"){const i=this.appointments.find(l=>l.id===e),n=i?.resolved_contact_name||i?.lead?.name||i?.bank_name||"Customer Visit",o=i?.resolved_address||i?.customer_address||i?.bank_address||"";window.dispatchEvent(new CustomEvent("mnr:navigate",{detail:{page:"journeys",prefill:{field_appointment_id:e,lead_id:i?.lead_id,client_name:n,client_address:o,purpose:"client_visit",notes:`Field Visit (${i?.appointment_code||""}): ${i?.visit_type?.replace("_"," ")||""}`}}}));return}const s=a.textContent||"";a.disabled=!0,a.textContent="Updating...";try{const i=await g.post(`/crm/field-appointments/${e}/status`,{action:t});i&&i.success?await this.fetchAppointments():alert(i?.error||i?.detail||i?.message||"Failed to update status")}catch(i){alert(i.message||"Network error")}finally{a.disabled=!1,a.textContent=s}}async handleMarkReached(e,t){t.disabled=!0,t.textContent="Acquiring GPS...";let a,s,i;try{const n=await Je.getCurrentPosition({enableHighAccuracy:!0,timeout:1e4});n&&n.coords&&(a=n.coords.latitude,s=n.coords.longitude,i=n.coords.accuracy)}catch(n){console.warn("[FieldAppointments] GPS fetch fallback:",n)}try{t.textContent="Saving...";const n=await g.post(`/crm/field-appointments/${e}/status`,{action:"reached",reached_latitude:a,reached_longitude:s,reached_accuracy_meters:i});n&&n.success?await this.fetchAppointments():alert(n?.error||n?.detail||n?.message||"Failed to record reached status")}catch(n){alert(n.message||"Error recording reached status")}finally{t.disabled=!1,t.textContent="📍 Mark Reached (GPS)"}}openCompletionModal(e){this.activeApptForCompletion=e,this.capturedPhotoBase64=null,this.capturedCoords=null;const t=this.container.querySelector("#completion-modal-mount");t&&(t.innerHTML=`
       <div class="fa-modal-overlay" id="_famCompModal">

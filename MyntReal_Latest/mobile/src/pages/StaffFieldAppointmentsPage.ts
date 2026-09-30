@@ -1031,29 +1031,48 @@ export class StaffFieldAppointmentsPage {
     this.bindCardActions();
   }
 
+  private formatGoogleMapsUrl(rawUrl?: string, address?: string, locationTitle?: string): string {
+    if (rawUrl && typeof rawUrl === 'string') {
+      const trimmed = rawUrl.trim();
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('geo:') || trimmed.startsWith('maps:')) {
+        return trimmed;
+      }
+      if (trimmed.length > 0 && trimmed !== '—') {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+      }
+    }
+    const queryParts = [locationTitle, address].filter(p => p && String(p).trim() && String(p).trim() !== '—').map(p => String(p).trim());
+    if (queryParts.length > 0) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(', '))}`;
+    }
+    return '';
+  }
+
   private renderAppointmentCard(apt: FieldAppointmentItem): string {
     // Visit type pill
     let typeBadge = '';
     let destTitle = '';
     let destSubtitle = '';
-    let mapsUrl = '';
+    let mapsUrl = (apt as any).resolved_maps_url || '';
 
     if (apt.visit_type === 'visit_bank') {
       typeBadge = '<span class="fa-type-badge bank">🏦 Option 1: Bank</span>';
       destTitle = apt.bank_name || 'Bank Visit';
       destSubtitle = [apt.bank_branch, apt.bank_address, apt.bank_contact_person ? `Contact: ${apt.bank_contact_person}` : ''].filter(Boolean).join(' • ');
-      mapsUrl = apt.bank_google_maps_url || '';
+      if (!mapsUrl) mapsUrl = apt.bank_google_maps_url || '';
     } else if (apt.visit_type === 'visit_customer') {
       typeBadge = '<span class="fa-type-badge customer">👤 Option 2: Customer</span>';
       destTitle = apt.customer_address || 'Customer Location';
       destSubtitle = [apt.customer_area, apt.customer_city, apt.customer_pincode].filter(Boolean).join(', ');
-      mapsUrl = apt.customer_google_maps_url || '';
+      if (!mapsUrl) mapsUrl = apt.customer_google_maps_url || '';
     } else {
       typeBadge = '<span class="fa-type-badge other">🏢 Option 3: Other</span>';
       destTitle = apt.other_location_title || 'Other Official Visit';
       destSubtitle = [apt.other_location_address, apt.other_contact_person ? `Contact: ${apt.other_contact_person}` : ''].filter(Boolean).join(' • ');
-      mapsUrl = apt.other_google_maps_url || '';
+      if (!mapsUrl) mapsUrl = apt.other_google_maps_url || '';
     }
+
+    const finalMapsUrl = this.formatGoogleMapsUrl(mapsUrl, destSubtitle, destTitle);
 
     // Status pill
     const statusMap: Record<string, { label: string; cls: string }> = {
@@ -1173,8 +1192,8 @@ export class StaffFieldAppointmentsPage {
                 💬
               </button>
             ` : ''}
-            ${mapsUrl ? `
-              <a href="${mapsUrl}" target="_system" class="fa-action-btn-circle maps" title="Google Maps">
+            ${finalMapsUrl ? `
+              <a href="${finalMapsUrl}" target="_system" class="fa-action-btn-circle maps" title="Google Maps">
                 🗺️
               </a>
             ` : ''}

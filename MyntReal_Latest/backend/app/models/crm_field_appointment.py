@@ -31,6 +31,21 @@ def _si(d):
         return None
 
 
+def format_google_maps_url(raw_url=None, address=None, location_title=None):
+    if raw_url and isinstance(raw_url, str):
+        trimmed = raw_url.strip()
+        if trimmed.startswith(('http://', 'https://', 'geo:', 'maps:')):
+            return trimmed
+        if len(trimmed) > 0 and trimmed != '—':
+            from urllib.parse import quote
+            return f"https://www.google.com/maps/search/?api=1&query={quote(trimmed)}"
+    query_parts = [p.strip() for p in [location_title, address] if p and str(p).strip() and str(p).strip() != '—']
+    if query_parts:
+        from urllib.parse import quote
+        return f"https://www.google.com/maps/search/?api=1&query={quote(', '.join(query_parts))}"
+    return ""
+
+
 class CRMFieldAppointment(BaseModel):
     """
     Dedicated field appointment model for physical visits and supporting staff workflow.
@@ -216,20 +231,20 @@ class CRMFieldAppointment(BaseModel):
         if self.visit_type == 'visit_bank':
             data['resolved_location_name'] = f"{self.bank_name or ''} {self.bank_branch or ''}".strip() or 'Bank Branch'
             data['resolved_address'] = self.bank_address or ''
-            data['resolved_maps_url'] = self.bank_google_maps_url or ''
+            data['resolved_maps_url'] = format_google_maps_url(self.bank_google_maps_url, data['resolved_address'], data['resolved_location_name'])
             data['resolved_contact_name'] = self.bank_contact_person or ''
             data['resolved_contact_phone'] = self.bank_contact_phone or ''
         elif self.visit_type == 'visit_customer':
             loc_parts = [self.customer_address, self.customer_area, self.customer_city, self.customer_pincode]
             data['resolved_location_name'] = 'Customer Location'
             data['resolved_address'] = ', '.join([p for p in loc_parts if p]) or ''
-            data['resolved_maps_url'] = self.customer_google_maps_url or ''
+            data['resolved_maps_url'] = format_google_maps_url(self.customer_google_maps_url, data['resolved_address'], data['resolved_location_name'])
             data['resolved_contact_name'] = self.lead.name if self.lead else ''
             data['resolved_contact_phone'] = self.lead.phone if self.lead else ''
         else:  # 'others'
             data['resolved_location_name'] = self.other_location_title or 'Field Location'
             data['resolved_address'] = self.other_location_address or ''
-            data['resolved_maps_url'] = self.other_google_maps_url or ''
+            data['resolved_maps_url'] = format_google_maps_url(self.other_google_maps_url, data['resolved_address'], data['resolved_location_name'])
             data['resolved_contact_name'] = self.other_contact_person or ''
             data['resolved_contact_phone'] = self.other_contact_phone or ''
 

@@ -553,6 +553,23 @@
             document.getElementById('metricPending').textContent = m.pending_count || 0;
         }
 
+        function formatGoogleMapsUrl(rawUrl, address, locationTitle) {
+            if (rawUrl && typeof rawUrl === 'string') {
+                const trimmed = rawUrl.trim();
+                if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('geo:') || trimmed.startsWith('maps:')) {
+                    return trimmed;
+                }
+                if (trimmed.length > 0 && trimmed !== '—') {
+                    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+                }
+            }
+            const queryParts = [locationTitle, address].filter(p => p && String(p).trim() && String(p).trim() !== '—').map(p => String(p).trim());
+            if (queryParts.length > 0) {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(', '))}`;
+            }
+            return '';
+        }
+
         function renderTable(items) {
             const tbody = document.getElementById('apptsTableBody');
             if (!items || items.length === 0) {
@@ -565,23 +582,23 @@
                 let typeBadge = '';
                 let destTitle = '';
                 let destSub = '';
-                let mapsUrl = '';
+                let mapsUrl = item.resolved_maps_url || '';
 
                 if (item.visit_type === 'visit_bank') {
                     typeBadge = '<span class="badge-bank"><i class="fas fa-university me-1"></i>Bank</span>';
                     destTitle = item.bank_name || 'Bank Visit';
                     destSub = item.bank_branch ? `${item.bank_branch}, ${item.bank_address || ''}` : (item.bank_address || '');
-                    mapsUrl = item.bank_google_maps_url;
+                    if (!mapsUrl) mapsUrl = item.bank_google_maps_url;
                 } else if (item.visit_type === 'visit_customer') {
                     typeBadge = '<span class="badge-cust"><i class="fas fa-home me-1"></i>Customer</span>';
                     destTitle = item.customer_address || 'Customer Location';
                     destSub = [item.customer_area, item.customer_city, item.customer_pincode].filter(Boolean).join(', ');
-                    mapsUrl = item.customer_google_maps_url;
+                    if (!mapsUrl) mapsUrl = item.customer_google_maps_url;
                 } else {
                     typeBadge = '<span class="badge-other"><i class="fas fa-map-marker-alt me-1"></i>Other</span>';
                     destTitle = item.other_location_title || 'Other Visit';
                     destSub = item.other_location_address || '';
-                    mapsUrl = item.other_google_maps_url;
+                    if (!mapsUrl) mapsUrl = item.other_google_maps_url;
                 }
 
                 // Lead info
@@ -619,8 +636,9 @@
                     evidenceHtml = `<div class="d-flex align-items-center gap-1">${imgThumb}<div>${gpsIcon}${onTimeBadge}</div></div>`;
                 }
 
-                const mapsBtn = mapsUrl 
-                    ? `<a href="${mapsUrl}" target="_blank" class="action-btn text-primary bg-light border" title="Open in Google Maps"><i class="fas fa-map-marked-alt"></i></a>` 
+                const finalMapsUrl = formatGoogleMapsUrl(mapsUrl, destSub, destTitle);
+                const mapsBtn = finalMapsUrl 
+                    ? `<a href="${finalMapsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn text-primary bg-light border" title="Open in Google Maps"><i class="fas fa-map-marked-alt"></i></a>` 
                     : '';
 
                 const callBtn = cleanPhone 
@@ -912,7 +930,13 @@
 
                 let mapsLink = '';
                 if (apt.visit_latitude && apt.visit_longitude) {
-                    mapsLink = `<a href="https://maps.google.com/?q=${apt.visit_latitude},${apt.visit_longitude}" target="_blank" class="btn btn-sm btn-outline-success"><i class="fas fa-external-link-alt me-1"></i>View Captured GPS on Google Maps</a>`;
+                    mapsLink = `<a href="https://maps.google.com/?q=${apt.visit_latitude},${apt.visit_longitude}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success"><i class="fas fa-external-link-alt me-1"></i>View Captured GPS on Google Maps</a>`;
+                } else {
+                    const rawM = apt.resolved_maps_url || apt.customer_google_maps_url || apt.bank_google_maps_url || apt.other_google_maps_url;
+                    const destUrl = formatGoogleMapsUrl(rawM, apt.resolved_address, apt.resolved_location_name);
+                    if (destUrl) {
+                        mapsLink = `<a href="${destUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-marked-alt me-1"></i>View Destination on Google Maps</a>`;
+                    }
                 }
 
                 body.innerHTML = `
