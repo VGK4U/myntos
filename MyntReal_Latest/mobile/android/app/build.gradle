@@ -34,6 +34,8 @@ android {
             def keystoreFile = System.getenv("CM_KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH") ?: project.findProperty("MYNTREAL_RELEASE_STORE_FILE")
             if (keystoreFile && file(keystoreFile).exists()) {
                 signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
             }
         }
     }

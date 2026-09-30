@@ -17390,7 +17390,11 @@ async def serve_mobile_apk():
             return FileResponse(
                 path=apk_file,
                 filename="MyntReal.apk",
-                media_type="application/vnd.android.package-archive"
+                media_type="application/vnd.android.package-archive",
+                headers={
+                    "Content-Disposition": 'attachment; filename="MyntReal.apk"',
+                    "Cache-Control": "no-cache, no-store, must-revalidate"
+                }
             )
     raise HTTPException(status_code=404, detail="APK file not found")
 

@@ -58,16 +58,19 @@ def create_zip():
             ]
             
             for file in files:
-                if file in exclude_files or file.endswith('.apk') or file == 'mnr-catalog.pdf':
+                if file in exclude_files or file == 'mnr-catalog.pdf':
+                    continue
+                
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, start=source_dir).replace(os.sep, '/')
+
+                if file.endswith('.apk') and arcname not in ['frontend/public/MyntReal.apk', 'frontend/public/mobile.apk']:
                     continue
                 if file.endswith('.zip') or file.endswith('.sqlite') or file.endswith('.db') or file.endswith('.dump') or (file.endswith('.sql') and 'backend/migrations' not in rel_root) or file.endswith('.log') or file.endswith('.pyc'):
                     continue
                 if file.startswith('.') and file not in ['.dockerignore', '.ebextensions', '.platform']:
                     continue
                     
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, start=source_dir).replace(os.sep, '/')
-                
                 # Exclude environment secrets and heavy storage
                 if arcname in ['.env', 'backend/.env', 'frontend/.env']:
                     continue
