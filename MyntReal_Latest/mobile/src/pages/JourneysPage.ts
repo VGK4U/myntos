@@ -565,7 +565,13 @@ export class JourneysPage {
     document.getElementById('cancelEndBtn')?.addEventListener('click', () => this.hideEndModal());
     document.getElementById('confirmEndBtn')?.addEventListener('click', () => this.endJourney());
 
-    // Photo upload
+    // Start journey photo upload
+    const startPhotoUploadArea = document.getElementById('startPhotoUploadArea');
+    const startPhotoInput = document.getElementById('startJourneyPhoto') as HTMLInputElement;
+    startPhotoUploadArea?.addEventListener('click', () => startPhotoInput?.click());
+    startPhotoInput?.addEventListener('change', (e) => this.handleStartPhotoSelect(e));
+
+    // End journey photo upload
     const photoUploadArea = document.getElementById('photoUploadArea');
     const photoInput = document.getElementById('journeyPhoto') as HTMLInputElement;
     photoUploadArea?.addEventListener('click', () => photoInput?.click());
@@ -887,6 +893,24 @@ export class JourneysPage {
   private hideEndModal(): void {
     const modal = document.getElementById('endJourneyModal');
     if (modal) modal.style.display = 'none';
+  }
+
+  private handleStartPhotoSelect(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const preview = document.getElementById('startPhotoPreview') as HTMLImageElement;
+      const placeholder = document.getElementById('startUploadPlaceholder');
+      if (preview && event.target?.result) {
+        preview.src = event.target.result as string;
+        preview.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   private handlePhotoSelect(e: Event): void {
