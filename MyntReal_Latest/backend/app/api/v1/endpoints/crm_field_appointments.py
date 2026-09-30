@@ -41,6 +41,26 @@ def generate_appointment_code() -> str:
     return f"APT-{d_str}-{suffix}"
 
 
+def is_authorized_manager_or_assignee(appointment: CRMFieldAppointment, current_user: StaffEmployee) -> bool:
+    """
+    Unified authorization check across field appointment operations.
+    Allows access if:
+    1. Assigned to current user
+    2. Created by current user
+    3. User is Sales Leadership / Manager (hierarchy_level >= 50, super_admin, or leadership roles)
+    """
+    if appointment.assigned_to_id == current_user.id or appointment.created_by_id == current_user.id:
+        return True
+
+    is_leadership = (
+        getattr(current_user, 'is_super_admin', False) or
+        getattr(current_user.role, 'hierarchy_level', 0) >= 50 or
+        (current_user.staff_type or '').upper() in ('VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'SALES_INCHARGE') or
+        (current_user.role and current_user.role.role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin'))
+    )
+    return is_leadership
+
+
 # ===================== REQUEST SCHEMAS =====================
 
 class CreateAppointmentRequest(BaseModel):
@@ -284,7 +304,7 @@ def get_supporting_staff_list(
     }
 
 
-@router.get("/my-assigned", summary="List field appointments assigned to current employee with metric rollups")
+@router.get("/my-assigned", summary="List field appointments with metric rollups & assignment tabs")
 def get_my_assigned_appointments(
     status: Optional[str] = Query(None, description="Filter by status: assigned, accepted, in_progress, reached, completed, all"),
     visit_type: Optional[str] = Query(None, description="visit_bank, visit_customer, others, all"),
@@ -292,6 +312,7 @@ def get_my_assigned_appointments(
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
     search: Optional[str] = Query(None),
+    assignment_tab: Optional[str] = Query('assigned_to_me', description="'assigned_to_me' | 'assigned_by_me' | 'all'"),
     view_all: Optional[bool] = Query(False, description="For sales leadership/admins to view all active appointments"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
@@ -304,7 +325,7 @@ def get_my_assigned_appointments(
     """
     query = db.query(CRMFieldAppointment)
 
-    # Permission check for view_all
+    # Permission check for view_all / leadership
     is_leadership = (
         getattr(current_user, 'is_super_admin', False) or
         getattr(current_user.role, 'hierarchy_level', 0) >= 50 or
@@ -312,7 +333,12 @@ def get_my_assigned_appointments(
         (current_user.role and current_user.role.role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin'))
     )
 
-    if not (view_all and is_leadership):
+    tab = (assignment_tab or 'assigned_to_me').lower().strip()
+    if tab == 'assigned_by_me':
+        query = query.filter(CRMFieldAppointment.created_by_id == current_user.id)
+    elif tab == 'all' and (view_all or is_leadership):
+        pass  # All team appointments for leadership
+    else:  # Default: 'assigned_to_me'
         query = query.filter(CRMFieldAppointment.assigned_to_id == current_user.id)
 
     # Status filter
@@ -692,9 +718,8 @@ async def complete_field_appointment(
     if not appointment:
         raise HTTPException(status_code=404, detail="Field appointment not found")
 
-    # Authorize: Assigned employee or leadership
-    is_admin = getattr(current_user, 'is_super_admin', False) or getattr(current_user.role, 'hierarchy_level', 0) >= 75
-    if appointment.assigned_to_id != current_user.id and not is_admin:
+    # Authorize: Assigned employee, creator, or sales leadership/manager
+    if not is_authorized_manager_or_assignee(appointment, current_user):
         raise HTTPException(status_code=403, detail="Only the assigned supporting staff member or authorized manager can complete this visit")
 
     now = get_indian_time()

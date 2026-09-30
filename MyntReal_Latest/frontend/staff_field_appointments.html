@@ -201,6 +201,19 @@
                 </div>
             </div>
 
+            <!-- Assignment Tabs: Assigned to Me | Assigned by Me | All Team -->
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-primary btn-assign-tab active" data-tab="assigned_to_me" onclick="setAssignmentTab('assigned_to_me')">
+                    <i class="fas fa-user-check me-1"></i>Assigned to Me
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-assign-tab" data-tab="assigned_by_me" onclick="setAssignmentTab('assigned_by_me')">
+                    <i class="fas fa-paper-plane me-1"></i>Assigned by Me
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-assign-tab" id="allTeamTabBtn" data-tab="all" onclick="setAssignmentTab('all')">
+                    <i class="fas fa-users me-1"></i>All Team Visits
+                </button>
+            </div>
+
             <div class="row g-2 align-items-center">
                 <div class="col-md-3">
                     <div class="input-group input-group-sm">
@@ -479,12 +492,26 @@
             }
         }
 
+        let currentAssignmentTab = 'assigned_to_me';
+
+        function setAssignmentTab(tab) {
+            currentAssignmentTab = tab;
+            document.querySelectorAll('.btn-assign-tab').forEach(b => {
+                const isActive = b.getAttribute('data-tab') === tab;
+                b.classList.toggle('active', isActive);
+                b.classList.toggle('btn-primary', isActive);
+                b.classList.toggle('btn-outline-secondary', !isActive);
+            });
+            loadAppointments();
+        }
+
         async function loadAppointments() {
             const tbody = document.getElementById('apptsTableBody');
             tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading appointments...</td></tr>';
 
             const params = new URLSearchParams();
             params.set('filter_period', currentFilterPeriod);
+            params.set('assignment_tab', currentAssignmentTab);
             
             const vType = document.getElementById('visitTypeSelect').value;
             if (vType !== 'all') params.set('visit_type', vType);
@@ -736,6 +763,20 @@
         async function submitStatusUpdate() {
             const aptId = document.getElementById('statusApptId').value;
             const action = document.getElementById('statusActionSelect').value;
+
+            if (action === 'start_visit') {
+                const item = (window._loadedAppts || []).find(a => a.id == aptId);
+                const destName = item ? (item.lead ? item.lead.name : (item.bank_name || 'Customer Visit')) : 'Customer Visit';
+                const destAddr = item ? (item.customer_address || item.bank_address || '') : '';
+                const code = item ? item.appointment_code : '';
+                const modalEl = document.getElementById('statusUpdateModal');
+                if (modalEl && bootstrap.Modal.getInstance(modalEl)) {
+                    bootstrap.Modal.getInstance(modalEl).hide();
+                }
+                window.location.href = `/staff/journeys?field_appointment_id=${aptId}&lead_id=${item ? item.lead_id : ''}&client_name=${encodeURIComponent(destName)}&client_address=${encodeURIComponent(destAddr)}&notes=${encodeURIComponent('Field Visit: ' + code)}`;
+                return;
+            }
+
             const btn = document.getElementById('btnSubmitStatus');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';

@@ -76,6 +76,8 @@ export interface FieldAppointmentItem {
   photo_url?: string;
   is_gps_verified?: boolean;
   visited_on_time?: boolean;
+  resolved_contact_name?: string;
+  resolved_address?: string;
 }
 
 const FA_STYLES = `
@@ -728,6 +730,7 @@ export class StaffFieldAppointmentsPage {
   private isLoading: boolean = false;
   private currentPeriod: string = 'all'; // 'all', 'today', 'yesterday', 'this_week', 'last_week', 'this_month'
   private currentStatusTab: string = 'all'; // 'all', 'pending', 'reached', 'completed'
+  private currentAssignmentTab: string = 'assigned_to_me'; // 'assigned_to_me' | 'assigned_by_me' | 'all'
   private searchQuery: string = '';
   private viewAllTeam: boolean = false;
   private isManagerOrLead: boolean = false;
@@ -759,6 +762,21 @@ export class StaffFieldAppointmentsPage {
           subtitle: 'Supporting Staff Visits',
           showBack: true
         })}
+
+        <!-- Assignment Tabs: Assigned to Me | Assigned by Me | All Team -->
+        <div class="fa-assignment-bar" style="display: flex; background: #0f172a; border-bottom: 1px solid #334155; padding: 6px 12px; gap: 6px; overflow-x: auto;">
+          <button class="fa-assign-tab ${this.currentAssignmentTab === 'assigned_to_me' ? 'active' : ''}" data-assign-tab="assigned_to_me" style="padding: 6px 12px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: 1px solid #334155; background: ${this.currentAssignmentTab === 'assigned_to_me' ? '#1e293b' : 'transparent'}; color: ${this.currentAssignmentTab === 'assigned_to_me' ? '#10b981' : '#94a3b8'}; cursor: pointer; white-space: nowrap;">
+            📌 Assigned to Me
+          </button>
+          <button class="fa-assign-tab ${this.currentAssignmentTab === 'assigned_by_me' ? 'active' : ''}" data-assign-tab="assigned_by_me" style="padding: 6px 12px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: 1px solid #334155; background: ${this.currentAssignmentTab === 'assigned_by_me' ? '#1e293b' : 'transparent'}; color: ${this.currentAssignmentTab === 'assigned_by_me' ? '#10b981' : '#94a3b8'}; cursor: pointer; white-space: nowrap;">
+            📤 Assigned by Me
+          </button>
+          ${this.isManagerOrLead ? `
+            <button class="fa-assign-tab ${this.currentAssignmentTab === 'all' ? 'active' : ''}" data-assign-tab="all" style="padding: 6px 12px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: 1px solid #334155; background: ${this.currentAssignmentTab === 'all' ? '#1e293b' : 'transparent'}; color: ${this.currentAssignmentTab === 'all' ? '#10b981' : '#94a3b8'}; cursor: pointer; white-space: nowrap;">
+              👥 All Team Visits
+            </button>
+          ` : ''}
+        </div>
 
         <!-- Metric Badges Strip -->
         <div class="fa-metrics-strip">
@@ -856,6 +874,20 @@ export class StaffFieldAppointmentsPage {
       });
     });
 
+    // Assignment Tabs
+    this.container.querySelectorAll('.fa-assign-tab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tab = (e.currentTarget as HTMLElement).getAttribute('data-assign-tab') || 'assigned_to_me';
+        this.currentAssignmentTab = tab;
+        this.container.querySelectorAll('.fa-assign-tab').forEach(b => {
+          const isActive = b.getAttribute('data-assign-tab') === tab;
+          (b as HTMLElement).style.background = isActive ? '#1e293b' : 'transparent';
+          (b as HTMLElement).style.color = isActive ? '#10b981' : '#94a3b8';
+        });
+        this.fetchAppointments();
+      });
+    });
+
     // Search input
     const searchInput = this.container.querySelector('#fa-search-input') as HTMLInputElement;
     if (searchInput) {
@@ -894,7 +926,8 @@ export class StaffFieldAppointmentsPage {
     try {
       const params = new URLSearchParams();
       params.set('filter_period', this.currentPeriod);
-      if (this.viewAllTeam) params.set('view_all', 'true');
+      params.set('assignment_tab', this.currentAssignmentTab);
+      if (this.viewAllTeam || this.currentAssignmentTab === 'all') params.set('view_all', 'true');
 
       const res = await apiService.get<any>(`/crm/field-appointments/my-assigned?${params.toString()}`);
       if (res && res.success !== false) {
@@ -1236,6 +1269,26 @@ export class StaffFieldAppointmentsPage {
   }
 
   private async handleStatusUpdate(aptId: number, action: string, btn: HTMLButtonElement): Promise<void> {
+    if (action === 'start_visit') {
+      const apt = this.appointments.find(a => a.id === aptId);
+      const destName = apt?.resolved_contact_name || apt?.lead?.name || apt?.bank_name || 'Customer Visit';
+      const destAddr = apt?.resolved_address || apt?.customer_address || apt?.bank_address || '';
+      window.dispatchEvent(new CustomEvent('mnr:navigate', {
+        detail: {
+          page: 'journeys',
+          prefill: {
+            field_appointment_id: aptId,
+            lead_id: apt?.lead_id,
+            client_name: destName,
+            client_address: destAddr,
+            purpose: 'client_visit',
+            notes: `Field Visit (${apt?.appointment_code || ''}): ${apt?.visit_type?.replace('_', ' ') || ''}`
+          }
+        }
+      }));
+      return;
+    }
+
     const origText = btn.textContent || '';
     btn.disabled = true;
     btn.textContent = 'Updating...';
@@ -1245,7 +1298,7 @@ export class StaffFieldAppointmentsPage {
       if (res && res.success) {
         await this.fetchAppointments();
       } else {
-        alert(res?.detail || 'Failed to update status');
+        alert(res?.error || res?.detail || res?.message || 'Failed to update status');
       }
     } catch (e: any) {
       alert(e.message || 'Network error');
@@ -1289,7 +1342,7 @@ export class StaffFieldAppointmentsPage {
       if (res && res.success) {
         await this.fetchAppointments();
       } else {
-        alert(res?.detail || 'Failed to record reached status');
+        alert(res?.error || res?.detail || res?.message || 'Failed to record reached status');
       }
     } catch (err: any) {
       alert(err.message || 'Error recording reached status');
@@ -1540,7 +1593,7 @@ export class StaffFieldAppointmentsPage {
         alert(`Appointment ${this.activeApptForCompletion.appointment_code} completed successfully!`);
         await this.fetchAppointments();
       } else {
-        alert(res?.detail || 'Failed to complete appointment');
+        alert(res?.error || res?.detail || res?.message || 'Failed to complete appointment');
       }
     } catch (err: any) {
       alert(err.message || 'Network error submitting completion');

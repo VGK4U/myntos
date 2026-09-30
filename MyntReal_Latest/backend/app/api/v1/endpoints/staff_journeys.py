@@ -145,6 +145,7 @@ class StartJourneyRequest(BaseModel):
     client_name: Optional[str] = None
     client_address: Optional[str] = None
     lead_id: Optional[int] = None
+    field_appointment_id: Optional[int] = None
     transport_mode: str = "bike"
     company_id: Optional[int] = None
     kra_instance_id: Optional[int] = None
@@ -440,6 +441,22 @@ async def start_journey(
     db.add(journey)
     db.commit()
     db.refresh(journey)
+
+    if request_data.field_appointment_id:
+        try:
+            from app.models.crm_field_appointment import CRMFieldAppointment
+            appt = db.query(CRMFieldAppointment).filter(CRMFieldAppointment.id == request_data.field_appointment_id).first()
+            if appt:
+                appt.journey_id = journey.id
+                appt.status = 'in_progress'
+                if not appt.started_at:
+                    appt.started_at = now
+                if appt.lead:
+                    appt.lead.recent_comments = f"[{now.strftime('%d-%b %I:%M%p')}] Started Journey ({journey.id}) for Field Appointment {appt.appointment_code}.\n{appt.lead.recent_comments or ''}"[:2000]
+                    appt.lead.updated_at = now
+                db.commit()
+        except Exception as appt_err:
+            print(f"[FieldAppointment] Non-fatal error linking journey to appointment: {appt_err}")
 
     message = "Journey started"
     if not is_reimbursable:

@@ -861,6 +861,37 @@
                     startJourneyTrigger.focus();
                 }
             });
+
+            // Parse URL parameters for prefilled details from Field Appointments
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const fieldApptId = urlParams.get('field_appointment_id');
+                const leadId = urlParams.get('lead_id');
+                const clientName = urlParams.get('client_name');
+                const clientAddr = urlParams.get('client_address');
+                const notes = urlParams.get('notes');
+
+                if (clientName) {
+                    const clientInput = document.getElementById('clientName');
+                    if (clientInput) clientInput.value = clientName;
+                }
+                if (clientAddr) {
+                    const clientAddrInput = document.getElementById('clientAddress');
+                    if (clientAddrInput) clientAddrInput.value = clientAddr;
+                }
+                if (notes) {
+                    const notesInput = document.getElementById('journeyNotes');
+                    if (notesInput) notesInput.value = notes;
+                }
+                if (fieldApptId) {
+                    window._prefilledFieldApptId = parseInt(fieldApptId);
+                }
+                if (leadId) {
+                    window._prefilledLeadId = parseInt(leadId);
+                }
+            } catch (pErr) {
+                console.warn('[MyJourneys] URL prefill parse error:', pErr);
+            }
         });
         
         function checkGpsPermission() {

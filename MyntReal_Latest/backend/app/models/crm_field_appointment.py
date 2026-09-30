@@ -128,6 +128,7 @@ class CRMFieldAppointment(BaseModel):
 
     # Performance / Timesheet Integration Link
     timesheet_entry_id = Column(Integer, nullable=True)
+    journey_id = Column(Integer, ForeignKey('staff_journeys.id', ondelete='SET NULL'), nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
@@ -137,6 +138,7 @@ class CRMFieldAppointment(BaseModel):
     lead = relationship("CRMLead", foreign_keys=[lead_id], backref="field_appointments")
     assigned_to = relationship("StaffEmployee", foreign_keys=[assigned_to_id])
     creator = relationship("StaffEmployee", foreign_keys=[created_by_id])
+    journey = relationship("StaffJourney", foreign_keys=[journey_id])
 
     def to_dict(self, include_lead_summary=True):
         data = {
@@ -145,6 +147,7 @@ class CRMFieldAppointment(BaseModel):
             'company_id': self.company_id,
             'appointment_code': self.appointment_code,
             'lead_id': self.lead_id,
+            'journey_id': self.journey_id,
             'visit_type': self.visit_type,
             'purpose': self.purpose or '',
             'status': self.status,

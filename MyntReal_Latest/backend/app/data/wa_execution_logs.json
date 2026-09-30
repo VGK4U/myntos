@@ -1,5 +1,120 @@
 [
   {
+    "id": "log_635635d8",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "30 Sep 2026, 06:30:01 PM IST",
+    "iso_timestamp": "2026-09-30T18:30:01.821688",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_df69aec8",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "30 Sep 2026, 06:00:01 PM IST",
+    "iso_timestamp": "2026-09-30T18:00:01.476884",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_97a9b951",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "30 Sep 2026, 05:30:06 PM IST",
+    "iso_timestamp": "2026-09-30T17:30:06.010392",
+    "target_summary": "Mynt Sales New",
+    "targets": [
+      {
+        "id": 0,
+        "target_type": "group",
+        "name": "Mynt Sales New",
+        "identifier": "120363410784518818@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "UNCERTAIN",
+    "error_message": "1 dispatches uncertain",
+    "detail": {
+      "success": true,
+      "queued": true,
+      "queue_id": 1062,
+      "message": "Enqueued directly to PostgreSQL queue"
+    }
+  },
+  {
+    "id": "log_aa758c27",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "30 Sep 2026, 05:30:02 PM IST",
+    "iso_timestamp": "2026-09-30T17:30:02.371141",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_831b2a33",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -14983,131 +15098,6 @@
       "updated": 2,
       "skipped": 0,
       "followups_created": 0
-    }
-  },
-  {
-    "id": "log_4f12b939",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "12 Sep 2026, 04:30:00 PM IST",
-    "iso_timestamp": "2026-09-12T16:30:00.731146",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 2,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 2,
-      "created": 0,
-      "updated": 2,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_5d491d13",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "12 Sep 2026, 04:00:00 PM IST",
-    "iso_timestamp": "2026-09-12T16:00:00.428630",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 2,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 2,
-      "created": 0,
-      "updated": 2,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_d7925718",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "12 Sep 2026, 03:30:00 PM IST",
-    "iso_timestamp": "2026-09-12T15:30:00.420862",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 2,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 2,
-      "created": 0,
-      "updated": 2,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_4d6d2aa4",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "12 Sep 2026, 03:30:00 PM IST",
-    "iso_timestamp": "2026-09-12T15:30:00.284122",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "mocked": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "success": true,
-            "message_id": "mock_dev_1789207200272"
-          }
-        ],
-        "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
-      }
     }
   }
 ]

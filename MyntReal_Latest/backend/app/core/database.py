@@ -686,6 +686,11 @@ def run_pending_migrations():
             "name": "idx_realtime_loc_client_obs_id",
             "check": "SELECT indexname FROM pg_indexes WHERE tablename='staff_realtime_locations' AND indexname='idx_realtime_loc_client_obs_id'",
             "migrate": "CREATE INDEX idx_realtime_loc_client_obs_id ON staff_realtime_locations(employee_id, client_observation_id)"
+        },
+        {
+            "name": "crm_field_appointments.journey_id",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='crm_field_appointments' AND column_name='journey_id'",
+            "migrate": "ALTER TABLE crm_field_appointments ADD COLUMN journey_id INTEGER"
         }
     ]
 
