@@ -2564,6 +2564,7 @@ function fmtVal(n){const v=parseFloat(n)||0;return v>=10000000?(v/10000000).toFi
 function fmtDateShort(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch{return String(d).slice(0,10);}}
 function isPast(d){try{return new Date(d)<new Date();}catch{return false;}}
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'');}
 function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=type;t.style.display='block';setTimeout(()=>t.style.display='none',3500);}
 
 if(typeof StaffSidebar!=='undefined')StaffSidebar.init();
