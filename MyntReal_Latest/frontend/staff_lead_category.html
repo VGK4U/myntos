@@ -2963,11 +2963,21 @@ async function dispatchShareDocumentsViaWa() {
   const sendBtn = document.getElementById('sdwSendBtn');
   const origHtml = sendBtn.innerHTML;
   sendBtn.disabled = true;
-  sendBtn.innerHTML = dispatchMode === 'merged' 
-    ? '<i class="fas fa-spinner fa-spin me-1"></i> Generating & Sending Docket...' 
-    : '<i class="fas fa-spinner fa-spin me-1"></i> Dispatching Attachments...';
 
   try {
+    // Phase 1: Pre-download PDF document bundle and show progress
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Downloading Document PDF (50%)...';
+    const bundleDlUrl = `/api/v1/crm/leads/${_sdocLeadId}/solar-docs/bundle?section=${group}`;
+    const dlAnchor = document.createElement('a');
+    dlAnchor.href = bundleDlUrl;
+    dlAnchor.download = `${(_sdocLeadName || 'Lead').replace(/[^a-z0-9]/gi, '_')}_${group}_docs.pdf`;
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    document.body.removeChild(dlAnchor);
+
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Document Downloaded (100%)! Preparing WhatsApp...';
+
+    // Phase 2: Call WhatsApp endpoint & open chat link
     const res = await staffFetch(`/api/v1/crm/leads/${_sdocLeadId}/solar-docs/share-whatsapp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2987,18 +2997,11 @@ async function dispatchShareDocumentsViaWa() {
       throw new Error(data.detail || 'Dispatch failed');
     }
 
-    if (data.bot_offline && data.wa_me_url) {
-      showToast('ℹ️ Bot offline on server. Opening direct WhatsApp Web link...', 'info');
+    if (data.wa_me_url) {
       window.open(data.wa_me_url, '_blank');
-      closeShareDocumentsModal();
-      return;
     }
 
-    if (data.dispatch_mode === 'merged') {
-      showToast(`✅ Successfully sent Consolidated Docket (${data.verified_count} docs) to +91 ${phone10} via WhatsApp!`, 'success');
-    } else {
-      showToast(`✅ Successfully shared ${data.sent_count} individual document(s) to +91 ${phone10} via WhatsApp!`, 'success');
-    }
+    showToast(`✅ PDF downloaded & WhatsApp message prepared for +91 ${phone10}!`, 'success');
     closeShareDocumentsModal();
   } catch (err) {
     showToast(`Share failed: ${err.message}`, 'error');
