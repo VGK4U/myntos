@@ -592,6 +592,7 @@ class ApiService {
     device_info?: { userAgent: string; platform: string };
     linked_kra_id?: number;
     linked_task_id?: number;
+    start_odometer_km?: number;
   }): Promise<ApiResponse<any>> {
     return this.post('/staff/journeys/start', params);
   }
@@ -599,7 +600,7 @@ class ApiService {
   async endJourney(
     journeyId: number,
     params: {
-      location: {
+      location?: {
         latitude: number;
         longitude: number;
         accuracy: number;
@@ -609,9 +610,25 @@ class ApiService {
         client_observation_id?: string;
       };
       notes?: string;
+      start_odometer_km?: number;
+      end_odometer_km?: number;
+      manual_distance_km?: number;
+      override_reason?: string;
     }
   ): Promise<ApiResponse<any>> {
     return this.post(`/staff/journeys/${journeyId}/end`, params);
+  }
+
+  async overrideJourneyDistance(
+    journeyId: number,
+    params: {
+      manual_distance_km: number;
+      start_odometer_km?: number;
+      end_odometer_km?: number;
+      reason: string;
+    }
+  ): Promise<ApiResponse<any>> {
+    return this.post(`/staff/journeys/${journeyId}/override-distance`, params);
   }
 
   async addJourneyTrackPoint(

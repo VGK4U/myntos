@@ -1127,7 +1127,9 @@ export class StaffBankWiseLeadsPage {
       const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/solar-docs/share-whatsapp`, payload);
       if (res && (res.success || res.status === 200 || (res.data && res.data.success))) {
         const dataObj = res.data || res;
-        if (dataObj.dispatch_mode === 'merged') {
+        if (dataObj.bot_offline && dataObj.wa_me_url) {
+          window.open(dataObj.wa_me_url, '_blank');
+        } else if (dataObj.dispatch_mode === 'merged') {
           alert(`Success: Consolidated Docket (${dataObj.verified_count || dataObj.sent_count || this.selectedDocTypes.size} docs) dispatched via WhatsApp to ${this.selectedRecipientName || 'recipient'} (+91 ${phone})!`);
         } else {
           const sent = dataObj.sent_count || this.selectedDocTypes.size;

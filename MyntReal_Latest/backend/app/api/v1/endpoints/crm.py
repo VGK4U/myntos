@@ -19285,7 +19285,12 @@ def create_share_link(
 
     token = _secrets_mod.token_urlsafe(40)
     expires_at_utc = datetime.now(_tz.utc) + timedelta(hours=6)
-    emp_name = getattr(current_employee, "name", None) or getattr(current_employee, "emp_code", "Staff")
+    emp_name = (
+        getattr(current_employee, "full_name", None) or
+        f"{getattr(current_employee, 'first_name', '') or ''} {getattr(current_employee, 'last_name', '') or ''}".strip() or
+        getattr(current_employee, "emp_code", None) or
+        "Staff"
+    )
 
     db.execute(text("""
         INSERT INTO crm_lead_share_tokens (token, lead_id, expires_at, created_by_id, created_by_name, doc_filter)
@@ -19567,12 +19572,45 @@ def _detect_fitz_filetype(data: bytes, filename: str) -> str:
     ext = (filename.lower().rsplit('.', 1)[-1] if '.' in filename else '')
     return {'jpg': 'jpeg', 'jpeg': 'jpeg', 'png': 'png', 'gif': 'gif', 'webp': 'webp'}.get(ext, 'pdf')
 
+def _read_doc_bytes(fn: str, storage_svc) -> Optional[bytes]:
+    if not fn:
+        return None
+    clean_fn = fn.replace('/storage/', '').lstrip('/')
+    data = None
+    try:
+        data = storage_svc.download_file(clean_fn)
+    except Exception:
+        pass
+
+    if not data:
+        from pathlib import Path
+        _base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+        _local_storage_roots = [
+            _base_dir / "frontend" / "storage",
+            _base_dir / "backend" / "storage",
+            _base_dir / "media_backup" / "solar_docs",
+            _base_dir / "uploads",
+            _base_dir / "static"
+        ]
+        for root_cand in _local_storage_roots:
+            p_cand = root_cand / clean_fn
+            if not p_cand.exists():
+                p_cand = root_cand / Path(clean_fn).name
+            if p_cand.exists() and p_cand.is_file():
+                try:
+                    data = p_cand.read_bytes()
+                    break
+                except Exception:
+                    pass
+    return data
+
+
 def _build_bundle_pdf(file_names: list, labels: list, storage_svc) -> bytes:
     """Merge a list of storage files (images + PDFs) into one PDF via PyMuPDF."""
     import fitz
     out = fitz.open()
     for fn, lbl in zip(file_names, labels):
-        data = storage_svc.download_file(fn)
+        data = _read_doc_bytes(fn, storage_svc)
         if not data:
             logger.warning("[DC-BUNDLE] File not found in storage: %s", fn)
             continue
@@ -20180,7 +20218,12 @@ def share_solar_docs_via_whatsapp(
         except Exception:
             pass
 
-        safe_staff_name = str(staff_name or getattr(current_employee, 'full_name', '') or getattr(current_employee, 'first_name', '') or 'Staff')
+        safe_staff_name = str(
+            getattr(current_employee, 'full_name', None) or
+            f"{getattr(current_employee, 'first_name', '') or ''} {getattr(current_employee, 'last_name', '') or ''}".strip() or
+            getattr(current_employee, 'emp_code', None) or
+            'Staff'
+        )
 
         # 1. Create a 6-hour share token for target_types
         tok = secrets.token_urlsafe(16)
@@ -20198,17 +20241,20 @@ def share_solar_docs_via_whatsapp(
         })
         db.commit()
         
-        # 2. Build share URL & pre-filled WhatsApp Web link
+        # 2. Build share URL & direct PDF download link for WhatsApp Web
         req_host = (request.headers.get("host") if request else None) or "localhost:3000"
         proto = "https" if (request and ("https" in request.headers.get("x-forwarded-proto", "") or "443" in req_host)) else "http"
         base_url = f"{proto}://{req_host}"
         share_url = f"{base_url}/lead-share.html?token={tok}"
+        download_url = f"{base_url}/lead-share.html?token={tok}&download=true"
+        bundle_direct_url = f"{base_url}/api/v1/crm/share/{tok}/bundle"
         
         wa_text = (
             f"📑 *{group_label} for {customer_name}*\n"
-            f"Please find the document bundle link below. You can view all documents and download them as a single PDF:\n\n"
-            f"🔗 {share_url}\n\n"
-            f"_(Valid for 6 hours · Shared by {staff_name})_"
+            f"Please find the document links below. You can view all documents online or download them directly as a single PDF:\n\n"
+            f"👁️ *View Online:* {share_url}\n"
+            f"📥 *Direct PDF Download:* {download_url}\n\n"
+            f"_(Valid for 6 hours · Shared by {safe_staff_name})_"
         )
         quoted_wa_text = urllib.parse.quote(wa_text)
         wa_me_url = f"https://api.whatsapp.com/send?phone=91{phone10}&text={quoted_wa_text}"
@@ -20218,6 +20264,8 @@ def share_solar_docs_via_whatsapp(
             "bot_offline": True,
             "message": "WhatsApp Bot gateway is offline. Generated direct WhatsApp Web link.",
             "share_url": share_url,
+            "download_url": download_url,
+            "bundle_direct_url": bundle_direct_url,
             "wa_me_url": wa_me_url,
             "recipient_phone": phone10
         }

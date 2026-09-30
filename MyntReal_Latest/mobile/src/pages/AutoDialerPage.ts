@@ -2393,6 +2393,7 @@ export class AutoDialerPage {
     PageHeader.attachListeners({ title: 'Auto Dialer', showBack: true });
     this._attachMainListeners();
     this._attachSearchListeners();
+    this._attachSearchResultListeners();
     this._attachNmcListeners();
     this._attachQueueItemListeners();
     this._attachCatPriorityListeners();
@@ -3324,9 +3325,11 @@ export class AutoDialerPage {
   }
 
   private _attachSearchResultListeners(): void {
-    document.querySelectorAll('[data-override-phone]').forEach(btn => {
+    document.querySelectorAll<HTMLElement>('[data-override-phone]').forEach(btn => {
+      if (btn.dataset.listenerAttached === 'true') return;
+      btn.dataset.listenerAttached = 'true';
       btn.addEventListener('click', () => {
-        const el = btn as HTMLElement;
+        const el = btn;
         const phone = el.dataset.overridePhone!;
         const idStr = el.dataset.overrideId;
         const id = idStr && idStr !== 'null' && !isNaN(parseInt(idStr)) ? parseInt(idStr) : null;
@@ -3351,9 +3354,11 @@ export class AutoDialerPage {
         }, 1500);
       });
     });
-    document.querySelectorAll('[data-direct-phone]').forEach(btn => {
+    document.querySelectorAll<HTMLElement>('[data-direct-phone]').forEach(btn => {
+      if (btn.dataset.listenerAttached === 'true') return;
+      btn.dataset.listenerAttached = 'true';
       btn.addEventListener('click', () => {
-        const el = btn as HTMLElement;
+        const el = btn;
         const phone = el.dataset.directPhone!;
         const name = el.dataset.directName || 'Direct Dial';
         // 1. Immediate visual feedback
@@ -3374,7 +3379,8 @@ export class AutoDialerPage {
       });
     });
     const viewAllBtn = document.getElementById('dc-view-all-hist');
-    if (viewAllBtn) {
+    if (viewAllBtn && !(viewAllBtn as any)._listenerAttached) {
+      (viewAllBtn as any)._listenerAttached = true;
       viewAllBtn.addEventListener('click', () => routerService.navigate('call-history'));
     }
   }

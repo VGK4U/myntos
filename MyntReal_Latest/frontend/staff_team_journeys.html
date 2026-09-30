@@ -537,6 +537,50 @@
                     <button type="button" class="btn btn-danger force-stop-btn" onclick="executeForceStop()">
                         <i class="fas fa-stop-circle me-1"></i>Force Stop Journey
                     </button>
+    <!-- DC_JOURNEY_ODOMETER_OVERRIDE_001: Distance Override Modal -->
+    <div class="modal fade" id="overrideDistanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Adjust / Override Journey Distance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Use this to override distance if GPS tracking was degraded or sparse points were logged during travel.
+                    </div>
+                    
+                    <div id="overrideJourneyInfo" class="mb-3 p-3 bg-light rounded text-dark"></div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Start Odometer (KM)</label>
+                            <input type="number" step="0.1" class="form-control" id="overrideStartOdometer" placeholder="e.g. 12450.0" oninput="calcOverrideDistance()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">End Odometer (KM)</label>
+                            <input type="number" step="0.1" class="form-control" id="overrideEndOdometer" placeholder="e.g. 12465.5" oninput="calcOverrideDistance()">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Approved Distance (KM) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="overrideManualDistance" placeholder="Enter distance in KM" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Reason for Adjustment <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="overrideReason" rows="2" 
+                                  placeholder="e.g. Staff travelled 15 km, GPS logged sparse points due to background throttling."
+                                  required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="executeDistanceOverride()">
+                        <i class="fas fa-save me-1"></i>Save Distance Adjustment
+                    </button>
                 </div>
             </div>
         </div>
@@ -2302,6 +2346,76 @@
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Error force stopping journey:', error);
                 alert('An error occurred while stopping the journey. Please try again.');
+            }
+        }
+
+        let overrideJourneyId = null;
+
+        function showOverrideDistanceModal(journeyId, employeeName, currentDistance) {
+            overrideJourneyId = journeyId;
+            const infoEl = document.getElementById('overrideJourneyInfo');
+            if (infoEl) {
+                infoEl.innerHTML = `<strong>${employeeName || 'Staff'}</strong> — Journey #${journeyId}<br>` +
+                                   `Current Recorded Distance: <strong>${parseFloat(currentDistance || 0).toFixed(2)} KM</strong>`;
+            }
+            document.getElementById('overrideStartOdometer').value = '';
+            document.getElementById('overrideEndOdometer').value = '';
+            document.getElementById('overrideManualDistance').value = parseFloat(currentDistance || 0).toFixed(2);
+            document.getElementById('overrideReason').value = '';
+            
+            new bootstrap.Modal(document.getElementById('overrideDistanceModal')).show();
+        }
+
+        function calcOverrideDistance() {
+            const start = parseFloat(document.getElementById('overrideStartOdometer').value);
+            const end = parseFloat(document.getElementById('overrideEndOdometer').value);
+            if (!isNaN(start) && !isNaN(end) && end >= start) {
+                document.getElementById('overrideManualDistance').value = (end - start).toFixed(2);
+            }
+        }
+
+        async function executeDistanceOverride() {
+            if (!overrideJourneyId) return;
+            const distVal = parseFloat(document.getElementById('overrideManualDistance').value);
+            const reason = document.getElementById('overrideReason').value.trim();
+            const startOdo = parseFloat(document.getElementById('overrideStartOdometer').value);
+            const endOdo = parseFloat(document.getElementById('overrideEndOdometer').value);
+            
+            if (isNaN(distVal) || distVal < 0) {
+                alert('Please enter a valid distance in KM');
+                return;
+            }
+            if (!reason) {
+                alert('Please provide a reason for the distance adjustment');
+                return;
+            }
+            
+            const payload = {
+                manual_distance_km: distVal,
+                reason: reason,
+                start_odometer_km: isNaN(startOdo) ? null : startOdo,
+                end_odometer_km: isNaN(endOdo) ? null : endOdo
+            };
+            
+            try {
+                const resp = await staffFetch(`${API_BASE}/staff/journeys/${overrideJourneyId}/override-distance`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    alert(`Distance updated to ${distVal} KM successfully!`);
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('overrideDistanceModal'))?.hide();
+                    if (typeof loadJourneys === 'function') loadJourneys();
+                    if (typeof loadActiveJourneys === 'function') loadActiveJourneys();
+                } else {
+                    const err = await resp.json();
+                    alert(err.detail || 'Failed to update distance');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                alert('Error updating distance: ' + err.message);
             }
         }
     </script>

@@ -2686,7 +2686,38 @@ def run_schema_bootstrap():
     except Exception as _tr_err:
         logger.warning(f"[JOURNEY-RATES] Non-fatal: {_tr_err}")
 
+    # DC_JOURNEY_ODOMETER_OVERRIDE_001: Ensure odometer and manual distance override columns exist
+    try:
+        bootstrap_journey_odometer_override_columns()
+    except Exception as _odo_err:
+        logger.warning(f"[JOURNEY-ODOMETER-BOOTSTRAP] Non-fatal: {_odo_err}")
+
     logger.info("[SCHEMA BOOTSTRAP] ✅ Schema bootstrap complete")
+
+
+def bootstrap_journey_odometer_override_columns():
+    """
+    DC_JOURNEY_ODOMETER_OVERRIDE_001: Add odometer and manual distance override columns to staff_journeys
+    """
+    try:
+        _db = SessionLocal()
+        try:
+            _db.execute(text("""
+                ALTER TABLE staff_journeys
+                ADD COLUMN IF NOT EXISTS start_odometer_km DOUBLE PRECISION,
+                ADD COLUMN IF NOT EXISTS end_odometer_km DOUBLE PRECISION,
+                ADD COLUMN IF NOT EXISTS manual_distance_km DOUBLE PRECISION,
+                ADD COLUMN IF NOT EXISTS is_distance_overridden BOOLEAN DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS distance_override_reason TEXT,
+                ADD COLUMN IF NOT EXISTS distance_overridden_by INTEGER REFERENCES staff_employees(id),
+                ADD COLUMN IF NOT EXISTS distance_overridden_at TIMESTAMP;
+            """))
+            _db.commit()
+            logger.info("[JOURNEY-ODOMETER-BOOTSTRAP] ✅ Odometer & distance override columns ensured on staff_journeys")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.warning(f"[JOURNEY-ODOMETER-BOOTSTRAP] Non-fatal: {e}")
 
 
 def bootstrap_partner_cap_bypass():

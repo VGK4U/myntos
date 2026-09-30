@@ -5956,11 +5956,21 @@ async function dispatchShareDocumentsViaWa() {
   const sendBtn = document.getElementById('sdwSendBtn');
   const origHtml = sendBtn.innerHTML;
   sendBtn.disabled = true;
-  sendBtn.innerHTML = dispatchMode === 'merged' 
-    ? '<i class="fas fa-spinner fa-spin me-1"></i> Generating & Sending Docket...' 
-    : '<i class="fas fa-spinner fa-spin me-1"></i> Dispatching Attachments...';
 
   try {
+    // Phase 1: Pre-download PDF document bundle and show progress
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Downloading Document PDF (50%)...';
+    const bundleDlUrl = `/api/v1/crm/leads/${_sdocLeadId}/solar-docs/bundle?section=${group}`;
+    const dlAnchor = document.createElement('a');
+    dlAnchor.href = bundleDlUrl;
+    dlAnchor.download = `${(_sdocLeadName || 'Lead').replace(/[^a-z0-9]/gi, '_')}_${group}_docs.pdf`;
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    document.body.removeChild(dlAnchor);
+
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Document Downloaded (100%)! Preparing WhatsApp...';
+
+    // Phase 2: Call WhatsApp endpoint & open chat link
     const res = await staffFetch(`/api/v1/crm/leads/${_sdocLeadId}/solar-docs/share-whatsapp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5980,18 +5990,11 @@ async function dispatchShareDocumentsViaWa() {
       throw new Error(data.detail || 'Dispatch failed');
     }
 
-    if (data.bot_offline && data.wa_me_url) {
-      showToast('ℹ️ Bot offline on server. Opening direct WhatsApp Web link...', 'info');
+    if (data.wa_me_url) {
       window.open(data.wa_me_url, '_blank');
-      closeShareDocumentsModal();
-      return;
     }
 
-    if (data.dispatch_mode === 'merged') {
-      showToast(`✅ Successfully sent Consolidated Docket (${data.verified_count} docs) to +91 ${phone10} via WhatsApp!`, 'success');
-    } else {
-      showToast(`✅ Successfully shared ${data.sent_count} individual document(s) to +91 ${phone10} via WhatsApp!`, 'success');
-    }
+    showToast(`✅ PDF downloaded & WhatsApp message prepared for +91 ${phone10}!`, 'success');
     closeShareDocumentsModal();
   } catch (err) {
     showToast(`Share failed: ${err.message}`, 'error');
@@ -7339,12 +7342,6 @@ async function saveCompleteDate(lid, val) {
     </div>
     <div class="sdw-body">
       <div class="sdw-sec-title">
-        <span>Quick Select Recipient</span>
-        <small style="color:#6b7280;text-transform:none;font-weight:normal">Click to auto-fill</small>
-      </div>
-      <div class="sdw-chips-wrap" id="sdwContactChips"></div>
-
-      <div class="sdw-sec-title">
         <span>Recipient WhatsApp Number</span>
         <small style="color:#6b7280;text-transform:none;font-weight:normal">10 digits</small>
       </div>
@@ -7352,6 +7349,12 @@ async function saveCompleteDate(lid, val) {
         <span class="sdw-phone-prefix">+91</span>
         <input type="tel" id="sdwPhoneInput" class="sdw-phone-input" placeholder="Enter 10-digit mobile number" maxlength="10" />
       </div>
+
+      <div class="sdw-sec-title" style="margin-top:12px">
+        <span>Quick Select Recipient</span>
+        <small style="color:#6b7280;text-transform:none;font-weight:normal">Click to auto-fill</small>
+      </div>
+      <div class="sdw-chips-wrap" id="sdwContactChips"></div>
 
       <div class="sdw-sec-title">
         <span>Dispatch Format</span>
@@ -7694,8 +7697,9 @@ function slkShareWhatsApp() {
   const url = document.getElementById('slkUrlInput')?.value;
   if (!url) { showToast('Generate a link first', 'error'); return; }
   const leadName = document.getElementById('slkLeadName')?.textContent || '';
-  const msg = 'Solar Documents – ' + leadName + '\n' + url;
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  const dlUrl = url.includes('?') ? url + '&download=true' : url + '?download=true';
+  const msg = '📑 *Solar Documents – ' + leadName + '*\n\nPlease find the document links below. You can view all documents online or download them directly as a single PDF:\n\n👁️ *View Online:* ' + url + '\n📥 *Direct PDF Download:* ' + dlUrl;
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
 }
 
 async function loadEtcStageStats(){

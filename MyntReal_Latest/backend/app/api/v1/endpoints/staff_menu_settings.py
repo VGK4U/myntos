@@ -3976,7 +3976,8 @@ async def get_my_menus(
                 'staff_ev_spares_leads', 'mnr_ev_spares_leads', 'MNR_EXECUTIVE_DASHBOARD',
                 'MNR_CATEGORY_LEADS', 'MNR_REAL_DREAMS_LEADS', 'staff_real_dreams_leads',
                 'MNR_INSURANCE_LEADS', 'staff_insurance_leads', 'MNR_ETC_LEADS', 'staff_etc_leads',
-                'MNR_BANK_WISE_LEADS', 'staff_bank_wise_leads', 'staff_field_sales',
+                'MNR_BANK_WISE_LEADS', 'staff_bank_wise_leads', 'staff_field_sales', 'field-sales',
+                'FIELD_APPOINTMENTS', 'staff_field_appointments', 'field_appointments', 'FIELD_LOCATION_TRACKING',
                 'MY_LEADS', 'staff_my_leads', 'STAFF_LEADS', 'staff_leads', 'ALL_CRM_LEADS',
                 'crm_leads', 'rvz_crm_leads', 'MY_CRM_DASHBOARD', 'staff_crm_dashboard',
                 'staff_team_leads', 'staff_crm_team_leads'

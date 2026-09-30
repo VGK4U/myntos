@@ -318,14 +318,19 @@ function renderPage(data) {
       </div>
     </div>
 
-    <div class="alert-box info">
-      <i class="fas fa-info-circle alert-icon"></i>
-      <div class="alert-text">
-        <h3>Read-Only Document Link</h3>
-        <p>This link was shared by <b>${esc(data.created_by||'Myntreal Staff')}</b>.
-           Documents can be viewed and downloaded, but no edits can be made.
-           This link expires at <b>${expiresAt.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</b>.</p>
+    <div class="alert-box info" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex:1;min-width:260px">
+        <i class="fas fa-info-circle alert-icon"></i>
+        <div class="alert-text">
+          <h3>Read-Only Document Link</h3>
+          <p>This link was shared by <b>${esc(data.created_by||'Myntreal Staff')}</b>.
+             Documents can be viewed and downloaded, but no edits can be made.
+             This link expires at <b>${expiresAt.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</b>.</p>
+        </div>
       </div>
+      <button onclick="downloadShareBundle()" style="background:#15803d;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,.15);flex-shrink:0;margin-top:6px">
+        <i class="fas fa-file-pdf"></i> Download All PDF
+      </button>
     </div>
     ${filteredNote}
 
@@ -468,15 +473,16 @@ async function downloadShareBundle() {
   const btn = document.getElementById('slkDlAllBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing PDF…'; }
   try {
-    const r = await fetch(`/api/v1/crm/share/${_shareToken}/bundle`);
-    if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.detail || 'Download failed'); return; }
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'solar_documents_bundle.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(e) { alert('Download failed: ' + e.message); }
-  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download All as PDF'; } }
+    const downloadUrl = `/api/v1/crm/share/${_shareToken}/bundle`;
+    // Direct browser navigation download guarantees native PDF download on iOS Safari, Android & Desktop
+    window.location.href = downloadUrl;
+  } catch(e) {
+    alert('Download failed: ' + e.message);
+  } finally {
+    setTimeout(() => {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download All as PDF'; }
+    }, 2000);
+  }
 }
 
 async function init() {
@@ -507,6 +513,9 @@ async function init() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     renderPage(data);
+    if (params.get('download') === 'true' || params.get('download') === '1' || params.get('autodownload') === 'true') {
+      setTimeout(() => { downloadShareBundle(); }, 400);
+    }
   } catch(e) {
     document.getElementById('appRoot').innerHTML = `
       <div class="alert-box error">

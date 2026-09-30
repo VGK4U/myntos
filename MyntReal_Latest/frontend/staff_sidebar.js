@@ -437,6 +437,8 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuPaths.add('/staff/catalog-library');
                             this.allowedMenuPaths.add('/staff/catalog');
                             this.allowedMenuPaths.add('/staff/field-appointments');
+                            this.allowedMenuPaths.add('/staff/bank-wise-leads');
+                            this.allowedMenuPaths.add('/staff/field-sales');
                             this.allowedMenuCodes.add('CRM_WA_INBOX');
                             this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
                             this.allowedMenuCodes.add('WHATSAPP_CONFIG');
@@ -449,6 +451,8 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuCodes.add('MY_LEADS');
                             this.allowedMenuCodes.add('staff_my_leads');
                             this.allowedMenuCodes.add('FIELD_APPOINTMENTS');
+                            this.allowedMenuCodes.add('MNR_BANK_WISE_LEADS');
+                            this.allowedMenuCodes.add('staff_bank_wise_leads');
                             this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
                             this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
                         }

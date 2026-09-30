@@ -553,6 +553,20 @@
                     <input type="file" class="form-control mb-3" id="journeyPhoto" accept="image/*" capture="environment">
                     <img id="photoPreview" class="img-fluid rounded mb-3" style="display: none; max-height: 200px;">
                     
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small">Start Odometer (KM)</label>
+                            <input type="number" step="0.1" class="form-control form-control-sm" id="endStartOdometer" placeholder="e.g. 12450.0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">End Odometer (KM)</label>
+                            <input type="number" step="0.1" class="form-control form-control-sm" id="endEndOdometer" placeholder="e.g. 12465.5">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Manual Distance Override (Optional KM)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="endManualDistance" placeholder="Enter distance if GPS signal was degraded">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Notes (Optional)</label>
                         <textarea class="form-control" id="journeyNotes" rows="2" placeholder="Any additional notes..."></textarea>
@@ -1705,12 +1719,21 @@
             console.log('End journey request:', { journey_id: activeJourney?.id, has_location: !!location });
             
             try {
+                const startOdo = document.getElementById('endStartOdometer')?.value;
+                const endOdo = document.getElementById('endEndOdometer')?.value;
+                const manualDist = document.getElementById('endManualDistance')?.value;
+
+                const endPayload = {
+                    location: location,
+                    notes: document.getElementById('journeyNotes').value
+                };
+                if (startOdo) endPayload.start_odometer_km = parseFloat(startOdo);
+                if (endOdo) endPayload.end_odometer_km = parseFloat(endOdo);
+                if (manualDist) endPayload.manual_distance_km = parseFloat(manualDist);
+
                 const endResponse = await staffFetch(`${API_BASE}/staff/journeys/${activeJourney.id}/end`, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        location: location,
-                        notes: document.getElementById('journeyNotes').value
-                    })
+                    body: JSON.stringify(endPayload)
                 });
                 
                 if (!endResponse.ok) {

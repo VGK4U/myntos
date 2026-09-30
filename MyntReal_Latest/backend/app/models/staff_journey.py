@@ -123,14 +123,22 @@ class StaffJourney(Base):
     force_stopped_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
     force_stopped_at = Column(DateTime, nullable=True)
     force_stopped_reason = Column(Text, nullable=True)
-    force_stopped_device_info = Column(JSON, nullable=True)  # Manager's device info for audit
-    
+    # DC_JOURNEY_ODOMETER_OVERRIDE_001: Manual Odometer & Distance Override Fields
+    start_odometer_km = Column(Float, nullable=True)
+    end_odometer_km = Column(Float, nullable=True)
+    manual_distance_km = Column(Float, nullable=True)
+    is_distance_overridden = Column(Boolean, default=False, nullable=True)
+    distance_override_reason = Column(Text, nullable=True)
+    distance_overridden_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
+    distance_overridden_at = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
     
     employee = relationship("StaffEmployee", foreign_keys=[employee_id], backref="journeys")
     force_stopped_by_employee = relationship("StaffEmployee", foreign_keys=[force_stopped_by])
+    distance_overridden_by_employee = relationship("StaffEmployee", foreign_keys=[distance_overridden_by])
     attendance = relationship("StaffAttendance", backref="journeys")
     company = relationship("AssociatedCompany", backref="journeys")
     kra_instance = relationship("StaffKRADailyInstance", backref="journeys")
@@ -208,6 +216,13 @@ class StaffJourney(Base):
             "force_stopped_by": self.force_stopped_by,
             "force_stopped_at": self.force_stopped_at.isoformat() if self.force_stopped_at else None,
             "force_stopped_reason": self.force_stopped_reason,
+            "start_odometer_km": self.start_odometer_km,
+            "end_odometer_km": self.end_odometer_km,
+            "manual_distance_km": self.manual_distance_km,
+            "is_distance_overridden": self.is_distance_overridden or False,
+            "distance_override_reason": self.distance_override_reason,
+            "distance_overridden_by": self.distance_overridden_by,
+            "distance_overridden_at": self.distance_overridden_at.isoformat() if self.distance_overridden_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
@@ -220,6 +235,7 @@ class StaffJourney(Base):
         data["track_points_count"] = len(self.track_points) if self.track_points else 0
         data["kra_name"] = self.kra_instance.kra_template.name if self.kra_instance and self.kra_instance.kra_template else None
         data["task_title"] = self.task.title if self.task else None
+        data["distance_overridden_by_name"] = f"{self.distance_overridden_by_employee.first_name} {self.distance_overridden_by_employee.last_name}" if self.distance_overridden_by_employee else None
         
         # DC Protocol (Dec 04, 2025): Force Stop by Manager - include stopper's name
         if self.force_stopped and self.force_stopped_by_employee:

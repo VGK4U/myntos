@@ -153,6 +153,7 @@ class StartJourneyRequest(BaseModel):
     gps_enabled: bool = True
     gps_permission_denied: bool = False
     device_info: Optional[dict] = None
+    start_odometer_km: Optional[float] = None
 
     @validator('purpose')
     def validate_purpose(cls, v):
@@ -183,6 +184,17 @@ class JourneyHeartbeatRequest(BaseModel):
 class EndJourneyRequest(BaseModel):
     location: Optional[LocationData] = None
     notes: Optional[str] = None
+    start_odometer_km: Optional[float] = None
+    end_odometer_km: Optional[float] = None
+    manual_distance_km: Optional[float] = None
+    override_reason: Optional[str] = None
+
+
+class OverrideDistanceRequest(BaseModel):
+    manual_distance_km: float = Field(..., ge=0, description="Manual distance in kilometers")
+    start_odometer_km: Optional[float] = Field(None, ge=0)
+    end_odometer_km: Optional[float] = Field(None, ge=0)
+    reason: str = Field(..., min_length=3, description="Reason for distance override")
 
 
 class ApprovalActionRequest(BaseModel):
@@ -715,6 +727,26 @@ async def end_journey(
         except Exception as e:
             print(f"[DC_JOURNEY_END_LOCATION] Failed to insert journey end location: {e}")
 
+    # DC_JOURNEY_ODOMETER_OVERRIDE_001: Process Odometer & Manual Distance Override at Journey End
+    if request.start_odometer_km is not None:
+        journey.start_odometer_km = request.start_odometer_km
+    if request.end_odometer_km is not None:
+        journey.end_odometer_km = request.end_odometer_km
+
+    calc_odo_dist = None
+    if journey.start_odometer_km is not None and journey.end_odometer_km is not None and journey.end_odometer_km >= journey.start_odometer_km:
+        calc_odo_dist = round(journey.end_odometer_km - journey.start_odometer_km, 2)
+
+    effective_manual_dist = request.manual_distance_km if request.manual_distance_km is not None else calc_odo_dist
+    if effective_manual_dist is not None and effective_manual_dist >= 0:
+        journey.manual_distance_km = effective_manual_dist
+        journey.is_distance_overridden = True
+        journey.distance_override_reason = request.override_reason or "Odometer / manual distance specified at journey end"
+        journey.distance_overridden_by = current_user.id
+        journey.distance_overridden_at = now
+        journey.total_distance_km = effective_manual_dist
+        journey.reimbursable_distance_km = effective_manual_dist
+
     journey.calculate_duration()
     journey.calculate_average_speed()
     if journey.is_reimbursable:
@@ -884,10 +916,56 @@ async def upload_journey_photo(
     except Exception as e:
         # DC Protocol: Transaction rollback removes all uncommitted changes
         db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to upload photo: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Photo upload failed: {e}")
+
+
+@router.post("/{journey_id}/override-distance", summary="Override journey distance (Manager/Employee)")
+async def override_journey_distance(
+    journey_id: int,
+    request: OverrideDistanceRequest = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC_JOURNEY_ODOMETER_OVERRIDE_001: Override total and reimbursable distance for a journey.
+    Used when background location tracking is degraded, sparse points captured, or odometer distance differs.
+    """
+    journey = db.query(StaffJourney).filter(StaffJourney.id == journey_id).first()
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+        
+    # Check accessibility (own journey or manager/admin)
+    if journey.employee_id != current_user.id and current_user.role not in ['admin', 'super_admin', 'manager']:
+        accessible_ids = get_accessible_employee_ids(db, current_user)
+        if journey.employee_id not in accessible_ids:
+            raise HTTPException(status_code=403, detail="Not authorized to edit distance for this journey")
+
+    now = get_indian_time()
+    if request.start_odometer_km is not None:
+        journey.start_odometer_km = request.start_odometer_km
+    if request.end_odometer_km is not None:
+        journey.end_odometer_km = request.end_odometer_km
+        
+    journey.manual_distance_km = round(request.manual_distance_km, 2)
+    journey.is_distance_overridden = True
+    journey.distance_override_reason = request.reason
+    journey.distance_overridden_by = current_user.id
+    journey.distance_overridden_at = now
+
+    journey.total_distance_km = journey.manual_distance_km
+    journey.reimbursable_distance_km = journey.manual_distance_km
+
+    journey.calculate_reimbursement()
+    journey.calculate_average_speed()
+
+    db.commit()
+    db.refresh(journey)
+
+    return {
+        "success": True,
+        "message": f"Journey distance successfully updated to {journey.total_distance_km} km",
+        "journey": journey.to_dict()
+    }
 
 
 @router.get("/active", summary="Get active journey")

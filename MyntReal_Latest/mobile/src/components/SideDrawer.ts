@@ -721,6 +721,7 @@ export class SideDrawer {
             paths.add('/staff/etc-leads');
             paths.add('/staff/bank-wise-leads');
             paths.add('/staff/field-sales');
+            paths.add('/staff/field-appointments');
             paths.add('/staff/leads');
             paths.add('/staff/crm/leads');
             paths.add('/staff/crm/dashboard');
@@ -871,7 +872,7 @@ export class SideDrawer {
         const isAlwaysAllowed = !isSaaSTenant && ([
           '/staff/dialer', '/staff/auto-dialer', 'auto-dialer', '/staff/softphone', 'softphone', '/staff/whatsapp-center',
           '/staff/configuration/catalog', '/staff/catalog-library', '/staff/catalog',
-          '/staff/bank-wise-leads', '/staff/field-sales', '/staff/my-leads',
+          '/staff/bank-wise-leads', '/staff/field-sales', '/staff/my-leads', '/staff/field-appointments',
           ...(isSalesStaff ? salesWorkflowRoutes : [])
         ].includes(item.route) || item.route.startsWith('/staff/vgk/'));
         

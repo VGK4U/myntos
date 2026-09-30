@@ -3675,12 +3675,6 @@ async function submitMissingFields(){
     </div>
     <div class="sdw-body">
       <div class="sdw-sec-title">
-        <span>Quick Select Recipient</span>
-        <small style="color:#6b7280;text-transform:none;font-weight:normal">Click to auto-fill</small>
-      </div>
-      <div class="sdw-chips-wrap" id="sdwContactChips"></div>
-
-      <div class="sdw-sec-title">
         <span>Recipient WhatsApp Number</span>
         <small style="color:#6b7280;text-transform:none;font-weight:normal">10 digits</small>
       </div>
@@ -3688,6 +3682,12 @@ async function submitMissingFields(){
         <span class="sdw-phone-prefix">+91</span>
         <input type="tel" id="sdwPhoneInput" class="sdw-phone-input" placeholder="Enter 10-digit mobile number" maxlength="10" />
       </div>
+
+      <div class="sdw-sec-title" style="margin-top:12px">
+        <span>Quick Select Recipient</span>
+        <small style="color:#6b7280;text-transform:none;font-weight:normal">Click to auto-fill</small>
+      </div>
+      <div class="sdw-chips-wrap" id="sdwContactChips"></div>
 
       <div class="sdw-sec-title">
         <span>Dispatch Format</span>
@@ -4195,8 +4195,9 @@ function slkShareWhatsApp() {
   const url = document.getElementById('slkUrlInput')?.value;
   if (!url) { showToast('Generate a link first', 'error'); return; }
   const leadName = document.getElementById('slkLeadName')?.textContent || '';
-  const msg = 'Solar Documents – ' + leadName + '\n' + url;
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  const dlUrl = url.includes('?') ? url + '&download=true' : url + '?download=true';
+  const msg = '📑 *Solar Documents – ' + leadName + '*\n\nPlease find the document links below. You can view all documents online or download them directly as a single PDF:\n\n👁️ *View Online:* ' + url + '\n📥 *Direct PDF Download:* ' + dlUrl;
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
 }
 
 async function loadEtcStageStats(){

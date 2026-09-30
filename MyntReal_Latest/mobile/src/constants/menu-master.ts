@@ -2365,7 +2365,7 @@ export const MENU_MASTER: SidebarSection[] = [
       },
       {
         "menu_code": "MNR_BANK_WISE_LEADS",
-        "label": "Field staff leads",
+        "label": "Field Sales",
         "route": "/staff/bank-wise-leads",
         "icon": "fas fa-users-gear",
         "audience": [
