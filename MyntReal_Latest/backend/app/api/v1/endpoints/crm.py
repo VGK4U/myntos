@@ -5740,17 +5740,20 @@ def list_leads(
         t_datetime = f"{t_str} 23:59:59" if t_str else None
 
         sub_sql = text("""
+            WITH target_leads AS (
+                SELECT id FROM crm_leads WHERE (:cid IS NULL OR company_id = :cid)
+            )
             SELECT l.id
             FROM crm_leads l
             JOIN (
                 SELECT lead_id, MAX(max_act) as last_act FROM (
-                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes GROUP BY lead_id
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups GROUP BY lead_id
+                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries GROUP BY lead_id
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT id as lead_id, updated_at as max_act FROM crm_leads
+                    SELECT id as lead_id, updated_at as max_act FROM crm_leads WHERE id IN (SELECT id FROM target_leads)
                 ) u
                 GROUP BY lead_id
             ) sub ON sub.lead_id = l.id
@@ -5777,19 +5780,22 @@ def list_leads(
     # Won leads are excluded from this filter (they remain visible regardless of filter value)
     if days_since_interaction:
         sub_sql_days = text("""
+            WITH target_leads AS (
+                SELECT id FROM crm_leads WHERE (:cid IS NULL OR company_id = :cid)
+            )
             SELECT l.id,
                    EXTRACT(DAY FROM NOW() - sub.last_act) as days_diff,
                    l.status
             FROM crm_leads l
             JOIN (
                 SELECT lead_id, MAX(max_act) as last_act FROM (
-                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes GROUP BY lead_id
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_lead_notes WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups GROUP BY lead_id
+                    SELECT lead_id, MAX(COALESCE(updated_at, created_at)) as max_act FROM crm_lead_followups WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries GROUP BY lead_id
+                    SELECT lead_id, MAX(created_at) as max_act FROM crm_revenue_entries WHERE lead_id IN (SELECT id FROM target_leads) GROUP BY lead_id
                     UNION ALL
-                    SELECT id as lead_id, updated_at as max_act FROM crm_leads
+                    SELECT id as lead_id, updated_at as max_act FROM crm_leads WHERE id IN (SELECT id FROM target_leads)
                 ) u
                 GROUP BY lead_id
             ) sub ON sub.lead_id = l.id

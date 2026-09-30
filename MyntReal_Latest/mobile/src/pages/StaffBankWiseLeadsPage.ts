@@ -1219,6 +1219,17 @@ export class StaffBankWiseLeadsPage {
 
             <!-- WhatsApp Direct Attachments Section -->
             <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+              <!-- Recipient Phone Input -->
+              <div class="bl-form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; color: #94a3b8;">Recipient WhatsApp Number (10 Digits)</label>
+                <div style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; overflow: hidden;">
+                  <span style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #22c55e; background: rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.1);">+91</span>
+                  <input type="tel" id="mobileDocPhoneInput" class="bl-input" placeholder="Enter 10-digit number" maxlength="10" 
+                    value="${this.escapeHtml(this.selectedRecipientPhone)}" 
+                    style="flex: 1; background: transparent; border: none; padding: 10px 12px; color: #fff; font-size: 13px; outline: none;">
+                </div>
+              </div>
+
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px;">
                   Quick Select Recipient
@@ -1239,17 +1250,6 @@ export class StaffBankWiseLeadsPage {
                     </button>
                   `;
                 }).join('') : '<span style="font-size: 11px; color: #64748b;">No contacts found. Enter phone below.</span>'}
-              </div>
-
-              <!-- Recipient Phone Input -->
-              <div class="bl-form-group" style="margin-bottom: 12px;">
-                <label style="font-size: 11px; color: #94a3b8;">Recipient WhatsApp Number (10 Digits)</label>
-                <div style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; overflow: hidden;">
-                  <span style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #22c55e; background: rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.1);">+91</span>
-                  <input type="tel" id="mobileDocPhoneInput" class="bl-input" placeholder="Enter 10-digit number" maxlength="10" 
-                    value="${this.escapeHtml(this.selectedRecipientPhone)}" 
-                    style="flex: 1; background: transparent; border: none; padding: 10px 12px; color: #fff; font-size: 13px; outline: none;">
-                </div>
               </div>
 
               <!-- Delivery Format Selection -->

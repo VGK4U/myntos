@@ -2710,7 +2710,9 @@ def bootstrap_journey_odometer_override_columns():
                 ADD COLUMN IF NOT EXISTS is_distance_overridden BOOLEAN DEFAULT FALSE,
                 ADD COLUMN IF NOT EXISTS distance_override_reason TEXT,
                 ADD COLUMN IF NOT EXISTS distance_overridden_by INTEGER REFERENCES staff_employees(id),
-                ADD COLUMN IF NOT EXISTS distance_overridden_at TIMESTAMP;
+                ADD COLUMN IF NOT EXISTS distance_overridden_at TIMESTAMP,
+                ADD COLUMN IF NOT EXISTS start_photo_path VARCHAR(500),
+                ADD COLUMN IF NOT EXISTS start_photo_uploaded_at TIMESTAMP;
             """))
             _db.commit()
             logger.info("[JOURNEY-ODOMETER-BOOTSTRAP] ✅ Odometer & distance override columns ensured on staff_journeys")

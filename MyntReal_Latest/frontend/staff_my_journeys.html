@@ -681,6 +681,17 @@
                         </div>
                     </div>
                     
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" style="color: #cbd5e0;">Start Odometer Reading (KM, Optional)</label>
+                            <input type="number" step="0.1" class="form-control form-control-sm" id="startOdometer" placeholder="e.g. 12450.0" style="background: #374151; border-color: #4a5568; color: #fff;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" style="color: #cbd5e0;">Start Odometer Photo (Optional)</label>
+                            <input type="file" class="form-control form-control-sm" id="startJourneyPhoto" accept="image/*" capture="environment" style="background: #374151; border-color: #4a5568; color: #fff;">
+                        </div>
+                    </div>
+                    
                     <hr style="border-color: #4a5568;">
                     
                     <div id="gpsStatusSection">
@@ -1518,6 +1529,7 @@
             }
             
             const selectedLeadIdVal = document.getElementById('selectedLeadId')?.value;
+            const startOdometerVal = document.getElementById('startOdometer')?.value;
             const payload = {
                 purpose: selectedPurpose,
                 purpose_description: document.getElementById('purposeDescription').value,
@@ -1528,6 +1540,7 @@
                 gps_enabled: gpsEnabled,
                 gps_permission_denied: !gpsEnabled,
                 location: location,
+                start_odometer_km: startOdometerVal ? parseFloat(startOdometerVal) : null,
                 device_info: {
                     userAgent: navigator.userAgent,
                     platform: navigator.platform
@@ -1551,6 +1564,21 @@
                     trackPoints = [];
                     window.wvvWarningShown = false;
                     window.wvvPaused = false;
+
+                    const startPhotoFile = document.getElementById('startJourneyPhoto')?.files[0];
+                    if (startPhotoFile && activeJourney && activeJourney.id) {
+                        const startPhotoFormData = new FormData();
+                        startPhotoFormData.append('photo', startPhotoFile);
+                        try {
+                            await staffFetch(`${API_BASE}/staff/journeys/${activeJourney.id}/start-photo`, {
+                                method: 'POST',
+                                body: startPhotoFormData
+                            });
+                            console.log('Start odometer photo uploaded successfully');
+                        } catch (startPhotoErr) {
+                            console.warn('Start photo upload failed (non-fatal):', startPhotoErr);
+                        }
+                    }
                     
                     // DC Protocol: Store active journey ID for recovery
                     if (activeJourney && activeJourney.id) {

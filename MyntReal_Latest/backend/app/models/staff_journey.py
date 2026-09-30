@@ -86,6 +86,8 @@ class StaffJourney(Base):
     
     photo_path = Column(String(500), nullable=True)
     photo_uploaded_at = Column(DateTime, nullable=True)
+    start_photo_path = Column(String(500), nullable=True)
+    start_photo_uploaded_at = Column(DateTime, nullable=True)
     
     # Universal Upload System: Compression fields (DC Protocol)
     compressed_photo_path = Column(String(500), nullable=True)
@@ -206,7 +208,11 @@ class StaffJourney(Base):
             "status": self.status.value if self.status else None,
             "approval_status": self.approval_status.value if self.approval_status else None,
             "photo_path": self.photo_path,
+            "end_photo_path": self.photo_path,
             "photo_uploaded_at": self.photo_uploaded_at.isoformat() if self.photo_uploaded_at else None,
+            "end_photo_uploaded_at": self.photo_uploaded_at.isoformat() if self.photo_uploaded_at else None,
+            "start_photo_path": self.start_photo_path,
+            "start_photo_uploaded_at": self.start_photo_uploaded_at.isoformat() if self.start_photo_uploaded_at else None,
             "gps_enabled": self.gps_enabled,
             "gps_permission_denied": self.gps_permission_denied,
             "is_reimbursable": self.is_reimbursable,

@@ -418,6 +418,22 @@ export class JourneysPage {
           </div>
 
           <div class="form-group">
+            <label>Start Odometer Reading (KM, Optional)</label>
+            <input type="number" step="0.1" id="startOdometer" class="form-input" placeholder="e.g. 12450.0">
+          </div>
+
+          <div class="form-group">
+            <label>Start Odometer Photo (Optional)</label>
+            <div class="photo-upload-area" id="startPhotoUploadArea" style="padding: 12px; border: 1px dashed #4b5563; border-radius: 8px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.05);">
+              <input type="file" id="startJourneyPhoto" accept="image/*" capture="environment" style="display: none;">
+              <div class="upload-placeholder" id="startUploadPlaceholder">
+                <span>📷 Tap to capture start odometer photo</span>
+              </div>
+              <img id="startPhotoPreview" class="photo-preview" style="display: none; max-height: 120px; margin: 0 auto; border-radius: 6px;">
+            </div>
+          </div>
+
+          <div class="form-group">
             <label>Notes (Optional)</label>
             <textarea id="journeyNotes" class="form-textarea" rows="2" placeholder="Brief description"></textarea>
           </div>
@@ -449,7 +465,17 @@ export class JourneysPage {
             <button class="modal-close" id="closeEndModal">&times;</button>
           </div>
           <div class="modal-body">
-            <p>Upload a photo to confirm your destination:</p>
+            <div class="form-group mb-3">
+              <label>End Odometer Reading (KM, Optional)</label>
+              <input type="number" step="0.1" id="endOdometer" class="form-input" placeholder="e.g. 12465.5">
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Manual Distance Override (Optional KM)</label>
+              <input type="number" step="0.01" id="manualDistance" class="form-input" placeholder="Enter distance if GPS was degraded">
+            </div>
+
+            <p>Upload a photo to confirm your destination / end odometer:</p>
             <div class="photo-upload-area" id="photoUploadArea">
               <input type="file" id="journeyPhoto" accept="image/*" capture="environment" style="display: none;">
               <div class="upload-placeholder" id="uploadPlaceholder">
@@ -689,6 +715,10 @@ export class JourneysPage {
       const selectedKraId = kraSelect?.value || '';
       const selectedTaskId = taskSelect?.value || '';
 
+      const startOdoVal = (document.getElementById('startOdometer') as HTMLInputElement)?.value;
+      const startPhotoInput = document.getElementById('startJourneyPhoto') as HTMLInputElement;
+      const startPhotoFile = startPhotoInput?.files?.[0];
+
       const payload: any = {
         company_id: parseInt(companySelect.value),
         transport_mode: this.selectedTransport,
@@ -697,6 +727,7 @@ export class JourneysPage {
         purpose_description: notes,
         gps_enabled: true,
         gps_permission_denied: false,
+        start_odometer_km: startOdoVal ? parseFloat(startOdoVal) : null,
         location: {
           latitude: position.latitude,
           longitude: position.longitude,
@@ -717,9 +748,23 @@ export class JourneysPage {
       console.log('[JourneysPage] Start journey response:', response);
       
       if (response.success && response.data) {
-        // Backend returns { success, journey: {...}, journey_session_token }
         const journey = response.data.journey;
         const sessionToken = response.data.journey_session_token;
+
+        if (journey && startPhotoFile) {
+          try {
+            const photoFormData = new FormData();
+            photoFormData.append('photo', startPhotoFile);
+            let startPhotoUrl = `/staff/journeys/${journey.id}/start-photo`;
+            if (sessionToken) {
+              startPhotoUrl += `?session_token=${encodeURIComponent(sessionToken)}`;
+            }
+            await apiService.postFormData(startPhotoUrl, photoFormData);
+            console.log('[JourneysPage] Start odometer photo uploaded successfully');
+          } catch (pErr) {
+            console.warn('[JourneysPage] Start photo upload failed (non-fatal):', pErr);
+          }
+        }
         
         if (journey) {
           this.activeJourney = {
@@ -889,7 +934,13 @@ export class JourneysPage {
         endUrl += `?session_token=${encodeURIComponent(sessionToken)}`;
       }
 
+      const endOdoVal = (document.getElementById('endOdometer') as HTMLInputElement)?.value;
+      const manualDistVal = (document.getElementById('manualDistance') as HTMLInputElement)?.value;
+
       const endPayload: any = { notes };
+      if (endOdoVal) endPayload.end_odometer_km = parseFloat(endOdoVal);
+      if (manualDistVal) endPayload.manual_distance_km = parseFloat(manualDistVal);
+
       if (position) {
         endPayload.location = {
           latitude: position.latitude,

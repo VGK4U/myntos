@@ -21380,44 +21380,57 @@ class LedgerPostingService:
         # Pre-load company names once
         co_names = {r.id: r.company_name for r in db.query(_AC.id, _AC.company_name).all()}
 
+        target_types = ['BANK', 'UPI', 'CASH']
+
+        # DC Protocol Batching: Query running balance for all account types at once
+        bal_q = db.query(
+            _AL.account_type, _AL.account_name, _AL.company_id,
+            func.sum(_AL.debit_amount).label('td'),
+            func.sum(_AL.credit_amount).label('tc'),
+            func.max(_AL.transaction_date).label('last_d'),
+        ).filter(_AL.account_type.in_(target_types), _AL.transaction_date <= p_end, _AL.source_status != 'CANCELLED')
+        if company_id:
+            bal_q = bal_q.filter(_AL.company_id == company_id)
+        
+        bal_maps = {'BANK': {}, 'UPI': {}, 'CASH': {}}
+        for r in bal_q.group_by(_AL.account_type, _AL.account_name, _AL.company_id).all():
+            if r.account_type in bal_maps:
+                bal_maps[r.account_type][(r.account_name, r.company_id)] = (float(r.td or 0), float(r.tc or 0), r.last_d)
+
+        # DC Protocol Batching: Query period in/out for all account types at once
+        prd_maps = {'BANK': {}, 'UPI': {}, 'CASH': {}}
+        if p_start:
+            prd_q = db.query(
+                _AL.account_type, _AL.account_name, _AL.company_id,
+                func.sum(_AL.debit_amount).label('pd'),
+                func.sum(_AL.credit_amount).label('pc'),
+            ).filter(_AL.account_type.in_(target_types),
+                     _AL.transaction_date >= p_start,
+                     _AL.transaction_date <= p_end,
+                     _AL.source_status != 'CANCELLED')
+            if company_id:
+                prd_q = prd_q.filter(_AL.company_id == company_id)
+            for r in prd_q.group_by(_AL.account_type, _AL.account_name, _AL.company_id).all():
+                if r.account_type in prd_maps:
+                    prd_maps[r.account_type][(r.account_name, r.company_id)] = (float(r.pd or 0), float(r.pc or 0))
+        else:
+            for atype in target_types:
+                prd_maps[atype] = {k: (v[0], v[1]) for k, v in bal_maps[atype].items()}
+
+        # DC Protocol Batching: Query master records for all account types at once
+        mq = db.query(_ALM).filter(_ALM.account_type.in_(target_types), _ALM.is_active == True)
+        if company_id:
+            mq = mq.filter(_ALM.company_id == company_id)
+        master_maps = {'BANK': {}, 'UPI': {}, 'CASH': {}}
+        for m in mq.all():
+            if m.account_type in master_maps:
+                master_maps[m.account_type][(m.account_name, m.company_id)] = m
+
         def _section(acct_type):
-            """Aggregate one account type into rows with running balance + period In/Out."""
-            # Running balance: SUM(Dr) − SUM(Cr) for ALL transactions up to p_end
-            bal_q = db.query(
-                _AL.account_name, _AL.company_id,
-                func.sum(_AL.debit_amount).label('td'),
-                func.sum(_AL.credit_amount).label('tc'),
-                func.max(_AL.transaction_date).label('last_d'),
-            ).filter(_AL.account_type == acct_type, _AL.transaction_date <= p_end, _AL.source_status != 'CANCELLED')
-            if company_id:
-                bal_q = bal_q.filter(_AL.company_id == company_id)
-            bal_map = {}
-            for r in bal_q.group_by(_AL.account_name, _AL.company_id).all():
-                bal_map[(r.account_name, r.company_id)] = (float(r.td or 0), float(r.tc or 0), r.last_d)
-
-            # Period In/Out (filtered by date range)
-            if p_start:
-                prd_q = db.query(
-                    _AL.account_name, _AL.company_id,
-                    func.sum(_AL.debit_amount).label('pd'),
-                    func.sum(_AL.credit_amount).label('pc'),
-                ).filter(_AL.account_type == acct_type,
-                         _AL.transaction_date >= p_start,
-                         _AL.transaction_date <= p_end,
-                         _AL.source_status != 'CANCELLED')
-                if company_id:
-                    prd_q = prd_q.filter(_AL.company_id == company_id)
-                prd_map = {(r.account_name, r.company_id): (float(r.pd or 0), float(r.pc or 0))
-                           for r in prd_q.group_by(_AL.account_name, _AL.company_id).all()}
-            else:
-                # OVERALL: period In/Out = all-time (same window as balance)
-                prd_map = {k: (v[0], v[1]) for k, v in bal_map.items()}
-
-            # Master records (bank details, is_active)
-            mq = db.query(_ALM).filter(_ALM.account_type == acct_type, _ALM.is_active == True)
-            if company_id:
-                mq = mq.filter(_ALM.company_id == company_id)
-            master_map = {(m.account_name, m.company_id): m for m in mq.all()}
+            """Assemble section result using pre-fetched batch maps."""
+            bal_map = bal_maps.get(acct_type, {})
+            prd_map = prd_maps.get(acct_type, {})
+            master_map = master_maps.get(acct_type, {})
 
             result = []
             all_keys = sorted(set(bal_map) | set(master_map),

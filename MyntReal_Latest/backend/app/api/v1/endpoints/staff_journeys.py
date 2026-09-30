@@ -919,6 +919,60 @@ async def upload_journey_photo(
         raise HTTPException(status_code=500, detail=f"Photo upload failed: {e}")
 
 
+@router.post("/{journey_id}/start-photo", summary="Upload journey start odometer photo")
+async def upload_journey_start_photo(
+    journey_id: int,
+    http_request: Request,
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC_JOURNEY_START_PHOTO_001: Upload photo at journey start (odometer reading)
+    """
+    journey = db.query(StaffJourney).filter(
+        StaffJourney.id == journey_id,
+        StaffJourney.employee_id == current_user.id
+    ).first()
+
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+
+    if not photo.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    from app.services.universal_upload_service import UniversalUploadService
+    try:
+        upload_result = await UniversalUploadService.handle_upload(
+            file=photo,
+            table_name='staff_journeys',
+            record_id=journey_id,
+            uploaded_by_id=current_user.id,
+            uploaded_by_type='staff',
+            storage_dir='journey_photos',
+            db=db,
+            emp_code=current_user.emp_code,
+            defer_scheduler=True
+        )
+        
+        journey.start_photo_path = upload_result['file_path']
+        journey.start_photo_uploaded_at = get_indian_time()
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Start odometer photo uploaded successfully",
+            "start_photo_path": upload_result['file_path']
+        }
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to upload start photo: {str(e)}")
+
+
 @router.post("/{journey_id}/override-distance", summary="Override journey distance (Manager/Employee)")
 async def override_journey_distance(
     journey_id: int,
