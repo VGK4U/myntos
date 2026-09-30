@@ -662,8 +662,8 @@ def _is_due_today(lead) -> bool:
     now = get_ist_now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
-    # Scheduled for today AND scheduled time has arrived (<= now)
-    return today_start <= lead.next_followup_date <= now < today_end
+    # Scheduled for today (any time today)
+    return today_start <= lead.next_followup_date < today_end
 
 
 def _needs_second_contact(lead) -> bool:
@@ -2434,6 +2434,7 @@ async def get_current_session(
 # ──────────────────────────────────────────────────────────────────────────────
 
 @router.post("/dialer/attempt")
+@router.post("/dialer/log-attempt")
 async def log_dialer_attempt(
     body: dict = Body(...),
     db: Session = Depends(get_db),
@@ -2574,6 +2575,15 @@ async def log_dialer_attempt(
                 lead.category_id = int(new_category_id)
             except (ValueError, TypeError):
                 pass
+
+        # Unified Lead Updates (Single Transaction): update any lead fields sent in body
+        lead_fields = body.get('lead_fields') or {}
+        for f_key in ('name', 'email', 'city', 'state', 'pincode', 'area', 'address', 'requirements', 'looking_for', 'description', 'budget_min', 'budget_max', 'lost_reason', 'recent_comments'):
+            if f_key in lead_fields and lead_fields[f_key] is not None:
+                setattr(lead, f_key, lead_fields[f_key])
+            elif f_key in body and body[f_key] is not None:
+                setattr(lead, f_key, body[f_key])
+
         if call_outcome and call_outcome != 'skip':
             lead.last_contact_date = now
             lead.last_dialed_at = now

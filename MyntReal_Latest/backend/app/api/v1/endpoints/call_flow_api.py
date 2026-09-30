@@ -3412,7 +3412,7 @@ def stream_call_recording(
 def get_customer_call_history(
     phone: str,
     db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_staff_user)
+    current_user=Depends(get_current_user_hybrid)
 ):
     """
     Returns the comprehensive call timeline and history for a specific customer phone number.

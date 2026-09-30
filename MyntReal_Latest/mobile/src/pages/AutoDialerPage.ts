@@ -1935,28 +1935,24 @@ export class AutoDialerPage {
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
 
-      // Fire both calls in parallel: full lead PUT + call outcome logAttempt
+      // Single Unified Transaction: pass lead_fields in dialerService.logAttempt to update lead and log attempt atomically
       const companyId = this.popupLeadData?.company_id || '';
-      const [_, attemptRes] = await Promise.all([
-        apiService.put(`/crm/leads/${leadId}?company_id=${companyId}`, leadPutPayload).catch(() => null),
-        dialerService.logAttempt({
-          session_id: this.sessionId,
-          lead_id: leadId,
-          call_outcome: selectedOutcome || 'answered',
-          call_method: this.callMethod,
-          duration_seconds: durationSec,
-          note,
-          next_followup_date: followup || undefined,
-          new_status: status,
-          new_priority: priority,
-          do_not_call: dnc,
-          // DC_RESUME_FIX: Send the POST-advance index so server knows this lead is done.
-          // Without +1, server stores index 0 (Ram's position); on resume it shows Ram again.
-          current_index: dialerService.getCurrentIndex() + 1,
-          activity_type: selectedActivity || undefined,
-          activity_minutes: activityMinutes,
-        }),
-      ]);
+      const attemptRes = await dialerService.logAttempt({
+        session_id: this.sessionId,
+        lead_id: leadId,
+        call_outcome: selectedOutcome || 'answered',
+        call_method: this.callMethod,
+        duration_seconds: durationSec,
+        note,
+        next_followup_date: followup || undefined,
+        new_status: status,
+        new_priority: priority,
+        do_not_call: dnc,
+        current_index: dialerService.getCurrentIndex() + 1,
+        activity_type: selectedActivity || undefined,
+        activity_minutes: activityMinutes,
+        lead_fields: leadPutPayload,
+      });
 
       void dialerService.releaseReservation(leadId);
       this._closePopup(overlay);
@@ -2290,11 +2286,12 @@ export class AutoDialerPage {
   private _startNextDialCountdown(lead: QueueItem): void {
     document.getElementById('dc-next-dial-countdown')?.remove();
     let count = 5;
+    let isPaused = false;
 
     const overlay = document.createElement('div');
     overlay.id = 'dc-next-dial-countdown';
     overlay.style.cssText = [
-      'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.55)',
+      'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.65)',
       'display:flex', 'align-items:center', 'justify-content:center',
       'z-index:9000',
     ].join(';');
@@ -2307,39 +2304,79 @@ export class AutoDialerPage {
           ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;background:#d1fae5;color:#059669;border:1px solid #86efac;border-radius:999px;">🌱 FRESH LEAD</span>`
           : '');
 
-    const render = () => {
-      overlay.innerHTML = `
-        <div style="background:#fff;border-radius:20px;padding:32px 40px;text-align:center;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-          <div style="font-size:72px;font-weight:800;color:#059669;line-height:1;font-variant-numeric:tabular-nums;">${count}</div>
-          <div style="font-size:14px;color:#9ca3af;margin-top:6px;letter-spacing:.5px;">DIALING NEXT IN…</div>
-          <div style="font-size:16px;font-weight:700;color:#1f2937;margin-top:10px;">${this._escapeHtml(lead.name)}</div>
-          <div style="font-size:13px;color:#6b7280;margin-top:2px;">${this._maskPhone(lead.phone)}</div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;">
-            <span style="font-size:11px;font-weight:600;padding:3px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;">🏷️ ${this._escapeHtml(catName)}</span>
-            <span style="font-size:11px;font-weight:600;padding:3px 8px;background:#f1f5f9;color:#475569;border-radius:6px;">📌 ${this._escapeHtml(statusName)}</span>
-            ${tempBadge}
-          </div>
-          <button id="dc-next-dial-cancel" style="margin-top:20px;width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:14px;color:#6b7280;cursor:pointer;font-weight:600;">
-            ✕ Cancel — I'll dial manually
-          </button>
-        </div>`;
+    const attachListeners = () => {
       document.getElementById('dc-next-dial-cancel')?.addEventListener('click', () => {
         clearInterval(timer);
         overlay.remove();
       });
+      document.getElementById('dc-next-dial-extend')?.addEventListener('click', () => {
+        count += 10;
+        const secEl = document.getElementById('dc-cd-sec-val');
+        if (secEl) secEl.textContent = String(count);
+      });
+      document.getElementById('dc-next-dial-pause')?.addEventListener('click', () => {
+        isPaused = !isPaused;
+        const btn = document.getElementById('dc-next-dial-pause');
+        if (btn) btn.innerHTML = isPaused ? '▶️ Resume' : '⏸️ Pause';
+      });
+      document.getElementById('dc-next-dial-history')?.addEventListener('click', () => {
+        isPaused = true;
+        const btn = document.getElementById('dc-next-dial-pause');
+        if (btn) btn.innerHTML = '▶️ Resume';
+        if (lead.id) {
+          UniversalLeadHistoryModal.open(lead.id, lead.phone);
+        }
+      });
+    };
+
+    const render = () => {
+      overlay.innerHTML = `
+        <div style="background:#1e293b;border-radius:20px;padding:28px 24px;text-align:center;min-width:300px;max-width:340px;box-shadow:0 12px 36px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);color:#fff;">
+          <div id="dc-cd-sec-val" style="font-size:64px;font-weight:800;color:#10b981;line-height:1;font-variant-numeric:tabular-nums;">${count}</div>
+          <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-top:6px;letter-spacing:0.5px;text-transform:uppercase;">Dialing Next Lead In</div>
+          
+          <div style="font-size:16px;font-weight:700;color:#fff;margin-top:12px;">${this._escapeHtml(lead.name)}</div>
+          <div style="font-size:13px;color:#cbd5e1;margin-top:2px;font-family:monospace;">${this._maskPhone(lead.phone)}</div>
+          
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span style="font-size:10.5px;font-weight:600;padding:3px 8px;background:rgba(56,189,248,0.15);color:#38bdf8;border-radius:6px;border:1px solid rgba(56,189,248,0.3);">🏷️ ${this._escapeHtml(catName)}</span>
+            <span style="font-size:10.5px;font-weight:600;padding:3px 8px;background:rgba(255,255,255,0.08);color:#cbd5e1;border-radius:6px;">📌 ${this._escapeHtml(statusName)}</span>
+            ${tempBadge}
+          </div>
+
+          <!-- Quick Action Buttons Row: History, Extend, Pause -->
+          <div style="display:flex;gap:8px;margin-top:18px;">
+            <button id="dc-next-dial-history" style="flex:1;padding:8px 10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:10px;font-size:11.5px;font-weight:700;cursor:pointer;">
+              📜 History
+            </button>
+            <button id="dc-next-dial-extend" style="flex:1;padding:8px 10px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399;border-radius:10px;font-size:11.5px;font-weight:700;cursor:pointer;">
+              ⏱️ +10s
+            </button>
+            <button id="dc-next-dial-pause" style="flex:1;padding:8px 10px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:10px;font-size:11.5px;font-weight:700;cursor:pointer;">
+              ${isPaused ? '▶️ Resume' : '⏸️ Pause'}
+            </button>
+          </div>
+
+          <button id="dc-next-dial-cancel" style="margin-top:12px;width:100%;padding:10px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:rgba(255,255,255,0.05);font-size:12.5px;color:#94a3b8;cursor:pointer;font-weight:600;">
+            ✕ Cancel — I'll dial manually
+          </button>
+        </div>`;
+      attachListeners();
     };
 
     render();
     document.body.appendChild(overlay);
 
     const timer = setInterval(() => {
+      if (isPaused) return;
       count--;
+      const secEl = document.getElementById('dc-cd-sec-val');
+      if (secEl) secEl.textContent = String(count);
+
       if (count <= 0) {
         clearInterval(timer);
         overlay.remove();
         this._dial(lead.phone, lead);
-      } else {
-        render();
       }
     }, 1000);
   }

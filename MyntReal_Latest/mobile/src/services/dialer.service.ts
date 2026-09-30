@@ -80,6 +80,7 @@ export interface AttemptResult {
   activity_type?: string;
   activity_minutes?: number;
   lead_update_minutes?: number;
+  lead_fields?: Record<string, any>;
 }
 
 export interface QueueStats {
@@ -627,6 +628,7 @@ class DialerService {
       activity_type: result.activity_type ?? null,
       activity_minutes: result.activity_minutes ?? null,
       lead_update_minutes: result.lead_update_minutes ?? null,
+      lead_fields: result.lead_fields ?? null,
     });
     const data = res.data as {
       attempt_id?: number;

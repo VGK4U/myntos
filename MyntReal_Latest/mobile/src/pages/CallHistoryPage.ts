@@ -8,6 +8,7 @@
 import { apiService } from '../services/api.service';
 import { dialerService } from '../services/dialer.service';
 import { PageHeader } from '../components/PageHeader';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
   INCOMING:  { icon: '📲', color: '#059669', label: 'Incoming' },
@@ -16,6 +17,16 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }
   REJECTED:  { icon: '🚫', color: '#7c3aed', label: 'Rejected' },
   DIALER:    { icon: '🎯', color: '#d97706', label: 'CRM Dialer' },
 };
+
+function maskPhone(phone: string): string {
+  if (!phone) return '';
+  const d = phone.replace(/\D/g, '');
+  if (d.length < 10) return phone;
+  const last4 = d.slice(-4);
+  const first2 = d.slice(-10, -8);
+  const prefix = phone.startsWith('+') ? '+91 ' : '';
+  return `${prefix}${first2}••••${last4}`;
+}
 
 function fmtDuration(secs: number): string {
   if (!secs) return '';
@@ -115,8 +126,11 @@ export class CallHistoryPage {
     const rows = this.entries.map(e => {
       const cfg = TYPE_CONFIG[e.call_type] || TYPE_CONFIG['OUTGOING'];
       const dur = fmtDuration(e.duration_seconds || 0);
-      const displayName = e.contact_name || e.name || e.phone;
       const phone = e.phone || '';
+      const rawName = e.contact_name || e.name;
+      const displayName = rawName ? rawName : (phone ? maskPhone(phone) : 'Unknown Contact');
+      const maskedPhoneStr = phone ? maskPhone(phone) : '';
+
       return `
         <div class="ch-row">
           <div class="ch-type-icon" style="color:${cfg.color}">${cfg.icon}</div>
@@ -129,9 +143,10 @@ export class CallHistoryPage {
               ${dur ? `· ${dur}` : ''}
               · ${fmtTime(e.dialed_at)}
             </div>
-            ${phone ? `<div class="ch-phone">${phone}</div>` : ''}
+            ${maskedPhoneStr ? `<div class="ch-phone">${maskedPhoneStr}</div>` : ''}
           </div>
-          <div class="ch-actions">
+          <div class="ch-actions" style="display:flex;gap:8px;align-items:center;">
+            <button class="ch-history-btn" data-phone="${phone}" data-lead="${e.lead_id || ''}" data-name="${displayName.replace(/"/g, '&quot;')}" style="background:#4f46e5;color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Universal History">📜</button>
             ${phone ? `<button class="ch-call-btn" data-phone="${phone}" data-name="${displayName.replace(/"/g, '&quot;')}" data-lead="${e.lead_id || ''}">📞</button>` : ''}
           </div>
         </div>`;
@@ -158,6 +173,24 @@ export class CallHistoryPage {
   }
 
   private _attachRowListeners(): void {
+    document.querySelectorAll('.ch-history-btn').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const target = btn as HTMLElement;
+        const phone = target.dataset.phone || '';
+        const leadIdStr = target.dataset.lead;
+        const name = target.dataset.name || 'Lead';
+        const leadId = leadIdStr ? parseInt(leadIdStr, 10) : undefined;
+        UniversalLeadHistoryModal.open({
+          entityType: 'crm_lead',
+          entityId: leadId || 0,
+          phone,
+          name,
+          category: 'Call History'
+        });
+      });
+    });
+
     document.querySelectorAll('.ch-call-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const phone = (btn as HTMLElement).dataset.phone!;

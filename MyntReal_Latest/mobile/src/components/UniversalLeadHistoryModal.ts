@@ -23,8 +23,8 @@ export interface UniversalHistoryModalOptions {
 }
 
 export class UniversalLeadHistoryModal {
-  public static open(options: UniversalHistoryModalOptions): void {
-    universalLeadHistoryModal.open(options);
+  public static open(optionsOrLeadId?: UniversalHistoryModalOptions | number | string, phone?: string): void {
+    universalLeadHistoryModal.open(optionsOrLeadId, phone);
   }
 
   public static close(): void {
@@ -41,7 +41,11 @@ export class UniversalLeadHistoryModal {
     changes: {}
   };
 
-  public open(options: UniversalHistoryModalOptions): void {
+  public open(optionsOrLeadId?: UniversalHistoryModalOptions | number | string, phone?: string): void {
+    const options: UniversalHistoryModalOptions = (typeof optionsOrLeadId === 'object' && optionsOrLeadId !== null)
+      ? optionsOrLeadId
+      : { entityId: optionsOrLeadId, phone: phone || '' };
+
     if (!options || (!options.entityId && !options.leadId && !options.memberId && !options.phone)) {
       console.warn('[UniversalLeadHistoryModal] Invalid options:', options);
       return;
