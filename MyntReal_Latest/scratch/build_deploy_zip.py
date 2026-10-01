@@ -135,7 +135,12 @@ def build_zip():
                     continue
                 
                 try:
-                    zf.write(abs_file, arcname=str(rel_path))
+                    if abs_file.suffix.lower() in [".sh", ".conf", ".config", ".py", ".js", ".json", ".txt", ".md"] or f in ["Procfile", "Dockerfile"]:
+                        with open(abs_file, "r", encoding="utf-8", errors="ignore") as tf:
+                            content = tf.read().replace("\r\n", "\n")
+                        zf.writestr(str(rel_path).replace("\\", "/"), content)
+                    else:
+                        zf.write(abs_file, arcname=str(rel_path))
                     file_count += 1
                     total_uncompressed += abs_file.stat().st_size
                 except Exception as err:
