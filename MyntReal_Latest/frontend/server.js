@@ -18683,6 +18683,27 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(200);
     res.end(createHTML('Field Allowances', content, sessionToken));
     return;
+  }
+  
+  // Zynova OS SaaS Domain Clean URL Routing (Clean URLs without .html)
+  const reqHost = (req.headers.host || '').toLowerCase();
+  const isZynovaDomain = reqHost.includes('zynovaos') || reqHost.includes('zynova');
+  
+  if (isZynovaDomain && (url === '/' || url === '/index.html' || url.startsWith('/?'))) {
+    serveCachedHtml(res, 'b2b_signup.html', BUILD_ID);
+    return;
+  } else if (isZynovaDomain && (url === '/login' || url.startsWith('/login?'))) {
+    serveCachedHtml(res, 'saas_login.html', BUILD_ID);
+    return;
+  } else if (isZynovaDomain && (url === '/workspace' || url.startsWith('/workspace?'))) {
+    serveCachedHtml(res, 'saas_workspace.html', BUILD_ID);
+    return;
+  } else if (isZynovaDomain && (url === '/signup' || url.startsWith('/signup?'))) {
+    serveCachedHtml(res, 'saas_signup.html', BUILD_ID);
+    return;
+  } else if (isZynovaDomain && (url === '/admin' || url.startsWith('/admin?'))) {
+    serveCachedHtml(res, 'saas_admin.html', BUILD_ID);
+    return;
   } else if (url.startsWith('/b2b-signup') || url.startsWith('/b2b/signup')) {
     // Task #43 — B2B SaaS tenant self-service sign-up
     serveCachedHtml(res, 'b2b_signup.html', BUILD_ID);

@@ -100,14 +100,17 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
 
     # Exclude heavy non-UI images > 2MB while keeping all logos
     if abs_file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
-        size_mb = abs_file.stat().st_size / (1024 * 1024)
-        if size_mb > 1.8:
+        try:
+            size_mb = abs_file.stat().st_size / (1024 * 1024)
+            if size_mb > 1.8:
+                return True
+        except Exception:
             return True
             
     return False
 
 def build_zip():
-    print(f"📦 Packaging Slim AWS Deploy Zip (< 50MB) from: {SOURCE_DIR}")
+    print(f"[PACKAGING] Packaging Slim AWS Deploy Zip (< 50MB) from: {SOURCE_DIR}")
     
     if OUTPUT_ZIP.exists():
         OUTPUT_ZIP.unlink()
@@ -156,7 +159,7 @@ def build_zip():
             
             env_config_content = '\n'.join(env_config_lines) + '\n'
             zf.writestr('.ebextensions/01_env.config', env_config_content)
-            print(f"✅ Successfully injected secure environment variables from {env_path.name} into the ZIP as .ebextensions/01_env.config")
+            print(f"[SUCCESS] Injected environment variables from {env_path.name} into .ebextensions/01_env.config")
 
     compressed_size = OUTPUT_ZIP.stat().st_size
     
@@ -170,16 +173,16 @@ def build_zip():
     root_zip = SOURCE_DIR.parent / "deployment.zip"
     try:
         shutil.copyfile(OUTPUT_ZIP, root_zip)
-        print(f"✅ Synchronized {root_zip}")
+        print(f"[SYNC] Synchronized {root_zip}")
     except Exception as e:
         print(f"Notice: Root copy: {e}")
 
-    print(f"\n✅ SLIM ZIP CREATION SUCCESSFUL (< 50MB)!")
-    print(f"📍 Location: {OUTPUT_ZIP}")
-    print(f"📊 Total Files Included: {file_count}")
-    print(f"📦 Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
-    print(f"📂 Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")
-    print(f"🔑 SHA256 Checksum: {sha256_checksum}")
+    print(f"\n[SUCCESS] SLIM ZIP CREATION SUCCESSFUL (< 50MB)!")
+    print(f"Location: {OUTPUT_ZIP}")
+    print(f"Total Files Included: {file_count}")
+    print(f"Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
+    print(f"Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")
+    print(f"SHA256 Checksum: {sha256_checksum}")
 
 if __name__ == "__main__":
     build_zip()
