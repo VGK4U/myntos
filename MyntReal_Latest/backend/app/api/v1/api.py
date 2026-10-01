@@ -58,6 +58,9 @@ from app.api.v1.endpoints import (
     mobile_telephony_api,
     crm_universal_history,
     crm_field_appointments,
+    ved_members,
+    tenant_service,
+    tenant_landing,
     central_integrations,
 )
 
@@ -209,6 +212,10 @@ api_router.include_router(partner_auth.router, tags=["Partner Authentication"])
 api_router.include_router(crm.router, prefix="/crm", tags=["Universal CRM - Lead Management"])
 api_router.include_router(crm_universal_history.router, prefix="/crm/universal-history", tags=["CRM - Universal History"])
 api_router.include_router(crm_field_appointments.router, prefix="/crm/field-appointments", tags=["CRM - Field Appointments & Supporting Staff"])
+api_router.include_router(ved_members.router, prefix="/tenant", tags=["Tenant VED Members & Executive Dashboard"])
+api_router.include_router(tenant_service.router, prefix="/tenant", tags=["SaaS Tenant Service Center Module"])
+api_router.include_router(tenant_landing.router, prefix="/tenant", tags=["SaaS Tenant Landing Page & AI Generator"])
+api_router.include_router(tenant_landing.public_router, tags=["Public Tenant Single Page Landing Site View"])
 api_router.include_router(bank_contacts.router, prefix="/crm", tags=["CRM - Bank Branch Contacts"])
 api_router.include_router(crm_settings.router, prefix="/crm/settings", tags=["CRM Settings & Handler Routing"])
 

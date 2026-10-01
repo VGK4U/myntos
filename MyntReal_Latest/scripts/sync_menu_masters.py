@@ -1,7 +1,7 @@
 import os
 import re
 
-base_dir = r"e:\SAAS\MyntReal_Latest"
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 js_path = os.path.join(base_dir, "frontend", "public", "js", "menu-master.js")
 ts_path = os.path.join(base_dir, "mobile", "src", "constants", "menu-master.ts")

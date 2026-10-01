@@ -246,6 +246,13 @@
         }
     `;
 
+    function isSaaSMode() {
+        const loc = window.location.pathname.toLowerCase();
+        if (loc.includes('b2b-signup') || loc.includes('saas')) return true;
+        if (typeof window !== 'undefined' && (window.IS_SAAS === true || window.IS_SAAS_TENANT === true)) return true;
+        return false;
+    }
+
     function injectWidget() {
         if (document.getElementById('myntChatbotBtn')) return;
 
@@ -253,18 +260,40 @@
         styleEl.textContent = styles;
         document.head.appendChild(styleEl);
 
+        const isSaaS = isSaaSMode();
+        const chatbotTitle = isSaaS ? 'Zynova Zen Assistant' : 'MyntReal Assistant';
+        const chatbotAvatar = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:2px;">' : '🤖';
+        const btnIcon = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:48px;height:48px;object-fit:contain;border-radius:50%;background:#ffffff;padding:4px;">' : '💬';
+        const welcomeText = isSaaS
+            ? 'Hello! 👋 Welcome to <b>Zynova OS SaaS Platform</b>. How can I help you explore our SaaS modules and plans today? Please choose an option below:'
+            : 'Hello! 👋 Welcome to MyntReal Har Ghar Solar. How can I help you today? Please choose an option below:';
+
+        const initialOptions = isSaaS
+            ? `
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_modules')">📦 1. Commercial SaaS Modules Matrix</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (₹1,499 - ₹9,999/mo)</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_signup')">🚀 3. Start 7-Day SaaS Free Trial</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
+            `
+            : `
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('services')">🏢 1. Company Services & Offerings</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('programs')">📊 2. VGK4U Partner Program & Earnings</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('lead')">📝 3. Connect & Create Lead</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
+            `;
+
         const container = document.createElement('div');
         container.innerHTML = `
-            <div class="mynt-chatbot-btn" id="myntChatbotBtn" title="Chat with MyntReal Support">
-                💬
+            <div class="mynt-chatbot-btn" id="myntChatbotBtn" title="Chat with ${chatbotTitle}">
+                ${btnIcon}
                 <div class="mynt-chatbot-badge"></div>
             </div>
             <div class="mynt-chatbot-box" id="myntChatbotBox">
                 <div class="mynt-chatbot-header">
                     <div class="mynt-chatbot-header-info">
-                        <div class="mynt-chatbot-avatar">🤖</div>
+                        <div class="mynt-chatbot-avatar">${chatbotAvatar}</div>
                         <div>
-                            <div class="mynt-chatbot-title">MyntReal Assistant</div>
+                            <div class="mynt-chatbot-title">${chatbotTitle}</div>
                             <div class="mynt-chatbot-status"><span class="mynt-chatbot-status-dot"></span> Online</div>
                         </div>
                     </div>
@@ -272,13 +301,10 @@
                 </div>
                 <div class="mynt-chatbot-body" id="myntChatbotBody">
                     <div class="mynt-chat-msg mynt-chat-bot">
-                        Hello! 👋 Welcome to MyntReal Har Ghar Solar. How can I help you today? Please choose an option below:
+                        ${welcomeText}
                     </div>
                     <div class="mynt-chat-options" id="myntChatOptions">
-                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('services')">🏢 1. Company Services & Offerings</button>
-                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('programs')">📊 2. VGK4U Partner Program & Earnings</button>
-                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('lead')">📝 3. Connect & Create Lead</button>
-                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
+                        ${initialOptions}
                     </div>
                 </div>
                 <div class="mynt-chatbot-footer">
@@ -317,7 +343,41 @@
 
         window.MyntWebsiteChatbot = {
             selectOption: function (opt) {
-                if (opt === 'services') {
+                if (opt === 'saas_modules') {
+                    appendUserMsg('1. Commercial SaaS Modules Matrix');
+                    appendBotMsg(`
+                        <b>Zynova OS Available SaaS Modules:</b><br/>
+                        • <b>CRM & Leads</b> (1+ Logins)<br/>
+                        • <b>WhatsApp Direct Messaging</b> (1+ Logins)<br/>
+                        • <b>Digital Company Profile</b> (2+ Logins)<br/>
+                        • <b>Workflows Engine</b> (2+ Logins)<br/>
+                        • <b>Journey & Appointments</b> (5+ Logins)<br/>
+                        • <b>Meta / Facebook Ads Integration</b> (5+ Logins)<br/>
+                        • <b>WhatsApp API Automation</b> (5+ Logins)<br/>
+                        • <b>Service Tickets & Support Desk</b> (10 Logins)<br/>
+                        • <b>Referral Agent Tracking (Ved)</b> (10 Logins)<br/>
+                        • <b>Core Workspace</b> (Included in all plans)
+                    `);
+                    this.showMenuOptions();
+                } else if (opt === 'saas_pricing') {
+                    appendUserMsg('2. Login Seat Plans');
+                    appendBotMsg(`
+                        <b>Zynova OS Monthly Seat Pricing:</b><br/>
+                        • <b>1 Login Plan</b>: ₹1,499 / month (7-Day Trial)<br/>
+                        • <b>2 Logins Plan</b>: ₹3,499 / month (7-Day Trial)<br/>
+                        • <b>5 Logins Plan</b>: ₹6,499 / month (7-Day Trial)<br/>
+                        • <b>10 Logins Plan</b>: ₹9,999 / month (7-Day Trial)<br/><br/>
+                        <i>All plans include 7 days free trial & instant automated setup.</i>
+                    `);
+                    this.showMenuOptions();
+                } else if (opt === 'saas_signup') {
+                    appendUserMsg('3. Start 7-Day SaaS Free Trial');
+                    appendBotMsg(`
+                        Ready to power your organization with Zynova OS?<br/><br/>
+                        <a href="/b2b-signup#signup-form" style="display:inline-block;background:#10b981;color:white;padding:10px 18px;border-radius:8px;font-weight:bold;text-decoration:none;">Fill Out SaaS Signup Form →</a>
+                    `);
+                    this.showMenuOptions();
+                } else if (opt === 'services') {
                     appendUserMsg('1. Company Services & Offerings');
                     appendBotMsg(`
                         <b>Our Core Services:</b><br/>
@@ -355,19 +415,26 @@
                 } else if (opt === 'whatsapp') {
                     appendUserMsg('4. Direct WhatsApp Support');
                     appendBotMsg(`Opening WhatsApp support channel...`);
-                    window.open('https://wa.me/918875551666?text=Hello%20VGK4U%20Support%2C%20I%20want%20to%20connect%20with%20you.', '_blank');
+                    window.open('https://wa.me/918875551666?text=Hello%20Support%2C%20I%20want%20to%20connect%20with%20you.', '_blank');
                     this.showMenuOptions();
                 }
             },
             showMenuOptions: function () {
                 const opts = document.createElement('div');
                 opts.className = 'mynt-chat-options';
-                opts.innerHTML = `
-                    <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('services')">🏢 1. Company Services & Offerings</button>
-                    <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('programs')">📊 2. VGK4U Partner Program & Earnings</button>
-                    <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('lead')">📝 3. Connect & Create Lead</button>
-                    <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
-                `;
+                opts.innerHTML = isSaaSMode()
+                    ? `
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_modules')">📦 1. Commercial SaaS Modules Matrix</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (₹1,499 - ₹9,999/mo)</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_signup')">🚀 3. Start 7-Day SaaS Free Trial</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
+                    `
+                    : `
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('services')">🏢 1. Company Services & Offerings</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('programs')">📊 2. VGK4U Partner Program & Earnings</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('lead')">📝 3. Connect & Create Lead</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
+                    `;
                 body.appendChild(opts);
                 body.scrollTop = body.scrollHeight;
             },

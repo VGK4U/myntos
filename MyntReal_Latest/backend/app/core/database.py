@@ -104,7 +104,7 @@ else:
             pool_size=8,              # 8 connections per worker
             max_overflow=4,           # 4 burst overflow
             pool_timeout=10,          # 10s timeout to prevent thread pile-up
-            pool_recycle=1800,        # Recycle idle connections every 30m
+            pool_recycle=300,         # Recycle idle connections every 5m to prevent RDS SSL drops
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
             connect_args={
@@ -686,6 +686,17 @@ def run_pending_migrations():
             "name": "idx_realtime_loc_client_obs_id",
             "check": "SELECT indexname FROM pg_indexes WHERE tablename='staff_realtime_locations' AND indexname='idx_realtime_loc_client_obs_id'",
             "migrate": "CREATE INDEX idx_realtime_loc_client_obs_id ON staff_realtime_locations(employee_id, client_observation_id)"
+        },
+        # DC Protocol (Sep 2026): VED Member / Freelancer Commission Structure (% vs ₹)
+        {
+            "name": "official_partners.commission_type",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='official_partners' AND column_name='commission_type'",
+            "migrate": "ALTER TABLE official_partners ADD COLUMN commission_type VARCHAR(20) NOT NULL DEFAULT 'PERCENTAGE'"
+        },
+        {
+            "name": "official_partners.commission_value",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='official_partners' AND column_name='commission_value'",
+            "migrate": "ALTER TABLE official_partners ADD COLUMN commission_value NUMERIC(12, 2) NOT NULL DEFAULT 0.00"
         },
         {
             "name": "crm_field_appointments.journey_id",

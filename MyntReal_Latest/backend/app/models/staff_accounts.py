@@ -3049,7 +3049,7 @@ class OfficialPartner(BaseModel):
 
     # VGK Team fields (DC Protocol Mar 2026)
     parent_partner_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
-    # Freelancer Segment fields (Sep 2026)
+    # Freelancer / VED Member Segment fields (Sep 2026)
     vgk_support_id = Column(Integer, ForeignKey('official_partners.id', ondelete='RESTRICT'), nullable=True, index=True)
     freelancer_classification = Column(String(30), nullable=True, index=True)  # 'WITH_COMMUNICATION' | 'WITHOUT_COMMUNICATION'
     vgk_role = Column(String(30), nullable=True)
@@ -3058,6 +3058,10 @@ class OfficialPartner(BaseModel):
     points_recovery_liability = Column(Numeric(12, 2), nullable=False, default=0)
     is_business_activated = Column(Boolean, default=False, nullable=False, index=True)
     vgk_activated_at = Column(DateTime, nullable=True)
+
+    # DC Protocol Sep 2026: VED Member / Freelancer Commission Structure (% vs ₹)
+    commission_type = Column(String(20), nullable=False, default='PERCENTAGE')  # 'PERCENTAGE' | 'FLAT_VALUE'
+    commission_value = Column(Numeric(12, 2), nullable=False, default=0.00)
 
     # DC Protocol Mar 2026: Loyal Coupon — zero-cost activation by VGK Mentor staff only.
     # is_loyal_coupon=True means the member was activated via Loyal Coupon (not standard 5K PIN).

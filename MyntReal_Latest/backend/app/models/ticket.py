@@ -25,8 +25,13 @@ class ServiceTicket(Base):
     id = Column(Integer, primary_key=True)
     ticket_id = Column(String(20), unique=True, nullable=False, index=True)
     
+    # DC Protocol: Multi-company / Tenant isolation & Category Linkage
+    company_id = Column(Integer, ForeignKey('associated_companies.id'), nullable=True, index=True)
+    tenant_id = Column(Integer, ForeignKey('platform_clients.id'), nullable=True, index=True)
+    category_id = Column(Integer, ForeignKey('signup_categories.id'), nullable=True, index=True)
+    
     # User and assignment
-    user_id = Column(String(12), ForeignKey('user.id'), nullable=False, index=True)
+    user_id = Column(String(12), ForeignKey('user.id'), nullable=True, index=True)
     assigned_to = Column(String(12), ForeignKey('user.id'), nullable=True, index=True)
     
     # Ticket details

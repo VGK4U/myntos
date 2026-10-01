@@ -5119,8 +5119,7 @@ function injectVgkAssistant(html) {
   const isStaffOrLogin = html.includes('staff_sidebar.js') || html.includes('staff_login') || html.includes('login') || html.includes('staffSidebar');
   if (!isStaffOrLogin && !html.includes('/public/js/website-chatbot.js')) {
     toInject.push('<script src="/public/js/website-chatbot.js"></script>');
-  }
-  if (!html.includes('/vgk_assistant.js')) {
+  } else if (!html.includes('/vgk_assistant.js')) {
     toInject.push('<script src="/vgk_assistant.js"></script>');
   }
   if (!html.includes('/public/js/dc-draft-manager.js')) {
@@ -7659,6 +7658,121 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
       return;
+    }
+
+    // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
+    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico']);
+    const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
+    
+    if (shortCodeMatch) {
+      const extractedCode = shortCodeMatch[1].toUpperCase();
+      const subPath = shortCodeMatch[2] || '/';
+      
+      if (!RESERVED_PREFIXES.has(extractedCode.toLowerCase())) {
+        res.setHeader('Set-Cookie', `mnr_tenant_short_code=${extractedCode}; Path=/; SameSite=Lax`);
+        req.headers['x-tenant-code'] = extractedCode;
+        
+        if (subPath.startsWith('/staff/')) {
+          // Rewrite req.url internally to match standard staff route handler while preserving browser URL
+          req.url = subPath + (urlParts.search || '');
+        } else if (subPath === '/' || subPath === '/landing') {
+          // Render Public Tenant Single Page Landing Site
+          try {
+            const landingApiUrl = `${BACKEND_URL_SERVER}/api/v1/public/tenant/${extractedCode}/landing`;
+            const apiRes = await fetch(landingApiUrl);
+            if (apiRes.ok) {
+              const apiJson = await apiRes.json();
+              const landingData = apiJson.data || {};
+              const compName = landingData.company_name || extractedCode;
+              const heroTitle = landingData.hero_title || `Welcome to ${compName}`;
+              const heroSub = landingData.hero_subtitle || 'Customized solutions and reliable quality services.';
+              const primaryPhone = landingData.primary_phone || '';
+              const secondaryPhone = landingData.secondary_phone || '';
+              const email = landingData.official_email || '';
+              const website = landingData.official_website || '';
+              const address = landingData.address || '';
+              const logo = landingData.logo_image_url || '';
+              const banner = landingData.banner_image_url || '';
+              const themeColor = landingData.theme_color || '#2563eb';
+              const content = landingData.generated_content || {};
+
+              const servicesList = (content.services || []).map(s => `<li style="padding:10px 0; border-bottom:1px solid #e2e8f0; font-size:16px; color:#334155;"><i class="fas fa-check-circle" style="color:${themeColor}; margin-right:8px;"></i>${escapeHTML(s)}</li>`).join('');
+              const highlightsList = (content.highlights || []).map(h => `<div style="background:#f8fafc; border-left:4px solid ${themeColor}; padding:14px; margin-bottom:12px; border-radius:6px; font-weight:600; color:#1e293b;">${escapeHTML(h)}</div>`).join('');
+              const videoEmbeds = (landingData.video_links || []).map(v => {
+                let embedUrl = v;
+                if (v.includes('youtube.com/watch?v=')) embedUrl = v.replace('watch?v=', 'embed/');
+                else if (v.includes('youtu.be/')) embedUrl = v.replace('youtu.be/', 'youtube.com/embed/');
+                return `<div style="margin-bottom:16px; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1);"><iframe width="100%" height="280" src="${escapeHTML(embedUrl)}" frameborder="0" allowfullscreen></iframe></div>`;
+              }).join('');
+              const galleryImgs = (landingData.gallery_images || []).map(img => `<img src="${escapeHTML(img)}" style="width:100%; max-height:240px; object-fit:cover; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);" />`).join('');
+
+              const landingHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHTML(compName)} — Official Tenant Partner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin:0; }
+        .hero { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; padding: 60px 20px; text-align: center; }
+        .hero-banner-img { max-width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px; margin-top: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .logo-img { max-height: 70px; margin-bottom: 16px; }
+        .card-box { background: #fff; border-radius: 12px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); margin-bottom: 24px; border: 1px solid #e2e8f0; }
+        .contact-pill { display: inline-flex; align-items: center; gap: 8px; background: #eff6ff; color: #1e40af; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; text-decoration: none; margin-right: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="container">
+            ${logo ? `<img src="${escapeHTML(logo)}" class="logo-img" alt="Logo">` : ''}
+            <h1 style="font-weight:800; font-size:36px; margin-bottom:12px;">${escapeHTML(heroTitle)}</h1>
+            <p style="font-size:18px; color:#94a3b8; max-width:800px; margin:0 auto;">${escapeHTML(heroSub)}</p>
+            ${banner ? `<img src="${escapeHTML(banner)}" class="hero-banner-img" alt="Banner">` : ''}
+        </div>
+    </div>
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-lg-7">
+                <div class="card-box">
+                    <h3 style="color:${themeColor}; font-weight:700; margin-bottom:16px;"><i class="fas fa-building me-2"></i>About ${escapeHTML(compName)}</h3>
+                    <p style="font-size:16px; line-height:1.7; color:#334155;">${escapeHTML(content.about || '')}</p>
+                </div>
+                ${servicesList ? `<div class="card-box"><h4 style="font-weight:700; margin-bottom:16px;"><i class="fas fa-concierge-bell me-2" style="color:${themeColor};"></i>Our Services & Solutions</h4><ul style="list-style:none; padding:0;">${servicesList}</ul></div>` : ''}
+                ${galleryImgs ? `<div class="card-box"><h4 style="font-weight:700; margin-bottom:16px;"><i class="fas fa-images me-2" style="color:${themeColor};"></i>Gallery</h4><div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">${galleryImgs}</div></div>` : ''}
+            </div>
+            <div class="col-lg-5">
+                <div class="card-box">
+                    <h4 style="font-weight:700; margin-bottom:16px;"><i class="fas fa-star me-2" style="color:${themeColor};"></i>Key Highlights</h4>
+                    ${highlightsList}
+                </div>
+                ${videoEmbeds ? `<div class="card-box"><h4 style="font-weight:700; margin-bottom:16px;"><i class="fas fa-video me-2" style="color:${themeColor};"></i>Featured Videos</h4>${videoEmbeds}</div>` : ''}
+                <div class="card-box">
+                    <h4 style="font-weight:700; margin-bottom:16px;"><i class="fas fa-headset me-2" style="color:${themeColor};"></i>Contact & Info</h4>
+                    ${primaryPhone ? `<a href="tel:${escapeHTML(primaryPhone)}" class="contact-pill"><i class="fas fa-phone"></i> ${escapeHTML(primaryPhone)}</a>` : ''}
+                    ${secondaryPhone ? `<a href="tel:${escapeHTML(secondaryPhone)}" class="contact-pill"><i class="fas fa-phone-alt"></i> ${escapeHTML(secondaryPhone)}</a>` : ''}
+                    ${email ? `<a href="mailto:${escapeHTML(email)}" class="contact-pill"><i class="fas fa-envelope"></i> ${escapeHTML(email)}</a>` : ''}
+                    ${website ? `<a href="${escapeHTML(website)}" target="_blank" class="contact-pill"><i class="fas fa-globe"></i> Website</a>` : ''}
+                    ${address ? `<p style="margin-top:12px; font-size:14px; color:#64748b;"><i class="fas fa-map-marker-alt me-1"></i>${escapeHTML(address)}</p>` : ''}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="background:#0f172a; color:#64748b; text-align:center; padding:24px; font-size:13px;">
+        &copy; ${new Date().getFullYear()} ${escapeHTML(compName)}. All Copyrights Reserved | Powered by MyntOS SaaS
+    </div>
+</body>
+</html>`;
+              res.writeHead(200, { 'Content-Type': 'text/html' });
+              res.end(landingHtml);
+              return;
+            }
+          } catch (e) {
+            console.error('❌ Error rendering tenant landing page:', e);
+          }
+        }
+      }
     }
 
   // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status, /api/send-message, /api/send-group-message, etc.)
@@ -18895,7 +19009,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': '/staff/tenant-users' });
     res.end();
     return;
-  } else if (url.startsWith('/staff/my-tenant')) {
+  } else if (url.startsWith('/staff/my-tenant') || url.startsWith('/staff/company-profile') || url.startsWith('/staff_company_profile')) {
     // DC_SAAS_CONSOLE_001: VGK SaaS → My Tenant / All Tenants (B2B)
     const filePath = path.join(__dirname, 'staff_my_tenant.html');
     readFileWithRetry(filePath, (err, data) => {

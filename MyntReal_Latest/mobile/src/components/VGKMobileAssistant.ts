@@ -33,9 +33,27 @@ export class VGKMobileAssistant {
     return `${base}/api/v1/ai/command/process`;
   }
 
+  private isSaaSMode(): boolean {
+    if (typeof window !== 'undefined') {
+      if ((window as any).IS_SAAS === true || (window as any).IS_SAAS_TENANT === true) return true;
+      const loc = window.location.pathname.toLowerCase();
+      if (loc.includes('saas') || loc.includes('b2b-signup')) return true;
+    }
+    return false;
+  }
+
   private render() {
     const endpoint = this.getEndpoint();
     if (!endpoint) return;
+
+    const isSaaS = this.isSaaSMode();
+    const assistantTitle = isSaaS ? 'Zen Assistant' : 'VGK Assistant';
+    const logoSrc = isSaaS
+      ? 'data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="url(%23zenGrad)"/><path d="M12 12H28L15 28H28" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="zenGrad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="%236C3DE8"/><stop offset="1" stop-color="%2310B981"/></linearGradient></defs></svg>'
+      : '/public/vgk-assistant-logo.png';
+    const initialGreeting = isSaaS
+      ? "Hi! I'm Zen, your Zynova OS AI Assistant 👋\nHow can I help you today?"
+      : "Hi! I'm VGK Assistant 👋\nHow can I help you today?";
 
     this.container.innerHTML = `
       <style>
@@ -105,14 +123,14 @@ export class VGKMobileAssistant {
         @keyframes vgkPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
       </style>
 
-      <button id="vgk-mobile-fab" aria-label="VGK Assistant">
-        <img src="/public/vgk-assistant-logo.png" onerror="this.style.display='none';this.parentElement.textContent='🤖'" style="width:26px;height:26px;border-radius:50%;">
+      <button id="vgk-mobile-fab" aria-label="${assistantTitle}">
+        <img src="${logoSrc}" onerror="this.style.display='none';this.parentElement.textContent='⚡'" style="width:26px;height:26px;border-radius:50%;">
       </button>
 
       <div id="vgk-mobile-modal">
         <div id="vgk-modal-header">
-          <img src="/public/vgk-assistant-logo.png" onerror="this.style.display='none'">
-          <span>VGK Assistant</span>
+          <img src="${logoSrc}" onerror="this.style.display='none'">
+          <span>${assistantTitle}</span>
           <button id="vgk-close-btn">✕</button>
         </div>
         <div id="vgk-messages"></div>
@@ -141,7 +159,7 @@ export class VGKMobileAssistant {
 
     this.container.querySelector('#vgk-mic-btn')?.addEventListener('click', () => this.startVoice(input));
 
-    this.pushMessage('assistant', 'Hi! I\'m VGK Assistant. How can I help you today?');
+    this.pushMessage('assistant', initialGreeting);
   }
 
   private attachFabDrag() {

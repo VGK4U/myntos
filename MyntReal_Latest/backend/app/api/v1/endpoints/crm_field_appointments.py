@@ -67,7 +67,7 @@ class CreateAppointmentRequest(BaseModel):
     lead_id: int
     visit_type: str = Field(..., description="'visit_bank' | 'visit_customer' | 'others'")
     purpose: Optional[str] = Field(None, description="Free text purpose/objective of visit")
-    appointment_date: date
+    appointment_date: Optional[date] = Field(None, description="Date of appointment (defaults to today if omitted)")
     preferred_time: Optional[str] = None
     scheduled_start_time: Optional[datetime] = None
     assigned_to_id: int
@@ -139,18 +139,20 @@ def create_field_appointment(
     if not assignee:
         raise HTTPException(status_code=400, detail="Assigned employee must be an active, valid staff member")
 
+    app_date = req.appointment_date or get_indian_date()
+
     # Duplicate / Conflict Protection:
     # Check if an active appointment already exists for this lead, same visit_type, and same appointment_date
     active_conflict = db.query(CRMFieldAppointment).filter(
         CRMFieldAppointment.lead_id == req.lead_id,
         CRMFieldAppointment.visit_type == req.visit_type,
-        CRMFieldAppointment.appointment_date == req.appointment_date,
+        CRMFieldAppointment.appointment_date == app_date,
         CRMFieldAppointment.status.in_(['assigned', 'accepted', 'in_progress', 'reached'])
     ).first()
     if active_conflict:
         raise HTTPException(
             status_code=409,
-            detail=f"An active appointment ({active_conflict.appointment_code}) already exists for this lead on {req.appointment_date} with status '{active_conflict.status}'."
+            detail=f"An active appointment ({active_conflict.appointment_code}) already exists for this lead on {app_date} with status '{active_conflict.status}'."
         )
 
     # Resolve scheduled start time if only preferred_time string is provided
@@ -160,9 +162,9 @@ def create_field_appointment(
             # Try parsing format like "10:30 AM"
             t_part = req.preferred_time.split('-')[0].strip()
             parsed_time = datetime.strptime(t_part, "%I:%M %p").time()
-            sched_dt = datetime.combine(req.appointment_date, parsed_time)
+            sched_dt = datetime.combine(app_date, parsed_time)
         except Exception:
-            sched_dt = datetime.combine(req.appointment_date, datetime.min.time())
+            sched_dt = datetime.combine(app_date, datetime.min.time())
 
     app_code = generate_appointment_code()
 

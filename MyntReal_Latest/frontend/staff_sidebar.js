@@ -1219,6 +1219,9 @@ window.StaffSidebar = window.StaffSidebar || {
         const roleName = this.userData?.role_name || 'Employee';
         const roleClass = this.getRoleClass(roleName);
 
+        const isSaaSTenantUser = this.userData && (this.userData.is_tenant_admin || (this.userData.base_company_id && ![1, 2, 3, 4, 88].includes(Number(this.userData.base_company_id))) || ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT'].includes(this.userData.staff_type));
+        const taglineText = isSaaSTenantUser ? 'ZYNOVA OS WORKSPACE' : 'STAFF PORTAL';
+
         let html = `
             <div class="sidebar-header">
                 <div class="sidebar-header-row">
@@ -1229,7 +1232,7 @@ window.StaffSidebar = window.StaffSidebar || {
                         <i class="fas fa-chevron-left"></i>
                     </button>
                 </div>
-                <div class="sidebar-tagline">STAFF PORTAL</div>
+                <div class="sidebar-tagline">${taglineText}</div>
             </div>
             
             <nav class="sidebar-nav">

@@ -7,7 +7,7 @@ const DEV_SERVER_URL = 'http://192.168.1.10:5001/mobile';
 
 const config: CapacitorConfig = {
   appId: 'com.myntos.mobile',
-  appName: 'MyntReal',
+  appName: 'ZYNOVA OS',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

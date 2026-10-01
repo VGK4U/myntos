@@ -54,6 +54,14 @@ class CRMFieldAppointment(BaseModel):
       - 'visit_customer': On-site customer location visit
       - 'others': Any other physical/support activity (service, inspection, liaison)
     """
+    def __init__(self, **kwargs):
+        if not kwargs.get('appointment_code'):
+            d_str = get_indian_time().strftime('%Y%m%d')
+            import uuid
+            kwargs['appointment_code'] = f"APT-{d_str}-{uuid.uuid4().hex[:4].upper()}"
+        if not kwargs.get('appointment_date'):
+            kwargs['appointment_date'] = get_indian_time().date()
+        super().__init__(**kwargs)
     __tablename__ = 'crm_field_appointments'
     __table_args__ = (
         Index('ix_crm_field_appts_lead', 'lead_id'),

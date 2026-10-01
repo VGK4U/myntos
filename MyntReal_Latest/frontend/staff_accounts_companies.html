@@ -356,7 +356,7 @@
                             <select id="formType">
                                 <option value="SAAS_CLIENT" selected>SAAS Client (Subscribed Tenant)</option>
                                 <option value="SUBSIDIARY">Subsidiary (Group Company)</option>
-                                <option value="PARENT">Parent / Holding (VGK4U)</option>
+                                <option value="PARENT">Parent / Holding (Zynova Mobility Private Limited)</option>
                                 <option value="PARTNER">Partner / Franchise</option>
                                 <option value="VENDOR">Vendor / Supplier</option>
                             </select>
@@ -366,7 +366,7 @@
                         <div class="form-group"><label>Lifecycle Stage</label>
                             <select id="formLifecycle">
                                 <option value="ACTIVE_PAID" selected>Active & Paid</option>
-                                <option value="TRIAL">Trial (14 Days)</option>
+                                <option value="TRIAL">Trial (7 Days)</option>
                                 <option value="OVERDUE">Suspended / Overdue</option>
                                 <option value="ARCHIVED">Archived / Inactive</option>
                             </select>
@@ -410,6 +410,18 @@
                                 <span><i class="fas fa-funnel-dollar me-1" style="color:#4f46e5;"></i>CRM & Leads</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="JOURNEYS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-route me-1" style="color:#ec4899;"></i>Solar Journeys & Docs</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="VED_MEMBERS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-users-rays me-1" style="color:#8b5cf6;"></i>VED Member Referrals</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="SERVICE_TICKETS" checked style="cursor:pointer;">
+                                <span><i class="fas fa-headset me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
                                 <input type="checkbox" name="formModules" value="ACCOUNTS_FINANCE" checked style="cursor:pointer;">
                                 <span><i class="fas fa-file-invoice-dollar me-1" style="color:#059669;"></i>Accounts & GST</span>
                             </label>
@@ -422,12 +434,16 @@
                                 <span><i class="fas fa-user-check me-1" style="color:#2563eb;"></i>Staff HRMS & GPS</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
-                                <input type="checkbox" name="formModules" value="SERVICE_TICKETS" checked style="cursor:pointer;">
-                                <span><i class="fas fa-tools me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                                <input type="checkbox" name="formModules" value="SOLAR_EV" checked style="cursor:pointer;">
+                                <span><i class="fas fa-diagram-project me-1" style="color:#10b981;"></i>Workflows & Solar EV</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
-                                <input type="checkbox" name="formModules" value="SOLAR_EV" checked style="cursor:pointer;">
-                                <span><i class="fas fa-diagram-project me-1" style="color:#10b981;"></i>Workflows</span>
+                                <input type="checkbox" name="formModules" value="TELEPHONY_SOFTPHONE" checked style="cursor:pointer;">
+                                <span><i class="fas fa-phone-volume me-1" style="color:#3b82f6;"></i>Telephony & Softphone</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="formModules" value="DIGITAL_CATALOG" checked style="cursor:pointer;">
+                                <span><i class="fas fa-book-open-reader me-1" style="color:#6366f1;"></i>Digital Catalogs</span>
                             </label>
                         </div>
                     </div>
@@ -472,7 +488,7 @@
                             <select id="editType">
                                 <option value="SAAS_CLIENT">SAAS Client (Subscribed Tenant)</option>
                                 <option value="SUBSIDIARY">Subsidiary (Group Company)</option>
-                                <option value="PARENT">Parent / Holding (VGK4U)</option>
+                                <option value="PARENT">Parent / Holding (Zynova Mobility Private Limited)</option>
                                 <option value="PARTNER">Partner / Franchise</option>
                                 <option value="VENDOR">Vendor / Supplier</option>
                             </select>
@@ -482,7 +498,7 @@
                         <div class="form-group"><label>Lifecycle Status</label>
                             <select id="editLifecycle">
                                 <option value="ACTIVE_PAID">Active & Paid</option>
-                                <option value="TRIAL">Trial (14 Days)</option>
+                                <option value="TRIAL">Trial (7 Days)</option>
                                 <option value="OVERDUE">Suspended / Overdue</option>
                                 <option value="ARCHIVED">Archived / Inactive</option>
                             </select>
@@ -524,6 +540,18 @@
                                 <span><i class="fas fa-funnel-dollar me-1" style="color:#4f46e5;"></i>CRM & Leads</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="JOURNEYS" style="cursor:pointer;">
+                                <span><i class="fas fa-route me-1" style="color:#ec4899;"></i>Solar Journeys & Docs</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="VED_MEMBERS" style="cursor:pointer;">
+                                <span><i class="fas fa-users-rays me-1" style="color:#8b5cf6;"></i>VED Member Referrals</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="SERVICE_TICKETS" style="cursor:pointer;">
+                                <span><i class="fas fa-headset me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
                                 <input type="checkbox" name="editModules" value="ACCOUNTS_FINANCE" style="cursor:pointer;">
                                 <span><i class="fas fa-file-invoice-dollar me-1" style="color:#059669;"></i>Accounts & GST</span>
                             </label>
@@ -536,12 +564,16 @@
                                 <span><i class="fas fa-user-check me-1" style="color:#2563eb;"></i>Staff HRMS & GPS</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
-                                <input type="checkbox" name="editModules" value="SERVICE_TICKETS" style="cursor:pointer;">
-                                <span><i class="fas fa-tools me-1" style="color:#0891b2;"></i>Service & Tickets</span>
+                                <input type="checkbox" name="editModules" value="SOLAR_EV" style="cursor:pointer;">
+                                <span><i class="fas fa-diagram-project me-1" style="color:#10b981;"></i>Workflows & Solar EV</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
-                                <input type="checkbox" name="editModules" value="SOLAR_EV" style="cursor:pointer;">
-                                <span><i class="fas fa-diagram-project me-1" style="color:#10b981;"></i>Workflows</span>
+                                <input type="checkbox" name="editModules" value="TELEPHONY_SOFTPHONE" style="cursor:pointer;">
+                                <span><i class="fas fa-phone-volume me-1" style="color:#3b82f6;"></i>Telephony & Softphone</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; margin:0; cursor:pointer;">
+                                <input type="checkbox" name="editModules" value="DIGITAL_CATALOG" style="cursor:pointer;">
+                                <span><i class="fas fa-book-open-reader me-1" style="color:#6366f1;"></i>Digital Catalogs</span>
                             </label>
                         </div>
                     </div>

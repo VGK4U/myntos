@@ -1653,6 +1653,7 @@ import secrets as _secrets
 
 
 class CalculatePricingIn(BaseModel):
+    plan_code: Optional[str] = None
     selected_modules: List[str] = Field(default_factory=list)
     billing_currency: str = "INR"
     billing_cycle: str = "monthly"  # monthly or annual
@@ -1670,11 +1671,12 @@ class TenantSignupIn(BaseModel):
     city:             Optional[str] = None
     state:            Optional[str] = None
     company_type:     str = "SAAS_CLIENT"
+    plan_code:        Optional[str] = "PLAN_1_LOGIN"
     billing_currency: str = "INR"
     billing_cycle:    str = "monthly"  # monthly or annual
     selected_modules: Optional[List[str]] = Field(default_factory=list)
     seat_count:       int = Field(default=1, ge=1, le=10000)
-    trial_days:       int = 14
+    trial_days:       int = 7
     notes:            Optional[str] = None
 
 
@@ -1797,62 +1799,204 @@ def _compute_authoritative_pricing(
     }
 
 
+@router.get("/commercial-catalog")
+def get_commercial_catalog(db: Session = Depends(get_db)):
+    """
+    Authoritative Customer-Facing Commercial Catalog & Product Matrix.
+    Returns plan configurations, login tiers, monthly/annual pricing,
+    and module explorer metadata.
+    """
+    plans = db.query(PlatformPlan).filter_by(is_active=True).order_by(PlatformPlan.seat_count.asc()).all()
+    
+    catalog_plans = []
+    for p in plans:
+        mod_rows = db.query(PlatformModule).join(
+            PlatformPlanModule, PlatformPlanModule.module_id == PlatformModule.id
+        ).filter(PlatformPlanModule.plan_id == p.id).all()
+        
+        inc_codes = [m.module_code for m in mod_rows]
+        
+        catalog_plans.append({
+            "plan_id": p.id,
+            "plan_code": p.plan_code,
+            "plan_name": p.plan_name,
+            "description": p.description,
+            "seat_count": p.seat_count,
+            "monthly_price_inr": float(p.monthly_price_inr),
+            "annual_price_inr": float(p.annual_price_inr),
+            "included_modules": inc_codes
+        })
+
+    module_details = [
+        {
+            "code": "CRM_LEADS",
+            "name": "CRM & Lead Pipeline Management",
+            "category": "Customer Relationship Management",
+            "icon": "bi-people-fill",
+            "description": "Comprehensive lead capture, pipeline tracking, deal status transitions, and customer history.",
+            "features": [
+                "Customizable sales pipelines & deal stages",
+                "Lead activity timeline & touchpoint logging",
+                "Contact notes, tasks, & appointment sync",
+                "Lead assignment & owner tracking"
+            ]
+        },
+        {
+            "code": "WHATSAPP_INTEGRATION",
+            "name": "WhatsApp Direct Messaging",
+            "category": "Omnichannel Communication",
+            "icon": "bi-whatsapp",
+            "description": "Direct 1-on-1 WhatsApp customer messaging inbox embedded right inside your CRM dashboard.",
+            "features": [
+                "Send & receive direct WhatsApp messages from CRM",
+                "Pre-approved template messaging & quick replies",
+                "Conversation history logged to lead profile",
+                "Media, document, & invoice sharing"
+            ]
+        },
+        {
+            "code": "DIGITAL_CATALOG",
+            "name": "Digital Company Profile Page",
+            "category": "Branding & Web Presence",
+            "icon": "bi-globe",
+            "description": "Dedicated single-page public web profile for your SaaS company tenant with dynamic media & contact info.",
+            "features": [
+                "Customizable company profile page at /<shortcode>/",
+                "AI-assisted page content generation",
+                "Image gallery & YouTube video link embedding",
+                "Direct contact buttons, address, & website link"
+            ]
+        },
+        {
+            "code": "WORKFLOWS",
+            "name": "Automated Workflows & Rules",
+            "category": "Process Automation",
+            "icon": "bi-diagram-3-fill",
+            "description": "Intelligent automated lifecycle triggers, status transition rules, and automated notifications.",
+            "features": [
+                "Auto-assign leads based on source or region",
+                "Automated follow-up reminders & status changes",
+                "Custom trigger-action workflow rules",
+                "Audit trail of automated execution"
+            ]
+        },
+        {
+            "code": "JOURNEYS",
+            "name": "Journey & Appointment Management",
+            "category": "Field & Customer Scheduling",
+            "icon": "bi-calendar-check-fill",
+            "description": "Site visit scheduling, appointment tracking, field agent journeys, and milestone documentation.",
+            "features": [
+                "Interactive appointment calendar & scheduling",
+                "Site visit location & status tracking",
+                "Automated document generation for milestones",
+                "Field team appointment dispatching"
+            ]
+        },
+        {
+            "code": "SERVICE_TICKETS",
+            "name": "Service Desk & Ticketing",
+            "category": "Customer Support",
+            "icon": "bi-headset",
+            "description": "Full customer support ticket system for issue tracking, resolution SLA management, and escalation.",
+            "features": [
+                "Support ticket creation & priority queue",
+                "SLA resolution timer & escalation rules",
+                "Customer issue communication log",
+                "Support team assignment & performance stats"
+            ]
+        },
+        {
+            "code": "VED_MEMBERS",
+            "name": "Referral Agent & Affiliate Tracking",
+            "category": "Growth & Partnerships",
+            "icon": "bi-diagram-2-fill",
+            "description": "Ved member referral agent network management, affiliate tree visualization, and commission logs.",
+            "features": [
+                "Referral agent registration & link tracking",
+                "Multi-tier referral network reporting",
+                "Automated commission calculation",
+                "Payout history & agent earnings dashboard"
+            ]
+        },
+        {
+            "code": "META_ADS_INTEGRATION",
+            "name": "Meta/Facebook Ads Lead Integration",
+            "category": "Ad Lead Capture",
+            "icon": "bi-facebook",
+            "description": "Real-time webhook synchronization connecting Facebook & Instagram Lead Ads directly to your CRM.",
+            "features": [
+                "Instant Facebook Lead Form auto-ingestion",
+                "Ad campaign & form attribution tracking",
+                "Instant agent notification on new lead",
+                "Campaign performance analytics"
+            ]
+        },
+        {
+            "code": "WHATSAPP_API",
+            "name": "WhatsApp API — Auto Messaging & Follow-up",
+            "category": "Automated Marketing",
+            "icon": "bi-robot",
+            "description": "Automated WhatsApp API broadcast campaigns, follow-up drip sequences, and webhook bots.",
+            "features": [
+                "Bulk WhatsApp broadcast messaging",
+                "Automated lead welcome & drip follow-ups",
+                "Custom webhook triggers & auto-responders",
+                "Delivery & read status analytics"
+            ]
+        }
+    ]
+
+    return {
+        "company_brand": "Zynova OS",
+        "powered_by": "Zynova Mobility Private Limited",
+        "tax_rate_pct": 18.00,
+        "plans": catalog_plans,
+        "modules_explorer": module_details
+    }
+
+
 @router.get("/public-catalog")
 def get_public_signup_catalog(db: Session = Depends(get_db)):
     """
     Public catalog of selectable MyntOS Services, Segments, and Addons with pricing.
     """
-    canonical_codes = [
-        "CRM_CORE", "CRM_LEADS_SOLAR", "CRM_LEADS_EV_B2B", "CRM_LEADS_EV_B2C",
-        "CRM_LEADS_EV_SPARES", "CRM_LEADS_REAL_DREAMS", "CRM_LEADS_INSURANCE", "CRM_LEADS_ETC",
-        "WHATSAPP_INTEGRATION", "META_ADS_INTEGRATION", "TELEPHONY_INTEGRATION",
-        "STAFF_HR", "SFMS_ACCOUNTING"
-    ]
-
-    mods = db.query(PlatformModule).filter(
-        PlatformModule.module_code.in_(canonical_codes),
-        PlatformModule.is_active == True,
-        PlatformModule.internal_only == False
-    ).all()
-
-    services = []
-    segments = []
-
-    for m in mods:
-        p = db.query(PlatformModulePricing).filter_by(module_id=m.id).first()
-        item = {
-            "module_id": m.id,
-            "module_code": m.module_code,
-            "module_name": m.module_name,
-            "category": m.category,
-            "description": m.description,
-            "price_inr": float(p.price_inr) if p else 0.0,
-            "price_usd": float(p.price_usd) if p else 0.0,
-            "pricing_unit": p.pricing_unit if p else "per_company",
-        }
-        if m.category == "CRM_SEGMENT":
-            item["requires_module"] = "CRM_CORE"
-            segments.append(item)
-        else:
-            services.append(item)
-
-    return {
-        "services": services,
-        "segments": segments,
-        "annual_discount_months": 2,
-        "tax_rate_inr_pct": 18.00,
-    }
+    return get_commercial_catalog(db)
 
 
 @router.post("/calculate-pricing")
 def calculate_public_pricing(payload: CalculatePricingIn, db: Session = Depends(get_db)):
     """
-    Authoritative server-side live price calculation for requested services and segments.
+    Authoritative server-side live price calculation for requested plan or modules.
     """
-    if payload.billing_currency.upper() not in ("INR", "USD"):
-        raise HTTPException(400, "billing_currency must be INR or USD")
-    if payload.billing_cycle.lower() not in ("monthly", "annual"):
-        raise HTTPException(400, "billing_cycle must be monthly or annual")
+    currency_clean = (payload.billing_currency or "INR").upper()
+    cycle_clean = (payload.billing_cycle or "monthly").lower()
+
+    if payload.plan_code:
+        plan = db.query(PlatformPlan).filter_by(plan_code=payload.plan_code, is_active=True).first()
+        if plan:
+            mod_rows = db.query(PlatformModule).join(
+                PlatformPlanModule, PlatformPlanModule.module_id == PlatformModule.id
+            ).filter(PlatformPlanModule.plan_id == plan.id).all()
+            
+            subtotal = float(plan.annual_price_inr if cycle_clean == "annual" else plan.monthly_price_inr)
+            gst_rate = 18.00 if currency_clean == "INR" else 0.00
+            tax_amt = round((subtotal * gst_rate) / 100.0, 2)
+            total_payable = round(subtotal + tax_amt, 2)
+
+            return {
+                "currency": currency_clean,
+                "billing_cycle": cycle_clean,
+                "plan_code": plan.plan_code,
+                "plan_name": plan.plan_name,
+                "seat_count": plan.seat_count,
+                "included_modules": [m.module_code for m in mod_rows],
+                "cycle_subtotal": subtotal,
+                "tax_rate_pct": gst_rate,
+                "tax_amount": tax_amt,
+                "total_payable": total_payable,
+                "monthly_effective_rate": round(total_payable / 12.0, 2) if cycle_clean == "annual" else total_payable,
+            }
 
     all_mods, auto_deps = _resolve_and_validate_modules_with_dependencies(db, payload.selected_modules)
     breakdown = _compute_authoritative_pricing(
@@ -1866,12 +2010,11 @@ def calculate_public_pricing(payload: CalculatePricingIn, db: Session = Depends(
 
 
 @router.post("/signup", status_code=201)
+@router.post("/public-signup", status_code=201)
 def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     """
     Public self-service sign-up with service/segment packaging and authoritative pricing.
-    Creates a `platform_clients` row in 'pending' status plus a 'pending_payment'
-    subscription with requested modules created in disabled status (enabled=False).
-    Authoritative pricing snapshot is recorded.
+    Authoritatively validates plan_code, derives seat counts & module entitlements server-side.
     """
     if not _re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", payload.contact_email):
         raise HTTPException(400, "invalid contact_email")
@@ -1880,19 +2023,46 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     if payload.billing_cycle.lower() not in ("monthly", "annual"):
         raise HTTPException(400, "billing_cycle must be monthly or annual")
 
-    # 1. Resolve & Validate requested modules + dependencies
-    requested_codes = payload.selected_modules or []
-    all_mods, auto_deps = _resolve_and_validate_modules_with_dependencies(db, requested_codes)
+    # Authoritative Plan Lookup
+    plan_code_target = payload.plan_code or "PLAN_1_LOGIN"
+    plan = db.query(PlatformPlan).filter_by(plan_code=plan_code_target, is_active=True).first()
 
-    # 2. Compute Authoritative Price Snapshot
-    pricing_snapshot = _compute_authoritative_pricing(
-        db, all_mods,
-        currency=payload.billing_currency,
-        cycle=payload.billing_cycle,
-        seat_count=payload.seat_count
-    )
+    if plan:
+        auth_seat_count = plan.seat_count
+        auth_plan_id = plan.id
+        all_mods = db.query(PlatformModule).join(
+            PlatformPlanModule, PlatformPlanModule.module_id == PlatformModule.id
+        ).filter(PlatformPlanModule.plan_id == plan.id).all()
+        auto_deps = []
+        cycle_subtotal = float(plan.annual_price_inr if payload.billing_cycle.lower() == "annual" else plan.monthly_price_inr)
+        gst_rate = 18.00 if payload.billing_currency.upper() == "INR" else 0.00
+        tax_amt = round((cycle_subtotal * gst_rate) / 100.0, 2)
+        total_payable = round(cycle_subtotal + tax_amt, 2)
 
-    # 3. De-dup on (company_name, contact_email)
+        pricing_snapshot = {
+            "plan_code": plan.plan_code,
+            "plan_name": plan.plan_name,
+            "seat_count": auth_seat_count,
+            "billing_cycle": payload.billing_cycle.lower(),
+            "currency": payload.billing_currency.upper(),
+            "cycle_subtotal": cycle_subtotal,
+            "tax_amount": tax_amt,
+            "total_payable": total_payable,
+            "included_modules": [m.module_code for m in all_mods]
+        }
+    else:
+        auth_seat_count = max(1, int(payload.seat_count or 1))
+        auth_plan_id = None
+        requested_codes = payload.selected_modules or []
+        all_mods, auto_deps = _resolve_and_validate_modules_with_dependencies(db, requested_codes)
+        pricing_snapshot = _compute_authoritative_pricing(
+            db, all_mods,
+            currency=payload.billing_currency,
+            cycle=payload.billing_cycle,
+            seat_count=auth_seat_count
+        )
+
+    # De-dup check on (company_name, contact_email)
     existing = db.execute(text("""
         SELECT id FROM platform_clients
          WHERE LOWER(client_name) = LOWER(:n) AND LOWER(contact_email) = LOWER(:e)
@@ -1902,7 +2072,7 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         cid = int(existing[0])
         return {"ok": True, "client_id": cid, "status": "already-exists"}
 
-    # 4. Pick unique, non-enumerable client_code
+    # Unique Client Code
     base_code = _slugify_code(payload.company_name)[:16]
     code = f"{base_code}-{_secrets.token_hex(4).upper()}"
     for _ in range(8):
@@ -1911,7 +2081,7 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         if not clash: break
         code = f"{base_code}-{_secrets.token_hex(4).upper()}"
 
-    # 5. Create Pending Client
+    # Create Client
     client = PlatformClient(
         client_code=code,
         client_name=payload.company_name,
@@ -1928,31 +2098,32 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     )
     db.add(client); db.commit(); db.refresh(client)
 
-    # 6. Create Pending Subscription
+    # Create Subscription
     sub = PlatformSubscription(
         client_id=client.id,
+        plan_id=auth_plan_id,
         billing_currency=client.billing_currency,
         billing_cycle=payload.billing_cycle.lower(),
         annual_free_months=2,
         status="pending_payment",
         is_trial=False,
-        seat_count=max(1, int(payload.seat_count or 1)),
+        seat_count=auth_seat_count,
         starts_on=None,
         trial_ends_on=None,
     )
     db.add(sub); db.commit(); db.refresh(sub)
 
-    # 7. Create Requested Subscription Modules (enabled=False until approved & paid)
+    # Subscription Modules
     for m in all_mods:
         sub_mod = PlatformSubscriptionModule(
             subscription_id=sub.id,
             module_id=m.id,
-            enabled=False,  # REQUESTED status; becomes True on verified payment
+            enabled=False,
         )
         db.add(sub_mod)
     db.commit()
 
-    # 8. Audit Record with Price Snapshot
+    # Audit Record
     _audit(
         db,
         actor_staff_id=None,
@@ -1963,6 +2134,8 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         after={
             "client_code": code,
             "status": "pending_payment",
+            "plan_code": plan_code_target,
+            "seat_count": auth_seat_count,
             "requested_modules": [m.module_code for m in all_mods],
             "auto_included_dependencies": [m.module_code for m in auto_deps],
             "pricing_snapshot": pricing_snapshot,
@@ -1975,12 +2148,14 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         "client_code": client.client_code,
         "subscription_id": sub.id,
         "status": "pending_payment",
+        "plan_code": plan_code_target,
+        "seat_count": auth_seat_count,
         "requested_modules": [m.module_code for m in all_mods],
         "auto_included_dependencies": [m.module_code for m in auto_deps],
         "pricing_snapshot": pricing_snapshot,
         "next_steps": [
-            "Your application has been received with requested services.",
-            "Zynova Admin will review your application and issue your invoice.",
+            "Your application for Zynova OS has been received.",
+            "Zynova Admin will review your application and issue your pro-forma invoice.",
             "Subscription and Tenant Administrator login will activate upon verified payment receipt.",
         ],
     }

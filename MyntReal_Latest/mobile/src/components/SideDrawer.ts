@@ -680,8 +680,8 @@ export class SideDrawer {
 
     return `
       <div class="drawer-header">
-        <div class="drawer-logo">
-          <span class="logo-text">WORKFLOWS</span>
+        <div class="drawer-logo" style="display: flex; align-items: center;">
+          <img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height: 32px; max-width: 140px; object-fit: contain;">
         </div>
         <button class="drawer-close" id="drawerClose">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome & Company Profile — MyntOS SaaS</title>
+    <title>Welcome & Company Profile — ZYNOVA OS</title>
+    <link rel="icon" type="image/x-icon" href="/public/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon.png">
+    <link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -706,6 +709,111 @@
                                 <div class="mt-2">Loading entitled modules...</div>
                             </div>
                         </div>
+                    <!-- Single Page Landing Site Builder (AI & Media) -->
+                    <div class="content-card mt-4" id="landingBuilderSection">
+                        <div class="card-header-clean">
+                            <h3 class="card-title-clean">
+                                <i class="fas fa-magic" style="color:#8b5cf6;"></i>
+                                Single Page Landing Site Builder (AI Prompt &amp; Media Manager)
+                            </h3>
+                            <div class="d-flex gap-2">
+                                <a href="#" id="linkPreviewLanding" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt me-1"></i> View Public Site
+                                </a>
+                                <button type="button" class="btn btn-sm btn-success" onclick="saveLandingPageConfig()" id="btnSaveLanding">
+                                    <i class="fas fa-save me-1"></i> Save &amp; Publish Site
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row g-4">
+                            <!-- Left: AI Prompt & Short Code -->
+                            <div class="col-lg-6">
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold"><i class="fas fa-link me-1" style="color:#2563eb;"></i> Tenant Short Code &amp; Custom URL</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">myntreal.com/</span>
+                                        <input type="text" class="form-control font-weight-bold" id="landingShortCodeInput" placeholder="SOLAR">
+                                        <span class="input-group-text bg-light">/</span>
+                                    </div>
+                                    <div class="form-text">Access your public tenant landing page via <code>myntreal.com/YOUR_SHORT_CODE</code></div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold"><i class="fas fa-robot me-1" style="color:#8b5cf6;"></i> AI Prompt &amp; Raw Business Text</label>
+                                    <textarea class="form-control" id="landingAiPromptInput" rows="5" placeholder="Paste your raw text, business description, or AI prompt instructions here... e.g. We provide top-grade solar installation, EV charging stations, 24/7 maintenance, and 100% certified quality guarantee."></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small class="text-muted">Generate single page section titles, about us, and service lists instantly.</small>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="generateAiLandingContent()" id="btnGenerateAi">
+                                            <i class="fas fa-wand-magic-sparkles me-1"></i> Generate Content with AI
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Hero Title</label>
+                                    <input type="text" class="form-control" id="landingHeroTitleInput" placeholder="Welcome to Our Company">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold">Hero Subtitle</label>
+                                    <textarea class="form-control" id="landingHeroSubInput" rows="2" placeholder="Customized solutions and reliable quality services."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Right: Media & Contact Information -->
+                            <div class="col-lg-6">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label font-weight-bold"><i class="fas fa-phone-alt me-1" style="color:#10b981;"></i> Primary Phone</label>
+                                        <input type="text" class="form-control" id="landingPrimaryPhoneInput" placeholder="9876543210">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label font-weight-bold"><i class="fas fa-mobile-alt me-1" style="color:#0284c7;"></i> Secondary Phone</label>
+                                        <input type="text" class="form-control" id="landingSecondaryPhoneInput" placeholder="9988776655">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label font-weight-bold"><i class="fas fa-globe me-1" style="color:#2563eb;"></i> Official Website</label>
+                                        <input type="url" class="form-control" id="landingWebsiteInput" placeholder="https://example.com">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label font-weight-bold"><i class="fas fa-envelope me-1" style="color:#ef4444;"></i> Official Email</label>
+                                        <input type="email" class="form-control" id="landingEmailInput" placeholder="info@example.com">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold"><i class="fas fa-image me-1" style="color:#f59e0b;"></i> Banner Image URL</label>
+                                    <input type="url" class="form-control" id="landingBannerUrlInput" placeholder="https://example.com/banner.jpg">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold"><i class="fas fa-images me-1" style="color:#ec4899;"></i> Gallery Images (Image Change Controls)</label>
+                                    <div class="input-group mb-2">
+                                        <input type="url" class="form-control" id="newGalleryImgInput" placeholder="Paste image URL...">
+                                        <button type="button" class="btn btn-outline-primary" onclick="addGalleryImage()"><i class="fas fa-plus"></i> Add</button>
+                                    </div>
+                                    <div id="landingGalleryContainer" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label font-weight-bold"><i class="fas fa-video me-1" style="color:#ef4444;"></i> Video Links (YouTube / Vimeo / MP4 Embeds)</label>
+                                    <div class="input-group mb-2">
+                                        <input type="url" class="form-control" id="newVideoLinkInput" placeholder="https://www.youtube.com/watch?v=...">
+                                        <button type="button" class="btn btn-outline-primary" onclick="addVideoLink()"><i class="fas fa-plus"></i> Add</button>
+                                    </div>
+                                    <div id="landingVideosContainer" class="d-flex flex-column gap-2"></div>
+                                </div>
+
+                                <div class="form-check form-switch mt-3">
+                                    <input class="form-check-input" type="checkbox" id="landingPublishToggle" checked>
+                                    <label class="form-check-input-label font-weight-bold" for="landingPublishToggle">Publish Landing Site Publicly</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1136,6 +1244,178 @@
             }
         }
 
+        // ===================== SAAS SINGLE PAGE LANDING SITE BUILDER JS =====================
+        let landingConfig = { gallery_images: [], video_links: [] };
+
+        async function fetchLandingPageConfig() {
+            try {
+                const res = await staffFetch('/api/v1/tenant/landing-page');
+                const data = await res.json();
+                if (res.ok && data.data) {
+                    landingConfig = data.data;
+                    document.getElementById('landingShortCodeInput').value = landingConfig.tenant_short_code || '';
+                    document.getElementById('landingAiPromptInput').value = landingConfig.ai_prompt || '';
+                    document.getElementById('landingHeroTitleInput').value = landingConfig.hero_title || '';
+                    document.getElementById('landingHeroSubInput').value = landingConfig.hero_subtitle || '';
+                    document.getElementById('landingPrimaryPhoneInput').value = landingConfig.primary_phone || '';
+                    document.getElementById('landingSecondaryPhoneInput').value = landingConfig.secondary_phone || '';
+                    document.getElementById('landingWebsiteInput').value = landingConfig.official_website || '';
+                    document.getElementById('landingEmailInput').value = landingConfig.official_email || '';
+                    document.getElementById('landingAddressInput').value = landingConfig.address || '';
+                    document.getElementById('landingBannerUrlInput').value = landingConfig.banner_image_url || '';
+                    document.getElementById('landingPublishToggle').checked = landingConfig.is_published !== false;
+
+                    const previewLink = document.getElementById('linkPreviewLanding');
+                    if (previewLink && landingConfig.tenant_short_code) {
+                        previewLink.href = '/' + landingConfig.tenant_short_code;
+                    }
+
+                    renderLandingGallery();
+                    renderLandingVideos();
+                }
+            } catch (e) {
+                console.error('[LandingConfig] Fetch error:', e);
+            }
+        }
+
+        function renderLandingGallery() {
+            const container = document.getElementById('landingGalleryContainer');
+            if (!container) return;
+            const imgs = landingConfig.gallery_images || [];
+            if (imgs.length === 0) {
+                container.innerHTML = '<small class="text-muted">No gallery images added yet.</small>';
+                return;
+            }
+            container.innerHTML = imgs.map((img, idx) => `
+                <div style="position:relative; display:inline-block;">
+                    <img src="${escapeHTML(img)}" style="width:70px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1;">
+                    <button type="button" onclick="removeGalleryImage(${idx})" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer;">&times;</button>
+                </div>
+            `).join('');
+        }
+
+        function addGalleryImage() {
+            const inp = document.getElementById('newGalleryImgInput');
+            if (!inp || !inp.value.trim()) return;
+            if (!landingConfig.gallery_images) landingConfig.gallery_images = [];
+            landingConfig.gallery_images.push(inp.value.trim());
+            inp.value = '';
+            renderLandingGallery();
+        }
+
+        function removeGalleryImage(idx) {
+            if (!landingConfig.gallery_images) return;
+            landingConfig.gallery_images.splice(idx, 1);
+            renderLandingGallery();
+        }
+
+        function renderLandingVideos() {
+            const container = document.getElementById('landingVideosContainer');
+            if (!container) return;
+            const vids = landingConfig.video_links || [];
+            if (vids.length === 0) {
+                container.innerHTML = '<small class="text-muted">No video links added yet.</small>';
+                return;
+            }
+            container.innerHTML = vids.map((v, idx) => `
+                <div class="d-flex justify-content-between align-items-center bg-light p-2 border-radius-6 border">
+                    <small class="text-truncate" style="max-width:320px;"><i class="fas fa-video me-1 text-danger"></i>${escapeHTML(v)}</small>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVideoLink(${idx})"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addVideoLink() {
+            const inp = document.getElementById('newVideoLinkInput');
+            if (!inp || !inp.value.trim()) return;
+            if (!landingConfig.video_links) landingConfig.video_links = [];
+            landingConfig.video_links.push(inp.value.trim());
+            inp.value = '';
+            renderLandingVideos();
+        }
+
+        function removeVideoLink(idx) {
+            if (!landingConfig.video_links) return;
+            landingConfig.video_links.splice(idx, 1);
+            renderLandingVideos();
+        }
+
+        async function generateAiLandingContent() {
+            const prompt = document.getElementById('landingAiPromptInput').value.trim();
+            if (!prompt) {
+                showToast('Please enter an AI prompt or business text first.', false);
+                return;
+            }
+            const btn = document.getElementById('btnGenerateAi');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+
+            try {
+                const res = await staffFetch('/api/v1/tenant/landing-page/generate-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ai_prompt: prompt })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'AI generation failed');
+
+                showToast('Single page content generated with AI!', true);
+                if (data.data) {
+                    landingConfig = data.data;
+                    document.getElementById('landingHeroTitleInput').value = landingConfig.hero_title || '';
+                    document.getElementById('landingHeroSubInput').value = landingConfig.hero_subtitle || '';
+                }
+            } catch (err) {
+                console.error('[AI Generate] Error:', err);
+                showToast(err.message, false);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        }
+
+        async function saveLandingPageConfig() {
+            const btn = document.getElementById('btnSaveLanding');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+
+            const payload = {
+                tenant_short_code: document.getElementById('landingShortCodeInput').value.trim(),
+                ai_prompt: document.getElementById('landingAiPromptInput').value.trim(),
+                hero_title: document.getElementById('landingHeroTitleInput').value.trim(),
+                hero_subtitle: document.getElementById('landingHeroSubInput').value.trim(),
+                primary_phone: document.getElementById('landingPrimaryPhoneInput').value.trim(),
+                secondary_phone: document.getElementById('landingSecondaryPhoneInput').value.trim(),
+                official_website: document.getElementById('landingWebsiteInput').value.trim(),
+                official_email: document.getElementById('landingEmailInput').value.trim(),
+                banner_image_url: document.getElementById('landingBannerUrlInput').value.trim(),
+                gallery_images: landingConfig.gallery_images || [],
+                video_links: landingConfig.video_links || [],
+                is_published: document.getElementById('landingPublishToggle').checked
+            };
+
+            try {
+                const res = await staffFetch('/api/v1/tenant/landing-page', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Failed to save landing page');
+
+                showToast('Landing page site published successfully!', true);
+                fetchLandingPageConfig();
+            } catch (err) {
+                console.error('[SaveLanding] Error:', err);
+                showToast(err.message, false);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof StaffSidebar !== 'undefined') StaffSidebar.init().catch(e => console.warn(e));
             if (typeof StaffHeader !== 'undefined') {
@@ -1144,6 +1424,7 @@
             }
             fetchTenantProfile();
             fetchEntitledModules();
+            fetchLandingPageConfig();
         });
     </script>
 </body>

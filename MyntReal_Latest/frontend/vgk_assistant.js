@@ -10,7 +10,33 @@
 
   // ─── Config ───────────────────────────────────────────────────────────────
   const VGK_VERSION = '1.0.0';
-  const LOGO_URL = '/public/vgk4u-logo-100.png';
+  const VGK_LOGO_URL = '/public/vgk4u-logo-100.png';
+  const ZYNOVA_Z_ICON = '/public/zynova-os-icon.png';
+
+  function isSaaSMode() {
+    if (typeof window !== 'undefined') {
+      if (window.IS_SAAS === true || window.IS_SAAS_TENANT === true) return true;
+      const loc = window.location.pathname.toLowerCase();
+      if (loc.startsWith('/b2b-signup') || loc.startsWith('/saas') || loc.includes('saas') || loc.startsWith('/mobile')) {
+        return true;
+      }
+      try {
+        const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+        if (staffUser.is_saas || staffUser.company_segment === 'SEGMENT_B_SAAS' || (staffUser.role_code && staffUser.role_code.startsWith('tenant_'))) {
+          return true;
+        }
+      } catch(e) {}
+      try {
+        const tenantInfo = JSON.parse(localStorage.getItem('saas_tenant_info') || '{}');
+        if (tenantInfo && tenantInfo.client_id) return true;
+      } catch(e) {}
+    }
+    return false;
+  }
+
+  function getLogoUrl() {
+    return isSaaSMode() ? ZYNOVA_Z_ICON : VGK_LOGO_URL;
+  }
 
   const MENU_INTENT_MAP = {
     create_task:           ['staff_task_tracker', 'staff_tasks_assigned_by_me', 'staff_tasks_assigned_to_me'],
@@ -33,9 +59,18 @@
 
   const LABELS = {
     en: {
-      title: 'VGK Assistant', placeholder: 'Type or speak…',
-      greeting: "Hi! I'm VGK Assistant 👋\nWhat would you like to do today?",
-      speak_greeting: "Hi, I'm VGK Assistant. What would you like to do?",
+      get title() { return isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant'; },
+      placeholder: 'Type or speak…',
+      get greeting() {
+        return isSaaSMode()
+          ? "Hi! I'm Zen, your Zynova OS AI Assistant 👋\nWhat would you like to do today?"
+          : "Hi! I'm VGK Assistant 👋\nWhat would you like to do today?";
+      },
+      get speak_greeting() {
+        return isSaaSMode()
+          ? "Hi, I'm Zen, your Zynova OS AI Assistant. What would you like to do?"
+          : "Hi, I'm VGK Assistant. What would you like to do?";
+      },
       listening: 'Listening…', error_mic: 'Microphone access denied.',
       confirm_btn: 'Confirm & Create', cancel_btn: 'Cancel',
       done: '✅ Done!', sending: 'Processing…',
@@ -44,9 +79,18 @@
       marketplace_placeholder: 'Say a product name or category…',
     },
     hi: {
-      title: 'VGK सहायक', placeholder: 'टाइप करें या बोलें…',
-      greeting: "नमस्ते! मैं VGK सहायक हूँ 👋\nआज आप क्या करना चाहते हैं?",
-      speak_greeting: "नमस्ते, मैं VGK सहायक हूँ। आप क्या करना चाहते हैं?",
+      get title() { return isSaaSMode() ? 'Zen सहायक' : 'VGK सहायक'; },
+      placeholder: 'टाइप करें या बोलें…',
+      get greeting() {
+        return isSaaSMode()
+          ? "नमस्ते! मैं Zen, आपका Zynova OS AI सहायक हूँ 👋\nआज आप क्या करना चाहते हैं?"
+          : "नमस्ते! मैं VGK सहायक हूँ 👋\nआज आप क्या करना चाहते हैं?";
+      },
+      get speak_greeting() {
+        return isSaaSMode()
+          ? "नमस्ते, मैं Zen हूँ, आपका Zynova OS AI सहायक। आप क्या करना चाहते हैं?"
+          : "नमस्ते, मैं VGK सहायक हूँ। आप क्या करना चाहते हैं?";
+      },
       listening: 'सुन रहा हूँ…', error_mic: 'माइक्रोफ़ोन की अनुमति नहीं मिली।',
       confirm_btn: 'पुष्टि करें', cancel_btn: 'रद्द करें',
       done: '✅ हो गया!', sending: 'प्रोसेस हो रहा है…',
@@ -55,9 +99,18 @@
       marketplace_placeholder: 'उत्पाद नाम या श्रेणी बोलें…',
     },
     te: {
-      title: 'VGK సహాయకుడు', placeholder: 'టైప్ చేయండి లేదా మాట్లాడండి…',
-      greeting: "హలో! నేను VGK సహాయకుడిని 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?",
-      speak_greeting: "హలో, నేను VGK సహాయకుడిని. మీరు ఏం చేయాలనుకుంటున్నారు?",
+      get title() { return isSaaSMode() ? 'Zen సహాయకుడు' : 'VGK సహాయకుడు'; },
+      placeholder: 'టైప్ చేయండి లేదా మాట్లాడండి…',
+      get greeting() {
+        return isSaaSMode()
+          ? "హలో! నేను Zen, మీ Zynova OS AI సహాయకుడిని 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?"
+          : "హలో! నేను VGK సహాయకుడిని 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?";
+      },
+      get speak_greeting() {
+        return isSaaSMode()
+          ? "హలో, నేను Zen, మీ Zynova OS AI సహాయకుడిని. మీరు ఏం చేయాలనుకుంటున్నారు?"
+          : "హలో, నేను VGK సహాయకుడిని. మీరు ఏం చేయాలనుకుంటున్నారు?";
+      },
       listening: 'వింటున్నాను…', error_mic: 'మైక్రోఫోన్ అనుమతి నిరాకరించబడింది.',
       confirm_btn: 'నిర్ధారించు', cancel_btn: 'రద్దు చేయి',
       done: '✅ పూర్తయింది!', sending: 'ప్రాసెస్ అవుతోంది…',
@@ -276,19 +329,23 @@
 
   // ─── DOM Build ─────────────────────────────────────────────────────────────
   function buildDOM() {
-    if (document.getElementById('vgkFab')) return;
+    if (document.getElementById('myntChatbotBtn') || document.getElementById('vgkFab')) return;
+
+    const logoSrc = getLogoUrl();
+    const assistantTitle = isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant';
+    const assistantSub = isSaaSMode() ? 'Zynova OS AI Assistant' : 'AI Voice &amp; Text Assistant';
 
     document.body.insertAdjacentHTML('beforeend', `
       <div id="vgkOverlay"></div>
-      <button id="vgkFab" title="VGK Assistant" aria-label="Open VGK Assistant">
-        <img src="${LOGO_URL}" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:26px\\'>🤖</span>'">
+      <button id="vgkFab" title="${assistantTitle}" aria-label="Open ${assistantTitle}">
+        <img id="vgkFabImg" src="${logoSrc}" alt="Z" style="width:42px;height:42px;border-radius:50%;object-fit:contain;background:#ffffff;padding:2px;" onerror="this.style.display='none';">
       </button>
-      <div id="vgkModal" role="dialog" aria-label="VGK Assistant">
+      <div id="vgkModal" role="dialog" aria-label="${assistantTitle}">
         <div class="vgk-header">
-          <img src="${LOGO_URL}" onerror="this.style.display='none'">
+          <img id="vgkHeaderImg" src="${logoSrc}" alt="Z" style="width:32px;height:32px;border-radius:50%;object-fit:contain;background:#ffffff;padding:2px;" onerror="this.style.display='none';">
           <div style="flex:1">
-            <div class="vgk-header-title" id="vgkTitle">VGK Assistant</div>
-            <div class="vgk-header-sub">AI Voice &amp; Text Assistant</div>
+            <div class="vgk-header-title" id="vgkTitle">${assistantTitle}</div>
+            <div class="vgk-header-sub" id="vgkHeaderSub">${assistantSub}</div>
           </div>
           <div class="vgk-lang-btns">
             <button class="vgk-lang-btn active" data-lang="en">EN</button>

@@ -883,15 +883,21 @@ window.StaffHeader = window.StaffHeader || {
                 
                 if (brandEl) {
                     logoEl.style.display = 'none';
+                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;">`;
+                    const separator = `<span style="color:rgba(255,255,255,0.35);font-size:14px;font-weight:300;">|</span>`;
                     if (compLogo) {
                         brandEl.innerHTML = `
-                            <img src="${compLogo}" alt="${compName}" class="header-logo tenant-logo" style="height:36px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:2px;" onerror="this.onerror=null; this.outerHTML='<span style=\\'display:inline-flex;width:32px;height:32px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:16px;\\'><i class=\\'fas fa-building\\'></i></span>';">
-                            <span style="font-weight:700;font-size:15px;color:#ffffff;letter-spacing:0.3px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
+                            ${zynovaPlatformLogo}
+                            ${separator}
+                            <img src="${compLogo}" alt="${compName}" class="header-logo tenant-logo" style="height:30px;max-width:120px;object-fit:contain;border-radius:4px;background:#fff;padding:2px;" onerror="this.onerror=null; this.outerHTML='<span style=\\'display:inline-flex;width:28px;height:28px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:14px;\\'><i class=\\'fas fa-building\\'></i></span>';">
+                            <span style="font-weight:700;font-size:14px;color:#ffffff;letter-spacing:0.3px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
                         `;
                     } else {
                         brandEl.innerHTML = `
-                            <span style="display:inline-flex;width:32px;height:32px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:16px;"><i class="fas fa-building"></i></span>
-                            <span style="font-weight:700;font-size:15px;color:#ffffff;letter-spacing:0.3px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
+                            ${zynovaPlatformLogo}
+                            ${separator}
+                            <span style="display:inline-flex;width:28px;height:28px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);align-items:center;justify-content:center;color:#38bdf8;font-size:14px;"><i class="fas fa-building"></i></span>
+                            <span style="font-weight:700;font-size:14px;color:#ffffff;letter-spacing:0.3px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${compName}</span>
                         `;
                     }
                 }

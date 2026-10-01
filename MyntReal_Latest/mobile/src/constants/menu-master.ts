@@ -113,6 +113,7 @@ export const MENU_MASTER: SidebarSection[] = [
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", icon: "fas fa-phone-volume", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
+      { menu_code: "VED_MEMBERS", label: "VED Members & Referrals", route: "/staff/ved-members", icon: "fas fa-handshake", audience: ["STAFF", "SAAS"] },
       { menu_code: "STAFF_CATALOG_LIBRARY", label: "Catalog Library", route: "/staff/catalog-library", icon: "fas fa-book-open", audience: ["STAFF"] }
     ]
   },
@@ -170,12 +171,12 @@ export const MENU_MASTER: SidebarSection[] = [
     section_label: "SERVICE TICKETS",
     order: 10,
     items: [
-      { menu_code: "ST_SERVICE_QUEUE", label: "Service Queue", route: "/staff/service-tickets/queue", audience: ["STAFF"] },
-      { menu_code: "ST_DASHBOARD", label: "Dashboard", route: "/staff/service-tickets/dashboard", audience: ["STAFF"] },
-      { menu_code: "SERVICE_CENTER_TRACKING", label: "Service Center Tracking", route: "/staff/inventory/service-center-tracking", audience: ["STAFF"] },
-      { menu_code: "ST_PROCUREMENT_QUEUE", label: "Procurement Queue", route: "/staff/service-tickets/procurement-queue", audience: ["STAFF"] },
-      { menu_code: "ST_RAISE_TICKET", label: "Raise Ticket", route: "/staff/service-tickets/raise", audience: ["STAFF"] },
-      { menu_code: "ST_SERVICE_CENTER_REVENUE", label: "Service Center Revenue", route: "/staff/service-center-revenue", audience: ["STAFF"] }
+      { menu_code: "ST_SERVICE_QUEUE", label: "Service Queue", route: "/staff/service-tickets/queue", audience: ["STAFF", "SAAS"] },
+      { menu_code: "ST_DASHBOARD", label: "Dashboard", route: "/staff/service-tickets/dashboard", audience: ["STAFF", "SAAS"] },
+      { menu_code: "SERVICE_CENTER_TRACKING", label: "Service Center Tracking", route: "/staff/inventory/service-center-tracking", audience: ["STAFF", "SAAS"] },
+      { menu_code: "ST_PROCUREMENT_QUEUE", label: "Procurement Queue", route: "/staff/service-tickets/procurement-queue", audience: ["STAFF", "SAAS"] },
+      { menu_code: "ST_RAISE_TICKET", label: "Raise Ticket", route: "/staff/service-tickets/raise", audience: ["STAFF", "SAAS"] },
+      { menu_code: "ST_SERVICE_CENTER_REVENUE", label: "Service Center Revenue", route: "/staff/service-center-revenue", audience: ["STAFF", "SAAS"] }
     ]
   },
   {
@@ -628,10 +629,10 @@ export const MENU_MASTER: SidebarSection[] = [
       }
     ]
   },
-  // ─── MYNTOS SAAS (Last Section) ──────────────────────────────────────────
+  // ─── ZYNOVA OS (Last Section) ──────────────────────────────────────────
   {
     section_code: "VGK_SAAS",
-    section_label: "MYNTOS SAAS",
+    section_label: "ZYNOVA OS",
     order: 99,
     items: [
       { menu_code: "VGK_SAAS_TENANT_ONBOARDING", label: "Tenant Onboarding", route: "/staff/accounts/companies", icon: "fas fa-building-circle-arrow-right", audience: ["STAFF", "VGK4U", "SAAS"] },

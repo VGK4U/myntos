@@ -1620,6 +1620,20 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block">Commission Structure *</label>
+        <select class="form-select" id="addFlCommType" style="width:100%" onchange="updateFlCommUnitLabel('add')">
+          <option value="PERCENTAGE">Percentage (%)</option>
+          <option value="FLAT_VALUE">Flat Value (₹)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="font-size:12.5px;font-weight:600;color:#334155;margin-bottom:5px;display:block" id="addFlCommValueLabel">Commission Percentage (%) *</label>
+        <input class="form-control" type="number" step="0.01" id="addFlCommValue" placeholder="e.g. 5.00" value="0.00" style="width:100%">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group">
         <label style="font-size:12px;color:#64748b;margin-bottom:4px;display:block">Email (Optional)</label>
         <input class="form-control" id="addFlEmail" placeholder="email@example.com">
       </div>

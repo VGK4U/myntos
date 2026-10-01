@@ -121,10 +121,14 @@ class PlatformPlan(BaseModel):
     plan_code = Column(String(64), unique=True, nullable=False, index=True)
     plan_name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
+    seat_count = Column(Integer, nullable=False, default=1, server_default=text('1'))
+    monthly_price_inr = Column(Numeric(14, 2), nullable=False, default=0, server_default=text('0'))
+    annual_price_inr = Column(Numeric(14, 2), nullable=False, default=0, server_default=text('0'))
     is_active = Column(Boolean, nullable=False, default=True, server_default=text('true'))
 
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
