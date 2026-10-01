@@ -10130,7 +10130,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
 
   // LEGACY ROUTE HANDLING (if/else chain)
   // This executes when route-map is disabled OR route not found in map
-  if (url === '/' || url.startsWith('/?')) {
+  if (url === '/' || url.startsWith('/?') || url === '/index.html' || url.startsWith('/index.html?') || url === '/index' || url.startsWith('/index?')) {
     // Root URL redirects to Myntreal Hub public website
     // 301 Permanent redirect — signals to search engines that /hub is the canonical destination
     res.writeHead(301, { 'Location': '/hub', 'Cache-Control': 'public, max-age=86400' });
@@ -18707,6 +18707,10 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     if (sideVal)    forwardParams += `&side=${encodeURIComponent(sideVal)}`;
     res.writeHead(302, { 'Location': `/create-member?signup=true${forwardParams}&v=${BUILD_ID}` });
     res.end();
+  } else if (url === '/saas' || url.startsWith('/saas?') || url === '/zynova-os' || url.startsWith('/zynova-os?') || url === '/zynovaos' || url.startsWith('/zynovaos?') || url.startsWith('/saas-pricing') || url.startsWith('/saas_pricing') || url.startsWith('/saas/pricing') || url.startsWith('/saas-catalog') || url.startsWith('/saas_catalog') || url.startsWith('/saas/catalog') || url.startsWith('/b2b_signup')) {
+    // ZYNOVA OS — SaaS Commercial Catalog & Seat Configurator Landing Page (b2b_signup.html)
+    serveCachedHtml(res, 'b2b_signup.html', BUILD_ID);
+    return;
   } else if (url.startsWith('/saas/signup') || url.startsWith('/saas_signup') || url.startsWith('/saas-signup') || url.startsWith('/client/signup')) {
     // SaaS Client Registration - Zynova Multi-Tenant Cloud
     serveCachedHtml(res, 'saas_signup.html', BUILD_ID);
@@ -19009,7 +19013,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': '/staff/tenant-users' });
     res.end();
     return;
-  } else if (url.startsWith('/staff/my-tenant') || url.startsWith('/staff/company-profile') || url.startsWith('/staff_company_profile')) {
+  } else if (url.startsWith('/staff/my-tenant') || url.startsWith('/staff/company-profile') || url.startsWith('/staff_company_profile') || url.startsWith('/staff_my_tenant')) {
     // DC_SAAS_CONSOLE_001: VGK SaaS → My Tenant / All Tenants (B2B)
     const filePath = path.join(__dirname, 'staff_my_tenant.html');
     readFileWithRetry(filePath, (err, data) => {
@@ -19019,7 +19023,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/tenant-users')) {
+  } else if (url.startsWith('/staff/tenant-users') || url.startsWith('/staff_tenant_users')) {
     // VGK SaaS → SaaS Tenant Staff & Access Management
     const filePath = path.join(__dirname, 'staff_tenant_users.html');
     readFileWithRetry(filePath, (err, data) => {
@@ -30919,7 +30923,7 @@ async function processAction(id, action){
       res.end(data);
     });
 
-  } else if (url.startsWith('/catalog/vgk4u') || url === '/vgk4u' || url.startsWith('/vgk4u?') || url.startsWith('/catalog/vgk-4u') || url === '/vgk-catalogue' || url === '/vgk4u-catalog' || url.startsWith('/vgk4u-catalog?')) {
+  } else if (url.startsWith('/catalog/vgk4u') || url === '/vgk4u' || url.startsWith('/vgk4u?') || url.startsWith('/catalog/vgk-4u') || url === '/vgk-catalogue' || url === '/vgk4u-catalog' || url.startsWith('/vgk4u-catalog?') || url.startsWith('/vgk4u_catalog')) {
     // Dedicated VGK4U Dynamic Web Catalogue Page (18-Section Master Journey)
     const vgkPath = path.join(__dirname, 'vgk4u_catalog.html');
     fs.readFile(vgkPath, 'utf8', (err, data) => {

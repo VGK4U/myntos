@@ -277,6 +277,11 @@ def get_supporting_staff_list(
         StaffEmployee.status == 'active',
         StaffEmployee.is_deleted == False
     )
+    # DC Protocol: Tenant-isolation scoping - only list staff belonging to current user's tenant
+    if getattr(current_user, 'tenant_id', None):
+        query = query.filter(StaffEmployee.tenant_id == current_user.tenant_id)
+    else:
+        query = query.filter(or_(StaffEmployee.tenant_id == None, StaffEmployee.tenant_id == ''))
     if search:
         s = f"%{search.strip()}%"
         query = query.filter(
@@ -327,21 +332,29 @@ def get_my_assigned_appointments(
     """
     query = db.query(CRMFieldAppointment)
 
-    # Permission check for view_all / leadership
+    # DC Protocol: Multi-Tenant Scoping
+    if getattr(current_user, 'tenant_id', None):
+        query = query.filter(CRMFieldAppointment.tenant_id == current_user.tenant_id)
+    else:
+        query = query.filter(or_(CRMFieldAppointment.tenant_id == None, CRMFieldAppointment.tenant_id == ''))
+
+    # Permission check for view_all / leadership / tenant admin
     is_leadership = (
         getattr(current_user, 'is_super_admin', False) or
         getattr(current_user.role, 'hierarchy_level', 0) >= 50 or
-        (current_user.staff_type or '').upper() in ('VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'SALES_INCHARGE') or
-        (current_user.role and current_user.role.role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin'))
+        (current_user.staff_type or '').upper() in ('VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'SALES_INCHARGE', 'TENANT_ADMIN', 'COMPANY_ADMIN', 'SAAS_ADMIN') or
+        (current_user.role and current_user.role.role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin', 'tenant_admin', 'company_admin'))
     )
 
     tab = (assignment_tab or 'assigned_to_me').lower().strip()
     if tab == 'assigned_by_me':
         query = query.filter(CRMFieldAppointment.created_by_id == current_user.id)
-    elif tab == 'all' and (view_all or is_leadership):
-        pass  # All team appointments for leadership
+    elif tab == 'all' or is_leadership:
+        if not is_leadership:
+            query = query.filter(or_(CRMFieldAppointment.assigned_to_id == current_user.id, CRMFieldAppointment.created_by_id == current_user.id))
     else:  # Default: 'assigned_to_me'
-        query = query.filter(CRMFieldAppointment.assigned_to_id == current_user.id)
+        if not is_leadership:
+            query = query.filter(CRMFieldAppointment.assigned_to_id == current_user.id)
 
     # Status filter
     if status and isinstance(status, str) and status.lower() != 'all':
