@@ -31,6 +31,7 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/accounts/DAR': 'embed-view',
   '/staff/accounts/capital': 'embed-view',
   '/staff/accounts/cash-in-hand': 'embed-view',
+  '/gucadmin': 'embed-view',
   '/staff/accounts/community-services': 'embed-view',
   '/staff/accounts/companies': 'embed-view',
   '/staff/accounts/duties-taxes': 'embed-view',

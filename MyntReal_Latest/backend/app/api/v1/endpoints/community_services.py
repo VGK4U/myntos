@@ -11,7 +11,7 @@ from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.models.staff import StaffEmployee
 from app.models.staff_accounts import OfficialPartner, VGKTeamIncomeEntry, VGKTeamCommissionConfig
 from app.models.crm import CRMLead
-from app.models.community_service import CommunityService, CommunityRegistration, CommunityCommission
+from app.models.community_service import CommunityService, CommunityRegistration, CommunityCommission, GUCAdminUser
 from app.services.universal_upload_service import UniversalUploadService
 from app.models.base import get_indian_time
 from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
@@ -2315,6 +2315,346 @@ def reset_registration_password_endpoint(
             "phone": partner.phone or reg.primary_phone_1
         }
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# 4. GUC DEDICATED ADMIN PORTAL ENDPOINTS (/gucadmin)
+# ──────────────────────────────────────────────────────────────────────
+
+def _seed_default_guc_admin_if_empty(db: Session):
+    """Seed initial super admin account for GUC portal if empty"""
+    try:
+        count = db.query(GUCAdminUser).count()
+        if count == 0:
+            from app.core.security import SecurityManager
+            admin = GUCAdminUser(
+                username="gucadmin",
+                full_name="GUC Super Admin",
+                phone="8019045667",
+                email="admin@guc.ap.gov.in",
+                hashed_password=SecurityManager.get_password_hash("gucadmin123"),
+                role="GUC_SUPER_ADMIN",
+                access_level="READ_WRITE",
+                district="Visakhapatnam",
+                is_active=True
+            )
+            db.add(admin)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"GUC admin seed notice: {e}")
+
+@router.post("/guc/auth/login")
+def guc_admin_login(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Authenticate GUC Admin portal login credentials against guc_admin_users table.
+    """
+    _seed_default_guc_admin_if_empty(db)
+    username = str(payload.get("username") or "").strip()
+    password = str(payload.get("password") or "").strip()
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required.")
+
+    user = db.query(GUCAdminUser).filter(
+        or_(
+            GUCAdminUser.username == username,
+            GUCAdminUser.phone == username,
+            GUCAdminUser.email == username
+        )
+    ).first()
+
+    from app.core.security import SecurityManager
+    if not user or not SecurityManager.verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated. Please contact administrator.")
+
+    token_payload = {
+        "sub": f"guc_{user.id}",
+        "guc_id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "access_level": user.access_level,
+        "type": "guc_admin"
+    }
+    access_token = SecurityManager.create_access_token(data=token_payload)
+
+    return {
+        "success": True,
+        "message": "Login successful",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name,
+            "phone": user.phone,
+            "email": user.email,
+            "role": user.role,
+            "access_level": user.access_level,
+            "district": user.district
+        }
+    }
+
+
+@router.post("/guc/auth/register")
+def guc_admin_register(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Register a new GUC Admin Account.
+    """
+    username = str(payload.get("username") or "").strip()
+    full_name = str(payload.get("full_name") or "").strip()
+    phone = str(payload.get("phone") or "").strip()
+    email = str(payload.get("email") or "").strip()
+    password = str(payload.get("password") or "").strip()
+    access_level = str(payload.get("access_level") or "READ_WRITE").strip().upper()
+    district = str(payload.get("district") or "Visakhapatnam").strip()
+
+    if not username or not full_name or not password:
+        raise HTTPException(status_code=400, detail="Username, Full Name, and Password are required.")
+
+    existing = db.query(GUCAdminUser).filter(GUCAdminUser.username == username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Username '{username}' is already registered.")
+
+    from app.core.security import SecurityManager
+    new_user = GUCAdminUser(
+        username=username,
+        full_name=full_name,
+        phone=phone,
+        email=email,
+        hashed_password=SecurityManager.get_password_hash(password),
+        role="GUC_ADMIN",
+        access_level=access_level if access_level in ("READ_WRITE", "READ_ONLY") else "READ_WRITE",
+        district=district,
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "success": True,
+        "message": "GUC Admin account created successfully!",
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "full_name": new_user.full_name,
+            "access_level": new_user.access_level,
+            "district": new_user.district
+        }
+    }
+
+
+@router.get("/guc/executive-dashboard")
+def guc_executive_dashboard(db: Session = Depends(get_db)):
+    """
+    Executive level analytics dashboard endpoint for GUC Admin Portal.
+    """
+    from sqlalchemy import func
+    
+    # Query all registrations belonging to GUC / Camgan
+    base_q = db.query(CommunityRegistration).join(CommunityService).filter(
+        or_(
+            CommunityService.short_name.ilike('guc'),
+            CommunityService.short_name.ilike('camgan'),
+            CommunityRegistration.registered_from.ilike('%GUC%'),
+            CommunityRegistration.application_no.ilike('%GUC%')
+        )
+    )
+    
+    total_regs = base_q.count()
+    if total_regs == 0:
+        # Fallback to all community registrations if specific GUC service tags are absent
+        base_q = db.query(CommunityRegistration)
+        total_regs = base_q.count()
+
+    approved_count = base_q.filter(CommunityRegistration.status == 'APPROVED').count()
+    pending_count = base_q.filter(CommunityRegistration.status == 'PENDING').count()
+    rejected_count = base_q.filter(CommunityRegistration.status == 'REJECTED').count()
+
+    # District Breakdown
+    district_counts = db.query(
+        CommunityRegistration.district, func.count(CommunityRegistration.id)
+    ).group_by(CommunityRegistration.district).all()
+    district_summary = {d or "Unspecified": cnt for d, cnt in district_counts}
+
+    # Location Category Breakdown
+    cat_counts = db.query(
+        CommunityRegistration.location_category, func.count(CommunityRegistration.id)
+    ).group_by(CommunityRegistration.location_category).all()
+    cat_summary = {c or "General": cnt for c, cnt in cat_counts}
+
+    # Idol Height Breakdown
+    height_counts = db.query(
+        CommunityRegistration.idol_height, func.count(CommunityRegistration.id)
+    ).group_by(CommunityRegistration.idol_height).all()
+    height_summary = {h or "Standard": cnt for h, cnt in height_counts}
+
+    # Recent 10 registrations
+    recent_regs = base_q.order_by(desc(CommunityRegistration.created_at)).limit(10).all()
+    recent_list = []
+    for r in recent_regs:
+        recent_list.append({
+            "id": r.id,
+            "application_no": r.application_no or f"GUC-2026-{r.id:04d}",
+            "association_name": r.association_name or r.primary_name,
+            "president_name": r.president_name or r.primary_name,
+            "president_phone": r.president_phone or r.primary_phone_1,
+            "area": r.area,
+            "district": r.district,
+            "status": r.status,
+            "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else None
+        })
+
+    return {
+        "success": True,
+        "kpis": {
+            "total_registrations": total_regs,
+            "approved_registrations": approved_count,
+            "pending_registrations": pending_count,
+            "rejected_registrations": rejected_count,
+            "approval_rate": round((approved_count / total_regs * 100), 1) if total_regs > 0 else 0
+        },
+        "district_breakdown": district_summary,
+        "location_category_breakdown": cat_summary,
+        "idol_height_breakdown": height_summary,
+        "recent_registrations": recent_list
+    }
+
+
+@router.get("/guc/registrations")
+def get_guc_registrations_master_list(
+    status: Optional[str] = None,
+    district: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get full GUC registrations master list with detailed fields.
+    """
+    from fastapi.encoders import jsonable_encoder
+    
+    q = db.query(CommunityRegistration).order_by(desc(CommunityRegistration.created_at))
+    
+    if status:
+        q = q.filter(CommunityRegistration.status == status.upper())
+    if district:
+        q = q.filter(CommunityRegistration.district.ilike(f"%{district}%"))
+    if search:
+        s = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                CommunityRegistration.association_name.ilike(s),
+                CommunityRegistration.primary_name.ilike(s),
+                CommunityRegistration.president_name.ilike(s),
+                CommunityRegistration.secretary_name.ilike(s),
+                CommunityRegistration.treasurer_name.ilike(s),
+                CommunityRegistration.primary_phone_1.ilike(s),
+                CommunityRegistration.president_phone.ilike(s),
+                CommunityRegistration.application_no.ilike(s),
+                CommunityRegistration.area.ilike(s),
+                CommunityRegistration.district.ilike(s)
+            )
+        )
+        
+    regs = q.all()
+    results = []
+    for r in regs:
+        item = r.to_dict()
+        item["application_no"] = r.application_no or f"GUC-2026-{r.id:04d}"
+        item["service_name"] = r.service.service_name if r.service else "Ganesh Utsav Committee"
+        results.append(item)
+
+    return {
+        "success": True,
+        "count": len(results),
+        "data": jsonable_encoder(results)
+    }
+
+
+@router.get("/guc/admin-accounts")
+def get_guc_admin_accounts(db: Session = Depends(get_db)):
+    """
+    List all GUC Admin user accounts for Page 3.
+    """
+    users = db.query(GUCAdminUser).order_by(desc(GUCAdminUser.created_at)).all()
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name,
+                "phone": u.phone or "",
+                "email": u.email or "",
+                "role": u.role,
+                "access_level": u.access_level,
+                "district": u.district or "Visakhapatnam",
+                "is_active": u.is_active,
+                "created_at": u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else None
+            } for u in users
+        ]
+    }
+
+
+@router.put("/guc/admin-accounts/{user_id}")
+def update_guc_admin_account(user_id: int, payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Update GUC Admin User Account parameters.
+    """
+    user = db.query(GUCAdminUser).filter(GUCAdminUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="GUC Admin account not found")
+
+    if "full_name" in payload:
+        user.full_name = payload["full_name"]
+    if "phone" in payload:
+        user.phone = payload["phone"]
+    if "email" in payload:
+        user.email = payload["email"]
+    if "access_level" in payload:
+        user.access_level = payload["access_level"]
+    if "district" in payload:
+        user.district = payload["district"]
+    if "is_active" in payload:
+        user.is_active = bool(payload["is_active"])
+    if "password" in payload and payload["password"]:
+        from app.core.security import SecurityManager
+        user.hashed_password = SecurityManager.get_password_hash(payload["password"])
+
+    user.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "success": True,
+        "message": "GUC Admin account updated successfully",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name,
+            "access_level": user.access_level,
+            "is_active": user.is_active
+        }
+    }
+
+
+@router.delete("/guc/admin-accounts/{user_id}")
+def delete_guc_admin_account(user_id: int, db: Session = Depends(get_db)):
+    """
+    Delete GUC Admin Account.
+    """
+    user = db.query(GUCAdminUser).filter(GUCAdminUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="GUC Admin account not found")
+
+    db.delete(user)
+    db.commit()
+    return {"success": True, "message": "GUC Admin account deleted successfully"}
+
 
 
 

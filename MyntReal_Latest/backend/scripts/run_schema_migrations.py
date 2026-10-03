@@ -1135,7 +1135,27 @@ def run_migrations():
                     WHERE op.id = sub.associated_partner_id
                       AND ABS(COALESCE(op.cumulative_self_business_dvr, 0) - sub.tot_dvr) > 0.01;
                 """))
-                logger.info("✅ DC-DVR-DEDUP-002 reconciled deal_value_received and partner DVR")
+                # 4.33 GUC Admin Users Table DDL (Option B)
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS guc_admin_users (
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR(100) UNIQUE NOT NULL,
+                        full_name VARCHAR(200) NOT NULL,
+                        phone VARCHAR(20),
+                        email VARCHAR(200),
+                        hashed_password VARCHAR(255) NOT NULL,
+                        role VARCHAR(50) NOT NULL DEFAULT 'GUC_ADMIN',
+                        access_level VARCHAR(20) NOT NULL DEFAULT 'READ_WRITE',
+                        district VARCHAR(100),
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_guc_admin_users_username ON guc_admin_users(username);
+                """))
+                logger.info("✅ DC-GDRIVE-GUC: guc_admin_users table verified/created")
 
         logger.info("✅ Feature-specific schema migrations complete")
         

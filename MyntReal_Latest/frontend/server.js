@@ -30986,6 +30986,19 @@ async function processAction(id, action){
       res.end(data);
     });
 
+  } else if (url === '/gucadmin' || url.startsWith('/gucadmin/') || url.startsWith('/gucadmin?')) {
+    // Dedicated /gucadmin portal page (Ganesh Utsav Samithi, Andhra Pradesh)
+    const gucAdminPath = path.join(__dirname, 'guc_admin.html');
+    readFileWithRetry(gucAdminPath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('GUC Admin page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url === '/guc' || url.startsWith('/guc/') || url.startsWith('/guc?') || url === '/camgan' || url.startsWith('/camgan/') || url.startsWith('/camgan?')) {
     // Dedicated /guc page with ONLY registration form (Utsav Committee)
     const gucPath = path.join(__dirname, 'guc.html');

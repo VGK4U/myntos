@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from app.models.base import BaseModel, get_indian_time
 from sqlalchemy.orm import relationship
@@ -116,3 +116,24 @@ class CommunityCommission(BaseModel):
 
     community = relationship("CommunityRegistration")
     lead = relationship("CRMLead")
+
+
+class GUCAdminUser(BaseModel):
+    """
+    Dedicated GUC Admin Account credentials and permission scopes (Option B)
+    """
+    __tablename__ = 'guc_admin_users'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    full_name = Column(String(200), nullable=False)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(200), nullable=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), default='GUC_ADMIN', nullable=False)
+    access_level = Column(String(20), default='READ_WRITE', nullable=False)  # READ_WRITE or READ_ONLY
+    district = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
+

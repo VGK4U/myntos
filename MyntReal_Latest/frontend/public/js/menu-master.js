@@ -290,6 +290,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "SETTINGS", label: "Settings", route: "/staff/settings", audience: ["STAFF"] },
       { menu_code: "VGK_COMMISSION_CONFIG", label: "VGK Commission Config", route: "/staff/vgk/config", audience: ["STAFF"] },
       { menu_code: "COMMUNITY_SERVICES", label: "Community Services", route: "/staff/accounts/community-services", audience: ["STAFF"] },
+      { menu_code: "GUC_ADMIN_PORTAL", label: "GUC Admin Portal", route: "/gucadmin", icon: "fas fa-torii-gate", audience: ["STAFF", "SAAS"] },
       { menu_code: "staff_razorpay_dashboard", label: "Razorpay Executive", route: "/staff/configuration/razorpay", audience: ["STAFF"] },
       { menu_code: "staff_a1top_dashboard", label: "A1Top Executive", route: "/staff/configuration/a1top", audience: ["STAFF"] },
       { menu_code: "CENTRAL_INTEGRATIONS", label: "Integrations", route: "/staff/configuration/integrations", icon: "fas fa-plug", audience: ["STAFF", "VGK4U"] },

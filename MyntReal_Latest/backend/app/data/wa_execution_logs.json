@@ -1,5 +1,34 @@
 [
   {
+    "id": "log_847d12f3",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "03 Oct 2026, 06:00:02 PM IST",
+    "iso_timestamp": "2026-10-03T18:00:02.676692",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_9d4efb4f",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -14708,35 +14737,6 @@
         ],
         "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
       }
-    }
-  },
-  {
-    "id": "log_8c9704fe",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 11:00:00 AM IST",
-    "iso_timestamp": "2026-09-14T11:00:00.443684",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
     }
   }
 ]

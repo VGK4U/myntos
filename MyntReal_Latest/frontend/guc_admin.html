@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>గణేష్ ఉత్సవ సమితి - అడ్మిన్ పోర్టల్ (GUC Admin Portal)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --guc-primary: #d97706;
+            --guc-secondary: #047857;
+            --guc-dark: #1e1b4b;
+            --guc-light: #fef3c7;
+            --guc-accent: #dc2626;
+        }
+        body {
+            font-family: 'Noto Sans Telugu', 'Poppins', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        /* Top Navigation Bar */
+        .guc-header {
+            background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #047857 100%);
+            color: white;
+            padding: 12px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .guc-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+        .guc-brand-logo {
+            width: 44px;
+            height: 44px;
+            background: white;
+            color: #d97706;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .guc-title-main {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+        }
+        .guc-title-sub {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        .lang-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover, .lang-btn.active {
+            background: white;
+            color: #d97706;
+            font-weight: 600;
+        }
+        /* Portal Navigation Tabs */
+        .guc-nav-tabs {
+            background: white;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 0 24px;
+        }
+        .guc-nav-tabs .nav-link {
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            padding: 16px 20px;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+        .guc-nav-tabs .nav-link:hover {
+            color: #d97706;
+        }
+        .guc-nav-tabs .nav-link.active {
+            color: #d97706;
+            border-bottom-color: #d97706;
+            background: transparent;
+        }
+        /* KPI Cards */
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+        .kpi-val {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .kpi-lbl {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        /* Status Badges */
+        .badge-approved { background-color: #d1fae5; color: #047857; }
+        .badge-pending { background-color: #fef3c7; color: #b45309; }
+        .badge-rejected { background-color: #fee2e2; color: #dc2626; }
+        /* Tables */
+        .table-custom {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .table-custom th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 14px 16px;
+        }
+        .table-custom td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+        .access-badge-rw {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .access-badge-ro {
+            background: #f3f4f6;
+            color: #4b5563;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Header -->
+    <header class="guc-header d-flex align-items-center justify-content-between">
+        <a href="/gucadmin" class="guc-brand">
+            <div class="guc-brand-logo">🕉️</div>
+            <div>
+                <h1 class="guc-title-main" id="txt-header-title">గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్</h1>
+                <p class="guc-title-sub" id="txt-header-subtitle">అధికారిక నిర్వహణ & పర్యవేక్షణ పోర్టల్ (GUC Executive Portal)</p>
+            </div>
+        </a>
+
+        <div class="d-flex align-items-center gap-3">
+            <!-- Language Switcher Button Group -->
+            <div class="btn-group" role="group">
+                <button class="lang-btn active" onclick="switchLanguage('te')" id="btn-lang-te">తెలుగు</button>
+                <button class="lang-btn" onclick="switchLanguage('hi')" id="btn-lang-hi">हिंदी</button>
+                <button class="lang-btn" onclick="switchLanguage('en')" id="btn-lang-en">English</button>
+            </div>
+
+            <!-- Login / Auth Buttons -->
+            <div id="auth-section">
+                <button class="btn btn-light btn-sm font-weight-bold" onclick="openLoginModal()" id="btn-login-trigger">
+                    <i class="fas fa-sign-in-alt me-1"></i> <span id="lbl-login-btn">లాగిన్ / Login</span>
+                </button>
+                <button class="btn btn-outline-light btn-sm me-2" onclick="openRegisterModal()" id="btn-register-trigger">
+                    <i class="fas fa-user-plus me-1"></i> <span id="lbl-register-btn">నమోదు / Register</span>
+                </button>
+            </div>
+
+            <!-- Logged-in Profile Controls (Hidden by default) -->
+            <div id="user-profile-section" class="d-none align-items-center gap-2">
+                <span class="badge bg-warning text-dark px-3 py-2" id="user-display-name">
+                    <i class="fas fa-user-shield me-1"></i> <span id="user-name-span">అడ్మిన్ (Admin)</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logoutGUCAdmin()" id="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> <span id="lbl-logout">లాగ్‌అవుట్</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="guc-nav-tabs">
+        <ul class="nav nav-tabs border-0" id="gucAdminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-dashboard-link" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button">
+                    <i class="fas fa-chart-line me-2"></i><span id="txt-tab-dashboard">ఎగ్జిక్యూటివ్ డ్యాష్‌బోర్డ్ (Executive Dashboard)</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-masterlist-link" data-bs-toggle="tab" data-bs-target="#tab-masterlist" type="button" onclick="loadMasterList()">
+                    <i class="fas fa-gavel me-2"></i><span id="txt-tab-masterlist">GUC కమిటీల జాబితా (Registrations Master List)</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-users-link" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" onclick="loadAdminUsers()">
+                    <i class="fas fa-users-cog me-2"></i><span id="txt-tab-users">అడ్మిన్ ఖాతాలు & రోల్స్ (Admin Accounts & Roles)</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="container-fluid p-4">
+        <div class="tab-content" id="gucAdminTabContent">
+
+            <!-- PAGE 1: EXECUTIVE LEVEL DASHBOARD (Landing Default) -->
+            <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-icon bg-amber-100 text-amber-600" style="background:#fffbe6; color:#d97706;">
+                                <i class="fas fa-torii-gate"></i>
+                            </div>
+                            <div class="kpi-val" id="kpi-total-mandaps">0</div>
+                            <div class="kpi-lbl" id="txt-kpi-total">మొత్తం నమోదుల గణన (Total Mandaps)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-icon bg-emerald-100 text-emerald-600" style="background:#ecfdf5; color:#047857;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="kpi-val text-success" id="kpi-approved-mandaps">0</div>
+                            <div class="kpi-lbl" id="txt-kpi-approved">ఆమోదించబడిన మండపాలు (Approved Mandaps)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-icon bg-amber-100 text-amber-600" style="background:#fef3c7; color:#b45309;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="kpi-val text-warning" id="kpi-pending-mandaps">0</div>
+                            <div class="kpi-lbl" id="txt-kpi-pending">పరిశీలనలో ఉన్నవి (Pending Verification)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-icon bg-rose-100 text-rose-600" style="background:#ffe4e6; color:#dc2626;">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="kpi-val text-danger" id="kpi-approval-rate">0%</div>
+                            <div class="kpi-lbl" id="txt-kpi-rate">మొత్తం ఆమోదిత శాతం (Approval Rate)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Analytics Summary Breakdown -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 h-100">
+                            <h5 class="card-title fw-bold text-dark mb-3" id="txt-chart-districts"><i class="fas fa-map-marked-alt text-warning me-2"></i>జిల్లా వారీ విభజన (District Wise Breakdown)</h5>
+                            <div id="district-breakdown-list" class="list-group list-group-flush">
+                                <div class="text-center text-muted py-4">డేటా లోడ్ అవుతోంది... (Loading...)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-3 p-3 h-100">
+                            <h5 class="card-title fw-bold text-dark mb-3" id="txt-chart-heights"><i class="fas fa-ruler-vertical text-success me-2"></i>విగ్రహాల ఎత్తుల వర్గీకరణ (Idol Heights Distribution)</h5>
+                            <div id="idol-height-list" class="list-group list-group-flush">
+                                <div class="text-center text-muted py-4">డేటా లోడ్ అవుతోంది... (Loading...)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 2: GUC REGISTRATIONS MASTER LIST -->
+            <div class="tab-pane fade" id="tab-masterlist" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-white py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <h5 class="m-0 fw-bold text-dark" id="txt-masterlist-title"><i class="fas fa-list-alt me-2 text-warning"></i>గణేష్ ఉత్సవ సమితి నమోదు మాస్టర్ రికార్డులు</h5>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="text" id="master-search-input" class="form-control form-control-sm" placeholder="శోధించండి (Search...)" style="width: 220px;" onkeyup="loadMasterList()">
+                            <select id="master-district-filter" class="form-select form-select-sm" style="width: 160px;" onchange="loadMasterList()">
+                                <option value="">అన్ని జిల్లాలు (All Districts)</option>
+                                <option value="Visakhapatnam">విశాఖపట్నం (Visakhapatnam)</option>
+                                <option value="Pendurthi">పెందుర్తి (Pendurthi)</option>
+                                <option value="Anakapalli">అనకాపల్లి (Anakapalli)</option>
+                            </select>
+                            <select id="master-status-filter" class="form-select form-select-sm" style="width: 140px;" onchange="loadMasterList()">
+                                <option value="">అన్ని స్థితులు (All Status)</option>
+                                <option value="APPROVED">ఆమోదించబడింది (Approved)</option>
+                                <option value="PENDING">పరిశీలనలో ఉంది (Pending)</option>
+                                <option value="REJECTED">తిరస్కరించబడింది (Rejected)</option>
+                            </select>
+                            <button class="btn btn-success btn-sm" onclick="exportMasterListCSV()"><i class="fas fa-file-excel me-1"></i> CSV Export</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-custom mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>దరఖాస్తు సంఖ్య (App No)</th>
+                                        <th>మండపం / అసోసియేషన్ పేరు</th>
+                                        <th>అధ్యక్షుడు (President)</th>
+                                        <th>కార్యదర్శి (Secretary)</th>
+                                        <th>లొకేషన్ / ప్రాంతం</th>
+                                        <th>విగ్రహ ఎత్తు</th>
+                                        <th>స్థితి (Status)</th>
+                                        <th>చర్యలు (Actions)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="masterlist-tbody">
+                                    <tr><td colspan="8" class="text-center py-4 text-muted">రికార్డులు లోడ్ చేయడానికి ఎదురుచూస్తోంది...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 3: GUC ADMIN ACCOUNTS & ROLES -->
+            <div class="tab-pane fade" id="tab-users" role="tabpanel">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                        <h5 class="m-0 fw-bold text-dark" id="txt-users-title"><i class="fas fa-user-shield me-2 text-primary"></i>GUC అడ్మినిస్ట్రేటర్ ఖాతాలు & అనుమతులు</h5>
+                        <button class="btn btn-warning btn-sm fw-bold text-dark" onclick="openRegisterModal()">
+                            <i class="fas fa-plus-circle me-1"></i> కొత్త అడ్మిన్‌ను జోడించండి (Create Admin Account)
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-custom mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>యూజర్‌నేమ్ (Username)</th>
+                                        <th>పూర్తి పేరు (Full Name)</th>
+                                        <th>ఫోన్ / ఇమెయిల్</th>
+                                        <th>యాక్సెస్ స్థాయి (Access Level)</th>
+                                        <th>జిల్లా (District)</th>
+                                        <th>స్థితి (Status)</th>
+                                        <th>సృష్టించిన తేది</th>
+                                        <th>చర్యలు (Actions)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-tbody">
+                                    <tr><td colspan="9" class="text-center py-4 text-muted">డేటా లోడ్ అవుతోంది...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- GUC ADMIN LOGIN MODAL -->
+    <div class="modal fade" id="gucLoginModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold" id="txt-login-modal-title"><i class="fas fa-lock me-2"></i>GUC అడ్మిన్ లాగిన్ (Admin Login)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="guc-login-form" onsubmit="handleGUCLogin(event)">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" id="lbl-login-username">యూజర్‌నేమ్ లేదా ఫోన్ నెంబర్</label>
+                            <input type="text" class="form-control" id="login-username" required placeholder="gucadmin">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" id="lbl-login-password">పాస్‌వర్డ్ (Password)</label>
+                            <input type="password" class="form-control" id="login-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold text-dark py-2" id="btn-submit-login">
+                            లాగిన్ చేయండి (Login Now)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GUC ADMIN REGISTER MODAL -->
+    <div class="modal fade" id="gucRegisterModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold" id="txt-reg-modal-title"><i class="fas fa-user-plus me-2"></i>క్రొత్త అడ్మిన్ ఖాతా నమోదు (Create GUC Admin Account)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="guc-register-form" onsubmit="handleGUCRegister(event)">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">యూజర్‌నేమ్ (Username)</label>
+                            <input type="text" class="form-control" id="reg-username" required placeholder="e.g. guc_vizag_admin">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">పూర్తి పేరు (Full Name)</label>
+                            <input type="text" class="form-control" id="reg-fullname" required placeholder="e.g. Viswanath Kaari">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">ఫోన్ నెంబర్ (Phone)</label>
+                                <input type="text" class="form-control" id="reg-phone" placeholder="8019045667">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">ఇమెయిల్ (Email)</label>
+                                <input type="email" class="form-control" id="reg-email" placeholder="admin@guc.ap.gov.in">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">పాస్‌వర్డ్ (Password)</label>
+                            <input type="password" class="form-control" id="reg-password" required placeholder="••••••••">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">అనుమతి స్థాయి (Access Level)</label>
+                                <select class="form-select" id="reg-access-level">
+                                    <option value="READ_WRITE">READ_WRITE (పూర్తి యాక్సెస్)</option>
+                                    <option value="READ_ONLY">READ_ONLY (చదవడానికి మాత్రమే)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">జిల్లా (District)</label>
+                                <input type="text" class="form-control" id="reg-district" value="Visakhapatnam">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 fw-bold py-2" id="btn-submit-register">
+                            ఖాతాను సృష్టించండి (Create Account)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Multilingual Dictionary
+        const I18N = {
+            te: {
+                title: "గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్",
+                subtitle: "అధికారిక నిర్వహణ & పర్యవేక్షణ పోర్టల్ (GUC Executive Portal)",
+                tabDashboard: "ఎగ్జిక్యూటివ్ డ్యాష్‌బోర్డ్",
+                tabMasterlist: "GUC కమిటీల జాబితా",
+                tabUsers: "అడ్మిన్ ఖాతాలు & రోల్స్",
+                kpiTotal: "మొత్తం నమోదుల గణన",
+                kpiApproved: "ఆమోదించబడిన மண்டపాలు",
+                kpiPending: "పరిశీలనలో ఉన్నవి",
+                kpiRate: "మొత్తం ఆమోదిత శాతం",
+                chartDistricts: "జిల్లా వారీ విభజన",
+                chartHeights: "విగ్రహాల ఎత్తుల వర్గీకరణ",
+                loginBtn: "లాగిన్ / Login",
+                registerBtn: "నమోదు / Register",
+                logoutBtn: "లాగ్‌అవుట్"
+            },
+            hi: {
+                title: "गणेश उत्सव समिति, आंध्र प्रदेश",
+                subtitle: "आधिकारिक प्रबंधन और पर्यवेक्षण पोर्टल (GUC Executive Portal)",
+                tabDashboard: "कार्यकारी डैशबोर्ड",
+                tabMasterlist: "GUC समितियों की सूची",
+                tabUsers: "एडमिन खाते और भूमिकाएं",
+                kpiTotal: "कुल पंजीकृत मण्‍डप",
+                kpiApproved: "स्वीकृत मण्डप",
+                kpiPending: "समीक्षाधीन",
+                kpiRate: "स्वीकृति दर",
+                chartDistricts: "जिला वार विवरण",
+                chartHeights: "मूर्ति ऊंचाई विवरण",
+                loginBtn: "लॉगिन",
+                registerBtn: "पंजीकरण",
+                logoutBtn: "लॉगआउट"
+            },
+            en: {
+                title: "Ganesh Utsav Samithi, Andhra Pradesh",
+                subtitle: "Official Management & Governance Portal",
+                tabDashboard: "Executive Dashboard",
+                tabMasterlist: "GUC Master List",
+                tabUsers: "Admin Accounts & Roles",
+                kpiTotal: "Total Registered Mandaps",
+                kpiApproved: "Approved Mandaps",
+                kpiPending: "Pending Verification",
+                kpiRate: "Approval Rate",
+                chartDistricts: "District Breakdown",
+                chartHeights: "Idol Height Distribution",
+                loginBtn: "Login",
+                registerBtn: "Register",
+                logoutBtn: "Logout"
+            }
+        };
+
+        let currentLang = 'te';
+        let currentUserToken = localStorage.getItem('guc_admin_token') || '';
+        let currentUserInfo = JSON.parse(localStorage.getItem('guc_admin_user') || 'null');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            switchLanguage('te');
+            checkAuthStatus();
+            loadExecutiveDashboard();
+        });
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-lang-${lang}`).classList.add('active');
+
+            const dict = I18N[lang] || I18N.te;
+            document.getElementById('txt-header-title').textContent = dict.title;
+            document.getElementById('txt-header-subtitle').textContent = dict.subtitle;
+            document.getElementById('txt-tab-dashboard').textContent = dict.tabDashboard;
+            document.getElementById('txt-tab-masterlist').textContent = dict.tabMasterlist;
+            document.getElementById('txt-tab-users').textContent = dict.tabUsers;
+            document.getElementById('txt-kpi-total').textContent = dict.kpiTotal;
+            document.getElementById('txt-kpi-approved').textContent = dict.kpiApproved;
+            document.getElementById('txt-kpi-pending').textContent = dict.kpiPending;
+            document.getElementById('txt-kpi-rate').textContent = dict.kpiRate;
+            document.getElementById('txt-chart-districts').textContent = dict.chartDistricts;
+            document.getElementById('txt-chart-heights').textContent = dict.chartHeights;
+            document.getElementById('lbl-login-btn').textContent = dict.loginBtn;
+            document.getElementById('lbl-register-btn').textContent = dict.registerBtn;
+            document.getElementById('lbl-logout').textContent = dict.logoutBtn;
+        }
+
+        function checkAuthStatus() {
+            if (currentUserToken && currentUserInfo) {
+                document.getElementById('auth-section').classList.add('d-none');
+                document.getElementById('user-profile-section').classList.remove('d-none');
+                document.getElementById('user-name-span').textContent = `${currentUserInfo.full_name} (${currentUserInfo.access_level})`;
+            } else {
+                document.getElementById('auth-section').classList.remove('d-none');
+                document.getElementById('user-profile-section').classList.add('d-none');
+            }
+        }
+
+        function openLoginModal() {
+            new bootstrap.Modal(document.getElementById('gucLoginModal')).show();
+        }
+
+        function openRegisterModal() {
+            new bootstrap.Modal(document.getElementById('gucRegisterModal')).show();
+        }
+
+        async function handleGUCLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/api/v1/community-services/guc/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentUserToken = data.access_token;
+                    currentUserInfo = data.user;
+                    localStorage.setItem('guc_admin_token', currentUserToken);
+                    localStorage.setItem('guc_admin_user', JSON.stringify(currentUserInfo));
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('gucLoginModal')).hide();
+                    checkAuthStatus();
+                    alert("లాగిన్ విజయవంతమైంది! (Login Successful)");
+                    loadExecutiveDashboard();
+                } else {
+                    alert(data.detail || "లాగిన్ విఫలమైంది.");
+                }
+            } catch (err) {
+                alert("కనెక్షన్ లోపం సంభవించింది.");
+            }
+        }
+
+        async function handleGUCRegister(e) {
+            e.preventDefault();
+            const payload = {
+                username: document.getElementById('reg-username').value,
+                full_name: document.getElementById('reg-fullname').value,
+                phone: document.getElementById('reg-phone').value,
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-password').value,
+                access_level: document.getElementById('reg-access-level').value,
+                district: document.getElementById('reg-district').value
+            };
+
+            try {
+                const res = await fetch('/api/v1/community-services/guc/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('gucRegisterModal')).hide();
+                    alert("అడ్మిన్ ఖాతా విజయవంతంగా సృష్టించబడింది!");
+                    loadAdminUsers();
+                } else {
+                    alert(data.detail || "ఖాతా సృష్టి విఫలమైంది.");
+                }
+            } catch (err) {
+                alert("నెట్‌వర్క్ లోపం సంభవించింది.");
+            }
+        }
+
+        function logoutGUCAdmin() {
+            localStorage.removeItem('guc_admin_token');
+            localStorage.removeItem('guc_admin_user');
+            currentUserToken = '';
+            currentUserInfo = null;
+            checkAuthStatus();
+            alert("మీరు విజయవంతంగా లాగ్‌అవుట్ అయ్యారు.");
+        }
+
+        async function loadExecutiveDashboard() {
+            try {
+                const res = await fetch('/api/v1/community-services/guc/executive-dashboard');
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('kpi-total-mandaps').textContent = data.kpis.total_registrations;
+                    document.getElementById('kpi-approved-mandaps').textContent = data.kpis.approved_registrations;
+                    document.getElementById('kpi-pending-mandaps').textContent = data.kpis.pending_registrations;
+                    document.getElementById('kpi-approval-rate').textContent = `${data.kpis.approval_rate}%`;
+
+                    // District Breakdown
+                    const distEl = document.getElementById('district-breakdown-list');
+                    let distHtml = '';
+                    for (const [k, v] of Object.entries(data.district_breakdown)) {
+                        distHtml += `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span class="fw-semibold text-dark"><i class="fas fa-map-marker-alt text-danger me-2"></i>${k}</span>
+                                <span class="badge bg-amber-600 rounded-pill px-3 py-2" style="background:#d97706; font-size:0.9rem;">${v} Mandaps</span>
+                            </div>`;
+                    }
+                    distEl.innerHTML = distHtml || '<div class="p-3 text-muted">డేటా లేదు</div>';
+
+                    // Height Breakdown
+                    const heightEl = document.getElementById('idol-height-list');
+                    let hHtml = '';
+                    for (const [k, v] of Object.entries(data.idol_height_breakdown)) {
+                        hHtml += `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span class="fw-semibold text-dark"><i class="fas fa-ruler-vertical text-emerald-600 me-2"></i>${k}</span>
+                                <span class="badge bg-emerald-600 rounded-pill px-3 py-2" style="background:#047857; font-size:0.9rem;">${v} Mandaps</span>
+                            </div>`;
+                    }
+                    heightEl.innerHTML = hHtml || '<div class="p-3 text-muted">డేటా లేదు</div>';
+                }
+            } catch (err) {
+                console.error("Dashboard error:", err);
+            }
+        }
+
+        async function loadMasterList() {
+            const search = document.getElementById('master-search-input').value;
+            const dist = document.getElementById('master-district-filter').value;
+            const status = document.getElementById('master-status-filter').value;
+
+            let url = `/api/v1/community-services/guc/registrations?`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (dist) url += `district=${encodeURIComponent(dist)}&`;
+            if (status) url += `status=${encodeURIComponent(status)}&`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                const tbody = document.getElementById('masterlist-tbody');
+                if (data.success && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(r => {
+                        let stBadge = r.status === 'APPROVED' ? 'badge-approved' : (r.status === 'PENDING' ? 'badge-pending' : 'badge-rejected');
+                        html += `
+                            <tr>
+                                <td><strong class="text-primary">${r.application_no}</strong></td>
+                                <td>${r.association_name || r.primary_name}</td>
+                                <td>${r.president_name || r.primary_name}<br><small class="text-muted">${r.president_phone || r.primary_phone_1}</small></td>
+                                <td>${r.secretary_name || 'N/A'}<br><small class="text-muted">${r.secretary_phone || ''}</small></td>
+                                <td>${r.area}, ${r.district}</td>
+                                <td><span class="badge bg-light text-dark">${r.idol_height || 'Standard'}</span></td>
+                                <td><span class="badge ${stBadge}">${r.status}</span></td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="downloadTeluguDocket(${r.id})">
+                                        <i class="fas fa-file-pdf"></i> డ్యాకెట్ (PDF)
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">రికార్డులు ఏవీ కనుగొనబడలేదు (No records found).</td></tr>';
+                }
+            } catch (err) {
+                console.error("Master list load error:", err);
+            }
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const res = await fetch('/api/v1/community-services/guc/admin-accounts');
+                const data = await res.json();
+
+                const tbody = document.getElementById('admin-users-tbody');
+                if (data.success && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(u => {
+                        let accBadge = u.access_level === 'READ_WRITE' ? 'access-badge-rw' : 'access-badge-ro';
+                        html += `
+                            <tr>
+                                <td>${u.id}</td>
+                                <td><strong>${u.username}</strong></td>
+                                <td>${u.full_name}</td>
+                                <td>${u.phone || 'N/A'}<br><small class="text-muted">${u.email || ''}</small></td>
+                                <td><span class="${accBadge}">${u.access_level}</span></td>
+                                <td>${u.district}</td>
+                                <td>${u.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                                <td>${u.created_at}</td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAdminUser(${u.id})">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ఖాతాలు ఏవీ లేవు.</td></tr>';
+                }
+            } catch (err) {
+                console.error("Load users error:", err);
+            }
+        }
+
+        async function deleteAdminUser(id) {
+            if (!confirm("ఈ అడ్మిన్ ఖాతాను ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?")) return;
+            try {
+                const res = await fetch(`/api/v1/community-services/guc/admin-accounts/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    alert("అడ్మిన్ ఖాతా తొలగించబడింది.");
+                    loadAdminUsers();
+                }
+            } catch (err) {
+                alert("తొలగింపు విఫలమైంది.");
+            }
+        }
+
+        function downloadTeluguDocket(regId) {
+            alert(`గణేష్ ఉత్సవ కమిటీ నమోదు ID #${regId} కోసం అధికారిక తెలుగు డ్యాకెట్ PDF జెనరేట్ అవుతోంది...`);
+            window.open(`/api/v1/community-services/public/registrations/${regId}`, '_blank');
+        }
+
+        function exportMasterListCSV() {
+            window.open(`/api/v1/community-services/guc/registrations?format=csv`, '_blank');
+        }
+    </script>
+</body>
+</html>
