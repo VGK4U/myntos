@@ -645,90 +645,232 @@
         </div>
     </div>
 
-    <!-- Edit GUC Registration Modal -->
-    <div class="modal fade" id="gucEditRegistrationModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content border-0 shadow rounded-4">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>మండపం నమోదు వివరాల సవరణ (Edit Registration)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Edit GUC Registration Modal (Exact Staff Portal Full Parity) -->
+    <div class="modal fade" id="gucEditRegistrationModal" tabindex="-1" aria-labelledby="gucEditRegistrationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-warning text-dark border-bottom py-3">
+                    <h5 class="modal-title fw-bold" id="gucEditRegistrationModalLabel">
+                        <i class="fas fa-edit me-2"></i>మండపం నమోదు వివరాల సవరణ (Edit Community Registration Details)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <form id="guc-edit-form" onsubmit="handleGUCEditSubmit(event)">
-                        <input type="hidden" id="edit-reg-id">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">మండపం / అసోసియేషన్ పేరు (Mandap Name)</label>
-                                <input type="text" class="form-control" id="edit-assoc-name" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">నమోదు హోదా (Status)</label>
-                                <select class="form-select fw-bold" id="edit-status">
-                                    <option value="PENDING">PENDING (పరిశీలనలో)</option>
-                                    <option value="APPROVED">APPROVED (ఆమోదించబడింది)</option>
-                                    <option value="REJECTED">REJECTED (తిరస్కరించబడింది)</option>
-                                </select>
+                <form id="guc-edit-form" onsubmit="handleGUCEditSubmit(event)">
+                    <input type="hidden" id="edit_reg_id">
+                    <div class="modal-body p-4" style="background-color: #f8fafc;">
+
+                        <!-- Section 1: Application & Source -->
+                        <div class="p-3 mb-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-file-signature me-2"></i>1. Application &amp; Origin Source</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Application No</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="edit_application_no" placeholder="e.g. GUC-2026-0051">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Registered From (Source) *</label>
+                                    <select class="form-select form-select-sm text-dark" id="edit_registered_from" required>
+                                        <option value="Utsav Committee">Utsav Committee (GUC)</option>
+                                        <option value="Green Ganesha">Green Ganesha</option>
+                                        <option value="Community Service">Community Service</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Assembly Constituency *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_assembly_constituency" placeholder="e.g. Pendurthi">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">అధ్యక్షుడు పేరు (President Name)</label>
-                                <input type="text" class="form-control" id="edit-pres-name" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">అధ్యక్షుడు ఫోన్ (President Phone)</label>
-                                <input type="text" class="form-control" id="edit-pres-phone" required>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">కార్యదర్శి పేరు (Secretary Name)</label>
-                                <input type="text" class="form-control" id="edit-sec-name">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">కార్యదర్శి ఫోన్ (Secretary Phone)</label>
-                                <input type="text" class="form-control" id="edit-sec-phone">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">కోశాధికారి పేరు (Treasurer Name)</label>
-                                <input type="text" class="form-control" id="edit-treas-name">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">కోశాధికారి ఫోన్ (Treasurer Phone)</label>
-                                <input type="text" class="form-control" id="edit-treas-phone">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">ప్రాంతం (Area)</label>
-                                <input type="text" class="form-control" id="edit-area">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">జిల్లా (District)</label>
-                                <input type="text" class="form-control" id="edit-district">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-bold">విగ్రహం ఎత్తు (Idol Height)</label>
-                                <input type="text" class="form-control" id="edit-idol-height">
+                        <!-- Section 2: Association & Representatives -->
+                        <div class="p-3 mb-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-users me-2"></i>2. Association &amp; Contact Representatives</h6>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">Association / Community / Mandap Name *</label>
+                                    <input type="text" class="form-control form-control-sm fw-bold text-dark" id="edit_association_name" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Primary Representative Name *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_primary_name" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Primary Mobile 1 *</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_primary_phone_1" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Alternative Mobile</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_primary_phone_2">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Alternate Representative Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_secondary_name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Alternate Mobile 1</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_secondary_phone_1">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Alternate Mobile 2</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_secondary_phone_2">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">ల్యాండ్‌మార్క్ / గుర్తించదగిన ప్రాంతం (Landmark)</label>
-                            <input type="text" class="form-control" id="edit-landmark">
+                        <!-- Section 3: Office Bearers (GUC) -->
+                        <div class="p-3 mb-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-crown me-2 text-warning"></i>3. Committee Office Bearers (GUC)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">President Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_president_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">President Mobile</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_president_phone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Secretary Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_secretary_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Secretary Mobile</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_secretary_phone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Treasurer Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_treasurer_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Treasurer Mobile</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_treasurer_phone">
+                                </div>
+                            </div>
                         </div>
 
-                        <button type="submit" class="btn btn-warning w-100 fw-bold py-2 shadow-sm">
+                        <!-- Section 4: Mandap & Celebration Details -->
+                        <div class="p-3 mb-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-om me-2"></i>4. Mandap &amp; Utsav Celebration Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Mandap Setup Location</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_mandap_location" placeholder="e.g. Near Ramalayam Temple">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Location Category</label>
+                                    <select class="form-select form-select-sm text-dark" id="edit_location_category">
+                                        <option value="Community">Community Ground</option>
+                                        <option value="Temple">Temple Premises</option>
+                                        <option value="Government">Government / Public Land</option>
+                                        <option value="Private">Private Property</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Idol Height (ft)</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_idol_height" placeholder="e.g. 5">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Location Owner / Authority Details</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_location_owner_details">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Landmark</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_landmark">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Utsav Start Date</label>
+                                    <input type="date" class="form-control form-control-sm" id="edit_utsav_start_date">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Utsav End Date</label>
+                                    <input type="date" class="form-control form-control-sm" id="edit_utsav_end_date">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Visarjan Date</label>
+                                    <input type="date" class="form-control form-control-sm" id="edit_visarjan_date">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Visarjan Time</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_visarjan_time" placeholder="e.g. 05:00 PM">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Visarjan In-Charge Contact Mobile</label>
+                                    <input type="tel" class="form-control form-control-sm" id="edit_visarjan_phone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Sound System / DJ Setup Details</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_sound_system_details" placeholder="e.g. 2 Box Sound System (upto 10 PM)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 5: Area & Location Coordinates -->
+                        <div class="p-3 mb-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-map-location-dot me-2 text-danger"></i>5. Area &amp; Geographic Location</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Area / Colony *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_area" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold">Pin Code *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_pin_code" maxlength="6" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold">District *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_district" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold">State *</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_state" required>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <label class="form-label small fw-bold mb-1">Google Maps Location Link</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_google_location" placeholder="e.g., https://maps.app.goo.gl/...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 6: Referral & Status -->
+                        <div class="p-3 border rounded-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-shield-halved me-2 text-info"></i>6. Referral Attribution &amp; Verification Status</h6>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Referral Type</label>
+                                    <select class="form-select form-select-sm text-dark" id="edit_referral_type">
+                                        <option value="direct">Direct</option>
+                                        <option value="vgk_member">VGK Member</option>
+                                        <option value="staff">Staff</option>
+                                        <option value="influencer">Influencer</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Referral Code</label>
+                                    <input type="text" class="form-control form-control-sm" id="edit_referral_code" placeholder="e.g., AKSHAR39">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Referral CP ID (OfficialPartner ID)</label>
+                                    <input type="number" class="form-control form-control-sm" id="edit_ref1_member_id" placeholder="Optional">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">KYC / Registration Status *</label>
+                                    <select class="form-select form-select-sm text-dark fw-bold" id="edit_status" required>
+                                        <option value="PENDING">PENDING</option>
+                                        <option value="APPROVED">APPROVED</option>
+                                        <option value="REJECTED">REJECTED</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light border-top">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning btn-sm font-weight-bold px-4 shadow-sm">
                             <i class="fas fa-save me-1"></i>వివరాలను నవీకరించండి (Save Changes)
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1032,54 +1174,115 @@
             window.open(`/api/v1/community-services/guc/registrations/${regId}/docket-html`, '_blank');
         }
 
+        let editGUCModalObj = null;
+
         function openEditGUCRegistrationModal(regId) {
-            const reg = gucMasterData.find(x => x.id === regId);
-            if (!reg) return;
+            const r = gucMasterData.find(x => x.id === regId);
+            if (!r) return;
 
-            document.getElementById('edit-reg-id').value = reg.id;
-            document.getElementById('edit-assoc-name').value = reg.association_name || reg.primary_name || '';
-            document.getElementById('edit-status').value = reg.status || 'PENDING';
-            document.getElementById('edit-pres-name').value = reg.president_name || reg.primary_name || '';
-            document.getElementById('edit-pres-phone').value = reg.president_phone || reg.primary_phone_1 || '';
-            document.getElementById('edit-sec-name').value = reg.secretary_name || '';
-            document.getElementById('edit-sec-phone').value = reg.secretary_phone || '';
-            document.getElementById('edit-treas-name').value = reg.treasurer_name || '';
-            document.getElementById('edit-treas-phone').value = reg.treasurer_phone || '';
-            document.getElementById('edit-area').value = reg.area || '';
-            document.getElementById('edit-district').value = reg.district || 'Visakhapatnam';
-            document.getElementById('edit-idol-height').value = reg.idol_height || '';
-            document.getElementById('edit-landmark').value = reg.landmark || '';
+            document.getElementById('edit_reg_id').value = r.id;
+            document.getElementById('edit_application_no').value = r.application_no || '';
+            document.getElementById('edit_registered_from').value = r.registered_from || 'Utsav Committee';
+            document.getElementById('edit_assembly_constituency').value = r.assembly_constituency || 'Pendurthi';
+            document.getElementById('edit_association_name').value = r.association_name || r.primary_name || '';
+            document.getElementById('edit_primary_name').value = r.primary_name || r.president_name || '';
+            document.getElementById('edit_primary_phone_1').value = r.primary_phone_1 || r.president_phone || '';
+            document.getElementById('edit_primary_phone_2').value = r.primary_phone_2 || '';
+            document.getElementById('edit_secondary_name').value = r.secondary_name || r.secretary_name || '';
+            document.getElementById('edit_secondary_phone_1').value = r.secondary_phone_1 || r.secretary_phone || '';
+            document.getElementById('edit_secondary_phone_2').value = r.secondary_phone_2 || '';
 
-            new bootstrap.Modal(document.getElementById('gucEditRegistrationModal')).show();
+            // GUC Office Bearers
+            document.getElementById('edit_president_name').value = r.president_name || r.primary_name || '';
+            document.getElementById('edit_president_phone').value = r.president_phone || r.primary_phone_1 || '';
+            document.getElementById('edit_secretary_name').value = r.secretary_name || r.secondary_name || '';
+            document.getElementById('edit_secretary_phone').value = r.secretary_phone || r.secondary_phone_1 || '';
+            document.getElementById('edit_treasurer_name').value = r.treasurer_name || '';
+            document.getElementById('edit_treasurer_phone').value = r.treasurer_phone || '';
+
+            // Mandap & Utsav
+            document.getElementById('edit_mandap_location').value = r.mandap_location || '';
+            document.getElementById('edit_location_category').value = r.location_category || 'Community';
+            document.getElementById('edit_location_owner_details').value = r.location_owner_details || '';
+            document.getElementById('edit_landmark').value = r.landmark || '';
+            document.getElementById('edit_idol_height').value = r.idol_height || '';
+            document.getElementById('edit_utsav_start_date').value = r.utsav_start_date || '';
+            document.getElementById('edit_utsav_end_date').value = r.utsav_end_date || '';
+            document.getElementById('edit_visarjan_date').value = r.visarjan_date || '';
+            document.getElementById('edit_visarjan_time').value = r.visarjan_time || '';
+            document.getElementById('edit_visarjan_phone').value = r.visarjan_phone || '';
+            document.getElementById('edit_sound_system_details').value = r.sound_system_details || '';
+
+            // Location
+            document.getElementById('edit_area').value = r.area || '';
+            document.getElementById('edit_pin_code').value = r.pin_code || '';
+            document.getElementById('edit_district').value = r.district || 'Visakhapatnam';
+            document.getElementById('edit_state').value = r.state || 'Telangana';
+            document.getElementById('edit_google_location').value = r.google_location || '';
+
+            // Referral & Status
+            document.getElementById('edit_referral_type').value = r.referral_type || 'direct';
+            document.getElementById('edit_referral_code').value = r.referral_code || '';
+            document.getElementById('edit_ref1_member_id').value = r.ref1_member_id || '';
+            document.getElementById('edit_status').value = r.status || 'PENDING';
+
+            if (!editGUCModalObj) {
+                editGUCModalObj = new bootstrap.Modal(document.getElementById('gucEditRegistrationModal'));
+            }
+            editGUCModalObj.show();
         }
 
         async function handleGUCEditSubmit(e) {
             e.preventDefault();
-            const regId = document.getElementById('edit-reg-id').value;
+            const id = document.getElementById('edit_reg_id').value;
             const payload = {
-                association_name: document.getElementById('edit-assoc-name').value,
-                status: document.getElementById('edit-status').value,
-                president_name: document.getElementById('edit-pres-name').value,
-                president_phone: document.getElementById('edit-pres-phone').value,
-                secretary_name: document.getElementById('edit-sec-name').value,
-                secretary_phone: document.getElementById('edit-sec-phone').value,
-                treasurer_name: document.getElementById('edit-treas-name').value,
-                treasurer_phone: document.getElementById('edit-treas-phone').value,
-                area: document.getElementById('edit-area').value,
-                district: document.getElementById('edit-district').value,
-                idol_height: document.getElementById('edit-idol-height').value,
-                landmark: document.getElementById('edit-landmark').value
+                application_no: document.getElementById('edit_application_no').value || null,
+                registered_from: document.getElementById('edit_registered_from').value || 'Utsav Committee',
+                assembly_constituency: document.getElementById('edit_assembly_constituency').value || null,
+                association_name: document.getElementById('edit_association_name').value,
+                primary_name: document.getElementById('edit_primary_name').value,
+                primary_phone_1: document.getElementById('edit_primary_phone_1').value,
+                primary_phone_2: document.getElementById('edit_primary_phone_2').value || null,
+                secondary_name: document.getElementById('edit_secondary_name').value || null,
+                secondary_phone_1: document.getElementById('edit_secondary_phone_1').value || null,
+                secondary_phone_2: document.getElementById('edit_secondary_phone_2').value || null,
+                president_name: document.getElementById('edit_president_name').value || null,
+                president_phone: document.getElementById('edit_president_phone').value || null,
+                secretary_name: document.getElementById('edit_secretary_name').value || null,
+                secretary_phone: document.getElementById('edit_secretary_phone').value || null,
+                treasurer_name: document.getElementById('edit_treasurer_name').value || null,
+                treasurer_phone: document.getElementById('edit_treasurer_phone').value || null,
+                mandap_location: document.getElementById('edit_mandap_location').value || null,
+                location_category: document.getElementById('edit_location_category').value || null,
+                location_owner_details: document.getElementById('edit_location_owner_details').value || null,
+                landmark: document.getElementById('edit_landmark').value || null,
+                idol_height: document.getElementById('edit_idol_height').value || null,
+                utsav_start_date: document.getElementById('edit_utsav_start_date').value || null,
+                utsav_end_date: document.getElementById('edit_utsav_end_date').value || null,
+                visarjan_date: document.getElementById('edit_visarjan_date').value || null,
+                visarjan_time: document.getElementById('edit_visarjan_time').value || null,
+                visarjan_phone: document.getElementById('edit_visarjan_phone').value || null,
+                sound_system_details: document.getElementById('edit_sound_system_details').value || null,
+                area: document.getElementById('edit_area').value,
+                pin_code: document.getElementById('edit_pin_code').value,
+                district: document.getElementById('edit_district').value,
+                state: document.getElementById('edit_state').value,
+                google_location: document.getElementById('edit_google_location').value || null,
+                referral_type: document.getElementById('edit_referral_type').value || 'direct',
+                referral_code: document.getElementById('edit_referral_code').value || null,
+                ref1_member_id: parseInt(document.getElementById('edit_ref1_member_id').value) || null,
+                status: document.getElementById('edit_status').value
             };
 
             try {
-                const res = await fetch(`/api/v1/community-services/guc/registrations/${regId}`, {
+                const res = await fetch(`/api/v1/community-services/guc/registrations/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('gucEditRegistrationModal')).hide();
+                    if (editGUCModalObj) editGUCModalObj.hide();
                     alert("మండపం వివరాలు విజయవంతంగా నవీకరించబడ్డాయి! (Updated Successfully)");
                     loadMasterList();
                     loadExecutiveDashboard();

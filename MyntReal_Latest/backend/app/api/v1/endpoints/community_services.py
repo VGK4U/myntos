@@ -2974,14 +2974,28 @@ def update_guc_registration(reg_id: int, payload: dict = Body(...), db: Session 
         raise HTTPException(status_code=404, detail="Registration not found")
 
     updatable_fields = [
-        'association_name', 'president_name', 'president_phone', 
-        'secretary_name', 'secretary_phone', 'treasurer_name', 'treasurer_phone',
-        'area', 'district', 'landmark', 'idol_height', 'status', 'mandap_location', 'pin_code'
+        'application_no', 'registered_from', 'assembly_constituency',
+        'association_name', 'primary_name', 'primary_phone_1', 'primary_phone_2',
+        'secondary_name', 'secondary_phone_1', 'secondary_phone_2',
+        'president_name', 'president_phone', 'secretary_name', 'secretary_phone', 'treasurer_name', 'treasurer_phone',
+        'mandap_location', 'location_category', 'location_owner_details', 'landmark', 'idol_height',
+        'utsav_start_date', 'utsav_end_date', 'visarjan_date', 'visarjan_time', 'visarjan_phone', 'sound_system_details',
+        'area', 'pin_code', 'district', 'state', 'google_location',
+        'referral_type', 'referral_code', 'ref1_member_id', 'status'
     ]
 
+    date_fields = {'utsav_start_date', 'utsav_end_date', 'visarjan_date'}
     for field in updatable_fields:
         if field in payload:
-            setattr(reg, field, payload[field])
+            val = payload[field]
+            if val == "" or val is None:
+                val = None
+            elif field in date_fields and isinstance(val, str):
+                try:
+                    val = datetime.strptime(val.strip(), "%Y-%m-%d").date()
+                except Exception:
+                    val = None
+            setattr(reg, field, val)
 
     if 'president_name' in payload and payload['president_name']:
         reg.primary_name = payload['president_name']
