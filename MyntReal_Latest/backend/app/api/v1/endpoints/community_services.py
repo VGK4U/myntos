@@ -220,7 +220,7 @@ def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
         f"• *ప్రాంతం / లొకేషన్:* {loc_str}\n"
         f"• *రిజిస్ట్రేషన్ ID:* {app_no}\n\n"
         f"*సమితి ముఖ్యులు:*\n"
-        f"• *కన్వీనర్:* విశ్వనాథ్ కారి (Viswanath Kaari)\n"
+        f"• *కన్వీనర్:* విశ్వనాథ్ కారి (Viswanath Kari)\n"
         f"• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n"
         f"📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8019045667\n\n"
         f"📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n"
