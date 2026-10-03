@@ -18934,6 +18934,8 @@ def _check_solar_doc_physical_exists(file_name: Optional[str]) -> bool:
     local_roots = [
         _base_dir / "frontend" / "storage",
         _base_dir / "backend" / "storage",
+        _base_dir / "backend" / "uploads",
+        _base_dir / "backend" / "uploads" / "solar_docs",
         _base_dir / "media_backup" / "solar_docs"
     ]
     for r in local_roots:
@@ -21443,12 +21445,43 @@ async def generate_solar_doc(
         logger.error("[DC-SOLAR-GEN] PDF generation failed for %s / lead %s: %s", doc_type, lead_id, exc)
         raise HTTPException(status_code=500, detail="PDF generation failed. Please try again or contact support.")
 
-    # ── Upload to object storage ─────────────────────────────────────────────
+    # ── Upload to object storage & local fallback ─────────────────────────────
     from datetime import datetime as _dt
+    import pathlib
     timestamp = _dt.now().strftime("%Y%m%d_%H%M%S")
     storage_key = f"solar_docs/{lead_id}/{doc_type}_{timestamp}.pdf"
+
+    # 1. Local disk persistence (guarantees zero-404 and local dev availability)
+    local_dir = pathlib.Path(__file__).resolve().parent.parent.parent.parent / "uploads" / "solar_docs" / str(lead_id)
+    local_dir.mkdir(parents=True, exist_ok=True)
+    local_file_path = local_dir / f"{doc_type}_{timestamp}.pdf"
+    try:
+        with open(local_file_path, "wb") as _fp:
+            _fp.write(pdf_bytes)
+    except Exception as _local_err:
+        logger.warning("[DC-SOLAR-LOCAL] Could not write local PDF copy: %s", _local_err)
+
+    # 2. Upload to S3 Bucket
     ok = storage_service.upload_file(storage_key, pdf_bytes)
-    if not ok:
+
+    # 3. Structured Google Drive Sync (Segment -> Company -> Lead_ID_CustomerName)
+    try:
+        from app.services.gdrive_storage import gdrive_storage_service
+        comp_name = getattr(vendor, "company_name", None) or "General_Company"
+        cust_name = getattr(lead, "name", None) or getattr(lead, "customer_name", None) or ""
+        gdrive_res = gdrive_storage_service.upload_file(
+            file_bytes=pdf_bytes,
+            filename=f"{doc_type}_{timestamp}.pdf",
+            segment="Solar_Docs",
+            company_name=comp_name,
+            lead_id=lead_id,
+            customer_name=cust_name
+        )
+        logger.info("[DC-SOLAR-GDRIVE] Google Drive upload result for lead #%s: %s", lead_id, gdrive_res)
+    except Exception as _gd_err:
+        logger.warning("[DC-SOLAR-GDRIVE] Google Drive sync notice for lead #%s: %s", lead_id, _gd_err)
+
+    if not ok and not local_file_path.exists():
         raise HTTPException(status_code=500, detail="Failed to upload generated PDF to object storage")
 
     doc_label = SOLAR_DOC_TYPES.get(doc_type, doc_type.replace("_", " ").title())
