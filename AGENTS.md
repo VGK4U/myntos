@@ -65,3 +65,13 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
      - Recording callback endpoint and storage pipeline.
 - **Standard**: All future features, UI tweaks, CRM adjustments, or mobile builds MUST treat this stack as immutable. No modifications are permitted.
 
+---
+
+### 7. ZERO API KEY EXPOSURE & ENVIRONMENT ISOLATION RULE (STRICT MANDATE)
+- **Rule**: NEVER hardcode API keys, AWS credentials, secret tokens, or private access keys in source code, scripts, HTML templates, frontend bundles, or committed repository files.
+- **Standard**:
+  - **Dynamic Environment Resolution**: All credentials MUST be loaded dynamically via environment variables (`os.getenv("AWS_ACCESS_KEY_ID")`, `process.env.API_KEY`, etc.) or local `.env` files.
+  - **Git & GitHub Safeguard**: All `.env`, `backend/.env`, `frontend/.env`, `.env.local`, `.env.production`, and build archives (`*.zip`) MUST remain strictly in `.gitignore`. NEVER stage or commit `.env` files or secret credentials to Git/GitHub repositories.
+  - **No Secrets in Client Bundles**: Web, `/mobile`, Android, and iOS client-side assets MUST NOT expose private backend credentials. All file operations and external API requests requiring credentials MUST route securely through backend services.
+
+
