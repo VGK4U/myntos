@@ -1216,18 +1216,33 @@ def run_migrations():
 
             # Check 4: Idempotent backfill and verification: no unexpected NULLs in tenant_id
             conn.execute(text("""
+                UPDATE associated_companies
+                SET client_id = 1
+                WHERE client_id IS NULL;
+            """))
+            conn.execute(text("""
                 UPDATE crm_leads l
-                SET tenant_id = c.client_id
+                SET tenant_id = COALESCE(c.client_id, 1)
                 FROM associated_companies c
                 WHERE l.company_id = c.id
                   AND l.tenant_id IS NULL;
             """))
             conn.execute(text("""
+                UPDATE crm_leads
+                SET tenant_id = 1
+                WHERE tenant_id IS NULL;
+            """))
+            conn.execute(text("""
                 UPDATE staff_employees s
-                SET tenant_id = c.client_id
+                SET tenant_id = COALESCE(c.client_id, 1)
                 FROM associated_companies c
                 WHERE s.base_company_id = c.id
                   AND s.tenant_id IS NULL;
+            """))
+            conn.execute(text("""
+                UPDATE staff_employees
+                SET tenant_id = 1
+                WHERE tenant_id IS NULL;
             """))
             conn.commit()
 
