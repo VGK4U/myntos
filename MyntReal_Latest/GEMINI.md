@@ -34,3 +34,42 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
 
 ### 4. MEMORY AWARENESS & OOM PREVENTION
 - **Rule**: The AWS production server is a monolithic instance with limited RAM. Do not silently bundle memory-heavy background processes (like Headless Chrome/Puppeteer bots, heavy AI pipelines, or unthrottled queues) into the main API startup script without warning the user about Out-Of-Memory (OOM) risks.
+
+---
+
+### 5. SINGLE APPLICATION STRUCTURE & FULL PLATFORM PARITY (WEB + /mobile + ANDROID + iOS)
+- **Rule**: MyntOS is ONE application with FOUR delivery representations:
+  1. Main Web Application
+  2. `/mobile` Mobile Web Application
+  3. Native Android Application (Capacitor)
+  4. Native iPhone/iOS Application (Capacitor)
+- **Standard**:
+  - **No Accidental Divergence**: Business logic, features, workflows, permissions, API contracts, data models, and validation rules MUST remain consistent across all 4 representations.
+  - **Single Implementation Pass**: Any feature or bug fix applicable across platforms must update Web, `/mobile`, Android, and iOS in the SAME pass. No "implement web now, mobile later".
+  - **Mobile Synchronization Pipeline**: Every `/mobile` change requires: `npm run build` in `mobile/` -> Propagate assets to `frontend/public/mobile/` -> `npx cap sync android` -> `npx cap sync ios` -> Verify native assets and adapters.
+  - **Explicit Adapters Only**: Platform-specific code is strictly limited to OS adapters (e.g., Android Foreground Services, iOS CoreLocation background APIs, native notification bridges). Business rules and state machines must remain unified.
+
+---
+
+### 6. FROZEN TELEPHONY & SOFTPHONE ARCHITECTURE (ZERO-MODIFICATION LOCK)
+- **Rule**: The complete production Telephony & Softphone stack is **STRICTLY FROZEN AND LOCKED**. DO NOT modify, refactor, replace, or redesign any component of this architecture.
+- **Protected Core Components**:
+  1. **Plivo WebRTC Softphone Controller** (`frontend/public/js/plivo-softphone.js`, `mobile/src/services/telephony.service.ts`):
+     - W3C RFC 8829 `pranswer` early-media signaling bridge.
+     - Dual answered state machine (`onCallAnswered` / backend session watcher).
+     - Audio routing: Earpiece/receiver by default; Speaker strictly OFF by default unless toggled by user.
+     - In-call controls: Mute, Hold, Speaker, and DTMF dialpad.
+  2. **Telephony Backend XML & Callbacks** (`backend/app/services/telephony/flow_interpreter.py`, `backend/app/api/v1/endpoints/plivo_softphone_api.py`):
+     - Dual-party session recording: `<Record recordSession="true" startOnDialAnswer="true" ... />` followed by `<Dial callbackUrl="...">`.
+     - Dial callback lifecycle endpoint (`/api/v1/telephony/plivo/dial-callback`).
+     - Recording callback endpoint and storage pipeline.
+- **Standard**: All future features, UI tweaks, CRM adjustments, or mobile builds MUST treat this stack as immutable. No modifications are permitted.
+
+---
+
+### 7. ZERO API KEY EXPOSURE & ENVIRONMENT ISOLATION RULE (STRICT MANDATE)
+- **Rule**: NEVER hardcode API keys, AWS credentials, secret tokens, or private access keys in source code, scripts, HTML templates, frontend bundles, or committed repository files.
+- **Standard**:
+  - **Dynamic Environment Resolution**: All credentials MUST be loaded dynamically via environment variables (`os.getenv("AWS_ACCESS_KEY_ID")`, `process.env.API_KEY`, etc.) or local `.env` files.
+  - **Git & GitHub Safeguard**: All `.env`, `backend/.env`, `frontend/.env`, `.env.local`, `.env.production`, and build archives (`*.zip`) MUST remain strictly in `.gitignore`. NEVER stage or commit `.env` files or secret credentials to Git/GitHub repositories.
+  - **No Secrets in Client Bundles**: Web, `/mobile`, Android, and iOS client-side assets MUST NOT expose private backend credentials. All file operations and external API requests requiring credentials MUST route securely through backend services.
