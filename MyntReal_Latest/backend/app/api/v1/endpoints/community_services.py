@@ -2747,5 +2747,312 @@ def delete_guc_admin_account(user_id: int, db: Session = Depends(get_db)):
     return {"success": True, "message": "GUC Admin account deleted successfully"}
 
 
+# ──────────────────────────────────────────────────────────────────────
+# GUC ADMIN MANAGEMENT & DOCKET ENDPOINTS
+# ──────────────────────────────────────────────────────────────────────
+
+@router.get("/guc/registrations/{reg_id}/docket-html")
+def get_guc_registration_docket_html(reg_id: int, db: Session = Depends(get_db)):
+    """
+    Generate official printable Telugu Registration Docket / Certificate for GUC Mandap.
+    Automatically triggers browser print window (Save as PDF).
+    """
+    from fastapi.responses import HTMLResponse
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="GUC Registration not found")
+
+    app_no = reg.application_no or f"GUC-2026-{reg.id:05d}"
+    assoc_name = reg.association_name or reg.primary_name or "గణేష్ ఉత్సవ కమిటీ"
+    pres_name = reg.president_name or reg.primary_name or "N/A"
+    pres_phone = reg.president_phone or reg.primary_phone_1 or "N/A"
+    sec_name = reg.secretary_name or "N/A"
+    sec_phone = reg.secretary_phone or "N/A"
+    treas_name = reg.treasurer_name or "N/A"
+    treas_phone = reg.treasurer_phone or "N/A"
+    area = reg.area or "పెందుర్తి"
+    district = reg.district or "Visakhapatnam"
+    landmark = reg.landmark or "N/A"
+    idol_h = f"{reg.idol_height} ft" if reg.idol_height else "Standard"
+    status_str = reg.status or "PENDING"
+    status_bg = "#d1fae5" if status_str == "APPROVED" else ("#fef3c7" if status_str == "PENDING" else "#fee2e2")
+    status_fg = "#047857" if status_str == "APPROVED" else ("#b45309" if status_str == "PENDING" else "#dc2626")
+    sub_date = reg.submission_date.strftime("%d-%m-%Y") if reg.submission_date else (reg.created_at.strftime("%d-%m-%Y") if reg.created_at else "2026")
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <title>గణేష్ ఉత్సవ సమితి - డ్యాకెట్ #{app_no}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {{
+            font-family: 'Noto Sans Telugu', sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            color: #1e293b;
+        }}
+        .docket-card {{
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 3px solid #d97706;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+        }}
+        .header-box {{
+            text-align: center;
+            border-bottom: 2px dashed #cbd5e1;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }}
+        .logo-img {{
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid #d97706;
+        }}
+        .title-main {{
+            color: #b45309;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 10px 0 4px 0;
+        }}
+        .title-sub {{
+            color: #047857;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+        }}
+        .doc-badge {{
+            display: inline-block;
+            background: #fef3c7;
+            color: #b45309;
+            font-weight: 700;
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 1px solid #f59e0b;
+            margin-top: 12px;
+            font-size: 14px;
+        }}
+        .grid-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }}
+        .grid-table td {{
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }}
+        .lbl {{
+            font-weight: 700;
+            color: #475569;
+            width: 38%;
+            background: #f8fafc;
+        }}
+        .val {{
+            font-weight: 600;
+            color: #0f172a;
+        }}
+        .status-badge {{
+            display: inline-block;
+            background: {status_bg};
+            color: {status_fg};
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        .footer-note {{
+            margin-top: 30px;
+            border-top: 2px solid #e2e8f0;
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }}
+        .btn-print {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #d97706;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }}
+        @media print {{
+            .btn-print {{ display: none; }}
+            body {{ background: white; padding: 0; }}
+            .docket-card {{ box-shadow: none; border-color: #000; }}
+        }}
+    </style>
+</head>
+<body>
+
+    <button class="btn-print" onclick="window.print()">🖨️ ప్రింట్ / Save PDF</button>
+
+    <div class="docket-card">
+        <div class="header-box">
+            <img src="/public/images/guc_logo.jpg" class="logo-img" alt="GUC Logo">
+            <h1 class="title-main">గణేష్ ఉత్సవ సమితి, పెందుర్తి నియోజకవర్గం</h1>
+            <p class="title-sub">(ఆంధ్రప్రదేశ్ సమితి అనుబంధం) - మండపం నమోదు అధికారిక డ్యాకెట్</p>
+            <div class="doc-badge">దరఖాస్తు సంఖ్య: {app_no}</div>
+        </div>
+
+        <table class="grid-table">
+            <tr>
+                <td class="lbl">మండపం / కమిటీ పేరు (Mandap Name):</td>
+                <td class="val" style="font-size:16px; color:#b45309;"><strong>{assoc_name}</strong></td>
+            </tr>
+            <tr>
+                <td class="lbl">అధ్యక్షుడు (President):</td>
+                <td class="val">{pres_name} (📞 {pres_phone})</td>
+            </tr>
+            <tr>
+                <td class="lbl">కార్యదర్శి (Secretary):</td>
+                <td class="val">{sec_name} (📞 {sec_phone})</td>
+            </tr>
+            <tr>
+                <td class="lbl">కోశాధికారి (Treasurer):</td>
+                <td class="val">{treas_name} (📞 {treas_phone})</td>
+            </tr>
+            <tr>
+                <td class="lbl">ప్రాంతం & లొకేషన్ (Area & Location):</td>
+                <td class="val">{area}, {district} (గుర్తు: {landmark})</td>
+            </tr>
+            <tr>
+                <td class="lbl">విగ్రహం ఎత్తు (Idol Height):</td>
+                <td class="val"><strong>{idol_h}</strong></td>
+            </tr>
+            <tr>
+                <td class="lbl">నమోదు స్థితి (Registration Status):</td>
+                <td class="val"><span class="status-badge">{status_str}</span></td>
+            </tr>
+            <tr>
+                <td class="lbl">నమోదు చేసిన తేదీ (Submitted Date):</td>
+                <td class="val">{sub_date}</td>
+            </tr>
+        </table>
+
+        <div class="footer-note">
+            <div>
+                <small style="color:#64748b;">📞 సమితి అధికారిక సంప్రదింపు నంబరు: <strong>8019045667</strong></small><br>
+                <small style="color:#64748b;">📍 పెందుర్తి నియోజకవర్గ గణేష్ ఉత్సవ నిర్వహణ పోర్టల్</small>
+            </div>
+            <div style="text-align:center;">
+                <div style="border-bottom:1px solid #94a3b8; width:160px; height:40px; margin-bottom:4px;"></div>
+                <small style="font-weight:700; color:#334155;">అధికారిక సంతకం & ముద్ర</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {{
+            setTimeout(function() {{ window.print(); }}, 600);
+        }};
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
+
+
+@router.put("/guc/registrations/{reg_id}")
+def update_guc_registration(reg_id: int, payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Update GUC Registration details.
+    """
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    updatable_fields = [
+        'association_name', 'president_name', 'president_phone', 
+        'secretary_name', 'secretary_phone', 'treasurer_name', 'treasurer_phone',
+        'area', 'district', 'landmark', 'idol_height', 'status', 'mandap_location', 'pin_code'
+    ]
+
+    for field in updatable_fields:
+        if field in payload:
+            setattr(reg, field, payload[field])
+
+    if 'president_name' in payload and payload['president_name']:
+        reg.primary_name = payload['president_name']
+    if 'president_phone' in payload and payload['president_phone']:
+        reg.primary_phone_1 = payload['president_phone']
+
+    reg.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(reg)
+    invalidate_community_services_cache()
+
+    return {"success": True, "message": "GUC registration updated successfully", "data": reg.to_dict()}
+
+
+@router.post("/guc/registrations/{reg_id}/approve")
+def approve_guc_registration(reg_id: int, db: Session = Depends(get_db)):
+    """
+    Approve GUC registration directly from GUC portal.
+    """
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    reg.status = 'APPROVED'
+    reg.updated_at = get_indian_time()
+    db.commit()
+    invalidate_community_services_cache()
+
+    return {"success": True, "message": "మండపం విజయవంతంగా ఆమోదించబడింది (Registration Approved)"}
+
+
+@router.post("/guc/registrations/{reg_id}/reject")
+def reject_guc_registration(reg_id: int, db: Session = Depends(get_db)):
+    """
+    Reject GUC registration directly from GUC portal.
+    """
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    reg.status = 'REJECTED'
+    reg.updated_at = get_indian_time()
+    db.commit()
+    invalidate_community_services_cache()
+
+    return {"success": True, "message": "మండపం తిరస్కరించబడింది (Registration Rejected)"}
+
+
+@router.post("/guc/registrations/{reg_id}/send-whatsapp")
+def send_guc_whatsapp_message(reg_id: int, db: Session = Depends(get_db)):
+    """
+    Send official Telugu WhatsApp confirmation message for single registration.
+    """
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    reg_data = reg.to_dict()
+    msg = format_guc_telugu_confirmation_message(reg_data)
+    phones = get_guc_registration_all_phones(reg)
+
+    dispatch_res = dispatch_guc_whatsapp_messages(phones=phones, message=msg, db=db)
+
+    return {
+        "success": True,
+        "message": "WhatsApp confirmation message dispatched successfully",
+        "phones": phones,
+        "dispatch_details": dispatch_res
+    }
+
+
+
 
 

@@ -261,9 +261,9 @@
                 <button class="btn btn-light btn-sm font-weight-bold" onclick="openLoginModal()" id="btn-login-trigger">
                     <i class="fas fa-sign-in-alt me-1"></i> <span id="lbl-login-btn">లాగిన్ / Login</span>
                 </button>
-                <button class="btn btn-outline-light btn-sm me-2" onclick="openRegisterModal()" id="btn-register-trigger">
-                    <i class="fas fa-user-plus me-1"></i> <span id="lbl-register-btn">నమోదు / Register</span>
-                </button>
+                <a href="/guc" class="btn btn-warning btn-sm font-weight-bold shadow-sm" id="btn-register-trigger">
+                    <i class="fas fa-edit me-1"></i> <span id="lbl-register-btn">మండపం నమోదు / Register Mandap</span>
+                </a>
             </div>
 
             <!-- Logged-in Profile Controls (Hidden by default) -->
@@ -645,6 +645,94 @@
         </div>
     </div>
 
+    <!-- Edit GUC Registration Modal -->
+    <div class="modal fade" id="gucEditRegistrationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>మండపం నమోదు వివరాల సవరణ (Edit Registration)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="guc-edit-form" onsubmit="handleGUCEditSubmit(event)">
+                        <input type="hidden" id="edit-reg-id">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">మండపం / అసోసియేషన్ పేరు (Mandap Name)</label>
+                                <input type="text" class="form-control" id="edit-assoc-name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">నమోదు హోదా (Status)</label>
+                                <select class="form-select fw-bold" id="edit-status">
+                                    <option value="PENDING">PENDING (పరిశీలనలో)</option>
+                                    <option value="APPROVED">APPROVED (ఆమోదించబడింది)</option>
+                                    <option value="REJECTED">REJECTED (తిరస్కరించబడింది)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">అధ్యక్షుడు పేరు (President Name)</label>
+                                <input type="text" class="form-control" id="edit-pres-name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">అధ్యక్షుడు ఫోన్ (President Phone)</label>
+                                <input type="text" class="form-control" id="edit-pres-phone" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">కార్యదర్శి పేరు (Secretary Name)</label>
+                                <input type="text" class="form-control" id="edit-sec-name">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">కార్యదర్శి ఫోన్ (Secretary Phone)</label>
+                                <input type="text" class="form-control" id="edit-sec-phone">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">కోశాధికారి పేరు (Treasurer Name)</label>
+                                <input type="text" class="form-control" id="edit-treas-name">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">కోశాధికారి ఫోన్ (Treasurer Phone)</label>
+                                <input type="text" class="form-control" id="edit-treas-phone">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">ప్రాంతం (Area)</label>
+                                <input type="text" class="form-control" id="edit-area">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">జిల్లా (District)</label>
+                                <input type="text" class="form-control" id="edit-district">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">విగ్రహం ఎత్తు (Idol Height)</label>
+                                <input type="text" class="form-control" id="edit-idol-height">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ల్యాండ్‌మార్క్ / గుర్తించదగిన ప్రాంతం (Landmark)</label>
+                            <input type="text" class="form-control" id="edit-landmark">
+                        </div>
+
+                        <button type="submit" class="btn btn-warning w-100 fw-bold py-2 shadow-sm">
+                            <i class="fas fa-save me-1"></i>వివరాలను నవీకరించండి (Save Changes)
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -873,6 +961,8 @@
             }
         }
 
+        let gucMasterData = [];
+
         async function loadMasterList() {
             const search = document.getElementById('master-search-input').value;
             const dist = document.getElementById('master-district-filter').value;
@@ -889,22 +979,43 @@
 
                 const tbody = document.getElementById('masterlist-tbody');
                 if (data.success && data.data.length > 0) {
+                    gucMasterData = data.data;
                     let html = '';
                     data.data.forEach(r => {
                         let stBadge = r.status === 'APPROVED' ? 'badge-approved' : (r.status === 'PENDING' ? 'badge-pending' : 'badge-rejected');
+                        const pPhone = r.president_phone || r.primary_phone_1 || '';
+                        
                         html += `
                             <tr>
                                 <td><strong class="text-primary">${r.application_no}</strong></td>
-                                <td>${r.association_name || r.primary_name}</td>
-                                <td>${r.president_name || r.primary_name}<br><small class="text-muted">${r.president_phone || r.primary_phone_1}</small></td>
+                                <td><strong>${r.association_name || r.primary_name}</strong></td>
+                                <td>${r.president_name || r.primary_name}<br><small class="text-muted">${pPhone}</small></td>
                                 <td>${r.secretary_name || 'N/A'}<br><small class="text-muted">${r.secretary_phone || ''}</small></td>
                                 <td>${r.area}, ${r.district}</td>
-                                <td><span class="badge bg-light text-dark">${r.idol_height || 'Standard'}</span></td>
+                                <td><span class="badge bg-light text-dark">${r.idol_height ? r.idol_height + ' ft' : 'Standard'}</span></td>
                                 <td><span class="badge ${stBadge}">${r.status}</span></td>
                                 <td>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="downloadTeluguDocket(${r.id})">
-                                        <i class="fas fa-file-pdf"></i> డ్యాకెట్ (PDF)
-                                    </button>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button class="btn btn-outline-primary btn-sm py-1 px-2" onclick="downloadTeluguDocket(${r.id})" title="డ్యాకెట్ ప్రింట్ / PDF">
+                                            <i class="fas fa-file-pdf"></i> డ్యాకెట్ (PDF)
+                                        </button>
+                                        <button class="btn btn-warning btn-sm py-1 px-2 text-dark font-weight-bold" onclick="openEditGUCRegistrationModal(${r.id})" title="వివరాలు సవరించు (Edit)">
+                                            <i class="fas fa-edit"></i> మార్చు
+                                        </button>
+                                        ${r.status !== 'APPROVED' ? `
+                                            <button class="btn btn-success btn-sm py-1 px-2" onclick="approveGUCRegistration(${r.id})" title="ఆమోదించు (Approve)">
+                                                <i class="fas fa-check-circle"></i> ఆమోదించు
+                                            </button>
+                                        ` : ''}
+                                        ${r.status !== 'REJECTED' ? `
+                                            <button class="btn btn-danger btn-sm py-1 px-2" onclick="rejectGUCRegistration(${r.id})" title="తిరస్కరించు (Reject)">
+                                                <i class="fas fa-times-circle"></i> తిరస్కరించు
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-outline-success btn-sm py-1 px-2" onclick="sendGUCWhatsAppMessage(${r.id}, '${pPhone}')" title="వాట్సాప్ సందేశం పంపు">
+                                            <i class="fab fa-whatsapp"></i> వాట్సాప్
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>`;
                     });
@@ -917,59 +1028,129 @@
             }
         }
 
-        async function loadAdminUsers() {
-            try {
-                const res = await fetch('/api/v1/community-services/guc/admin-accounts');
-                const data = await res.json();
-
-                const tbody = document.getElementById('admin-users-tbody');
-                if (data.success && data.data.length > 0) {
-                    let html = '';
-                    data.data.forEach(u => {
-                        let accBadge = u.access_level === 'READ_WRITE' ? 'access-badge-rw' : 'access-badge-ro';
-                        html += `
-                            <tr>
-                                <td>${u.id}</td>
-                                <td><strong>${u.username}</strong></td>
-                                <td>${u.full_name}</td>
-                                <td>${u.phone || 'N/A'}<br><small class="text-muted">${u.email || ''}</small></td>
-                                <td><span class="${accBadge}">${u.access_level}</span></td>
-                                <td>${u.district}</td>
-                                <td>${u.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
-                                <td>${u.created_at}</td>
-                                <td>
-                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAdminUser(${u.id})">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </td>
-                            </tr>`;
-                    });
-                    tbody.innerHTML = html;
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ఖాతాలు ఏవీ లేవు.</td></tr>';
-                }
-            } catch (err) {
-                console.error("Load users error:", err);
-            }
+        function downloadTeluguDocket(regId) {
+            window.open(`/api/v1/community-services/guc/registrations/${regId}/docket-html`, '_blank');
         }
 
-        async function deleteAdminUser(id) {
-            if (!confirm("ఈ అడ్మిన్ ఖాతాను ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?")) return;
+        function openEditGUCRegistrationModal(regId) {
+            const reg = gucMasterData.find(x => x.id === regId);
+            if (!reg) return;
+
+            document.getElementById('edit-reg-id').value = reg.id;
+            document.getElementById('edit-assoc-name').value = reg.association_name || reg.primary_name || '';
+            document.getElementById('edit-status').value = reg.status || 'PENDING';
+            document.getElementById('edit-pres-name').value = reg.president_name || reg.primary_name || '';
+            document.getElementById('edit-pres-phone').value = reg.president_phone || reg.primary_phone_1 || '';
+            document.getElementById('edit-sec-name').value = reg.secretary_name || '';
+            document.getElementById('edit-sec-phone').value = reg.secretary_phone || '';
+            document.getElementById('edit-treas-name').value = reg.treasurer_name || '';
+            document.getElementById('edit-treas-phone').value = reg.treasurer_phone || '';
+            document.getElementById('edit-area').value = reg.area || '';
+            document.getElementById('edit-district').value = reg.district || 'Visakhapatnam';
+            document.getElementById('edit-idol-height').value = reg.idol_height || '';
+            document.getElementById('edit-landmark').value = reg.landmark || '';
+
+            new bootstrap.Modal(document.getElementById('gucEditRegistrationModal')).show();
+        }
+
+        async function handleGUCEditSubmit(e) {
+            e.preventDefault();
+            const regId = document.getElementById('edit-reg-id').value;
+            const payload = {
+                association_name: document.getElementById('edit-assoc-name').value,
+                status: document.getElementById('edit-status').value,
+                president_name: document.getElementById('edit-pres-name').value,
+                president_phone: document.getElementById('edit-pres-phone').value,
+                secretary_name: document.getElementById('edit-sec-name').value,
+                secretary_phone: document.getElementById('edit-sec-phone').value,
+                treasurer_name: document.getElementById('edit-treas-name').value,
+                treasurer_phone: document.getElementById('edit-treas-phone').value,
+                area: document.getElementById('edit-area').value,
+                district: document.getElementById('edit-district').value,
+                idol_height: document.getElementById('edit-idol-height').value,
+                landmark: document.getElementById('edit-landmark').value
+            };
+
             try {
-                const res = await fetch(`/api/v1/community-services/guc/admin-accounts/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/v1/community-services/guc/registrations/${regId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const data = await res.json();
                 if (data.success) {
-                    alert("అడ్మిన్ ఖాతా తొలగించబడింది.");
-                    loadAdminUsers();
+                    bootstrap.Modal.getInstance(document.getElementById('gucEditRegistrationModal')).hide();
+                    alert("మండపం వివరాలు విజయవంతంగా నవీకరించబడ్డాయి! (Updated Successfully)");
+                    loadMasterList();
+                    loadExecutiveDashboard();
+                } else {
+                    alert(data.detail || "నవీకరణ విఫలమైంది.");
                 }
             } catch (err) {
-                alert("తొలగింపు విఫలమైంది.");
+                alert("నెట్‌వర్క్ లోపం సంభవించింది.");
             }
         }
 
-        function downloadTeluguDocket(regId) {
-            alert(`గణేష్ ఉత్సవ కమిటీ నమోదు ID #${regId} కోసం అధికారిక తెలుగు డ్యాకెట్ PDF జెనరేట్ అవుతోంది...`);
-            window.open(`/api/v1/community-services/public/registrations/${regId}`, '_blank');
+        async function approveGUCRegistration(regId) {
+            if (!confirm("ఈ గణేష్ ఉత్సవ మండప నమోదును ఖచ్చితంగా ఆమోదించాలనుకుంటున్నారా?")) return;
+            try {
+                const res = await fetch(`/api/v1/community-services/guc/registrations/${regId}/approve`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message || "మండపం ఆమోదించబడింది!");
+                    loadMasterList();
+                    loadExecutiveDashboard();
+                } else {
+                    alert(data.detail || "ఆమోదం విఫలమైంది.");
+                }
+            } catch (err) {
+                alert("కనెక్షన్ లోపం సంభవించింది.");
+            }
+        }
+
+        async function rejectGUCRegistration(regId) {
+            if (!confirm("ఈ గణేష్ ఉత్సవ మండప నమోదును ఖచ్చితంగా తిరస్కరించాలనుకుంటున్నారా?")) return;
+            try {
+                const res = await fetch(`/api/v1/community-services/guc/registrations/${regId}/reject`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message || "మండపం తిరస్కరించబడింది.");
+                    loadMasterList();
+                    loadExecutiveDashboard();
+                } else {
+                    alert(data.detail || "తిరస్కరణ విఫలమైంది.");
+                }
+            } catch (err) {
+                alert("కనెక్షన్ లోపం సంభవించింది.");
+            }
+        }
+
+        async function sendGUCWhatsAppMessage(regId, phone) {
+            const reg = gucMasterData.find(x => x.id === regId);
+            const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+            
+            const assocName = reg ? (reg.association_name || reg.primary_name || 'గణేష్ ఉత్సవ కమిటీ') : 'గణేష్ ఉత్సవ కమిటీ';
+            const presName = reg ? (reg.president_name || reg.primary_name || '') : '';
+            const appNo = reg ? (reg.application_no || 'GUC-2026-' + regId) : ('GUC-2026-' + regId);
+
+            const msg = `*పెందుర్తి గణేష్ ఉత్సవ సమితి - నమోదు ధృవీకరణ* 🙏\n\n` +
+                `శ్రీ వినాయక చవితి మహోత్సవాల సందర్భంగా పెందుర్తి గణేష్ ఉత్సవ సమితితో భాగస్వామ్యం అయినందుకు ధన్యవాదాలు! 🕉️\n\n` +
+                `• *మండపం:* ${assocName}\n` +
+                `• *ప్రతినిధి:* ${presName}\n` +
+                `• *దరఖాస్తు సంఖ్య:* ${appNo}\n\n` +
+                `📞 సమితి హెల్ప్‌లైన్: 8019045667\n` +
+                `📲 వాట్సాప్ గ్రూప్: https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy`;
+
+            const encodedMsg = encodeURIComponent(msg);
+            const waUrl = cleanPhone ? `https://wa.me/91${cleanPhone}?text=${encodedMsg}` : `https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy`;
+
+            window.open(waUrl, '_blank');
+
+            try {
+                await fetch(`/api/v1/community-services/guc/registrations/${regId}/send-whatsapp`, { method: 'POST' });
+            } catch (e) {
+                console.warn("Backend WhatsApp dispatch notification:", e);
+            }
         }
 
         function exportMasterListCSV() {
