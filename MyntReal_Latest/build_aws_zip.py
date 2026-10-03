@@ -68,12 +68,12 @@ def create_zip():
                     continue
                 if file.endswith('.zip') or file.endswith('.sqlite') or file.endswith('.db') or file.endswith('.dump') or (file.endswith('.sql') and 'backend/migrations' not in rel_root) or file.endswith('.log') or file.endswith('.pyc'):
                     continue
-                if file.startswith('.') and file not in ['.dockerignore', '.ebextensions', '.platform']:
+                if file.startswith('.') and file not in ['.dockerignore', '.ebextensions', '.platform', '.env']:
                     continue
                     
-                # Exclude environment secrets and heavy storage
-                if arcname in ['.env', 'backend/.env', 'frontend/.env']:
-                    continue
+                # Ensure environment variables are included in the deployment zip per user request
+                # if arcname in ['.env', 'backend/.env', 'frontend/.env']:
+                #     continue
                 if any(ex in arcname for ex in ['backend/storage', 'media_backup', 'postgres_data', 'node_modules', '.next']):
                     continue
                     
