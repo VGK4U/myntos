@@ -973,6 +973,7 @@
                 document.getElementById('admin-portal-wrapper').classList.remove('d-none');
 
                 loadExecutiveDashboard();
+                loadAdminUsers();
             } else {
                 // NOT LOGGED IN: Hide internal dashboard/data, show public utsav information page
                 document.getElementById('auth-section').classList.remove('d-none');
@@ -1172,6 +1173,63 @@
 
         function downloadTeluguDocket(regId) {
             window.open(`/api/v1/community-services/guc/registrations/${regId}/docket-html`, '_blank');
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const res = await fetch('/api/v1/community-services/guc/admin-accounts');
+                const data = await res.json();
+
+                const tbody = document.getElementById('admin-users-tbody');
+                if (!tbody) return;
+
+                if (data.success && data.data && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(u => {
+                        let accBadge = u.access_level === 'READ_WRITE' ? 'access-badge-rw' : 'access-badge-ro';
+                        const createdStr = u.created_at ? String(u.created_at).slice(0, 10) : '2026';
+                        html += `
+                            <tr>
+                                <td><strong>${u.id}</strong></td>
+                                <td><strong class="text-primary">${u.username}</strong></td>
+                                <td>${u.full_name}</td>
+                                <td>${u.phone || 'N/A'}<br><small class="text-muted">${u.email || ''}</small></td>
+                                <td><span class="${accBadge}">${u.access_level}</span></td>
+                                <td>${u.district || 'Visakhapatnam'}</td>
+                                <td>${u.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</td>
+                                <td>${createdStr}</td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm py-1 px-2" onclick="deleteAdminUser(${u.id})" title="అడ్మిన్ ఖాతాను తొలగించు">
+                                        <i class="fas fa-trash-alt"></i> తొలగించు
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ఖాతాలు ఏవీ లేవు (No admin accounts found).</td></tr>';
+                }
+            } catch (err) {
+                console.error("Load users error:", err);
+                const tbody = document.getElementById('admin-users-tbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">డేటా లోడ్ చేయడం విఫలమైంది (Failed to load data).</td></tr>';
+            }
+        }
+
+        async function deleteAdminUser(id) {
+            if (!confirm("ఈ అడ్మిన్ ఖాతాను ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?")) return;
+            try {
+                const res = await fetch(`/api/v1/community-services/guc/admin-accounts/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    alert("అడ్మిన్ ఖాతా తొలగించబడింది.");
+                    loadAdminUsers();
+                } else {
+                    alert(data.detail || "తొలగింపు విఫలమైంది.");
+                }
+            } catch (err) {
+                alert("తొలగింపు విఫలమైంది.");
+            }
         }
 
         let editGUCModalObj = null;
