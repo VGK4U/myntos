@@ -20,7 +20,10 @@ def get_safe_db_url(url: str) -> str:
 # DC Protocol (Dec 24, 2025): Early diagnostic logging for production debugging
 # This runs at import time, BEFORE lifespan, to catch issues early
 print("[DC-DB-INIT] Database module loading...", flush=True)
-db_url_raw = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
+if (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1" and os.getenv("PROD_DATABASE_URL"):
+    db_url_raw = os.getenv("PROD_DATABASE_URL")
+else:
+    db_url_raw = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
 if db_url_raw:
     # Mask password in URL for logging
     masked_url = get_safe_db_url(db_url_raw)

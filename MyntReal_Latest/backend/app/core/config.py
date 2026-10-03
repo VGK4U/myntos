@@ -154,7 +154,12 @@ class Settings(BaseSettings):
         """Create database URL from environment or use PostgreSQL default"""
         # DC Protocol: Use DATABASE_URL as single source of truth (current dev database)
         # PROD_DATABASE_URL is only for production deployments
-        db_url = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
+        prod_url = os.getenv("PROD_DATABASE_URL")
+        env_url = os.getenv("DATABASE_URL")
+        if (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1" and prod_url:
+            db_url = prod_url
+        else:
+            db_url = env_url or prod_url
         if db_url:
             # Fix legacy Neon SSL mode typo if present (sslmode=require. → sslmode=require)
             db_url = db_url.replace("sslmode=require.", "sslmode=require")
@@ -167,7 +172,7 @@ class Settings(BaseSettings):
                 or os.getenv("NODE_ENV", "").lower() == "production"
             )
             if "rds.amazonaws.com" in db_url and not is_prod:
-                if os.getenv("ALLOW_PROD_DB_ACCESS") != "1":
+                if (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() != "1":
                     print("[DC-DB-GUARD] 🛡️ Blocked silent local connection to production RDS! Defaulting to local PostgreSQL (port 5433). Set ALLOW_PROD_DB_ACCESS=1 to override.", flush=True)
                     return "postgresql://postgres:postgres@localhost:5433/myntreal_dev"
             return db_url
