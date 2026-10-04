@@ -7647,6 +7647,17 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
+
+    // DC Protocol: Zynova OS Multi-Tenant Domain Masking
+    if (hostHeader.includes('zynovaos.com') || hostHeader.includes('zynova.com')) {
+      const p = req.url.split('?')[0];
+      if (p === '/') {
+        req.url = req.url.replace('/', '/zynovaos');
+      } else if (p === '/login' || p === '/login/') {
+        req.url = req.url.replace(p, '/saas/login');
+      }
+    }
+
     const url = req.url;
     const urlParts = new URL(url, `http://${getSafeHost(req)}`);
     const reqPathLower = (urlParts.pathname || '').toLowerCase();
