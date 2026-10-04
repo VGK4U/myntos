@@ -372,7 +372,11 @@ _TEMPLATES = [
             "🚀 Welcome to *Zynova OS*!\n\n"
             "Dear {{name}},\n"
             "Your tenant account *{{company_name}}* has been officially activated!\n\n"
-            "Your SaaS workspace is ready. You can now log in at https://www.zynovaos.com/saas/login\n\n"
+            "Your SaaS workspace is ready. You can now access your dashboard using the credentials below:\n\n"
+            "🌐 *Login Portal:* https://www.zynovaos.com/saas/login\n"
+            "👤 *Username:* {{username}}\n"
+            "🔑 *Temporary Password:* {{password}}\n\n"
+            "⚠️ _For security reasons, the system will prompt you to change this temporary password immediately upon your first login._\n\n"
             "Thank you for choosing Zynova OS!"
         ),
         "footer_text": "Zynova OS Team",
@@ -381,7 +385,7 @@ _TEMPLATES = [
         "event_key": "saas_tenant_approved",
         "event_label": "SaaS Tenant Approved",
         "event_category": "saas",
-        "example_values": ["Suresh Patel", "Zynova OS Live Final Test"],
+        "example_values": ["Suresh Patel", "Green Energy Corp", "suresh@greenenergy.com", "MN00124"],
     },
 ]
 

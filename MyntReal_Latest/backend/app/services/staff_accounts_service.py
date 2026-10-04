@@ -559,13 +559,55 @@ class AssociatedCompanyService:
             try:
                 from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
                 from app.models.whatsapp import WhatsAppTemplate
+                from app.models.staff import StaffRole, StaffEmployee
+                from app.api.v1.endpoints.staff_employees import generate_employee_code
+                from app.core.security import SecurityManager
+                
+                # Check if they already have an admin
+                admin_exists = db.query(StaffEmployee).filter(
+                    StaffEmployee.base_company_id == company.id,
+                    StaffEmployee.email == company.contact_email
+                ).first()
+                
+                temp_password = "Pending"
+                username = company.contact_email or "No Email"
+                
+                if not admin_exists and company.contact_email:
+                    # Auto-provision the first Tenant Admin user
+                    tenant_admin_role = db.query(StaffRole).filter_by(role_code="MN_TENANT_ADMIN").first()
+                    if tenant_admin_role:
+                        emp_code = generate_employee_code(db, staff_type="MN_EMPLOYEE")
+                        temp_password = emp_code
+                        pwd_hash = SecurityManager.get_password_hash(temp_password)
+                        
+                        new_user = StaffEmployee(
+                            emp_code=emp_code,
+                            first_name=company.contact_name or "Tenant Admin",
+                            email=company.contact_email,
+                            phone=company.phone,
+                            role_id=tenant_admin_role.id,
+                            status="active",
+                            date_of_joining=get_indian_time().date(),
+                            password_hash=pwd_hash,
+                            requires_password_change=True,
+                            base_company_id=company.id,
+                            data_companies=[company.id],
+                            failed_login_attempts=0
+                        )
+                        db.add(new_user)
+                        db.commit()
+                elif admin_exists:
+                    temp_password = "User Already Created"
+                
                 template = db.query(WhatsAppTemplate).filter(
                     WhatsAppTemplate.slug == 'zynova_tenant_approved'
                 ).first()
                 if template:
                     context = {
-                        "name": company.signatory_name or company.company_name or "Valued Client",
+                        "name": company.signatory_name or company.contact_name or company.company_name or "Valued Client",
                         "company_name": company.company_name,
+                        "username": username,
+                        "password": temp_password
                     }
                     WhatsAppCanonicalService.send_auto_trigger_by_template(
                         db=db,
