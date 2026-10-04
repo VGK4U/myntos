@@ -2113,6 +2113,27 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     )
     db.add(sub); db.commit(); db.refresh(sub)
 
+    # Create AssociatedCompany for Tenant Onboarding Dashboard
+    from app.models.staff_accounts import AssociatedCompany
+    assoc_company = AssociatedCompany(
+        company_code=client.client_code,
+        company_name=client.client_name,
+        company_type="SAAS_CLIENT",
+        company_segment="SEGMENT_B_SAAS",
+        client_id=client.id,
+        phone=client.contact_phone,
+        email=client.contact_email,
+        address=client.billing_address,
+        city=payload.city,
+        state=payload.state,
+        pincode=payload.pincode,
+        pan_number=payload.pan_number,
+        is_active=False,
+        created_by_id=None,
+    )
+    db.add(assoc_company)
+    db.commit()
+
     # Subscription Modules
     for m in all_mods:
         sub_mod = PlatformSubscriptionModule(
