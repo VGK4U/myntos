@@ -47,16 +47,20 @@ def is_authorized_manager_or_assignee(appointment: CRMFieldAppointment, current_
     Allows access if:
     1. Assigned to current user
     2. Created by current user
-    3. User is Sales Leadership / Manager (hierarchy_level >= 50, super_admin, or leadership roles)
+    3. User is Sales Leadership / Manager / Tenant Administrator (hierarchy_level >= 50, super_admin, or leadership/admin roles)
     """
     if appointment.assigned_to_id == current_user.id or appointment.created_by_id == current_user.id:
         return True
 
+    user_staff_type = (getattr(current_user, 'staff_type', '') or '').upper()
+    user_role_code = (current_user.role.role_code if current_user.role else '') or ''
+    user_role_code = user_role_code.lower()
+
     is_leadership = (
         getattr(current_user, 'is_super_admin', False) or
         getattr(current_user.role, 'hierarchy_level', 0) >= 50 or
-        (current_user.staff_type or '').upper() in ('VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'SALES_INCHARGE') or
-        (current_user.role and current_user.role.role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin'))
+        user_staff_type in ('VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'SALES_INCHARGE', 'TENANT_ADMIN', 'COMPANY_ADMIN', 'SAAS_ADMIN', 'TENANT_ADMINISTRATOR', 'MANAGER', 'SUPERVISOR') or
+        user_role_code in ('sales_incharge', 'key_leadership', 'ea', 'vgk4u', 'super_admin', 'admin', 'tenant_admin', 'company_admin', 'tenant_administrator', 'manager', 'supervisor')
     )
     return is_leadership
 
@@ -266,19 +270,42 @@ def create_field_appointment(
 
 @router.get("/supporting-staff", summary="Get list of all active staff members available for appointment assignment")
 def get_supporting_staff_list(
+    company_id: Optional[int] = Query(None, description="Target company ID for filtering supporting staff"),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
     """
     Returns list of active staff employees available for appointment assignment across all departments.
+    DC Protocol: Scoped to target company_id or user's tenant context.
     """
+    from app.models.staff import StaffCompanyMembership
+    from app.models.staff_accounts import AssociatedCompany
+
     query = db.query(StaffEmployee).filter(
         StaffEmployee.status == 'active',
         StaffEmployee.is_deleted == False
     )
-    # DC Protocol: Tenant-isolation scoping - only list staff belonging to current user's tenant
-    if getattr(current_user, 'tenant_id', None):
+
+    if company_id:
+        member_staff_ids = db.query(StaffCompanyMembership.staff_id).filter(
+            StaffCompanyMembership.company_id == company_id,
+            StaffCompanyMembership.is_active == True
+        )
+        
+        assoc_comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+        tenant_filters = []
+        if assoc_comp and getattr(assoc_comp, 'client_id', None):
+            tenant_filters.append(StaffEmployee.tenant_id == assoc_comp.client_id)
+        
+        query = query.filter(
+            or_(
+                StaffEmployee.base_company_id == company_id,
+                StaffEmployee.id.in_(member_staff_ids),
+                *tenant_filters
+            )
+        )
+    elif getattr(current_user, 'tenant_id', None):
         query = query.filter(StaffEmployee.tenant_id == current_user.tenant_id)
     else:
         query = query.filter(or_(StaffEmployee.tenant_id == None, StaffEmployee.tenant_id == ''))
@@ -579,16 +606,24 @@ def update_appointment_status(
     if not appointment:
         raise HTTPException(status_code=404, detail="Field appointment not found")
 
+    if not is_authorized_manager_or_assignee(appointment, current_user):
+        raise HTTPException(status_code=403, detail="Only the assigned supporting staff member or authorized manager can update this visit status")
+
     action = req.action.lower().strip()
     now = get_indian_time()
     lead = appointment.lead
+    old_status = appointment.status
 
     if action == 'accept':
         appointment.status = 'accepted'
+        if lead:
+            lead.recent_comments = f"[{now.strftime('%d-%b %I:%M%p')}] Appointment {appointment.appointment_code} ACCEPTED by {current_user.full_name}.\n{lead.recent_comments or ''}"[:2000]
     elif action == 'start_visit':
         appointment.status = 'in_progress'
         if not appointment.started_at:
             appointment.started_at = now
+        if lead:
+            lead.recent_comments = f"[{now.strftime('%d-%b %I:%M%p')}] Supporting Staff {current_user.full_name} STARTED VISIT for appointment {appointment.appointment_code}.\n{lead.recent_comments or ''}"[:2000]
     elif action == 'reached':
         appointment.status = 'reached'
         appointment.reached_at = now
@@ -632,6 +667,22 @@ def update_appointment_status(
         raise HTTPException(status_code=400, detail=f"Invalid action: '{action}'. Must be one of: accept, start_visit, reached, reschedule, unable_to_visit, cancel")
 
     appointment.updated_at = now
+
+    if lead:
+        lead.updated_at = now
+        audit_entry = CRMLeadAuditLog(
+            lead_id=lead.id,
+            changed_by_type='staff',
+            changed_by_id=current_user.emp_code,
+            changed_by_name=current_user.full_name,
+            field_name='field_appointment_status',
+            old_value=old_status,
+            new_value=f"Transitioned {appointment.appointment_code} to {appointment.status}",
+            change_category='visit',
+            changed_at=now
+        )
+        db.add(audit_entry)
+
     db.commit()
     db.refresh(appointment)
 

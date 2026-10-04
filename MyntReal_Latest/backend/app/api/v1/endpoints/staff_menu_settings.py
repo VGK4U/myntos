@@ -596,9 +596,9 @@ CANONICAL_MENU_REGISTRY = [
         'is_default_visible': True,
         'is_default_accessible': True,
         'audience_scope': 'staff',
-        'sidebar_section': 'journey-tracking',
-        'sidebar_section_title': 'JOURNEY TRACKING',
-        'sidebar_section_order': 8,
+        'sidebar_section': 'FIELD_LOCATION_TRACKING',
+        'sidebar_section_title': 'FIELD & LOCATION TRACKING',
+        'sidebar_section_order': 7,
     },
     {
         'menu_code': 'ai_calling',

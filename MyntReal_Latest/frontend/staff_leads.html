@@ -3041,6 +3041,13 @@
         function handleLeadStatusChange() {
             const status = document.getElementById('leadStatus').value;
             toggleLeadRevenueSection(status);
+            if (status === 'won') {
+                setTimeout(() => {
+                    const input = document.getElementById('dealValueInput') || document.getElementById('leadDealValueTotal');
+                    if (input) { input.focus(); }
+                    showToast('Status set to Won. Please specify Deal Value before saving.', 'info');
+                }, 150);
+            }
         }
         
         // Load transactions for lead modal
@@ -3985,9 +3992,13 @@
 
             // Validate deal value for Won status
             if (currentStatus === 'won') {
-                const dealTotal = parseFloat(document.getElementById('leadDealValueTotal').value) || 0;
-                if (dealTotal <= 0 && leadDeals.length === 0) {
-                    showToast('Please add at least one deal for Won status', 'error');
+                const rawDirectVal = parseFloat(document.getElementById('dealValueInput')?.value) || 0;
+                const rawHiddenVal = parseFloat(document.getElementById('leadDealValueTotal')?.value) || 0;
+                const dealsSum = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals)) ? leadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const pendingDealsSum = (typeof pendingNewLeadDeals !== 'undefined' && Array.isArray(pendingNewLeadDeals)) ? pendingNewLeadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const dealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum, pendingDealsSum);
+                if (dealTotal <= 0) {
+                    showToast('Please enter a deal value or add a deal for Won status', 'warning');
                     return;
                 }
             }
@@ -4108,9 +4119,14 @@
             
             // Add deal values if status is Won
             if (currentStatus === 'won') {
-                leadData.deal_value_total = parseFloat(document.getElementById('leadDealValueTotal').value) || 0;
-                leadData.deal_value_received = parseFloat(document.getElementById('leadDealValueReceived').value) || 0;
-                leadData.deal_value_balance = Math.max(leadData.deal_value_total - leadData.deal_value_received, 0);
+                const rawDirectVal = parseFloat(document.getElementById('dealValueInput')?.value) || 0;
+                const rawHiddenVal = parseFloat(document.getElementById('leadDealValueTotal')?.value) || 0;
+                const dealsSum = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals)) ? leadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const finalDealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum);
+                
+                leadData.deal_value_total = finalDealTotal;
+                leadData.deal_value_received = parseFloat(document.getElementById('leadDealValueReceived')?.value) || 0;
+                leadData.deal_value_balance = Math.max(finalDealTotal - leadData.deal_value_received, 0);
             }
             
             try {

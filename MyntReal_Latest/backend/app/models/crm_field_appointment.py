@@ -46,6 +46,34 @@ def format_google_maps_url(raw_url=None, address=None, location_title=None):
     return ""
 
 
+def _resolve_photo_url(raw_path):
+    if not raw_path or not isinstance(raw_path, str):
+        return None
+    raw_path = raw_path.strip().replace('\\', '/')
+    if raw_path.startswith(('http://', 'https://', 'data:')):
+        return raw_path
+    while '//' in raw_path:
+        raw_path = raw_path.replace('//', '/')
+    if raw_path.startswith('/storage/'):
+        return raw_path
+    if raw_path.startswith('storage/'):
+        return '/' + raw_path
+
+    clean_path = raw_path.lstrip('/')
+    if 'public/uploads/' in clean_path:
+        clean_path = clean_path[clean_path.find('public/uploads/'):]
+        return '/' + clean_path
+    if 'uploads/' in clean_path:
+        clean_path = clean_path[clean_path.find('uploads/'):]
+        return '/public/' + clean_path
+    if 'private/' in clean_path:
+        clean_path = clean_path[clean_path.find('private/'):]
+        return '/storage/' + clean_path
+
+    return f"/public/uploads/{clean_path}"
+
+
+
 class CRMFieldAppointment(BaseModel):
     """
     Dedicated field appointment model for physical visits and supporting staff workflow.
@@ -222,7 +250,9 @@ class CRMFieldAppointment(BaseModel):
             'cancel_reason': self.cancel_reason,
             # Evidence
             'photo_path': self.photo_path,
+            'photo_url': _resolve_photo_url(self.photo_path),
             'compressed_photo_path': self.compressed_photo_path or self.photo_path,
+            'compressed_photo_url': _resolve_photo_url(self.compressed_photo_path or self.photo_path),
             'photo_uploaded_at': _si(self.photo_uploaded_at),
             'visit_latitude': self.visit_latitude,
             'visit_longitude': self.visit_longitude,

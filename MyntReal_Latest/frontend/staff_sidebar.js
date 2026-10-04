@@ -420,6 +420,14 @@ window.StaffSidebar = window.StaffSidebar || {
                         // Build set of allowed route paths (unified across companies)
                         this.allowedMenuPaths = new Set(data.menus.map(m => m.route_path).filter(p => p));
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
+                        // Always allow Field Appointments and Mobility routes for SaaS Tenants and Staff
+                        this.allowedMenuPaths.add('/staff/field-appointments');
+                        this.allowedMenuCodes.add('FIELD_APPOINTMENTS');
+                        this.allowedMenuPaths.add('/staff/my-journeys');
+                        this.allowedMenuCodes.add('MY_MOBILITY_JOURNEYS');
+                        this.allowedMenuPaths.add('/staff/team-journeys');
+                        this.allowedMenuCodes.add('TEAM_JOURNEYS_CLAIMS');
+
                         if (!this.isSaaSTenant) {
                             this.allowedMenuPaths.add('/staff/whatsapp-center');
                             this.allowedMenuPaths.add('/staff/crm/whatsapp-inbox');
@@ -436,7 +444,6 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuPaths.add('/staff/configuration/catalog');
                             this.allowedMenuPaths.add('/staff/catalog-library');
                             this.allowedMenuPaths.add('/staff/catalog');
-                            this.allowedMenuPaths.add('/staff/field-appointments');
                             this.allowedMenuPaths.add('/staff/bank-wise-leads');
                             this.allowedMenuPaths.add('/staff/field-sales');
                             this.allowedMenuCodes.add('CRM_WA_INBOX');
@@ -450,7 +457,6 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuCodes.add('staff_auto_dialer');
                             this.allowedMenuCodes.add('MY_LEADS');
                             this.allowedMenuCodes.add('staff_my_leads');
-                            this.allowedMenuCodes.add('FIELD_APPOINTMENTS');
                             this.allowedMenuCodes.add('MNR_BANK_WISE_LEADS');
                             this.allowedMenuCodes.add('staff_bank_wise_leads');
                             this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
@@ -880,7 +886,7 @@ window.StaffSidebar = window.StaffSidebar || {
             if (isSaaSTenant) {
                 if (!isCoreWorkspace) {
                     const hasHrmsAccess = Boolean(hasRouteAccess && (this.hasPathAccess(allowedPaths, '/staff/attendance-sheet') || this.hasPathAccess(allowedPaths, '/staff/my-attendance')));
-                    const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
+                    const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT'];
                     const saasRestricted = [
                         'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
                         'PARTNER', 'INTERNAL', 'VGK_SAAS', 'PROGRESS', 'STAFF_DASHBOARD',
@@ -1944,7 +1950,7 @@ var StaffSidebarStyles = window.StaffSidebarStyles = window.StaffSidebarStyles |
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 1000;
+    z-index: 1050;
     box-shadow: 4px 0 15px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
 }
@@ -1989,7 +1995,7 @@ body:has(#headerContainer) .sidebar-mobile-toggle,
     right: 0;
     bottom: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 999;
+    z-index: 1040;
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -2870,7 +2876,7 @@ html {
         width: 100% !important;
         max-width: 100vw !important;
         box-sizing: border-box !important;
-        padding-top: 60px;
+        padding-top: 0 !important;
     }
     
     /* Keep groups functional on mobile */

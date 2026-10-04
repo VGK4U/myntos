@@ -31,9 +31,12 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-page); min-height: 100vh; color: var(--text-main); }
         
-        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 0; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 0 !important; }
         .sidebar-expanded .main-content { margin-left: 260px; }
         .content-area { padding: 24px 32px; width: 100%; max-width: 100%; }
+        @media (max-width: 768px) {
+            .content-area { padding: 16px 14px; }
+        }
         
         /* Page Header */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }

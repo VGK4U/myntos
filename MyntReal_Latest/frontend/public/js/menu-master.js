@@ -153,11 +153,11 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     section_label: "FIELD & LOCATION TRACKING",
     order: 7,
     items: [
-      { menu_code: "MY_MOBILITY_JOURNEYS", label: "My Mobility & Journeys", route: "/staff/my-journeys", audience: ["STAFF"] },
-      { menu_code: "FIELD_APPOINTMENTS", label: "Field Appointments", route: "/staff/field-appointments", audience: ["STAFF"] },
-      { menu_code: "TEAM_LIVE_MAP", label: "Team Live Map", route: "/staff/team-live-tracker", audience: ["STAFF"] },
-      { menu_code: "TEAM_JOURNEYS_CLAIMS", label: "Team Journeys & Claims", route: "/staff/team-journeys", audience: ["STAFF"] },
-      { menu_code: "ALL_MOBILITY_LOG", label: "All Mobility & Location Log", route: "/staff/all-location-tracker", audience: ["STAFF"] }
+      { menu_code: "MY_MOBILITY_JOURNEYS", label: "My Mobility & Journeys", route: "/staff/my-journeys", audience: ["STAFF", "SAAS"] },
+      { menu_code: "FIELD_APPOINTMENTS", label: "Field Appointments", route: "/staff/field-appointments", audience: ["STAFF", "SAAS"] },
+      { menu_code: "TEAM_LIVE_MAP", label: "Team Live Map", route: "/staff/team-live-tracker", audience: ["STAFF", "SAAS"] },
+      { menu_code: "TEAM_JOURNEYS_CLAIMS", label: "Team Journeys & Claims", route: "/staff/team-journeys", audience: ["STAFF", "SAAS"] },
+      { menu_code: "ALL_MOBILITY_LOG", label: "All Mobility & Location Log", route: "/staff/all-location-tracker", audience: ["STAFF", "SAAS"] }
     ]
   },
   {

@@ -29,8 +29,29 @@
     return y + '-' + m + '-' + day;
   }
 
+  function _formatPhotoUrl(rawPath) {
+    if (!rawPath || typeof rawPath !== 'string') return '';
+    var path = rawPath.trim().replace(/\\/g, '/');
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+    while (path.indexOf('//') !== -1) path = path.replace(/\/\//g, '/');
+    if (path.startsWith('/storage/')) return path;
+    if (path.startsWith('storage/')) return '/' + path;
+    var clean = path.replace(/^\/+/, '');
+    if (clean.indexOf('public/uploads/') !== -1) {
+      return '/' + clean.substring(clean.indexOf('public/uploads/'));
+    }
+    if (clean.indexOf('uploads/') !== -1) {
+      return '/public/' + clean.substring(clean.indexOf('uploads/'));
+    }
+    if (clean.indexOf('private/') !== -1) {
+      return '/storage/' + clean.substring(clean.indexOf('private/'));
+    }
+    return '/public/uploads/' + clean;
+  }
+
   var MODAL_HTML = [
     '<div id="_famModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.8);backdrop-filter:blur(3px);z-index:1000000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif">',
+    '<style>#_famModal input,#_famModal textarea,#_famModal select{pointer-events:auto !important;user-select:text !important;-webkit-user-select:text !important;position:relative !important;z-index:1000001 !important;}#_famModal input::placeholder,#_famModal textarea::placeholder{color:#94a3b8 !important;opacity:1 !important;}#_famModal input::-webkit-input-placeholder,#_famModal textarea::-webkit-input-placeholder{color:#94a3b8 !important;opacity:1 !important;}#_famModal input:focus,#_famModal textarea:focus,#_famModal select:focus{outline:2px solid #059669 !important;border-color:#059669 !important;background:#1e293b !important;}</style>',
     '<div style="background:#0f172a;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);border-radius:16px;width:100%;max-width:580px;max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 80px rgba(0,0,0,.7)">',
 
     /* Header */
@@ -183,17 +204,28 @@
     }
   }
 
-  async function _loadSupportingStaff() {
-    if (_staffList.length > 0) {
+  var _lastLoadedCompanyId = null;
+
+  async function _loadSupportingStaff(targetCid) {
+    var cid = targetCid || (_currentLead ? (_currentLead.company_id || _currentLead.companyId) : null);
+    if (!cid && typeof window.currentCompanyId !== 'undefined' && window.currentCompanyId !== 'all') cid = window.currentCompanyId;
+    if (!cid && typeof companyId !== 'undefined' && companyId !== 'all') cid = companyId;
+
+    if (_staffList.length > 0 && _lastLoadedCompanyId === cid) {
       _renderStaffOptions();
       return;
     }
     if (_isLoadingStaff) return;
     _isLoadingStaff = true;
+    _lastLoadedCompanyId = cid;
     try {
+      var url = API_BASE + '/supporting-staff';
+      if (cid && cid !== 'all') {
+        url += '?company_id=' + encodeURIComponent(cid);
+      }
       var r = typeof staffFetch === 'function' 
-        ? await staffFetch(API_BASE + '/supporting-staff')
-        : await fetch(API_BASE + '/supporting-staff', { credentials: 'include' });
+        ? await staffFetch(url)
+        : await fetch(url, { credentials: 'include' });
       if (r.ok) {
         var res = await r.json();
         _staffList = res.data || [];
@@ -261,6 +293,19 @@
       tabOther.style.color = '#fff';
       secOther.style.display = 'flex';
     }
+
+    setTimeout(function () {
+      if (vType === 'visit_bank') {
+        var bEl = document.getElementById('_famBankName');
+        if (bEl) bEl.focus();
+      } else if (vType === 'visit_customer') {
+        var cEl = document.getElementById('_famCustAddress');
+        if (cEl) cEl.focus();
+      } else if (vType === 'others') {
+        var oEl = document.getElementById('_famOtherTitle');
+        if (oEl) oEl.focus();
+      }
+    }, 50);
   };
 
   window.openFixAppointmentModal = function (leadData, onCreated) {
@@ -273,29 +318,36 @@
     document.getElementById('_famLeadPhone').textContent = _currentLead.phone ? '📞 ' + _currentLead.phone : '';
     document.getElementById('_famLeadLocation').textContent = (_currentLead.area || '') + (_currentLead.city ? ', ' + _currentLead.city : '');
 
+    function _cleanVal(val) {
+      if (val === null || val === undefined) return '';
+      var s = String(val).trim();
+      if (s === '' || s === 'null' || s === 'undefined' || s === 'None' || s === '—' || s === '-') return '';
+      return s;
+    }
+
     // Pre-populate customer details if present
-    document.getElementById('_famCustAddress').value = _currentLead.address || '';
-    document.getElementById('_famCustCity').value = _currentLead.city || '';
-    document.getElementById('_famCustArea').value = _currentLead.area || '';
-    document.getElementById('_famCustPincode').value = _currentLead.pincode || '';
-    document.getElementById('_famCustMapsUrl').value = _currentLead.google_maps_url || _currentLead.location_url || '';
+    document.getElementById('_famCustAddress').value = _cleanVal(_currentLead.address);
+    document.getElementById('_famCustCity').value = _cleanVal(_currentLead.city);
+    document.getElementById('_famCustArea').value = _cleanVal(_currentLead.area);
+    document.getElementById('_famCustPincode').value = _cleanVal(_currentLead.pincode);
+    document.getElementById('_famCustMapsUrl').value = _cleanVal(_currentLead.google_maps_url || _currentLead.location_url);
 
     // Pre-populate bank details if present
-    document.getElementById('_famBankName').value = _currentLead.bank_name || '';
-    document.getElementById('_famBankBranch').value = _currentLead.bank_branch || '';
-    document.getElementById('_famBankAddress').value = _currentLead.bank_address || '';
-    document.getElementById('_famBankContactPerson').value = _currentLead.bank_contact_person || '';
-    document.getElementById('_famBankContactPhone').value = _currentLead.bank_contact_phone || '';
-    document.getElementById('_famBankMapsUrl').value = _currentLead.bank_google_maps_url || (_currentLead.bank_name ? (_currentLead.google_maps_url || '') : '');
+    document.getElementById('_famBankName').value = _cleanVal(_currentLead.bank_name);
+    document.getElementById('_famBankBranch').value = _cleanVal(_currentLead.bank_branch);
+    document.getElementById('_famBankAddress').value = _cleanVal(_currentLead.bank_address);
+    document.getElementById('_famBankContactPerson').value = _cleanVal(_currentLead.bank_contact_person);
+    document.getElementById('_famBankContactPhone').value = _cleanVal(_currentLead.bank_contact_phone);
+    document.getElementById('_famBankMapsUrl').value = _cleanVal(_currentLead.bank_google_maps_url || (_currentLead.bank_name ? (_currentLead.google_maps_url || '') : ''));
 
-    document.getElementById('_famOtherTitle').value = _currentLead.other_location_title || '';
-    document.getElementById('_famOtherAddress').value = _currentLead.other_location_address || '';
-    document.getElementById('_famOtherContactPerson').value = _currentLead.other_contact_person || '';
-    document.getElementById('_famOtherContactPhone').value = _currentLead.other_contact_phone || '';
-    document.getElementById('_famOtherMapsUrl').value = _currentLead.other_google_maps_url || '';
+    document.getElementById('_famOtherTitle').value = _cleanVal(_currentLead.other_location_title);
+    document.getElementById('_famOtherAddress').value = _cleanVal(_currentLead.other_location_address);
+    document.getElementById('_famOtherContactPerson').value = _cleanVal(_currentLead.other_contact_person);
+    document.getElementById('_famOtherContactPhone').value = _cleanVal(_currentLead.other_contact_phone);
+    document.getElementById('_famOtherMapsUrl').value = _cleanVal(_currentLead.other_google_maps_url);
 
-    document.getElementById('_famPurpose').value = _currentLead.purpose || '';
-    document.getElementById('_famInstructions').value = _currentLead.instructions || '';
+    document.getElementById('_famPurpose').value = _cleanVal(_currentLead.purpose);
+    document.getElementById('_famInstructions').value = _cleanVal(_currentLead.instructions);
 
     // Date defaults to today
     var apptDateEl = document.getElementById('_famApptDate');
@@ -316,7 +368,7 @@
     window._famSetVisitType(initialVisitType);
 
     // Load staff
-    _loadSupportingStaff();
+    _loadSupportingStaff(_currentLead ? (_currentLead.company_id || _currentLead.companyId) : null);
 
     // Show modal
     var modal = document.getElementById('_famModal');
@@ -514,8 +566,9 @@
         var staffName = apt.assigned_to ? apt.assigned_to.full_name + ' (' + (apt.assigned_to.emp_code || '') + ')' : 'Assigned Staff #' + apt.assigned_to_id;
 
         var proofHtml = '';
-        if (apt.photo_url || apt.photo_path) {
-          var pUrl = apt.photo_url || apt.photo_path;
+        var rawPhoto = apt.photo_url || apt.photo_path || apt.compressed_photo_path;
+        if (rawPhoto) {
+          var pUrl = _formatPhotoUrl(rawPhoto);
           proofHtml = '<div style="margin-top:6px"><a href="' + pUrl + '" target="_blank" style="font-size:11px;color:#10b981;text-decoration:none;font-weight:600"><i class="fas fa-camera me-1"></i>View Visit Photo Proof</a></div>';
         }
 
@@ -560,5 +613,20 @@
       container.innerHTML = '<div style="color:#ef4444;font-size:11.5px">Failed to load appointments: ' + e.message + '</div>';
     }
   };
+
+  // DC Protocol: Neutralize parent Bootstrap modal focus trap (_enforceFocus / focusin.bs.modal)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('focusin', function (e) {
+      if (e.target && e.target.closest && e.target.closest('#_famModal')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    document.addEventListener('mousedown', function (e) {
+      if (e.target && e.target.closest && e.target.closest('#_famModal')) {
+        e.stopPropagation();
+      }
+    }, true);
+  }
 
 })();

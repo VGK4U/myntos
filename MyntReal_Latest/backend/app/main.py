@@ -17434,6 +17434,11 @@ if os.path.isdir(FRONTEND_PUBLIC_DIR):
     app.mount("/public", StaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
     print(f"[DC-STATIC] ✅ Public assets mounted: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
 
+FRONTEND_JS_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "js")
+if os.path.isdir(FRONTEND_JS_DIR):
+    app.mount("/js", StaticFiles(directory=FRONTEND_JS_DIR, follow_symlink=True), name="frontend_js_assets")
+    print(f"[DC-STATIC] ✅ Frontend JS assets mounted: /js -> {FRONTEND_JS_DIR}", flush=True)
+
 MARKETPLACE_IMAGES_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public", "marketplace", "product-images")
 if os.path.isdir(MARKETPLACE_IMAGES_DIR):
     app.mount("/marketplace/product-images", StaticFiles(directory=MARKETPLACE_IMAGES_DIR), name="marketplace_product_images")
@@ -17496,7 +17501,91 @@ async def serve_mobile_spa_root():
                 "Content-Disposition": "inline"
             }
         )
-    raise HTTPException(status_code=404, detail="Mobile application not found")
+@app.get("/{filename:path}.js", include_in_schema=False)
+async def serve_root_js_files(filename: str):
+    from fastapi.responses import FileResponse
+    clean_name = filename.split("?")[0].strip() + ".js"
+    possible_paths = [
+        os.path.join(_WORKSPACE_ROOT, "frontend", clean_name),
+        os.path.join(FRONTEND_PUBLIC_DIR, clean_name),
+        os.path.join(FRONTEND_PUBLIC_DIR, "js", clean_name)
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            return FileResponse(p, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail=f"JS file '{filename}' not found")
+
+@app.get("/{filename:path}.css", include_in_schema=False)
+async def serve_root_css_files(filename: str):
+    from fastapi.responses import FileResponse
+    clean_name = filename.split("?")[0].strip() + ".css"
+    possible_paths = [
+        os.path.join(_WORKSPACE_ROOT, "frontend", clean_name),
+        os.path.join(FRONTEND_PUBLIC_DIR, clean_name),
+        os.path.join(FRONTEND_PUBLIC_DIR, "css", clean_name)
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            return FileResponse(p, media_type="text/css", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail=f"CSS file '{filename}' not found")
+
+@app.get("/staff/{page:path}", include_in_schema=False)
+async def serve_staff_dynamic_pages(page: str):
+    from fastapi.responses import HTMLResponse
+    clean_page = page.split("?")[0].strip().rstrip("/")
+    if not clean_page:
+        clean_page = "my-tenant"
+    
+    mapping = {
+        "my-tenant": "staff_my_tenant.html",
+        "my-journeys": "staff_my_journeys.html",
+        "field-appointments": "staff_field_appointments.html",
+        "all-journeys": "staff_all_journeys.html",
+        "team-journeys": "staff_team_journeys.html",
+        "my-leads": "staff_my_leads.html",
+        "dashboard": "staff_dashboard.html",
+        "tenant-users": "staff_tenant_users.html",
+        "profile": "staff_profile.html",
+        "login": "staff_login.html",
+        "accounts/companies": "staff_accounts_companies.html"
+    }
+    
+    filename = mapping.get(clean_page) or f"staff_{clean_page.replace('/', '_').replace('-', '_')}.html"
+    file_path = os.path.join(_WORKSPACE_ROOT, "frontend", filename)
+    if not os.path.exists(file_path):
+        file_path = os.path.join(_WORKSPACE_ROOT, "frontend", f"{clean_page.replace('/', '_')}.html")
+    if not os.path.exists(file_path):
+        file_path = os.path.join(_WORKSPACE_ROOT, "frontend", clean_page)
+
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"})
+
+    fallback = os.path.join(_WORKSPACE_ROOT, "frontend", "staff_my_tenant.html")
+    if os.path.exists(fallback):
+        with open(fallback, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"})
+
+    raise HTTPException(status_code=404, detail=f"Staff page '{page}' not found")
+
+@app.get("/saas/login", include_in_schema=False)
+@app.get("/saas-login", include_in_schema=False)
+@app.get("/saas_login", include_in_schema=False)
+@app.get("/client/login", include_in_schema=False)
+@app.get("/tenant/login", include_in_schema=False)
+@app.get("/staff/login", include_in_schema=False)
+@app.get("/login", include_in_schema=False)
+async def serve_saas_login_page(request: Request):
+    from fastapi.responses import HTMLResponse
+    filename = "staff_login.html" if request.url.path == "/staff/login" else "saas_login.html"
+    filePath = os.path.join(_WORKSPACE_ROOT, "frontend", filename)
+    if os.path.exists(filePath):
+        with open(filePath, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Login page not found")
 
 @app.get("/privacy-policy.html", include_in_schema=False)
 @app.get("/privacy-policy", include_in_schema=False)

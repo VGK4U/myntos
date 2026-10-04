@@ -6297,8 +6297,9 @@ def list_team_leads(
     # DC Protocol (Feb 2026): Category name filter for cross-company queries
     # Uses JOIN with SignupCategory to filter by name (not category_id)
     if category:
+        _cat_str = str(category).strip()
         query = query.join(SignupCategory, CRMLead.category_id == SignupCategory.id)
-        query = query.filter(SignupCategory.name == category)
+        query = query.filter(or_(SignupCategory.name == _cat_str, SignupCategory.name.ilike(f"%{_cat_str}%"), SignupCategory.slug.ilike(f"%{_cat_str}%")))
     if search:
         _st = f'%{search}%'
         phone_lead_ids = find_candidate_lead_ids_for_search(
@@ -8200,9 +8201,14 @@ def lead_analytics(
 
     # DC Protocol (Apr 2026): Dual-match category filter — mirrors master-leads logic.
     if category:
+        _cat_str = str(category).strip()
         _an_cat_ids = [
             r.id for r in db.query(SignupCategory.id)
-            .filter(SignupCategory.name == category).all()
+            .filter(or_(
+                SignupCategory.name == _cat_str,
+                SignupCategory.name.ilike(f"%{_cat_str}%"),
+                SignupCategory.slug.ilike(f"%{_cat_str}%")
+            )).all()
         ]
         if _an_cat_ids:
             _an_deal_sq = (
@@ -9447,12 +9453,27 @@ def _apply_exec_dashboard_common_filters(
         ))
 
     if category:
-        _cids = [r.id for r in db.query(_SC2.id).filter(_SC2.name == category).all()]
+        _cat_str = str(category).strip()
+        _cids = [r.id for r in db.query(_SC2.id).filter(
+            _sa_or(
+                _SC2.name == _cat_str,
+                _SC2.name.ilike(f"%{_cat_str}%"),
+                _SC2.slug.ilike(f"%{_cat_str}%")
+            )
+        ).all()]
         if _cids:
             _dsq = db.query(CRMLeadDeal.lead_id).filter(CRMLeadDeal.revenue_category_id.in_(_cids)).scalar_subquery()
             base = base.filter(_sa_or(CRMLead.category_id.in_(_cids), CRMLead.id.in_(_dsq)))
         else:
-            base = base.filter(CRMLead.id == -1)
+            if _cat_str.isdigit():
+                _num_id = int(_cat_str)
+                _dsq = db.query(CRMLeadDeal.lead_id).filter(CRMLeadDeal.revenue_category_id == _num_id).scalar_subquery()
+                base = base.filter(_sa_or(CRMLead.category_id == _num_id, CRMLead.id.in_(_dsq)))
+            else:
+                base = base.filter(_sa_or(
+                    CRMLead.looking_for.ilike(f"%{_cat_str}%"),
+                    CRMLead.source.ilike(f"%{_cat_str}%")
+                ))
     if status:
         POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
         if status in POST_WON or status == 'won_plus':
@@ -13650,8 +13671,19 @@ def list_lead_sources(
                 'is_active': True,
                 'display_order': 99
             })
-            existing_names.add(src_val.strip().lower())
-    
+    if not source_dicts:
+        from app.models.crm import DEFAULT_LEAD_SOURCES
+        for idx, sdef in enumerate(DEFAULT_LEAD_SOURCES):
+            source_dicts.append({
+                'id': None,
+                'company_id': parsed_company_id,
+                'name': sdef['name'],
+                'code': sdef['name'].lower().replace(' ', '_'),
+                'description': sdef.get('description', ''),
+                'is_active': True,
+                'display_order': sdef.get('display_order', idx)
+            })
+
     return {
         'success': True,
         'data': source_dicts
@@ -18624,13 +18656,21 @@ async def network_search(
                 })
 
         if search_all or type in ('partner', 'vgk', 'vgk_partner'):
-            partners = db.query(OfficialPartner).filter(
+            partners_q = db.query(OfficialPartner).filter(
                 or_(
                     func.coalesce(func.lower(OfficialPartner.partner_name), '').contains(search_term.lower()),
                     func.lower(OfficialPartner.partner_code).contains(search_term.lower()),
                     func.coalesce(func.lower(OfficialPartner.contact_person), '').contains(search_term.lower())
                 )
-            ).order_by(OfficialPartner.partner_name).limit(per_type_limit).all()
+            )
+            if company_id:
+                partners_q = partners_q.filter(
+                    or_(
+                        OfficialPartner.company_id == company_id,
+                        OfficialPartner.company_id.is_(None)
+                    )
+                )
+            partners = partners_q.order_by(OfficialPartner.partner_name).limit(per_type_limit).all()
             # DC Protocol Fix (Apr 2026): Pre-load parent chain in one query pass to avoid N+1
             # DC-TEAM-ASSIGN-001 (Jun 2026): Extended to 4 levels (L1→L2→L3→L4 Senior/Extended/Core)
             _partner_ids_needed = set()
@@ -19614,37 +19654,65 @@ def _read_doc_bytes(fn: str, storage_svc) -> Optional[bytes]:
 
 
 def _build_bundle_pdf(file_names: list, labels: list, storage_svc) -> bytes:
-    """Merge a list of storage files (images + PDFs) into one PDF via PyMuPDF."""
-    import fitz
-    out = fitz.open()
+    """Merge a list of storage files (images + PDFs) into one PDF via pypdf, PIL, and reportlab."""
+    import io
+    from pypdf import PdfWriter, PdfReader
+    from PIL import Image
+
+    writer = PdfWriter()
+    merged_count = 0
+
     for fn, lbl in zip(file_names, labels):
         data = _read_doc_bytes(fn, storage_svc)
         if not data:
             logger.warning("[DC-BUNDLE] File not found in storage: %s", fn)
             continue
-        ft = _detect_fitz_filetype(data, fn)
+
         try:
-            if ft == 'pdf':
-                src = fitz.open(stream=data, filetype='pdf')
+            if data[:4] == b'%PDF':
+                r = PdfReader(io.BytesIO(data))
+                if r.is_encrypted:
+                    try:
+                        r.decrypt('')
+                    except Exception:
+                        pass
+                for page in r.pages:
+                    writer.add_page(page)
+                    merged_count += 1
             else:
-                img_doc = fitz.open(stream=data, filetype=ft)
-                pdf_bytes = img_doc.convert_to_pdf()
-                img_doc.close()
-                src = fitz.open(stream=pdf_bytes, filetype='pdf')
-            out.insert_pdf(src)
-            src.close()
+                # Convert image (PNG/JPEG/WebP) to PDF page via PIL
+                img = Image.open(io.BytesIO(data))
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                pdf_buf = io.BytesIO()
+                img.save(pdf_buf, format='PDF')
+                pdf_buf.seek(0)
+                img_reader = PdfReader(pdf_buf)
+                for page in img_reader.pages:
+                    writer.add_page(page)
+                    merged_count += 1
         except Exception as _be:
-            logger.warning("[DC-BUNDLE] Skipped %s (%s): %s", fn, ft, _be)
-    if len(out) == 0:
-        blank = fitz.open()
-        page = blank.new_page(width=595, height=842)
-        page.insert_text((72, 400), 'No documents available for this bundle.', fontsize=12)
-        result = blank.tobytes()
-        blank.close()
-        return result
-    result = out.tobytes()
-    out.close()
-    return result
+            logger.warning("[DC-BUNDLE] Skipped %s: %s", fn, _be)
+
+    if merged_count == 0:
+        # Generate a clean blank A4 page when no docs are uploaded yet
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        blank_buf = io.BytesIO()
+        c = canvas.Canvas(blank_buf, pagesize=A4)
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(72, 500, "No uploaded documents available for this bundle.")
+        c.setFont("Helvetica", 10)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawString(72, 480, "Please upload the required documents in the Solar Documents panel.")
+        c.showPage()
+        c.save()
+        blank_buf.seek(0)
+        return blank_buf.getvalue()
+
+    out_buf = io.BytesIO()
+    writer.write(out_buf)
+    return out_buf.getvalue()
 
 @router.get("/leads/{lead_id}/solar-docs/bundle")
 def download_solar_docs_bundle(

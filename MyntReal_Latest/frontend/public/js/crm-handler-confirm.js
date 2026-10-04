@@ -75,17 +75,8 @@ window.HC_CONFIG_MASTER = [
  * DC-HANDLER-CONFIRM-GATE-001
  */
 window.HC_CONFIG_STAFF_UPGRADED = [
-  { key: 'guru_supported',          idField: 'guru_id',              nameField: 'guru_name',              label: 'Source',       always_show: true },
-  { key: 'z_guru_supported',        idField: 'z_guru_id',            nameField: 'z_guru_name',            label: 'Senior',       always_show: true,  auto_fetch: true },
-  { key: 'adi_guru_supported',      idField: 'adi_guru_id',          nameField: 'adi_guru_name',          label: 'Extended',     always_show: true,  auto_fetch: true },
-  { key: 'core_supported',          idField: 'core_id',              nameField: 'core_name',              label: 'Core',         always_show: true,  auto_fetch: true },
-  { key: 'field_support_supported', idField: 'field_support_ref_id', nameField: 'field_support_ref_name', label: 'Field Support',always_show: true },
-  { key: 'telecaller_supported',    idField: 'telecaller_id',        nameField: 'telecaller_name',        label: 'Telecaller',   always_show: true },
-  {
-    key: 'showroom_supported', idField: 'field_staff_id', nameField: 'field_staff_name',
-    idFieldFallback: 'associated_partner_id', nameFallbackField: 'associated_partner_name',
-    label: 'Support', always_show: true, inline_search: true
-  }
+  { key: 'field_support_supported', idField: 'field_support_ref_id', nameField: 'field_support_ref_name', label: 'Field Support', always_show: true },
+  { key: 'telecaller_supported',    idField: 'telecaller_id',        nameField: 'telecaller_name',        label: 'Telecaller',   always_show: true }
 ];
 
 /* HC_CONFIG_ETC — for ETC Training direct student modal (3 handler roles) */

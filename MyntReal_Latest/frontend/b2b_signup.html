@@ -210,7 +210,7 @@
           <label style="display:flex;flex-direction:column;gap:4px;background:#fff;border:2px solid var(--brand-1);padding:10px 12px;border-radius:10px;cursor:pointer;position:relative" id="card-PLAN_1_LOGIN">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <span style="font-weight:700;font-size:13.5px"><input type="radio" name="plan_choice" value="PLAN_1_LOGIN" checked style="width:auto;margin-right:4px"> 1 Login</span>
-              <span style="font-size:13px;font-weight:800;color:var(--brand-1)" class="plan-price-display" data-monthly="1499" data-annual="14990">₹1,499/mo</span>
+              <span style="font-size:13px;font-weight:800;color:var(--brand-1)" class="plan-price-display" data-monthly="1999" data-annual="19990">₹1,999/mo</span>
             </div>
             <span style="font-size:11px;color:var(--muted)">CRM & WhatsApp Direct</span>
           </label>
@@ -318,8 +318,8 @@
             <span id="price-cycle-name">Monthly Billing</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
-            <span style="font-size:24px;font-weight:800;color:var(--brand-1)" id="price-total">₹1,499</span>
-            <span style="font-size:11.5px;color:var(--muted)" id="price-tax-label">+ 18% GST (₹269.82) · Total ₹1,768.82</span>
+            <span style="font-size:24px;font-weight:800;color:var(--brand-1)" id="price-total">₹1,999</span>
+            <span style="font-size:11.5px;color:var(--muted)" id="price-tax-label">+ 18% GST (₹359.82) · Total ₹2,358.82</span>
           </div>
           <div id="summary-modules-list" style="font-size:11.5px;color:var(--ink-2);margin-top:8px;border-top:1px dashed var(--line);padding-top:6px">
             <b>Included Modules:</b> CRM, WhatsApp Direct Messages
@@ -453,7 +453,7 @@
       <div class="price">
         <h3>1 Login</h3>
         <p class="tag">Solo entrepreneurs & single users needing core CRM.</p>
-        <div class="amount">₹1,499<small> /mo</small></div>
+        <div class="amount">₹1,999<small> /mo</small></div>
         <ul>
           <li>1 Staff Login Seat</li>
           <li>CRM & Lead Management</li>
@@ -513,7 +513,7 @@
           <thead>
             <tr style="background:linear-gradient(180deg,#f8fafc,#f1f5f9);border-bottom:2px solid var(--line)">
               <th style="padding:16px 18px;font-weight:700;color:var(--ink);width:32%">SaaS Commercial Module</th>
-              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">1 Login<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹1,499/mo</span></th>
+              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">1 Login<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹1,999/mo</span></th>
               <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">2 Logins<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹3,499/mo</span></th>
               <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);background:#f0edfb;width:17%">5 Logins ★<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹6,499/mo</span></th>
               <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">10 Logins<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹9,999/mo</span></th>
@@ -709,8 +709,6 @@ document.getElementById('yr').textContent = new Date().getFullYear();
     'ATTENDANCE':          ['#06b6d4','#0ea5e9'],
     'Earnings':            ['#22c55e','#10b981'],
     'CONFIGURATION':       ['#475569','#334155'],
-    'MNR ADMIN':           ['#ef4444','#f97316'],
-    'MNR USER':            ['#a855f7','#8b5cf6'],
     'VED MEMBERS':         ['#4f46e5','#7c3aed'],
     'ZYNOVA REAL':         ['#0ea5e9','#7c3aed'],
   };
@@ -728,8 +726,6 @@ document.getElementById('yr').textContent = new Date().getFullYear();
     'ATTENDANCE':        'Check-in, leaves, regularisation',
     'Earnings':          'Commissions, payouts',
     'CONFIGURATION':     'Settings, preferences, defaults',
-    'MNR ADMIN':         'Tenant administration',
-    'MNR USER':          'End-user portal modules',
     'VED MEMBERS':       'VED Member referrals & commissions',
     'ZYNOVA REAL':        'Real-estate & Solar verticals',
   };
@@ -738,9 +734,7 @@ document.getElementById('yr').textContent = new Date().getFullYear();
   // so we render this client-side rather than fetching an auth-gated
   // endpoint, keeping the network log clean.
   const cats = [
-    {category:'MNR ADMIN', count:152},
     {category:'CONFIGURATION', count:34},
-    {category:'MNR USER', count:32},
     {category:'VED MEMBERS', count:26},
     {category:'ACCOUNTS', count:16},
     {category:'SFMS', count:15},
@@ -812,7 +806,7 @@ const COMMERCIAL_MATRIX = {
 };
 
 const PLAN_TIERS = {
-  'PLAN_1_LOGIN': { title: '1 Login Plan', seats: 1, monthly: 1499, annual: 14990 },
+  'PLAN_1_LOGIN': { title: '1 Login Plan', seats: 1, monthly: 1999, annual: 19990 },
   'PLAN_2_LOGINS': { title: '2 Logins Plan', seats: 2, monthly: 3499, annual: 34990 },
   'PLAN_5_LOGINS': { title: '5 Logins Plan', seats: 5, monthly: 6499, annual: 64990 },
   'PLAN_10_LOGINS': { title: '10 Logins Plan', seats: 10, monthly: 9999, annual: 99990 }

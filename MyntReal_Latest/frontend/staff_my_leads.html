@@ -1835,6 +1835,59 @@
             }
         }
         
+        function isSaasTenantCompany(targetCid) {
+            const cid = parseInt(targetCid || document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId);
+            if (!cid || isNaN(cid)) return false;
+            const compObj = companiesList.find(c => c.id === cid);
+            if (compObj) {
+                const code = (compObj.company_code || '').toUpperCase();
+                if (cid === 1 || cid === 2 || code === 'MNR' || code === 'VGK' || code === 'VGK4U' || compObj.is_book_keeper) {
+                    return false;
+                }
+                return true;
+            }
+            return cid > 2;
+        }
+
+        function adjustLeadFormForCompanyContext() {
+            const formCid = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+            const isTenant = isSaasTenantCompany(formCid);
+
+            const mnrLabel = document.getElementById('leadMnrHandlerSearch')?.closest('.col-md-3')?.querySelector('.form-label');
+            const mnrInput = document.getElementById('leadMnrHandlerSearch');
+
+            const guruCol = document.getElementById('leadGuruSearch')?.closest('.col-md-3');
+            const zGuruCol = document.getElementById('leadZGuruSearch')?.closest('.col-md-3');
+            const coreCol = document.getElementById('leadCoreRow');
+            const adiGuruCol = document.getElementById('leadAdiGuruSearch')?.closest('.col-md-3');
+            const communityCol = document.getElementById('leadCommunitySearch')?.closest('.col-md-3');
+            const vgkRow = document.getElementById('leadIsVgkProgram')?.closest('.row');
+
+            if (isTenant) {
+                const vgkEditBanner = document.getElementById('sl_vgkEditBanner');
+                if (vgkEditBanner) vgkEditBanner.innerHTML = '';
+
+                if (mnrLabel) mnrLabel.innerHTML = 'Referral Agent (Ved Member)';
+                if (mnrInput) mnrInput.placeholder = 'Search Ved Member...';
+
+                if (guruCol) guruCol.style.display = 'none';
+                if (zGuruCol) zGuruCol.style.display = 'none';
+                if (coreCol) coreCol.style.display = 'none';
+                if (adiGuruCol) adiGuruCol.style.display = 'none';
+                if (communityCol) communityCol.style.display = 'none';
+                if (vgkRow) vgkRow.style.display = 'none';
+            } else {
+                if (mnrLabel) mnrLabel.innerHTML = 'Ground Source <span class="text-muted" style="font-size:11px">(MNR / VGK / Partner)</span>';
+                if (mnrInput) mnrInput.placeholder = 'Search MNR / VGK / Partner...';
+
+                if (guruCol) guruCol.style.display = '';
+                if (zGuruCol) zGuruCol.style.display = '';
+                if (adiGuruCol) adiGuruCol.style.display = '';
+                if (communityCol) communityCol.style.display = '';
+                if (vgkRow) vgkRow.style.display = '';
+            }
+        }
+
         // DC Protocol (Dec 31, 2025): Sync form company selection with header
         function onLeadFormCompanyChange() {
             const formSelect = document.getElementById('leadFormCompany');
@@ -1846,6 +1899,7 @@
                     onCompanyChange();
                 }
             }
+            adjustLeadFormForCompanyContext();
         }
         
         // DC Protocol (Dec 31, 2025): Sync form when opening modal
@@ -2162,27 +2216,28 @@
                 const data = await apiCall(endpoint);
                 if (data && data.success && data.data) {
                     const stats = data.data;
-                    document.getElementById('totalLeads').textContent = stats.total_leads || 0;
-                    document.getElementById('selfLeadsStat').textContent = stats.self_leads_count || stats.self_leads || 0;
-                    document.getElementById('newLeads').textContent = stats.status_breakdown?.new || 0;
-                    document.getElementById('inProgressLeads').textContent = 
+                    const _setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+                    _setTxt('totalLeads', stats.total_leads || 0);
+                    _setTxt('selfLeadsStat', stats.self_leads_count || stats.self_leads || 0);
+                    _setTxt('newLeads', stats.status_breakdown?.new || 0);
+                    _setTxt('inProgressLeads', 
                         (stats.status_breakdown?.contacted || 0) + (stats.status_breakdown?.interested || 0) +
-                        (stats.status_breakdown?.qualified || 0) + (stats.status_breakdown?.proposal || 0) + (stats.status_breakdown?.loan_process || 0);
-                    document.getElementById('wonLeads').textContent = stats.status_breakdown?.won || 0;
-                    document.getElementById('loanProcessLeads').textContent = stats.status_breakdown?.loan_process || 0;
-                    document.getElementById('completedLeads').textContent = stats.status_breakdown?.completed || 0;
-                    document.getElementById('lostLeads').textContent = stats.status_breakdown?.lost || 0;
-                    document.getElementById('onHoldLeads').textContent = stats.status_breakdown?.on_hold || 0;
-                    document.getElementById('todayFollowups').textContent = stats.today_followups || 0;
-                    document.getElementById('overdueFollowups').textContent = stats.overdue_followups || 0;
+                        (stats.status_breakdown?.qualified || 0) + (stats.status_breakdown?.proposal || 0) + (stats.status_breakdown?.loan_process || 0));
+                    _setTxt('wonLeads', stats.status_breakdown?.won || 0);
+                    _setTxt('loanProcessLeads', stats.status_breakdown?.loan_process || 0);
+                    _setTxt('completedLeads', stats.status_breakdown?.completed || 0);
+                    _setTxt('lostLeads', stats.status_breakdown?.lost || 0);
+                    _setTxt('onHoldLeads', stats.status_breakdown?.on_hold || 0);
+                    _setTxt('todayFollowups', stats.today_followups || 0);
+                    _setTxt('overdueFollowups', stats.overdue_followups || 0);
                     
                     if (stats.revenue) {
-                        document.getElementById('revenueTotalAll').textContent = formatCurrency(stats.revenue.total || 0);
-                        document.getElementById('revenueReceivedAll').textContent = formatCurrency(stats.revenue.received || 0);
-                        document.getElementById('revenueBalanceAll').textContent = formatCurrency(stats.revenue.balance || 0);
+                        _setTxt('revenueTotalAll', formatCurrency(stats.revenue.total || 0));
+                        _setTxt('revenueReceivedAll', formatCurrency(stats.revenue.received || 0));
+                        _setTxt('revenueBalanceAll', formatCurrency(stats.revenue.balance || 0));
                     }
                     if (stats.revenue_this_month) {
-                        document.getElementById('revenueThisMonth').textContent = formatCurrency(stats.revenue_this_month.total || 0);
+                        _setTxt('revenueThisMonth', formatCurrency(stats.revenue_this_month.total || 0));
                     }
                 }
                 highlightActiveCards();
@@ -2302,15 +2357,25 @@
             }
         }
 
+        const DEFAULT_FALLBACK_SOURCES = [
+            'Self Lead', 'Website', 'Referral', 'Walk-in', 'Phone Call',
+            'Online - M', 'Advertisement', 'Event/Exhibition', 'Partner',
+            'MNR', 'VGK4U', 'Other'
+        ];
+
         function populateSourceDropdowns() {
             const filterSelect = document.getElementById('filterSource');
             const formSelect = document.getElementById('leadSource');
             
+            const sourcesToRender = (leadSources && leadSources.length > 0)
+                ? leadSources
+                : DEFAULT_FALLBACK_SOURCES.map((name, i) => ({ name, display_order: i }));
+
             if (filterSelect) {
                 const currentFilterVal = filterSelect.value;
                 filterSelect.innerHTML = '<option value="">All Sources</option>';
                 const seenFilter = new Set();
-                (leadSources || []).forEach(src => {
+                sourcesToRender.forEach(src => {
                     const sName = src && src.name ? src.name.trim() : '';
                     if (sName && !seenFilter.has(sName.toLowerCase())) {
                         seenFilter.add(sName.toLowerCase());
@@ -2323,7 +2388,7 @@
                 const currentFormVal = formSelect.value;
                 formSelect.innerHTML = '<option value="">Select Source</option>';
                 const seenForm = new Set();
-                (leadSources || []).forEach(src => {
+                sourcesToRender.forEach(src => {
                     const sName = src && src.name ? src.name.trim() : '';
                     if (sName && !seenForm.has(sName.toLowerCase())) {
                         seenForm.add(sName.toLowerCase());
@@ -3007,9 +3072,15 @@
                 el.disabled = false;
             });
             // Auto-assign to current staff member by default
-            const _staffRole = (staffUserData.role || '').toLowerCase();
-            const _staffDept = (staffUserData.department_name || staffUserData.department || '').toLowerCase();
-            const _staffDesig = (staffUserData.designation || '').toLowerCase();
+            const _getStrVal = (val) => {
+                if (!val) return '';
+                if (typeof val === 'string') return val;
+                if (typeof val === 'object') return val.name || val.role_code || val.code || val.title || '';
+                return String(val);
+            };
+            const _staffRole = _getStrVal(staffUserData.role || staffUserData.role_name).toLowerCase();
+            const _staffDept = _getStrVal(staffUserData.department_name || staffUserData.department).toLowerCase();
+            const _staffDesig = _getStrVal(staffUserData.designation).toLowerCase();
             const _isTc = _staffRole.includes('tele') || _staffDept.includes('tele') || _staffDesig.includes('tele');
 
             const _displayName = staffUserData.full_name || staffUserData.name || staffUserData.emp_code || 'Staff';
@@ -3061,6 +3132,7 @@
             // DC Protocol (Dec 31, 2025): Sync form company dropdown with header
             syncFormCompanyWithHeader();
             clearCommunitySelection();
+            adjustLeadFormForCompanyContext();
         }
         
         // Toggle revenue section based on status
@@ -3092,6 +3164,13 @@
         function handleLeadStatusChange() {
             const status = document.getElementById('leadStatus').value;
             toggleLeadRevenueSection(status);
+            if (status === 'won') {
+                setTimeout(() => {
+                    const input = document.getElementById('dealValueInput') || document.getElementById('leadDealValueTotal');
+                    if (input) { input.focus(); }
+                    showToast('Status set to Won. Please specify Deal Value before saving.', 'info');
+                }, 150);
+            }
         }
         
         // Load transactions for lead modal
@@ -3442,6 +3521,7 @@
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
                     const _slVeb = document.getElementById('sl_vgkEditBanner');
                     if (_slVeb) _slVeb.innerHTML = '';
+                    adjustLeadFormForCompanyContext();
                     new bootstrap.Modal(document.getElementById('leadModal')).show();
                     setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
                 }
@@ -3533,7 +3613,10 @@
         async function searchMnrUsers(query, fieldType) {
             if (!query || query.length < 2) return;
             try {
-                const response = await fetch(`/api/v1/crm/network-search?q=${encodeURIComponent(query)}&limit=10`, { credentials: 'include' });
+                const formCid = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+                let searchUrl = `/api/v1/crm/network-search?q=${encodeURIComponent(query)}&limit=10`;
+                if (formCid && formCid !== 'all') searchUrl += `&company_id=${encodeURIComponent(formCid)}`;
+                const response = await fetch(searchUrl, { credentials: 'include' });
                 const data = await response.json();
                 if (data.success && data.results) showGroundNetworkDropdown(data.results, fieldType);
             } catch (e) { console.error('Ground network search error:', e); }
@@ -4021,9 +4104,13 @@
 
             // Validate deal value for Won status
             if (currentStatus === 'won') {
-                const dealTotal = parseFloat(document.getElementById('leadDealValueTotal').value) || 0;
-                if (dealTotal <= 0 && leadDeals.length === 0) {
-                    showToast('Please add at least one deal for Won status', 'error');
+                const rawDirectVal = parseFloat(document.getElementById('dealValueInput')?.value) || 0;
+                const rawHiddenVal = parseFloat(document.getElementById('leadDealValueTotal')?.value) || 0;
+                const dealsSum = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals)) ? leadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const pendingDealsSum = (typeof pendingNewLeadDeals !== 'undefined' && Array.isArray(pendingNewLeadDeals)) ? pendingNewLeadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const dealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum, pendingDealsSum);
+                if (dealTotal <= 0) {
+                    showToast('Please enter a deal value or add a deal for Won status', 'warning');
                     return;
                 }
             }
@@ -4144,9 +4231,14 @@
             
             // Add deal values if status is Won
             if (currentStatus === 'won') {
-                leadData.deal_value_total = parseFloat(document.getElementById('leadDealValueTotal').value) || 0;
-                leadData.deal_value_received = parseFloat(document.getElementById('leadDealValueReceived').value) || 0;
-                leadData.deal_value_balance = Math.max(leadData.deal_value_total - leadData.deal_value_received, 0);
+                const rawDirectVal = parseFloat(document.getElementById('dealValueInput')?.value) || 0;
+                const rawHiddenVal = parseFloat(document.getElementById('leadDealValueTotal')?.value) || 0;
+                const dealsSum = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals)) ? leadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const finalDealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum);
+                
+                leadData.deal_value_total = finalDealTotal;
+                leadData.deal_value_received = parseFloat(document.getElementById('leadDealValueReceived')?.value) || 0;
+                leadData.deal_value_balance = Math.max(finalDealTotal - leadData.deal_value_received, 0);
             }
             
             try {
@@ -6197,7 +6289,12 @@
         async function loadSlVgkBanner(leadId, companyId, context) {
             const elId = context === 'edit' ? 'sl_vgkEditBanner' : 'sl_vgkBanner';
             const el = document.getElementById(elId);
-            if (!el || !leadId || !companyId) return;
+            if (!el) return;
+            if (typeof isSaasTenantCompany === 'function' && isSaasTenantCompany(companyId)) {
+                el.innerHTML = '';
+                return;
+            }
+            if (!leadId || !companyId) return;
             el.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px 0"><i class="fas fa-spinner fa-spin me-1"></i>Checking VGK member status…</div>';
             try {
                 const res = await staffFetch(`/api/v1/crm/leads/${leadId}/vgk-status?company_id=${companyId}`);

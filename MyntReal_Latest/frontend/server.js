@@ -7661,7 +7661,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
-    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico']);
+    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering']);
     const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
     
     if (shortCodeMatch) {
@@ -8761,10 +8761,11 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(404);
         res.end('File not found');
       } else {
-        console.log(`✅ Serving mobile asset: ${url}`);
+        const isHashedAsset = url.includes('/assets/') && /\.[a-f0-9A-Z_]{6,}\.(js|css|png|jpg|woff2?)$/i.test(filePath);
+        const cacheHeader = isHashedAsset ? 'public, max-age=86400' : 'no-cache, must-revalidate';
         res.writeHead(200, { 
           'Content-Type': contentType,
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
+          'Cache-Control': cacheHeader
         });
         res.end(data);
       }
@@ -8889,6 +8890,43 @@ const server = http.createServer(async (req, res) => {
           ? 'public, max-age=604800, immutable'
           : isMutable ? 'no-cache' : 'public, max-age=3600';
         res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheHeader });
+        res.end(data);
+      }
+    });
+    return;
+  }
+
+  // Serve static JS files from /js directory (DC_JOURNEY_UNIFIED_001)
+  if (url.startsWith('/js/')) {
+    const rawUrl = url.split("?")[0];
+    if (/%2e%2e/i.test(rawUrl) || /%2f/i.test(rawUrl) || /%5c/i.test(rawUrl) || /\\/g.test(rawUrl)) {
+      res.writeHead(403); res.end('Access denied'); return;
+    }
+    const urlPath = decodeURIComponent(rawUrl);
+    const baseDir = path.resolve(__dirname, "js");
+    const requestedPath = urlPath.substring('/js/'.length);
+    let filePath = path.resolve(baseDir, requestedPath);
+    if (!filePath.startsWith(baseDir + path.sep) && filePath !== baseDir) {
+      res.writeHead(403); res.end('Access denied'); return;
+    }
+    if (!fs.existsSync(filePath)) {
+      const publicBaseDir = path.resolve(__dirname, "public", "js");
+      filePath = path.resolve(publicBaseDir, requestedPath);
+    }
+    const extname = path.extname(filePath);
+    const contentTypes = {
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.css': 'text/css',
+      '.map': 'application/json'
+    };
+    const contentType = contentTypes[extname] || 'application/javascript';
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-cache' });
         res.end(data);
       }
     });

@@ -431,6 +431,26 @@
         let searchTimeout = null;
         let supportingStaffCache = [];
 
+        function formatPhotoUrl(rawPath) {
+            if (!rawPath || typeof rawPath !== 'string') return '';
+            let path = rawPath.trim().replace(/\\/g, '/');
+            if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+            while (path.includes('//')) path = path.replace(/\/\//g, '/');
+            if (path.startsWith('/storage/')) return path;
+            if (path.startsWith('storage/')) return '/' + path;
+            const clean = path.replace(/^\/+/, '');
+            if (clean.includes('public/uploads/')) {
+                return '/' + clean.substring(clean.indexOf('public/uploads/'));
+            }
+            if (clean.includes('uploads/')) {
+                return '/public/' + clean.substring(clean.indexOf('uploads/'));
+            }
+            if (clean.includes('private/')) {
+                return '/storage/' + clean.substring(clean.indexOf('private/'));
+            }
+            return '/public/uploads/' + clean;
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             if (typeof StaffSidebar !== 'undefined') {
                 try { await StaffSidebar.init(); } catch (e) { console.warn('Sidebar init error:', e); }
@@ -441,8 +461,10 @@
                     StaffHeader.init();
                 } catch (e) { console.warn('Header init error:', e); }
             }
-            await loadSupportingStaffList();
-            await loadAppointments();
+            await Promise.allSettled([
+                loadSupportingStaffList(),
+                loadAppointments()
+            ]);
         });
 
         function setPeriod(period, btn) {
@@ -625,7 +647,7 @@
                 // Completion evidence
                 let evidenceHtml = '<span class="text-muted small">—</span>';
                 if (item.status === 'completed') {
-                    const pUrl = item.photo_url || item.photo_path;
+                    const pUrl = formatPhotoUrl(item.photo_url || item.photo_path || item.compressed_photo_path);
                     const imgThumb = pUrl ? `<img src="${pUrl}" class="photo-thumb" onclick="openEvidenceModal(${item.id})" title="Click to view photo">` : '';
                     const gpsIcon = item.is_gps_verified 
                         ? '<span class="badge bg-success" style="font-size:9.5px;" title="GPS Accuracy verified"><i class="fas fa-satellite"></i> GPS OK</span>'
@@ -644,6 +666,8 @@
                 const callBtn = cleanPhone 
                     ? `<a href="tel:${cleanPhone}" class="action-btn text-success bg-light border" title="Call Lead"><i class="fas fa-phone-alt"></i></a>` 
                     : '';
+
+                const journeyBtn = `<a href="/staff/journeys?field_appointment_id=${item.id}&lead_id=${item.lead_id || ''}&client_name=${encodeURIComponent(destTitle)}&client_address=${encodeURIComponent(destSub)}&notes=${encodeURIComponent('Field Visit: ' + item.appointment_code)}" class="action-btn text-info bg-light border" title="Track Journey in Mobility"><i class="fas fa-route"></i></a>`;
 
                 const updateStatusBtn = `<button class="action-btn text-success bg-light border" onclick="openStatusModal(${index})" title="Update Status & Photo"><i class="fas fa-edit"></i> Action</button>`;
 
@@ -684,6 +708,7 @@
                         <div class="d-flex align-items-center justify-content-center gap-1">
                             ${callBtn}
                             ${mapsBtn}
+                            ${journeyBtn}
                             ${updateStatusBtn}
                             ${historyBtn}
                             ${reassignBtn}
@@ -782,19 +807,6 @@
             const aptId = document.getElementById('statusApptId').value;
             const action = document.getElementById('statusActionSelect').value;
 
-            if (action === 'start_visit') {
-                const item = (window._loadedAppts || []).find(a => a.id == aptId);
-                const destName = item ? (item.lead ? item.lead.name : (item.bank_name || 'Customer Visit')) : 'Customer Visit';
-                const destAddr = item ? (item.customer_address || item.bank_address || '') : '';
-                const code = item ? item.appointment_code : '';
-                const modalEl = document.getElementById('statusUpdateModal');
-                if (modalEl && bootstrap.Modal.getInstance(modalEl)) {
-                    bootstrap.Modal.getInstance(modalEl).hide();
-                }
-                window.location.href = `/staff/journeys?field_appointment_id=${aptId}&lead_id=${item ? item.lead_id : ''}&client_name=${encodeURIComponent(destName)}&client_address=${encodeURIComponent(destAddr)}&notes=${encodeURIComponent('Field Visit: ' + code)}`;
-                return;
-            }
-
             const btn = document.getElementById('btnSubmitStatus');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
@@ -846,9 +858,17 @@
                     if (!r.ok) throw new Error(data.detail || 'Failed to update appointment status');
                 }
 
-                bootstrap.Modal.getInstance(document.getElementById('statusUpdateModal')).hide();
+                const modalEl = document.getElementById('statusUpdateModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const inst = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    if (inst) inst.hide();
+                }
                 await loadAppointments();
-                alert('Appointment status updated successfully!');
+                if (typeof showToast === 'function') {
+                    showToast('Appointment status updated successfully!', 'success');
+                } else {
+                    alert('Appointment status updated successfully!');
+                }
             } catch (e) {
                 alert(e.message || 'Error updating status');
             } finally {
@@ -923,7 +943,7 @@
                 const apt = data.appointment || data.data;
                 if (!apt) throw new Error('Appointment details missing from response');
 
-                const pUrl = apt.photo_url || apt.photo_path;
+                const pUrl = formatPhotoUrl(apt.photo_url || apt.photo_path || apt.compressed_photo_path);
                 const photoBlock = pUrl 
                     ? `<div class="text-center my-3"><img src="${pUrl}" style="max-width:100%; max-height:360px; border-radius:10px; border:1px solid #cbd5e1; box-shadow:0 4px 15px rgba(0,0,0,0.1);"></div>`
                     : '<div class="alert alert-light text-center small text-muted my-2">No photo evidence uploaded yet</div>';

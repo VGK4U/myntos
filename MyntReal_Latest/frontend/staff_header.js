@@ -77,7 +77,7 @@ window.StaffHeader = window.StaffHeader || {
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
                 position: sticky;
                 top: 0;
-                z-index: 100;
+                z-index: 1000;
                 margin-left: 0;
             }
             
@@ -94,7 +94,29 @@ window.StaffHeader = window.StaffHeader || {
             .header-left {
                 display: flex;
                 align-items: center;
-                gap: 16px;
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+            }
+
+            .header-hamburger {
+                flex-shrink: 0;
+                width: 40px;
+                height: 40px;
+                background: rgba(255,255,255,0.12);
+                border: none;
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 18px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+            .header-hamburger:hover {
+                background: rgba(255,255,255,0.22);
             }
             
             .header-logo {
@@ -440,10 +462,35 @@ window.StaffHeader = window.StaffHeader || {
             @media (max-width: 991px) {
                 .top-header {
                     height: 60px;
-                    padding: 0 12px;
+                    padding: 0 10px;
                     max-width: 100vw;
                     box-sizing: border-box;
                     overflow: hidden;
+                }
+                .header-left {
+                    gap: 8px;
+                    flex: 1;
+                    min-width: 0;
+                }
+                .header-hamburger {
+                    display: flex !important;
+                    flex-shrink: 0 !important;
+                    width: 38px !important;
+                    height: 38px !important;
+                    font-size: 18px !important;
+                }
+                .tenant-header-brand {
+                    max-width: 160px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .page-title {
+                    font-size: 14px !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    max-width: 120px !important;
                 }
                 .user-info-header {
                     display: none !important;
@@ -471,6 +518,11 @@ window.StaffHeader = window.StaffHeader || {
                     width: 100% !important;
                     max-width: 100vw !important;
                     box-sizing: border-box !important;
+                }
+            }
+            @media (max-width: 576px) {
+                .page-title {
+                    display: none !important;
                 }
             }
             

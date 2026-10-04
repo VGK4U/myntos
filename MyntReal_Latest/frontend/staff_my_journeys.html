@@ -704,6 +704,9 @@
                         <div id="gpsDisabledError" class="alert alert-danger py-2 mb-0" style="display: none; background: rgba(239,68,68,0.15); border-color: #ef4444; color: #fca5a5;">
                             <i class="fas fa-times-circle me-2"></i><strong>GPS is disabled!</strong> Please enable GPS location services to start journey. Without GPS, reimbursement will NOT be processed.
                         </div>
+                        <div id="gpsWifiTestStatus" class="alert alert-warning py-2 mb-0" style="display: none; background: rgba(245,158,11,0.18); border-color: #f59e0b; color: #fef08a;">
+                            <i class="fas fa-exclamation-triangle me-2"></i><strong>Wi-Fi Test Mode (HTTP):</strong> Browser blocked GPS over HTTP on local IP (192.168.1.28). Wi-Fi test mode enabled for journey start. (Use HTTPS or Native App for live GPS tracking).
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0" style="border-top: 1px solid #4a5568;">
@@ -840,11 +843,13 @@
             if (typeof StaffHeader !== 'undefined') StaffHeader.init();
             
             checkGpsPermission();
-            await loadTransportRates();
-            await loadCompanies();
-            await checkActiveJourney();
-            await loadJourneys();
-            await loadStats();
+            await Promise.allSettled([
+                loadTransportRates(),
+                loadCompanies(),
+                checkActiveJourney(),
+                loadJourneys(),
+                loadStats()
+            ]);
             
             document.getElementById('periodFilter').addEventListener('change', loadStats);
             document.getElementById('journeyPhoto').addEventListener('change', previewPhoto);
@@ -913,7 +918,13 @@
             );
         }
         
+        function esc(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
         let _leadSearchTimer = null;
+        window._taggedLeadsMap = window._taggedLeadsMap || {};
+
         async function onLeadSearchInput() {
             const inp = document.getElementById('leadSearchInput');
             const resDiv = document.getElementById('leadSearchResults');
@@ -932,14 +943,19 @@
             if (_leadSearchTimer) clearTimeout(_leadSearchTimer);
             _leadSearchTimer = setTimeout(async () => {
                 try {
-                    const r = await staffFetch('/api/v1/crm/leads/system-search?q=' + encodeURIComponent(query));
+                    const coSelect = document.getElementById('companySelect');
+                    const coVal = coSelect ? (coSelect.value || '').trim() : '';
+                    const coParam = coVal ? '&company_id=' + encodeURIComponent(coVal) : '';
+                    const r = await staffFetch('/api/v1/crm/leads/system-search?q=' + encodeURIComponent(query) + coParam);
                     const d = r.ok ? await r.json() : {};
                     if (d.success && d.leads && d.leads.length > 0) {
                         let html = '';
                         d.leads.forEach(l => {
-                            html += `<div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:12px" onclick="selectTaggedLead(${l.id}, '${esc(l.name)}', '${esc(l.phone)}', '${esc(l.area || l.city || '')}')">
+                            window._taggedLeadsMap[l.id] = l;
+                            const areaStr = l.area || l.city || 'N/A';
+                            html += `<div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:12px" onclick="selectTaggedLead(${l.id})">
                                 <strong>#${l.id} - ${esc(l.name)}</strong> (${esc(l.phone)})
-                                <div style="color:#6b7280;font-size:11px">${esc(l.area || l.city || 'N/A')}</div>
+                                <div style="color:#6b7280;font-size:11px">${esc(areaStr)}</div>
                             </div>`;
                         });
                         resDiv.innerHTML = html;
@@ -949,20 +965,30 @@
                         resDiv.style.display = 'block';
                     }
                 } catch(e) {
+                    console.error('[LeadSearch] Error fetching leads:', e);
                     resDiv.style.display = 'none';
                 }
             }, 250);
         }
 
-        function selectTaggedLead(leadId, name, phone, area) {
+        function selectTaggedLead(leadId) {
+            const l = window._taggedLeadsMap ? window._taggedLeadsMap[leadId] : null;
             const inp = document.getElementById('leadSearchInput');
             const resDiv = document.getElementById('leadSearchResults');
             const hiddenId = document.getElementById('selectedLeadId');
             const clientNameInput = document.getElementById('clientName');
             
             if (hiddenId) hiddenId.value = leadId;
-            if (inp) inp.value = `#${leadId} - ${name} (${phone}) - ${area}`;
-            if (clientNameInput && !clientNameInput.value) clientNameInput.value = `${name} (${area})`;
+            if (l) {
+                const areaStr = l.area || l.city || '';
+                const formattedText = `#${l.id} - ${l.name} (${l.phone})${areaStr ? ' - ' + areaStr : ''}`;
+                if (inp) inp.value = formattedText;
+                if (clientNameInput && !clientNameInput.value) {
+                    clientNameInput.value = `${l.name}${areaStr ? ' (' + areaStr + ')' : ''}`;
+                }
+            } else if (leadId) {
+                if (hiddenId) hiddenId.value = leadId;
+            }
             if (resDiv) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; }
         }
 
@@ -1314,7 +1340,7 @@
         
         function checkGpsForJourney() {
             if (!navigator.geolocation) {
-                showGpsError();
+                showGpsError({ message: 'Geolocation not supported' });
                 return;
             }
             
@@ -1324,23 +1350,40 @@
                     document.getElementById('gpsCheckingStatus').style.display = 'none';
                     document.getElementById('gpsEnabledStatus').style.display = 'block';
                     document.getElementById('gpsDisabledError').style.display = 'none';
+                    const wifiEl = document.getElementById('gpsWifiTestStatus');
+                    if (wifiEl) wifiEl.style.display = 'none';
                     document.getElementById('startJourneyBtn').disabled = false;
                     console.log('GPS check passed:', { lat: position.coords.latitude, lon: position.coords.longitude });
                 },
                 (error) => {
-                    showGpsError();
-                    console.error('GPS check failed:', error.message);
+                    showGpsError(error);
+                    console.error('GPS check failed:', error ? error.message : 'Unknown error');
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         }
         
-        function showGpsError() {
-            gpsEnabled = false;
+        function showGpsError(error) {
+            const isHttpLocalOrigin = window.location.protocol === 'http:' && 
+                                      window.location.hostname !== 'localhost' && 
+                                      window.location.hostname !== '127.0.0.1';
+            
             document.getElementById('gpsCheckingStatus').style.display = 'none';
             document.getElementById('gpsEnabledStatus').style.display = 'none';
-            document.getElementById('gpsDisabledError').style.display = 'block';
-            document.getElementById('startJourneyBtn').disabled = true;
+            
+            const wifiEl = document.getElementById('gpsWifiTestStatus');
+            if (isHttpLocalOrigin && wifiEl) {
+                gpsEnabled = true;
+                document.getElementById('gpsDisabledError').style.display = 'none';
+                wifiEl.style.display = 'block';
+                document.getElementById('startJourneyBtn').disabled = false;
+                console.warn('[GPS_HTTP_TEST_MODE] Local IP over HTTP detected. Enabled Wi-Fi test mode journey start.');
+            } else {
+                gpsEnabled = false;
+                document.getElementById('gpsDisabledError').style.display = 'block';
+                if (wifiEl) wifiEl.style.display = 'none';
+                document.getElementById('startJourneyBtn').disabled = true;
+            }
         }
         
         function toggleAssignmentContainer(type) {
