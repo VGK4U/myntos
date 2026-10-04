@@ -2115,8 +2115,14 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
 
     # Create AssociatedCompany for Tenant Onboarding Dashboard
     from app.models.staff_accounts import AssociatedCompany
+    
+    # Ensure company_code fits in String(20) and remains unique
+    safe_company_code = client.client_code
+    if len(safe_company_code) > 20:
+        safe_company_code = safe_company_code[:11] + "-" + safe_company_code[-8:]
+
     assoc_company = AssociatedCompany(
-        company_code=client.client_code,
+        company_code=safe_company_code,
         company_name=client.client_name,
         company_type="SAAS_CLIENT",
         company_segment="SEGMENT_B_SAAS",
