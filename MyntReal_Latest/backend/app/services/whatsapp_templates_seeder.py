@@ -365,6 +365,24 @@ _TEMPLATES = [
         "event_category": "crm",
         "example_values": ["VGK Hub Hyderabad", "Rajesh Kumar", "07 May 2026", "MNR-LEAD-00123"],
     },
+    {
+        "slug": "zynova_tenant_approved",
+        "name": "Zynova Tenant Approved",
+        "body_text": (
+            "🚀 Welcome to *Zynova OS*!\n\n"
+            "Dear {{name}},\n"
+            "Your tenant account *{{company_name}}* has been officially activated!\n\n"
+            "Your SaaS workspace is ready. You can now log in at https://www.zynovaos.com/saas/login\n\n"
+            "Thank you for choosing Zynova OS!"
+        ),
+        "footer_text": "Zynova OS Team",
+        "segment": "saas",
+        "meta_category": "UTILITY",
+        "event_key": "saas_tenant_approved",
+        "event_label": "SaaS Tenant Approved",
+        "event_category": "saas",
+        "example_values": ["Suresh Patel", "Zynova OS Live Final Test"],
+    },
 ]
 
 

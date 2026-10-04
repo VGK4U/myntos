@@ -553,6 +553,31 @@ class AssociatedCompanyService:
             description=f"Updated company: {company.company_name}"
         )
         
+        # Trigger WhatsApp Notification if tenant was just activated
+        was_activated = (old_values.get("is_active") is False and company.is_active is True)
+        if was_activated and company.phone:
+            try:
+                from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+                from app.models.whatsapp import WhatsAppTemplate
+                template = db.query(WhatsAppTemplate).filter(
+                    WhatsAppTemplate.slug == 'zynova_tenant_approved'
+                ).first()
+                if template:
+                    context = {
+                        "name": company.signatory_name or company.company_name or "Valued Client",
+                        "company_name": company.company_name,
+                    }
+                    WhatsAppCanonicalService.send_auto_trigger_by_template(
+                        db=db,
+                        phone=company.phone,
+                        template=template,
+                        context=context,
+                        event_key="saas_tenant_approved"
+                    )
+            except Exception as e:
+                import logging
+                logging.error(f"Failed to send tenant activation WhatsApp: {e}")
+                
         return company
     
     @staticmethod
