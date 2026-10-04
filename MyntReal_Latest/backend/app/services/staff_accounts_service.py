@@ -559,8 +559,7 @@ class AssociatedCompanyService:
             try:
                 from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
                 from app.models.whatsapp import WhatsAppTemplate
-                from app.models.staff import StaffRole, StaffEmployee
-                from app.api.v1.endpoints.staff_employees import generate_employee_code
+                from app.models.staff import StaffRole, StaffEmployee, generate_employee_code
                 from app.core.security import SecurityManager
                 
                 # Check if they already have an admin
