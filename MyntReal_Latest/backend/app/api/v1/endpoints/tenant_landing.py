@@ -257,7 +257,7 @@ def get_public_tenant_landing(
     db: Session = Depends(get_db)
 ):
     """
-    Public unauthenticated view for myntreal.com/{tenant_short_code} landing site.
+    Public unauthenticated view for zynovaos.com/{tenant_short_code} landing site.
     """
     sc = tenant_short_code.strip().upper()
 

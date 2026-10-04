@@ -22,6 +22,10 @@
             background: "#f8fafc",
             surface: "#ffffff",
             border: "#cbd5e1"
+        },
+        socialLinks: {
+            facebook: "https://www.facebook.com/ZynovaOS/",
+            instagram: "https://www.instagram.com/zynovaos/?hl=en"
         }
     };
 })();
