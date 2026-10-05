@@ -14769,12 +14769,16 @@ def _get_indian_fy_start(ref_date=None):
 def _generate_deal_code(db, deal_company_id: int, revenue_category_id: int, created_at=None):
     from app.models.staff_accounts import AssociatedCompany
     from sqlalchemy import func
+    import re
 
     company = db.query(AssociatedCompany).filter(AssociatedCompany.id == deal_company_id).first()
     category = db.query(SignupCategory).filter(SignupCategory.id == revenue_category_id).first()
 
-    company_prefix = company.company_code if company else 'UNK'
-    cat_code = (category.slug[:2] if category and category.slug else 'XX').upper()
+    raw_prefix = (company.company_code or company.name or 'UNK') if company else 'UNK'
+    clean_prefix = re.sub(r'[^A-Z0-9]', '', raw_prefix.upper())[:10] or 'UNK'
+
+    cat_code = (category.slug[:2] if category and category.slug else (category.name[:2] if category and category.name else 'XX')).upper()
+    cat_code = re.sub(r'[^A-Z0-9]', '', cat_code)[:2] or 'XX'
 
     now = created_at or get_indian_time()
     if hasattr(now, 'strftime'):
@@ -14790,7 +14794,9 @@ def _generate_deal_code(db, deal_company_id: int, revenue_category_id: int, crea
     ).scalar() or 0
 
     next_seq = max_seq + 1
-    deal_code = f"{company_prefix}-{cat_code}-{mmyy}-{next_seq:04d}"
+    deal_code = f"{clean_prefix}-{cat_code}-{mmyy}-{next_seq:04d}"
+    if len(deal_code) > 30:
+        deal_code = deal_code[:30]
 
     return deal_code, next_seq
 

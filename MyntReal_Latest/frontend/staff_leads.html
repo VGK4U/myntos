@@ -882,7 +882,7 @@
                                                     <div id="dealExclTaxHint" style="font-size:10px;color:#059669;margin-top:2px;font-weight:600;display:none;"></div>
                                                 </div>
                                                 <div class="col-md-2 d-flex gap-1 align-items-end">
-                                                    <button class="btn btn-success btn-sm flex-grow-1" onclick="saveDeal()"><i class="fas fa-check me-1"></i>Save</button>
+                                                    <button type="button" class="btn btn-success btn-sm flex-grow-1" onclick="saveDeal(event)"><i class="fas fa-check me-1"></i>Save</button>
                                                     <button class="btn btn-outline-secondary btn-sm" onclick="toggleAddDealForm()"><i class="fas fa-times"></i></button>
                                                 </div>
                                             </div>
@@ -3442,7 +3442,7 @@
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
                     const _slVeb = document.getElementById('sl_vgkEditBanner');
                     if (_slVeb) _slVeb.innerHTML = '';
-                    new bootstrap.Modal(document.getElementById('leadModal')).show();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('leadModal')).show();
                     setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
                 }
             } catch (error) {
@@ -4234,7 +4234,7 @@
                         loadLeads(currentPage);
                         loadDashboard();
                     } else {
-                        bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
+                        safeHideModal('leadModal');
                         loadLeads(currentPage);
                         loadDashboard();
                     }
@@ -4342,7 +4342,7 @@
         }
         
         function skipTaskCreation() {
-            bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
+            safeHideModal('leadModal');
         }
         
         async function createInlineTask() {
@@ -4375,7 +4375,7 @@
                 if (!data) { showToast('Unable to complete - please try again', 'error'); return; }
                 if (data.success) {
                     showToast(data.message || 'Task created successfully', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
+                    safeHideModal('leadModal');
                 } else {
                     showToast(data.detail || 'Failed to create task', 'error');
                 }
@@ -4402,7 +4402,7 @@
                 return;
             }
             const leadName = document.getElementById('leadName').value || 'Lead';
-            bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
+            safeHideModal('leadModal');
             setTimeout(() => openCreateTaskModal(leadId, leadName), 300);
         }
         
@@ -4915,7 +4915,8 @@
             }
         }
 
-        async function saveDeal() {
+        async function saveDeal(e) {
+            if (e && e.preventDefault) e.preventDefault();
             const dealCompanyId = document.getElementById('dealCompanySelect').value;
             const categoryId = document.getElementById('dealCategorySelect').value;
             const dealValue = parseFloat(document.getElementById('dealValueInput').value) || 0;
@@ -4930,6 +4931,13 @@
             if (!categoryId) { showToast('Please select a category', 'error'); return; }
             if (dealValue <= 0) { showToast('Please enter a valid deal value', 'error'); return; }
 
+            const saveBtn = (e && e.currentTarget) || document.querySelector('#addDealFormSection button.btn-success');
+            const origBtnContent = saveBtn ? saveBtn.innerHTML : '<i class="fas fa-check me-1"></i>Save';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            }
+
             const payload = {
                 company_id: parseInt(dealCompanyId),
                 revenue_category_id: parseInt(categoryId),
@@ -4943,42 +4951,43 @@
             if (startDate) payload.start_date = startDate;
             if (closeDate) payload.close_date = closeDate;
 
-            // DC-PENDING-DEALS-001: When adding a deal before the lead is created,
-            // queue it locally and flush to API after saveLead() gets the new lead ID.
-            if (!currentLeadId) {
-                const catName = document.getElementById('dealCategorySelect').selectedOptions[0]?.text || categoryId;
-                const compName = document.getElementById('dealCompanySelect').selectedOptions[0]?.text || dealCompanyId;
-                pendingNewLeadDeals.push(payload);
-                const tbody = document.getElementById('leadDealsBody');
-                const isFirstPending = pendingNewLeadDeals.length === 1 && leadDeals.length === 0;
-                if (isFirstPending) tbody.innerHTML = '';
-                tbody.innerHTML += `<tr style="background:#fef9c3">
-                    <td><span class="badge bg-warning text-dark" style="font-size:9px">Pending</span></td>
-                    <td>${compName}</td>
-                    <td><span class="badge bg-info text-dark">${catName}</span></td>
-                    <td class="fw-medium">₹${dealValue.toLocaleString('en-IN')}</td>
-                    <td>₹0</td>
-                    <td>₹${dealValue.toLocaleString('en-IN')}</td>
-                    <td><span class="badge bg-secondary">pending save</span></td>
-                    <td>—</td>
-                    <td>—</td>
-                </tr>`;
-                // Update aggregate badges
-                const pendingTotal = pendingNewLeadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0);
-                document.getElementById('leadDealAggregateTotal').textContent = pendingTotal.toLocaleString('en-IN');
-                document.getElementById('leadDealAggregateBalance').textContent = pendingTotal.toLocaleString('en-IN');
-                document.getElementById('addDealFormSection').style.display = 'none';
-                showToast('Deal queued — will be saved when you click Save Lead', 'success');
-                return;
-            }
-
-            const activeCompanyId = currentEditingLeadCompanyId || companyId;
-            if (!activeCompanyId || activeCompanyId === 'all') {
-                showToast('Cannot determine lead company', 'error');
-                return;
-            }
-            
             try {
+                // DC-PENDING-DEALS-001: When adding a deal before the lead is created,
+                // queue it locally and flush to API after saveLead() gets the new lead ID.
+                if (!currentLeadId) {
+                    const catName = document.getElementById('dealCategorySelect').selectedOptions[0]?.text || categoryId;
+                    const compName = document.getElementById('dealCompanySelect').selectedOptions[0]?.text || dealCompanyId;
+                    pendingNewLeadDeals.push(payload);
+                    const tbody = document.getElementById('leadDealsBody');
+                    const isFirstPending = pendingNewLeadDeals.length === 1 && leadDeals.length === 0;
+                    if (isFirstPending) tbody.innerHTML = '';
+                    tbody.innerHTML += `<tr style="background:#fef9c3">
+                        <td><span class="badge bg-warning text-dark" style="font-size:9px">Pending</span></td>
+                        <td>${compName}</td>
+                        <td><span class="badge bg-info text-dark">${catName}</span></td>
+                        <td class="fw-medium">₹${dealValue.toLocaleString('en-IN')}</td>
+                        <td>₹0</td>
+                        <td>₹${dealValue.toLocaleString('en-IN')}</td>
+                        <td><span class="badge bg-secondary">pending save</span></td>
+                        <td>—</td>
+                        <td>—</td>
+                    </tr>`;
+                    // Update aggregate badges
+                    const pendingTotal = pendingNewLeadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0);
+                    document.getElementById('leadDealAggregateTotal').textContent = pendingTotal.toLocaleString('en-IN');
+                    document.getElementById('leadDealAggregateBalance').textContent = pendingTotal.toLocaleString('en-IN');
+                    document.getElementById('addDealFormSection').style.display = 'none';
+                    if (document.getElementById('dealValueInput')) document.getElementById('dealValueInput').value = '';
+                    showToast('Deal queued — will be saved when you click Save Lead', 'success');
+                    return;
+                }
+
+                const activeCompanyId = currentEditingLeadCompanyId || companyId;
+                if (!activeCompanyId || activeCompanyId === 'all') {
+                    showToast('Cannot determine lead company', 'error');
+                    return;
+                }
+                
                 const response = await staffFetch(`${API_BASE}/leads/${currentLeadId}/deals?company_id=${activeCompanyId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4987,6 +4996,16 @@
                 const data = await response.json();
                 if (data.success) {
                     showToast('Deal created successfully', 'success');
+                    if (document.getElementById('dealValueInput')) document.getElementById('dealValueInput').value = '';
+                    if (document.getElementById('dealTaxRate')) document.getElementById('dealTaxRate').value = '0';
+                    if (document.getElementById('dealSourceId')) document.getElementById('dealSourceId').value = '';
+                    if (document.getElementById('dealReferrerId')) document.getElementById('dealReferrerId').value = '';
+                    if (document.getElementById('dealFieldSupportId')) document.getElementById('dealFieldSupportId').value = '';
+                    if (document.getElementById('dealStartDate')) document.getElementById('dealStartDate').value = '';
+                    if (document.getElementById('dealCloseDate')) document.getElementById('dealCloseDate').value = '';
+                    const hint = document.getElementById('dealExclTaxHint');
+                    if (hint) { hint.style.display = 'none'; hint.textContent = ''; }
+
                     document.getElementById('addDealFormSection').style.display = 'none';
                     await loadLeadDeals(currentLeadId);
                     const statusSelect = document.getElementById('leadStatus');
@@ -5001,6 +5020,11 @@
             } catch (e) {
                 console.error('Failed to save deal:', e);
                 showToast('Failed to save deal', 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = origBtnContent;
+                }
             }
         }
         
@@ -6211,7 +6235,38 @@
         window.submitCreateTask = submitCreateTask;
         window.openAddTransactionModal = openAddTransactionModal;
         window.submitTransaction = submitTransaction;
-        window.loadFinanceStatus = loadFinanceStatus;
+        function safeHideModal(modalId) {
+            const modalEl = typeof modalId === 'string' ? document.getElementById(modalId) : modalId;
+            if (!modalEl) return;
+            try {
+                const bsModal = (typeof bootstrap !== 'undefined' && bootstrap.Modal) ? (bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl)) : null;
+                if (bsModal) bsModal.hide();
+            } catch (e) {
+                console.warn('Error hiding modal:', e);
+            }
+            setTimeout(() => {
+                const activeModals = document.querySelectorAll('.modal.show');
+                if (activeModals.length === 0) {
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                }
+            }, 150);
+        }
+        window.safeHideModal = safeHideModal;
+
+        document.addEventListener('hidden.bs.modal', function () {
+            setTimeout(() => {
+                const activeModals = document.querySelectorAll('.modal.show');
+                if (activeModals.length === 0) {
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                }
+            }, 150);
+        });
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
