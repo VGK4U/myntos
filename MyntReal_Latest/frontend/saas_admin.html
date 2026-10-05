@@ -57,9 +57,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1000 !important;
         }
 
         .brand-wrap {
@@ -352,7 +352,7 @@
     <!-- Navigation -->
     <header class="navbar">
         <div class="brand-wrap">
-            <img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height: 38px; width: auto; object-fit: contain;">
+            <img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height: 38px; width: auto; object-fit: contain; filter: brightness(0) invert(1);">
             <span class="segment-tag" style="margin-left: 10px;"><i class="fas fa-layer-group"></i> SaaS Administration</span>
         </div>
 

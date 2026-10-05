@@ -75,9 +75,9 @@ window.StaffHeader = window.StaffHeader || {
                 justify-content: space-between;
                 padding: 0 20px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                position: sticky;
-                top: 0;
-                z-index: 1000;
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 1000 !important;
                 margin-left: 0;
             }
             
@@ -88,6 +88,9 @@ window.StaffHeader = window.StaffHeader || {
             @media (max-width: 768px) {
                 .top-header {
                     margin-left: 0 !important;
+                    position: sticky !important;
+                    top: 0 !important;
+                    z-index: 1000 !important;
                 }
             }
             
@@ -119,9 +122,15 @@ window.StaffHeader = window.StaffHeader || {
                 background: rgba(255,255,255,0.22);
             }
             
-            .header-logo {
+            .header-logo,
+            .top-header img[src*="zynova-os-logo"],
+            .unified-header img[src*="zynova-os-logo"],
+            .tenant-header-brand img[src*="zynova-os-logo"],
+            .header-left img[src*="zynova-os-logo"] {
                 height: 36px;
                 width: auto;
+                filter: brightness(0) invert(1) !important;
+                opacity: 0.98;
             }
             
             .header-divider {
@@ -935,7 +944,7 @@ window.StaffHeader = window.StaffHeader || {
                 
                 if (brandEl) {
                     logoEl.style.display = 'none';
-                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;">`;
+                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;filter:brightness(0) invert(1) !important;">`;
                     const separator = `<span style="color:rgba(255,255,255,0.35);font-size:14px;font-weight:300;">|</span>`;
                     if (compLogo) {
                         brandEl.innerHTML = `

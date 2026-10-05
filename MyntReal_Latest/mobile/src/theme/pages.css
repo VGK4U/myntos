@@ -11048,6 +11048,9 @@ input:checked + .slider:before {
   padding: var(--spacing-md);
   background: linear-gradient(135deg, #059669, #10b981);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
 }
 
 .mnr-header-left {
