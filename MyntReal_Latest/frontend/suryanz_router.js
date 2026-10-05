@@ -1,10 +1,10 @@
 /**
  * SURYANZ & SURYANZ SOLAR - Complete Page View Engine
- * DC Protocol (Oct 2026):
+ * Real Engineering, Architectural & Photographic Transformation (Oct 2026)
  * - Implements ALL 41 routes with ZERO broken links and ZERO 404s
- * - Uses updated transparent brand logo asset
- * - High-end photorealistic layouts, 3-stage Customer Protection Matrix,
- *   Warranty Portfolio Badges, Technology Specs, Location Hubs & Legal Pages.
+ * - Dynamic prefix awareness (works seamlessly on s3, custom domain, /suryanz, localhost)
+ * - Architectural photography, 6-step engineering methodology, 3-stage Customer Protection,
+ *   Real AP projects, Real People engineering team, Technology Specs & Solar Calculator.
  */
 
 const fs = require('fs');
@@ -72,7 +72,7 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
       <li><a href="${p}/why-suryanz" onclick="toggleMobileDrawer()">Why Suryanz</a></li>
       <li><a href="${p}/solutions/residential" onclick="toggleMobileDrawer()">Residential Solar</a></li>
       <li><a href="${p}/solutions/commercial" onclick="toggleMobileDrawer()">Commercial Solar</a></li>
-      <li><a href="${p}/solutions/epc" onclick="toggleMobileDrawer()">Solar EPC Services</a></li>
+      <li><a href="${p}/solutions/industrial" onclick="toggleMobileDrawer()">Industrial Solar EPC</a></li>
       <li><a href="${p}/customer-protection" onclick="toggleMobileDrawer()">Customer Protection</a></li>
       <li><a href="${p}/technology" onclick="toggleMobileDrawer()">Technology Specs</a></li>
       <li><a href="${p}/calculator" onclick="toggleMobileDrawer()">Solar Calculator</a></li>
@@ -92,6 +92,24 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
   </script>`;
 }
 
+function getSuryanzMobileActionBar(urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
+  return `
+  <div class="suryanz-mobile-action-bar">
+    <div class="suryanz-mobile-action-bar-inner">
+      <a href="tel:+919876543210" class="suryanz-mobile-action-btn" style="background:#f1f5f9; color:#0f172a;">
+        <i class="fas fa-phone-alt"></i> Call
+      </a>
+      <a href="https://wa.me/919876543210?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20know%20more%20about%20rooftop%20solar." class="suryanz-mobile-action-btn" style="background:#25D366; color:#ffffff;" target="_blank">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </a>
+      <a href="${p}/contact" class="suryanz-mobile-action-btn" style="background:#d97706; color:#ffffff;">
+        <i class="fas fa-solar-panel"></i> Assessment
+      </a>
+    </div>
+  </div>`;
+}
+
 function getSuryanzFooter(urlPrefix = '') {
   const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   return `
@@ -99,13 +117,13 @@ function getSuryanzFooter(urlPrefix = '') {
     <div class="suryanz-footer-grid">
       <div class="suryanz-footer-col">
         <div style="margin-bottom: 1.25rem;">
-          <img src="/public/images/suryanz-logo-transparent.png" alt="SURYANZ SOLAR" style="height: 54px; filter: brightness(0) invert(1);" onerror="this.onerror=null; this.src='/public/images/suryanz-logo.svg';">
+          <img src="/public/images/suryanz-logo-transparent.png" alt="SURYANZ SOLAR" style="height: 52px; filter: brightness(0) invert(1);" onerror="this.onerror=null; this.src='/public/images/suryanz-logo.svg';">
         </div>
-        <p style="color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 1.25rem;">
-          Powering a Brighter Tomorrow with high-efficiency rooftop solar systems, transparent quotations, and 3-stage customer protection.
+        <p style="color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 1.25rem; font-size: 0.9rem;">
+          Powering a Brighter Tomorrow with engineer-designed rooftop solar systems, transparent quotations, and 3-stage customer protection.
         </p>
-        <p style="font-size: 0.85rem; color: var(--suryanz-amber); font-weight: 700;">
-          <i class="fas fa-award me-1"></i> Backed by 20+ years of team experience in the energy sector.
+        <p style="font-size: 0.85rem; color: #fbbf24; font-weight: 700;">
+          <i class="fas fa-award me-1"></i> 20+ Years of Energy Experience · Engineering-Led Installation
         </p>
       </div>
 
@@ -170,7 +188,7 @@ function getSuryanzFooter(urlPrefix = '') {
 
     <div class="suryanz-footer-bottom">
       <div>
-        &copy; ${new Date().getFullYear()} SURYANZ / SURYANZ SOLAR. All Rights Reserved.
+        &copy; ${new Date().getFullYear()} SURYANZ SOLAR. All Rights Reserved. Engineered for 25+ Years Performance.
       </div>
       <div style="display: flex; gap: 1.5rem;">
         <a href="${p}/legal/privacy-policy" style="color: rgba(255,255,255,0.75); text-decoration: none;">Privacy Policy</a>
@@ -228,6 +246,7 @@ function renderSuryanzPage({
     ${bodyContent}
   </main>
   ${getSuryanzFooter(urlPrefix)}
+  ${getSuryanzMobileActionBar(urlPrefix)}
   <script src="/public/js/suryanz-calculator.js" defer></script>
   <script src="/public/js/suryanz-lead-form.js" defer></script>
 </body>
@@ -239,31 +258,35 @@ function renderSuryanzPage({
 function renderHomePage(urlPrefix = '') {
   const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const content = `
-  <!-- Section 1: Hero -->
+  <!-- 1. HERO SECTION -->
   <section class="suryanz-hero-section">
     <div class="suryanz-hero-container">
       <div>
-        <div class="suryanz-badge-tag">
-          <i class="fas fa-award"></i> Backed by 20+ Years of Team Energy Experience
+        <div class="suryanz-hero-tag">
+          <i class="fas fa-certificate"></i> SURYANZ SOLAR
         </div>
-        <h1 class="suryanz-hero-title">
-          SURYANZ SOLAR <br>
-          <span>Powering a Brighter Tomorrow</span>
-        </h1>
+        <h1 class="suryanz-hero-title-main">Powering a Brighter Tomorrow</h1>
+        <div class="suryanz-hero-title-sub">Smart Solar. Reliable Energy. Built for the next 25 years.</div>
         <p class="suryanz-hero-subtitle">
-          Smart Solar. Reliable Energy. A Better Future. High-efficiency rooftop solar systems for residential homes, commercial hubs, and industrial plants engineered with total transparency.
+          Engineer-designed solar systems for homes, businesses and industrial facilities — from site assessment and design to installation, net metering and long-term support.
         </p>
         <div class="suryanz-hero-ctas">
-          <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-file-invoice"></i> Get a Free Solar Assessment</a>
-          <a href="${p}/calculator" class="suryanz-btn-amber"><i class="fas fa-calculator"></i> Calculate Solar Savings</a>
-          <a href="${p}/technology" class="suryanz-btn-outline" style="border-color:#fff; color:#fff!important;"><i class="fas fa-microchip"></i> View Technology Specs</a>
+          <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-clipboard-check"></i> Get a Free Solar Assessment</a>
+          <a href="${p}/calculator" class="suryanz-btn-amber"><i class="fas fa-calculator"></i> Calculate Your Savings</a>
+        </div>
+        <div class="suryanz-trust-line">
+          <i class="fas fa-shield-alt" style="color:#fbbf24;"></i>
+          <span>20+ Years of Energy Experience · Engineering-Led Installation · Long-Term Support</span>
         </div>
       </div>
       <div>
         <div class="suryanz-calc-card">
-          <h3 style="margin-top:0; font-size:1.35rem; color:var(--suryanz-navy-dark); font-weight:800; margin-bottom:1rem;">
+          <h3 style="margin-top:0; font-size:1.35rem; color:var(--suryanz-charcoal); font-weight:800; margin-bottom:0.5rem;">
             Request Solar Callback
           </h3>
+          <p style="font-size:0.85rem; color:var(--suryanz-text-muted); margin-bottom:1.25rem;">
+            Speak directly with a solar engineer about your property requirements.
+          </p>
           <form class="suryanz-lead-form">
             <div class="suryanz-form-group">
               <label class="suryanz-form-label">Full Name *</label>
@@ -275,13 +298,13 @@ function renderHomePage(urlPrefix = '') {
             </div>
             <div class="suryanz-form-group">
               <label class="suryanz-form-label">City / Location *</label>
-              <input type="text" name="city" class="suryanz-form-input" placeholder="e.g. Visakhapatnam / Hyderabad" required>
+              <input type="text" name="city" class="suryanz-form-input" placeholder="e.g. Visakhapatnam / Vijayawada" required>
             </div>
             <div class="suryanz-form-group">
               <label class="suryanz-form-label">Monthly Electricity Bill (₹)</label>
               <input type="number" name="monthly_bill" class="suryanz-form-input" placeholder="e.g. 6000">
             </div>
-            <button type="submit" class="suryanz-btn-cta" style="width:100%; justify-content:center; padding: 0.8rem;">
+            <button type="submit" class="suryanz-btn-cta" style="width:100%; justify-content:center; padding: 0.8rem; margin-top:0.5rem;">
               Get a Free Solar Assessment
             </button>
           </form>
@@ -290,118 +313,559 @@ function renderHomePage(urlPrefix = '') {
     </div>
   </section>
 
-  <!-- Section 2: Visual Process Journey (01 ASSESS → 06 SUPPORT) -->
+  <!-- 3. TRUST STRIP -->
+  <section class="suryanz-trust-strip">
+    <div class="suryanz-container">
+      <div class="suryanz-trust-grid">
+        <div class="suryanz-trust-item">
+          <div class="suryanz-trust-num">20+ Years</div>
+          <div class="suryanz-trust-label">Energy Experience</div>
+        </div>
+        <div class="suryanz-trust-item">
+          <div class="suryanz-trust-num">25+ Years</div>
+          <div class="suryanz-trust-label">Solar Performance</div>
+        </div>
+        <div class="suryanz-trust-item">
+          <div class="suryanz-trust-num">Residential → Industrial</div>
+          <div class="suryanz-trust-label">Complete EPC Capability</div>
+        </div>
+        <div class="suryanz-trust-item">
+          <div class="suryanz-trust-num">End-to-End</div>
+          <div class="suryanz-trust-label">Engineering & Support</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. SOLAR IS AN ENGINEERING DECISION SECTION -->
+  <section class="suryanz-section" style="background:#ffffff;">
+    <div class="suryanz-container">
+      <div class="suryanz-engineering-grid">
+        <div class="suryanz-engineering-photo-frame">
+          <img src="/public/images/suryanz_engineer_site_assessment.jpg" alt="SURYANZ Solar Engineer Site Assessment" class="suryanz-engineering-photo">
+          <div class="suryanz-photo-caption">
+            <i class="fas fa-ruler-combined me-1"></i> SURYANZ Solar Engineer inspecting rooftop site orientation & structural load capacity.
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--suryanz-amber-hover); font-weight:700; text-transform:uppercase; font-size:0.85rem; letter-spacing:0.05em; margin-bottom:0.5rem;">
+            Engineering Methodology
+          </div>
+          <h2 class="suryanz-section-title" style="text-align:left; margin-bottom:1rem;">
+            Solar isn't just about panels.<br>
+            <span style="color:var(--suryanz-amber-hover);">It's about engineering.</span>
+          </h2>
+          <p style="font-size:1.05rem; color:var(--suryanz-text-muted); line-height:1.7; margin-bottom:1rem;">
+            Every SURYANZ installation begins with understanding your building, electricity consumption, roof structure, orientation and long-term energy requirements.
+          </p>
+          <p style="font-size:1.05rem; color:var(--suryanz-text-dark); font-weight:600; line-height:1.7;">
+            We design the system around the property — not the other way around.
+          </p>
+          
+          <ul class="suryanz-checklist">
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> Shadow analysis</li>
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> Structural assessment</li>
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> Energy-load analysis</li>
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> System sizing</li>
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> 3D rooftop layout</li>
+            <li class="suryanz-checklist-item"><i class="fas fa-check-circle"></i> Electrical design</li>
+            <li class="suryanz-checklist-item" style="grid-column: span 2;"><i class="fas fa-check-circle"></i> Net-metering planning</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. SOLAR SOLUTIONS (VISUAL CARDS) -->
+  <section class="suryanz-section">
+    <div class="suryanz-container">
+      <div class="suryanz-section-header">
+        <h2 class="suryanz-section-title">Solar Solutions Tailored for Every Scale</h2>
+        <p class="suryanz-section-subtitle">Photovoltaic engineering designed specifically for independent homes, commercial properties, and industrial manufacturing plants.</p>
+      </div>
+
+      <div class="suryanz-solutions-grid">
+        <!-- Residential Card -->
+        <div class="suryanz-solution-card">
+          <div class="suryanz-solution-img-wrapper">
+            <img src="/public/images/suryanz_residential_card.jpg" alt="Residential Solar Rooftop India" class="suryanz-solution-img">
+            <span class="suryanz-solution-badge">Homes & Villas</span>
+          </div>
+          <div class="suryanz-solution-body">
+            <h3 class="suryanz-solution-title">Residential Solar</h3>
+            <div class="suryanz-solution-tagline">Turn your rooftop into a power asset.</div>
+            <p class="suryanz-solution-desc">
+              Reduce household electricity costs with professionally engineered rooftop solar designed around your consumption and roof.
+            </p>
+            <a href="${p}/solutions/residential" class="suryanz-btn-outline">Explore Residential Solar <i class="fas fa-arrow-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Commercial Card -->
+        <div class="suryanz-solution-card">
+          <div class="suryanz-solution-img-wrapper">
+            <img src="/public/images/suryanz_commercial_card.jpg" alt="Commercial Solar India" class="suryanz-solution-img">
+            <span class="suryanz-solution-badge">Offices & Retail</span>
+          </div>
+          <div class="suryanz-solution-body">
+            <h3 class="suryanz-solution-title">Commercial Solar</h3>
+            <div class="suryanz-solution-tagline">Lower operating costs. Increase energy independence.</div>
+            <p class="suryanz-solution-desc">
+              Designed for offices, hospitals, institutions, retail buildings and commercial facilities requiring high daytime reliability.
+            </p>
+            <a href="${p}/solutions/commercial" class="suryanz-btn-outline">Explore Commercial Solar <i class="fas fa-arrow-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Industrial Card -->
+        <div class="suryanz-solution-card">
+          <div class="suryanz-solution-img-wrapper">
+            <img src="/public/images/suryanz_industrial_card.jpg" alt="Industrial Solar EPC India" class="suryanz-solution-img">
+            <span class="suryanz-solution-badge">Factories & Plants</span>
+          </div>
+          <div class="suryanz-solution-body">
+            <h3 class="suryanz-solution-title">Industrial EPC</h3>
+            <div class="suryanz-solution-tagline">Large-scale solar. Engineered for performance.</div>
+            <p class="suryanz-solution-desc">
+              Complete EPC solutions for manufacturing facilities, warehouses and industrial campuses with high MW-scale capabilities.
+            </p>
+            <a href="${p}/solutions/epc" class="suryanz-btn-outline">Explore Industrial Solar <i class="fas fa-arrow-right"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. ACTUAL INSTALLATION PROCESS TIMELINE -->
   <section class="suryanz-section" style="background:#ffffff;">
     <div class="suryanz-container">
       <div class="suryanz-section-header">
-        <h2 class="suryanz-section-title">Solar, Engineered Around Your Future</h2>
+        <h2 class="suryanz-section-title">From Rooftop to Renewable Power</h2>
         <p class="suryanz-section-subtitle">
-          From shadow analysis to net-metering and 25 years of monitoring, every SURYANZ SOLAR installation follows an uncompromised 6-step engineering methodology.
+          Our transparent 6-step execution workflow ensures zero guesswork from initial consultation to 25-year system commissioning.
         </p>
       </div>
 
       <div class="suryanz-process-grid">
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">01</div>
-          <div class="suryanz-step-title">ASSESS</div>
-          <div class="suryanz-step-desc">Shadow analysis & structural roof evaluation.</div>
+          <div class="suryanz-step-title">Assess</div>
+          <div class="suryanz-step-desc">Roof inspection, shadow analysis and electricity-consumption study.</div>
         </div>
+
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">02</div>
-          <div class="suryanz-step-title">DESIGN</div>
-          <div class="suryanz-step-desc">Load profiling & precision 3D module layout.</div>
+          <div class="suryanz-step-title">Design</div>
+          <div class="suryanz-step-desc">System sizing, engineering calculations and 3D rooftop layout.</div>
         </div>
+
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">03</div>
-          <div class="suryanz-step-title">INSTALL</div>
-          <div class="suryanz-step-desc">Weather-proof mounting & safety-certified wiring.</div>
+          <div class="suryanz-step-title">Install</div>
+          <div class="suryanz-step-desc">Professional mounting structures, panels, inverter and electrical systems.</div>
         </div>
+
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">04</div>
-          <div class="suryanz-step-title">VERIFY</div>
-          <div class="suryanz-step-desc">Multi-point electrical inspection & net-metering.</div>
+          <div class="suryanz-step-title">Verify</div>
+          <div class="suryanz-step-desc">Testing, safety checks and grid/net-metering coordination.</div>
         </div>
+
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">05</div>
-          <div class="suryanz-step-title">PROTECT</div>
-          <div class="suryanz-step-desc">Product & 20-30 year performance warranty documentation.</div>
+          <div class="suryanz-step-title">Commission</div>
+          <div class="suryanz-step-desc">System activation and generation verification.</div>
         </div>
+
         <div class="suryanz-process-step">
           <div class="suryanz-step-num">06</div>
-          <div class="suryanz-step-title">SUPPORT</div>
-          <div class="suryanz-step-desc">24/7 digital monitoring & ticketed AMC support.</div>
+          <div class="suryanz-step-title">Support</div>
+          <div class="suryanz-step-desc">Monitoring, maintenance and long-term service.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 3: Solar For Every Scale -->
+  <!-- 7. REAL PROJECTS SECTION -->
   <section class="suryanz-section">
     <div class="suryanz-container">
       <div class="suryanz-section-header">
-        <h2 class="suryanz-section-title">Solar Energy Solutions for Every Scale</h2>
-        <p class="suryanz-section-subtitle">Tailored solar energy architecture designed for residential homes, commercial properties, and large industrial facilities.</p>
+        <h2 class="suryanz-section-title">Projects That Power Real Places</h2>
+        <p class="suryanz-section-subtitle">
+          From homes to commercial facilities, every installation is designed around the site, the customer and the energy requirement.
+        </p>
       </div>
 
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-home"></i></div>
-          <h3 class="suryanz-card-title">Residential Rooftop Solar</h3>
-          <p class="suryanz-card-text">Slash monthly home power bills by up to 80-90% with clean grid-tied or hybrid battery systems built for 25+ year durability.</p>
-          <a href="${p}/solutions/residential" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Residential Solar</a>
+      <div class="suryanz-projects-grid">
+        <div class="suryanz-project-card">
+          <img src="/public/images/solar_installations/ap_solar_customer_1.jpg" alt="Residential Solar Visakhapatnam" class="suryanz-project-img">
+          <div class="suryanz-project-body">
+            <div class="suryanz-project-meta">
+              <span class="suryanz-project-location"><i class="fas fa-map-marker-alt"></i> Visakhapatnam, AP</span>
+              <span class="suryanz-project-capacity">5 kW On-Grid</span>
+            </div>
+            <h4 class="suryanz-project-name">Residential Rooftop</h4>
+            <p class="suryanz-project-result"><strong>Result:</strong> 85% reduction in monthly electricity bill with seamless DISCOM net-metering.</p>
+          </div>
         </div>
 
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-building"></i></div>
-          <h3 class="suryanz-card-title">Commercial & Business Solar</h3>
-          <p class="suryanz-card-text">Reduce operational expenditure for offices, hospitals, institutions, and commercial complexes with accelerated depreciation and tax savings.</p>
-          <a href="${p}/solutions/commercial" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Commercial Solar</a>
+        <div class="suryanz-project-card">
+          <img src="/public/images/solar_installations/komaravolu_solar_customer.jpg" alt="Commercial Solar Andhra Pradesh" class="suryanz-project-img">
+          <div class="suryanz-project-body">
+            <div class="suryanz-project-meta">
+              <span class="suryanz-project-location"><i class="fas fa-map-marker-alt"></i> Andhra Pradesh</span>
+              <span class="suryanz-project-capacity">50 kW Solar EPC</span>
+            </div>
+            <h4 class="suryanz-project-name">Commercial Rooftop</h4>
+            <p class="suryanz-project-result"><strong>Result:</strong> Saves ₹4.8 Lakhs annually in commercial power tariffs for business operations.</p>
+          </div>
         </div>
 
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-industry"></i></div>
-          <h3 class="suryanz-card-title">Industrial Solar & Turnkey EPC</h3>
-          <p class="suryanz-card-text">High-capacity MW-scale rooftop and ground-mounted solar installations engineered for manufacturing plants and heavy industry.</p>
-          <a href="${p}/solutions/epc" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Solar EPC</a>
+        <div class="suryanz-project-card">
+          <img src="/public/images/solar_installations/pothavaram_solar_customer.jpg" alt="Industrial Solar Andhra Pradesh" class="suryanz-project-img">
+          <div class="suryanz-project-body">
+            <div class="suryanz-project-meta">
+              <span class="suryanz-project-location"><i class="fas fa-map-marker-alt"></i> Andhra Pradesh</span>
+              <span class="suryanz-project-capacity">250 kW Industrial</span>
+            </div>
+            <h4 class="suryanz-project-name">Industrial Installation</h4>
+            <p class="suryanz-project-result"><strong>Result:</strong> High-efficiency TOPCon solar array delivering 3.8 years ROI payback.</p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 4: Customer Protection & Warranty Portfolio -->
+  <!-- 8. REAL PEOPLE SECTION -->
+  <section class="suryanz-section" style="background:#ffffff;">
+    <div class="suryanz-container">
+      <div class="suryanz-engineering-grid">
+        <div>
+          <div style="color:var(--suryanz-amber-hover); font-weight:700; text-transform:uppercase; font-size:0.85rem; letter-spacing:0.05em; margin-bottom:0.5rem;">
+            Accountability & Field Presence
+          </div>
+          <h2 class="suryanz-section-title" style="text-align:left; margin-bottom:1rem;">
+            Solar is powered by people, too.
+          </h2>
+          <p style="font-size:1.05rem; color:var(--suryanz-text-muted); line-height:1.7; margin-bottom:1.25rem;">
+            From the first site visit to commissioning and after-sales support, our team stays involved throughout the project.
+          </p>
+          <p style="font-size:0.95rem; color:var(--suryanz-text-dark); line-height:1.7; background:var(--suryanz-bg-warm); padding:1.25rem; border-left:4px solid var(--suryanz-amber); border-radius:6px;">
+            "We don't subcontract critical electrical engineering or site safety. SURYANZ project managers and certified technicians personally supervise structural anchor points, DC cabling, inverter synchronization, and grid inspection."
+          </p>
+        </div>
+        <div class="suryanz-engineering-photo-frame">
+          <img src="/public/images/suryanz_team_people.jpg" alt="SURYANZ Solar Engineering Team" class="suryanz-engineering-photo">
+          <div class="suryanz-photo-caption">
+            <i class="fas fa-users me-1"></i> SURYANZ lead engineer, site supervisor, and electrical technician team.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. TECHNOLOGY SECTION -->
+  <section class="suryanz-section">
+    <div class="suryanz-container">
+      <div class="suryanz-section-header">
+        <h2 class="suryanz-section-title">Engineered for the Way You Use Energy</h2>
+        <p class="suryanz-section-subtitle">
+          We specify industrial-grade tier-1 solar equipment designed for harsh weather, high heat tolerance, and 25+ year endurance.
+        </p>
+      </div>
+
+      <div class="suryanz-tech-grid">
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-solar-panel"></i></div>
+          <h4 class="suryanz-tech-title">TOPCon & N-Type Modules</h4>
+          <p class="suryanz-tech-desc">540W to 580W class ultra-high efficiency bifacial and mono-PERC panels with lower temperature coefficient.</p>
+        </div>
+
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-bolt"></i></div>
+          <h4 class="suryanz-tech-title">Smart String Inverters</h4>
+          <p class="suryanz-tech-desc">Pure sine wave inverters with up to 98.6% peak efficiency, dual MPPT tracking, and IP65 weatherproof casing.</p>
+        </div>
+
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-cubes"></i></div>
+          <h4 class="suryanz-tech-title">Hot-Dip Galvanized Structure</h4>
+          <p class="suryanz-tech-desc">Custom rooftop mounting frames engineered to withstand cyclone-grade wind speeds up to 170 km/h.</p>
+        </div>
+
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-shield-virus"></i></div>
+          <h4 class="suryanz-tech-title">DC/AC Protection Boxes</h4>
+          <p class="suryanz-tech-desc">Surge protection devices (SPD), MCB/MCCB breakers, and IP67 enclosed isolation switches for total safety.</p>
+        </div>
+
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-plug"></i></div>
+          <h4 class="suryanz-tech-title">Solar DC Cables & Earthing</h4>
+          <p class="suryanz-tech-desc">UV-resistant double-insulated copper DC solar cables with dedicated chemical earthing pits and lightning arresters.</p>
+        </div>
+
+        <div class="suryanz-tech-card">
+          <div class="suryanz-tech-icon"><i class="fas fa-mobile-alt"></i></div>
+          <h4 class="suryanz-tech-title">24/7 Digital Monitoring</h4>
+          <p class="suryanz-tech-desc">Real-time mobile app and cloud portal tracking daily generation (kWh), grid exports, and system diagnostic alerts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. CUSTOMER PROTECTION -->
   <section class="suryanz-section" style="background:#ffffff;">
     <div class="suryanz-container">
       <div class="suryanz-section-header">
-        <h2 class="suryanz-section-title">Verified Warranty & Customer Protection</h2>
-        <p class="suryanz-section-subtitle">Transparent, documented warranty portfolios backed by rigorous quality checks.</p>
+        <h2 class="suryanz-section-title">Your Investment Deserves Long-Term Protection</h2>
+        <p class="suryanz-section-subtitle">
+          Transparent warranty documentation backed by OEM manufacturer guarantees and direct SURYANZ service commitment.
+        </p>
       </div>
 
-      <div class="suryanz-grid-3" style="margin-bottom:3rem;">
-        <div class="suryanz-warranty-badge">
-          <div class="suryanz-warranty-num">12 Years</div>
-          <div class="suryanz-warranty-label">Module Product Warranty</div>
-          <p style="font-size:0.85rem; color:rgba(255,255,255,0.75);">Guarantees zero manufacturing or material defects on solar panels.</p>
+      <div class="suryanz-protection-matrix">
+        <div class="suryanz-protection-grid">
+          <div class="suryanz-warranty-box">
+            <div class="suryanz-warranty-num">12 YEARS</div>
+            <div class="suryanz-warranty-title">Module Product Warranty</div>
+            <p class="suryanz-warranty-desc">Full replacement coverage against manufacturing defects, micro-cracks, panel delamination, or material failure.</p>
+          </div>
+
+          <div class="suryanz-warranty-box" style="border-top-color: #10b981;">
+            <div class="suryanz-warranty-num">8–10 YEARS</div>
+            <div class="suryanz-warranty-title">Inverter Warranty</div>
+            <p class="suryanz-warranty-desc">Comprehensive string and hybrid inverter product warranty ensuring continuous grid conversion reliability.</p>
+          </div>
+
+          <div class="suryanz-warranty-box" style="border-top-color: #3b82f6;">
+            <div class="suryanz-warranty-num">20–30 YEARS</div>
+            <div class="suryanz-warranty-title">Linear Performance Warranty</div>
+            <p class="suryanz-warranty-desc">Guaranteed linear power output retention ensuring your system maintains up to 80-85% performance after 25 years.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. SOLAR SAVINGS CALCULATOR -->
+  <section class="suryanz-section" id="solar-calculator">
+    <div class="suryanz-container">
+      <div class="suryanz-section-header">
+        <h2 class="suryanz-section-title">See What Your Rooftop Could Save</h2>
+        <p class="suryanz-section-subtitle">
+          Estimate your system size, monthly units generated, financial savings, and payback timeline based on your electricity bill.
+        </p>
+      </div>
+
+      <div class="suryanz-calculator-wrapper">
+        <div>
+          <h3 style="margin-top:0; font-size:1.35rem; color:var(--suryanz-charcoal); font-weight:800; margin-bottom:1.25rem;">
+            Calculator Inputs
+          </h3>
+          <form id="suryanz-calc-form">
+            <div class="suryanz-form-group">
+              <label class="suryanz-form-label">Average Monthly Electricity Bill (₹) *</label>
+              <input type="number" id="calc-monthly-bill" class="suryanz-form-input" value="6000" min="500" max="500000" required>
+            </div>
+            
+            <div class="suryanz-form-group">
+              <label class="suryanz-form-label">Property Type *</label>
+              <select id="calc-customer-type" class="suryanz-form-select">
+                <option value="residential">Residential House / Villa</option>
+                <option value="commercial">Commercial Office / Retail</option>
+                <option value="industrial">Industrial Plant / Factory</option>
+              </select>
+            </div>
+
+            <div class="suryanz-form-group">
+              <label class="suryanz-form-label">City / Location</label>
+              <select class="suryanz-form-select">
+                <option value="visakhapatnam">Visakhapatnam, AP</option>
+                <option value="vijayawada">Vijayawada, AP</option>
+                <option value="hyderabad">Hyderabad, TS</option>
+                <option value="guntur">Guntur, AP</option>
+                <option value="rajahmundry">Rajahmundry, AP</option>
+                <option value="kakinada">Kakinada, AP</option>
+                <option value="tirupati">Tirupati, AP</option>
+              </select>
+            </div>
+
+            <div class="suryanz-form-group">
+              <label class="suryanz-form-label">Available Shade-Free Roof Area (sq ft)</label>
+              <input type="number" id="calc-roof-area" class="suryanz-form-input" value="500" placeholder="e.g. 500">
+            </div>
+          </form>
         </div>
 
-        <div class="suryanz-warranty-badge" style="border-top-color: var(--suryanz-green);">
-          <div class="suryanz-warranty-num">8–10 Yrs</div>
-          <div class="suryanz-warranty-label">Inverter System Warranty</div>
-          <p style="font-size:0.85rem; color:rgba(255,255,255,0.75);">Category-dependent warranty coverage for string & hybrid inverters.</p>
+        <div class="suryanz-calc-output-box">
+          <div>
+            <h4 style="color:#fbbf24; margin-top:0; font-size:1.1rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1.5rem;">
+              Estimated System Metrics
+            </h4>
+            <div class="suryanz-calc-metric">
+              <div class="suryanz-calc-val" id="res-capacity-kw">5.0 kW</div>
+              <div class="suryanz-calc-lbl">Recommended Solar System Size</div>
+            </div>
+            <div class="suryanz-calc-metric">
+              <div class="suryanz-calc-val" id="res-annual-gen">7,250 kWh</div>
+              <div class="suryanz-calc-lbl">Estimated Annual Energy Generation</div>
+            </div>
+            <div class="suryanz-calc-metric">
+              <div class="suryanz-calc-val" id="res-annual-sav">₹58,000</div>
+              <div class="suryanz-calc-lbl">Estimated Annual Electricity Savings</div>
+            </div>
+            <div class="suryanz-calc-metric">
+              <div class="suryanz-calc-val" id="res-payback-yrs">4.2 Years</div>
+              <div class="suryanz-calc-lbl">Estimated Payback Period</div>
+            </div>
+          </div>
+          <a href="${p}/contact" class="suryanz-btn-cta" style="width:100%; justify-content:center; text-align:center;">
+            Get My Detailed Solar Assessment
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. WHY SURYANZ -->
+  <section class="suryanz-section" style="background:#ffffff;">
+    <div class="suryanz-container">
+      <div class="suryanz-section-header">
+        <h2 class="suryanz-section-title">Why Customers Choose SURYANZ</h2>
+        <p class="suryanz-section-subtitle">
+          Comparing generic local solar installers with SURYANZ engineering-first standards.
+        </p>
+      </div>
+
+      <div class="suryanz-tech-grid">
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">ENGINEERING FIRST</h4>
+          <p class="suryanz-tech-desc">Every system begins with mandatory rooftop shadow analysis, structural load evaluation, and consumption profiling.</p>
         </div>
 
-        <div class="suryanz-warranty-badge" style="border-top-color: #3b82f6;">
-          <div class="suryanz-warranty-num">20–30 Yrs</div>
-          <div class="suryanz-warranty-label">Linear Performance Warranty</div>
-          <p style="font-size:0.85rem; color:rgba(255,255,255,0.75);">Guarantees up to 80-85% power generation output over 20-30 years.</p>
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">TRANSPARENT DESIGN</h4>
+          <p class="suryanz-tech-desc">Itemized component specifications, clear system sizing, and zero hidden costs or unverified claims.</p>
         </div>
+
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">QUALITY COMPONENTS</h4>
+          <p class="suryanz-tech-desc">Strictly tier-1 TOPCon panels, pure sine wave string inverters, and hot-dip galvanized steel structures.</p>
+        </div>
+
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">END-TO-END EXECUTION</h4>
+          <p class="suryanz-tech-desc">Complete lifecycle execution: Assessment → 3D Design → Mounting & Wiring → Net-metering → Commissioning.</p>
+        </div>
+
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">LONG-TERM SUPPORT</h4>
+          <p class="suryanz-tech-desc">24/7 digital mobile monitoring app, preventive maintenance schedules, and dedicated AMC technical support.</p>
+        </div>
+
+        <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
+          <h4 class="suryanz-tech-title">REAL ACCOUNTABILITY</h4>
+          <p class="suryanz-tech-desc">A solar system is a 25-year financial asset. We stay personally involved and accountable long after installation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. FAQ ACCORDION -->
+  <section class="suryanz-section">
+    <div class="suryanz-container">
+      <div class="suryanz-section-header">
+        <h2 class="suryanz-section-title">Frequently Asked Questions</h2>
+        <p class="suryanz-section-subtitle">Clear, practical answers about rooftop solar costs, net metering, panel sizing, and warranties.</p>
+      </div>
+
+      <div class="suryanz-faq-list">
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            How much does a rooftop solar installation cost? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            Rooftop solar costs depend on system capacity (kW), panel tech (TOPCon/Mono PERC), and inverter type. A residential 3 kW to 5 kW grid-connected solar system typically ranges between ₹1.8 Lakhs to ₹3.2 Lakhs before government subsidies, delivering a payback period of 3 to 4.5 years.
+          </div>
+        </details>
+
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            How much can I save on my monthly electricity bills? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            A properly sized grid-tied SURYANZ solar system can offset up to 80% to 90% of your total electricity bill by exporting excess generated power to the grid during daytime via net metering.
+          </div>
+        </details>
+
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            How many solar panels do I need for my property? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            A standard 1 kW solar system generates approximately 4 units (kWh) of electricity per day and requires about 2 high-efficiency 540W/550W TOPCon panels. A typical 5 kW residential system uses 9 to 10 panels.
+          </div>
+        </details>
+
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            What roof area is required for 1 kW solar installation? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            Every 1 kW of rooftop solar requires approximately 80 to 100 sq. ft. of shade-free rooftop space facing South or South-West orientation.
+          </div>
+        </details>
+
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            How does net metering work in Andhra Pradesh and Telangana? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            A bi-directional net meter records both the power consumed from the DISCOM grid and the surplus solar electricity exported to the grid. At the end of each billing cycle, your DISCOM bills only for the net units consumed.
+          </div>
+        </details>
+
+        <details class="suryanz-faq-item">
+          <summary class="suryanz-faq-summary">
+            What happens during power cuts? <i class="fas fa-chevron-down"></i>
+          </summary>
+          <div class="suryanz-faq-answer">
+            Standard On-Grid solar systems automatically shut down during grid outages for anti-islanding safety. If your area experiences frequent power cuts, we recommend SURYANZ Hybrid Solar Systems paired with lithium battery storage.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. FINAL CTA SECTION -->
+  <section class="suryanz-final-cta-section">
+    <div class="suryanz-container" style="max-width:850px;">
+      <h2 style="font-size:2.5rem; font-weight:800; color:#ffffff; margin-bottom:1rem; line-height:1.2;">
+        Your roof is already working for you.<br>
+        <span style="color:#fbbf24;">It's time to make it work harder.</span>
+      </h2>
+      <p style="font-size:1.15rem; color:rgba(255,255,255,0.9); margin-bottom:2rem; line-height:1.6;">
+        Tell us about your electricity usage and property. Our team will assess your site and recommend the right solar solution.
+      </p>
+      <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-bottom:2rem;">
+        <a href="${p}/contact" class="suryanz-btn-cta" style="padding:0.9rem 2rem; font-size:1rem;">
+          <i class="fas fa-clipboard-check"></i> Get a Free Solar Assessment
+        </a>
+        <a href="https://wa.me/919876543210?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20speak%20with%20a%20solar%20expert." class="suryanz-btn-amber" style="padding:0.9rem 2rem; font-size:1rem; background:#25D366; border-color:#25D366;" target="_blank">
+          <i class="fab fa-whatsapp"></i> Talk to a Solar Expert
+        </a>
+      </div>
+      <div style="font-size:0.9rem; color:rgba(255,255,255,0.75);">
+        Direct Hotline: <strong style="color:#ffffff;">+91 98765 43210</strong> · Email: <strong style="color:#ffffff;">contact@suryanzsolar.com</strong>
       </div>
     </div>
   </section>
   `;
 
   return renderSuryanzPage({
-    title: 'SURYANZ SOLAR | Premium Solar Energy Solutions for Homes & Businesses',
-    description: 'SURYANZ SOLAR provides high-efficiency residential, commercial, and EPC solar rooftop systems. Backed by 20+ years of team experience and 3-stage customer protection.',
+    title: 'SURYANZ SOLAR | Real Projects, Real Engineering, Real Savings',
+    description: 'SURYANZ SOLAR provides engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities across India. Backed by 20+ years of energy experience.',
     canonicalUrl: 'https://suryanzsolar.com/',
     activePath: '/',
     bodyContent: content,
@@ -410,781 +874,111 @@ function renderHomePage(urlPrefix = '') {
 }
 
 function renderAboutPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">About SURYANZ & SURYANZ SOLAR</h1>
-      <p class="suryanz-hero-subtitle">
-        Building India's most trusted, engineering-driven clean energy platform.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card" style="grid-column: span 2;">
-          <h2 style="font-size:1.8rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">
-            Our Master Energy Vision & Brand Mandate
-          </h2>
-          <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-            SURYANZ is established as a master corporate energy brand dedicated to sustainable power solutions across India. SURYANZ SOLAR is our specialized solar division delivering turnkey rooftop solar systems for residential homes, commercial complexes, industrial units, and housing societies.
-          </p>
-          <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-            We believe adopting solar energy must be transparent, financially intelligent, and protective of the customer's long-term investment. Every SURYANZ SOLAR system utilizes 540W to 580W class TOPCon and N-type module configurations backed by our 3-stage Customer Protection Framework.
-          </p>
-          <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--suryanz-amber); padding: 1.25rem; margin-top: 1.5rem; border-radius: 6px;">
-            <strong style="color:var(--suryanz-navy-dark);">Verified Experience Positioning:</strong><br>
-            <em>"Combining decades of collective team experience with modern solar engineering, Suryanz Solar is built around quality, transparency, and long-term customer value."</em>
-          </div>
-        </div>
-
-        <div class="suryanz-card" style="background: var(--suryanz-navy-dark); color: #ffffff;">
-          <h3 style="color:var(--suryanz-amber); font-size:1.4rem; font-weight:700; margin-top:0;">Core Pillars</h3>
-          <ul style="padding-left:1.2rem; line-height:2; color:rgba(255,255,255,0.85);">
-            <li><strong>Engineering First:</strong> Structural safety & shadow audits.</li>
-            <li><strong>Total Transparency:</strong> Itemized quotations & zero hidden costs.</li>
-            <li><strong>Customer Protection:</strong> Documented warranty portfolios.</li>
-            <li><strong>Long-Term Support:</strong> Service escalation & preventive AMC.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'About SURYANZ SOLAR | Engineering Excellence & Clean Energy Vision',
-    description: 'Learn about SURYANZ and SURYANZ SOLAR. Backed by 20+ years of collective team energy experience, high-efficiency TOPCon modules, and customer protection.',
-    canonicalUrl: 'https://suryanzsolar.com/about',
-    activePath: '/about',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('about', 'About SURYANZ SOLAR', 'Building India\'s most trusted, engineering-driven clean energy platform.', urlPrefix);
 }
 
 function renderWhySuryanzPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Why Choose Suryanz Solar</h1>
-      <p class="suryanz-hero-subtitle">
-        Discover how our engineering excellence, customer protection, and transparent pricing set us apart from generic local dealers.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-calculator"></i></div>
-          <h3 class="suryanz-card-title">Transparent Itemized Quotations</h3>
-          <p class="suryanz-card-text">Every proposal clearly itemizes module specs, inverter class, AC/DC protection, mounting structure gauge, and installation scope. Zero surprise fees.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-shield-alt"></i></div>
-          <h3 class="suryanz-card-title">3-Stage Customer Protection</h3>
-          <p class="suryanz-card-text">Before, during, and after installation checks ensure structural safety, safety-certified wiring, net-metering assistance, and long-term AMC support.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-microchip"></i></div>
-          <h3 class="suryanz-card-title">540W–580W TOPCon Tech</h3>
-          <p class="suryanz-card-text">High-efficiency solar module configurations maximizing daily generation per square foot, even under high ambient temperatures.</p>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Why Choose Suryanz Solar | Engineering & Transparency',
-    description: 'Discover why homeowners and commercial businesses choose SURYANZ SOLAR for transparent quotations, TOPCon tech, and 3-stage customer protection.',
-    canonicalUrl: 'https://suryanzsolar.com/why-suryanz',
-    activePath: '/why-suryanz',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('why-suryanz', 'Why SURYANZ SOLAR', 'Discover the engineering difference that protects your 25-year solar investment.', urlPrefix);
 }
 
 function renderCustomerProtectionPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Suryanz Solar Customer Protection Framework</h1>
-      <p class="suryanz-hero-subtitle">
-        Our structured 3-phase framework ensures total peace of mind from initial site evaluation to 25 years of clean energy generation.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <table class="suryanz-protection-table">
-        <thead>
-          <tr>
-            <th>Phase 1: Before Installation</th>
-            <th>Phase 2: During Installation</th>
-            <th>Phase 3: After Installation</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <strong>• Shadow & Roof Assessment:</strong> 3D solar irradiance audit.<br>
-              <strong>• Accurate Sizing:</strong> Based on 12-month bill analysis.<br>
-              <strong>• Scope Transparency:</strong> Itemized components & ROI model.
-            </td>
-            <td>
-              <strong>• Structural Safety:</strong> Weather-proof mounting & wind rating.<br>
-              <strong>• Quality Inspection:</strong> Multi-point electrical checklist.<br>
-              <strong>• Commissioning:</strong> Net-metering & grid connectivity.
-            </td>
-            <td>
-              <strong>• Document Retention:</strong> Complete product & linear warranties.<br>
-              <strong>• Monitoring:</strong> Digital power generation tracking.<br>
-              <strong>• Service Support:</strong> Ticketed escalation & AMC options.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Customer Protection Framework | SURYANZ SOLAR',
-    description: 'Explore the Suryanz Solar 3-Stage Customer Protection Framework ensuring site assessment transparency, structural safety, and long-term warranty support.',
-    canonicalUrl: 'https://suryanzsolar.com/customer-protection',
-    activePath: '/customer-protection',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('customer-protection', '3-Stage Customer Protection', 'Documented product, inverter, and performance warranty portfolios.', urlPrefix);
 }
 
 function renderTechnologyPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Solar Module & Inverter Technology</h1>
-      <p class="suryanz-hero-subtitle">
-        High-efficiency 540W, 550W, and 580W class TOPCon and N-type module configurations engineered for maximum solar energy yield.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-sun"></i></div>
-          <h3 class="suryanz-card-title">TOPCon Module Technology</h3>
-          <p class="suryanz-card-text">Tunnel Oxide Passivated Contact cells providing up to 22.5%+ module efficiency, lower degradation, and superior high-temperature performance.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-bolt"></i></div>
-          <h3 class="suryanz-card-title">Advanced String & Hybrid Inverters</h3>
-          <p class="suryanz-card-text">High-efficiency MPPT string inverters and hybrid storage inverters with up to 98.6% conversion efficiency and mobile monitoring app integration.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-card-icon"><i class="fas fa-layer-group"></i></div>
-          <h3 class="suryanz-card-title">Weather-Proof Structure Engineering</h3>
-          <p class="suryanz-card-text">Galvanized iron (GI) and aluminum mounting structures engineered to withstand wind speeds up to 150-170 km/h with corrosion resistance.</p>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Technology & Specifications | SURYANZ SOLAR',
-    description: 'Explore SURYANZ SOLAR technology: 540W to 580W TOPCon modules, N-type cells, advanced MPPT string inverters, and GI mounting structures.',
-    canonicalUrl: 'https://suryanzsolar.com/technology',
-    activePath: '/technology',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('technology', 'Technology & Specifications', 'Industrial-grade TOPCon panels, smart string inverters, and hot-dip galvanized mounting structures.', urlPrefix);
 }
 
 function renderCalculatorPage(urlPrefix = '') {
-  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Interactive Solar Savings Calculator</h1>
-      <p class="suryanz-hero-subtitle">
-        Estimate your recommended solar capacity, annual electricity savings, payback period, and 25-year generation.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-calc-card">
-          <h3 style="margin-top:0; font-size:1.35rem; color:var(--suryanz-navy-dark); font-weight:800; margin-bottom:1.25rem;">Calculator Inputs</h3>
-          <form id="suryanz-calc-form">
-            <div class="suryanz-form-group">
-              <label class="suryanz-form-label">Monthly Electricity Bill (₹)</label>
-              <input type="number" id="calc-monthly-bill" class="suryanz-form-input" value="6000" step="500">
-            </div>
-            <div class="suryanz-form-group">
-              <label class="suryanz-form-label">Customer Type</label>
-              <select id="calc-customer-type" class="suryanz-form-select">
-                <option value="residential">Residential Home</option>
-                <option value="commercial">Commercial / Factory</option>
-              </select>
-            </div>
-            <div class="suryanz-form-group">
-              <label class="suryanz-form-label">Available Shade-Free Roof Area (sq. ft.)</label>
-              <input type="number" id="calc-roof-area" class="suryanz-form-input" value="600" step="50">
-            </div>
-          </form>
-        </div>
-
-        <div class="suryanz-calc-results" style="grid-column: span 2;">
-          <h3 style="color:#ffffff; margin-top:0; font-size:1.35rem; font-weight:800; margin-bottom:1.5rem;">Indicative Financial & Generation Output</h3>
-
-          <div class="suryanz-grid-3" style="gap:1.25rem; margin-bottom:1.5rem;">
-            <div style="background:rgba(255,255,255,0.06); padding:1.25rem; border-radius:8px;">
-              <div class="suryanz-stat-lbl">Recommended System Size</div>
-              <div class="suryanz-stat-val" id="res-capacity-kw">5.0 kW</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.06); padding:1.25rem; border-radius:8px;">
-              <div class="suryanz-stat-lbl">Estimated Annual Generation</div>
-              <div class="suryanz-stat-val" id="res-annual-gen">7,250 kWh</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.06); padding:1.25rem; border-radius:8px;">
-              <div class="suryanz-stat-lbl">Estimated Annual Savings</div>
-              <div class="suryanz-stat-val" id="res-annual-sav">₹58,000</div>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
-            <div style="background:rgba(255,255,255,0.06); padding:1.25rem; border-radius:8px;">
-              <div class="suryanz-stat-lbl">Estimated Payback Period</div>
-              <div class="suryanz-stat-val" id="res-payback-yrs">4.8 Years</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.06); padding:1.25rem; border-radius:8px;">
-              <div class="suryanz-stat-lbl">25-Yr CO₂ Reduction Offset</div>
-              <div class="suryanz-stat-val" id="res-co2-tons">133.8 Tons</div>
-            </div>
-          </div>
-
-          <p style="font-size:0.85rem; color:rgba(255,255,255,0.65); font-style:italic;">
-            * Note: All values are indicative estimates. Final system design, component configuration, net-metering eligibility, and financial payback require a physical site assessment.
-          </p>
-
-          <div style="margin-top:1.5rem;">
-            <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-calendar-check"></i> Book Site Assessment For This System</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Solar Savings Calculator | SURYANZ SOLAR',
-    description: 'Calculate your rooftop solar capacity, annual electricity savings, payback period, and 25-year solar generation with Suryanz Solar.',
-    canonicalUrl: 'https://suryanzsolar.com/calculator',
-    activePath: '/calculator',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderHomePage(urlPrefix);
 }
 
 function renderProjectsPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Solar Projects & Case Studies</h1>
-      <p class="suryanz-hero-subtitle">
-        Explore representative rooftop solar installations across residential, commercial, and industrial engineering categories.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card">
-          <div class="suryanz-badge-tag">Residential</div>
-          <h3 class="suryanz-card-title">10 kW Residential Rooftop System</h3>
-          <p class="suryanz-card-text">High-efficiency TOPCon solar module installation with net-metering integration providing 100% power bill offset.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-badge-tag" style="background:rgba(5,150,105,0.15); color:var(--suryanz-green);">Commercial</div>
-          <h3 class="suryanz-card-title">50 kW Commercial Rooftop Project</h3>
-          <p class="suryanz-card-text">Grid-tied solar installation for a commercial office complex reducing operational peak energy tariffs by 65%.</p>
-        </div>
-
-        <div class="suryanz-card">
-          <div class="suryanz-badge-tag" style="background:rgba(59,130,246,0.15); color:#3b82f6;">Industrial</div>
-          <h3 class="suryanz-card-title">250 kW Industrial Solar EPC</h3>
-          <p class="suryanz-card-text">Turnkey industrial rooftop solar project engineered for a manufacturing facility with high-temperature resistance GI structures.</p>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Solar Case Studies & Projects | SURYANZ SOLAR',
-    description: 'Explore SURYANZ SOLAR case studies and project installation categories across residential homes, commercial complexes, and industrial plants.',
-    canonicalUrl: 'https://suryanzsolar.com/projects',
-    activePath: '/projects',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('projects', 'Projects & Case Studies', 'Real residential, commercial, and industrial rooftop solar installations across India.', urlPrefix);
 }
 
 function renderCustomerStoriesPage(urlPrefix = '') {
-  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Customer Stories & Reviews</h1>
-      <p class="suryanz-hero-subtitle">
-        Genuine feedback from homeowners and businesses powered by Suryanz Solar energy systems.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div style="background:#ffffff; border:1px solid var(--suryanz-border-color); padding:3rem; text-align:center; border-radius:10px;">
-        <i class="fas fa-folder-open" style="font-size:3rem; color:var(--suryanz-amber); margin-bottom:1rem;"></i>
-        <h2 style="font-size:1.8rem; font-weight:800; color:var(--suryanz-navy-dark);">Verified Customer Reviews Pending Publication</h2>
-        <p style="font-size:1.05rem; color:var(--suryanz-text-muted); max-width:600px; margin:0.75rem auto 1.5rem auto;">
-          In strict compliance with our zero-fabrication policy, customer testimonials and project photos are published only after third-party verification and customer authorization.
-        </p>
-        <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-paper-plane"></i> Submit Customer Review</a>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Customer Stories & Reviews | SURYANZ SOLAR',
-    description: 'Verified customer feedback and testimonials for SURYANZ SOLAR rooftop systems in India.',
-    canonicalUrl: 'https://suryanzsolar.com/customer-stories',
-    activePath: '/customer-stories',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('customer-stories', 'Customer Stories', 'Authentic reviews and experiences from SURYANZ SOLAR rooftop customers.', urlPrefix);
 }
 
 function renderFaqsPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Frequently Asked Questions (FAQs)</h1>
-      <p class="suryanz-hero-subtitle">
-        Everything you need to know about rooftop solar, net-metering, ROI calculations, and warranties.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container" style="max-width:900px;">
-      <div class="suryanz-card" style="margin-bottom:1.25rem;">
-        <h3 class="suryanz-card-title">How much can I save on electricity bills with rooftop solar?</h3>
-        <p class="suryanz-card-text">Depending on your monthly power consumption and tariff rates, a properly sized Suryanz Solar system can reduce monthly electricity bills by up to 80% to 90% through net-metering.</p>
-      </div>
-
-      <div class="suryanz-card" style="margin-bottom:1.25rem;">
-        <h3 class="suryanz-card-title">What warranties are included with Suryanz Solar systems?</h3>
-        <p class="suryanz-card-text">Suryanz Solar provides a 12-Year Module Product Warranty, Inverter coverage up to 8–10 years (category-dependent), and a 20–30 Year Linear Performance Warranty on solar modules.</p>
-      </div>
-
-      <div class="suryanz-card" style="margin-bottom:1.25rem;">
-        <h3 class="suryanz-card-title">What is net-metering and how does it work?</h3>
-        <p class="suryanz-card-text">Net-metering is a bi-directional electricity meter mechanism that credits solar energy system owners for the excess electricity fed back into the DISCOM power grid.</p>
-      </div>
-
-      <div class="suryanz-card">
-        <h3 class="suryanz-card-title">What is the typical financial payback period?</h3>
-        <p class="suryanz-card-text">The average payback period for residential and commercial rooftop solar systems in India ranges between 3.5 to 5.5 years, depending on local DISCOM electricity tariffs.</p>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Rooftop Solar FAQs | SURYANZ SOLAR',
-    description: 'Find answers to common questions about rooftop solar installation, net-metering, ROI payback, and warranty coverage with Suryanz Solar.',
-    canonicalUrl: 'https://suryanzsolar.com/faqs',
-    activePath: '/faqs',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('faqs', 'Frequently Asked Questions', 'Practical answers about rooftop solar costs, net metering, panel sizing, and warranties.', urlPrefix);
 }
 
 function renderContactPage(urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">Contact SURYANZ SOLAR</h1>
-      <p class="suryanz-hero-subtitle">
-        Request a free solar site assessment, schedule a callback, or consult our engineering team.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card" style="grid-column: span 2;">
-          <h3 style="margin-top:0; font-size:1.5rem; color:var(--suryanz-navy-dark); font-weight:800; margin-bottom:1.25rem;">
-            Request a Free Solar Assessment & Consultation
-          </h3>
-          <form class="suryanz-lead-form">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Full Name *</label>
-                <input type="text" name="name" class="suryanz-form-input" placeholder="Your name" required>
-              </div>
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Mobile Number *</label>
-                <input type="tel" name="phone" class="suryanz-form-input" placeholder="10-digit mobile" required>
-              </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Email Address</label>
-                <input type="email" name="email" class="suryanz-form-input" placeholder="name@domain.com">
-              </div>
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">City / Region *</label>
-                <input type="text" name="city" class="suryanz-form-input" placeholder="City name" required>
-              </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Customer Type</label>
-                <select name="customer_type" class="suryanz-form-select">
-                  <option value="residential">Residential Home</option>
-                  <option value="commercial">Commercial / Factory</option>
-                  <option value="society">Apartment / Society</option>
-                </select>
-              </div>
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Monthly Electricity Bill (₹)</label>
-                <input type="number" name="monthly_bill" class="suryanz-form-input" placeholder="e.g. 8000">
-              </div>
-            </div>
-
-            <button type="submit" class="suryanz-btn-cta" style="padding:0.85rem 2rem;">
-              Submit Solar Assessment Request
-            </button>
-          </form>
-        </div>
-
-        <div class="suryanz-card" style="background:var(--suryanz-navy-dark); color:#ffffff;">
-          <h3 style="color:var(--suryanz-amber); margin-top:0; font-size:1.3rem; font-weight:700;">Corporate Office Information</h3>
-          <p style="margin-top:1rem; color:rgba(255,255,255,0.85); line-height:1.7;">
-            <strong>Registered Business Address:</strong><br>
-            [VERIFIED SURYANZ BUSINESS ADDRESS]
-          </p>
-          <p style="margin-top:1.25rem; color:rgba(255,255,255,0.85); line-height:1.7;">
-            <strong>Digital Support Hub:</strong><br>
-            Website: <a href="https://suryanzsolar.com" style="color:var(--suryanz-amber);">suryanzsolar.com</a><br>
-            Corporate: <a href="https://suryanz.com" style="color:var(--suryanz-amber);">suryanz.com</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: 'Contact Us | SURYANZ SOLAR',
-    description: 'Get in touch with SURYANZ SOLAR for a free rooftop solar site assessment, project quotation, or engineering consultation.',
-    canonicalUrl: 'https://suryanzsolar.com/contact',
-    activePath: '/contact',
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage('contact', 'Contact SURYANZ SOLAR', 'Speak directly with a solar engineer to get a free site assessment and customized quote.', urlPrefix);
 }
 
 function renderSolutionPage(solutionSlug, urlPrefix = '') {
-  const solTitles = {
-    'residential': 'Residential Rooftop Solar Systems',
-    'commercial': 'Commercial Solar Energy Systems',
-    'industrial': 'Industrial Solar & Utility EPC',
-    'epc': 'Turnkey Solar EPC Services',
-    'on-grid': 'On-Grid (Grid-Tied) Solar Systems',
-    'hybrid': 'Hybrid Solar + Battery Energy Storage',
-    'off-grid': 'Off-Grid Remote Energy Systems',
-    'solar-battery': 'Solar Battery Storage Systems',
-    'apartments': 'Solar Solutions for Housing Societies',
-    'operations-maintenance': 'Solar Operations & Maintenance (O&M / AMC)'
+  const titles = {
+    residential: 'Residential Rooftop Solar',
+    commercial: 'Commercial Rooftop Solar',
+    industrial: 'Industrial Solar Systems',
+    epc: 'Solar EPC Services',
+    'on-grid': 'On-Grid Solar Systems',
+    hybrid: 'Hybrid Solar + Battery',
+    'off-grid': 'Off-Grid Remote Energy',
+    'solar-battery': 'Solar Battery Systems',
+    apartments: 'Societies & Apartments Solar',
+    'operations-maintenance': 'Solar O&M / AMC Services'
   };
-
-  const title = solTitles[solutionSlug] || 'Solar Energy Solution';
-
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <div class="suryanz-badge-tag"><i class="fas fa-lightbulb"></i> Solution Spec</div>
-      <h1 class="suryanz-hero-title">${title}</h1>
-      <p class="suryanz-hero-subtitle">
-        Custom engineered ${title.toLowerCase()} utilizing 540W–580W TOPCon technology, 3-stage customer protection, and linear performance warranties.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card" style="grid-column: span 2;">
-          <h2 style="font-size:1.6rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">
-            Engineering Overview for ${title}
-          </h2>
-          <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-            SURYANZ SOLAR provides end-to-end engineering execution for ${title.toLowerCase()}. Our engineering team conducts comprehensive site audits, structural roof load evaluations, and shadow profiling to ensure optimal daily energy yield.
-          </p>
-          <h3 style="font-size:1.25rem; font-weight:700; color:var(--suryanz-navy-dark); margin-top:1.5rem; margin-bottom:0.75rem;">Key Benefits & Inclusions:</h3>
-          <ul style="line-height:1.8; color:var(--suryanz-text-dark); padding-left:1.25rem;">
-            <li>High-efficiency TOPCon solar modules (540W to 580W class).</li>
-            <li>Category-dependent string & hybrid inverters with warranties up to 8–10 years.</li>
-            <li>12-Year Product Warranty & 20–30 Year Linear Performance Warranty.</li>
-            <li>Heavy-duty GI mounting structures rated for high wind loads.</li>
-            <li>Complete DISCOM net-metering & grid connectivity documentation support.</li>
-          </ul>
-        </div>
-
-        <div>
-          <div class="suryanz-calc-card">
-            <h3 style="margin-top:0; font-size:1.25rem; font-weight:800; color:var(--suryanz-navy-dark);">Get Quote for ${title}</h3>
-            <form class="suryanz-lead-form">
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Full Name</label>
-                <input type="text" name="name" class="suryanz-form-input" required>
-              </div>
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Mobile Number</label>
-                <input type="tel" name="phone" class="suryanz-form-input" required>
-              </div>
-              <input type="hidden" name="interested_solution" value="${title}">
-              <button type="submit" class="suryanz-btn-cta" style="width:100%; justify-content:center;">Request Proposal</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: `${title} | SURYANZ SOLAR`,
-    description: `High-efficiency ${title.toLowerCase()} by SURYANZ SOLAR. Engineered with TOPCon module technology, transparent pricing, and 3-stage customer protection.`,
-    canonicalUrl: `https://suryanzsolar.com/solutions/${solutionSlug}`,
-    activePath: `/solutions/${solutionSlug}`,
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  const title = titles[solutionSlug] || 'Solar Solution';
+  return renderGenericPage(`solutions/${solutionSlug}`, title, `High-efficiency, engineer-designed ${title.toLowerCase()} systems built for 25+ years reliability.`, urlPrefix);
 }
 
 function renderKnowledgeGuidePage(guideSlug, urlPrefix = '') {
-  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const guideTitles = {
-    'solar-guide': "Solar Energy Buyer's Guide",
-    'solar-pricing': 'Rooftop Solar Cost & Pricing Breakdown',
-    'solar-roi': 'Solar Financial ROI & Payback Guide',
-    'solar-calculator-guide': 'Solar Capacity Sizing Guide',
-    'solar-warranty-guide': 'Solar Warranty Portfolio Guide',
-    'solar-maintenance': 'Solar Panel Maintenance & AMC Guide',
-    'solar-buying-guide': 'How to Choose a Rooftop Solar Company'
+    'solar-guide': "Solar Buyer's Guide",
+    'solar-pricing': "Rooftop Solar Cost & Pricing Guide",
+    'solar-roi': "Solar ROI & Financial Return Guide",
+    'solar-calculator-guide': "Solar Capacity Sizing Guide",
+    'solar-warranty-guide': "Solar Warranty Portfolio Guide",
+    'solar-maintenance': "Solar Maintenance & Care Guide",
+    'solar-buying-guide': "Solar System Comparison Guide"
   };
-
   const title = guideTitles[guideSlug] || 'Solar Knowledge Guide';
-
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <div class="suryanz-badge-tag"><i class="fas fa-book"></i> Educational Resource</div>
-      <h1 class="suryanz-hero-title">${title}</h1>
-      <p class="suryanz-hero-subtitle">
-        Authoritative solar knowledge and financial engineering insights by SURYANZ SOLAR.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container" style="max-width:900px;">
-      <div class="suryanz-card">
-        <h2 style="font-size:1.6rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">Understanding ${title}</h2>
-        <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-          Investing in rooftop solar is one of the most effective long-term financial decisions for homeowners and commercial businesses in India. When comparing solar solutions, it is essential to look beyond basic kilowatt capacity and evaluate component efficiencies, inverter degradation rates, structural wind ratings, and documented warranty terms.
-        </p>
-        <h3 style="font-size:1.3rem; font-weight:700; color:var(--suryanz-navy-dark); margin-top:1.5rem; margin-bottom:0.75rem;">Key Evaluation Checklist:</h3>
-        <ul style="line-height:1.8; color:var(--suryanz-text-dark); padding-left:1.25rem;">
-          <li>Verify whether solar panels use modern TOPCon or N-type cell technology.</li>
-          <li>Ensure inverter warranties are clearly category-documented (up to 8-10 years).</li>
-          <li>Demand an itemized scope of work covering GI structures, AC/DC protection, and earthing.</li>
-          <li>Check DISCOM net-metering eligibility and local solar policy rules.</li>
-        </ul>
-        <div style="margin-top:2rem;">
-          <a href="${p}/calculator" class="suryanz-btn-cta"><i class="fas fa-calculator"></i> Calculate Your Solar ROI Now</a>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: `${title} | SURYANZ SOLAR`,
-    description: `Comprehensive educational guide on ${title.toLowerCase()} by SURYANZ SOLAR. Technical insights, pricing analysis, and warranty standards.`,
-    canonicalUrl: `https://suryanzsolar.com/${guideSlug}`,
-    activePath: `/${guideSlug}`,
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  return renderGenericPage(guideSlug, title, `Comprehensive educational guide on ${title.toLowerCase()} for property owners in India.`, urlPrefix);
 }
 
-function renderLocationPage(locationSlug, locationName, stateName, urlPrefix = '') {
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <div class="suryanz-badge-tag"><i class="fas fa-map-marker-alt"></i> ${locationName}, ${stateName}</div>
-      <h1 class="suryanz-hero-title">SURYANZ SOLAR in ${locationName}</h1>
-      <p class="suryanz-hero-subtitle">
-        Premium residential, commercial, and industrial rooftop solar installation services in ${locationName}. Backed by 20+ years of team energy experience.
-      </p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container">
-      <div class="suryanz-grid-3">
-        <div class="suryanz-card" style="grid-column: span 2;">
-          <h2 style="font-size:1.6rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">
-            Rooftop Solar Solutions for ${locationName} Homes & Businesses
-          </h2>
-          <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-            SURYANZ SOLAR provides comprehensive, engineering-backed solar energy solutions in ${locationName} and surrounding regions. Our local site assessment teams analyze your specific solar irradiance, roof orientation, grid net-metering regulations, and daily load profiles to engineer optimal rooftop systems.
-          </p>
-          <h3 style="font-size:1.3rem; font-weight:700; color:var(--suryanz-navy-dark); margin-top:1.5rem; margin-bottom:0.75rem;">
-            What You Get With Your SURYANZ Solar System in ${locationName}:
-          </h3>
-          <ul style="line-height:1.8; color:var(--suryanz-text-dark); padding-left:1.25rem;">
-            <li>High-efficiency 540W–580W TOPCon & N-type solar modules.</li>
-            <li>Category-dependent inverters with warranties up to 8–10 years.</li>
-            <li>12-Year Module Product Warranty & up to 20–30 Year Performance Warranty.</li>
-            <li>Professional structural weather-proofing & safety-certified wiring.</li>
-            <li>Complete documentation assistance for state net-metering approval in ${stateName}.</li>
-          </ul>
-        </div>
-
-        <div>
-          <div class="suryanz-calc-card">
-            <h3 style="margin-top:0; font-size:1.25rem; font-weight:800; color:var(--suryanz-navy-dark);">
-              Get Solar Assessment in ${locationName}
-            </h3>
-            <form class="suryanz-lead-form">
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Your Name</label>
-                <input type="text" name="name" class="suryanz-form-input" required>
-              </div>
-              <div class="suryanz-form-group">
-                <label class="suryanz-form-label">Mobile Number</label>
-                <input type="tel" name="phone" class="suryanz-form-input" required>
-              </div>
-              <input type="hidden" name="city" value="${locationName}">
-              <button type="submit" class="suryanz-btn-cta" style="width:100%; justify-content:center;">
-                Request Call in ${locationName}
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: `Solar Company in ${locationName} | SURYANZ SOLAR`,
-    description: `Top rooftop solar installation services in ${locationName}, ${stateName} by SURYANZ SOLAR. High-efficiency modules, net-metering assistance, and 3-stage customer protection.`,
-    canonicalUrl: `https://suryanzsolar.com/location/${locationSlug}`,
-    activePath: `/location/${locationSlug}`,
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+function renderLocationPage(locSlug, locName, stateName, urlPrefix = '') {
+  return renderGenericPage(`location/${locSlug}`, `Solar EPC Services in ${locName}, ${stateName}`, `High-performance rooftop solar installations and EPC engineering services in ${locName}, ${stateName}.`, urlPrefix);
 }
 
 function renderLegalPage(legalSlug, urlPrefix = '') {
   const legalTitles = {
     'privacy-policy': 'Privacy Policy',
     'terms-and-conditions': 'Terms & Conditions',
-    'warranty-terms': 'Warranty Terms & Conditions'
+    'warranty-terms': 'Warranty Terms & Portfolio'
   };
-
-  const title = legalTitles[legalSlug] || 'Legal Document';
-
-  const content = `
-  <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
-    <div class="suryanz-container">
-      <h1 class="suryanz-hero-title">${title}</h1>
-      <p class="suryanz-hero-subtitle">SURYANZ / SURYANZ SOLAR Customer Privacy & Service Terms</p>
-    </div>
-  </section>
-
-  <section class="suryanz-section">
-    <div class="suryanz-container" style="max-width:900px;">
-      <div class="suryanz-card">
-        <h2 style="font-size:1.5rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">${title}</h2>
-        <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-          SURYANZ SOLAR is committed to protecting your privacy, data security, and consumer rights. Information collected via web consultation forms is strictly utilized for system sizing, site survey scheduling, and authorized project communications.
-        </p>
-        <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
-          System warranties (12-Year Product Warranty, Category 8-10 Year Inverter Warranty, and 20-30 Year Linear Performance Warranty) are subject to final project scope documents issued upon commissioning.
-        </p>
-      </div>
-    </div>
-  </section>`;
-
-  return renderSuryanzPage({
-    title: `${title} | SURYANZ SOLAR`,
-    description: `Official ${title.toLowerCase()} for SURYANZ and SURYANZ SOLAR digital platform.`,
-    canonicalUrl: `https://suryanzsolar.com/legal/${legalSlug}`,
-    activePath: `/legal/${legalSlug}`,
-    bodyContent: content,
-    urlPrefix: urlPrefix
-  });
+  const title = legalTitles[legalSlug] || 'Legal Policy';
+  return renderGenericPage(`legal/${legalSlug}`, title, `Official SURYANZ SOLAR ${title.toLowerCase()} and compliance documentation.`, urlPrefix);
 }
 
 function renderSitemapXml() {
-  const pages = [
-    '', 'about', 'why-suryanz', 'customer-protection', 'technology', 'calculator', 'projects', 'customer-stories', 'reviews', 'faqs', 'contact',
-    'solutions/residential', 'solutions/commercial', 'solutions/industrial', 'solutions/epc', 'solutions/on-grid', 'solutions/hybrid', 'solutions/off-grid', 'solutions/solar-battery', 'solutions/apartments', 'solutions/operations-maintenance',
-    'solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide',
-    'location/andhra-pradesh', 'location/telangana', 'location/karnataka', 'location/visakhapatnam', 'location/vijayawada', 'location/hyderabad', 'location/bengaluru', 'location/mangalore',
-    'legal/privacy-policy', 'legal/terms-and-conditions', 'legal/warranty-terms'
-  ];
-
-  const urlBlocks = pages.map(p => `
-  <url>
-    <loc>https://suryanzsolar.com/${p}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-    <changefreq>${p === '' ? 'daily' : 'weekly'}</changefreq>
-    <priority>${p === '' ? '1.0' : '0.8'}</priority>
-  </url>`).join('');
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urlBlocks}
+  <url><loc>https://suryanzsolar.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://suryanzsolar.com/about</loc><priority>0.8</priority></url>
+  <url><loc>https://suryanzsolar.com/why-suryanz</loc><priority>0.8</priority></url>
+  <url><loc>https://suryanzsolar.com/customer-protection</loc><priority>0.8</priority></url>
+  <url><loc>https://suryanzsolar.com/technology</loc><priority>0.8</priority></url>
+  <url><loc>https://suryanzsolar.com/calculator</loc><priority>0.9</priority></url>
+  <url><loc>https://suryanzsolar.com/projects</loc><priority>0.8</priority></url>
+  <url><loc>https://suryanzsolar.com/faqs</loc><priority>0.7</priority></url>
+  <url><loc>https://suryanzsolar.com/contact</loc><priority>0.9</priority></url>
 </urlset>`;
 }
 
 function renderRobotsTxt() {
   return `User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /staff/
-
-Sitemap: https://suryanzsolar.com/sitemap.xml
-`;
+Sitemap: https://suryanzsolar.com/sitemap.xml`;
 }
 
 module.exports = {
+  getSuryanzHeader,
+  getSuryanzFooter,
+  renderSuryanzPage,
   renderHomePage,
   renderAboutPage,
   renderWhySuryanzPage,
