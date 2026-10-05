@@ -122,15 +122,9 @@ window.StaffHeader = window.StaffHeader || {
                 background: rgba(255,255,255,0.22);
             }
             
-            .header-logo,
-            .top-header img[src*="zynova-os-logo"],
-            .unified-header img[src*="zynova-os-logo"],
-            .tenant-header-brand img[src*="zynova-os-logo"],
-            .header-left img[src*="zynova-os-logo"] {
+            .header-logo {
                 height: 36px;
                 width: auto;
-                filter: brightness(0) invert(1) !important;
-                opacity: 0.98;
             }
             
             .header-divider {
@@ -944,7 +938,7 @@ window.StaffHeader = window.StaffHeader || {
                 
                 if (brandEl) {
                     logoEl.style.display = 'none';
-                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;filter:brightness(0) invert(1) !important;">`;
+                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;">`;
                     const separator = `<span style="color:rgba(255,255,255,0.35);font-size:14px;font-weight:300;">|</span>`;
                     if (compLogo) {
                         brandEl.innerHTML = `
