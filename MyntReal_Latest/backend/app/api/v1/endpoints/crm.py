@@ -14975,6 +14975,8 @@ def _update_lead_aggregate_deal_values(db, lead_id):
         lead.deal_value_balance = max(0, lead.deal_value_total - lead.deal_value_received)
         if deals:
             lead.deal_tax_rate = deals[0].deal_tax_rate or 0
+            if (lead.status or '').lower() != 'completed':
+                lead.status = 'won'
         # DC-DEAL-PER-DEAL-RECV-001 (Jul 2026): update per-deal received/balance from validated
         # transactions linked to each deal via deal_id. Transactions without a deal_id are
         # attributed to the lead aggregate only (not to any specific deal).
