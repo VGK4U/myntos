@@ -35,7 +35,7 @@
   }
 
   function getLogoUrl() {
-    return isSaaSMode() ? ZYNOVA_Z_ICON : VGK_LOGO_URL;
+    return ZYNOVA_Z_ICON;
   }
 
   const MENU_INTENT_MAP = {
@@ -59,37 +59,29 @@
 
   const LABELS = {
     en: {
-      get title() { return isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant'; },
+      get title() { return 'Zen Assistant'; },
       placeholder: 'Type or speak…',
       get greeting() {
-        return isSaaSMode()
-          ? "Hi! I'm Zen, your Zynova OS AI Assistant 👋\nWhat would you like to do today?"
-          : "Hi! I'm VGK Assistant 👋\nWhat would you like to do today?";
+        return "Welcome to Zen Assistant 👋\nWhat would you like to do today?";
       },
       get speak_greeting() {
-        return isSaaSMode()
-          ? "Hi, I'm Zen, your Zynova OS AI Assistant. What would you like to do?"
-          : "Hi, I'm VGK Assistant. What would you like to do?";
+        return "Welcome to Zen Assistant. What would you like to do?";
       },
       listening: 'Listening…', error_mic: 'Microphone access denied.',
       confirm_btn: 'Confirm & Create', cancel_btn: 'Cancel',
       done: '✅ Done!', sending: 'Processing…',
-      error_api: 'Something went wrong. Please try again.',
+      error_api: 'This feature through Zen enabled soon — you can connect with our tech team to get this handled directly.',
       confirm_header: '📋 Please confirm:', suggestions: 'Suggestions:',
       marketplace_placeholder: 'Say a product name or category…',
     },
     hi: {
-      get title() { return isSaaSMode() ? 'Zen सहायक' : 'VGK सहायक'; },
+      get title() { return 'Zen सहायक'; },
       placeholder: 'टाइप करें या बोलें…',
       get greeting() {
-        return isSaaSMode()
-          ? "नमस्ते! मैं Zen, आपका Zynova OS AI सहायक हूँ 👋\nआज आप क्या करना चाहते हैं?"
-          : "नमस्ते! मैं VGK सहायक हूँ 👋\nआज आप क्या करना चाहते हैं?";
+        return "Zen सहायक में आपका स्वागत है 👋\nआज आप क्या करना चाहते हैं?";
       },
       get speak_greeting() {
-        return isSaaSMode()
-          ? "नमस्ते, मैं Zen हूँ, आपका Zynova OS AI सहायक। आप क्या करना चाहते हैं?"
-          : "नमस्ते, मैं VGK सहायक हूँ। आप क्या करना चाहते हैं?";
+        return "Zen सहायक में आपका स्वागत है। आप क्या करना चाहते हैं?";
       },
       listening: 'सुन रहा हूँ…', error_mic: 'माइक्रोफ़ोन की अनुमति नहीं मिली।',
       confirm_btn: 'पुष्टि करें', cancel_btn: 'रद्द करें',
@@ -99,17 +91,13 @@
       marketplace_placeholder: 'उत्पाद नाम या श्रेणी बोलें…',
     },
     te: {
-      get title() { return isSaaSMode() ? 'Zen సహాయకుడు' : 'VGK సహాయకుడు'; },
+      get title() { return 'Zen సహాయకుడు'; },
       placeholder: 'టైప్ చేయండి లేదా మాట్లాడండి…',
       get greeting() {
-        return isSaaSMode()
-          ? "హలో! నేను Zen, మీ Zynova OS AI సహాయకుడిని 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?"
-          : "హలో! నేను VGK సహాయకుడిని 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?";
+        return "Zen సహాయకుడికి స్వాగతం 👋\nఈరోజు మీరు ఏం చేయాలనుకుంటున్నారు?";
       },
       get speak_greeting() {
-        return isSaaSMode()
-          ? "హలో, నేను Zen, మీ Zynova OS AI సహాయకుడిని. మీరు ఏం చేయాలనుకుంటున్నారు?"
-          : "హలో, నేను VGK సహాయకుడిని. మీరు ఏం చేయాలనుకుంటున్నారు?";
+        return "Zen సహాయకుడికి స్వాగతం. మీరు ఏం చేయాలనుకుంటున్నారు?";
       },
       listening: 'వింటున్నాను…', error_mic: 'మైక్రోఫోన్ అనుమతి నిరాకరించబడింది.',
       confirm_btn: 'నిర్ధారించు', cancel_btn: 'రద్దు చేయి',
@@ -332,8 +320,8 @@
     if (document.getElementById('myntChatbotBtn') || document.getElementById('vgkFab')) return;
 
     const logoSrc = getLogoUrl();
-    const assistantTitle = isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant';
-    const assistantSub = isSaaSMode() ? 'Zynova OS AI Assistant' : 'AI Voice &amp; Text Assistant';
+    const assistantTitle = 'Zen Assistant';
+    const assistantSub = 'Zynova OS AI Assistant';
 
     document.body.insertAdjacentHTML('beforeend', `
       <div id="vgkOverlay"></div>

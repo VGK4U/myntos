@@ -62,6 +62,7 @@ from app.api.v1.endpoints import (
     tenant_service,
     tenant_landing,
     central_integrations,
+    suryanz_public,
 )
 
 
@@ -308,6 +309,9 @@ api_router.include_router(central_integrations.router)
 # SaaS CRM & Workflow Setup (DC_SAAS_CRM_SETUP_001)
 from app.api.v1.endpoints import saas_crm_setup
 api_router.include_router(saas_crm_setup.router, prefix="/saas/crm-setup", tags=["SaaS CRM & Workflow Setup"])
+
+# Suryanz Solar Public Lead Capture & Knowledge API (Oct 2026)
+api_router.include_router(suryanz_public.router, prefix="/public/suryanz", tags=["Suryanz Solar Public API"])
 
 @api_router.get("/health")
 async def api_health():

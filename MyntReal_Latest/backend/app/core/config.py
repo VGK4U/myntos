@@ -214,6 +214,12 @@ class Settings(BaseSettings):
             "mnrteam.com",
             "www.mnrteam.com",
             "*.mnrteam.com",
+            "suryanz.com",
+            "www.suryanz.com",
+            "*.suryanz.com",
+            "suryanzsolar.com",
+            "www.suryanzsolar.com",
+            "*.suryanzsolar.com",
             "*.elasticbeanstalk.com",
             "newbev.replit.app",
             "*.replit.app",
@@ -236,9 +242,13 @@ APPROVED_PUBLIC_DOMAINS = {
     "mnrteam.com",
     "www.mnrteam.com",
     "vgk4u.com",
-    "www.vgk4u.com"
+    "www.vgk4u.com",
+    "suryanz.com",
+    "www.suryanz.com",
+    "suryanzsolar.com",
+    "www.suryanzsolar.com"
 }
-DEFAULT_PUBLIC_DOMAIN = "https://www.vgk4u.com"
+DEFAULT_PUBLIC_DOMAIN = "https://suryanzsolar.com"
 
 def get_safe_base_url(request: Optional[Any] = None) -> str:
     """

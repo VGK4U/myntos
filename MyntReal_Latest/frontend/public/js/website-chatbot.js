@@ -261,7 +261,7 @@
         document.head.appendChild(styleEl);
 
         const isSaaS = isSaaSMode();
-        const chatbotTitle = isSaaS ? 'Zynova Zen Assistant' : 'MyntReal Assistant';
+        const chatbotTitle = 'Zynova Zen Assistant';
         const chatbotAvatar = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:2px;">' : '🤖';
         const btnIcon = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:48px;height:48px;object-fit:contain;border-radius:50%;background:#ffffff;padding:4px;">' : '💬';
         const welcomeText = isSaaS
@@ -478,7 +478,7 @@
             appendUserMsg(val);
             input.value = '';
             setTimeout(() => {
-                appendBotMsg(`Thank you for your message! Please select one of our options or click <b>Direct WhatsApp Support</b> for immediate assistance.`);
+                appendBotMsg(`This feature through Zen enabled soon — you can connect with our tech team to get this handled directly.`);
                 MyntWebsiteChatbot.showMenuOptions();
             }, 600);
         });

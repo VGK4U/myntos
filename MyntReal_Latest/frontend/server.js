@@ -7651,7 +7651,7 @@ const server = http.createServer(async (req, res) => {
     // DC Protocol: Zynova OS Multi-Tenant Domain Masking
     if (hostHeader.includes('zynovaos.com') || hostHeader.includes('zynova.com')) {
       const p = req.url.split('?')[0];
-      if (p === '/') {
+      if (p === '/' || p === '') {
         req.url = req.url.replace('/', '/zynovaos');
       } else if (p === '/login' || p === '/login/') {
         req.url = req.url.replace(p, '/saas/login');
@@ -7661,6 +7661,102 @@ const server = http.createServer(async (req, res) => {
     const url = req.url;
     const urlParts = new URL(url, `http://${getSafeHost(req)}`);
     const reqPathLower = (urlParts.pathname || '').toLowerCase();
+
+    // DC Protocol Oct 2026: SURYANZ & SURYANZ SOLAR Domain & Path Router Engine
+    const isSuryanzDomain = hostHeader.includes('suryanz.com') || hostHeader.includes('suryanzsolar.com') || reqPathLower.startsWith('/suryanz');
+    if (isSuryanzDomain) {
+      const suryanzRouter = require('./suryanz_router');
+      const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : reqPathLower) || '/';
+
+      if (cleanPath === '/sitemap.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+        res.end(suryanzRouter.renderSitemapXml());
+        return;
+      }
+      if (cleanPath === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(suryanzRouter.renderRobotsTxt());
+        return;
+      }
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+      if (cleanPath === '/' || cleanPath === '') {
+        res.writeHead(200); res.end(suryanzRouter.renderHomePage()); return;
+      }
+      if (cleanPath === '/about') {
+        res.writeHead(200); res.end(suryanzRouter.renderAboutPage()); return;
+      }
+      if (cleanPath === '/why-suryanz') {
+        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage()); return;
+      }
+      if (cleanPath === '/customer-protection') {
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage()); return;
+      }
+      if (cleanPath === '/technology') {
+        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage()); return;
+      }
+      if (cleanPath === '/calculator') {
+        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage()); return;
+      }
+      if (cleanPath === '/projects') {
+        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage()); return;
+      }
+      if (cleanPath === '/customer-stories' || cleanPath === '/reviews') {
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage()); return;
+      }
+      if (cleanPath === '/faqs') {
+        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage()); return;
+      }
+      if (cleanPath === '/contact') {
+        res.writeHead(200); res.end(suryanzRouter.renderContactPage()); return;
+      }
+
+      // Solutions Sub-routes
+      if (cleanPath.startsWith('/solutions/')) {
+        const solutionSlug = cleanPath.replace('/solutions/', '').trim();
+        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug)); return;
+      }
+
+      // Educational Knowledge Guides
+      const knowledgeGuides = ['solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide'];
+      const guideSlug = cleanPath.replace(/^\//, '');
+      if (knowledgeGuides.includes(guideSlug)) {
+        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug)); return;
+      }
+
+      // Regional Location Hubs
+      if (cleanPath.startsWith('/location/')) {
+        const locSlug = cleanPath.replace('/location/', '').trim();
+        let locName = locSlug.charAt(0).toUpperCase() + locSlug.slice(1);
+        let stateName = 'India';
+
+        if (locSlug === 'visakhapatnam' || locSlug === 'vijayawada') {
+          stateName = 'Andhra Pradesh';
+        } else if (locSlug === 'hyderabad') {
+          stateName = 'Telangana';
+        } else if (locSlug === 'bengaluru' || locSlug === 'mangalore') {
+          stateName = 'Karnataka';
+        } else if (locSlug === 'andhra-pradesh') {
+          locName = 'Andhra Pradesh'; stateName = 'Andhra Pradesh';
+        } else if (locSlug === 'telangana') {
+          locName = 'Telangana'; stateName = 'Telangana';
+        } else if (locSlug === 'karnataka') {
+          locName = 'Karnataka'; stateName = 'Karnataka';
+        }
+
+        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName)); return;
+      }
+
+      // Legal Sub-routes
+      if (cleanPath.startsWith('/legal/')) {
+        const legalSlug = cleanPath.replace('/legal/', '').trim();
+        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug)); return;
+      }
+
+      // Default Home Fallback
+      res.writeHead(200); res.end(suryanzRouter.renderHomePage()); return;
+    }
 
     // AWS ELB / Load Balancer Health Check Endpoint
     const userAgent = (req.headers['user-agent'] || '').toLowerCase();
@@ -7672,7 +7768,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
-    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering']);
+    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator', 'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal', 'sitemap.xml', 'robots.txt']);
     const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
     
     if (shortCodeMatch) {
@@ -18757,11 +18853,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(302, { 'Location': `/create-member?signup=true${forwardParams}&v=${BUILD_ID}` });
     res.end();
   } else if (url === '/saas' || url.startsWith('/saas?') || url === '/zynova-os' || url.startsWith('/zynova-os?') || url === '/zynovaos' || url.startsWith('/zynovaos?') || url.startsWith('/saas-pricing') || url.startsWith('/saas_pricing') || url.startsWith('/saas/pricing') || url.startsWith('/saas-catalog') || url.startsWith('/saas_catalog') || url.startsWith('/saas/catalog') || url.startsWith('/b2b_signup')) {
-    // ZYNOVA OS — SaaS Commercial Catalog & Seat Configurator Landing Page (b2b_signup.html)
+    // ZYNOVA OS — SaaS Commercial Catalog & Seat Configurator Default Business Page (b2b_signup.html)
     serveCachedHtml(res, 'b2b_signup.html', BUILD_ID);
     return;
   } else if (url.startsWith('/saas/signup') || url.startsWith('/saas_signup') || url.startsWith('/saas-signup') || url.startsWith('/client/signup')) {
-    // SaaS Client Registration - Zynova Multi-Tenant Cloud
+    // SaaS Client / Zen Partner Registration - Zynova Multi-Tenant Cloud
     serveCachedHtml(res, 'saas_signup.html', BUILD_ID);
     return;
   } else if (url.startsWith('/saas/admin') || url.startsWith('/saas_admin') || url.startsWith('/saas-admin')) {

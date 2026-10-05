@@ -46,14 +46,9 @@ export class VGKMobileAssistant {
     const endpoint = this.getEndpoint();
     if (!endpoint) return;
 
-    const isSaaS = this.isSaaSMode();
-    const assistantTitle = isSaaS ? 'Zen Assistant' : 'VGK Assistant';
-    const logoSrc = isSaaS
-      ? 'data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="url(%23zenGrad)"/><path d="M12 12H28L15 28H28" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="zenGrad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="%236C3DE8"/><stop offset="1" stop-color="%2310B981"/></linearGradient></defs></svg>'
-      : '/public/vgk-assistant-logo.png';
-    const initialGreeting = isSaaS
-      ? "Hi! I'm Zen, your Zynova OS AI Assistant 👋\nHow can I help you today?"
-      : "Hi! I'm VGK Assistant 👋\nHow can I help you today?";
+    const assistantTitle = 'Zen Assistant';
+    const logoSrc = 'data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="url(%23zenGrad)"/><path d="M12 12H28L15 28H28" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="zenGrad" x1="0" y1="0" x2="40" y2="40"><stop stop-color="%236C3DE8"/><stop offset="1" stop-color="%2310B981"/></linearGradient></defs></svg>';
+    const initialGreeting = "Welcome to Zen Assistant 👋\nHow can I help you today?";
 
     this.container.innerHTML = `
       <style>
@@ -285,10 +280,10 @@ export class VGKMobileAssistant {
           window.speechSynthesis.speak(utt);
         }
       } else {
-        this.pushMessage('assistant', data.detail || 'Something went wrong.');
+        this.pushMessage('assistant', data.detail || 'This feature through Zen enabled soon — you can connect with our tech team to get this handled directly.');
       }
     } catch (e) {
-      this.pushMessage('assistant', 'Could not reach VGK server. Please try again.');
+      this.pushMessage('assistant', 'This feature through Zen enabled soon — you can connect with our tech team to get this handled directly.');
     }
     this.isLoading = false;
     this.renderMessages();

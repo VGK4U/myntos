@@ -1,0 +1,45 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 520 120' width='520' height='120'>
+  <defs>
+    <linearGradient id='sunGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#FFD700'/>
+      <stop offset='50%' stop-color='#FF8C00'/>
+      <stop offset='100%' stop-color='#FF4500'/>
+    </linearGradient>
+    <linearGradient id='leafGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#00E676'/>
+      <stop offset='100%' stop-color='#00873E'/>
+    </linearGradient>
+    <linearGradient id='panelGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#1565C0'/>
+      <stop offset='100%' stop-color='#0D47A1'/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Sun Rays & Emblem -->
+  <g transform='translate(10, 10)'>
+    <!-- Sun Rays -->
+    <polygon points='50,5 56,22 44,22' fill='url(#sunGrad)'/>
+    <polygon points='25,12 36,26 27,33' fill='url(#sunGrad)'/>
+    <polygon points='75,12 73,33 64,26' fill='url(#sunGrad)'/>
+    <polygon points='8,30 25,36 21,46' fill='url(#sunGrad)'/>
+    <polygon points='92,30 79,46 75,36' fill='url(#sunGrad)'/>
+
+    <!-- Solar Panel Roof Shape -->
+    <path d='M20,65 L50,30 L80,65 Z' fill='url(#panelGrad)' stroke='#0D47A1' stroke-width='2'/>
+    <path d='M25,62 L50,33 L75,62' fill='none' stroke='#64B5F6' stroke-width='1.5'/>
+    <line x1='37' y1='47' x2='63' y2='47' stroke='#64B5F6' stroke-width='1.5'/>
+    <line x1='50' y1='33' x2='50' y2='62' stroke='#64B5F6' stroke-width='1.5'/>
+    
+    <!-- Green Eco Leaf Curve -->
+    <path d='M10,85 C5,55 35,45 45,70 C50,85 25,95 10,85 Z' fill='url(#leafGrad)'/>
+    <path d='M18,80 Q35,68 40,70' fill='none' stroke='#81C784' stroke-width='1.5'/>
+  </g>
+
+  <!-- Typography -->
+  <!-- SURYANZ -->
+  <text x='115' y='64' font-family='Arial, Helvetica, sans-serif' font-weight='900' font-size='52' fill='#0F2B48' letter-spacing='2'>SURYANZ</text>
+  <!-- SOLAR -->
+  <text x='120' y='92' font-family='Arial, Helvetica, sans-serif' font-weight='800' font-size='24' fill='#00873E' letter-spacing='10'>SOLAR</text>
+  <!-- Tagline -->
+  <text x='122' y='108' font-family='Arial, Helvetica, sans-serif' font-weight='600' font-size='12' fill='#546E7A' letter-spacing='1'>Powering a Brighter Tomorrow</text>
+</svg>

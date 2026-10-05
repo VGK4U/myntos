@@ -1,5 +1,310 @@
 [
   {
+    "id": "log_56596b42",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 10:00:25 AM IST",
+    "iso_timestamp": "2026-10-05T10:00:25.369449",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_deaed752",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "05 Oct 2026, 09:30:07 AM IST",
+    "iso_timestamp": "2026-10-05T09:30:07.270622",
+    "target_summary": "Mynt Sales New",
+    "targets": [
+      {
+        "id": 0,
+        "target_type": "group",
+        "name": "Mynt Sales New",
+        "identifier": "120363410784518818@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "UNCERTAIN",
+    "error_message": "1 dispatches uncertain",
+    "detail": {
+      "success": true,
+      "queued": true,
+      "queue_id": 1102,
+      "message": "Enqueued directly to PostgreSQL queue"
+    }
+  },
+  {
+    "id": "log_197c1398",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "05 Oct 2026, 09:30:04 AM IST",
+    "iso_timestamp": "2026-10-05T09:30:04.960200",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "120363428888306723@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SKIPPED",
+    "error_message": "No active field staff or journeys today",
+    "detail": {
+      "reason": "no_active_journeys"
+    }
+  },
+  {
+    "id": "log_85f2db07",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 09:30:02 AM IST",
+    "iso_timestamp": "2026-10-05T09:30:02.611144",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_999be4ec",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 09:01:06 AM IST",
+    "iso_timestamp": "2026-10-05T09:01:06.101017",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "(psycopg2.OperationalError) SSL connection has been closed unexpectedly\n\n[SQL: SELECT crm_leads.id AS crm_leads_id, crm_leads.tenant_id AS crm_leads_tenant_id, crm_leads.company_id AS crm_leads_company_id, crm_leads.name AS crm_leads_name, crm_leads.gender AS crm_leads_gender, crm_leads.email AS crm_leads_email, crm_leads.phone AS crm_leads_phone, crm_leads.phone_primary_whatsapp AS crm_leads_phone_primary_whatsapp, crm_leads.alternate_phone AS crm_leads_alternate_phone, crm_leads.phone_secondary_whatsapp AS crm_leads_phone_secondary_whatsapp, crm_leads.category_id AS crm_leads_category_id, crm_leads.source AS crm_leads_source, crm_leads.source_details AS crm_leads_source_details, crm_leads.status AS crm_leads_status, crm_leads.priority AS crm_leads_priority, crm_leads.handler_type AS crm_leads_handler_type, crm_leads.handler_id AS crm_leads_handler_id, crm_leads.description AS crm_leads_description, crm_leads.requirements AS crm_leads_requirements, crm_leads.looking_for AS crm_leads_looking_for, crm_leads.recent_comments AS crm_leads_recent_comments, crm_leads.budget_min AS crm_leads_budget_min, crm_leads.budget_max AS crm_leads_budget_max, crm_leads.address AS crm_leads_address, crm_leads.area AS crm_leads_area, crm_leads.city AS crm_leads_city, crm_leads.state AS crm_leads_state, crm_leads.pincode AS crm_leads_pincode, crm_leads.expected_close_date AS crm_leads_expected_close_date, crm_leads.actual_close_date AS crm_leads_actual_close_date, crm_leads.deal_value AS crm_leads_deal_value, crm_leads.deal_value_total AS crm_leads_deal_value_total, crm_leads.deal_value_excl_tax AS crm_leads_deal_value_excl_tax, crm_leads.deal_tax_rate AS crm_leads_deal_tax_rate, crm_leads.deal_value_received AS crm_leads_deal_value_received, crm_leads.deal_value_balance AS crm_leads_deal_value_balance, crm_leads.points_evaluated_dvr AS crm_leads_points_evaluated_dvr, crm_leads.confirmed_final_value AS crm_leads_confirmed_final_value, crm_leads.solar_value AS crm_leads_solar_value, crm_leads.lost_reason AS crm_leads_lost_reason, crm_leads.tags AS crm_leads_tags, crm_leads.last_contact_date AS crm_leads_last_contact_date, crm_leads.next_followup_date AS crm_leads_next_followup_date, crm_leads.depends_on_staff_id AS crm_leads_depends_on_staff_id, crm_leads.telecaller_id AS crm_leads_telecaller_id, crm_leads.field_staff_id AS crm_leads_field_staff_id, crm_leads.associated_partner_id AS crm_leads_associated_partner_id, crm_leads.direct_team_lead_points_awarded AS crm_leads_direct_team_lead_points_awarded, crm_leads.direct_team_lead_points_awarded_at AS crm_leads_direct_team_lead_points_awarded_at, crm_leads.direct_team_lead_sponsor_id AS crm_leads_direct_team_lead_sponsor_id, crm_leads.vendor_id AS crm_leads_vendor_id, crm_leads.mnr_handler_id AS crm_leads_mnr_handler_id, crm_leads.is_vgk_program AS crm_leads_is_vgk_program, crm_leads.vgk_field_support_id AS crm_leads_vgk_field_support_id, crm_leads.solar_brand_id AS crm_leads_solar_brand_id, crm_leads.community_id AS crm_leads_community_id, crm_leads.aadhaar_number AS crm_leads_aadhaar_number, crm_leads.pan_number AS crm_leads_pan_number, crm_leads.electricity_bill_number AS crm_leads_electricity_bill_number, crm_leads.google_maps_link AS crm_leads_google_maps_link, crm_leads.bank_account_number AS crm_leads_bank_account_number, crm_leads.ifsc_code AS crm_leads_ifsc_code, crm_leads.subsidy_status AS crm_leads_subsidy_status, crm_leads.application_no AS crm_leads_application_no, crm_leads.accepted_date AS crm_leads_accepted_date, crm_leads.loan_bank AS crm_leads_loan_bank, crm_leads.bank_branch AS crm_leads_bank_branch, crm_leads.documents_folder_link AS crm_leads_documents_folder_link, crm_leads.material_reach_date AS crm_leads_material_reach_date, crm_leads.installation_date AS crm_leads_installation_date, crm_leads.existing_association AS crm_leads_existing_association, crm_leads.bank_entry_updated AS crm_leads_bank_entry_updated, crm_leads.bank_statement_available AS crm_leads_bank_statement_available, crm_leads.regular_income_available AS crm_leads_regular_income_available, crm_leads.monthly_income AS crm_leads_monthly_income, crm_leads.co_applicant_name AS crm_leads_co_applicant_name, crm_leads.co_applicant_phone AS crm_leads_co_applicant_phone, crm_leads.co_applicant_aadhaar AS crm_leads_co_applicant_aadhaar, crm_leads.co_applicant_pan AS crm_leads_co_applicant_pan, crm_leads.co_applicant_bank_account AS crm_leads_co_applicant_bank_account, crm_leads.co_applicant_ifsc AS crm_leads_co_applicant_ifsc, crm_leads.solar_pipeline_status AS crm_leads_solar_pipeline_status, crm_leads.solar_pipeline_status_updated_at AS crm_leads_solar_pipeline_status_updated_at, crm_leads.submit_date AS crm_leads_submit_date, crm_leads.complete_date AS crm_leads_complete_date, crm_leads.first_dvr_confirmed_at AS crm_leads_first_dvr_confirmed_at, crm_leads.first_payment_received_date AS crm_leads_first_payment_received_date, crm_leads.remaining_stage1_advance AS crm_leads_remaining_stage1_advance, crm_leads.remaining_stage1_advance_l1 AS crm_leads_remaining_stage1_advance_l1, crm_leads.remaining_stage1_advance_l2 AS crm_leads_remaining_stage1_advance_l2, crm_leads.cibil_confirmed AS crm_leads_cibil_confirmed, crm_leads.cibil_score AS crm_leads_cibil_score, crm_leads.cibil_score_updated_at AS crm_leads_cibil_score_updated_at, crm_leads.ev_b2b_stage AS crm_leads_ev_b2b_stage, crm_leads.kw_size AS crm_leads_kw_size, crm_leads.discom AS crm_leads_discom, crm_leads.sc_number AS crm_leads_sc_number, crm_leads.consumer_no AS crm_leads_consumer_no, crm_leads.sanction_date AS crm_leads_sanction_date, crm_leads.mnre_app_ref AS crm_leads_mnre_app_ref, crm_leads.discom_reg_no AS crm_leads_discom_reg_no, crm_leads.latitude AS crm_leads_latitude, crm_leads.longitude AS crm_leads_longitude, crm_leads.grid_phase AS crm_leads_grid_phase, crm_leads.investment_capacity AS crm_leads_investment_capacity, crm_leads.planning_to_start AS crm_leads_planning_to_start, crm_leads.full_time_business AS crm_leads_full_time_business, crm_leads.guru_id AS crm_leads_guru_id, crm_leads.z_guru_id AS crm_leads_z_guru_id, crm_leads.adi_guru_id AS crm_leads_adi_guru_id, crm_leads.core_id AS crm_leads_core_id, crm_leads.guru_name AS crm_leads_guru_name, crm_leads.z_guru_name AS crm_leads_z_guru_name, crm_leads.core_name AS crm_leads_core_name, crm_leads.team_senior_partner_id AS crm_leads_team_senior_partner_id, crm_leads.team_extended_partner_id AS crm_leads_team_extended_partner_id, crm_leads.team_core_partner_id AS crm_leads_team_core_partner_id, crm_leads.source_ref_type AS crm_leads_source_ref_type, crm_leads.source_ref_id AS crm_leads_source_ref_id, crm_leads.source_ref_name AS crm_leads_source_ref_name, crm_leads.field_support_ref_type AS crm_leads_field_support_ref_type, crm_leads.field_support_ref_id AS crm_leads_field_support_ref_id, crm_leads.field_support_ref_name AS crm_leads_field_support_ref_name, crm_leads.technical_id AS crm_leads_technical_id, crm_leads.support_staff_id AS crm_leads_support_staff_id, crm_leads.technical_staff1_id AS crm_leads_technical_staff1_id, crm_leads.guru_supported AS crm_leads_guru_supported, crm_leads.z_guru_supported AS crm_leads_z_guru_supported, crm_leads.adi_guru_supported AS crm_leads_adi_guru_supported, crm_leads.core_supported AS crm_leads_core_supported, crm_leads.telecaller_supported AS crm_leads_telecaller_supported, crm_leads.showroom_supported AS crm_leads_showroom_supported, crm_leads.technical_supported AS crm_leads_technical_supported, crm_leads.field_support_supported AS crm_leads_field_support_supported, crm_leads.support_staff_supported AS crm_leads_support_staff_supported, crm_leads.technical_staff1_supported AS crm_leads_technical_staff1_supported, crm_leads.showroom_vgk_id AS crm_leads_showroom_vgk_id, crm_leads.primary_owner_type AS crm_leads_primary_owner_type, crm_leads.primary_owner_id AS crm_leads_primary_owner_id, crm_leads.property_id AS crm_leads_property_id, crm_leads.lost_at AS crm_leads_lost_at, crm_leads.created_at AS crm_leads_created_at, crm_leads.updated_at AS crm_leads_updated_at, crm_leads.created_by_type AS crm_leads_created_by_type, crm_leads.created_by_id AS crm_leads_created_by_id \nFROM crm_leads \nWHERE (crm_leads.phone LIKE %(phone_1)s OR crm_leads.alternate_phone LIKE %(alternate_phone_1)s) AND crm_leads.company_id = %(company_id_1)s ORDER BY crm_leads.created_at DESC \n LIMIT %(param_1)s]\n[parameters: {'phone_1': '%9381936716', 'alternate_phone_1': '%9381936716', 'company_id_1': 4, 'param_1': 1}]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "detail": {
+      "error": "(psycopg2.OperationalError) SSL connection has been closed unexpectedly\n\n[SQL: SELECT crm_leads.id AS crm_leads_id, crm_leads.tenant_id AS crm_leads_tenant_id, crm_leads.company_id AS crm_leads_company_id, crm_leads.name AS crm_leads_name, crm_leads.gender AS crm_leads_gender, crm_leads.email AS crm_leads_email, crm_leads.phone AS crm_leads_phone, crm_leads.phone_primary_whatsapp AS crm_leads_phone_primary_whatsapp, crm_leads.alternate_phone AS crm_leads_alternate_phone, crm_leads.phone_secondary_whatsapp AS crm_leads_phone_secondary_whatsapp, crm_leads.category_id AS crm_leads_category_id, crm_leads.source AS crm_leads_source, crm_leads.source_details AS crm_leads_source_details, crm_leads.status AS crm_leads_status, crm_leads.priority AS crm_leads_priority, crm_leads.handler_type AS crm_leads_handler_type, crm_leads.handler_id AS crm_leads_handler_id, crm_leads.description AS crm_leads_description, crm_leads.requirements AS crm_leads_requirements, crm_leads.looking_for AS crm_leads_looking_for, crm_leads.recent_comments AS crm_leads_recent_comments, crm_leads.budget_min AS crm_leads_budget_min, crm_leads.budget_max AS crm_leads_budget_max, crm_leads.address AS crm_leads_address, crm_leads.area AS crm_leads_area, crm_leads.city AS crm_leads_city, crm_leads.state AS crm_leads_state, crm_leads.pincode AS crm_leads_pincode, crm_leads.expected_close_date AS crm_leads_expected_close_date, crm_leads.actual_close_date AS crm_leads_actual_close_date, crm_leads.deal_value AS crm_leads_deal_value, crm_leads.deal_value_total AS crm_leads_deal_value_total, crm_leads.deal_value_excl_tax AS crm_leads_deal_value_excl_tax, crm_leads.deal_tax_rate AS crm_leads_deal_tax_rate, crm_leads.deal_value_received AS crm_leads_deal_value_received, crm_leads.deal_value_balance AS crm_leads_deal_value_balance, crm_leads.points_evaluated_dvr AS crm_leads_points_evaluated_dvr, crm_leads.confirmed_final_value AS crm_leads_confirmed_final_value, crm_leads.solar_value AS crm_leads_solar_value, crm_leads.lost_reason AS crm_leads_lost_reason, crm_leads.tags AS crm_leads_tags, crm_leads.last_contact_date AS crm_leads_last_contact_date, crm_leads.next_followup_date AS crm_leads_next_followup_date, crm_leads.depends_on_staff_id AS crm_leads_depends_on_staff_id, crm_leads.telecaller_id AS crm_leads_telecaller_id, crm_leads.field_staff_id AS crm_leads_field_staff_id, crm_leads.associated_partner_id AS crm_leads_associated_partner_id, crm_leads.direct_team_lead_points_awarded AS crm_leads_direct_team_lead_points_awarded, crm_leads.direct_team_lead_points_awarded_at AS crm_leads_direct_team_lead_points_awarded_at, crm_leads.direct_team_lead_sponsor_id AS crm_leads_direct_team_lead_sponsor_id, crm_leads.vendor_id AS crm_leads_vendor_id, crm_leads.mnr_handler_id AS crm_leads_mnr_handler_id, crm_leads.is_vgk_program AS crm_leads_is_vgk_program, crm_leads.vgk_field_support_id AS crm_leads_vgk_field_support_id, crm_leads.solar_brand_id AS crm_leads_solar_brand_id, crm_leads.community_id AS crm_leads_community_id, crm_leads.aadhaar_number AS crm_leads_aadhaar_number, crm_leads.pan_number AS crm_leads_pan_number, crm_leads.electricity_bill_number AS crm_leads_electricity_bill_number, crm_leads.google_maps_link AS crm_leads_google_maps_link, crm_leads.bank_account_number AS crm_leads_bank_account_number, crm_leads.ifsc_code AS crm_leads_ifsc_code, crm_leads.subsidy_status AS crm_leads_subsidy_status, crm_leads.application_no AS crm_leads_application_no, crm_leads.accepted_date AS crm_leads_accepted_date, crm_leads.loan_bank AS crm_leads_loan_bank, crm_leads.bank_branch AS crm_leads_bank_branch, crm_leads.documents_folder_link AS crm_leads_documents_folder_link, crm_leads.material_reach_date AS crm_leads_material_reach_date, crm_leads.installation_date AS crm_leads_installation_date, crm_leads.existing_association AS crm_leads_existing_association, crm_leads.bank_entry_updated AS crm_leads_bank_entry_updated, crm_leads.bank_statement_available AS crm_leads_bank_statement_available, crm_leads.regular_income_available AS crm_leads_regular_income_available, crm_leads.monthly_income AS crm_leads_monthly_income, crm_leads.co_applicant_name AS crm_leads_co_applicant_name, crm_leads.co_applicant_phone AS crm_leads_co_applicant_phone, crm_leads.co_applicant_aadhaar AS crm_leads_co_applicant_aadhaar, crm_leads.co_applicant_pan AS crm_leads_co_applicant_pan, crm_leads.co_applicant_bank_account AS crm_leads_co_applicant_bank_account, crm_leads.co_applicant_ifsc AS crm_leads_co_applicant_ifsc, crm_leads.solar_pipeline_status AS crm_leads_solar_pipeline_status, crm_leads.solar_pipeline_status_updated_at AS crm_leads_solar_pipeline_status_updated_at, crm_leads.submit_date AS crm_leads_submit_date, crm_leads.complete_date AS crm_leads_complete_date, crm_leads.first_dvr_confirmed_at AS crm_leads_first_dvr_confirmed_at, crm_leads.first_payment_received_date AS crm_leads_first_payment_received_date, crm_leads.remaining_stage1_advance AS crm_leads_remaining_stage1_advance, crm_leads.remaining_stage1_advance_l1 AS crm_leads_remaining_stage1_advance_l1, crm_leads.remaining_stage1_advance_l2 AS crm_leads_remaining_stage1_advance_l2, crm_leads.cibil_confirmed AS crm_leads_cibil_confirmed, crm_leads.cibil_score AS crm_leads_cibil_score, crm_leads.cibil_score_updated_at AS crm_leads_cibil_score_updated_at, crm_leads.ev_b2b_stage AS crm_leads_ev_b2b_stage, crm_leads.kw_size AS crm_leads_kw_size, crm_leads.discom AS crm_leads_discom, crm_leads.sc_number AS crm_leads_sc_number, crm_leads.consumer_no AS crm_leads_consumer_no, crm_leads.sanction_date AS crm_leads_sanction_date, crm_leads.mnre_app_ref AS crm_leads_mnre_app_ref, crm_leads.discom_reg_no AS crm_leads_discom_reg_no, crm_leads.latitude AS crm_leads_latitude, crm_leads.longitude AS crm_leads_longitude, crm_leads.grid_phase AS crm_leads_grid_phase, crm_leads.investment_capacity AS crm_leads_investment_capacity, crm_leads.planning_to_start AS crm_leads_planning_to_start, crm_leads.full_time_business AS crm_leads_full_time_business, crm_leads.guru_id AS crm_leads_guru_id, crm_leads.z_guru_id AS crm_leads_z_guru_id, crm_leads.adi_guru_id AS crm_leads_adi_guru_id, crm_leads.core_id AS crm_leads_core_id, crm_leads.guru_name AS crm_leads_guru_name, crm_leads.z_guru_name AS crm_leads_z_guru_name, crm_leads.core_name AS crm_leads_core_name, crm_leads.team_senior_partner_id AS crm_leads_team_senior_partner_id, crm_leads.team_extended_partner_id AS crm_leads_team_extended_partner_id, crm_leads.team_core_partner_id AS crm_leads_team_core_partner_id, crm_leads.source_ref_type AS crm_leads_source_ref_type, crm_leads.source_ref_id AS crm_leads_source_ref_id, crm_leads.source_ref_name AS crm_leads_source_ref_name, crm_leads.field_support_ref_type AS crm_leads_field_support_ref_type, crm_leads.field_support_ref_id AS crm_leads_field_support_ref_id, crm_leads.field_support_ref_name AS crm_leads_field_support_ref_name, crm_leads.technical_id AS crm_leads_technical_id, crm_leads.support_staff_id AS crm_leads_support_staff_id, crm_leads.technical_staff1_id AS crm_leads_technical_staff1_id, crm_leads.guru_supported AS crm_leads_guru_supported, crm_leads.z_guru_supported AS crm_leads_z_guru_supported, crm_leads.adi_guru_supported AS crm_leads_adi_guru_supported, crm_leads.core_supported AS crm_leads_core_supported, crm_leads.telecaller_supported AS crm_leads_telecaller_supported, crm_leads.showroom_supported AS crm_leads_showroom_supported, crm_leads.technical_supported AS crm_leads_technical_supported, crm_leads.field_support_supported AS crm_leads_field_support_supported, crm_leads.support_staff_supported AS crm_leads_support_staff_supported, crm_leads.technical_staff1_supported AS crm_leads_technical_staff1_supported, crm_leads.showroom_vgk_id AS crm_leads_showroom_vgk_id, crm_leads.primary_owner_type AS crm_leads_primary_owner_type, crm_leads.primary_owner_id AS crm_leads_primary_owner_id, crm_leads.property_id AS crm_leads_property_id, crm_leads.lost_at AS crm_leads_lost_at, crm_leads.created_at AS crm_leads_created_at, crm_leads.updated_at AS crm_leads_updated_at, crm_leads.created_by_type AS crm_leads_created_by_type, crm_leads.created_by_id AS crm_leads_created_by_id \nFROM crm_leads \nWHERE (crm_leads.phone LIKE %(phone_1)s OR crm_leads.alternate_phone LIKE %(alternate_phone_1)s) AND crm_leads.company_id = %(company_id_1)s ORDER BY crm_leads.created_at DESC \n LIMIT %(param_1)s]\n[parameters: {'phone_1': '%9381936716', 'alternate_phone_1': '%9381936716', 'company_id_1': 4, 'param_1': 1}]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
+    }
+  },
+  {
+    "id": "log_250858c5",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 09:00:14 AM IST",
+    "iso_timestamp": "2026-10-05T09:00:14.547085",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_26a1d214",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 08:30:31 AM IST",
+    "iso_timestamp": "2026-10-05T08:30:31.066050",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 1,
+    "status": "FAILED",
+    "error_message": "(psycopg2.OperationalError) SSL connection has been closed unexpectedly\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "detail": {
+      "error": "(psycopg2.OperationalError) SSL connection has been closed unexpectedly\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
+    }
+  },
+  {
+    "id": "log_77bcf303",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 08:00:06 AM IST",
+    "iso_timestamp": "2026-10-05T08:00:06.850889",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_fbeaf293",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 07:30:13 AM IST",
+    "iso_timestamp": "2026-10-05T07:30:13.679990",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_61130099",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 07:00:02 AM IST",
+    "iso_timestamp": "2026-10-05T07:00:02.891079",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_e7bc3de1",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "05 Oct 2026, 06:30:01 AM IST",
+    "iso_timestamp": "2026-10-05T06:30:01.033185",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_9d902e68",
     "job_id": "field_staff_journey_report",
     "job_name": "Field Journey Performance & Leaderboard Report",
@@ -14395,334 +14700,6 @@
         ],
         "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
       }
-    }
-  },
-  {
-    "id": "log_018f8b4a",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 05:30:00 PM IST",
-    "iso_timestamp": "2026-09-14T17:30:00.469304",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_05a796c8",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 05:00:08 PM IST",
-    "iso_timestamp": "2026-09-14T17:00:08.325495",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_188e250e",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 04:30:40 PM IST",
-    "iso_timestamp": "2026-09-14T16:30:40.871461",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_afa22312",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 03:00:00 PM IST",
-    "iso_timestamp": "2026-09-14T15:00:00.730999",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_5c4db78c",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 02:30:25 PM IST",
-    "iso_timestamp": "2026-09-14T14:30:25.545008",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_e7432352",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "14 Sep 2026, 01:30:01 PM IST",
-    "iso_timestamp": "2026-09-14T13:30:01.102745",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "mocked": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "success": true,
-            "message_id": "mock_dev_1789372801083"
-          }
-        ],
-        "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
-      }
-    }
-  },
-  {
-    "id": "log_60837e39",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 01:30:00 PM IST",
-    "iso_timestamp": "2026-09-14T13:30:00.833174",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_a7fcdaea",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 01:00:00 PM IST",
-    "iso_timestamp": "2026-09-14T13:00:00.917258",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_74f05b09",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 12:30:00 PM IST",
-    "iso_timestamp": "2026-09-14T12:30:00.590472",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_63f717e9",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 12:00:00 PM IST",
-    "iso_timestamp": "2026-09-14T12:00:00.377341",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_9e59d51d",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "14 Sep 2026, 11:30:00 AM IST",
-    "iso_timestamp": "2026-09-14T11:30:00.419871",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
     }
   }
 ]
