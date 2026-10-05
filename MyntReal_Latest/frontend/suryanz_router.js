@@ -27,7 +27,7 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
           
           <li class="suryanz-dropdown">
             <a href="${p}/solutions/residential" class="${activePath.startsWith('/solutions') ? 'active' : ''}">
-              Solutions <i class="fas fa-chevron-down" style="font-size:0.75rem; margin-left:3px;"></i>
+              Solutions <i class="fas fa-chevron-down" style="font-size:0.7rem; margin-left:2px;"></i>
             </a>
             <ul class="suryanz-dropdown-menu">
               <li><a href="${p}/solutions/residential">Residential Rooftop Solar</a></li>
@@ -43,18 +43,17 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
             </ul>
           </li>
 
-          <li><a href="${p}/customer-protection" class="${activePath === '/customer-protection' ? 'active' : ''}">Customer Protection</a></li>
+          <li><a href="${p}/customer-protection" class="${activePath === '/customer-protection' ? 'active' : ''}">Protection</a></li>
           <li><a href="${p}/technology" class="${activePath === '/technology' ? 'active' : ''}">Technology</a></li>
-          <li><a href="${p}/calculator" class="${activePath === '/calculator' ? 'active' : ''}">Solar Calculator</a></li>
           <li><a href="${p}/projects" class="${activePath === '/projects' ? 'active' : ''}">Projects</a></li>
+          <li><a href="${p}/calculator" class="${activePath === '/calculator' ? 'active' : ''}">Calculator</a></li>
           <li><a href="${p}/faqs" class="${activePath === '/faqs' ? 'active' : ''}">FAQs</a></li>
           <li><a href="${p}/contact" class="${activePath === '/contact' ? 'active' : ''}">Contact</a></li>
         </ul>
       </nav>
 
-      <div class="suryanz-header-actions" style="display: flex; gap: 0.75rem; align-items: center;">
-        <a href="${p}/calculator" class="suryanz-btn-outline" style="font-size: 0.85rem;">Calculate Savings</a>
-        <a href="${p}/contact" class="suryanz-btn-cta" style="font-size: 0.85rem;"><i class="fas fa-solar-panel"></i> Get Solar Assessment</a>
+      <div class="suryanz-header-actions">
+        <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-solar-panel"></i> Get Solar Assessment</a>
       </div>
 
       <button class="suryanz-mobile-toggle" onclick="toggleMobileDrawer()" aria-label="Toggle Navigation">
@@ -188,7 +187,7 @@ function getSuryanzFooter(urlPrefix = '') {
 
     <div class="suryanz-footer-bottom">
       <div>
-        &copy; ${new Date().getFullYear()} SURYANZ SOLAR. All Rights Reserved. Engineered for 25+ Years Performance.
+        &copy; ${new Date().getFullYear()} SURYANZ SOLAR. All Rights Reserved. Engineered for 30 Years Performance.
       </div>
       <div style="display: flex; gap: 1.5rem;">
         <a href="${p}/legal/privacy-policy" style="color: rgba(255,255,255,0.75); text-decoration: none;">Privacy Policy</a>
@@ -266,7 +265,7 @@ function renderHomePage(urlPrefix = '') {
           <i class="fas fa-certificate"></i> SURYANZ SOLAR
         </div>
         <h1 class="suryanz-hero-title-main">Powering a Brighter Tomorrow</h1>
-        <div class="suryanz-hero-title-sub">Smart Solar. Reliable Energy. Built for the next 25 years.</div>
+        <div class="suryanz-hero-title-sub">Smart Solar. Reliable Energy. Built for the next 30 years.</div>
         <p class="suryanz-hero-subtitle">
           Engineer-designed solar systems for homes, businesses and industrial facilities — from site assessment and design to installation, net metering and long-term support.
         </p>
@@ -322,8 +321,8 @@ function renderHomePage(urlPrefix = '') {
           <div class="suryanz-trust-label">Energy Experience</div>
         </div>
         <div class="suryanz-trust-item">
-          <div class="suryanz-trust-num">25+ Years</div>
-          <div class="suryanz-trust-label">Solar Performance</div>
+          <div class="suryanz-trust-num">30 Years</div>
+          <div class="suryanz-trust-label">Solar Performance Warranty</div>
         </div>
         <div class="suryanz-trust-item">
           <div class="suryanz-trust-num">Residential → Industrial</div>
@@ -442,7 +441,7 @@ function renderHomePage(urlPrefix = '') {
       <div class="suryanz-section-header">
         <h2 class="suryanz-section-title">From Rooftop to Renewable Power</h2>
         <p class="suryanz-section-subtitle">
-          Our transparent 6-step execution workflow ensures zero guesswork from initial consultation to 25-year system commissioning.
+          Our transparent 6-step execution workflow ensures zero guesswork from initial consultation to 30-year system commissioning.
         </p>
       </div>
 
@@ -570,7 +569,7 @@ function renderHomePage(urlPrefix = '') {
       <div class="suryanz-section-header">
         <h2 class="suryanz-section-title">Engineered for the Way You Use Energy</h2>
         <p class="suryanz-section-subtitle">
-          We specify industrial-grade tier-1 solar equipment designed for harsh weather, high heat tolerance, and 25+ year endurance.
+          We specify industrial-grade tier-1 solar equipment designed for harsh weather, high heat tolerance, and 30-year endurance.
         </p>
       </div>
 
@@ -614,7 +613,7 @@ function renderHomePage(urlPrefix = '') {
     </div>
   </section>
 
-  <!-- 10. CUSTOMER PROTECTION -->
+  <!-- 10. CUSTOMER PROTECTION (30 YEARS FIRST TILE, NO % SIGN) -->
   <section class="suryanz-section" style="background:#ffffff;">
     <div class="suryanz-container">
       <div class="suryanz-section-header">
@@ -626,22 +625,25 @@ function renderHomePage(urlPrefix = '') {
 
       <div class="suryanz-protection-matrix">
         <div class="suryanz-protection-grid">
-          <div class="suryanz-warranty-box">
+          <!-- 1st Tile: 30 YEARS Linear Performance Warranty -->
+          <div class="suryanz-warranty-box" style="border-top-color: var(--suryanz-amber);">
+            <div class="suryanz-warranty-num">30 YEARS</div>
+            <div class="suryanz-warranty-title">Linear Performance Warranty</div>
+            <p class="suryanz-warranty-desc">Guarantees up to 80-85 power generation output retention over 30 years.</p>
+          </div>
+
+          <!-- 2nd Tile: 12 YEARS Module Product Warranty -->
+          <div class="suryanz-warranty-box" style="border-top-color: #3b82f6;">
             <div class="suryanz-warranty-num">12 YEARS</div>
             <div class="suryanz-warranty-title">Module Product Warranty</div>
             <p class="suryanz-warranty-desc">Full replacement coverage against manufacturing defects, micro-cracks, panel delamination, or material failure.</p>
           </div>
 
+          <!-- 3rd Tile: 8-10 YEARS Inverter Warranty -->
           <div class="suryanz-warranty-box" style="border-top-color: #10b981;">
             <div class="suryanz-warranty-num">8–10 YEARS</div>
             <div class="suryanz-warranty-title">Inverter Warranty</div>
             <p class="suryanz-warranty-desc">Comprehensive string and hybrid inverter product warranty ensuring continuous grid conversion reliability.</p>
-          </div>
-
-          <div class="suryanz-warranty-box" style="border-top-color: #3b82f6;">
-            <div class="suryanz-warranty-num">20–30 YEARS</div>
-            <div class="suryanz-warranty-title">Linear Performance Warranty</div>
-            <p class="suryanz-warranty-desc">Guaranteed linear power output retention ensuring your system maintains up to 80-85% performance after 25 years.</p>
           </div>
         </div>
       </div>
@@ -766,7 +768,7 @@ function renderHomePage(urlPrefix = '') {
 
         <div class="suryanz-tech-card" style="border-top: 3px solid var(--suryanz-amber);">
           <h4 class="suryanz-tech-title">REAL ACCOUNTABILITY</h4>
-          <p class="suryanz-tech-desc">A solar system is a 25-year financial asset. We stay personally involved and accountable long after installation.</p>
+          <p class="suryanz-tech-desc">A solar system is a 30-year financial asset. We stay personally involved and accountable long after installation.</p>
         </div>
       </div>
     </div>
@@ -878,11 +880,11 @@ function renderAboutPage(urlPrefix = '') {
 }
 
 function renderWhySuryanzPage(urlPrefix = '') {
-  return renderGenericPage('why-suryanz', 'Why SURYANZ SOLAR', 'Discover the engineering difference that protects your 25-year solar investment.', urlPrefix);
+  return renderGenericPage('why-suryanz', 'Why SURYANZ SOLAR', 'Discover the engineering difference that protects your 30-year solar investment.', urlPrefix);
 }
 
 function renderCustomerProtectionPage(urlPrefix = '') {
-  return renderGenericPage('customer-protection', '3-Stage Customer Protection', 'Documented product, inverter, and performance warranty portfolios.', urlPrefix);
+  return renderGenericPage('customer-protection', 'Customer Protection & 30-Year Warranty', 'Documented 30-Year Linear Performance, 12-Year Product, and 10-Year Inverter Warranty portfolios.', urlPrefix);
 }
 
 function renderTechnologyPage(urlPrefix = '') {
@@ -923,7 +925,7 @@ function renderSolutionPage(solutionSlug, urlPrefix = '') {
     'operations-maintenance': 'Solar O&M / AMC Services'
   };
   const title = titles[solutionSlug] || 'Solar Solution';
-  return renderGenericPage(`solutions/${solutionSlug}`, title, `High-efficiency, engineer-designed ${title.toLowerCase()} systems built for 25+ years reliability.`, urlPrefix);
+  return renderGenericPage(`solutions/${solutionSlug}`, title, `High-efficiency, engineer-designed ${title.toLowerCase()} systems built for 30 years reliability.`, urlPrefix);
 }
 
 function renderKnowledgeGuidePage(guideSlug, urlPrefix = '') {
