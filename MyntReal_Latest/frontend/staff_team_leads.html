@@ -2606,9 +2606,13 @@
                     document.getElementById('leadDealValueBalance').value = lead.deal_value_balance || 0;
                     calculateLeadDealBalance();
                     
-                    if (lead.status === 'won') {
+                    if (lead.id) {
                         loadLeadModalTransactions(lead.id, leadCompanyId);
-                        loadLeadDeals(lead.id);
+                        await loadLeadDeals(lead.id);
+                        if (leadDeals && leadDeals.length > 0) {
+                            document.getElementById('leadStatus').value = 'won';
+                            toggleLeadRevenueSection('won');
+                        }
                     }
                     
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
@@ -3868,7 +3872,17 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
-                if (data.success) { showToast('Deal created successfully', 'success'); document.getElementById('addDealFormSection').style.display = 'none'; loadLeadDeals(currentLeadId); }
+                if (data.success) {
+                    showToast('Deal created successfully', 'success');
+                    document.getElementById('addDealFormSection').style.display = 'none';
+                    await loadLeadDeals(currentLeadId);
+                    const statusSelect = document.getElementById('leadStatus');
+                    if (statusSelect) statusSelect.value = 'won';
+                    toggleLeadRevenueSection('won');
+                    if (typeof loadLeads === 'function') {
+                        loadLeads(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    }
+                }
                 else { showToast(data.detail || 'Failed to create deal', 'error'); }
             } catch (e) { console.error('Failed to save deal:', e); showToast('Failed to save deal', 'error'); }
         }

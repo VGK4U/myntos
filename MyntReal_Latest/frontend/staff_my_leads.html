@@ -2358,42 +2358,56 @@
         }
 
         const DEFAULT_FALLBACK_SOURCES = [
-            'Self Lead', 'Website', 'Referral', 'Walk-in', 'Phone Call',
-            'Online - M', 'Advertisement', 'Event/Exhibition', 'Partner',
+            'Self Lead', 'Direct Enquiry', 'Website', 'Referral', 'Walk-in', 'Phone Call',
+            'Online - M', 'Social Media', 'Cold Call', 'Advertisement', 'Event/Exhibition', 'Partner',
             'MNR', 'VGK4U', 'Other'
         ];
 
-        function populateSourceDropdowns() {
+        function populateSourceDropdowns(currentLeadSource) {
             const filterSelect = document.getElementById('filterSource');
             const formSelect = document.getElementById('leadSource');
             
-            const sourcesToRender = (leadSources && leadSources.length > 0)
-                ? leadSources
-                : DEFAULT_FALLBACK_SOURCES.map((name, i) => ({ name, display_order: i }));
+            const combinedList = [];
+            const seen = new Set();
+
+            if (Array.isArray(leadSources)) {
+                leadSources.forEach(src => {
+                    const sName = typeof src === 'string' ? src.trim() : (src && src.name ? src.name.trim() : '');
+                    if (sName && !seen.has(sName.toLowerCase())) {
+                        seen.add(sName.toLowerCase());
+                        combinedList.push(sName);
+                    }
+                });
+            }
+
+            DEFAULT_FALLBACK_SOURCES.forEach(sName => {
+                if (sName && !seen.has(sName.toLowerCase())) {
+                    seen.add(sName.toLowerCase());
+                    combinedList.push(sName);
+                }
+            });
+
+            if (currentLeadSource && typeof currentLeadSource === 'string') {
+                const cName = currentLeadSource.trim();
+                if (cName && !seen.has(cName.toLowerCase())) {
+                    seen.add(cName.toLowerCase());
+                    combinedList.push(cName);
+                }
+            }
 
             if (filterSelect) {
                 const currentFilterVal = filterSelect.value;
                 filterSelect.innerHTML = '<option value="">All Sources</option>';
-                const seenFilter = new Set();
-                sourcesToRender.forEach(src => {
-                    const sName = src && src.name ? src.name.trim() : '';
-                    if (sName && !seenFilter.has(sName.toLowerCase())) {
-                        seenFilter.add(sName.toLowerCase());
-                        filterSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
-                    }
+                combinedList.forEach(sName => {
+                    filterSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
                 });
                 if (currentFilterVal) filterSelect.value = currentFilterVal;
             }
             if (formSelect) {
-                const currentFormVal = formSelect.value;
+                const currentFormVal = formSelect.value || currentLeadSource || '';
                 formSelect.innerHTML = '<option value="">Select Source</option>';
-                const seenForm = new Set();
-                sourcesToRender.forEach(src => {
-                    const sName = src && src.name ? src.name.trim() : '';
-                    if (sName && !seenForm.has(sName.toLowerCase())) {
-                        seenForm.add(sName.toLowerCase());
-                        formSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
-                    }
+                combinedList.forEach(sName => {
+                    formSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
                 });
                 if (currentFormVal) formSelect.value = currentFormVal;
             }
@@ -3300,6 +3314,7 @@
                     // DC Protocol (Mar 2026): Reload categories for lead's specific company before setting value
                     await loadCategoriesForCompany(effectiveCompanyId);
                     document.getElementById('leadCategory').value = lead.category_id || '';
+                    populateSourceDropdowns(lead.source);
                     document.getElementById('leadSource').value = lead.source || '';
                     document.getElementById('leadPriority').value = lead.priority;
                     document.getElementById('leadStatus').value = lead.status || 'new';
@@ -3513,9 +3528,13 @@
                     document.getElementById('leadDealValueReceived').value = lead.deal_value_received || 0;
                     document.getElementById('leadDealValueBalance').value = lead.deal_value_balance || 0;
                     
-                    if (lead.status === 'won') {
+                    if (lead.id) {
                         loadLeadModalTransactions(lead.id, leadCompanyId);
-                        loadLeadDeals(lead.id);
+                        await loadLeadDeals(lead.id);
+                        if (leadDeals && leadDeals.length > 0) {
+                            document.getElementById('leadStatus').value = 'won';
+                            toggleLeadRevenueSection('won');
+                        }
                     }
                     
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
@@ -4229,12 +4248,15 @@
                 }
             }
             
-            // Add deal values if status is Won
-            if (currentStatus === 'won') {
+            // Add deal values if status is Won or deals exist
+            const hasSavedDeals = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals) && leadDeals.length > 0) || (typeof pendingNewLeadDeals !== 'undefined' && Array.isArray(pendingNewLeadDeals) && pendingNewLeadDeals.length > 0);
+            if (currentStatus === 'won' || hasSavedDeals) {
+                leadData.status = 'won';
                 const rawDirectVal = parseFloat(document.getElementById('dealValueInput')?.value) || 0;
                 const rawHiddenVal = parseFloat(document.getElementById('leadDealValueTotal')?.value) || 0;
                 const dealsSum = (typeof leadDeals !== 'undefined' && Array.isArray(leadDeals)) ? leadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
-                const finalDealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum);
+                const pendingSum = (typeof pendingNewLeadDeals !== 'undefined' && Array.isArray(pendingNewLeadDeals)) ? pendingNewLeadDeals.reduce((s, d) => s + (d.deal_value_total || 0), 0) : 0;
+                const finalDealTotal = Math.max(rawDirectVal, rawHiddenVal, dealsSum, pendingSum);
                 
                 leadData.deal_value_total = finalDealTotal;
                 leadData.deal_value_received = parseFloat(document.getElementById('leadDealValueReceived')?.value) || 0;
@@ -5068,7 +5090,13 @@
                 if (data.success) {
                     showToast('Deal created successfully', 'success');
                     document.getElementById('addDealFormSection').style.display = 'none';
-                    loadLeadDeals(currentLeadId);
+                    await loadLeadDeals(currentLeadId);
+                    const statusSelect = document.getElementById('leadStatus');
+                    if (statusSelect) statusSelect.value = 'won';
+                    toggleLeadRevenueSection('won');
+                    if (typeof loadLeads === 'function') {
+                        loadLeads(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    }
                 } else {
                     showToast(data.detail || 'Failed to create deal', 'error');
                 }

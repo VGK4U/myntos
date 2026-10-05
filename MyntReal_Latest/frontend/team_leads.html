@@ -2545,12 +2545,65 @@
             });
         }
         
-        async function loadLeadSources() {
-            // DC Protocol: Skip if no valid company selected
-            if (!companyId) return;
+        const DEFAULT_FALLBACK_SOURCES = [
+            'Self Lead', 'Direct Enquiry', 'Website', 'Referral', 'Walk-in', 'Phone Call',
+            'Online - M', 'Social Media', 'Cold Call', 'Advertisement', 'Event/Exhibition', 'Partner',
+            'MNR', 'VGK4U', 'Other'
+        ];
+
+        function populateSourceDropdowns(currentLeadSource) {
+            const filterSelect = document.getElementById('filterSource');
+            const formSelect = document.getElementById('leadSource');
             
+            const combinedList = [];
+            const seen = new Set();
+
+            if (Array.isArray(leadSources)) {
+                leadSources.forEach(src => {
+                    const sName = typeof src === 'string' ? src.trim() : (src && src.name ? src.name.trim() : '');
+                    if (sName && !seen.has(sName.toLowerCase())) {
+                        seen.add(sName.toLowerCase());
+                        combinedList.push(sName);
+                    }
+                });
+            }
+
+            DEFAULT_FALLBACK_SOURCES.forEach(sName => {
+                if (sName && !seen.has(sName.toLowerCase())) {
+                    seen.add(sName.toLowerCase());
+                    combinedList.push(sName);
+                }
+            });
+
+            if (currentLeadSource && typeof currentLeadSource === 'string') {
+                const cName = currentLeadSource.trim();
+                if (cName && !seen.has(cName.toLowerCase())) {
+                    seen.add(cName.toLowerCase());
+                    combinedList.push(cName);
+                }
+            }
+
+            if (filterSelect) {
+                const currentFilterVal = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">All Sources</option>';
+                combinedList.forEach(sName => {
+                    filterSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
+                });
+                if (currentFilterVal) filterSelect.value = currentFilterVal;
+            }
+            if (formSelect) {
+                const currentFormVal = formSelect.value || currentLeadSource || '';
+                formSelect.innerHTML = '<option value="">Select Source</option>';
+                combinedList.forEach(sName => {
+                    formSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
+                });
+                if (currentFormVal) formSelect.value = currentFormVal;
+            }
+        }
+
+        async function loadLeadSources() {
+            if (!companyId) return;
             try {
-                // DC Protocol (Dec 31, 2025): "All Companies" mode - aggregate sources
                 if (companyId === 'all' && companiesList.length > 0) {
                     const fetchPromises = companiesList.map(async (company) => {
                         const url = `${API_BASE}/sources?company_id=${company.id}`;
@@ -2563,10 +2616,7 @@
                             return [];
                         }
                     });
-                    
                     const results = await Promise.all(fetchPromises);
-                    
-                    // Aggregate unique sources by name
                     const sourceMap = new Map();
                     results.forEach(sources => {
                         if (sources) {
@@ -2578,24 +2628,19 @@
                         }
                     });
                     leadSources = Array.from(sourceMap.values());
-                    const select = document.getElementById('leadSource');
-                    select.innerHTML = '<option value="">Select Source</option>';
-                    leadSources.forEach(src => {
-                        select.innerHTML += `<option value="${src.name}">${src.name}</option>`;
-                    });
+                    populateSourceDropdowns();
                 } else {
                     const data = await apiCall('/sources');
                     if (data && data.success) {
                         leadSources = data.data;
-                        const select = document.getElementById('leadSource');
-                        select.innerHTML = '<option value="">Select Source</option>';
-                        leadSources.forEach(src => {
-                            select.innerHTML += `<option value="${src.name}">${src.name}</option>`;
-                        });
+                        populateSourceDropdowns();
+                    } else {
+                        populateSourceDropdowns();
                     }
                 }
             } catch (error) {
                 console.error('Failed to load sources:', error);
+                populateSourceDropdowns();
             }
         }
         
@@ -3512,6 +3557,7 @@
                     // DC Protocol (Mar 2026): Reload categories for lead's specific company before setting value
                     await loadCategoriesForCompany(effectiveCompanyId);
                     document.getElementById('leadCategory').value = lead.category_id || '';
+                    populateSourceDropdowns(lead.source);
                     document.getElementById('leadSource').value = lead.source || '';
                     document.getElementById('leadPriority').value = lead.priority;
                     document.getElementById('leadStatus').value = lead.status || 'new';
@@ -3622,9 +3668,13 @@
                     document.getElementById('leadDealValueReceived').value = lead.deal_value_received || 0;
                     document.getElementById('leadDealValueBalance').value = lead.deal_value_balance || 0;
                     
-                    if (lead.status === 'won') {
+                    if (lead.id) {
                         loadLeadModalTransactions(lead.id, leadCompanyId);
-                        loadLeadDeals(lead.id);
+                        await loadLeadDeals(lead.id);
+                        if (leadDeals && leadDeals.length > 0) {
+                            document.getElementById('leadStatus').value = 'won';
+                            toggleLeadRevenueSection('won');
+                        }
                     }
 
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
@@ -4784,7 +4834,13 @@
                 if (data.success) {
                     showToast('Deal created successfully', 'success');
                     document.getElementById('addDealFormSection').style.display = 'none';
-                    loadLeadDeals(currentLeadId);
+                    await loadLeadDeals(currentLeadId);
+                    const statusSelect = document.getElementById('leadStatus');
+                    if (statusSelect) statusSelect.value = 'won';
+                    toggleLeadRevenueSection('won');
+                    if (typeof loadLeads === 'function') {
+                        loadLeads(typeof currentPage !== 'undefined' ? currentPage : 1);
+                    }
                 } else {
                     showToast(data.detail || 'Failed to create deal', 'error');
                 }
