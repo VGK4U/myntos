@@ -7653,7 +7653,7 @@ const server = http.createServer(async (req, res) => {
       const p = req.url.split('?')[0];
       if (p === '/' || p === '') {
         req.url = req.url.replace('/', '/zynovaos');
-      } else if (p === '/login' || p === '/login/') {
+      } else if (p === '/login' || p === '/login/' || p === '/staff/login' || p === '/staff/login/' || p === '/staff_login' || p === '/staff-login') {
         req.url = req.url.replace(p, '/saas/login');
       }
     }
@@ -18874,8 +18874,12 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/login') || url.startsWith('/staff_login') || url.startsWith('/staff-login')) {
     // Staff Portal Login - No MNR user auth required
-    // DC Protocol (Dec 23, 2025): Use cached HTML to prevent EIO errors
-    serveCachedHtml(res, 'staff_login.html', BUILD_ID);
+    const hostHeader = (req.headers['host'] || '').toLowerCase();
+    if (hostHeader.includes('zynovaos.com') || hostHeader.includes('zynova.com')) {
+      serveCachedHtml(res, 'saas_login.html', BUILD_ID);
+    } else {
+      serveCachedHtml(res, 'staff_login.html', BUILD_ID);
+    }
     return;
   } else if (url.startsWith('/partner/login')) {
     // Partner Portal Login - DC_PARTNER_AUTH_001 (Dec 2025)

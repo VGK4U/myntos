@@ -72,19 +72,19 @@
     }
     
     function redirectToLogin() {
-        const rawUser = localStorage.getItem('staff_user');
         let isSaaSTenant = false;
-        if (rawUser) {
+        if (typeof window !== 'undefined' && window.location && (window.location.hostname.includes('zynovaos') || window.location.hostname.includes('zynova.com') || window.location.pathname.startsWith('/saas'))) {
+            isSaaSTenant = true;
+        } else if (typeof StaffSidebar !== 'undefined' && typeof StaffSidebar.isSaaSTenantContext === 'function') {
+            isSaaSTenant = StaffSidebar.isSaaSTenantContext();
+        } else {
             try {
-                const u = JSON.parse(rawUser);
-                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
-                const internalCompanyIds = [1, 2, 3, 4, 88];
-                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
-                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
-                if (!isInternalType && !isInternalCompany) {
-                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
-                        isSaaSTenant = true;
-                    }
+                const rawUser = localStorage.getItem('staff_user');
+                if (rawUser) {
+                    const u = JSON.parse(rawUser);
+                    if (u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') isSaaSTenant = true;
+                    else if (['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT', 'SAAS_SEGMENT_ADMIN'].includes(u.staff_type)) isSaaSTenant = true;
+                    else if (u.base_company_id && ![1, 2, 3, 4, 88].includes(Number(u.base_company_id))) isSaaSTenant = true;
                 }
             } catch (_) {}
         }

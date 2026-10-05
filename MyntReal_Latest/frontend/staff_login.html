@@ -480,6 +480,14 @@
     </div>
     
     <script>
+        // Zynova OS Domain Guard: Ensure zynovaos.com traffic lands on SaaS login page
+        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+            const h = window.location.hostname.toLowerCase();
+            if (h.includes('zynovaos') || h.includes('zynova.com')) {
+                window.location.replace('/saas/login' + window.location.search);
+            }
+        }
+
         // Auto-correct port in local development if port 5001 was omitted
         if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '' || window.location.port === '80')) {
             window.location.replace('http://127.0.0.1:5001' + window.location.pathname + window.location.search);

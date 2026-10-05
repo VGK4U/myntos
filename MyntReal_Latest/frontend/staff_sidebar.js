@@ -736,24 +736,30 @@ window.StaffSidebar = window.StaffSidebar || {
         console.log('[DC-SIDEBAR] Notifications toggle - to be implemented');
     },
 
+    isSaaSTenantContext: function() {
+        if (typeof window !== 'undefined' && window.location) {
+            const host = (window.location.hostname || '').toLowerCase();
+            if (host.includes('zynovaos') || host.includes('zynova.com')) return true;
+            if ((window.location.pathname || '').startsWith('/saas')) return true;
+        }
+        if (this.isSaaSTenant) return true;
+        try {
+            const rawUser = localStorage.getItem('staff_user');
+            if (rawUser) {
+                const u = JSON.parse(rawUser);
+                if (u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') return true;
+                if (['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT', 'SAAS_SEGMENT_ADMIN'].includes(u.staff_type)) return true;
+                const internalCompanyIds = [1, 2, 3, 4, 88];
+                if (u.base_company_id && !internalCompanyIds.includes(Number(u.base_company_id))) return true;
+            }
+        } catch (_) {}
+        return false;
+    },
+
     // Logout function (context-aware: returns SaaS tenants to /saas/login, internal staff to /staff/login)
     logout: function() {
-        const rawUser = localStorage.getItem('staff_user');
-        let isSaaSTenant = false;
-        if (rawUser) {
-            try {
-                const u = JSON.parse(rawUser);
-                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
-                const internalCompanyIds = [1, 2, 3, 4, 88];
-                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
-                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
-                if (!isInternalType && !isInternalCompany) {
-                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
-                        isSaaSTenant = true;
-                    }
-                }
-            } catch (_) {}
-        }
+        const isSaaS = (typeof this.isSaaSTenantContext === 'function' ? this.isSaaSTenantContext() : false) || 
+                       (typeof window !== 'undefined' && (window.location.hostname.includes('zynovaos') || window.location.hostname.includes('zynova.com') || window.location.pathname.startsWith('/saas')));
         
         // Clear all storage
         try {
@@ -768,7 +774,7 @@ window.StaffSidebar = window.StaffSidebar || {
             document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/saas;';
         });
 
-        if (isSaaSTenant) {
+        if (isSaaS) {
             window.location.href = '/saas/login?logout=true';
         } else {
             window.location.href = '/staff/login?logout=true';
@@ -1864,22 +1870,8 @@ window.StaffSidebar = window.StaffSidebar || {
 
     // Logout function
     logout: function() {
-        const rawUser = localStorage.getItem('staff_user');
-        let isSaaSTenant = false;
-        if (rawUser) {
-            try {
-                const u = JSON.parse(rawUser);
-                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
-                const internalCompanyIds = [1, 2, 3, 4, 88];
-                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
-                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
-                if (!isInternalType && !isInternalCompany) {
-                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
-                        isSaaSTenant = true;
-                    }
-                }
-            } catch (_) {}
-        }
+        const isSaaS = (typeof this.isSaaSTenantContext === 'function' ? this.isSaaSTenantContext() : false) || 
+                       (typeof window !== 'undefined' && (window.location.hostname.includes('zynovaos') || window.location.hostname.includes('zynova.com') || window.location.pathname.startsWith('/saas')));
         
         try {
             localStorage.clear();
@@ -1892,7 +1884,7 @@ window.StaffSidebar = window.StaffSidebar || {
             document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/saas;';
         });
 
-        if (isSaaSTenant) {
+        if (isSaaS) {
             window.location.href = '/saas/login?logout=true';
         } else {
             window.location.href = '/staff/login?logout=true';
