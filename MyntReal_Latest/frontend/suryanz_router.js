@@ -10,50 +10,51 @@
 const fs = require('fs');
 const path = require('path');
 
-function getSuryanzHeader(activePath = '/') {
+function getSuryanzHeader(activePath = '/', urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   return `
   <header class="suryanz-header" role="banner">
     <div class="suryanz-nav-container">
-      <a href="/" class="suryanz-brand-logo" aria-label="Suryanz Solar Home">
+      <a href="${p || '/'}" class="suryanz-brand-logo" aria-label="Suryanz Solar Home">
         <img src="/public/images/suryanz-logo-transparent.png" alt="SURYANZ SOLAR Logo" class="suryanz-logo-img" onerror="this.onerror=null; this.src='/public/images/suryanz-logo.svg';">
       </a>
       
       <nav aria-label="Main Navigation">
         <ul class="suryanz-nav-links">
-          <li><a href="/" class="${activePath === '/' ? 'active' : ''}">Home</a></li>
-          <li><a href="/about" class="${activePath === '/about' ? 'active' : ''}">About</a></li>
-          <li><a href="/why-suryanz" class="${activePath === '/why-suryanz' ? 'active' : ''}">Why Suryanz</a></li>
+          <li><a href="${p || '/'}" class="${activePath === '/' ? 'active' : ''}">Home</a></li>
+          <li><a href="${p}/about" class="${activePath === '/about' ? 'active' : ''}">About</a></li>
+          <li><a href="${p}/why-suryanz" class="${activePath === '/why-suryanz' ? 'active' : ''}">Why Suryanz</a></li>
           
           <li class="suryanz-dropdown">
-            <a href="/solutions/residential" class="${activePath.startsWith('/solutions') ? 'active' : ''}">
+            <a href="${p}/solutions/residential" class="${activePath.startsWith('/solutions') ? 'active' : ''}">
               Solutions <i class="fas fa-chevron-down" style="font-size:0.75rem; margin-left:3px;"></i>
             </a>
             <ul class="suryanz-dropdown-menu">
-              <li><a href="/solutions/residential">Residential Rooftop Solar</a></li>
-              <li><a href="/solutions/commercial">Commercial Rooftop Solar</a></li>
-              <li><a href="/solutions/industrial">Industrial Solar Systems</a></li>
-              <li><a href="/solutions/epc">Solar EPC Services</a></li>
-              <li><a href="/solutions/on-grid">On-Grid Systems</a></li>
-              <li><a href="/solutions/hybrid">Hybrid Solar + Battery Storage</a></li>
-              <li><a href="/solutions/off-grid">Off-Grid Remote Energy</a></li>
-              <li><a href="/solutions/solar-battery">Solar Battery Systems</a></li>
-              <li><a href="/solutions/apartments">Societies & Apartments</a></li>
-              <li><a href="/solutions/operations-maintenance">Operations & Maintenance (O&M)</a></li>
+              <li><a href="${p}/solutions/residential">Residential Rooftop Solar</a></li>
+              <li><a href="${p}/solutions/commercial">Commercial Rooftop Solar</a></li>
+              <li><a href="${p}/solutions/industrial">Industrial Solar Systems</a></li>
+              <li><a href="${p}/solutions/epc">Solar EPC Services</a></li>
+              <li><a href="${p}/solutions/on-grid">On-Grid Systems</a></li>
+              <li><a href="${p}/solutions/hybrid">Hybrid Solar + Battery Storage</a></li>
+              <li><a href="${p}/solutions/off-grid">Off-Grid Remote Energy</a></li>
+              <li><a href="${p}/solutions/solar-battery">Solar Battery Systems</a></li>
+              <li><a href="${p}/solutions/apartments">Societies & Apartments</a></li>
+              <li><a href="${p}/solutions/operations-maintenance">Operations & Maintenance (O&M)</a></li>
             </ul>
           </li>
 
-          <li><a href="/customer-protection" class="${activePath === '/customer-protection' ? 'active' : ''}">Customer Protection</a></li>
-          <li><a href="/technology" class="${activePath === '/technology' ? 'active' : ''}">Technology</a></li>
-          <li><a href="/calculator" class="${activePath === '/calculator' ? 'active' : ''}">Solar Calculator</a></li>
-          <li><a href="/projects" class="${activePath === '/projects' ? 'active' : ''}">Projects</a></li>
-          <li><a href="/faqs" class="${activePath === '/faqs' ? 'active' : ''}">FAQs</a></li>
-          <li><a href="/contact" class="${activePath === '/contact' ? 'active' : ''}">Contact</a></li>
+          <li><a href="${p}/customer-protection" class="${activePath === '/customer-protection' ? 'active' : ''}">Customer Protection</a></li>
+          <li><a href="${p}/technology" class="${activePath === '/technology' ? 'active' : ''}">Technology</a></li>
+          <li><a href="${p}/calculator" class="${activePath === '/calculator' ? 'active' : ''}">Solar Calculator</a></li>
+          <li><a href="${p}/projects" class="${activePath === '/projects' ? 'active' : ''}">Projects</a></li>
+          <li><a href="${p}/faqs" class="${activePath === '/faqs' ? 'active' : ''}">FAQs</a></li>
+          <li><a href="${p}/contact" class="${activePath === '/contact' ? 'active' : ''}">Contact</a></li>
         </ul>
       </nav>
 
       <div class="suryanz-header-actions" style="display: flex; gap: 0.75rem; align-items: center;">
-        <a href="/calculator" class="suryanz-btn-outline" style="font-size: 0.85rem;">Calculate Savings</a>
-        <a href="/contact" class="suryanz-btn-cta" style="font-size: 0.85rem;"><i class="fas fa-solar-panel"></i> Get Solar Assessment</a>
+        <a href="${p}/calculator" class="suryanz-btn-outline" style="font-size: 0.85rem;">Calculate Savings</a>
+        <a href="${p}/contact" class="suryanz-btn-cta" style="font-size: 0.85rem;"><i class="fas fa-solar-panel"></i> Get Solar Assessment</a>
       </div>
 
       <button class="suryanz-mobile-toggle" onclick="toggleMobileDrawer()" aria-label="Toggle Navigation">
@@ -66,18 +67,18 @@ function getSuryanzHeader(activePath = '/') {
   <div class="suryanz-mobile-drawer" id="mobileDrawer">
     <button class="suryanz-mobile-close" onclick="toggleMobileDrawer()">&times;</button>
     <ul class="suryanz-mobile-menu">
-      <li><a href="/" onclick="toggleMobileDrawer()">Home</a></li>
-      <li><a href="/about" onclick="toggleMobileDrawer()">About Suryanz</a></li>
-      <li><a href="/why-suryanz" onclick="toggleMobileDrawer()">Why Suryanz</a></li>
-      <li><a href="/solutions/residential" onclick="toggleMobileDrawer()">Residential Solar</a></li>
-      <li><a href="/solutions/commercial" onclick="toggleMobileDrawer()">Commercial Solar</a></li>
-      <li><a href="/solutions/epc" onclick="toggleMobileDrawer()">Solar EPC Services</a></li>
-      <li><a href="/customer-protection" onclick="toggleMobileDrawer()">Customer Protection</a></li>
-      <li><a href="/technology" onclick="toggleMobileDrawer()">Technology Specs</a></li>
-      <li><a href="/calculator" onclick="toggleMobileDrawer()">Solar Calculator</a></li>
-      <li><a href="/projects" onclick="toggleMobileDrawer()">Projects & Case Studies</a></li>
-      <li><a href="/faqs" onclick="toggleMobileDrawer()">FAQs</a></li>
-      <li><a href="/contact" onclick="toggleMobileDrawer()">Contact Us</a></li>
+      <li><a href="${p || '/'}" onclick="toggleMobileDrawer()">Home</a></li>
+      <li><a href="${p}/about" onclick="toggleMobileDrawer()">About Suryanz</a></li>
+      <li><a href="${p}/why-suryanz" onclick="toggleMobileDrawer()">Why Suryanz</a></li>
+      <li><a href="${p}/solutions/residential" onclick="toggleMobileDrawer()">Residential Solar</a></li>
+      <li><a href="${p}/solutions/commercial" onclick="toggleMobileDrawer()">Commercial Solar</a></li>
+      <li><a href="${p}/solutions/epc" onclick="toggleMobileDrawer()">Solar EPC Services</a></li>
+      <li><a href="${p}/customer-protection" onclick="toggleMobileDrawer()">Customer Protection</a></li>
+      <li><a href="${p}/technology" onclick="toggleMobileDrawer()">Technology Specs</a></li>
+      <li><a href="${p}/calculator" onclick="toggleMobileDrawer()">Solar Calculator</a></li>
+      <li><a href="${p}/projects" onclick="toggleMobileDrawer()">Projects & Case Studies</a></li>
+      <li><a href="${p}/faqs" onclick="toggleMobileDrawer()">FAQs</a></li>
+      <li><a href="${p}/contact" onclick="toggleMobileDrawer()">Contact Us</a></li>
     </ul>
   </div>
 
@@ -91,7 +92,8 @@ function getSuryanzHeader(activePath = '/') {
   </script>`;
 }
 
-function getSuryanzFooter() {
+function getSuryanzFooter(urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   return `
   <footer class="suryanz-footer" role="contentinfo">
     <div class="suryanz-footer-grid">
@@ -110,58 +112,58 @@ function getSuryanzFooter() {
       <div class="suryanz-footer-col">
         <h4>Solar Solutions</h4>
         <ul>
-          <li><a href="/solutions/residential">Residential Rooftop Solar</a></li>
-          <li><a href="/solutions/commercial">Commercial Rooftop Solar</a></li>
-          <li><a href="/solutions/industrial">Industrial Solar Systems</a></li>
-          <li><a href="/solutions/epc">Solar EPC Services</a></li>
-          <li><a href="/solutions/on-grid">On-Grid Systems</a></li>
-          <li><a href="/solutions/hybrid">Hybrid Solar + Battery</a></li>
-          <li><a href="/solutions/off-grid">Off-Grid Remote Energy</a></li>
-          <li><a href="/solutions/solar-battery">Solar Battery Systems</a></li>
-          <li><a href="/solutions/apartments">Housing Societies</a></li>
-          <li><a href="/solutions/operations-maintenance">Solar O&M / AMC</a></li>
+          <li><a href="${p}/solutions/residential">Residential Rooftop Solar</a></li>
+          <li><a href="${p}/solutions/commercial">Commercial Rooftop Solar</a></li>
+          <li><a href="${p}/solutions/industrial">Industrial Solar Systems</a></li>
+          <li><a href="${p}/solutions/epc">Solar EPC Services</a></li>
+          <li><a href="${p}/solutions/on-grid">On-Grid Systems</a></li>
+          <li><a href="${p}/solutions/hybrid">Hybrid Solar + Battery</a></li>
+          <li><a href="${p}/solutions/off-grid">Off-Grid Remote Energy</a></li>
+          <li><a href="${p}/solutions/solar-battery">Solar Battery Systems</a></li>
+          <li><a href="${p}/solutions/apartments">Housing Societies</a></li>
+          <li><a href="${p}/solutions/operations-maintenance">Solar O&M / AMC</a></li>
         </ul>
       </div>
 
       <div class="suryanz-footer-col">
         <h4>Knowledge & Guides</h4>
         <ul>
-          <li><a href="/solar-guide">Solar Buyer's Guide</a></li>
-          <li><a href="/solar-pricing">Rooftop Solar Cost Guide</a></li>
-          <li><a href="/solar-roi">Solar ROI & Financial Guide</a></li>
-          <li><a href="/solar-calculator-guide">Capacity Sizing Guide</a></li>
-          <li><a href="/solar-warranty-guide">Warranty Portfolio Guide</a></li>
-          <li><a href="/solar-maintenance">Solar Maintenance Guide</a></li>
-          <li><a href="/solar-buying-guide">Solar System Comparison</a></li>
+          <li><a href="${p}/solar-guide">Solar Buyer's Guide</a></li>
+          <li><a href="${p}/solar-pricing">Rooftop Solar Cost Guide</a></li>
+          <li><a href="${p}/solar-roi">Solar ROI & Financial Guide</a></li>
+          <li><a href="${p}/solar-calculator-guide">Capacity Sizing Guide</a></li>
+          <li><a href="${p}/solar-warranty-guide">Warranty Portfolio Guide</a></li>
+          <li><a href="${p}/solar-maintenance">Solar Maintenance Guide</a></li>
+          <li><a href="${p}/solar-buying-guide">Solar System Comparison</a></li>
         </ul>
       </div>
 
       <div class="suryanz-footer-col">
         <h4>Regional Service Hubs</h4>
         <ul>
-          <li><a href="/location/andhra-pradesh">Andhra Pradesh Solar Hub</a></li>
-          <li><a href="/location/telangana">Telangana Solar Hub</a></li>
-          <li><a href="/location/karnataka">Karnataka Solar Hub</a></li>
-          <li><a href="/location/visakhapatnam">Visakhapatnam Solar EPC</a></li>
-          <li><a href="/location/vijayawada">Vijayawada Rooftop Solar</a></li>
-          <li><a href="/location/hyderabad">Hyderabad Commercial Solar</a></li>
-          <li><a href="/location/bengaluru">Bengaluru Residential Solar</a></li>
-          <li><a href="/location/mangalore">Mangalore Solar Solutions</a></li>
+          <li><a href="${p}/location/andhra-pradesh">Andhra Pradesh Solar Hub</a></li>
+          <li><a href="${p}/location/telangana">Telangana Solar Hub</a></li>
+          <li><a href="${p}/location/karnataka">Karnataka Solar Hub</a></li>
+          <li><a href="${p}/location/visakhapatnam">Visakhapatnam Solar EPC</a></li>
+          <li><a href="${p}/location/vijayawada">Vijayawada Rooftop Solar</a></li>
+          <li><a href="${p}/location/hyderabad">Hyderabad Commercial Solar</a></li>
+          <li><a href="${p}/location/bengaluru">Bengaluru Residential Solar</a></li>
+          <li><a href="${p}/location/mangalore">Mangalore Solar Solutions</a></li>
         </ul>
       </div>
 
       <div class="suryanz-footer-col">
         <h4>Company & Trust</h4>
         <ul>
-          <li><a href="/about">About SURYANZ</a></li>
-          <li><a href="/why-suryanz">Why Suryanz Solar</a></li>
-          <li><a href="/customer-protection">Customer Protection</a></li>
-          <li><a href="/technology">Technology Specifications</a></li>
-          <li><a href="/calculator">Solar Calculator</a></li>
-          <li><a href="/projects">Case Studies & Projects</a></li>
-          <li><a href="/customer-stories">Customer Stories</a></li>
-          <li><a href="/faqs">FAQs</a></li>
-          <li><a href="/contact">Contact & Consult</a></li>
+          <li><a href="${p}/about">About SURYANZ</a></li>
+          <li><a href="${p}/why-suryanz">Why Suryanz Solar</a></li>
+          <li><a href="${p}/customer-protection">Customer Protection</a></li>
+          <li><a href="${p}/technology">Technology Specifications</a></li>
+          <li><a href="${p}/calculator">Solar Calculator</a></li>
+          <li><a href="${p}/projects">Case Studies & Projects</a></li>
+          <li><a href="${p}/customer-stories">Customer Stories</a></li>
+          <li><a href="${p}/faqs">FAQs</a></li>
+          <li><a href="${p}/contact">Contact & Consult</a></li>
         </ul>
       </div>
     </div>
@@ -171,9 +173,9 @@ function getSuryanzFooter() {
         &copy; ${new Date().getFullYear()} SURYANZ / SURYANZ SOLAR. All Rights Reserved.
       </div>
       <div style="display: flex; gap: 1.5rem;">
-        <a href="/legal/privacy-policy" style="color: rgba(255,255,255,0.75); text-decoration: none;">Privacy Policy</a>
-        <a href="/legal/terms-and-conditions" style="color: rgba(255,255,255,0.75); text-decoration: none;">Terms & Conditions</a>
-        <a href="/legal/warranty-terms" style="color: rgba(255,255,255,0.75); text-decoration: none;">Warranty Terms</a>
+        <a href="${p}/legal/privacy-policy" style="color: rgba(255,255,255,0.75); text-decoration: none;">Privacy Policy</a>
+        <a href="${p}/legal/terms-and-conditions" style="color: rgba(255,255,255,0.75); text-decoration: none;">Terms & Conditions</a>
+        <a href="${p}/legal/warranty-terms" style="color: rgba(255,255,255,0.75); text-decoration: none;">Warranty Terms</a>
       </div>
     </div>
   </footer>`;
@@ -185,7 +187,8 @@ function renderSuryanzPage({
   canonicalUrl = 'https://suryanzsolar.com/',
   activePath = '/',
   bodyContent,
-  jsonLd = null
+  jsonLd = null,
+  urlPrefix = ''
 }) {
   const defaultSchema = {
     "@context": "https://schema.org",
@@ -220,11 +223,11 @@ function renderSuryanzPage({
   <script type="application/ld+json">${schemaJson}</script>
 </head>
 <body class="suryanz-body">
-  ${getSuryanzHeader(activePath)}
+  ${getSuryanzHeader(activePath, urlPrefix)}
   <main role="main">
     ${bodyContent}
   </main>
-  ${getSuryanzFooter()}
+  ${getSuryanzFooter(urlPrefix)}
   <script src="/public/js/suryanz-calculator.js" defer></script>
   <script src="/public/js/suryanz-lead-form.js" defer></script>
 </body>
@@ -233,7 +236,8 @@ function renderSuryanzPage({
 
 // ===================== SPECIFIC ROUTE RENDERERS =====================
 
-function renderHomePage() {
+function renderHomePage(urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const content = `
   <!-- Section 1: Hero -->
   <section class="suryanz-hero-section">
@@ -250,9 +254,9 @@ function renderHomePage() {
           Smart Solar. Reliable Energy. A Better Future. High-efficiency rooftop solar systems for residential homes, commercial hubs, and industrial plants engineered with total transparency.
         </p>
         <div class="suryanz-hero-ctas">
-          <a href="/contact" class="suryanz-btn-cta"><i class="fas fa-file-invoice"></i> Get a Free Solar Assessment</a>
-          <a href="/calculator" class="suryanz-btn-amber"><i class="fas fa-calculator"></i> Calculate Solar Savings</a>
-          <a href="/technology" class="suryanz-btn-outline" style="border-color:#fff; color:#fff!important;"><i class="fas fa-microchip"></i> View Technology Specs</a>
+          <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-file-invoice"></i> Get a Free Solar Assessment</a>
+          <a href="${p}/calculator" class="suryanz-btn-amber"><i class="fas fa-calculator"></i> Calculate Solar Savings</a>
+          <a href="${p}/technology" class="suryanz-btn-outline" style="border-color:#fff; color:#fff!important;"><i class="fas fa-microchip"></i> View Technology Specs</a>
         </div>
       </div>
       <div>
@@ -344,21 +348,21 @@ function renderHomePage() {
           <div class="suryanz-card-icon"><i class="fas fa-home"></i></div>
           <h3 class="suryanz-card-title">Residential Rooftop Solar</h3>
           <p class="suryanz-card-text">Slash monthly home power bills by up to 80-90% with clean grid-tied or hybrid battery systems built for 25+ year durability.</p>
-          <a href="/solutions/residential" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Residential Solar</a>
+          <a href="${p}/solutions/residential" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Residential Solar</a>
         </div>
 
         <div class="suryanz-card">
           <div class="suryanz-card-icon"><i class="fas fa-building"></i></div>
           <h3 class="suryanz-card-title">Commercial & Business Solar</h3>
           <p class="suryanz-card-text">Reduce operational expenditure for offices, hospitals, institutions, and commercial complexes with accelerated depreciation and tax savings.</p>
-          <a href="/solutions/commercial" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Commercial Solar</a>
+          <a href="${p}/solutions/commercial" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Commercial Solar</a>
         </div>
 
         <div class="suryanz-card">
           <div class="suryanz-card-icon"><i class="fas fa-industry"></i></div>
           <h3 class="suryanz-card-title">Industrial Solar & Turnkey EPC</h3>
           <p class="suryanz-card-text">High-capacity MW-scale rooftop and ground-mounted solar installations engineered for manufacturing plants and heavy industry.</p>
-          <a href="/solutions/epc" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Solar EPC</a>
+          <a href="${p}/solutions/epc" class="suryanz-btn-outline" style="font-size:0.85rem;">Explore Solar EPC</a>
         </div>
       </div>
     </div>
@@ -400,11 +404,12 @@ function renderHomePage() {
     description: 'SURYANZ SOLAR provides high-efficiency residential, commercial, and EPC solar rooftop systems. Backed by 20+ years of team experience and 3-stage customer protection.',
     canonicalUrl: 'https://suryanzsolar.com/',
     activePath: '/',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderAboutPage() {
+function renderAboutPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -452,11 +457,12 @@ function renderAboutPage() {
     description: 'Learn about SURYANZ and SURYANZ SOLAR. Backed by 20+ years of collective team energy experience, high-efficiency TOPCon modules, and customer protection.',
     canonicalUrl: 'https://suryanzsolar.com/about',
     activePath: '/about',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderWhySuryanzPage() {
+function renderWhySuryanzPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -496,11 +502,12 @@ function renderWhySuryanzPage() {
     description: 'Discover why homeowners and commercial businesses choose SURYANZ SOLAR for transparent quotations, TOPCon tech, and 3-stage customer protection.',
     canonicalUrl: 'https://suryanzsolar.com/why-suryanz',
     activePath: '/why-suryanz',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderCustomerProtectionPage() {
+function renderCustomerProtectionPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -549,11 +556,12 @@ function renderCustomerProtectionPage() {
     description: 'Explore the Suryanz Solar 3-Stage Customer Protection Framework ensuring site assessment transparency, structural safety, and long-term warranty support.',
     canonicalUrl: 'https://suryanzsolar.com/customer-protection',
     activePath: '/customer-protection',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderTechnologyPage() {
+function renderTechnologyPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -593,11 +601,13 @@ function renderTechnologyPage() {
     description: 'Explore SURYANZ SOLAR technology: 540W to 580W TOPCon modules, N-type cells, advanced MPPT string inverters, and GI mounting structures.',
     canonicalUrl: 'https://suryanzsolar.com/technology',
     activePath: '/technology',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderCalculatorPage() {
+function renderCalculatorPage(urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -666,7 +676,7 @@ function renderCalculatorPage() {
           </p>
 
           <div style="margin-top:1.5rem;">
-            <a href="/contact" class="suryanz-btn-cta"><i class="fas fa-calendar-check"></i> Book Site Assessment For This System</a>
+            <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-calendar-check"></i> Book Site Assessment For This System</a>
           </div>
         </div>
       </div>
@@ -678,11 +688,12 @@ function renderCalculatorPage() {
     description: 'Calculate your rooftop solar capacity, annual electricity savings, payback period, and 25-year solar generation with Suryanz Solar.',
     canonicalUrl: 'https://suryanzsolar.com/calculator',
     activePath: '/calculator',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderProjectsPage() {
+function renderProjectsPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -722,11 +733,13 @@ function renderProjectsPage() {
     description: 'Explore SURYANZ SOLAR case studies and project installation categories across residential homes, commercial complexes, and industrial plants.',
     canonicalUrl: 'https://suryanzsolar.com/projects',
     activePath: '/projects',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderCustomerStoriesPage() {
+function renderCustomerStoriesPage(urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -745,7 +758,7 @@ function renderCustomerStoriesPage() {
         <p style="font-size:1.05rem; color:var(--suryanz-text-muted); max-width:600px; margin:0.75rem auto 1.5rem auto;">
           In strict compliance with our zero-fabrication policy, customer testimonials and project photos are published only after third-party verification and customer authorization.
         </p>
-        <a href="/contact" class="suryanz-btn-cta"><i class="fas fa-paper-plane"></i> Submit Customer Review</a>
+        <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-paper-plane"></i> Submit Customer Review</a>
       </div>
     </div>
   </section>`;
@@ -755,11 +768,12 @@ function renderCustomerStoriesPage() {
     description: 'Verified customer feedback and testimonials for SURYANZ SOLAR rooftop systems in India.',
     canonicalUrl: 'https://suryanzsolar.com/customer-stories',
     activePath: '/customer-stories',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderFaqsPage() {
+function renderFaqsPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -799,11 +813,12 @@ function renderFaqsPage() {
     description: 'Find answers to common questions about rooftop solar installation, net-metering, ROI payback, and warranty coverage with Suryanz Solar.',
     canonicalUrl: 'https://suryanzsolar.com/faqs',
     activePath: '/faqs',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderContactPage() {
+function renderContactPage(urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -886,11 +901,12 @@ function renderContactPage() {
     description: 'Get in touch with SURYANZ SOLAR for a free rooftop solar site assessment, project quotation, or engineering consultation.',
     canonicalUrl: 'https://suryanzsolar.com/contact',
     activePath: '/contact',
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderSolutionPage(solutionSlug) {
+function renderSolutionPage(solutionSlug, urlPrefix = '') {
   const solTitles = {
     'residential': 'Residential Rooftop Solar Systems',
     'commercial': 'Commercial Solar Energy Systems',
@@ -963,11 +979,13 @@ function renderSolutionPage(solutionSlug) {
     description: `High-efficiency ${title.toLowerCase()} by SURYANZ SOLAR. Engineered with TOPCon module technology, transparent pricing, and 3-stage customer protection.`,
     canonicalUrl: `https://suryanzsolar.com/solutions/${solutionSlug}`,
     activePath: `/solutions/${solutionSlug}`,
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderKnowledgeGuidePage(guideSlug) {
+function renderKnowledgeGuidePage(guideSlug, urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const guideTitles = {
     'solar-guide': "Solar Energy Buyer's Guide",
     'solar-pricing': 'Rooftop Solar Cost & Pricing Breakdown',
@@ -1006,7 +1024,7 @@ function renderKnowledgeGuidePage(guideSlug) {
           <li>Check DISCOM net-metering eligibility and local solar policy rules.</li>
         </ul>
         <div style="margin-top:2rem;">
-          <a href="/calculator" class="suryanz-btn-cta"><i class="fas fa-calculator"></i> Calculate Your Solar ROI Now</a>
+          <a href="${p}/calculator" class="suryanz-btn-cta"><i class="fas fa-calculator"></i> Calculate Your Solar ROI Now</a>
         </div>
       </div>
     </div>
@@ -1017,11 +1035,12 @@ function renderKnowledgeGuidePage(guideSlug) {
     description: `Comprehensive educational guide on ${title.toLowerCase()} by SURYANZ SOLAR. Technical insights, pricing analysis, and warranty standards.`,
     canonicalUrl: `https://suryanzsolar.com/${guideSlug}`,
     activePath: `/${guideSlug}`,
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderLocationPage(locationSlug, locationName, stateName) {
+function renderLocationPage(locationSlug, locationName, stateName, urlPrefix = '') {
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
     <div class="suryanz-container">
@@ -1085,18 +1104,19 @@ function renderLocationPage(locationSlug, locationName, stateName) {
     description: `Top rooftop solar installation services in ${locationName}, ${stateName} by SURYANZ SOLAR. High-efficiency modules, net-metering assistance, and 3-stage customer protection.`,
     canonicalUrl: `https://suryanzsolar.com/location/${locationSlug}`,
     activePath: `/location/${locationSlug}`,
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 
-function renderLegalPage(legalSlug) {
+function renderLegalPage(legalSlug, urlPrefix = '') {
   const legalTitles = {
     'privacy-policy': 'Privacy Policy',
     'terms-and-conditions': 'Terms & Conditions',
     'warranty-terms': 'Warranty Terms & Conditions'
   };
 
-  const title = legalTitles[legalSlug] || 'Legal Policy';
+  const title = legalTitles[legalSlug] || 'Legal Document';
 
   const content = `
   <section class="suryanz-hero-section" style="padding: 3.5rem 1.5rem;">
@@ -1110,10 +1130,10 @@ function renderLegalPage(legalSlug) {
     <div class="suryanz-container" style="max-width:900px;">
       <div class="suryanz-card">
         <h2 style="font-size:1.5rem; font-weight:800; color:var(--suryanz-navy-dark); margin-bottom:1rem;">${title}</h2>
-        <p style="font-size:1rem; color:var(--suryanz-text-dark); line-height:1.7;">
+        <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
           SURYANZ SOLAR is committed to protecting your privacy, data security, and consumer rights. Information collected via web consultation forms is strictly utilized for system sizing, site survey scheduling, and authorized project communications.
         </p>
-        <p style="font-size:1rem; color:var(--suryanz-text-dark); line-height:1.7;">
+        <p style="font-size:1.05rem; color:var(--suryanz-text-dark); line-height:1.7;">
           System warranties (12-Year Product Warranty, Category 8-10 Year Inverter Warranty, and 20-30 Year Linear Performance Warranty) are subject to final project scope documents issued upon commissioning.
         </p>
       </div>
@@ -1125,7 +1145,8 @@ function renderLegalPage(legalSlug) {
     description: `Official ${title.toLowerCase()} for SURYANZ and SURYANZ SOLAR digital platform.`,
     canonicalUrl: `https://suryanzsolar.com/legal/${legalSlug}`,
     activePath: `/legal/${legalSlug}`,
-    bodyContent: content
+    bodyContent: content,
+    urlPrefix: urlPrefix
   });
 }
 

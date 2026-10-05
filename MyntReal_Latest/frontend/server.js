@@ -7680,49 +7680,50 @@ const server = http.createServer(async (req, res) => {
       }
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      const urlPrefix = reqPathLower.startsWith('/suryanz') ? '/suryanz' : '';
 
       if (cleanPath === '/' || cleanPath === '') {
-        res.writeHead(200); res.end(suryanzRouter.renderHomePage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix)); return;
       }
       if (cleanPath === '/about') {
-        res.writeHead(200); res.end(suryanzRouter.renderAboutPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderAboutPage(urlPrefix)); return;
       }
       if (cleanPath === '/why-suryanz') {
-        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage(urlPrefix)); return;
       }
       if (cleanPath === '/customer-protection') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage(urlPrefix)); return;
       }
       if (cleanPath === '/technology') {
-        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage(urlPrefix)); return;
       }
       if (cleanPath === '/calculator') {
-        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage(urlPrefix)); return;
       }
       if (cleanPath === '/projects') {
-        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage(urlPrefix)); return;
       }
       if (cleanPath === '/customer-stories' || cleanPath === '/reviews') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage(urlPrefix)); return;
       }
       if (cleanPath === '/faqs') {
-        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage(urlPrefix)); return;
       }
       if (cleanPath === '/contact') {
-        res.writeHead(200); res.end(suryanzRouter.renderContactPage()); return;
+        res.writeHead(200); res.end(suryanzRouter.renderContactPage(urlPrefix)); return;
       }
 
       // Solutions Sub-routes
       if (cleanPath.startsWith('/solutions/')) {
         const solutionSlug = cleanPath.replace('/solutions/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug, urlPrefix)); return;
       }
 
       // Educational Knowledge Guides
       const knowledgeGuides = ['solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide'];
       const guideSlug = cleanPath.replace(/^\//, '');
       if (knowledgeGuides.includes(guideSlug)) {
-        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug, urlPrefix)); return;
       }
 
       // Regional Location Hubs
@@ -7745,17 +7746,17 @@ const server = http.createServer(async (req, res) => {
           locName = 'Karnataka'; stateName = 'Karnataka';
         }
 
-        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName, urlPrefix)); return;
       }
 
       // Legal Sub-routes
       if (cleanPath.startsWith('/legal/')) {
         const legalSlug = cleanPath.replace('/legal/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug, urlPrefix)); return;
       }
 
       // Default Home Fallback
-      res.writeHead(200); res.end(suryanzRouter.renderHomePage()); return;
+      res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix)); return;
     }
 
     // AWS ELB / Load Balancer Health Check Endpoint
