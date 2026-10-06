@@ -20,6 +20,17 @@ _backend_dir = Path(__file__).resolve().parent.parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # Enable logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("migration_runner")
@@ -39,7 +50,8 @@ def run_migrations():
     
     try:
         with engine.connect() as conn:
-            conn.execute(text("SET statement_timeout = 10000"))
+            if engine.dialect.name == 'postgresql':
+                conn.execute(text("SET statement_timeout = 10000"))
             conn.execute(text("SELECT 1"))
         logger.info("✅ Database connectivity verified")
     except Exception as e:
@@ -73,10 +85,11 @@ def run_migrations():
     # Formerly created at runtime in request handlers / module imports
     try:
         logger.info("Running feature-specific schema migrations...")
-        with engine.connect() as conn:
-            with conn.begin():
-                conn.execute(text("SET LOCAL lock_timeout = '2000'"))
-                conn.execute(text("SET LOCAL statement_timeout = '10000'"))
+        if engine.dialect.name == 'postgresql':
+            with engine.connect() as conn:
+                with conn.begin():
+                    conn.execute(text("SET LOCAL lock_timeout = '2000'"))
+                    conn.execute(text("SET LOCAL statement_timeout = '10000'"))
 
                 # 4.1 service_center_given_out (from staff_accounts_service)
                 conn.execute(text("""
