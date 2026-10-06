@@ -33,8 +33,8 @@ COPY backend/whatsapp-group-bot/package-lock.json backend/whatsapp-group-bot/pac
 RUN pip install --no-cache-dir --prefer-binary -r backend/requirements.txt
 
 # Install Node.js production dependencies for frontend and whatsapp bot
-RUN cd frontend && npm install --production --no-audit --no-fund
-RUN cd backend/whatsapp-group-bot && npm install --production --no-audit --no-fund
+RUN cd frontend && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
+RUN cd backend/whatsapp-group-bot && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
 
 # Copy application source code
 COPY . .
