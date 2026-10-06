@@ -7663,7 +7663,8 @@ const server = http.createServer(async (req, res) => {
     const reqPathLower = (urlParts.pathname || '').toLowerCase();
 
     // DC Protocol Oct 2026: SURYANZ & SURYANZ SOLAR Domain & Path Router Engine
-    const isSuryanzDomain = hostHeader.includes('suryanz') || reqPathLower.startsWith('/suryanz') || reqPathLower.startsWith('/suryanzsolar');
+    const isStaticAssetReq = reqPathLower.startsWith('/public/') || reqPathLower.startsWith('/assets/') || /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|mp4|json)$/i.test(reqPathLower);
+    const isSuryanzDomain = !isStaticAssetReq && (hostHeader.includes('suryanz') || reqPathLower.startsWith('/suryanz') || reqPathLower.startsWith('/suryanzsolar'));
     if (isSuryanzDomain) {
       const suryanzRouter = require('./suryanz_router');
       const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : (reqPathLower.startsWith('/suryanzsolar') ? reqPathLower.replace(/^\/suryanzsolar/, '') : reqPathLower)) || '/';
