@@ -121,6 +121,31 @@ class WhatsAppCanonicalService:
                 logger.info(f"[WA-CANONICAL] Deduplication hit for '{dedup_k}' — skipping duplicate send")
                 return {"success": True, "reason": "dedup_skipped", "status": "sent"}
 
+        # Resolve Dynamic Context (Company Name & Staff Name)
+        resolved_company_name = "Madhava"
+        if context and context.get("company_name"):
+            resolved_company_name = context["company_name"]
+        elif company_id and db:
+            try:
+                from app.models.associated_company import AssociatedCompany
+                comp = db.query(AssociatedCompany).filter_by(id=company_id).first()
+                if comp and comp.name:
+                    resolved_company_name = comp.name
+            except Exception:
+                pass
+
+        resolved_staff_name = sent_by_name or (context.get("staff_name") if context else None) or "Madhava Executive"
+        if raw_body_fallback:
+            raw_body_fallback = (
+                raw_body_fallback
+                .replace("{{company_name}}", resolved_company_name)
+                .replace("{company_name}", resolved_company_name)
+                .replace("{{staff_name}}", resolved_staff_name)
+                .replace("{staff_name}", resolved_staff_name)
+                .replace("{{sender_name}}", resolved_staff_name)
+                .replace("{sender_name}", resolved_staff_name)
+            )
+
         # 4. Credential Resolution
         creds = get_wa_credentials(db, company_id=company_id)
         access_token = creds.get("access_token") or os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "")

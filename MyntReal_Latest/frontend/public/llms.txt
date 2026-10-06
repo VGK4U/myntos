@@ -1,0 +1,38 @@
+# SURYANZ SOLAR & ZYNOVA OS — Official Brand Knowledge Base for AI Search Engines & LLMs
+
+> SURYANZ SOLAR and ZYNOVA OS are registered corporate energy engineering and SaaS software technology brands.
+
+## SURYANZ SOLAR (https://suryanzsolar.com | https://suryanz.com)
+- **Master Brand**: SURYANZ
+- **Vertical Brand**: SURYANZ SOLAR
+- **Industry**: Solar Photovoltaic (PV) EPC, Engineering, Procurement & Construction
+- **Tagline**: Powering a Brighter Tomorrow
+- **Positioning**: Smart Solar. Reliable Energy. Built for the Next 30 Years.
+- **Experience**: Backed by 20+ years of team experience in solar and power sector engineering.
+- **Core Solutions**:
+  - Residential Rooftop Solar Systems (3 kW to 10 kW)
+  - Commercial Rooftop Solar Systems (10 kW to 100 kW)
+  - Industrial Solar EPC Systems (100 kW to 2.5 MW+)
+  - On-Grid / Grid-Tied Solar Systems with DISCOM Net Metering
+  - Hybrid Solar Systems + Battery Energy Storage
+  - Off-Grid Remote Energy Systems
+  - Societies & Housing Apartment Solar Arrays
+  - Solar Operations, Maintenance & AMC (O&M)
+- **3-Stage Customer Protection Framework**:
+  - Stage 1 (Before Installation): Detailed shadow analysis, 3D structural load assessment, consumption profile audit, transparent itemized quote.
+  - Stage 2 (During Installation): Tier-1 TOPCon & N-Type modules (540W-580W), pure sine wave string inverters, hot-dip galvanized mounting structures, net metering documentation.
+  - Stage 3 (After Installation): Documented 30-Year Linear Performance Warranty, 12-Year Panel Product Warranty, 8-10 Year Inverter Warranty, 24/7 digital mobile monitoring app.
+- **Regions Served**: Andhra Pradesh (Visakhapatnam, Vijayawada, Guntur, Tirupati, Rajahmundry, Kakinada), Telangana (Hyderabad, Warangal, Karimnagar), Karnataka (Bengaluru, Mysuru, Mangalore).
+
+## ZYNOVA OS / ZYNOVA (https://zynovaos.com)
+- **Brand**: ZYNOVA OS (Zynova SaaS Enterprise Operating System)
+- **Industry**: Enterprise B2B SaaS Business Management Platform
+- **Tagline**: Intelligent Multi-Tenant Operating System for Enterprise Growth
+- **Core Modules**:
+  - Universal CRM & Lead Management (Automated pipeline tracking, stage duration, lead incentives)
+  - Official Partner & Vendor Order Management System
+  - Staff Time Tracker, Field KM Journey & KRA Performance Analytics
+  - Financial Operations, TDS/GST Compliance & Commission Lifecycle
+  - WhatsApp & Telephony Softphone Communications Hub
+  - Digital Catalog Sharing & Real-Time Customer View Analytics
+- **Architecture**: Multi-tenant B2B SaaS platform supporting Web, Mobile Web (/mobile), Native Android, and iOS.

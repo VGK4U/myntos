@@ -435,12 +435,24 @@ async def get_current_user(
     except Exception as db_err:
         from sqlalchemy.exc import SQLAlchemyError
         if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
-            _sec_logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user: {db_err}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Authentication database service temporarily unavailable. Please try again."
-            )
-        raise
+            _sec_logger.warning(f"[AUTH-DB-RETRY] DB failure in get_current_user: {db_err}. Retrying after rollback...")
+            try:
+                db.rollback()
+                import time
+                time.sleep(0.2)
+                user = SecurityManager.get_user_by_id(db, user_id)
+            except Exception as retry_err:
+                _sec_logger.error(f"[AUTH-DB-ERROR] DB failure after retry in get_current_user: {retry_err}")
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication database service temporarily unavailable. Please try again."
+                )
+        else:
+            raise
     
     if user is None:
         raise HTTPException(
@@ -505,11 +517,29 @@ async def get_current_user_hybrid(
                     StaffEmployee.emp_code == payload.get("emp_code")
                 ).first()
         except SQLAlchemyError as e:
-            logger.error(f"[AUTH-DB-ERROR] DB failure resolving staff employee: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Authentication database service temporarily unavailable. Please try again."
-            )
+            logger.warning(f"[AUTH-DB-RETRY] DB failure resolving staff employee: {e}. Retrying after rollback...")
+            try:
+                db.rollback()
+                import time
+                time.sleep(0.2)
+                numeric_id = None
+                try:
+                    numeric_id = int(employee_id)
+                    staff = db.query(StaffEmployee).filter(StaffEmployee.id == numeric_id).first()
+                except (ValueError, TypeError):
+                    staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == employee_id).first()
+                if not staff and payload.get("emp_code"):
+                    staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == payload.get("emp_code")).first()
+            except Exception as retry_e:
+                logger.error(f"[AUTH-DB-ERROR] DB failure after retry resolving staff employee: {retry_e}")
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Authentication database service temporarily unavailable. Please try again."
+                )
         
         # DC Protocol / Stage 2A: StaffEmployee live status and token_version verification
         if staff and staff.status == 'active' and not getattr(staff, 'is_deleted', False):
@@ -548,10 +578,23 @@ async def get_current_user_hybrid(
                     except Exception as db_err:
                         from sqlalchemy.exc import SQLAlchemyError
                         if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
-                            raise HTTPException(
-                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                                detail="Authentication database service temporarily unavailable. Please try again."
-                            )
+                            _sec_logger.warning(f"[AUTH-DB-RETRY] DB failure in get_current_user_hybrid header lookup: {db_err}. Retrying after rollback...")
+                            try:
+                                db.rollback()
+                                import time
+                                time.sleep(0.2)
+                                user = SecurityManager.get_user_by_id(db, payload["sub"])
+                                if user:
+                                    return user
+                            except Exception as retry_err:
+                                try:
+                                    db.rollback()
+                                except Exception:
+                                    pass
+                                raise HTTPException(
+                                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                    detail="Authentication database service temporarily unavailable. Please try again."
+                                )
                         raise
         except HTTPException:
             raise
@@ -583,11 +626,23 @@ async def get_current_user_hybrid(
                 except Exception as db_err:
                     from sqlalchemy.exc import SQLAlchemyError
                     if isinstance(db_err, SQLAlchemyError) or "timeout" in str(db_err).lower():
-                        raise HTTPException(
-                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="Authentication database service temporarily unavailable. Please try again."
-                        )
-                    raise
+                        _sec_logger.warning(f"[AUTH-DB-RETRY] DB failure in get_current_user_hybrid session cookie lookup: {db_err}. Retrying after rollback...")
+                        try:
+                            db.rollback()
+                            import time
+                            time.sleep(0.2)
+                            user = SecurityManager.get_user_by_id(db, payload["sub"])
+                        except Exception as retry_err:
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            raise HTTPException(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Authentication database service temporarily unavailable. Please try again."
+                            )
+                    else:
+                        raise
                 if user:
                     # Same security checks as get_current_user
                     if getattr(user, 'account_locked', False):
@@ -679,11 +734,28 @@ async def get_current_vgk_partner_any(
                                 OfficialPartner.partner_code == partner_code
                             ).first()
                     except SQLAlchemyError as db_err:
-                        logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_vgk_partner_any: {db_err}")
-                        raise HTTPException(
-                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="Authentication database service temporarily unavailable. Please try again."
-                        )
+                        logger.warning(f"[AUTH-DB-RETRY] DB failure in get_current_vgk_partner_any: {db_err}. Retrying after rollback...")
+                        try:
+                            db.rollback()
+                            import time
+                            time.sleep(0.2)
+                            if partner_id:
+                                try:
+                                    partner = db.query(OfficialPartner).filter(OfficialPartner.id == int(partner_id)).first()
+                                except (ValueError, TypeError):
+                                    partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == partner_id).first()
+                            if not partner and partner_code:
+                                partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == partner_code).first()
+                        except Exception as retry_err:
+                            logger.error(f"[AUTH-DB-ERROR] DB failure after retry in get_current_vgk_partner_any: {retry_err}")
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            raise HTTPException(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Authentication database service temporarily unavailable. Please try again."
+                            )
                     # DC Protocol: Accept partner regardless of is_active status
                     if partner:
                         return partner
@@ -754,11 +826,28 @@ async def get_current_user_hybrid_with_partner(
                                 OfficialPartner.partner_code == partner_code
                             ).first()
                     except SQLAlchemyError as db_err:
-                        logger.error(f"[AUTH-DB-ERROR] DB failure in get_current_user_hybrid_with_partner: {db_err}")
-                        raise HTTPException(
-                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="Authentication database service temporarily unavailable. Please try again."
-                        )
+                        logger.warning(f"[AUTH-DB-RETRY] DB failure in get_current_user_hybrid_with_partner: {db_err}. Retrying after rollback...")
+                        try:
+                            db.rollback()
+                            import time
+                            time.sleep(0.2)
+                            if partner_id:
+                                try:
+                                    partner = db.query(OfficialPartner).filter(OfficialPartner.id == int(partner_id)).first()
+                                except (ValueError, TypeError):
+                                    partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == partner_id).first()
+                            if not partner and partner_code:
+                                partner = db.query(OfficialPartner).filter(OfficialPartner.partner_code == partner_code).first()
+                        except Exception as retry_err:
+                            logger.error(f"[AUTH-DB-ERROR] DB failure after retry in get_current_user_hybrid_with_partner: {retry_err}")
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            raise HTTPException(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Authentication database service temporarily unavailable. Please try again."
+                            )
                     
                     if partner:
                         if partner.is_active:

@@ -141,7 +141,7 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
         LEFT JOIN staff_employees mgr ON mgr.id = e.reporting_manager_id
         LEFT JOIN crm_leads l ON l.id = j.lead_id
         WHERE (
-            j.date::text LIKE :d_pattern
+            CAST(j.date AS TEXT) LIKE :d_pattern
             OR (j.start_time >= :start_utc AND j.start_time < :end_utc)
         )
           AND (e.status IS NULL OR e.status = 'active')

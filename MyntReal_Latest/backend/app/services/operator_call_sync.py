@@ -532,20 +532,38 @@ def sync_myoperator_logs(
         # other calls from the same number that don't have a staff assigned yet.
         try:
             from sqlalchemy import text as sa_text
-            db.execute(sa_text("""
-                UPDATE operator_calls dest
-                SET handled_by = src.handled_by
-                FROM (
-                    SELECT DISTINCT ON (caller_number) caller_number, handled_by
-                    FROM operator_calls
-                    WHERE handled_by IS NOT NULL AND handled_by != ''
-                      AND caller_number IS NOT NULL AND caller_number != ''
-                    ORDER BY caller_number, started_at DESC
-                ) src
-                WHERE dest.caller_number = src.caller_number
-                  AND (dest.handled_by IS NULL OR dest.handled_by = '')
-            """))
-            logger.info('[OPERATOR_SYNC] Cross-call staff propagation done')
+            if db.bind and getattr(db.bind, 'name', '') == 'postgresql':
+                db.execute(sa_text("""
+                    UPDATE operator_calls dest
+                    SET handled_by = src.handled_by
+                    FROM (
+                        SELECT DISTINCT ON (caller_number) caller_number, handled_by
+                        FROM operator_calls
+                        WHERE handled_by IS NOT NULL AND handled_by != ''
+                          AND caller_number IS NOT NULL AND caller_number != ''
+                        ORDER BY caller_number, started_at DESC
+                    ) src
+                    WHERE dest.caller_number = src.caller_number
+                      AND (dest.handled_by IS NULL OR dest.handled_by = '')
+                """))
+                logger.info('[OPERATOR_SYNC] Cross-call staff propagation done')
+            else:
+                db.execute(sa_text("""
+                    UPDATE operator_calls
+                    SET handled_by = (
+                        SELECT handled_by FROM operator_calls sub
+                        WHERE sub.caller_number = operator_calls.caller_number
+                          AND sub.handled_by IS NOT NULL AND sub.handled_by != ''
+                        ORDER BY sub.started_at DESC LIMIT 1
+                    )
+                    WHERE (handled_by IS NULL OR handled_by = '')
+                      AND EXISTS (
+                        SELECT 1 FROM operator_calls sub2
+                        WHERE sub2.caller_number = operator_calls.caller_number
+                          AND sub2.handled_by IS NOT NULL AND sub2.handled_by != ''
+                      )
+                """))
+                logger.info('[OPERATOR_SYNC] Cross-call staff propagation done (SQLite fallback mode)')
         except Exception as prop_err:
             logger.warning('[OPERATOR_SYNC] Staff propagation error: %s', prop_err)
 

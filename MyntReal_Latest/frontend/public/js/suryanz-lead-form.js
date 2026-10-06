@@ -46,7 +46,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
+      let originalBtnHtml = 'Get a Free Solar Assessment';
       if (submitBtn) {
+        originalBtnHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
       }
@@ -78,13 +80,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const resData = await resp.json();
 
-        if (resp.ok && resData.success) {
+        if (resData && (resp.ok || resData.success)) {
           msgBox.style.color = '#10b981';
           msgBox.innerHTML = '<i class="fas fa-check-circle"></i> ' + (resData.message || 'Thank you! Your solar assessment request has been submitted.');
           form.reset();
         } else {
           msgBox.style.color = '#ef4444';
-          msgBox.innerText = resData.detail || 'Submission error. Please try again.';
+          msgBox.innerText = (resData && (resData.message || resData.detail)) ? (resData.message || resData.detail) : 'Submission error. Please try again.';
         }
       } catch (err) {
         console.warn('Lead submission network issue:', err);
@@ -94,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = 'Get a Free Solar Assessment';
+          submitBtn.innerHTML = originalBtnHtml;
         }
       }
     });

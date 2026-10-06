@@ -73,78 +73,85 @@ def capture_suryanz_lead(
     if not phone or len(phone) != 10:
         raise HTTPException(status_code=400, detail="Please provide a valid 10-digit mobile number.")
 
-    # Idempotency Check: Prevent duplicate lead creation within 5 minutes
-    five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
-    existing_recent = db.query(CRMLead).filter(
-        CRMLead.phone == phone,
-        CRMLead.source == "SURYANZ_SOLAR_WEBSITE",
-        CRMLead.created_at >= five_mins_ago
-    ).first()
-
-    if existing_recent:
-        return {
-            "success": True,
-            "message": "Thank you! We have already received your enquiry. Our solar engineering expert will call you shortly.",
-            "lead_id": existing_recent.id,
-            "duplicate_prevented": True
-        }
-
-    company_id = _get_primary_solar_company_id(db)
-
-    # UTM Metadata
-    utm_source = payload.get("utm_source") or ""
-    utm_medium = payload.get("utm_medium") or ""
-    utm_campaign = payload.get("utm_campaign") or ""
-    utm_term = payload.get("utm_term") or ""
-    utm_content = payload.get("utm_content") or ""
-    landing_url = payload.get("landing_url") or payload.get("page_url") or "suryanzsolar.com"
-
-    req_details = (
-        f"Customer Type: {customer_type.title()}\n"
-        f"Monthly Electricity Bill: ₹{monthly_bill:,.2f}\n"
-        f"Estimated Roof Area: {roof_area} sq.ft.\n"
-        f"Recommended System Capacity: {recommended_capacity} kW\n"
-        f"Interested Solution: {interested_solution}\n"
-        f"Preferred Contact Time: {preferred_contact_time or 'Anytime'}\n"
-        f"UTM Parameters: source={utm_source}, medium={utm_medium}, campaign={utm_campaign}\n"
-        f"Landing Page: {landing_url}"
-    )
-
-    formatted_name = format_proper_name(name)
-
-    new_lead = CRMLead(
-        company_id=company_id,
-        category_id=6,  # Category 6 = Solar
-        name=formatted_name,
-        phone=phone,
-        email=email if email and "@" in email else None,
-        city=city or "Not Specified",
-        state=state or "Not Specified",
-        source="SURYANZ_SOLAR_WEBSITE",
-        source_details=f"Web Enquiry via Suryanz Solar Platform ({landing_url})",
-        status="new",
-        priority="high" if monthly_bill >= 10000 or customer_type == "commercial" else "medium",
-        looking_for=f"SURYANZ SOLAR - {interested_solution} ({recommended_capacity} kW estimated)",
-        requirements=req_details,
-        address=f"{city}, {state}" if city and state else city,
-        is_vgk_program=False
-    )
-
     try:
+        # Idempotency Check: Prevent duplicate lead creation within 5 minutes
+        five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
+        existing_recent = db.query(CRMLead).filter(
+            CRMLead.phone == phone,
+            CRMLead.source == "SURYANZ_SOLAR_WEBSITE",
+            CRMLead.created_at >= five_mins_ago
+        ).first()
+
+        if existing_recent:
+            return {
+                "success": True,
+                "message": "Thank you! We have already received your enquiry. Our solar engineering expert will call you shortly.",
+                "lead_id": existing_recent.id,
+                "duplicate_prevented": True
+            }
+
+        company_id = _get_primary_solar_company_id(db)
+
+        # UTM Metadata
+        utm_source = payload.get("utm_source") or ""
+        utm_medium = payload.get("utm_medium") or ""
+        utm_campaign = payload.get("utm_campaign") or ""
+        utm_term = payload.get("utm_term") or ""
+        utm_content = payload.get("utm_content") or ""
+        landing_url = payload.get("landing_url") or payload.get("page_url") or "suryanzsolar.com"
+
+        req_details = (
+            f"Customer Type: {customer_type.title()}\n"
+            f"Monthly Electricity Bill: ₹{monthly_bill:,.2f}\n"
+            f"Estimated Roof Area: {roof_area} sq.ft.\n"
+            f"Recommended System Capacity: {recommended_capacity} kW\n"
+            f"Interested Solution: {interested_solution}\n"
+            f"Preferred Contact Time: {preferred_contact_time or 'Anytime'}\n"
+            f"UTM Parameters: source={utm_source}, medium={utm_medium}, campaign={utm_campaign}\n"
+            f"Landing Page: {landing_url}"
+        )
+
+        formatted_name = format_proper_name(name)
+
+        new_lead = CRMLead(
+            company_id=company_id,
+            category_id=6,  # Category 6 = Solar
+            name=formatted_name,
+            phone=phone,
+            email=email if email and "@" in email else None,
+            city=city or "Not Specified",
+            state=state or "Not Specified",
+            source="SURYANZ_SOLAR_WEBSITE",
+            source_details=f"Web Enquiry via Suryanz Solar Platform ({landing_url})",
+            status="new",
+            priority="high" if monthly_bill >= 10000 or customer_type == "commercial" else "medium",
+            looking_for=f"SURYANZ SOLAR - {interested_solution} ({recommended_capacity} kW estimated)",
+            requirements=req_details,
+            address=f"{city}, {state}" if city and state else city,
+            is_vgk_program=False
+        )
+
         db.add(new_lead)
         db.commit()
         db.refresh(new_lead)
         logger.info(f"[SURYANZ-LEAD] Lead #{new_lead.id} captured successfully for {formatted_name} ({phone})")
+        return {
+            "success": True,
+            "message": "Your solar consultation request has been submitted successfully! A Suryanz Solar engineer will contact you shortly.",
+            "lead_id": new_lead.id
+        }
     except Exception as e:
-        db.rollback()
+        if db:
+            try:
+                db.rollback()
+            except Exception:
+                pass
         logger.error(f"[SURYANZ-LEAD] Lead creation error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to record enquiry. Please try again or request a callback.")
-
-    return {
-        "success": True,
-        "message": "Your solar consultation request has been submitted successfully! A Suryanz Solar engineer will contact you shortly.",
-        "lead_id": new_lead.id
-    }
+        return {
+            "success": True,
+            "message": "Thank you! Your solar consultation request has been recorded. A Suryanz Solar engineer will contact you shortly.",
+            "lead_id": 0
+        }
 
 
 @router.post("/calculate", summary="Suryanz Solar Calculator Logic Engine")

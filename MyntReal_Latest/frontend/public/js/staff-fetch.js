@@ -230,6 +230,15 @@
                 throw new Error('AUTH_EXPIRED');
             }
             
+            if (response.status === 503) {
+                console.warn('[DC-FETCH] HTTP 503 Service Unavailable received for:', url, '. Retrying once after 1s delay...');
+                await new Promise(r => setTimeout(r, 1000));
+                const retryResponse = await fetch(url, fetchOptions);
+                if (retryResponse.ok || retryResponse.status !== 503) {
+                    return retryResponse;
+                }
+            }
+            
             return response;
         } catch (error) {
             if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') {

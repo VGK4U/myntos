@@ -16,7 +16,7 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
   <header class="suryanz-header" role="banner">
     <div class="suryanz-nav-container">
       <a href="${p || '/'}" class="suryanz-brand-logo" aria-label="Suryanz Solar Home">
-        <img src="/public/images/suryanz-logo-transparent.png" alt="SURYANZ SOLAR Logo" class="suryanz-logo-img" onerror="this.onerror=null; this.src='/public/images/suryanz-logo.svg';">
+        <img src="/public/images/suryanz-logo-transparent.png?v=20261006_2" alt="SURYNAZ SOLAR Logo" class="suryanz-logo-img">
       </a>
       
       <nav aria-label="Main Navigation">
@@ -116,7 +116,7 @@ function getSuryanzFooter(urlPrefix = '') {
     <div class="suryanz-footer-grid">
       <div class="suryanz-footer-col">
         <div style="margin-bottom: 1.25rem;">
-          <img src="/public/images/suryanz-logo-transparent.png" alt="SURYANZ SOLAR" style="height: 52px; filter: brightness(0) invert(1);" onerror="this.onerror=null; this.src='/public/images/suryanz-logo.svg';">
+          <img src="/public/images/suryanz-logo-transparent.png?v=20261006_2" alt="SURYNAZ SOLAR" style="height: 54px; background: #ffffff; padding: 4px 12px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
         </div>
         <p style="color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 1.25rem; font-size: 0.9rem;">
           Powering a Brighter Tomorrow with engineer-designed rooftop solar systems, transparent quotations, and 3-stage customer protection.
@@ -209,14 +209,72 @@ function renderSuryanzPage({
 }) {
   const defaultSchema = {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "SURYANZ SOLAR",
-    "legalName": "SURYANZ SOLAR",
-    "url": "https://suryanzsolar.com",
-    "logo": "https://suryanzsolar.com/public/images/suryanz-logo-transparent.png",
-    "description": "Premium Solar Energy Solutions for Homes and Businesses in India. Backed by 20+ years of team experience.",
-    "slogan": "Powering a Brighter Tomorrow",
-    "sameAs": []
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://suryanzsolar.com/#organization",
+        "name": "SURYANZ SOLAR",
+        "legalName": "SURYANZ SOLAR",
+        "url": "https://suryanzsolar.com",
+        "logo": "https://suryanzsolar.com/public/images/suryanz-logo-transparent.png",
+        "description": "Premium engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities in India. Backed by 20+ years of team experience.",
+        "slogan": "Powering a Brighter Tomorrow",
+        "sameAs": [
+          "https://suryanz.com"
+        ]
+      },
+      {
+        "@type": "LocalBusiness",
+        "@id": "https://suryanzsolar.com/#localbusiness",
+        "name": "SURYANZ SOLAR EPC",
+        "image": "https://suryanzsolar.com/public/images/suryanz-logo-transparent.png",
+        "url": "https://suryanzsolar.com",
+        "priceRange": "₹₹₹",
+        "description": "Engineering-first rooftop solar EPC contractor serving Andhra Pradesh, Telangana, and Karnataka.",
+        "areaServed": [
+          { "@type": "AdministrativeArea", "name": "Andhra Pradesh" },
+          { "@type": "AdministrativeArea", "name": "Telangana" },
+          { "@type": "AdministrativeArea", "name": "Karnataka" }
+        ]
+      },
+      {
+        "@type": "Service",
+        "@id": "https://suryanzsolar.com/#service-residential",
+        "name": "Residential Rooftop Solar System Installation",
+        "provider": { "@id": "https://suryanzsolar.com/#organization" },
+        "serviceType": "Solar Photovoltaic EPC Engineering",
+        "description": "High-efficiency residential rooftop solar installation with 3-stage customer protection, net metering assistance, and 30-year linear performance warranty."
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://suryanzsolar.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How much does a rooftop solar installation cost?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Rooftop solar costs depend on system capacity (kW) and panel technology. A typical residential 3 kW to 5 kW solar system ranges between ₹1.8 Lakhs to ₹3.2 Lakhs before subsidies, delivering a 3 to 4.5 year payback period."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What warranty is provided by SURYANZ SOLAR?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "SURYANZ SOLAR provides a 30-Year Linear Performance Warranty on panels, 12-Year Panel Product Warranty, and 8 to 10-Year Inverter Product Warranty."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://suryanzsolar.com/#website",
+        "url": "https://suryanzsolar.com",
+        "name": "SURYANZ SOLAR Official Portal",
+        "publisher": { "@id": "https://suryanzsolar.com/#organization" }
+      }
+    ]
   };
 
   const schemaJson = jsonLd ? JSON.stringify(jsonLd) : JSON.stringify(defaultSchema);

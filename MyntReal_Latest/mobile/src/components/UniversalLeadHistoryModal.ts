@@ -467,7 +467,7 @@ export class UniversalLeadHistoryModal {
             mediaHtml = `
               <div class="muhm-media-img-box">
                 <a href="${this.escape(mediaUrl)}" target="_blank" rel="noopener noreferrer">
-                  <img src="${this.escape(mediaUrl)}" alt="${this.escape(mediaName)}" onerror="this.style.display='none';this.parentElement.nextElementSibling.querySelector('.muhm-media-name').textContent='[Image attachment]';" />
+                  <img src="${this.escape(mediaUrl)}" alt="${this.escape(mediaName)}" onerror="this.style.display='none';" />
                 </a>
                 <div class="muhm-media-img-bar">
                   <span class="muhm-media-name" title="${this.escape(mediaName)}">${this.escape(mediaName)}</span>

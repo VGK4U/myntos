@@ -7663,10 +7663,10 @@ const server = http.createServer(async (req, res) => {
     const reqPathLower = (urlParts.pathname || '').toLowerCase();
 
     // DC Protocol Oct 2026: SURYANZ & SURYANZ SOLAR Domain & Path Router Engine
-    const isSuryanzDomain = hostHeader.includes('suryanz.com') || hostHeader.includes('suryanzsolar.com') || reqPathLower.startsWith('/suryanz');
+    const isSuryanzDomain = hostHeader.includes('suryanz') || reqPathLower.startsWith('/suryanz') || reqPathLower.startsWith('/suryanzsolar');
     if (isSuryanzDomain) {
       const suryanzRouter = require('./suryanz_router');
-      const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : reqPathLower) || '/';
+      const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : (reqPathLower.startsWith('/suryanzsolar') ? reqPathLower.replace(/^\/suryanzsolar/, '') : reqPathLower)) || '/';
 
       if (cleanPath === '/sitemap.xml') {
         res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });

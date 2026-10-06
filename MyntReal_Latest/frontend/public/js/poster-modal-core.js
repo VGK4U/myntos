@@ -737,12 +737,15 @@
       const seniorNameUpper = (seniorName || '').toUpperCase().trim();
       const isVgkSupport = seniorNameUpper.includes('VGK SUPPORT') || seniorNameUpper.includes('SUPPORT') || seniorNameUpper === 'NONE' || seniorNameUpper === '—' || !seniorNameUpper;
       
-      // VGK Support MUST ALWAYS BE HIDDEN on the Achievement Poster
-      setChecked('postShowSenior', !isVgkSupport);
       const postShowSeniorEl = document.getElementById('postShowSenior');
-      if (postShowSeniorEl && isVgkSupport) {
-        postShowSeniorEl.checked = false;
-        postShowSeniorEl.disabled = true;
+      if (postShowSeniorEl) {
+        postShowSeniorEl.disabled = false;
+        if (isVgkSupport) {
+          postShowSeniorEl.checked = false;
+          postShowSeniorEl.disabled = true;
+        } else {
+          postShowSeniorEl.checked = true;
+        }
       }
 
       setChecked('payTypeStage1', true);
@@ -793,6 +796,7 @@
   }
 
   function setPosterPresetPeriod(period) {
+    window._postTotalTodayUserEdited = false;
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     let fromStr = todayStr;
@@ -843,6 +847,19 @@
     const entries = window._currentEntries || [];
     const dateFrom = (document.getElementById('postPayoutDateFrom')?.value || '').trim();
     const dateTo = (document.getElementById('postPayoutDateTo')?.value || '').trim();
+
+    const todayIsoStr = new Date().toISOString().split('T')[0];
+    const isSingleDay = Boolean(dateFrom && dateTo && dateFrom === dateTo);
+    const isToday = isSingleDay && (dateFrom === todayIsoStr);
+    window._posterIsSingleDay = isSingleDay;
+    window._posterIsToday = isToday;
+    window._posterPeriodTitleText = isToday ? "Today's Earning" : (isSingleDay ? "Single Day Earning" : "This Period Earning");
+    window._posterPeriodPayoutText = isToday ? "Today's Payout" : (isSingleDay ? "Single Day Payout" : "This Period Payout");
+
+    const prevTodayLabelTextEl = document.getElementById('prevTodayLabelText');
+    if (prevTodayLabelTextEl) {
+      prevTodayLabelTextEl.textContent = window._posterPeriodTitleText;
+    }
 
     let periodLabel = '';
     const fmtDate = dStr => {
@@ -963,7 +980,9 @@
     if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
 
     const postTotalTodayEl = document.getElementById('postTotalToday');
-    if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
+    if (postTotalTodayEl && !window._postTotalTodayUserEdited) {
+      postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
+    }
 
     // Senior Partner Today Earning calculation from window._seniorEntries for date range
     seniorTodayAmt = 0;
@@ -1109,6 +1128,22 @@
     const showSenior = document.getElementById('postShowSenior')?.checked ?? true;
     const prevSeniorRow = document.getElementById('prevSeniorRow');
     if (prevSeniorRow) prevSeniorRow.style.display = showSenior ? 'flex' : 'none';
+
+    const postTotalTodayInput = document.getElementById('postTotalToday');
+    if (postTotalTodayInput && !postTotalTodayInput._hasUserEditListener) {
+      postTotalTodayInput._hasUserEditListener = true;
+      postTotalTodayInput.addEventListener('input', () => {
+        window._postTotalTodayUserEdited = true;
+        updatePoster();
+      });
+    }
+
+    if (!window._posterCustomTextEdited) {
+      const tpl = document.getElementById('postShareTemplate')?.value || 'full';
+      const txt = buildPosterShareText(tpl);
+      const customTextEl = document.getElementById('postShareCustomText');
+      if (customTextEl) customTextEl.value = txt;
+    }
   }
 
   function changeThemePreset() {
@@ -1333,13 +1368,16 @@
     const showSeniorInput = document.getElementById('postShowSenior');
     const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
 
+    const periodPayoutLabel = window._posterPeriodPayoutText || "Today's Payout";
+    const periodEarningLabel = window._posterPeriodTitleText || "Today's Earning";
+
     const tpl = templateKey || document.getElementById('postShareTemplate')?.value || 'full';
 
     if (tpl === 'payout') {
-      let t = `💰 *TODAY'S PAYOUT RELEASED!* 💰\n\n`;
+      let t = `💰 *${periodPayoutLabel.toUpperCase()} RELEASED!* 💰\n\n`;
       t += `🎉 Congratulations to *${partnerName}*${partnerRank ? ' (' + partnerRank + ')' : ''}!\n\n`;
       if (partnerRank) t += `🏆 *Career Designation:* ${partnerRank}\n`;
-      if (partnerToday) t += `💵 *Today's Earning:* ${partnerToday}\n`;
+      if (partnerToday) t += `💵 *${periodEarningLabel}:* ${partnerToday}\n`;
       if (breakupText && breakupText !== 'No Payouts for Selected Date') t += `📋 *Breakup:* ${breakupText}\n`;
       if (filesVal) t += `📂 *Files Status:* ${filesVal}\n`;
       if (partnerOverall) t += `📈 *Overall Earned:* ${partnerOverall}\n`;
@@ -1355,7 +1393,7 @@
       if (partnerOverall) t += `📈 *Total Career Earnings:* ${partnerOverall}\n`;
       if (teamVal) t += `👥 *Total Team Size:* ${teamVal}\n`;
       if (partnerPotential) t += `🔮 *Expected Potential:* ${partnerPotential}\n`;
-      if (partnerToday) t += `💰 *Latest Payout:* ${partnerToday}\n`;
+      if (partnerToday) t += `💰 *${periodPayoutLabel}:* ${partnerToday}\n`;
       t += `\n🚀 VGK4U is empowering partners across India!\n`;
       t += `🌐 https://vgk4u.com\n`;
       t += `📲 Join the revolution today!`;
@@ -1363,7 +1401,7 @@
     }
 
     if (tpl === 'short') {
-      return `🎉 Big congratulations to *${partnerName}* (${partnerRank || 'Channel Partner'}) for earning *${partnerToday}* today with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
+      return `🎉 Big congratulations to *${partnerName}* (${partnerRank || 'Channel Partner'}) for earning *${partnerToday}* with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
     }
 
     let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
@@ -1372,7 +1410,7 @@
     }
     text += `👤 *Member Name:* ${partnerName}\n`;
     if (partnerToday) {
-      text += `💰 *Today's Payout:* ${partnerToday}\n`;
+      text += `💰 *${periodPayoutLabel}:* ${partnerToday}\n`;
     }
     if (partnerOverall) {
       text += `📈 *Overall Earning:* ${partnerOverall}\n`;
@@ -1518,65 +1556,54 @@
     }
   }
 
-  function downloadPoster() {
+  async function downloadPoster() {
     const container = document.getElementById('posterCanvasWrapper');
     const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Channel_Partner').trim();
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
 
-    capturePosterCanvas(container).then(canvas => {
+    try {
+      const { dataUrl, source } = await resolvePosterImagePayload(container);
       if (spinner) spinner.style.display = 'none';
-      if (!canvas) { alert('Could not generate poster canvas.'); return; }
-      let dataUrl = safeToDataURL(canvas);
-      if (!dataUrl) {
-        try {
-          const cvs = document.createElement('canvas');
-          cvs.width = canvas.width;
-          cvs.height = canvas.height;
-          const ctx = cvs.getContext('2d');
-          ctx.drawImage(canvas, 0, 0);
-          dataUrl = cvs.toDataURL('image/png');
-        } catch(e){}
-      }
       if (!dataUrl) { alert('Failed to generate poster download image.'); return; }
+      const fileSuffix = (source === 'uploaded') ? 'Custom_Creative.png' : 'Achievement_Poster.png';
       const link = document.createElement('a');
-      link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
+      link.download = `${partnerName.replace(/\s+/g, '_')}_${fileSuffix}`;
       link.href = dataUrl;
       link.click();
-    }).catch(err => {
+    } catch (err) {
       if (spinner) spinner.style.display = 'none';
       alert('Failed to download image: ' + err.message);
-    });
+    }
   }
 
-  function sharePoster() {
+  async function sharePoster() {
     const container = document.getElementById('posterCanvasWrapper');
     const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Partner').trim();
     const totalPayout = document.getElementById('prevTotalToday')?.textContent?.trim() || '';
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
 
-    capturePosterCanvas(container).then(canvas => {
+    try {
+      const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
       if (spinner) spinner.style.display = 'none';
-      if (!canvas) return;
-      safeToBlob(canvas, (blob) => {
-        if (!blob) { alert('Failed to generate image file.'); return; }
-        const file = new File([blob], `${partnerName.replace(/\s+/g, '_')}_Achievement.png`, { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ title: 'VGK4U Celebration Poster', text: `Congratulations to ${partnerName} for earning ${totalPayout} today!`, files: [file] }).catch(err => {
-            if (err.name !== 'AbortError') alert('Sharing failed: ' + err.message);
-          });
-        } else {
-          const a = document.createElement('a');
-          a.download = `${partnerName.replace(/\s+/g, '_')}_Achievement.png`;
-          a.href = URL.createObjectURL(blob);
-          a.click();
-        }
-      }, 'image/png');
-    }).catch(err => {
+      if (!blob) { alert('Failed to generate image file.'); return; }
+      const fileSuffix = (source === 'uploaded') ? 'Custom_Creative.png' : 'Achievement.png';
+      const file = new File([blob], `${partnerName.replace(/\s+/g, '_')}_${fileSuffix}`, { type: blob.type || 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ title: 'VGK4U Celebration Poster', text: `Congratulations to ${partnerName} for earning ${totalPayout}!`, files: [file] }).catch(err => {
+          if (err.name !== 'AbortError') alert('Sharing failed: ' + err.message);
+        });
+      } else {
+        const a = document.createElement('a');
+        a.download = `${partnerName.replace(/\s+/g, '_')}_${fileSuffix}`;
+        a.href = URL.createObjectURL(blob);
+        a.click();
+      }
+    } catch (err) {
       if (spinner) spinner.style.display = 'none';
       alert('Failed to generate sharing image: ' + err.message);
-    });
+    }
   }
 
   async function shareOnWhatsApp() {
@@ -1916,12 +1943,10 @@
     if (spinner) spinner.style.display = 'flex';
 
     try {
-      const canvas = await capturePosterCanvas(container);
-      if (!canvas) throw new Error('Failed to capture poster canvas');
+      const { dataUrl, blob, source } = await resolvePosterImagePayload(container);
+      if (!blob) throw new Error('Failed to resolve poster image payload');
 
-      const dataUrl = canvas.toDataURL('image/png');
-      const blob = await (await fetch(dataUrl)).blob();
-
+      const fileSuffix = (source === 'uploaded') ? 'Custom_Creative.png' : 'Achievement.png';
       const shareText = shareDetails.text;
 
       const formData = new FormData();
@@ -1929,7 +1954,7 @@
       formData.append('description', shareText);
       formData.append('category_id', '1');
       formData.append('submission_type', 'photo');
-      formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_Achievement.png`);
+      formData.append('files', blob, `${partnerName.replace(/\s+/g, '_')}_${fileSuffix}`);
 
       const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
       const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');

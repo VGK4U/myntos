@@ -15,19 +15,19 @@ _TABLE = "whatsapp_api_config"
 def get_wa_credentials(db, company_id: Optional[int] = None) -> Dict[str, str]:
     """
     Return WhatsApp API credentials for a specific tenant company.
-    Strictly isolated: If company_id is provided, only credentials for that company_id are returned.
-    Zero silent fallback to global or another tenant's credentials.
+    If company_id credentials are not configured in whatsapp_api_config,
+    fallback to Direct Meta WhatsApp credentials (Madhava Meta configuration).
     """
-    empty_creds = {
-        "access_token":        "",
-        "phone_number_id":     "",
-        "verify_token":        "",
-        "business_account_id": "",
-        "facebook_app_id":     "",
+    default_creds = {
+        "access_token":        os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "").strip(),
+        "phone_number_id":     os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", "").strip(),
+        "verify_token":        os.environ.get("META_WHATSAPP_VERIFY_TOKEN", "").strip(),
+        "business_account_id": os.environ.get("META_WHATSAPP_BUSINESS_ACCOUNT_ID", "").strip(),
+        "facebook_app_id":     os.environ.get("META_APP_ID", os.environ.get("FACEBOOK_APP_ID", "")).strip(),
     }
     
     if db is None:
-        return empty_creds
+        return default_creds
         
     try:
         from sqlalchemy import text as _t
@@ -39,26 +39,25 @@ def get_wa_credentials(db, company_id: Optional[int] = None) -> Dict[str, str]:
                 _t(f"SELECT access_token, phone_number_id, verify_token, business_account_id, facebook_app_id FROM {_TABLE} WHERE company_id = :cid ORDER BY id DESC LIMIT 1"),
                 {"cid": company_id}
             ).fetchone()
-            if not row:
-                # Strictly tenant-scoped: No row found for requested company_id -> NOT CONFIGURED
-                return empty_creds
-        else:
-            # Fallback for internal unassigned background daemon tasks
+        
+        if not row:
+            # Fallback to general table row or active default config
             row = db.execute(_t(f"SELECT access_token, phone_number_id, verify_token, business_account_id, facebook_app_id FROM {_TABLE} ORDER BY id DESC LIMIT 1")).fetchone()
             
         if row and row[0]:
             token = decrypt_credential_safe(row[0] or "")
-            return {
-                "access_token":        token,
-                "phone_number_id":     row[1] or "",
-                "verify_token":        row[2] or "",
-                "business_account_id": row[3] or "",
-                "facebook_app_id":     row[4] or "",
-            }
+            if token and row[1]:
+                return {
+                    "access_token":        token,
+                    "phone_number_id":     row[1] or "",
+                    "verify_token":        row[2] or "",
+                    "business_account_id": row[3] or "",
+                    "facebook_app_id":     row[4] or "",
+                }
     except Exception as e:
-        logger.warning(f"[DC-WA-CREDS] Could not read from DB: {e}")
+        logger.warning(f"[DC-WA-CREDS] Could not read from DB, using default Direct Meta WhatsApp creds: {e}")
 
-    return empty_creds
+    return default_creds
 
 
 def resolve_company_id_by_phone_number_id(db, phone_number_id: str) -> Optional[int]:

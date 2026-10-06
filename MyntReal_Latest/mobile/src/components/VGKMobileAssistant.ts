@@ -119,12 +119,13 @@ export class VGKMobileAssistant {
       </style>
 
       <button id="vgk-mobile-fab" aria-label="${assistantTitle}">
-        <img src="${logoSrc}" onerror="this.style.display='none';this.parentElement.textContent='⚡'" style="width:26px;height:26px;border-radius:50%;">
+        <img id="vgk-fab-img" src="${logoSrc}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;">
+        <span id="vgk-fab-fallback" style="display:none;font-size:16px;">⚡</span>
       </button>
 
       <div id="vgk-mobile-modal">
         <div id="vgk-modal-header">
-          <img src="${logoSrc}" onerror="this.style.display='none'">
+          <img id="vgk-hdr-img" src="${logoSrc}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">
           <span>${assistantTitle}</span>
           <button id="vgk-close-btn">✕</button>
         </div>
@@ -139,6 +140,22 @@ export class VGKMobileAssistant {
 
     this.fab = this.container.querySelector('#vgk-mobile-fab');
     this.modal = this.container.querySelector('#vgk-mobile-modal');
+
+    // Safe error listeners for images (prevents raw onerror text leaking on screen)
+    const fabImg = this.container.querySelector('#vgk-fab-img') as HTMLImageElement;
+    const fabFallback = this.container.querySelector('#vgk-fab-fallback') as HTMLElement;
+    if (fabImg) {
+      fabImg.addEventListener('error', () => {
+        fabImg.style.display = 'none';
+        if (fabFallback) fabFallback.style.display = 'inline';
+      });
+    }
+    const hdrImg = this.container.querySelector('#vgk-hdr-img') as HTMLImageElement;
+    if (hdrImg) {
+      hdrImg.addEventListener('error', () => {
+        hdrImg.style.display = 'none';
+      });
+    }
 
     this.attachFabDrag();
 

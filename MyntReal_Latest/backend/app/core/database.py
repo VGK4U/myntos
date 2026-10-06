@@ -78,7 +78,36 @@ else:
     _is_helium = any(h in _db_url_str for h in ["@helium", "@helium/", "heliumdb", "127.0.0.1", "localhost"])
     _is_neon   = "neon.tech" in _db_url_str
 
+    _use_sqlite_fallback = False
     if _is_helium:
+        try:
+            _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": 2})
+            _test_conn = _test_eng.connect()
+            _test_conn.close()
+            _test_eng.dispose()
+        except Exception as _db_conn_err:
+            print(f"[DC-DB-INIT] Local PostgreSQL unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
+            _use_sqlite_fallback = True
+
+    if _use_sqlite_fallback:
+        print("[DC-DB-INIT] Creating SQLite engine (development fallback mode with WAL & 30s timeout)...", flush=True)
+        engine = create_engine(
+            "sqlite:///./mlm_app.db",
+            connect_args={"check_same_thread": False, "timeout": 30},
+            poolclass=StaticPool,
+            echo=settings.DEBUG
+        )
+        from sqlalchemy import event
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            try:
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.execute("PRAGMA busy_timeout=30000;")
+                cursor.close()
+            except Exception:
+                pass
+    elif _is_helium:
         print("[DC-DB-INIT] Creating PostgreSQL engine (Helium local mode)...", flush=True)
         engine = create_engine(
             settings.DATABASE_URL,

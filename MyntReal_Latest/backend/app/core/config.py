@@ -217,9 +217,15 @@ class Settings(BaseSettings):
             "suryanz.com",
             "www.suryanz.com",
             "*.suryanz.com",
+            "suryanz.in",
+            "www.suryanz.in",
+            "*.suryanz.in",
             "suryanzsolar.com",
             "www.suryanzsolar.com",
             "*.suryanzsolar.com",
+            "suryanzsolar.in",
+            "www.suryanzsolar.in",
+            "*.suryanzsolar.in",
             "*.elasticbeanstalk.com",
             "newbev.replit.app",
             "*.replit.app",
@@ -245,8 +251,12 @@ APPROVED_PUBLIC_DOMAINS = {
     "www.vgk4u.com",
     "suryanz.com",
     "www.suryanz.com",
+    "suryanz.in",
+    "www.suryanz.in",
     "suryanzsolar.com",
-    "www.suryanzsolar.com"
+    "www.suryanzsolar.com",
+    "suryanzsolar.in",
+    "www.suryanzsolar.in"
 }
 DEFAULT_PUBLIC_DOMAIN = "https://suryanzsolar.com"
 

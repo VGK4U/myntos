@@ -9732,82 +9732,15 @@ async function capturePosterCanvas(container) {
 }
 
 function downloadPoster() {
-  const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Channel_Partner').trim();
-  const spinner = document.getElementById('posterSpinner');
-  if (spinner) spinner.style.display = 'flex';
-  
-  capturePosterCanvas(container).then(canvas => {
-    if (spinner) spinner.style.display = 'none';
-    if (!canvas) { alert('Could not generate poster canvas.'); return; }
-    let dataUrl = safeToDataURL(canvas);
-    if (!dataUrl) {
-      try {
-        const cvs = document.createElement('canvas');
-        cvs.width = canvas.width;
-        cvs.height = canvas.height;
-        const ctx = cvs.getContext('2d');
-        ctx.drawImage(canvas, 0, 0);
-        dataUrl = cvs.toDataURL('image/png');
-      } catch(e){}
-    }
-    if (!dataUrl) { alert('Failed to generate poster download image.'); return; }
-    const link = document.createElement('a');
-    link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
-    link.href = dataUrl;
-    link.click();
-  }).catch(err => {
-    if (spinner) spinner.style.display = 'none';
-    alert('Failed to download image: ' + err.message);
-  });
+  if (typeof window.downloadPoster === 'function' && window.downloadPoster !== downloadPoster) {
+    return window.downloadPoster();
+  }
 }
 
 function sharePoster() {
-  const container = document.getElementById('posterCanvasWrapper');
-  const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || 'Partner').trim();
-  const totalPayout = document.getElementById('prevTotalToday').textContent.trim();
-  
-  const spinner = document.getElementById('posterSpinner');
-  if (spinner) {
-    spinner.style.display = 'flex';
-    const spText = spinner.querySelector('div div');
-    if (spText) spText.textContent = 'Generating share image...';
+  if (typeof window.sharePoster === 'function' && window.sharePoster !== sharePoster) {
+    return window.sharePoster();
   }
-  
-  capturePosterCanvas(container).then(canvas => {
-    if (spinner) spinner.style.display = 'none';
-    if (!canvas) return;
-    
-    // Convert canvas to blob for native file sharing using safeToBlob
-    safeToBlob(canvas, (blob) => {
-      if (!blob) {
-        alert('Failed to generate image file.');
-        return;
-      }
-      
-      const file = new File([blob], `${partnerName.replace(/\s+/g, '_')}_Achievement.png`, { type: 'image/png' });
-      const shareData = {
-        title: 'VGK4U Celebration Poster',
-        text: `Congratulations to ${partnerName} for earning ${totalPayout} today!`,
-        files: [file]
-      };
-      
-      // Native sharing (supported on mobile / modern Safari/Chrome)
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share(shareData).catch(err => {
-          if (err.name !== 'AbortError') {
-            alert('Sharing failed: ' + err.message);
-          }
-        });
-      } else {
-        // Fallback: Custom Share Dialog
-        showCustomShareDialog(canvas, partnerName, totalPayout);
-      }
-    }, 'image/png');
-  }).catch(err => {
-    if (spinner) spinner.style.display = 'none';
-    alert('Failed to generate sharing image: ' + err.message);
-  });
 }
 
 function getPosterShareDetails() {

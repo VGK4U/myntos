@@ -1,0 +1,28 @@
+# SURYANZ SOLAR & ZYNOVA OS — Full Technical Specifications & Corporate Knowledge
+
+## 1. SURYANZ SOLAR (https://suryanzsolar.com)
+### Executive Overview
+SURYANZ SOLAR is an established engineering-first solar photovoltaic EPC (Engineering, Procurement, and Construction) company. The engineering team brings over 20 years of hands-on experience in high-efficiency solar design, electrical safety, structural engineering, and long-term asset management.
+
+### Technical Equipment Specifications
+- **Modules**: Tier-1 High-Efficiency TOPCon (Tunnel Oxide Passivated Contact) and N-Type Mono PERC panels ranging from 540W to 580W+ per module, with lower temperature degradation coefficients (<0.30%/°C).
+- **Inverters**: IP65-rated smart string and hybrid inverters with peak efficiency exceeding 98.6%, dual MPPT tracking, anti-islanding protection, and built-in Wi-Fi monitoring.
+- **Mounting Structures**: Custom structural steel hot-dip galvanized mounting frames engineered to withstand wind velocities up to 170 km/h.
+- **Electrical Protection**: Heavy-duty DC isolation switches, Type-II Surge Protection Devices (SPD), dedicated chemical copper earthing pits, and copper-clad lightning arresters.
+
+### Service Hub Locations
+- **Andhra Pradesh**: Visakhapatnam, Vijayawada, Guntur, Tirupati, Rajahmundry, Kakinada, Eluru, Nellore, Anantapur, Kurnool.
+- **Telangana**: Hyderabad, Secunderabad, Warangal, Karimnagar, Nizamabad, Khammam.
+- **Karnataka**: Bengaluru, Mysuru, Mangalore, Hubballi-Dharwad.
+
+---
+
+## 2. ZYNOVA OS (https://zynovaos.com)
+### Executive Overview
+ZynovaOS is a multi-tenant enterprise B2B SaaS operating system designed for business management, field sales tracking, financial operations, multi-channel customer communications, and partner network management.
+
+### Platform Modules & Features
+- **Lead & CRM Pipeline Engine**: End-to-end lead ingestion, automated handler assignment, activity history tracking, stage duration alerts, and automated follow-ups.
+- **WhatsApp & Softphone Communications**: Native integration with Meta WhatsApp Cloud API, browser WebRTC softphone signaling, and automated campaign tracking.
+- **Staff Operations & Field Tracking**: Real-time GPS location tracking, field KM reimbursement calculator, daily KRA scorecards, and timesheet approvals.
+- **Financial & TDS/GST Compliance**: Automated revenue tracking, TDS deduplication, GST handling, partner commission lifecycles, and receipt generation.

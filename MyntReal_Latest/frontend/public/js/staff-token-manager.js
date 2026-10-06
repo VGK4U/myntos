@@ -315,6 +315,15 @@
             }
         }
         
+        if (response.status === 503) {
+            console.warn('[DC_TOKEN] HTTP 503 Service Unavailable received in staffFetch for:', url, '. Retrying once after 1s delay...');
+            await new Promise(r => setTimeout(r, 1000));
+            const retryResponse = await fetch(url, { ...options, headers });
+            if (retryResponse.ok || retryResponse.status !== 503) {
+                return retryResponse;
+            }
+        }
+        
         return response;
     }
     
@@ -470,6 +479,15 @@
                     if (!currentTok || isTokenExpired(currentTok)) {
                         handleSessionExpired('Session expired. Please login again.');
                     }
+                }
+            }
+            
+            if (response.status === 503 && isApiCall && !isAuthEndpoint) {
+                console.warn('[DC_TOKEN] HTTP 503 Service Unavailable in fetch interceptor for:', urlStr, '. Retrying once after 1s delay...');
+                await new Promise(r => setTimeout(r, 1000));
+                const retryResponse = await originalFetch(url, options);
+                if (retryResponse.ok || retryResponse.status !== 503) {
+                    return retryResponse;
                 }
             }
             

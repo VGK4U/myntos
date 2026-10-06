@@ -1004,61 +1004,14 @@ def dispatch_scanned_lead_fallback(
             logger.warning("[WA-LEAD-FALLBACK] MessageLog write warning: %s", _log_e)
             return {"success": True, "wamid": wamid, "channel": "scanned_fallback", "via": "direct_gateway"}
 
-    # Scanned bot offline or direct dispatch failed -> Safely enqueue into PostgreSQL whatsapp_bot_queue!
-    try:
-        rp = {
-            "phone": clean_10,
-            "clean_phone": clean_p,
-            "source": "lead_fallback",
-            "lead_id": lead_id,
-            "event_key": event_key,
-            "enqueued_reason": last_err or reason or "Meta API failure failover",
-            "enqueued_at": now_utc.isoformat()
-        }
-        db.execute(text("""
-            INSERT INTO whatsapp_bot_queue (
-                target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id
-            ) VALUES (
-                'direct', :target_jid, :message, 'pending', NOW(), CAST(:rp AS jsonb), 'lead_welcome_fallback', :execution_id
-            )
-        """), {
-            "target_jid": target_jid,
-            "message": message,
-            "rp": json.dumps(rp),
-            "execution_id": exec_id
-        })
-
-        ml = MessageLog(
-            message_sid=exec_id,
-            message_type=f"fallback_{event_key}",
-            mobile_number=clean_10,
-            message_body=message,
-            from_number="8019045667",
-            to_number=f"+{clean_p}",
-            provider="SCANNED_QUEUE",
-            initial_status="queued",
-            current_status="queued",
-            status_source="LEAD_FALLBACK_QUEUE",
-            sent_by_staff_id=staff_id,
-            sent_by_name="System/FallbackQueue",
-            sender_type="system",
-            job_id="lead_welcome_fallback",
-            execution_id=exec_id
-        )
-        db.add(ml)
-        if lead_id:
-            _log_to_crm_note(
-                db, lead_id,
-                f"⏳ [Meta API Failover] Queued in Scanned WhatsApp queue (will auto-send with safe pacing once connected). Exec: {exec_id}",
-                event_key, staff_id=staff_id, wamid=exec_id
-            )
-        db.commit()
-        logger.info("⏳ [WA-LEAD-FALLBACK] Enqueued into whatsapp_bot_queue for %s (will auto-send with pacing)", clean_10)
-        return {"success": True, "queued": True, "execution_id": exec_id, "channel": "scanned_fallback", "via": "bot_queue"}
-    except Exception as q_err:
-        db.rollback()
-        logger.error("[WA-LEAD-FALLBACK] Failed to enqueue into whatsapp_bot_queue: %s", q_err)
-        return {"success": False, "reason": str(q_err), "error_code": "FALLBACK_QUEUE_ERROR"}
+    # Scanned WhatsApp anti-ban safeguard: NEVER enqueue 1-on-1 lead messages into Scanned WA queue.
+    # Individual lead messages must exclusively use official Meta Cloud API or explicit manual user action.
+    logger.info("🛑 [WA-LEAD-FALLBACK] Individual lead message for %s suppressed from Scanned WA queue to prevent account bans.", clean_10)
+    return {
+        "success": False,
+        "reason": "Scanned queue fallback suppressed for individual 1-on-1 lead to prevent account bans. Meta Cloud API required.",
+        "error_code": "SCANNED_QUEUE_FALLBACK_SUPPRESSED"
+    }
 
 
 def send_lead_welcome(

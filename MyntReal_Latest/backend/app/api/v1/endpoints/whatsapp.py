@@ -7301,12 +7301,26 @@ def poll_bot_queue(
     except Exception as rh_err:
         logger.warning(f"[BOT-QUEUE-POLL] Stale recovery note: {rh_err}")
 
-    try:
+        # Auto-cancel any individual items in queue to protect scanned WhatsApp account from anti-spam bans
+        try:
+            db.execute(text("""
+                UPDATE whatsapp_bot_queue
+                SET status = 'cancelled',
+                    error_message = 'Cancelled to protect Scanned WA account from bans. Individual messages strictly require Meta Cloud API.'
+                WHERE status IN ('pending', 'processing')
+                  AND target_type != 'group'
+                  AND (target_jid IS NULL OR target_jid NOT LIKE '%@g.us')
+            """))
+            db.commit()
+        except Exception:
+            pass
+
         rows = db.execute(
             text("""
                 SELECT id, target_type, target_jid, message, media_url, result_payload
                 FROM whatsapp_bot_queue
                 WHERE status = 'pending'
+                  AND (target_type = 'group' OR target_jid LIKE '%@g.us')
                 ORDER BY id ASC
                 LIMIT :limit
                 FOR UPDATE SKIP LOCKED

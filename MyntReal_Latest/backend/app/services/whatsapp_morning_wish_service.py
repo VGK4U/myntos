@@ -29,11 +29,11 @@ MORNING_WISH_TEMPLATES = [
         "body_text": (
             "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ప్రతి రోజూ కొత్త వెలుగులతో ప్రారంభమవుతుంది!\"_ ☀️\n\n"
-            "Team *MyntReal* wishes you and your family a bright, prosperous, and successful day ahead!\n\n"
+            "Team *{{company_name}}* wishes you and your family a bright, prosperous, and successful day ahead!\n\n"
             "⚡ *PM సూర్య ఘర్ పథకంతో ₹78,000 సబ్సిడీ & మీ ఇంటికి ఉచిత విద్యుత్ పొందండి.*\n\n"
             "Have a wonderful day ahead! 🙏"
         ),
-        "footer_text": "MyntReal.com",
+        "footer_text": "{{company_name}}",
         "example_values": ["Friend"],
         "buttons": [
             {"type": "PHONE_NUMBER", "text": "Call Us", "phone_number": "+918585852738"},
@@ -48,11 +48,11 @@ MORNING_WISH_TEMPLATES = [
         "body_text": (
             "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ఈ రోజు సాధించే చిన్న మార్పులే మీ కుటుంబ భవిష్యత్తుకు గొప్ప వెలుగు.\"_ ☀️\n\n"
-            "Team *MyntReal - Har Ghar Solar* wishes you a peaceful and productive day!\n\n"
+            "Team *{{company_name}}* wishes you a peaceful and productive day!\n\n"
             "💡 *మీ ఇంటి కరెంట్ బిల్లును సున్నా (₹0) చేసుకునే ఉచిత సలహా కోసం మమ్మల్ని సంప్రదించండి.*\n\n"
             "Have a great day! 🙏"
         ),
-        "footer_text": "MyntReal.com",
+        "footer_text": "{{company_name}}",
         "example_values": ["Friend"],
         "buttons": [
             {"type": "PHONE_NUMBER", "text": "Call Us", "phone_number": "+918585852738"},
@@ -67,11 +67,11 @@ MORNING_WISH_TEMPLATES = [
         "body_text": (
             "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"స్వచ్ఛమైన శక్తి - శ్రేయస్సకరమైన జీవితం!\"_ ☀️\n\n"
-            "May your day be filled with positive energy, good health, and success! Best wishes from *MyntReal*.\n\n"
+            "May your day be filled with positive energy, good health, and success! Best wishes from *{{company_name}}*.\n\n"
             "🌿 *3KW సోలార్ రూఫ్‌టాప్ ద్వారా నెలకు వేల రూపాయలు ఆదా చేసుకోండి.*\n\n"
             "Have a blessed day! 🙏"
         ),
-        "footer_text": "MyntReal.com",
+        "footer_text": "{{company_name}}",
         "example_values": ["Friend"],
         "buttons": [
             {"type": "PHONE_NUMBER", "text": "Call Us", "phone_number": "+918585852738"},
@@ -86,11 +86,11 @@ MORNING_WISH_TEMPLATES = [
         "body_text": (
             "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ఈ ఉదయం మీ ముఖంలో చిరునవ్వు, మీ ఇంట్లో వెలుగు నిండాలని ఆశిస్తున్నాము!\"_ ☀️\n\n"
-            "Team *MyntReal* is dedicated to supporting your energy independence.\n\n"
+            "Team *{{company_name}}* is dedicated to supporting your energy independence.\n\n"
             "📞 *మీ సోలార్ సందేహాల నివారణకు & ఉచిత సైట్ విజిట్ కోసం ఒక కాల్ చేయండి.*\n\n"
             "Have a wonderful day ahead! 🙏"
         ),
-        "footer_text": "MyntReal.com",
+        "footer_text": "{{company_name}}",
         "example_values": ["Friend"],
         "buttons": [
             {"type": "PHONE_NUMBER", "text": "Call Us", "phone_number": "+918585852738"},
