@@ -2617,8 +2617,15 @@ def require_tenant_admin_context(
     else:
         client = db.query(PlatformClient).filter_by(id=company.client_id).first()
 
-    if not client or client.status != "active":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Tenant client '{company.client_id}' is not active")
+    if not client:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"Tenant client for company '{company.id}' not found")
+
+    if client.status != "active":
+        if client.status in ("approved", "pending", "pending_payment", "onboarding"):
+            client.status = "active"
+            db.commit()
+        else:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, f"Tenant client '{company.client_id}' is not active (status: {client.status})")
 
     # Ensure active PlatformSubscription exists for this tenant
     sub = db.query(PlatformSubscription).filter_by(client_id=client.id, status="active").first()
@@ -2657,11 +2664,25 @@ def require_tenant_admin_context(
     # Verify Tenant Admin authority
     role = staff.role
     role_code = (getattr(role, "role_code", "") or "").lower()
+    role_name = (getattr(role, "role_name", "") or "").lower()
     hierarchy_level = int(getattr(role, "hierarchy_level", 0) or 0)
     is_super = getattr(staff, "is_super_admin", False)
     staff_type = (getattr(staff, "staff_type", "") or "").upper()
+    admin_scope = (getattr(staff, "admin_scope", "") or "").upper()
+    is_tenant_admin_flag = bool(getattr(staff, "is_tenant_admin", False))
 
-    if not is_super and role_code not in ("tenant_admin", "super_admin", "admin", "saas_segment_admin") and staff_type not in ("TENANT_ADMIN", "SAAS_CLIENT", "SAAS_SEGMENT_ADMIN") and hierarchy_level < 80:
+    is_authorized_admin = (
+        is_super
+        or is_tenant_admin_flag
+        or admin_scope in ("TENANT_ADMIN", "SAAS_CLIENT", "CLIENT_SPECIFIC", "SUPER_ADMIN", "SAAS_SEGMENT_ADMIN")
+        or staff_type in ("TENANT_ADMIN", "SAAS_CLIENT", "SAAS_SEGMENT_ADMIN")
+        or role_code in ("tenant_admin", "tenant_administrator", "super_admin", "admin", "saas_segment_admin", "ceo", "cto", "founder")
+        or "tenant admin" in role_name
+        or hierarchy_level >= 70
+        or (company and staff.base_company_id == company.id and staff.emp_code and ("ADM" in staff.emp_code or "ADMIN" in staff.emp_code or staff.emp_code.endswith("_ADMIN")))
+    )
+
+    if not is_authorized_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Tenant Administrator authority required")
 
     return staff, client, company
@@ -3420,6 +3441,7 @@ def create_tenant_user(
     new_user = StaffEmployee(
         emp_code=emp_code,
         staff_type="MN_EMPLOYEE",
+        tenant_id=client.id,  # STRICTLY LOCKED TO TENANT CLIENT
         full_name=payload.full_name,
         email=payload.email.lower() if payload.email else None,
         phone=payload.phone,

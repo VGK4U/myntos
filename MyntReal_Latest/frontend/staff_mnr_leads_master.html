@@ -1944,6 +1944,7 @@ function switchTab(key) {
 
 // ── Table headers (with sort) ─────────────────────────────────────────────
   function buildTableHead() {
+  const _isSaaSMode = Boolean(window._isSaasTenant || _initIsSaaS || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
   const thead = document.getElementById('tableHead');
   if (activeTab === 'ground-source') {
     thead.innerHTML = `<tr>
@@ -2041,6 +2042,7 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
         <th>Senior</th>
         <th>Extended</th>
@@ -2048,7 +2050,7 @@ function switchTab(key) {
         <th>Field Supp</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>
+        <th>Tech Staff 2</th>` : ''}
         <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
         <th>Bank IFSC</th>
         <th>Vendor</th>
@@ -2068,7 +2070,7 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
-        <th>VGK</th>
+        ${!_isSaaSMode ? '<th>VGK</th>' : ''}
         <th>Actions</th>
       </tr>`;
     }
@@ -2094,11 +2096,12 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
         <th>Field Supp</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>
+        <th>Tech Staff 2</th>` : ''}
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
@@ -2130,11 +2133,12 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
         <th>Field Supp</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>
+        <th>Tech Staff 2</th>` : ''}
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
@@ -2310,11 +2314,14 @@ async function loadData() {
 // ── Render CRM table ──────────────────────────────────────────────────────
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTableBody');
+  const _isSaaSMode = Boolean(window._isSaasTenant || _initIsSaaS || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
   const isSolar = activeTab==='solar';
   const isB2B = activeTab==='ev-b2b';
   const cols = _isRestrictedFreelancer
     ? (isSolar ? 16 : isB2B ? 7 : 7)
-    : (isSolar ? 36 : isB2B ? 20 : 20);
+    : _isSaaSMode
+    ? (isSolar ? 44 : isB2B ? 15 : 15)
+    : (isSolar ? 53 : isB2B ? 20 : 20);
   if (!leads.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}" class="no-data"><i class="fas fa-inbox"></i> No leads found</td></tr>`;
     document.getElementById('tableCountLabel').textContent = '0 leads';
@@ -2441,6 +2448,7 @@ function renderLeadsTable(leads) {
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${l.source?`<span class="source-tag">${esc(l.source)}</span>`:'—'}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||'')}">${handlerTele}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-name="${esc(l.field_staff_name||l.associated_partner_name||'')}" data-valtype="${l.field_staff_id?'staff':l.associated_partner_id?'partner':''}">${handlerField}</td>
+        ${!_isSaaSMode ? `
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler_id" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-name="${esc(l.source_ref_name||'')}" data-valtype="${esc(l.source_ref_type||'')}">${handlerMnr}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="guru_id" data-type="handler_guru" data-val="${esc(l.guru_id||'')}" data-name="${esc(l.guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${handlerGuru}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="z_guru_id" data-type="handler_zguru" data-val="${esc(l.z_guru_id||'')}" data-name="${esc(l.z_guru_name||l.team_extended_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${handlerZGuru}</td>
@@ -2448,7 +2456,7 @@ function renderLeadsTable(leads) {
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support_ref_id" data-type="handler_fs" data-val="${esc(_fsMId)}" data-name="${esc(_fsMName||'')}" data-valtype="${esc(_fsMType)}">${handlerFs}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="support_staff_id" data-type="handler_support_staff" data-val="${l.support_staff_id||''}" data-name="${esc(l.support_staff_name||'')}">${handlerSupportStaff}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_staff1_id" data-type="handler_tech1" data-val="${l.technical_staff1_id||''}" data-name="${esc(l.technical_staff1_name||'')}">${handlerTech1}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}">${handlerTech}</td>
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}">${handlerTech}</td>` : ''}
         <td class="ic" data-lid="${l.id}" data-field="pincode" data-type="text" data-val="${esc(l.pincode||'')}" style="font-size:10.5px">${l.pincode||'—'}</td>
         <td style="font-size:10.5px">${esc(l.ifsc_code||'—')}</td>
         <td class="ic" data-lid="${l.id}" data-field="vendor_id" data-type="vendor_select" data-val="${l.vendor_id||''}" style="cursor:pointer;min-width:90px">${l.partner_name?`<span style="font-size:10.5px;color:#1e3a5f;font-weight:600">${esc(l.partner_name)}</span>${l.vendor_code?`<br><span style="font-size:9px;color:#6b7280">${esc(l.vendor_code)}</span>`:''}` :'<span style="color:#9ca3af;font-size:9.5px;cursor:pointer">— Vendor</span>'}</td>
@@ -2468,7 +2476,7 @@ function renderLeadsTable(leads) {
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
-        <td style="text-align:center;min-width:100px">${typeof _vgkCell==='function'?_vgkCell(l, l.company_id, _sdName):'—'}</td>
+        ${!_isSaaSMode ? `<td style="text-align:center;min-width:100px">${typeof _vgkCell==='function'?_vgkCell(l, l.company_id, _sdName):'—'}</td>` : ''}
         <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="openFixAppointmentFromMnr(${l.id})" title="Fix Field Appointment"><i class="fas fa-calendar-check"></i> Visit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     } else if (isB2B) {
@@ -2498,11 +2506,12 @@ function renderLeadsTable(leads) {
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${src}</td>
         <td>${handlerTele}</td>
         <td>${handlerField}</td>
+        ${!_isSaaSMode ? `
         <td>${handlerMnr}</td>
         <td>${handlerFs}</td>
         <td>${handlerSupportStaff}</td>
         <td>${handlerTech1}</td>
-        <td>${handlerTech}</td>
+        <td>${handlerTech}</td>` : ''}
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
@@ -2535,11 +2544,12 @@ function renderLeadsTable(leads) {
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${src}</td>
         <td>${handlerTele}</td>
         <td>${handlerField}</td>
+        ${!_isSaaSMode ? `
         <td>${handlerMnr}</td>
         <td>${handlerFs}</td>
         <td>${handlerSupportStaff}</td>
         <td>${handlerTech1}</td>
-        <td>${handlerTech}</td>
+        <td>${handlerTech}</td>` : ''}
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>

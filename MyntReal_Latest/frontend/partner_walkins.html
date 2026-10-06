@@ -683,9 +683,19 @@ function openNewWalkinModal() {
     document.getElementById('wAssignedResults').innerHTML = '';
     document.getElementById('followUpDateRow').style.display = 'none';
     // Reset VGK section
-    document.getElementById('wRegisterVGK').checked = true;
-    document.getElementById('vgkReferralRow').style.display = 'block';
-    document.getElementById('vgkEnrolToggleRow').style.display = 'block';
+    const _uObjWalkin = JSON.parse(localStorage.getItem('staff_user') || '{}');
+    const _isSaaSWalkin = Boolean(_uObjWalkin.is_saas_tenant || _uObjWalkin.company_segment === 'SEGMENT_B_SAAS');
+    if (_isSaaSWalkin) {
+      document.getElementById('wRegisterVGK').checked = false;
+      document.getElementById('vgkReferralRow').style.display = 'none';
+      document.getElementById('vgkEnrolToggleRow').style.display = 'none';
+      const _vSec = document.getElementById('vgkEnrolSection');
+      if (_vSec) _vSec.style.display = 'none';
+    } else {
+      document.getElementById('wRegisterVGK').checked = true;
+      document.getElementById('vgkReferralRow').style.display = 'block';
+      document.getElementById('vgkEnrolToggleRow').style.display = 'block';
+    }
     document.getElementById('vgkExistingBanner').style.display = 'none';
     document.getElementById('vgkReferralSearch').value = '';
     document.getElementById('vgkReferralResults').innerHTML = '';
@@ -693,7 +703,7 @@ function openNewWalkinModal() {
     document.getElementById('vgkReferralId').value = '';
     // [DC-PHONE-OTP-001] Reset OTP state and show OTP section (since VGK is default-checked)
     walkinOtpReset();
-    document.getElementById('walkinOtpSection').style.display = 'block';
+    document.getElementById('walkinOtpSection').style.display = _isSaaSWalkin ? 'none' : 'block';
     new bootstrap.Modal(document.getElementById('walkinModal')).show();
 }
 

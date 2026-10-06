@@ -1105,11 +1105,28 @@ function buildTableHead() {
       <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('telecaller_id')">Support<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom<span class="sort-icon"></span></th>
+  const _isSaaSMode = Boolean(window._isSaasTenant || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
+  if (CFG.isSolar) {
+    thead.innerHTML = `<tr>
+      <th><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)" title="Select All" style="cursor:pointer"></th>
+      <th></th>
+      <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('application_no')">App No<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('accepted_date')">Accepted<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('phone')">Mobile<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
+      <th>Stage</th>
+      <th>Comments</th>
+      <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('telecaller_id')">Support<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom<span class="sort-icon"></span></th>
+      ${!_isSaaSMode ? `
       <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
       <th>Senior</th>
       <th>Extended</th>
       <th>Field Supp</th>
-      <th>Technical</th>
+      <th>Technical</th>` : ''}
       <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('loan_bank')">Loan Bank<span class="sort-icon"></span></th>
       <th>Vendor</th>
@@ -1129,7 +1146,7 @@ function buildTableHead() {
       <th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('deal_value_total')">Total<span class="sort-icon"></span></th>
       <th>Received</th><th>Pending</th><th>Txns</th>
-      <th>VGK</th>
+      ${!_isSaaSMode ? '<th>VGK</th>' : ''}
       <th>Actions</th>
     </tr>`;
   } else if (CFG.isB2B) {
@@ -1143,9 +1160,10 @@ function buildTableHead() {
       <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('telecaller_id')">Support<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom<span class="sort-icon"></span></th>
+      ${!_isSaaSMode ? `
       <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
       <th>Field Supp</th>
-      <th>Technical</th>
+      <th>Technical</th>` : ''}
       <th class="sortable" onclick="sortByCol('deal_value_total')">Total<span class="sort-icon"></span></th>
       <th>Received</th><th>Pending</th><th>Txns</th>
       <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
@@ -1161,9 +1179,10 @@ function buildTableHead() {
       <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('telecaller_id')">Support<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom<span class="sort-icon"></span></th>
+      ${!_isSaaSMode ? `
       <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
       <th>Field Supp</th>
-      <th>Technical</th>
+      <th>Technical</th>` : ''}
       <th class="sortable" onclick="sortByCol('deal_value_total')">Total<span class="sort-icon"></span></th>
       <th>Received</th><th>Pending</th><th>Txns</th>
       <th class="sortable" onclick="sortByCol('created_at')">Created<span class="sort-icon"></span></th>
@@ -1214,8 +1233,9 @@ function buildQS() {
 }
 
 async function loadData() {
+  const _isSaaSMode = Boolean(window._isSaasTenant || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
   if (CFG.isSolar && !_solarVendors.length) { await loadSolarVendors(); _populateVendorFilterDropdown(); }
-  const cols = CFG.isSolar?41:CFG.isB2B?18:16;
+  const cols = CFG.isSolar?(_isSaaSMode?35:41):CFG.isB2B?(_isSaaSMode?15:18):(_isSaaSMode?13:16);
   document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="${cols}" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>`;
   resetStats(); if (expandedRow) { expandedRow.remove(); expandedRow=null; }
   try {
@@ -1227,14 +1247,15 @@ async function loadData() {
     totalCount = pg.total||leads.length; _leadsCache = leads;
     renderLeadsTable(leads); renderPagination(pg); computeStats(leads, totalCount, pg); loadStats();
   } catch(e) {
-    const cols=CFG.isSolar?41:CFG.isB2B?18:16;
+    const cols = CFG.isSolar?(_isSaaSMode?35:41):CFG.isB2B?(_isSaaSMode?15:18):(_isSaaSMode?13:16);
     document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="${cols}" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> Error: ${esc(e.message)}</td></tr>`;
   }
 }
 
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTableBody');
-  const cols = CFG.isSolar?41:CFG.isB2B?18:17;
+  const _isSaaSMode = Boolean(window._isSaasTenant || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
+  const cols = CFG.isSolar?(_isSaaSMode?35:41):CFG.isB2B?(_isSaaSMode?15:18):(_isSaaSMode?14:17);
   if (!leads.length) { tbody.innerHTML=`<tr><td colspan="${cols}" class="no-data"><i class="fas fa-inbox"></i> No leads found</td></tr>`; document.getElementById('tableCountLabel').textContent='0 leads'; return; }
   tbody.innerHTML = leads.map(l => {
     const st=(l.status||'new').toLowerCase(), pr=(l.priority||'medium').toLowerCase();
@@ -1269,7 +1290,7 @@ function renderLeadsTable(leads) {
         </td>
         <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${l.source?`<span class="source-tag">${esc(l.source)}</span>`:'—'}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="guru_id" data-type="handler_guru" data-val="${esc(l.guru_id||'')}" data-name="${esc(l.guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${l.guru_id?`<span class="handler-chip mnr" title="${esc(l.guru_id)}"><span class="hc-name"><i class="fas fa-user-graduate" style="font-size:8.5px;margin-right:2px"></i>${esc(l.guru_name||l.guru_id)}</span><span class="hc-id">${esc(l.guru_id)}</span></span>`:'<span style="color:#d1d5db">—</span>'}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="z_guru_id" data-type="handler_zguru" data-val="${esc(l.z_guru_id||'')}" data-name="${esc(l.z_guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${l.z_guru_id?`<span class="handler-chip mnr" title="${esc(l.z_guru_id)}"><span class="hc-name"><i class="fas fa-user-graduate" style="font-size:8.5px;margin-right:2px"></i>${esc(l.z_guru_name||l.z_guru_id)}</span><span class="hc-id">${esc(l.z_guru_id)}</span></span>`:'<span style="color:#d1d5db">—</span>'}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td>${!_isSaaSMode ? `<td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-[#valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="guru_id" data-type="handler_guru" data-val="${esc(l.guru_id||'')}" data-name="${esc(l.guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${l.guru_id?`<span class="handler-chip mnr" title="${esc(l.guru_id)}"><span class="hc-name"><i class="fas fa-user-graduate" style="font-size:8.5px;margin-right:2px"></i>${esc(l.guru_name||l.guru_id)}</span><span class="hc-id">${esc(l.guru_id)}</span></span>`:'<span style="color:#d1d5db">—</span>'}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="z_guru_id" data-type="handler_zguru" data-val="${esc(l.z_guru_id||'')}" data-name="${esc(l.z_guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${l.z_guru_id?`<span class="handler-chip mnr" title="${esc(l.z_guru_id)}"><span class="hc-name"><i class="fas fa-user-graduate" style="font-size:8.5px;margin-right:2px"></i>${esc(l.z_guru_name||l.z_guru_id)}</span><span class="hc-id">${esc(l.z_guru_id)}</span></span>`:'<span style="color:#d1d5db">—</span>'}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>` : ''}
         <td class="ic" data-lid="${l.id}" data-field="pincode" data-type="text" data-val="${esc(l.pincode||'')}" style="font-size:10.5px">${l.pincode||'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="loan_bank" data-type="text" data-val="${esc(l.loan_bank||'')}" style="font-size:10.5px">${esc(l.loan_bank||'—')}</td>
         <td class="ic" data-lid="${l.id}" data-field="vendor_id" data-type="vendor_select" data-val="${l.vendor_id||''}" style="cursor:pointer;min-width:90px">${l.partner_name?`<span style="font-size:10.5px;color:#1e3a5f;font-weight:600">${esc(l.partner_name)}</span>${l.vendor_code?`<br><span style="font-size:9px;color:#6b7280">${esc(l.vendor_code)}</span>`:''}` :'<span style="color:#9ca3af;font-size:9.5px;cursor:pointer">— Vendor</span>'}</td>
@@ -1291,7 +1312,7 @@ function renderLeadsTable(leads) {
         <td>${(l.deal_value_received||0)>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td>${(()=>{const p=Math.max(0,(dv||0)-(l.deal_value_received||0));return p>0?`<span class="value-chip" style="background:#fef3c7;color:#92400e">₹${fmtVal(p)}</span>`:'—';})()}</td>
         <td>${(l.txn_count||0)>0?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700"><i class="fas fa-receipt" style="font-size:9px"></i>${l.txn_count}</span>`:'—'}</td>
-        <td style="text-align:center;min-width:100px">${_vgkCell(l, l.company_id, _sdName)}</td>
+        ${!_isSaaSMode ? `<td style="text-align:center;min-width:100px">${_vgkCell(l, l.company_id, _sdName)}</td>` : ''}
         <td style="text-align:center;white-space:nowrap"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button> <button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;margin-left:2px" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button> <button onclick="event.stopPropagation();openLeadWAModal(${l.id},'${esc(l.phone||'')}','${esc(l.name||'')}',${l.company_id||'null'})" title="Send WhatsApp" style="background:#25d366;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer"><i class="fab fa-whatsapp"></i></button></td>
       </tr>`;
     } else if (CFG.isB2B) {
@@ -1305,7 +1326,7 @@ function renderLeadsTable(leads) {
         <td class="ic" data-lid="${l.id}" data-field="status" data-type="status" data-val="${l.status||'new'}"><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
         <td class="ic" data-lid="${l.id}" data-field="ev_b2b_stage" data-type="b2b_stage" data-val="${b2bStg}" title="Click to edit Stage" style="min-width:90px;padding:3px 4px">${b2bBadge}</td>
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${l.source?`<span class="source-tag">${esc(l.source)}</span>`:'—'}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td>${!_isSaaSMode ? `<td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>` : ''}
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td>${(l.deal_value_received||0)>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td>${(()=>{const p=Math.max(0,(dv||0)-(l.deal_value_received||0));return p>0?`<span class="value-chip" style="background:#fef3c7;color:#92400e">₹${fmtVal(p)}</span>`:'—';})()}</td>
@@ -1321,7 +1342,7 @@ function renderLeadsTable(leads) {
         <td>${phoneCell}</td>
         <td class="ic" data-lid="${l.id}" data-field="status" data-type="status" data-val="${l.status||'new'}"><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${l.source?`<span class="source-tag">${esc(l.source)}</span>`:'—'}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||l.telecaller_emp_code||'')}" style="cursor:pointer" title="Click to edit Telecaller">${handlerTele}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-valtype="${l.field_staff_id?'staff':(l.associated_partner_id?'partner':'')}" data-name="${esc(l.field_staff_name||l.associated_partner_name||l.field_staff_emp_code||'')}" style="cursor:pointer" title="Click to edit Showroom/Field">${handlerField}</td>${!_isSaaSMode ? `<td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="mnr_handler" data-type="handler_mnr" data-val="${esc(l.source_ref_id||l.mnr_handler_id||'')}" data-valtype="${esc(l.source_ref_type||'mnr')}" data-name="${esc(_mnrName||'')}" style="cursor:pointer" title="Click to edit Ground Source">${handlerMnr}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support" data-type="handler_fs" data-val="${esc(_fsDispId)}" data-valtype="${esc(_fsDispType)}" data-name="${esc(_fsDispName||'')}" style="cursor:pointer" title="Click to edit Field Support">${handlerFs}</td><td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}" style="cursor:pointer" title="Click to edit Technical">${handlerTech}</td>` : ''}
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td>${(l.deal_value_received||0)>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td>${(()=>{const p=Math.max(0,(dv||0)-(l.deal_value_received||0));return p>0?`<span class="value-chip" style="background:#fef3c7;color:#92400e">₹${fmtVal(p)}</span>`:'—';})()}</td>

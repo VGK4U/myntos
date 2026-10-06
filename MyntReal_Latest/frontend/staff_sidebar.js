@@ -2935,6 +2935,18 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // ─── VGK Assistant Integration (DC_VGK_001) ───────────────────────────────
 (function _vgkBoot() {
+  try {
+    const userObj = JSON.parse(localStorage.getItem('staff_user') || '{}');
+    const isSaaS = Boolean(
+      userObj.is_saas_tenant ||
+      userObj.staff_type === 'TENANT_ADMIN' ||
+      userObj.staff_type === 'SAAS_CLIENT' ||
+      userObj.company_segment === 'SEGMENT_B_SAAS' ||
+      (userObj.role_code && userObj.role_code.startsWith('tenant_'))
+    );
+    if (isSaaS) return; // Suppress VGK internal assistant for SaaS Tenants
+  } catch (e) {}
+
   function loadVGK() {
     if (!document.getElementById('vgk-script')) {
       const s = document.createElement('script');

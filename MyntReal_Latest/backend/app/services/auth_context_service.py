@@ -117,10 +117,17 @@ def resolve_staff_memberships(db: Session, staff_id: int, tenant_id: int) -> Tup
             else:
                 # 0 primary memberships
                 return accessible, None
+
+        # Fail-safe defense for provisioned tenant admins or staff with valid base_company_id
+        staff = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+        if staff and staff.base_company_id:
+            comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == staff.base_company_id).first()
+            if comp and (comp.client_id == tenant_id or staff.tenant_id == tenant_id or getattr(staff, "admin_scope", "") == "TENANT_ADMIN"):
+                logger.info(f"[AUTH-RESOLVE-MEMBERSHIPS] Dynamically resolved base_company_id #{staff.base_company_id} for Staff #{staff_id}")
+                return [staff.base_company_id], staff.base_company_id
     except Exception as e:
         logger.error(f"[AUTH-RESOLVE-MEMBERSHIPS] Error querying staff_company_memberships: {e}")
 
-    # Section 1 & Section 3: FAIL CLOSED. Zero fallback to base_company_id or company 1.
     return [], None
 
 

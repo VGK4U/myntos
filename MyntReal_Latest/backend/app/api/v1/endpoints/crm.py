@@ -162,12 +162,24 @@ def validate_crm_assignee(
             detail=f"Invalid or inactive {slot_name}"
         )
     
-    if lead_tenant_id is not None and staff.tenant_id is not None and staff.tenant_id != lead_tenant_id:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot assign {slot_name} from a different organization/tenant"
-        )
-    
+    if lead_tenant_id is not None:
+        is_same_tenant = False
+        if staff.tenant_id == lead_tenant_id:
+            is_same_tenant = True
+        elif db.query(StaffCompanyMembership).filter_by(staff_id=staff.id, tenant_id=lead_tenant_id, is_active=True).first():
+            is_same_tenant = True
+        elif staff.base_company_id:
+            from app.models.staff_accounts import AssociatedCompany
+            comp = db.query(AssociatedCompany).filter_by(id=staff.base_company_id).first()
+            if comp and comp.client_id == lead_tenant_id:
+                is_same_tenant = True
+
+        if not is_same_tenant and staff.tenant_id is not None and staff.tenant_id != lead_tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot assign {slot_name} from a different organization/tenant"
+            )
+
     return staff
 
 

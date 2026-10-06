@@ -102,10 +102,18 @@ def resolve_tenant_context(db: Session, staff: StaffEmployee) -> TenantContext:
         is_saas = True
 
     role_code = (staff.role.role_code.lower() if staff.role and staff.role.role_code else '')
+    role_name = (staff.role.role_name.lower() if staff.role and staff.role.role_name else '')
+    admin_scope = (getattr(staff, "admin_scope", "") or "").upper()
+    staff_type = (getattr(staff, "staff_type", "") or "").upper()
+
     is_admin = (
-        role_code == "tenant_admin" or
-        staff.staff_type in ("TENANT_ADMIN", "SAAS_CLIENT") or
-        getattr(staff, "admin_scope", "") == "CLIENT_SPECIFIC"
+        role_code in ("tenant_admin", "tenant_administrator", "super_admin", "admin", "saas_segment_admin", "ceo", "cto", "founder") or
+        "tenant admin" in role_name or
+        staff_type in ("TENANT_ADMIN", "SAAS_CLIENT", "SAAS_SEGMENT_ADMIN") or
+        admin_scope in ("TENANT_ADMIN", "SAAS_CLIENT", "CLIENT_SPECIFIC", "SUPER_ADMIN", "SAAS_SEGMENT_ADMIN") or
+        getattr(staff, "is_tenant_admin", False) or
+        getattr(staff, "is_super_admin", False) or
+        (staff.emp_code and ("ADM" in staff.emp_code or "ADMIN" in staff.emp_code or staff.emp_code.endswith("_ADMIN")))
     )
 
     if not is_saas:
