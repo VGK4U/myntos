@@ -16,7 +16,7 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
   <header class="suryanz-header" role="banner">
     <div class="suryanz-nav-container">
       <a href="${p || '/'}" class="suryanz-brand-logo" aria-label="Suryanz Solar Home">
-        <img src="/public/images/suryanz-logo-transparent.png?v=20261006_2" alt="SURYNAZ SOLAR Logo" class="suryanz-logo-img">
+        <img src="/public/images/suryanz-logo-transparent.png?v=20261007_1" alt="SURYANZ SOLAR Logo" class="suryanz-logo-img">
       </a>
       
       <nav aria-label="Main Navigation">
@@ -116,7 +116,7 @@ function getSuryanzFooter(urlPrefix = '') {
     <div class="suryanz-footer-grid">
       <div class="suryanz-footer-col">
         <div style="margin-bottom: 1.25rem;">
-          <img src="/public/images/suryanz-logo-transparent.png?v=20261006_2" alt="SURYNAZ SOLAR" style="height: 54px; background: #ffffff; padding: 4px 12px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <img src="/public/images/suryanz-logo-transparent.png?v=20261007_1" alt="SURYANZ SOLAR" style="height: 54px; background: transparent; padding: 2px 4px; display: inline-block;">
         </div>
         <p style="color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 1.25rem; font-size: 0.9rem;">
           Powering a Brighter Tomorrow with engineer-designed rooftop solar systems, transparent quotations, and 3-stage customer protection.
