@@ -308,7 +308,7 @@
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
             <span style="font-size:24px;font-weight:800;color:var(--brand-1)" id="price-total">₹1,999</span>
-            <span style="font-size:11.5px;color:var(--muted)" id="price-tax-label">+ 18% GST (₹359.82) · Total ₹2,358.82</span>
+            <span style="font-size:11.5px;color:var(--muted)" id="price-tax-label">18% GST (₹304.93) Included · Subtotal ₹1,694.07</span>
           </div>
           <div id="summary-modules-list" style="font-size:11.5px;color:var(--ink-2);margin-top:8px;border-top:1px dashed var(--line);padding-top:6px">
             <b>Included Modules:</b> CRM, WhatsApp Direct Messages
@@ -894,10 +894,10 @@ function updatePricingCalculation() {
   const planInfo = PLAN_TIERS[planCode] || PLAN_TIERS['PLAN_1_LOGIN'];
   const includedCodes = COMMERCIAL_MATRIX[planCode] || [];
 
-  const subtotal = cycle === 'annual' ? planInfo.annual : planInfo.monthly;
+  const totalPayable = cycle === 'annual' ? planInfo.annual : planInfo.monthly;
   const gstRate = currency === 'INR' ? 0.18 : 0.00;
-  const taxAmount = Math.round(subtotal * gstRate * 100) / 100;
-  const totalPayable = Math.round((subtotal + taxAmount) * 100) / 100;
+  const baseAmount = gstRate > 0 ? Math.round((totalPayable / (1 + gstRate)) * 100) / 100 : totalPayable;
+  const taxAmount = Math.round((totalPayable - baseAmount) * 100) / 100;
 
   const symbol = currency === 'USD' ? '$' : '₹';
 
@@ -908,7 +908,11 @@ function updatePricingCalculation() {
   
   const taxLabel = document.getElementById('price-tax-label');
   if (taxLabel) {
-    taxLabel.textContent = `+ 18% GST (${symbol}${taxAmount.toLocaleString('en-IN')}) · Subtotal ${symbol}${subtotal.toLocaleString('en-IN')}`;
+    if (gstRate > 0) {
+      taxLabel.textContent = `18% GST (${symbol}${taxAmount.toLocaleString('en-IN')}) Included · Subtotal ${symbol}${baseAmount.toLocaleString('en-IN')}`;
+    } else {
+      taxLabel.textContent = `All Taxes Included · Total ${symbol}${totalPayable.toLocaleString('en-IN')}`;
+    }
   }
 
   const includedNames = includedCodes.map(c => MODULE_NAMES[c] || c).join(', ');
