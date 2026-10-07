@@ -903,6 +903,25 @@ body.suryanz-body {
   gap: 2.5rem;
 }
 
+.suryanz-footer-logo-card {
+  background: #ffffff;
+  padding: 8px 16px;
+  border-radius: 10px;
+  display: inline-block;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 12px rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.suryanz-footer-logo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 18px rgba(255, 255, 255, 0.25);
+}
+.suryanz-footer-logo-img {
+  height: 52px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
 .suryanz-footer-col h4 {
   color: #fbbf24;
   font-size: 1rem;

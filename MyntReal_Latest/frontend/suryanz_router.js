@@ -116,7 +116,9 @@ function getSuryanzFooter(urlPrefix = '') {
     <div class="suryanz-footer-grid">
       <div class="suryanz-footer-col">
         <div style="margin-bottom: 1.25rem;">
-          <img src="/public/images/suryanz-logo-transparent.png?v=20261007_1" alt="SURYANZ SOLAR" style="height: 54px; background: transparent; padding: 2px 4px; display: inline-block;">
+          <div class="suryanz-footer-logo-card">
+            <img src="/public/images/suryanz-logo-transparent.png?v=20261007_2" alt="SURYANZ SOLAR" class="suryanz-footer-logo-img">
+          </div>
         </div>
         <p style="color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 1.25rem; font-size: 0.9rem;">
           Powering a Brighter Tomorrow with engineer-designed rooftop solar systems, transparent quotations, and 3-stage customer protection.
