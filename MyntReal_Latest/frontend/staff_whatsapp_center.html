@@ -2677,7 +2677,7 @@ async function sendChatMessage() {
     const officialPayload = {
       phone: cleanPhone || activeChatPhone,
       company_id: 4,
-      custom_message: msgText
+      custom_message: rawMsgText
     };
 
     const res = await apiFetch(`${API}/whatsapp-config/test-send`, {
