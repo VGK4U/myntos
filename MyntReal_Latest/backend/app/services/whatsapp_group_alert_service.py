@@ -166,22 +166,35 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
     if not lead:
         return {"success": False, "reason": "lead_not_found"}
 
-    # DC-SELF-LEAD-001 / DC-STAFF-LEAD-001: Suppress group alert for staff-related / private / manually added staff leads
+    # DC-LEAD-ALERT-FILTER-001: ONLY Meta leads or external inbound form leads trigger group alerts.
+    # EXCLUDE staff-created leads and VGK4U partner leads.
     lead_source = (getattr(lead, 'source', '') or '').strip()
     created_by_type = (getattr(lead, 'created_by_type', '') or '').strip().lower()
     source_ref_type = (getattr(lead, 'source_ref_type', '') or '').strip().lower()
-    if (
-        created_by_type == 'staff'
-        or source_ref_type in ('staff', 'self', 'mn_staff')
-        or lead_source.lower() == 'self lead'
+    associated_partner_id = getattr(lead, 'associated_partner_id', None)
+
+    # Check staff lead criteria
+    is_staff_lead = (
+        created_by_type in ('staff', 'mn_staff', 'employee', 'admin')
+        or source_ref_type in ('self', 'staff', 'mn_staff', 'staff_personal')
+        or lead_source.lower() in ('self lead', 'staff personal', 'staff lead', 'self', 'staff')
         or lead_source == SELF_LEAD_SOURCE_NAME
-    ):
-        logger.info(f"[SCOUT-ALERT] Suppressing Sales Group notification for Staff-created / Private Lead #{lead.id} (Internal Staff Lead)")
-        return {"success": True, "skipped": True, "reason": "staff_lead_suppressed"}
+    )
+
+    # Check VGK4U / Partner lead criteria
+    is_vgk_lead = (
+        associated_partner_id is not None
+        or source_ref_type in ('vgk', 'partner', 'vgk4u')
+        or lead_source.lower() in ('vgk4u', 'vgk', 'partner', 'partner lead', 'vgk lead', 'vgk4u lead', 'partner submission')
+    )
+
+    if is_staff_lead or is_vgk_lead:
+        reason = "staff_lead_suppressed" if is_staff_lead else "vgk_partner_lead_suppressed"
+        logger.info(f"[SCOUT-ALERT] Suppressing Sales Group alert for Lead #{lead.id} (Reason: {reason}, Source: {lead_source}, CreatedBy: {created_by_type})")
+        return {"success": True, "skipped": True, "reason": reason}
 
     lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Valued Prospect').strip()
     phone = getattr(lead, 'phone', 'N/A') or 'N/A'
-    city = getattr(lead, 'city', '') or getattr(lead, 'location', '') or 'Not Specified'
     pincode = getattr(lead, 'pincode', '') or ''
     source = getattr(lead, 'source', '') or 'Direct Intake'
     interest = getattr(lead, 'product_interest', '') or getattr(lead, 'requirement', '') or 'Solar Rooftop (PM Surya Ghar)'
@@ -197,6 +210,19 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
             pass
     elif isinstance(source_details_raw, dict):
         sd = source_details_raw
+
+    raw_fields = sd.get('raw_fields') or {}
+
+    # Extract City & District
+    city = (getattr(lead, 'city', '') or getattr(lead, 'location', '') or sd.get('city') or raw_fields.get('city') or '').strip()
+    district = (getattr(lead, 'district', '') or sd.get('district') or raw_fields.get('district') or raw_fields.get('city_district') or sd.get('city_district') or '').strip()
+
+    loc_parts = []
+    if city:
+        loc_parts.append(city)
+    if district and district.lower() not in [c.lower() for c in loc_parts]:
+        loc_parts.append(district)
+    city_district_str = " / ".join(loc_parts) if loc_parts else "Not Specified"
 
     # Meta Lead Generation Time (IST)
     meta_created_str = sd.get('created_time')
@@ -320,7 +346,7 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
         "🚨 *NEW LEAD RECEIVED!* 🚨\n",
         f"👤 *Customer Name*: {lead_name}",
         f"📱 *Phone*: {masked_phone} 🔒 _(Masked for Security)_",
-        f"📍 *Location*: {city}" + (f" (PIN: {pincode})" if pincode else ""),
+        f"📍 *Location (City/District)*: {city_district_str}" + (f" (PIN: {pincode})" if pincode else ""),
     ]
 
     if company_name:

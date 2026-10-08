@@ -10863,13 +10863,11 @@ def create_lead(
         except Exception:
             db.rollback()
 
-    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Staff-created leads are internal workflows and must NOT trigger shared Sales Group notifications
+    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Private personal self leads are suppressed; customer leads trigger instant WhatsApp group alert
     _is_staff_or_self_lead = (
         (_resolved_source or '').strip().lower() == 'self lead'
         or _resolved_source == SELF_LEAD_SOURCE_NAME
-        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff', 'mn_staff')
-        or getattr(new_lead, 'created_by_type', '') == 'staff'
-        or current_employee is not None
+        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff_personal')
     )
     if not _is_staff_or_self_lead:
         try:
@@ -17628,14 +17626,11 @@ async def create_lead_unified(
     db.commit()
     db.refresh(new_lead)
 
-    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Staff-created leads are internal workflows and must NOT trigger shared Sales Group notifications
+    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Private personal self leads are suppressed; customer leads trigger instant WhatsApp group alert
     _is_staff_or_self_lead = (
         (getattr(new_lead, 'source', '') or '').strip().lower() == 'self lead'
         or getattr(new_lead, 'source', '') == SELF_LEAD_SOURCE_NAME
-        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff', 'mn_staff')
-        or getattr(new_lead, 'created_by_type', '') == 'staff'
-        or is_staff
-        or user_type == 'staff'
+        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff_personal')
     )
     if not _is_staff_or_self_lead:
         try:

@@ -612,7 +612,17 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 </div>
 
 <div class="filter-bar">
-  <div class="fgroup"><label>Search</label><input class="form-control" id="searchInput" placeholder="Name, phone, code…" style="min-width:200px" oninput="debounceSearch()" onkeydown="if(event.key==='Enter'){clearTimeout(_searchDebTimer);loadMembers(1);}"></div>
+  <div class="fgroup"><label>Search</label><input class="form-control" id="searchInput" placeholder="Name, phone, code…" style="min-width:180px" oninput="debounceSearch()" onkeydown="if(event.key==='Enter'){clearTimeout(_searchDebTimer);loadMembers(1);}"></div>
+  <div class="fgroup"><label>Hierarchy Type</label>
+    <select class="form-select" id="hierarchyTypeFilter" style="min-width:140px" onchange="loadMembers(1)">
+      <option value="">All Types</option>
+      <option value="sponsor">Sponsor (Direct L1)</option>
+      <option value="upliner">Upliner (All L1–L4)</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Hierarchy Search</label>
+    <input class="form-control" id="hierarchyMemberFilter" placeholder="Sponsor / Upliner Name/Code…" style="min-width:180px" onkeydown="if(event.key==='Enter')loadMembers(1)">
+  </div>
   <div class="fgroup"><label>Status</label>
     <select class="form-select" id="statusFilter" onchange="loadMembers(1)">
       <option value="">All Status</option>
@@ -710,6 +720,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <th class="mb-sticky-1" style="width:45px;text-align:center">#</th>
         <th class="mb-sticky-2 sortable" onclick="toggleSort('code')" id="th_code" style="width:120px">Code</th>
         <th class="mb-sticky-3 sortable" onclick="toggleSort('name')" id="th_name" style="width:200px">Name</th>
+        <th style="text-align:center;min-width:70px;color:#7c3aed;background:#f5f3ff" title="Downline Level (L1: Direct Referral, L2–L4: Multilevel Downlines)">LEVEL</th>
         <th class="sortable" onclick="toggleSort('registered')" id="th_registered" title="Registration date (created_at)">Reg Date</th>
         <th class="sortable" onclick="toggleSort('registered_by')" id="th_registered_by" title="Staff who registered this member">Reg By</th>
         <th style="min-width:140px;color:#1e40af;background:#eff6ff" title="Staff assigned to manage and contact this member">Assigned Staff</th>
@@ -1131,12 +1142,12 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           </th>
 
           <!-- SELF PERFORMANCE Group -->
-          <th colspan="7" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-right:2px solid #bfdbfe">
+          <th colspan="8" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-right:2px solid #bfdbfe">
             <i class="fas fa-user-check me-1" style="color:#2563eb"></i>SELF PERFORMANCE
           </th>
 
           <!-- DIRECT TEAM PERFORMANCE Group -->
-          <th colspan="8" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#fdf4ff;border-right:2px solid #f0abfc">
+          <th colspan="9" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#fdf4ff;border-right:2px solid #f0abfc">
             <i class="fas fa-users-cog me-1" style="color:#a855f7"></i>TEAM PERFORMANCE (DIRECT REFERENCE)
           </th>
 
@@ -1161,7 +1172,8 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('submits_val')">SUBMIT VALUE ↕</th>
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('first_pmt_count')" title="Active in-progress files with 1st payment received">1ST PMT COUNT ↕</th>
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#047857;cursor:pointer" onclick="_tptSort('completed_count')" title="Installed / completed files">COMPLETED ↕</th>
-          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e3a8a;border-right:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('received_val')" title="Overall total payment received value directly by partner">RECEIVED VALUE ↕</th>
+          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e3a8a;cursor:pointer" onclick="_tptSort('received_val')" title="Overall total payment received value directly by partner">RECEIVED VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#0f766e;border-right:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('processed_count')" title="Sum of 1st Payment Count and Completed Count">PROCESSED ↕</th>
 
           <!-- Direct Team subheaders -->
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_added')" title="Total team members registered under this partner">TEAM MEMBERS ↕</th>
@@ -1171,13 +1183,14 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           <th style="padding:6px;text-align:right;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_val')">SUBMIT VALUE ↕</th>
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_first_pmt_count')">1ST PMT COUNT ↕</th>
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#047857;cursor:pointer" onclick="_tptSort('team_completed_count')">COMPLETED ↕</th>
-          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#4c1d95;border-right:2px solid #f0abfc;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">RECEIVED VALUE ↕</th>
+          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#4c1d95;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">RECEIVED VALUE ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#0f766e;border-right:2px solid #f0abfc;cursor:pointer" onclick="_tptSort('team_processed_count')" title="Sum of Team 1st Payment Count and Team Completed Count">PROCESSED ↕</th>
 
           <th></th>
         </tr>
       </thead>
       <tbody id="tptBody">
-        <tr><td colspan="24" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
+        <tr><td colspan="26" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -2570,6 +2583,10 @@ function resetFilters() {
   if (regByEl) regByEl.value = '';
   const refEl = document.getElementById('referrerFilter');
   if (refEl) refEl.value = '';
+  const htEl = document.getElementById('hierarchyTypeFilter');
+  if (htEl) htEl.value = '';
+  const hmEl = document.getElementById('hierarchyMemberFilter');
+  if (hmEl) hmEl.value = '';
   const rmEl = document.getElementById('regMonthFilter');
   if (rmEl) rmEl.value = '';
   _regPeriod = '';
@@ -3457,7 +3474,10 @@ async function loadTopPartnersTable(page = 1) {
         <td style="padding:8px;text-align:center;background:#eff6ff">
           ${_tptCountBtn(p.completed_count, p.id, p.name, p.code, 'completed_count', 'Self Completed Leads', {bg:'#dcfce7', color:'#047857'})}
         </td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#eff6ff;border-right:2px solid #bfdbfe">${(p.received_val || 0) > 0 ? inr(p.received_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#eff6ff">${(p.received_val || 0) > 0 ? inr(p.received_val) : '—'}</td>
+        <td style="padding:8px;text-align:center;background:#eff6ff;border-right:2px solid #bfdbfe">
+          ${_tptCountBtn((p.processed_count !== undefined ? p.processed_count : ((p.first_pmt_count || 0) + (p.completed_count || 0))), p.id, p.name, p.code, 'processed_count', 'Self Processed Leads', {bg:'#ccfbf1', color:'#0f766e'})}
+        </td>
 
         <!-- DIRECT TEAM PERFORMANCE Cells -->
         <td style="padding:8px;text-align:center;background:#fdf4ff">
@@ -3479,7 +3499,10 @@ async function loadTopPartnersTable(page = 1) {
         <td style="padding:8px;text-align:center;background:#fdf4ff">
           ${_tptCountBtn(p.team_completed_count, p.id, p.name, p.code, 'team_completed_count', 'Team Completed Leads', {bg:'#dcfce7', color:'#047857'})}
         </td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#fdf4ff;border-right:2px solid #f0abfc">${(p.team_total_received_val || 0) > 0 ? inr(p.team_total_received_val) : '—'}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#fdf4ff">${(p.team_total_received_val || 0) > 0 ? inr(p.team_total_received_val) : '—'}</td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff;border-right:2px solid #f0abfc">
+          ${_tptCountBtn((p.team_processed_count !== undefined ? p.team_processed_count : ((p.team_first_pmt_count || 0) + (p.team_completed_count || 0))), p.id, p.name, p.code, 'team_processed_count', 'Team Processed Leads', {bg:'#ccfbf1', color:'#0f766e'})}
+        </td>
 
         <!-- Win Rate -->
         <td style="padding:10px 12px;text-align:center;background:#f0fdf4">
@@ -3492,7 +3515,7 @@ async function loadTopPartnersTable(page = 1) {
 
   } catch (err) {
     console.error('[TPT_LOAD_ERR]', err);
-    body.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="26" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
   }
 }
 
@@ -3647,9 +3670,11 @@ function _tptExportCsv() {
       const partners = (json.data || {}).partners || [];
       if (partners.length === 0) { alert('No data available to export.'); return; }
 
-      let csv = 'Rank,Code,Partner,Team Added,Total Leads,Submits Count,With Bank Count,Submits Value,Submits %,1st Payment Count,1st Payment Value,1st Payment %,Won Count,Won Value,Won %,Completed Count,Completed Value,Completed %,Lost Count,Lost Value,Lost %,Overall Win Rate %\n';
+      let csv = 'Rank,Code,Partner,Current Rank,Earning Slab %,Overall Payout,This Month Payout,Eligibility Files,Self Files,Self Submits Count,Self With Bank,Self Submits Value,Self 1st Payment Count,Self Completed Count,Self Received Value,Self Processed Count,Team Members,Team Files,Team Submits Count,Team With Bank,Team Submits Value,Team 1st Payment Count,Team Completed Count,Team Received Value,Team Processed Count,Overall Win Rate %\n';
       partners.forEach(p => {
-        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.team_added}","${p.total_leads}","${p.submits_count}","${p.with_bank_count || 0}","${p.submits_val}","${p.submits_pct}","${p.dvr_count}","${p.dvr_val}","${p.dvr_pct}","${p.won_count}","${p.won_val}","${p.won_pct}","${p.completed_count}","${p.completed_val}","${p.completed_pct}","${p.lost_count}","${p.lost_val}","${p.lost_pct}","${p.win_rate}"\n`;
+        const selfProc = (p.processed_count !== undefined ? p.processed_count : ((p.first_pmt_count || 0) + (p.completed_count || 0)));
+        const teamProc = (p.team_processed_count !== undefined ? p.team_processed_count : ((p.team_first_pmt_count || 0) + (p.team_completed_count || 0)));
+        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.rank_display || ''}","${p.rank_slab_pct || 0}%","${p.overall_payout || 0}","${p.current_month_earning || 0}","${p.eligible_files_installed || 0}/${p.eligible_files_total || 0}","${p.total_leads}","${p.submits_count}","${p.with_bank_count || 0}","${p.submits_val}","${p.first_pmt_count || 0}","${p.completed_count || 0}","${p.received_val || 0}","${selfProc}","${p.team_added || 0}","${p.team_leads || 0}","${p.team_submits_count || 0}","${p.team_with_bank_count || 0}","${p.team_submits_val || 0}","${p.team_first_pmt_count || 0}","${p.team_completed_count || 0}","${p.team_total_received_val || 0}","${teamProc}","${p.win_rate}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -5813,6 +5838,10 @@ async function loadMembers(page = 1) {
   if (regByFilter) url += '&registered_by_emp_code=' + encodeURIComponent(regByFilter);
   const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
   if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
+  const hierarchyType = (document.getElementById('hierarchyTypeFilter')?.value || '').trim();
+  if (hierarchyType) url += '&hierarchy_type=' + encodeURIComponent(hierarchyType);
+  const hierarchyMember = (document.getElementById('hierarchyMemberFilter')?.value || '').trim();
+  if (hierarchyMember) url += '&hierarchy_member=' + encodeURIComponent(hierarchyMember);
 
   tbody.innerHTML = `<tr><td colspan="31" style="padding:0;border:none">
     <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
@@ -5952,6 +5981,7 @@ async function loadMembers(page = 1) {
           <td class="mb-sticky-1" style="text-align:center;font-size:11.5px;font-weight:700;color:#6b7280">${rowNum}</td>
           <td class="mb-sticky-2"><strong style="color:#7c3aed">${m.partner_code}</strong></td>
           <td class="mb-sticky-3"><div style="display:flex;align-items:center;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
+          <td style="text-align:center">${m.downline_level ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-weight:800;font-size:11px">L${m.downline_level}</span>` : `<span style="color:#cbd5e1">—</span>`}</td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${(m.registered_by_emp_code === 'VGK07102207' || m.registered_by_name === 'VGK Support') ? '<span style="font-weight:600;color:#059669">VGK Support <span style="font-family:monospace;font-size:10px;color:#7c3aed">(VGK07102207)</span></span>' : (m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' + (m.registered_by_emp_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.registered_by_emp_code + ')</span>' : '') : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>'))}</td>
           <td>${assignedStaffHtml}</td>
@@ -9970,9 +10000,7 @@ async function shareDefaultChannel() {
     { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
     { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
     { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
-    { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
     { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
-    { id: 'group_vgk_vjd', type: 'group', label: 'VGK4U - Vijayawada', target: 'VGK4U - Vijayawada', groupName: 'VGK4U - Vijayawada', status: 'sending', msg: 'Broadcasting to group...' },
     { id: 'group_vgk_gen', type: 'group', label: 'VGK4U General', target: 'VGK4U General', groupName: 'VGK4U General', status: 'sending', msg: 'Broadcasting to group...' },
     { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
   ];
@@ -10138,29 +10166,12 @@ async function shareDefaultChannel() {
       updateDispatchStatus('group_exec', 'error', 'Bot Offline or Not in Group');
     }
 
-    // 7. EV Scooty Stars
+    // 7. MNR General Group
     try {
       const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'Ev scooty. MNR (royal ev ) stars' })
-      });
-      const json = await res.json();
-      if (json.success) {
-        updateDispatchStatus('group_ev_stars', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
-      } else {
-        updateDispatchStatus('group_ev_stars', 'error', json.error || 'Group Send Failed');
-      }
-    } catch (eErr) {
-      updateDispatchStatus('group_ev_stars', 'error', 'Bot Offline or Not in Group');
-    }
-
-    // 8. MNR General Group
-    try {
-      const res = await fetchWithTimeout('/api/send-group-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'MNR General Group' })
+        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363423048458227@g.us', groupName: 'MNR General Group' })
       });
       const json = await res.json();
       if (json.success) {
@@ -10172,24 +10183,7 @@ async function shareDefaultChannel() {
       updateDispatchStatus('group_mnr_gen', 'error', 'Bot Offline or Not in Group');
     }
 
-    // 9. VGK4U - Vijayawada
-    try {
-      const res = await fetchWithTimeout('/api/send-group-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
-      });
-      const json = await res.json();
-      if (json.success) {
-        updateDispatchStatus('group_vgk_vjd', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
-      } else {
-        updateDispatchStatus('group_vgk_vjd', 'error', json.error || 'Group Send Failed');
-      }
-    } catch (vErr) {
-      updateDispatchStatus('group_vgk_vjd', 'error', 'Bot Offline or Not in Group');
-    }
-
-    // 10. VGK4U General Group Send
+    // 8. VGK4U General Group Send
     try {
       const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',

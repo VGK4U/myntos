@@ -501,6 +501,8 @@ def list_vgk_members(
     category_id: Optional[str] = Query(None, description="Category ID or Category Name e.g. Solar, EV"),
     rank_level: Optional[int] = Query(None, description="Filter by rank level 1 to 5"),
     eligibility_filter: Optional[str] = Query(None, description="Filter by business eligibility: installed_1plus|leads_1plus|team_1plus|earners_1plus|current_month_active"),
+    hierarchy_type: Optional[str] = Query(None, description="sponsor|upliner"),
+    hierarchy_member: Optional[str] = Query(None, description="Search term or partner code for Sponsor / Upliner"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -511,6 +513,59 @@ def list_vgk_members(
         OfficialPartner.category == 'VGK_TEAM',
         or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER')
     )
+
+    # [DC-VGK-HIERARCHY-001] Sponsor / Upliner Hierarchy Filtering (L1 to L4)
+    downline_level_map = {}
+    if hierarchy_member and hierarchy_member.strip():
+        hm_term = hierarchy_member.strip()
+        _hm_like = f"%{hm_term}%"
+        root_partners = db.query(OfficialPartner.id).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            or_(
+                OfficialPartner.partner_code.ilike(hm_term),
+                OfficialPartner.partner_name.ilike(_hm_like),
+                OfficialPartner.phone.ilike(_hm_like),
+                OfficialPartner.whatsapp_number.ilike(_hm_like)
+            )
+        ).all()
+        root_ids = [r[0] for r in root_partners]
+        if root_ids:
+            # Level 1 (Direct Referrals / Sponsor)
+            l1_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(root_ids)).all()
+            l1_ids = [r[0] for r in l1_rows]
+            for lid in l1_ids:
+                downline_level_map[lid] = 1
+
+            htype = (hierarchy_type or '').strip().lower()
+            if htype in ('upliner', 'upline', 'all') and l1_ids:
+                # Level 2
+                l2_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(l1_ids)).all()
+                l2_ids = [r[0] for r in l2_rows if r[0] not in downline_level_map]
+                for lid in l2_ids:
+                    downline_level_map[lid] = 2
+
+                # Level 3
+                if l2_ids:
+                    l3_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(l2_ids)).all()
+                    l3_ids = [r[0] for r in l3_rows if r[0] not in downline_level_map]
+                    for lid in l3_ids:
+                        downline_level_map[lid] = 3
+
+                    # Level 4
+                    if l3_ids:
+                        l4_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(l3_ids)).all()
+                        l4_ids = [r[0] for r in l4_rows if r[0] not in downline_level_map]
+                        for lid in l4_ids:
+                            downline_level_map[lid] = 4
+
+            if downline_level_map:
+                query = query.filter(OfficialPartner.id.in_(list(downline_level_map.keys())))
+            else:
+                query = query.filter(OfficialPartner.id == -1)
+        else:
+            query = query.filter(OfficialPartner.id == -1)
+    elif hierarchy_type and hierarchy_type.strip().lower() in ('sponsor', 'direct'):
+        query = query.filter(OfficialPartner.parent_partner_id.isnot(None))
 
     # [DC-VGK-RBAC-001] Strict member visibility: Ordinary staff only see members registered by them or assigned to them
     if not _has_full_vgk_visibility(current_user):
@@ -842,6 +897,7 @@ def list_vgk_members(
 
     for m in members:
         d = m.to_dict()
+        d['downline_level'] = downline_level_map.get(m.id)
         phone = (m.phone or m.whatsapp_number or '').strip()
         if m.parent_partner_id:
             ref = parent_map.get(m.parent_partner_id)
@@ -7657,6 +7713,18 @@ def vgk_top_partners_leaderboard_table(
     Detailed Leaderboard for Top Partners by Leads with full stage metrics (Submits, DVR/1st Payment, Won, Completed, Lost),
     rank and performance metrics, date presets, filters, sorting, and pagination.
     """
+    period = period if isinstance(period, str) else "overall"
+    company_id = company_id if isinstance(company_id, int) else None
+    category_id = category_id if isinstance(category_id, (int, str)) else None
+    search = search if isinstance(search, str) else None
+    reg_by = reg_by if isinstance(reg_by, str) else None
+    referred_by = referred_by if isinstance(referred_by, str) else None
+    rank_level = rank_level if isinstance(rank_level, int) else None
+    sort_by = sort_by if isinstance(sort_by, str) else "total_leads"
+    sort_dir = sort_dir if isinstance(sort_dir, str) else "desc"
+    page = page if isinstance(page, int) else 1
+    limit = limit if isinstance(limit, int) else 50
+
     from datetime import date, timedelta
     today = date.today()
 
@@ -7701,11 +7769,34 @@ def vgk_top_partners_leaderboard_table(
         where_clauses.append("""(
             (cl.created_at >= :from_d AND cl.created_at <= :to_d_end)
             OR (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
+            OR EXISTS (
+                SELECT 1 FROM crm_lead_transactions tx 
+                WHERE tx.lead_id = cl.id 
+                  AND tx.validation_status IN ('validated', 'posted_to_ledger')
+                  AND tx.transaction_date >= CAST(:from_d AS date) 
+                  AND tx.transaction_date <= CAST(:to_d_end AS date)
+            )
+            OR EXISTS (
+                SELECT 1 FROM crm_leads tcl2
+                JOIN official_partners sub2 ON sub2.id = tcl2.associated_partner_id
+                WHERE sub2.parent_partner_id = op.id
+                  AND (
+                      (tcl2.created_at >= :from_d AND tcl2.created_at <= :to_d_end)
+                      OR (tcl2.first_payment_received_date >= CAST(:from_d AS date) AND tcl2.first_payment_received_date <= CAST(:to_d_end AS date))
+                      OR EXISTS (
+                          SELECT 1 FROM crm_lead_transactions tx2
+                          WHERE tx2.lead_id = tcl2.id
+                            AND tx2.validation_status IN ('validated', 'posted_to_ledger')
+                            AND tx2.transaction_date >= CAST(:from_d AS date)
+                            AND tx2.transaction_date <= CAST(:to_d_end AS date)
+                      )
+                  )
+            )
         )""")
         dvr_filter = """
             WHERE (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
         """
-        tcl_date_filter = """ AND ((tcl.created_at >= :from_d AND tcl.created_at <= :to_d_end) OR (tcl.first_payment_received_date >= CAST(:from_d AS date) AND tcl.first_payment_received_date <= CAST(:to_d_end AS date)))"""
+        tcl_date_filter = """ AND ((tcl.created_at >= :from_d AND tcl.created_at <= :to_d_end) OR (tcl.first_payment_received_date >= CAST(:from_d AS date) AND tcl.first_payment_received_date <= CAST(:to_d_end AS date)) OR EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id AND tx.validation_status IN ('validated', 'posted_to_ledger') AND tx.transaction_date >= CAST(:from_d AS date) AND tx.transaction_date <= CAST(:to_d_end AS date)))"""
         tcl_dvr_date_filter = """ AND (tcl.first_payment_received_date >= CAST(:from_d AS date) AND tcl.first_payment_received_date <= CAST(:to_d_end AS date))"""
     else:
         dvr_filter = """
@@ -7910,6 +8001,7 @@ def vgk_top_partners_leaderboard_table(
             "first_pmt_count": first_pmt_c, "first_pmt_pct": first_pmt_pct,
             "dvr_count": first_pmt_c, "dvr_val": recv_v, "dvr_pct": first_pmt_pct,
             "completed_count": comp_c, "completed_val": comp_v, "completed_pct": comp_pct,
+            "processed_count": first_pmt_c + comp_c,
             "received_val": recv_v,
             "overall_dvr_val": recv_v,
             "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
@@ -7923,6 +8015,7 @@ def vgk_top_partners_leaderboard_table(
             "team_dvr_count": tm_first_pmt_c,
             "team_dvr_val": tm_tot_recv_v,
             "team_completed_count": tm_comp_c,
+            "team_processed_count": tm_first_pmt_c + tm_comp_c,
             "team_total_received_val": tm_tot_recv_v
         })
 
@@ -7946,6 +8039,8 @@ def vgk_top_partners_leaderboard_table(
         "dvr_count": lambda x: x["first_pmt_count"],
         "completed_count": lambda x: x["completed_count"],
         "completed_val": lambda x: x["completed_val"],
+        "processed_count": lambda x: x["processed_count"],
+        "processed": lambda x: x["processed_count"],
         "received_val": lambda x: x["received_val"],
         "dvr_val": lambda x: x["received_val"],
         "overall_dvr_val": lambda x: x["received_val"],
@@ -7972,6 +8067,8 @@ def vgk_top_partners_leaderboard_table(
         "team_first_pmt_count": lambda x: x["team_first_pmt_count"],
         "team_dvr_count": lambda x: x["team_first_pmt_count"],
         "team_completed_count": lambda x: x["team_completed_count"],
+        "team_processed_count": lambda x: x["team_processed_count"],
+        "team_processed": lambda x: x["team_processed_count"],
         "team_dvr_val": lambda x: x["team_total_received_val"],
         "team_total_received_val": lambda x: x["team_total_received_val"],
     }
@@ -8175,6 +8272,13 @@ def vgk_top_partners_leads(
     elif metric in ("completed_count", "completed", "team_completed_count", "team_completed"):
         where_clauses.append("""(
             cl.installation_date IS NOT NULL 
+            OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') 
+            OR cl.status = 'completed'
+        )""")
+    elif metric in ("processed_count", "processed", "team_processed_count", "team_processed"):
+        where_clauses.append("""(
+            (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
+            OR cl.installation_date IS NOT NULL 
             OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') 
             OR cl.status = 'completed'
         )""")

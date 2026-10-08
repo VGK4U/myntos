@@ -3073,6 +3073,9 @@ def vgk_submit_lead(
     except Exception as _pt_err:
         logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] Direct team lead points hook error (non-fatal): {_pt_err}")
 
+    # [DC-VGK-GROUP-ALERT] Note: Lead alerts to VGK Community are disabled per strict privacy rules (Sales Group only)
+    logger.info(f"[DC-VGK-GROUP-ALERT] Suppressing community group alert for partner lead #{lead.id} per policy.")
+
     # [DC-VGK-ACCOUNT] Auto-create VGK account for lead if requested
     vgk_account_data = None
     if req.create_vgk_account:

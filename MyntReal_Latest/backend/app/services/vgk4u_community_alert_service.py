@@ -306,15 +306,11 @@ def send_partner_lead_added_congratulations(
     city: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Posts congratulatory alert in VGK4U Elite group when a partner adds a new lead.
+    Lead sharing in VGK4U Community is disabled per strict security & privacy rules.
+    Lead details are ONLY dispatched to authorized Sales Group.
     """
-    city_str = f" ({city})" if city else ""
-    msg = (
-        f"🎉 *CONGRATULATIONS & KUDOS!* 👏\n\n"
-        f"Huge shoutout to Elite Partner *{partner_name}* for registering a NEW Solar Rooftop Lead: *{lead_name}*{city_str}! 🌟\n\n"
-        f"Thank you for driving green energy growth with VGK4U! Keep shining & earning! 🚀⚡"
-    )
-    return send_vgk4u_group_bot_message(msg)
+    logger.info("[COMMUNITY-ALERT] Partner lead notification in VGK4U community disabled per lead sharing privacy rules.")
+    return {"success": True, "skipped": True, "reason": "lead_sharing_disabled_in_community"}
 
 
 def send_partner_payout_disbursed_congratulations(

@@ -185,8 +185,8 @@ tbody tr { background: #ffffff !important; }
         <div>
             <label>Current Status</label>
             <select class="form-select" id="filterCurrentStatus" style="min-width:140px">
-                <option value="">All</option>
-                <option value="Running" selected>🏃 Running</option>
+                <option value="" selected>All</option>
+                <option value="Running">🏃 Running</option>
                 <option value="Expired">⌛ Expired</option>
                 <option value="Cancelled">🚫 Cancelled</option>
             </select>
@@ -253,8 +253,8 @@ tbody tr { background: #ffffff !important; }
             <div>
                 <label>Current Status</label>
                 <select class="form-select" id="mFilterCurrentStatus" onchange="onTrackCurrentStatusChange()" style="min-width:140px">
-                    <option value="">All</option>
-                    <option value="Running" selected>🏃 Running</option>
+                    <option value="" selected>All</option>
+                    <option value="Running">🏃 Running</option>
                     <option value="Expired">⌛ Expired</option>
                     <option value="Cancelled">🚫 Cancelled</option>
                 </select>
@@ -879,55 +879,72 @@ let _bonanzas = [], _segments = [], _brands = [];
 async function loadSegments() {
     try {
         const r = await staffFetch(BONANZA_BASE + '/segments');
+        if (!r.ok) return;
         const d = await r.json();
         _segments = d.segments || [];
         const sel = document.getElementById('mSegment');
-        sel.innerHTML = '<option value="">All Segments</option>' +
-            _segments.map(s => `<option value="${s.id}">${escH(s.name)}</option>`).join('');
+        if (sel) {
+            sel.innerHTML = '<option value="">All Segments</option>' +
+                _segments.map(s => `<option value="${s.id}">${escH(s.name)}</option>`).join('');
+        }
     } catch(e) {}
 }
 
 async function loadBrands() {
     try {
         const r = await staffFetch('/api/v1/vgk/brands?active_only=true');
+        if (!r.ok) return;
         const d = await r.json();
         _brands = d.brands || [];
         const sel = document.getElementById('mBrand');
-        sel.innerHTML = _brands.map(b => `<option value="${b.id}">${escH(b.brand_name)}</option>`).join('');
+        if (sel) {
+            sel.innerHTML = _brands.map(b => `<option value="${b.id}">${escH(b.brand_name)}</option>`).join('');
+        }
     } catch(e) {}
 }
 
 async function loadBonanzas() {
-    const status = document.getElementById('filterStatus').value;
-    const currentStatus = document.getElementById('filterCurrentStatus').value;
-    const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+    const statusEl = document.getElementById('filterStatus');
+    const currentStatusEl = document.getElementById('filterCurrentStatus');
+    const searchEl = document.getElementById('filterSearch');
+    const status = statusEl ? statusEl.value : '';
+    const currentStatus = currentStatusEl ? currentStatusEl.value : 'Running';
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
     const tbody = document.getElementById('bonanzaTbody');
+    if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
     try {
         const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
         const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || d.message || 'Failed to load');
-        let items = d.bonanzas || [];
+        if (!r.ok) throw new Error(d.detail || d.message || `HTTP ${r.status}`);
+        const allItems = d.bonanzas || [];
+        populateMgmtBonanzaOptions(allItems);
+
+        let items = allItems;
         if (status) items = items.filter(b => b.status === status);
         if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search));
         if (currentStatus) items = items.filter(b => getCampaignCurrentStatus(b) === currentStatus);
         _bonanzas = items;
 
-        document.getElementById('statTotal').textContent = d.total || 0;
-        document.getElementById('statActive').textContent = items.filter(b => b.status === 'Approved').length;
-        document.getElementById('statPending').textContent = items.filter(b => b.status === 'Pending').length;
-        document.getElementById('statClaims').textContent = items.reduce((s,b) => s + (b.total_claims||0), 0);
+        const elTotal = document.getElementById('statTotal');
+        const elActive = document.getElementById('statActive');
+        const elPending = document.getElementById('statPending');
+        const elClaims = document.getElementById('statClaims');
+
+        if (elTotal) elTotal.textContent = d.total || allItems.length || 0;
+        if (elActive) elActive.textContent = allItems.filter(b => b.status === 'Approved').length;
+        if (elPending) elPending.textContent = allItems.filter(b => b.status === 'Pending').length;
+        if (elClaims) elClaims.textContent = allItems.reduce((s,b) => s + (b.total_claims||0), 0);
 
         if (!items.length) {
             tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
             return;
         }
 
-        // Fetch slabs for all bonanzas in parallel
-        const slabResults = await Promise.all(
-            items.map(b => staffFetch(`${BONANZA_BASE}/${b.id}/slabs`).then(r => r.json()).catch(() => ({ slabs: [] })))
-        );
-        slabResults.forEach((res, i) => { items[i]._slabs = res.slabs || []; });
+        // Slabs are already pre-fetched in all-bonanzas response
+        items.forEach(b => {
+            if (!b._slabs) b._slabs = b.slabs || [];
+        });
 
         tbody.innerHTML = items.map(b => {
             const pct = b.max_winners ? Math.round((b.current_winners||0) / b.max_winners * 100) : 0;
@@ -1006,17 +1023,17 @@ async function loadBonanzas() {
                 <td>${currStatusBadge}</td>
                 <td>
                     <button class="btn-sm-icon edit" title="Edit" onclick="openEditModal(${b.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-sm-icon" title="Manage Slabs" onclick="openSlabsModal(${b.id},\`${escH(b.name)}\`)" style="color:#7c3aed;border-color:#c4b5fd"><i class="fas fa-layer-group"></i></button>
-                    <button class="btn-sm-icon" title="Recalculate Entitlements" onclick="recalculateBonanza(${b.id},\`${escH(b.name)}\`)" style="color:#0284c7;border-color:#bae6fd"><i class="fas fa-sync-alt"></i></button>
-                    ${b.status === 'Pending'   ? `<button class="btn-sm-icon approve"  title="Approve"    onclick="openApprove(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-check"></i></button>` : ''}
-                    ${b.status === 'Approved'  ? `<button class="btn-sm-icon pause"    title="Pause"      onclick="pauseBonanza(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-pause"></i></button>` : ''}
-                    ${(b.status === 'Cancelled' || b.status === 'Paused') ? `<button class="btn-sm-icon activate" title="Activate / Re-activate" onclick="activateBonanza(${b.id},\`${escH(b.name)}\`,\`${escH(b.status)}\`)"><i class="fas fa-play"></i></button>` : ''}
-                    ${b.status !== 'Cancelled' ? `<button class="btn-sm-icon cancel"   title="Cancel"    onclick="cancelBonanza(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-times"></i></button>` : ''}
+                    <button class="btn-sm-icon" title="Manage Slabs" onclick="openSlabsModal(${b.id})" style="color:#7c3aed;border-color:#c4b5fd"><i class="fas fa-layer-group"></i></button>
+                    <button class="btn-sm-icon" title="Recalculate Entitlements" onclick="recalculateBonanza(${b.id})" style="color:#0284c7;border-color:#bae6fd"><i class="fas fa-sync-alt"></i></button>
+                    ${b.status === 'Pending'   ? `<button class="btn-sm-icon approve"  title="Approve"    onclick="openApprove(${b.id})"><i class="fas fa-check"></i></button>` : ''}
+                    ${b.status === 'Approved'  ? `<button class="btn-sm-icon pause"    title="Pause"      onclick="pauseBonanza(${b.id})"><i class="fas fa-pause"></i></button>` : ''}
+                    ${(b.status === 'Cancelled' || b.status === 'Paused') ? `<button class="btn-sm-icon activate" title="Activate / Re-activate" onclick="activateBonanza(${b.id})"><i class="fas fa-play"></i></button>` : ''}
+                    ${b.status !== 'Cancelled' ? `<button class="btn-sm-icon cancel"   title="Cancel"    onclick="cancelBonanza(${b.id})"><i class="fas fa-times"></i></button>` : ''}
                 </td>
             </tr>`;
         }).join('');
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message || 'Failed to load campaigns')}<br><button class="btn-filter apply me-0 mt-3" onclick="loadBonanzas()"><i class="fas fa-sync me-1"></i>Retry</button></td></tr>`;
     }
 }
 
@@ -1425,7 +1442,9 @@ function updateReviewSummary() {
 }
 
 async function recalculateBonanza(id, name) {
-    if (!confirm(`Recalculate all member entitlements and achievements for campaign "${name}"?\n\nThis will re-evaluate all qualifying leads and sync member rewards.`)) return;
+    const targetBz = (_bonanzas || []).find(x => x.id === id);
+    const bzName = name || (targetBz ? targetBz.name : '') || `Campaign #${id}`;
+    if (!confirm(`Recalculate all member entitlements and achievements for campaign "${bzName}"?\n\nThis will re-evaluate all qualifying leads and sync member rewards.`)) return;
     try {
         const r = await staffFetch(`${BONANZA_BASE}/admin/recalculate/${id}`, {
             method: 'POST',
@@ -1940,8 +1959,10 @@ function renderBrandConfigs(campaign = null) {
 }
 
 function openApprove(id, name) {
+    const targetBz = (_bonanzas || []).find(x => x.id === id);
+    const bzName = name || (targetBz ? targetBz.name : '') || `Campaign #${id}`;
     document.getElementById('approveBonanzaId').value = id;
-    document.getElementById('approveName').textContent = name;
+    document.getElementById('approveName').textContent = bzName;
     document.getElementById('approveModal').classList.add('open');
 }
 
@@ -1963,7 +1984,9 @@ async function confirmApprove() {
 }
 
 async function cancelBonanza(id, name) {
-    if (!confirm(`Cancel bonanza "${name}"?\n\nNote: you can re-activate it later if needed.`)) return;
+    const targetBz = (_bonanzas || []).find(x => x.id === id);
+    const bzName = name || (targetBz ? targetBz.name : '') || `Campaign #${id}`;
+    if (!confirm(`Cancel bonanza "${bzName}"?\n\nNote: you can re-activate it later if needed.`)) return;
     try {
         const r = await staffFetch(BONANZA_BASE + '/cancel/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
@@ -1975,7 +1998,9 @@ async function cancelBonanza(id, name) {
 }
 
 async function pauseBonanza(id, name) {
-    if (!confirm(`Pause bonanza "${name}"?\n\nIt will be hidden from partners until you re-activate it.`)) return;
+    const targetBz = (_bonanzas || []).find(x => x.id === id);
+    const bzName = name || (targetBz ? targetBz.name : '') || `Campaign #${id}`;
+    if (!confirm(`Pause bonanza "${bzName}"?\n\nIt will be hidden from partners until you re-activate it.`)) return;
     try {
         const r = await staffFetch(BONANZA_BASE + '/pause/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
@@ -1987,8 +2012,9 @@ async function pauseBonanza(id, name) {
 }
 
 async function activateBonanza(id, name, currentStatus) {
-    const fromLabel = currentStatus === 'Paused' ? 'paused' : 'cancelled';
-    if (!confirm(`Re-activate bonanza "${name}"?\n\nIt will go back to Approved and become visible to partners immediately.`)) return;
+    const targetBz = (_bonanzas || []).find(x => x.id === id);
+    const bzName = name || (targetBz ? targetBz.name : '') || `Campaign #${id}`;
+    if (!confirm(`Re-activate bonanza "${bzName}"?\n\nIt will go back to Approved and become visible to partners immediately.`)) return;
     try {
         const r = await staffFetch(BONANZA_BASE + '/activate/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const d = await r.json();
@@ -2004,6 +2030,7 @@ function getCampaignCurrentStatus(b) {
     if (b.status === 'Paused') return 'Paused';
     if (b.status === 'Pending') return 'Pending';
     if (b.status === 'Draft') return 'Draft';
+    if (b.status === 'Approved') return 'Running';
     
     const now = new Date();
     const start = new Date(b.start_date);
@@ -2399,10 +2426,13 @@ async function loadEcCategories() {
 }
 
 async function init() {
-    await loadSegments();
-    await loadBrands();
-    await loadEcCategories();
-    await loadBonanzas();
+    // Fire loadBonanzas immediately so campaign table renders without delay
+    const mainLoad = loadBonanzas();
+    // Fire metadata dropdown loads concurrently
+    loadSegments();
+    loadBrands();
+    loadEcCategories();
+    await mainLoad;
 }
 
 // ── DC-VGK-MEMBER-TRACKING-001: Management page tab + tracking ────────────────
@@ -2472,14 +2502,12 @@ function mgmtSetTrackView(v) {
     if (_mgmtTrackApiData) mgmtRenderTracking(_mgmtTrackApiData);
 }
 
-async function loadMgmtBonanzaOptions() {
+function populateMgmtBonanzaOptions(bonanzas) {
     try {
-        const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
-        if (!r.ok) return;
-        const d = await r.json();
         const sel = document.getElementById('mFilterBonanza');
+        if (!sel) return;
         const existing = new Set(Array.from(sel.options).map(o => String(o.value)));
-        (d.bonanzas || []).filter(b => b.id !== 54).forEach(b => {
+        (bonanzas || []).filter(b => b.id !== 54).forEach(b => {
             if (!existing.has(String(b.id))) {
                 const opt = document.createElement('option');
                 opt.value = b.id;
@@ -2488,13 +2516,25 @@ async function loadMgmtBonanzaOptions() {
                 existing.add(String(b.id));
             }
         });
-        // Default to "All Campaigns" (value="") so all approved campaigns are shown
+    } catch(e) {}
+}
+
+async function loadMgmtBonanzaOptions() {
+    // Dropdown is automatically populated by loadBonanzas; fallback only if empty
+    const sel = document.getElementById('mFilterBonanza');
+    if (sel && sel.options.length > 1) return;
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
+        if (!r.ok) return;
+        const d = await r.json();
+        populateMgmtBonanzaOptions(d.bonanzas || []);
     } catch(e) {}
 }
 
 async function mgmtLoadTracking() {
     const bonanzaId     = document.getElementById('mFilterBonanza').value;
     const partnerSearch = document.getElementById('mFilterPartner').value.trim();
+    const currStatus    = document.getElementById('mFilterCurrentStatus').value;
     const content       = document.getElementById('mgmtTrackingContent');
     content.innerHTML   = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading member progress…</div>';
 
@@ -2502,6 +2542,7 @@ async function mgmtLoadTracking() {
     const params = [];
     if (bonanzaId)     params.push('bonanza_id=' + bonanzaId);
     if (partnerSearch) params.push('partner_search=' + encodeURIComponent(partnerSearch));
+    if (currStatus && !bonanzaId) params.push('current_status=' + encodeURIComponent(currStatus));
     if (params.length) url += '?' + params.join('&');
 
     try {
@@ -2549,12 +2590,13 @@ function mgmtRenderTracking(d) {
     const nonZeroSet = new Set(), claimedSet = new Set(), eligibleSet = new Set(), totalPartnerSet = new Set();
     rows.forEach(row => (row.members || []).forEach(m => {
         totalPartnerSet.add(m.partner_id);
-        if (m.achieved > 0)  nonZeroSet.add(m.partner_id);
+        if (m.achieved > 0 || m.eligible > 0)  nonZeroSet.add(m.partner_id);
         if (m.claim_status)  claimedSet.add(m.partner_id);
         if (m.is_eligible)   eligibleSet.add(m.partner_id);
     }));
     document.getElementById('mStatTotal').textContent    = totalPartnerSet.size || d.total_members || 0;
     document.getElementById('mStatEligible').textContent = eligibleSet.size;
+    if (document.getElementById('mStatProgress')) document.getElementById('mStatProgress').textContent = nonZeroSet.size;
     document.getElementById('mStatClaimed').textContent  = claimedSet.size;
     document.getElementById('mStatZero').textContent     = Math.max(0, (totalPartnerSet.size || d.total_members || 0) - nonZeroSet.size);
 
@@ -2632,14 +2674,58 @@ function mgmtRenderTracking(d) {
         } else {
             tierColHeaders = g.tiers.map(tier => {
                 const lbl = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
+                const achieversText = tier.eligible_count > 0 ? `${tier.eligible_count} Achieved (Target Met)` : `0 Achieved (Target: ${tier.target} deals)`;
                 return `<th colspan="3" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
                     <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
-                    <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
+                    <div style="color:#6b7280;font-size:10px;font-weight:600">${achieversText}</div>
                 </th>`;
             }).join('');
             tierSubHeaders = g.tiers.map(() =>
-                `<th style="text-align:center;border-left:1px solid #e5e7eb">Elig</th><th style="text-align:center">Done</th><th style="text-align:center">Need</th>`
+                `<th style="text-align:center;border-left:1px solid #e5e7eb" title="Qualifying files submitted/payment-received in campaign window">Elig</th><th style="text-align:center" title="Completed qualifying deals count">Done</th><th style="text-align:center" title="Remaining deals needed to achieve milestone">Need</th>`
             ).join('');
+            totalCols = 2 + g.tiers.length * 3 + 1;
+        }
+
+        const TIER_BG_PALETTE = [
+            { headBg: 'linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)', headText: '#5b21b6', cellBg: 'rgba(237,233,254,0.25)', borderLeft: '2px solid #a78bfa' },
+            { headBg: 'linear-gradient(180deg, #dbeafe 0%, #bfdbfe 100%)', headText: '#1e40af', cellBg: 'rgba(219,234,254,0.25)', borderLeft: '2px solid #60a5fa' },
+            { headBg: 'linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%)', headText: '#065f46', cellBg: 'rgba(209,250,229,0.25)', borderLeft: '2px solid #34d399' },
+            { headBg: 'linear-gradient(180deg, #fef3c7 0%, #fde68a 100%)', headText: '#92400e', cellBg: 'rgba(254,243,199,0.25)', borderLeft: '2px solid #fbbf24' },
+            { headBg: 'linear-gradient(180deg, #fee2e2 0%, #fca5a5 100%)', headText: '#991b1b', cellBg: 'rgba(254,226,226,0.25)', borderLeft: '2px solid #f87171' },
+            { headBg: 'linear-gradient(180deg, #e0e7ff 0%, #c7d2fe 100%)', headText: '#3730a3', cellBg: 'rgba(224,231,255,0.25)', borderLeft: '2px solid #818cf8' },
+        ];
+
+        let tierColHeaders = '';
+        let tierSubHeaders = '';
+        let totalCols = 0;
+
+        if (isEc) {
+            tierColHeaders = ecLevels.map((lvl, ti) => {
+                const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
+                return `<th style="text-align:center;border-left:${theme.borderLeft};background:${theme.headBg};white-space:nowrap;padding:6px 4px">
+                    <div style="color:${theme.headText};font-size:11px;font-weight:800">L${lvl.level}</div>
+                    <div style="color:${theme.headText};font-size:9.5px;opacity:0.85">${lvl.trigger}</div>
+                </th>`;
+            }).join('') + `<th style="text-align:center;border-left:2px solid #10b981;background:linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%);white-space:nowrap;padding:6px 4px">
+                <div style="color:#065f46;font-size:11px;font-weight:800">Earnings</div>
+            </th>`;
+            totalCols = 2 + ecLevels.length + 1 + 1;
+        } else {
+            tierColHeaders = g.tiers.map((tier, ti) => {
+                const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
+                const rawLabel = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
+                const achieversText = tier.eligible_count > 0 ? `${tier.eligible_count} Met` : `0 Met (${tier.target} req)`;
+                return `<th colspan="3" style="text-align:center;border-left:${theme.borderLeft};background:${theme.headBg};padding:5px 4px;white-space:nowrap">
+                    <div style="color:${theme.headText};font-size:10.5px;font-weight:800;letter-spacing:-0.2px">${escBonanzaH(rawLabel)}</div>
+                    <div style="color:${theme.headText};font-size:9.5px;font-weight:600;opacity:0.9">${achieversText}</div>
+                </th>`;
+            }).join('');
+            tierSubHeaders = g.tiers.map((tier, ti) => {
+                const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
+                return `<th style="text-align:center;border-left:${theme.borderLeft};background:${theme.headBg};color:${theme.headText};padding:3px 2px;font-size:10px;width:24px" title="Qualifying files submitted/payment-received in campaign window">Elig</th>
+                        <th style="text-align:center;background:${theme.headBg};color:${theme.headText};padding:3px 2px;font-size:10px;width:24px" title="Completed qualifying deals count">Done</th>
+                        <th style="text-align:center;background:${theme.headBg};color:${theme.headText};padding:3px 2px;font-size:10px;width:32px" title="Remaining deals needed to achieve milestone">Need</th>`;
+            }).join('');
             totalCols = 2 + g.tiers.length * 3 + 1;
         }
 
@@ -2648,73 +2734,77 @@ function mgmtRenderTracking(d) {
             let tierCells = '';
 
             if (isEc) {
-                tierCells = ecLevels.map(lvl => {
+                tierCells = ecLevels.map((lvl, ti) => {
+                    const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
                     const stats = md.ec_stats || {levels: {}, total_earnings: 0.0};
                     const lvData = stats.levels[String(lvl.level)] || {count: 0, earnings: 0.0};
                     const cnt = lvData.count;
                     if (cnt > 0) {
-                        return `<td style="text-align:center;border-left:1px solid #e5e7eb">
-                            <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(g.name)}" data-partner-name="${escH(md.partner_name)}" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${cnt}</a>
+                        return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.cellBg};padding:4px 2px">
+                            <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(g.name)}" data-partner-name="${escH(md.partner_name)}" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:12px">${cnt}</a>
                         </td>`;
                     } else {
-                        return `<td style="text-align:center;border-left:1px solid #e5e7eb;color:#9ca3af">0</td>`;
+                        return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.cellBg};color:#9ca3af;padding:4px 2px;font-size:11px">0</td>`;
                     }
-                }).join('') + `<td style="text-align:center;border-left:1px solid #e5e7eb;font-weight:700;color:#059669;font-size:13px">
+                }).join('') + `<td style="text-align:center;border-left:2px solid #10b981;background-color:rgba(209,250,229,0.3);font-weight:700;color:#059669;font-size:12px;padding:4px 2px">
                     ₹${(md.ec_stats.total_earnings || 0).toLocaleString('en-IN')}
                 </td>`;
             } else {
-                tierCells = g.tiers.map(tier => {
+                tierCells = g.tiers.map((tier, ti) => {
+                    const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
                     const t = (md.tiers || {})[tier.row_key] || {};
                     const eligibleCount = t.eligible ?? 0;
                     const achievedCount = t.achieved ?? 0;
                     
                     let eligCell = '';
                     if (eligibleCount > 0) {
-                        eligCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="false" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:13px">${eligibleCount}</a>`;
+                        eligCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="false" style="color:#1e3a8a; font-weight:700; text-decoration:underline; font-size:12px">${eligibleCount}</a>`;
                     } else {
-                        eligCell = `<span style="color:#9ca3af">0</span>`;
+                        eligCell = `<span style="color:#9ca3af;font-size:11px">0</span>`;
                     }
 
                     let doneCell = '';
                     if (achievedCount > 0) {
-                        doneCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="true" style="color:${t.is_eligible ? '#059669' : '#7c3aed'}; font-weight:800; text-decoration:underline; font-size:13px">${achievedCount}</a>`;
+                        doneCell = `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="${md.partner_id}" data-campaign-name="${escH(tier.name)}" data-partner-name="${escH(md.partner_name)}" data-only-triggered="true" style="color:${t.is_eligible ? '#059669' : '#7c3aed'}; font-weight:800; text-decoration:underline; font-size:12px">${achievedCount}</a>`;
                         if (t.is_eligible) {
-                            doneCell += `&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`;
+                            doneCell += `&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:9px"></i>`;
                         }
                     } else {
-                        doneCell = `<span style="font-weight:700;color:#9ca3af">0</span>`;
+                        doneCell = `<span style="font-weight:700;color:#9ca3af;font-size:11px">0</span>`;
                     }
                     const isCompleted = t.claim_status === 'Paid' || t.claim_status === 'Delivered';
                     let needCell = '';
                     if (isCompleted) {
                         const formattedDate = t.completed_date ? fmtDate(t.completed_date) : '';
                         needCell = `<div style="text-align:center">
-                            <span style="background-color:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block" title="Completed date">Completed</span>
-                            <div style="font-size:10px;color:#6b7280;margin-top:2px">${formattedDate}</div>
-                            <a href="javascript:void(0)" onclick="openCompleteTierModal(${tier.bonanza_id}, ${md.partner_id}, ${tier.tier_num}, '${t.completed_date || ''}')" style="font-size:10px;color:#2563eb;text-decoration:underline;display:block;margin-top:2px">Edit Date</a>
+                            <span style="background-color:#dcfce7;color:#15803d;padding:1px 5px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block">Done</span>
+                            <div style="font-size:9px;color:#6b7280">${formattedDate}</div>
                         </div>`;
                     } else if (t.gap > 0) {
-                        needCell = `<span style="color:#dc2626;font-weight:600">${t.gap}</span>`;
+                        needCell = `<span style="color:#dc2626;font-weight:700;font-size:11px" title="${t.gap} deal(s) needed to reach milestone target of ${tier.target}">${t.gap} req</span>`;
                     } else {
                         needCell = `<div style="text-align:center">
-                            <span style="background-color:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:4px">Eligible</span>
-                            <button onclick="openCompleteTierModal(${tier.bonanza_id}, ${md.partner_id}, ${tier.tier_num}, '')" class="btn-filter apply" style="padding:2px 8px;font-size:10.5px;display:block;margin:auto;width:auto;height:auto;line-height:normal">Mark Complete</button>
+                            <span style="background-color:#dcfce7;color:#15803d;padding:1px 5px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block">Met</span>
                         </div>`;
                     }
-                    return `<td style="text-align:center;border-left:1px solid #e5e7eb">${eligCell}</td><td style="text-align:center">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
+                    return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.cellBg};padding:3px 2px">${eligCell}</td>
+                            <td style="text-align:center;background-color:${theme.cellBg};padding:3px 2px">${doneCell}</td>
+                            <td style="text-align:center;background-color:${theme.cellBg};padding:3px 2px">${needCell}</td>`;
                 }).join('');
             }
 
             const claimBadge = md.claim_status
-                ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
+                ? `<span style="display:inline-block;padding:1px 6px;border-radius:12px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
                 : `<span style="color:#9ca3af;font-size:10px">—</span>`;
             const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
             return `<tr class="${rowCls}">
-                <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
-                <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(md.partner_name)}</div>
-                    <div style="font-size:11px;color:#6b7280">${escBonanzaH(md.partner_code)}</div></td>
+                <td style="width:22px;color:#9ca3af;font-size:11px;text-align:center;padding:4px 2px">${idx+1}</td>
+                <td style="white-space:nowrap;padding:4px 6px;max-width:170px;overflow:hidden;text-overflow:ellipsis" title="${escH(md.partner_name)} (${escH(md.partner_code)})">
+                    <span style="font-weight:700;font-size:12px;color:#111827">${escBonanzaH(md.partner_name)}</span>
+                    <span style="font-size:10px;color:#6b7280;margin-left:3px">(${escBonanzaH(md.partner_code)})</span>
+                </td>
                 ${tierCells}
-                ${isEc ? '' : `<td>${claimBadge}</td>`}
+                ${isEc ? '' : `<td style="text-align:center;padding:4px 2px">${claimBadge}</td>`}
             </tr>`;
         }).join('');
 
@@ -2732,22 +2822,23 @@ function mgmtRenderTracking(d) {
                 });
                 overallEarningsTotal += (stats.total_earnings || 0);
             });
-            const overallLevelCells = ecLevels.map(lvl => {
+            const overallLevelCells = ecLevels.map((lvl, ti) => {
+                const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
                 const cnt = levelTotals[lvl.level];
                 if (cnt > 0) {
-                    return `<td style="text-align:center;border-left:1px solid #e5e7eb;background-color:#f9fafb">
-                        <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="" data-campaign-name="${escH(g.name)}" data-partner-name="Overall Total" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:13px">${cnt}</a>
+                    return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.headBg};padding:4px 2px">
+                        <a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${g.bonanza_id}" data-partner-id="" data-campaign-name="${escH(g.name)}" data-partner-name="Overall Total" data-level="${lvl.level}" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:12px">${cnt}</a>
                     </td>`;
                 } else {
-                    return `<td style="text-align:center;border-left:1px solid #e5e7eb;color:#9ca3af;background-color:#f9fafb">0</td>`;
+                    return `<td style="text-align:center;border-left:${theme.borderLeft};color:#9ca3af;background-color:${theme.headBg};padding:4px 2px;font-size:11px">0</td>`;
                 }
-            }).join('') + `<td style="text-align:center;border-left:1px solid #e5e7eb;font-weight:800;color:#059669;font-size:13px;background-color:#f9fafb">
+            }).join('') + `<td style="text-align:center;border-left:2px solid #10b981;font-weight:800;color:#059669;font-size:12px;background-color:#d1fae5;padding:4px 2px">
                 ₹${overallEarningsTotal.toLocaleString('en-IN')}
             </td>`;
             
             overallTotalRowHtml = `<tr style="background-color:#f3f4f6;border-bottom:2px solid #d1d5db">
-                <td style="width:28px;text-align:center;font-weight:800;color:#374151">Σ</td>
-                <td><div style="font-weight:800;font-size:13px;color:#111827">Overall Total</div></td>
+                <td style="width:22px;text-align:center;font-weight:800;color:#374151;padding:4px 2px">Σ</td>
+                <td style="padding:4px 6px"><div style="font-weight:800;font-size:12px;color:#111827">Overall Total</div></td>
                 ${overallLevelCells}
             </tr>`;
         } else {
@@ -2764,27 +2855,31 @@ function mgmtRenderTracking(d) {
                     tierTotals[tier.row_key].gap += (t.gap ?? 0);
                 });
             });
-            const overallTierCells = g.tiers.map(tier => {
+            const overallTierCells = g.tiers.map((tier, ti) => {
+                const theme = TIER_BG_PALETTE[ti % TIER_BG_PALETTE.length];
                 const totals = tierTotals[tier.row_key];
                 const eligCell = totals.eligible > 0
-                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="false" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:13px">${totals.eligible}</a>`
-                    : `<span style="color:#9ca3af">0</span>`;
+                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="false" style="color:#1e3a8a; font-weight:800; text-decoration:underline; font-size:12px">${totals.eligible}</a>`
+                    : `<span style="color:#9ca3af;font-size:11px">0</span>`;
                 const doneCell = totals.achieved > 0
-                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="true" style="color:#7c3aed; font-weight:800; text-decoration:underline; font-size:13px">${totals.achieved}</a>`
-                    : `<span style="font-weight:700;color:#9ca3af">0</span>`;
+                    ? `<a href="javascript:void(0)" onclick="openTrackDetailsFromLink(this)" data-bonanza-id="${tier.bonanza_id}" data-partner-id="" data-campaign-name="${escH(tier.name)}" data-partner-name="Overall Total" data-only-triggered="true" style="color:#7c3aed; font-weight:800; text-decoration:underline; font-size:12px">${totals.achieved}</a>`
+                    : `<span style="font-weight:700;color:#9ca3af;font-size:11px">0</span>`;
                 const needCell = totals.gap > 0
-                    ? `<span style="color:#dc2626;font-weight:700">${totals.gap}</span>`
+                    ? `<span style="color:#dc2626;font-weight:700;font-size:11px">${totals.gap} req</span>`
                     : `<span style="color:#059669;font-weight:700">✓</span>`;
-                return `<td style="text-align:center;border-left:1px solid #e5e7eb;background-color:#f9fafb">${eligCell}</td>
-                        <td style="text-align:center;background-color:#f9fafb">${doneCell}</td>
-                        <td style="text-align:center;background-color:#f9fafb">${needCell}</td>`;
+                return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.headBg};padding:3px 2px">${eligCell}</td>
+                        <td style="text-align:center;background-color:${theme.headBg};padding:3px 2px">${doneCell}</td>
+                        <td style="text-align:center;background-color:${theme.headBg};padding:3px 2px">${needCell}</td>`;
             }).join('');
             
             overallTotalRowHtml = `<tr style="background-color:#f3f4f6;border-bottom:2px solid #d1d5db">
-                <td style="width:28px;text-align:center;font-weight:800;color:#374151">Σ</td>
-                <td><div style="font-weight:800;font-size:13px;color:#111827">Overall Total</div></td>
+                <td style="width:22px;text-align:center;font-weight:800;color:#374151;padding:4px 2px">Σ</td>
+                <td style="padding:4px 6px"><div style="font-weight:800;font-size:12px;color:#111827">Overall Total</div></td>
                 ${overallTierCells}
-                <td></td>
+                <td style="padding:4px 2px"></td>
+            </tr>`;
+        }
+
             </tr>`;
         }
 
@@ -3259,13 +3354,15 @@ async function downloadDynamicPoster() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-    StaffHeader.inject('VGK Bonanza Management', 'fas fa-trophy');
-    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
-    await loadMgmtBonanzaOptions(); // populate dropdown + auto-select most recent
-    await init();
-    mgmtLoadTracking(); // loads with most recent bonanza pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof StaffSidebar !== 'undefined') {
+        StaffSidebar.init().catch(e => console.warn('[Sidebar] init:', e));
+    }
+    if (typeof StaffHeader !== 'undefined') {
+        StaffHeader.inject('VGK Bonanza Management', 'fas fa-trophy');
+        StaffHeader.init();
+    }
+    init().catch(e => console.error('[Init] error:', e));
 });
 </script>
 </body>

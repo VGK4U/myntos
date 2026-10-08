@@ -4790,10 +4790,37 @@ def list_vgk_bonanzas_staff(
             if r[0] not in eligible_partners_map or eligible_partners_map[r[0]] == 0:
                 eligible_partners_map[r[0]] = r[1]
 
+    slabs_map = {}
+    if bonanza_ids:
+        s_rows = db.execute(text("""
+            SELECT id, bonanza_id, target_from, target_to, award_name, reward_amount, is_monetary, max_winners, current_winners, slab_label, is_active
+            FROM bonanza_slabs
+            WHERE bonanza_id = ANY(:ids) AND is_active = true
+            ORDER BY target_from
+        """), {"ids": bonanza_ids}).fetchall()
+        for r in s_rows:
+            bid = r[1]
+            if bid not in slabs_map:
+                slabs_map[bid] = []
+            slabs_map[bid].append({
+                "id": r[0],
+                "bonanza_id": r[1],
+                "target_from": r[2],
+                "target_to": r[3],
+                "award_name": r[4],
+                "reward_amount": float(r[5]) if r[5] is not None else None,
+                "is_monetary": r[6],
+                "max_winners": r[7],
+                "current_winners": r[8] or 0,
+                "slab_label": r[9],
+                "is_active": r[10]
+            })
+
     result = []
     for b in bonanzas:
         cc = claims_count.get(b.id, {})
         brand_configs = brand_filters_map.get(b.id, [])
+        slabs_list = slabs_map.get(b.id, [])
         result.append({
             "id": b.id,
             "bonanza_number": b.bonanza_number,
@@ -4840,7 +4867,9 @@ def list_vgk_bonanzas_staff(
             "claims_summary": cc,
             "total_claims": sum(cc.values()),
             "eligible_partners_count": eligible_partners_map.get(b.id, 0),
-            "created_by": b.created_by
+            "created_by": b.created_by,
+            "slabs": slabs_list,
+            "_slabs": slabs_list
         })
 
     return {"success": True, "bonanzas": result, "total": len(result)}
@@ -5250,6 +5279,7 @@ def admin_backfill_slab_bonus(
 def vgk_member_tracking(
     bonanza_id: Optional[int] = None,
     partner_search: Optional[str] = None,
+    current_status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_hybrid),
 ):
@@ -5276,6 +5306,22 @@ def vgk_member_tracking(
     if bonanza_id:
         q = q.filter(Bonanza.id == bonanza_id)
     bonanzas = q.order_by(Bonanza.created_at.desc()).all()
+    if not bonanzas:
+        return {"success": True, "rows": [], "total_members": 0, "eligible_count": 0}
+
+    if current_status:
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        filtered_bzs = []
+        for b in bonanzas:
+            grace = b.grace_days if b.grace_days is not None else 15
+            st = b.status
+            if b.status == 'Approved':
+                st = 'Running'
+            if st == current_status:
+                filtered_bzs.append(b)
+        bonanzas = filtered_bzs
+
     if not bonanzas:
         return {"success": True, "rows": [], "total_members": 0, "eligible_count": 0}
 
@@ -5476,6 +5522,9 @@ def vgk_member_tracking(
                                  THEN cl.source_ref_id::int END,
                             (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) = ANY(:pids)
+                          AND cl.first_payment_received_date IS NOT NULL
+                          AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                          AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                           {seg_clause}
                           {brand_clause}
                         GROUP BY partner_id
@@ -5510,12 +5559,17 @@ def vgk_member_tracking(
                                  THEN cl.source_ref_id::int END,
                             (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
                         ) = ANY(:pids)
+                          AND cl.first_payment_received_date IS NOT NULL
+                          AND cl.first_payment_received_date >= CAST(:start AS DATE)
+                          AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                           {seg_clause}
                         GROUP BY partner_id
                     """), params).fetchall()
                     for r in count_rows:
                         eligible_map[r[0]] = int(r[1])
                         achieved_map[r[0]] = int(r[2])
+
+
             else:
                 # NON-SOLAR CAMPAIGN path: count completed deals in CRM
                 seg_clause = "AND cld.revenue_category_id = :seg_id" if seg else ""
