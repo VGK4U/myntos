@@ -620,8 +620,10 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <option value="upliner">Upliner (All L1–L4)</option>
     </select>
   </div>
-  <div class="fgroup"><label>Hierarchy Search</label>
-    <input class="form-control" id="hierarchyMemberFilter" placeholder="Sponsor / Upliner Name/Code…" style="min-width:180px" onkeydown="if(event.key==='Enter')loadMembers(1)">
+  <div class="fgroup" style="position:relative">
+    <label>Hierarchy Search</label>
+    <input class="form-control" id="hierarchyMemberFilter" placeholder="Sponsor / Upliner Name/Code…" style="min-width:190px" autocomplete="off" oninput="debounceHierarchyMemberSearch(this.value)" onkeydown="if(event.key==='Enter'){closeHierarchyMemberDropdown();loadMembers(1);}">
+    <div id="hierarchyMemberDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:#fff;border:1.5px solid #c4b5fd;border-radius:9px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:4px"></div>
   </div>
   <div class="fgroup"><label>Status</label>
     <select class="form-select" id="statusFilter" onchange="loadMembers(1)">
@@ -679,13 +681,15 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <option value="current_month_active">Active This Month</option>
     </select>
   </div>
-  <div class="fgroup">
+  <div class="fgroup" style="position:relative">
     <label>Registered By</label>
-    <input class="form-control" id="regByFilter" placeholder="Name or emp code…" style="min-width:130px" onkeydown="if(event.key==='Enter')loadMembers(1)">
+    <input class="form-control" id="regByFilter" placeholder="Name or emp code…" style="min-width:140px" autocomplete="off" oninput="debounceRegByFilterSearch(this.value)" onkeydown="if(event.key==='Enter'){closeRegByFilterDropdown();loadMembers(1);}">
+    <div id="regByFilterDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:#fff;border:1.5px solid #c4b5fd;border-radius:9px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:4px"></div>
   </div>
-  <div class="fgroup">
+  <div class="fgroup" style="position:relative">
     <label>Referred By</label>
-    <input class="form-control" id="referrerFilter" placeholder="Referrer name or code…" style="min-width:140px" onkeydown="if(event.key==='Enter')loadMembers(1)">
+    <input class="form-control" id="referrerFilter" placeholder="Referrer name or code…" style="min-width:160px" autocomplete="off" oninput="debounceReferrerFilterSearch(this.value)" onkeydown="if(event.key==='Enter'){closeReferrerFilterDropdown();loadMembers(1);}">
+    <div id="referrerFilterDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:#fff;border:1.5px solid #c4b5fd;border-radius:9px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:4px"></div>
   </div>
   <div class="fgroup">
     <label>Reg Month</label>
@@ -720,6 +724,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <th class="mb-sticky-1" style="width:45px;text-align:center">#</th>
         <th class="mb-sticky-2 sortable" onclick="toggleSort('code')" id="th_code" style="width:120px">Code</th>
         <th class="mb-sticky-3 sortable" onclick="toggleSort('name')" id="th_name" style="width:200px">Name</th>
+        <th style="min-width:150px;color:#6d28d9;background:#faf5ff" id="th_referrer" title="Parent Channel Partner / Sponsor who referred this member">Referred By</th>
         <th style="text-align:center;min-width:70px;color:#7c3aed;background:#f5f3ff" title="Downline Level (L1: Direct Referral, L2–L4: Multilevel Downlines)">LEVEL</th>
         <th class="sortable" onclick="toggleSort('registered')" id="th_registered" title="Registration date (created_at)">Reg Date</th>
         <th class="sortable" onclick="toggleSort('registered_by')" id="th_registered_by" title="Staff who registered this member">Reg By</th>
@@ -737,7 +742,6 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <th>Breakdown</th>
         <th>Points Balance</th>
         <th>Points Used</th>
-        <th>Referrer</th>
         <th>Source</th>
         <th class="sortable" onclick="toggleSort('src_revenue')" id="th_src_revenue" title="Revenue from their coupon activations">Src Revenue ↕</th>
         <th class="sortable" onclick="toggleSort('leads_total')" id="th_leads_total" title="Total CRM leads sourced by this partner">Total Leads ↕</th>
@@ -5793,9 +5797,165 @@ function _renderTopPartners(d) {
           <td style="text-align:right;font-weight:800;color:${overallColor};font-size:14px">${overallPct}</td>
         </tr>`;
       }).join('')}
-    </tbody>
-  </table>`;
+// Filter Bar Autocomplete Search for Hierarchy Member, Referred By, and Registered By
+let _hmSearchTimer = null;
+function debounceHierarchyMemberSearch(val) {
+  clearTimeout(_hmSearchTimer);
+  const q = (val || '').trim();
+  const dropdown = document.getElementById('hierarchyMemberDropdown');
+  if (!dropdown) return;
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+  _hmSearchTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const list = (data.success && data.data) ? data.data : [];
+      if (!list.length) {
+        dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching partners found</div>';
+      } else {
+        dropdown.innerHTML = list.map(m => `
+          <div onclick="selectHierarchyMemberOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+               style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
+               onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
+            <div>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+            </div>
+            <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
+          </div>
+        `).join('');
+      }
+      dropdown.style.display = 'block';
+    } catch (e) {
+      console.error('Error searching hierarchy member:', e);
+    }
+  }, 250);
 }
+
+function selectHierarchyMemberOption(code, name) {
+  const input = document.getElementById('hierarchyMemberFilter');
+  if (input) input.value = code;
+  closeHierarchyMemberDropdown();
+  loadMembers(1);
+}
+
+function closeHierarchyMemberDropdown() {
+  const dropdown = document.getElementById('hierarchyMemberDropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+let _refFilterSearchTimer = null;
+function debounceReferrerFilterSearch(val) {
+  clearTimeout(_refFilterSearchTimer);
+  const q = (val || '').trim();
+  const dropdown = document.getElementById('referrerFilterDropdown');
+  if (!dropdown) return;
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+  _refFilterSearchTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const list = (data.success && data.data) ? data.data : [];
+      if (!list.length) {
+        dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching partners found</div>';
+      } else {
+        dropdown.innerHTML = list.map(m => `
+          <div onclick="selectReferrerFilterOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+               style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
+               onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
+            <div>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+            </div>
+            <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
+          </div>
+        `).join('');
+      }
+      dropdown.style.display = 'block';
+    } catch (e) {
+      console.error('Error searching referrer filter:', e);
+    }
+  }, 250);
+}
+
+function selectReferrerFilterOption(code, name) {
+  const input = document.getElementById('referrerFilter');
+  if (input) input.value = code;
+  closeReferrerFilterDropdown();
+  loadMembers(1);
+}
+
+function closeReferrerFilterDropdown() {
+  const dropdown = document.getElementById('referrerFilterDropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+let _regByFilterSearchTimer = null;
+function debounceRegByFilterSearch(val) {
+  clearTimeout(_regByFilterSearchTimer);
+  const q = (val || '').trim();
+  const dropdown = document.getElementById('regByFilterDropdown');
+  if (!dropdown) return;
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+  _regByFilterSearchTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const list = (data.success && data.data) ? data.data : [];
+      if (!list.length) {
+        dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching staff/partners found</div>';
+      } else {
+        dropdown.innerHTML = list.map(m => `
+          <div onclick="selectRegByFilterOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+               style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
+               onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
+            <div>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+            </div>
+            <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
+          </div>
+        `).join('');
+      }
+      dropdown.style.display = 'block';
+    } catch (e) {
+      console.error('Error searching regBy filter:', e);
+    }
+  }, 250);
+}
+
+function selectRegByFilterOption(code, name) {
+  const input = document.getElementById('regByFilter');
+  if (input) input.value = code;
+  closeRegByFilterDropdown();
+  loadMembers(1);
+}
+
+function closeRegByFilterDropdown() {
+  const dropdown = document.getElementById('regByFilterDropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#hierarchyMemberFilter') && !e.target.closest('#hierarchyMemberDropdown')) {
+    closeHierarchyMemberDropdown();
+  }
+  if (!e.target.closest('#referrerFilter') && !e.target.closest('#referrerFilterDropdown')) {
+    closeReferrerFilterDropdown();
+  }
+  if (!e.target.closest('#regByFilter') && !e.target.closest('#regByFilterDropdown')) {
+    closeRegByFilterDropdown();
+  }
+});
 
 async function loadMembers(page = 1) {
   currentPage = page;
@@ -5981,6 +6141,7 @@ async function loadMembers(page = 1) {
           <td class="mb-sticky-1" style="text-align:center;font-size:11.5px;font-weight:700;color:#6b7280">${rowNum}</td>
           <td class="mb-sticky-2"><strong style="color:#7c3aed">${m.partner_code}</strong></td>
           <td class="mb-sticky-3"><div style="display:flex;align-items:center;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
+          <td style="white-space:nowrap;background:#faf5ff">${m.referrer_name ? '<span style="font-size:11.5px;font-weight:600;color:#6d28d9">' + m.referrer_name + (m.referrer_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.referrer_code + ')</span>' : '') + '</span>' : '<span style="color:#cbd5e1">—</span>'}</td>
           <td style="text-align:center">${m.downline_level ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-weight:800;font-size:11px">L${m.downline_level}</span>` : `<span style="color:#cbd5e1">—</span>`}</td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${(m.registered_by_emp_code === 'VGK07102207' || m.registered_by_name === 'VGK Support') ? '<span style="font-weight:600;color:#059669">VGK Support <span style="font-family:monospace;font-size:10px;color:#7c3aed">(VGK07102207)</span></span>' : (m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' + (m.registered_by_emp_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.registered_by_emp_code + ')</span>' : '') : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>'))}</td>
@@ -5998,7 +6159,6 @@ async function loadMembers(page = 1) {
           <td onclick="event.stopPropagation()"><button onclick="openExecutiveMemberEarningModal('${m.id}')" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid #c084fc;background:#faf5ff;color:#7e22ce;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 2px rgba(126,34,206,0.15)"><i class="fas fa-chart-line"></i> Breakdown</button></td>
           <td><strong>${fmtPts(m.vgk_points_balance)}</strong></td>
           <td><span class="pts-used${ptsUsed === 0 ? ' zero' : ''}">${fmtPts(ptsUsed)}</span></td>
-          <td>${m.referrer_name ? '<span style="font-size:11px">' + m.referrer_name + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
           <td>${fmtSource(m.registration_source)}</td>
           <td style="text-align:right;font-size:12px;font-weight:700;color:${(m.src_revenue||0)>0?'#059669':'#9ca3af'}">${(m.src_revenue||0)>0?fmtInr(m.src_revenue):'₹0'}</td>
           <td style="text-align:center;font-size:12px;font-weight:700;color:${(m.leads_total||0)>0?'#1d4ed8':'#9ca3af'}">${m.leads_total||0}</td>
