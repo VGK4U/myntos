@@ -516,7 +516,7 @@ def list_vgk_members(
 
     # [DC-VGK-HIERARCHY-001] Sponsor / Upliner Hierarchy Filtering (L1 to L4)
     downline_level_map = {}
-    if hierarchy_member and hierarchy_member.strip():
+    if isinstance(hierarchy_member, str) and hierarchy_member.strip():
         hm_term = hierarchy_member.strip()
         _hm_like = f"%{hm_term}%"
         root_partners = db.query(OfficialPartner.id).filter(
@@ -529,14 +529,30 @@ def list_vgk_members(
             )
         ).all()
         root_ids = [r[0] for r in root_partners]
+
+        root_staff = db.query(StaffEmployee.emp_code).filter(
+            or_(
+                StaffEmployee.emp_code.ilike(hm_term),
+                StaffEmployee.full_name.ilike(_hm_like),
+                StaffEmployee.phone.ilike(_hm_like)
+            )
+        ).all()
+        root_staff_codes = [r[0] for r in root_staff]
+
+        # Level 1 (Direct Referrals / Sponsor)
+        l1_conds = []
         if root_ids:
-            # Level 1 (Direct Referrals / Sponsor)
-            l1_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(root_ids)).all()
+            l1_conds.append(OfficialPartner.parent_partner_id.in_(root_ids))
+        if root_staff_codes:
+            l1_conds.append(OfficialPartner.registered_by_emp_code.in_(root_staff_codes))
+
+        if l1_conds:
+            l1_rows = db.query(OfficialPartner.id).filter(or_(*l1_conds)).all()
             l1_ids = [r[0] for r in l1_rows]
             for lid in l1_ids:
                 downline_level_map[lid] = 1
 
-            htype = (hierarchy_type or '').strip().lower()
+            htype = hierarchy_type.strip().lower() if isinstance(hierarchy_type, str) else ''
             if htype in ('upliner', 'upline', 'all') and l1_ids:
                 # Level 2
                 l2_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(l1_ids)).all()
@@ -564,8 +580,8 @@ def list_vgk_members(
                 query = query.filter(OfficialPartner.id == -1)
         else:
             query = query.filter(OfficialPartner.id == -1)
-    elif hierarchy_type and hierarchy_type.strip().lower() in ('sponsor', 'direct'):
-        query = query.filter(OfficialPartner.parent_partner_id.isnot(None))
+    elif isinstance(hierarchy_type, str) and hierarchy_type.strip().lower() in ('sponsor', 'direct'):
+        query = query.filter(or_(OfficialPartner.parent_partner_id.isnot(None), OfficialPartner.registered_by_emp_code.isnot(None)))
 
     # [DC-VGK-RBAC-001] Strict member visibility: Ordinary staff only see members registered by them or assigned to them
     if not _has_full_vgk_visibility(current_user):
@@ -647,15 +663,29 @@ def list_vgk_members(
                 query = query.filter(OfficialPartner.id == -1)
     if isinstance(referred_by, str) and referred_by.strip():
         _ref_term = f"%{referred_by.strip()}%"
+        _ref_code = referred_by.strip().upper()
         try:
-            _ref_matched = db.execute(text(
-                "SELECT id FROM official_partners WHERE partner_name ILIKE :term OR partner_code ILIKE :term"
-            ), {"term": _ref_term}).fetchall()
-            _ref_ids = [r[0] for r in _ref_matched]
+            _ref_matched_p = db.execute(text(
+                "SELECT id FROM official_partners WHERE partner_name ILIKE :term OR partner_code ILIKE :term OR UPPER(partner_code) = :code"
+            ), {"term": _ref_term, "code": _ref_code}).fetchall()
+            _ref_ids = [r[0] for r in _ref_matched_p]
+
+            _ref_matched_s = db.execute(text(
+                "SELECT emp_code FROM staff_employees WHERE full_name ILIKE :term OR emp_code ILIKE :term OR UPPER(emp_code) = :code"
+            ), {"term": _ref_term, "code": _ref_code}).fetchall()
+            _ref_staff_codes = [r[0] for r in _ref_matched_s]
         except Exception:
             _ref_ids = []
+            _ref_staff_codes = []
+
+        ref_conds = []
         if _ref_ids:
-            query = query.filter(OfficialPartner.parent_partner_id.in_(_ref_ids))
+            ref_conds.append(OfficialPartner.parent_partner_id.in_(_ref_ids))
+        if _ref_staff_codes:
+            ref_conds.append(OfficialPartner.registered_by_emp_code.in_(_ref_staff_codes))
+
+        if ref_conds:
+            query = query.filter(or_(*ref_conds))
         else:
             query = query.filter(OfficialPartner.parent_partner_id == -1)
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp_code OR full_name / partner_code OR partner_name
@@ -878,7 +908,7 @@ def list_vgk_members(
     comm_rows = db.query(CommunityRegistration).filter(CommunityRegistration.user_id.in_(member_ids)).all() if member_ids else []
     comm_map = {c.user_id: c for c in comm_rows}
 
-    # Pre-fetch parent partner roles and promo influencer records for quick lookup
+    # Pre-fetch parent partner roles, staff employees, and promo influencer records for quick lookup
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     parent_map = {}
     parent_codes = []
@@ -886,6 +916,12 @@ def list_vgk_members(
         parents = db.query(OfficialPartner).filter(OfficialPartner.id.in_(parent_ids)).all()
         parent_map = {p.id: p for p in parents}
         parent_codes = [p.partner_code for p in parents if p.partner_code]
+
+    staff_codes = list({m.registered_by_emp_code.strip().upper() for m in members if isinstance(m.registered_by_emp_code, str) and m.registered_by_emp_code.strip()})
+    staff_map = {}
+    if staff_codes:
+        staff_objs = db.query(StaffEmployee).filter(StaffEmployee.emp_code.in_(staff_codes)).all()
+        staff_map = {s.emp_code.upper(): s for s in staff_objs}
     
     from app.models.promo import PromoInfluencer
     inf_rows = db.query(PromoInfluencer).filter(PromoInfluencer.vgk_member_id.in_(parent_codes)).all() if parent_codes else []
@@ -898,14 +934,26 @@ def list_vgk_members(
     for m in members:
         d = m.to_dict()
         d['downline_level'] = downline_level_map.get(m.id)
+        d['level_num'] = downline_level_map.get(m.id)
         phone = (m.phone or m.whatsapp_number or '').strip()
         if m.parent_partner_id:
             ref = parent_map.get(m.parent_partner_id)
             d['referrer_name'] = ref.partner_name if ref else None
             d['referrer_code'] = ref.partner_code if ref else None
+        elif m.registered_by_emp_code:
+            scode = m.registered_by_emp_code.strip().upper()
+            st_user = staff_map.get(scode)
+            d['referrer_name'] = st_user.full_name if st_user else None
+            d['referrer_code'] = scode
         else:
             d['referrer_name'] = None
             d['referrer_code'] = None
+
+        if not d.get('registered_by_name') and m.registered_by_emp_code:
+            scode = m.registered_by_emp_code.strip().upper()
+            st_user = staff_map.get(scode)
+            if st_user:
+                d['registered_by_name'] = st_user.full_name
         balance = float(m.vgk_points_balance or 0)
         d['points_utilised'] = pts_debit_map.get(m.id, 0.0)
         d['confirmed_income_total'] = income_map.get(m.id, 0.0)
