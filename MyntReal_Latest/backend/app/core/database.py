@@ -79,15 +79,14 @@ else:
     _is_neon   = "neon.tech" in _db_url_str
 
     _use_sqlite_fallback = False
-    if _is_helium:
-        try:
-            _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": 2})
-            _test_conn = _test_eng.connect()
-            _test_conn.close()
-            _test_eng.dispose()
-        except Exception as _db_conn_err:
-            print(f"[DC-DB-INIT] Local PostgreSQL unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
-            _use_sqlite_fallback = True
+    try:
+        _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": 3})
+        _test_conn = _test_eng.connect()
+        _test_conn.close()
+        _test_eng.dispose()
+    except Exception as _db_conn_err:
+        print(f"[DC-DB-INIT] Primary Database unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
+        _use_sqlite_fallback = True
 
     if _use_sqlite_fallback:
         print("[DC-DB-INIT] Creating SQLite engine (development fallback mode with WAL & 30s timeout)...", flush=True)
@@ -136,7 +135,7 @@ else:
             pool_size=8,              # 8 connections per worker
             max_overflow=4,           # 4 burst overflow
             pool_timeout=10,          # 10s timeout to prevent thread pile-up
-            pool_recycle=300,         # Recycle idle connections every 5m to prevent RDS SSL drops
+            pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
             connect_args={
@@ -171,11 +170,17 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
-    except Exception:
+    except Exception as e:
         try:
             db.rollback()
         except Exception:
             pass
+        from sqlalchemy.exc import OperationalError, DBAPIError
+        if isinstance(e, (OperationalError, DBAPIError)):
+            try:
+                db.invalidate()
+            except Exception:
+                pass
         raise
     finally:
         try:
