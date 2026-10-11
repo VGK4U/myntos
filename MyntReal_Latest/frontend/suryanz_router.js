@@ -356,7 +356,7 @@ function renderSuryanzPage({
 
 // ===================== SPECIFIC ROUTE RENDERERS =====================
 
-function renderHomePage(urlPrefix = '') {
+function renderHomePage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
   const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : urlPrefix;
   const content = `
   <!-- 1. HERO SECTION -->

@@ -7666,100 +7666,91 @@ const server = http.createServer(async (req, res) => {
     const isStaticAssetReq = reqPathLower.startsWith('/public/') || reqPathLower.startsWith('/assets/') || /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|mp4|json)$/i.test(reqPathLower);
     const isSuryanzDomain = !isStaticAssetReq && (hostHeader.includes('suryanz') || reqPathLower.startsWith('/suryanz') || reqPathLower.startsWith('/suryanzsolar'));
     if (isSuryanzDomain) {
-      const suryanzRouter = require('./suryanz_router');
-      const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : (reqPathLower.startsWith('/suryanzsolar') ? reqPathLower.replace(/^\/suryanzsolar/, '') : reqPathLower)) || '/';
-      const reqHost = getSafeHost(req) || 'suryanz.com';
-      const reqProto = ((req.headers['x-forwarded-proto'] || 'https').split(',')[0] || 'https').trim();
+      try {
+        const suryanzRouter = require('./suryanz_router');
+        const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : (reqPathLower.startsWith('/suryanzsolar') ? reqPathLower.replace(/^\/suryanzsolar/, '') : reqPathLower)) || '/';
+        const reqHost = getSafeHost(req) || 'suryanz.com';
+        const reqProto = ((req.headers['x-forwarded-proto'] || 'https').split(',')[0] || 'https').trim();
 
-      if (cleanPath === '/sitemap.xml') {
-        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-        res.end(suryanzRouter.renderSitemapXml(reqHost, reqProto));
-        return;
-      }
-      if (cleanPath === '/robots.txt') {
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end(suryanzRouter.renderRobotsTxt(reqHost, reqProto));
-        return;
-      }
-
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      const urlPrefix = reqPathLower.startsWith('/suryanz') ? '/suryanz' : '';
-
-      if (cleanPath === '/' || cleanPath === '') {
-        res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/about') {
-        res.writeHead(200); res.end(suryanzRouter.renderAboutPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/why-suryanz') {
-        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/customer-protection') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/technology') {
-        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/calculator') {
-        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/projects') {
-        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/customer-stories' || cleanPath === '/reviews') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/faqs') {
-        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage(urlPrefix, reqHost, reqProto)); return;
-      }
-      if (cleanPath === '/contact') {
-        res.writeHead(200); res.end(suryanzRouter.renderContactPage(urlPrefix, reqHost, reqProto)); return;
-      }
-
-      // Solutions Sub-routes
-      if (cleanPath.startsWith('/solutions/')) {
-        const solutionSlug = cleanPath.replace('/solutions/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug, urlPrefix, reqHost, reqProto)); return;
-      }
-
-      // Educational Knowledge Guides
-      const knowledgeGuides = ['solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide'];
-      const guideSlug = cleanPath.replace(/^\//, '');
-      if (knowledgeGuides.includes(guideSlug)) {
-        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug, urlPrefix, reqHost, reqProto)); return;
-      }
-
-      // Regional Location Hubs
-      if (cleanPath.startsWith('/location/')) {
-        const locSlug = cleanPath.replace('/location/', '').trim();
-        let locName = locSlug.charAt(0).toUpperCase() + locSlug.slice(1);
-        let stateName = 'India';
-
-        if (locSlug === 'visakhapatnam' || locSlug === 'vijayawada') {
-          stateName = 'Andhra Pradesh';
-        } else if (locSlug === 'hyderabad') {
-          stateName = 'Telangana';
-        } else if (locSlug === 'bengaluru' || locSlug === 'mangalore') {
-          stateName = 'Karnataka';
-        } else if (locSlug === 'andhra-pradesh') {
-          locName = 'Andhra Pradesh'; stateName = 'Andhra Pradesh';
-        } else if (locSlug === 'telangana') {
-          locName = 'Telangana'; stateName = 'Telangana';
-        } else if (locSlug === 'karnataka') {
-          locName = 'Karnataka'; stateName = 'Karnataka';
+        if (cleanPath === '/sitemap.xml') {
+          res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+          res.end(suryanzRouter.renderSitemapXml(reqHost, reqProto));
+          return;
+        }
+        if (cleanPath === '/robots.txt') {
+          res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end(suryanzRouter.renderRobotsTxt(reqHost, reqProto));
+          return;
         }
 
-        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName, urlPrefix, reqHost, reqProto)); return;
-      }
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        const urlPrefix = reqPathLower.startsWith('/suryanz') ? '/suryanz' : '';
 
-      // Legal Sub-routes
-      if (cleanPath.startsWith('/legal/')) {
-        const legalSlug = cleanPath.replace('/legal/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug, urlPrefix, reqHost, reqProto)); return;
-      }
+        let html = '';
+        if (cleanPath === '/' || cleanPath === '') {
+          html = suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/about') {
+          html = suryanzRouter.renderAboutPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/why-suryanz') {
+          html = suryanzRouter.renderWhySuryanzPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/customer-protection') {
+          html = suryanzRouter.renderCustomerProtectionPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/technology') {
+          html = suryanzRouter.renderTechnologyPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/calculator') {
+          html = suryanzRouter.renderCalculatorPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/projects') {
+          html = suryanzRouter.renderProjectsPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/customer-stories' || cleanPath === '/reviews') {
+          html = suryanzRouter.renderCustomerStoriesPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/faqs') {
+          html = suryanzRouter.renderFaqsPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath === '/contact') {
+          html = suryanzRouter.renderContactPage(urlPrefix, reqHost, reqProto);
+        } else if (cleanPath.startsWith('/solutions/')) {
+          const solutionSlug = cleanPath.replace('/solutions/', '').trim();
+          html = suryanzRouter.renderSolutionPage(solutionSlug, urlPrefix, reqHost, reqProto);
+        } else if (['solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide'].includes(cleanPath.replace(/^\//, ''))) {
+          const guideSlug = cleanPath.replace(/^\//, '');
+          html = suryanzRouter.renderKnowledgeGuidePage(guideSlug, urlPrefix, reqHost, reqProto);
+        } else if (cleanPath.startsWith('/location/')) {
+          const locSlug = cleanPath.replace('/location/', '').trim();
+          let locName = locSlug.charAt(0).toUpperCase() + locSlug.slice(1);
+          let stateName = 'India';
 
-      // Default Home Fallback
-      res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto)); return;
+          if (locSlug === 'visakhapatnam' || locSlug === 'vijayawada') {
+            stateName = 'Andhra Pradesh';
+          } else if (locSlug === 'hyderabad') {
+            stateName = 'Telangana';
+          } else if (locSlug === 'bengaluru' || locSlug === 'mangalore') {
+            stateName = 'Karnataka';
+          } else if (locSlug === 'andhra-pradesh') {
+            locName = 'Andhra Pradesh'; stateName = 'Andhra Pradesh';
+          } else if (locSlug === 'telangana') {
+            locName = 'Telangana'; stateName = 'Telangana';
+          } else if (locSlug === 'karnataka') {
+            locName = 'Karnataka'; stateName = 'Karnataka';
+          }
+
+          html = suryanzRouter.renderLocationPage(locSlug, locName, stateName, urlPrefix, reqHost, reqProto);
+        } else if (cleanPath.startsWith('/legal/')) {
+          const legalSlug = cleanPath.replace('/legal/', '').trim();
+          html = suryanzRouter.renderLegalPage(legalSlug, urlPrefix, reqHost, reqProto);
+        } else {
+          html = suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto);
+        }
+
+        res.writeHead(200);
+        res.end(html);
+        return;
+      } catch (err) {
+        console.error('❌ [SURYANZ ROUTER ERROR]:', err);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+        }
+        res.end('<!DOCTYPE html><html><body><h1>Internal Server Error</h1><p>Please refresh the page.</p></body></html>');
+        return;
+      }
     }
 
     // AWS ELB / Load Balancer Health Check Endpoint
@@ -31210,6 +31201,8 @@ async function processAction(id, action){
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'text/html' });
       res.end('Internal Server Error - Please refresh the page');
+    } else {
+      try { res.end(); } catch (_) {}
     }
   
   }
