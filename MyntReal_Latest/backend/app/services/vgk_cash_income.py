@@ -1216,10 +1216,177 @@ def reject_cash_income(db: Session, entry_id: int, company_id: int, rejected_by_
     return {'success': True, 'entry_number': entry.entry_number}
 
 
+def get_partner_advance_summary(db: Session, partner_id: int, company_id: int = None) -> dict:
+    """
+    Dynamic calculation of partner advance balance and deduction history.
+    
+    Total Advance Given = SUM(commission_amount) for entries where partner_id = partner_id,
+                          kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE'),
+                          status IN ('RELEASED', 'PAID')
+                          
+    Total Advance Recovered = SUM(advance_adjusted_amount) for entries where partner_id = partner_id,
+                             status IN ('RELEASED', 'PAID')
+                             
+    Outstanding Advance Balance = max(0, Total Advance Given - Total Advance Recovered)
+    """
+    from app.models.staff_accounts import OfficialPartner
+
+    partner = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
+    if not partner:
+        return {
+            'success': False,
+            'error': f'Partner #{partner_id} not found'
+        }
+
+    query_adv = text("""
+        SELECT COALESCE(SUM(commission_amount), 0) AS total_given
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid
+          AND kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE')
+          AND status IN ('RELEASED', 'PAID')
+    """)
+    res_adv = db.execute(query_adv, {'pid': partner_id}).fetchone()
+    total_given = Decimal(str(res_adv.total_given if res_adv and res_adv.total_given is not None else 0))
+
+    query_rec = text("""
+        SELECT COALESCE(SUM(advance_adjusted_amount), 0) AS total_recovered
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid
+          AND status IN ('RELEASED', 'PAID')
+    """)
+    res_rec = db.execute(query_rec, {'pid': partner_id}).fetchone()
+    total_recovered = Decimal(str(res_rec.total_recovered if res_rec and res_rec.total_recovered is not None else 0))
+
+    outstanding = max(Decimal('0'), total_given - total_recovered)
+
+    history_query = text("""
+        SELECT 
+            id, entry_number, kind, commission_amount, advance_adjusted_amount, 
+            status, created_at, notes, net_payout
+        FROM vgk_cash_income_entries
+        WHERE partner_id = :pid
+          AND (
+            kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE')
+            OR advance_adjusted_amount > 0
+          )
+        ORDER BY created_at DESC
+        LIMIT 20
+    """)
+    rows = db.execute(history_query, {'pid': partner_id}).fetchall()
+    history = []
+    for r in rows:
+        history.append({
+            'id': r.id,
+            'entry_number': r.entry_number,
+            'kind': r.kind,
+            'commission_amount': float(r.commission_amount or 0),
+            'advance_adjusted_amount': float(r.advance_adjusted_amount or 0),
+            'status': r.status,
+            'net_payout': float(r.net_payout or 0),
+            'created_at': r.created_at.isoformat() if r.created_at else None,
+            'notes': r.notes
+        })
+
+    return {
+        'success': True,
+        'partner_id': partner_id,
+        'partner_code': getattr(partner, 'partner_code', '') or f'MEMBER-{partner_id}',
+        'partner_name': getattr(partner, 'full_name', '') or getattr(partner, 'partner_name', '') or f'Partner #{partner_id}',
+        'total_advance_given': float(total_given),
+        'total_advance_recovered': float(total_recovered),
+        'outstanding_advance_balance': float(outstanding),
+        'history': history
+    }
+
+
+def issue_direct_advance(
+    db: Session,
+    company_id: int,
+    partner_id: int,
+    gross_amount: Decimal,
+    created_by_id: int,
+    kind: str = 'ADVANCE',
+    payment_mode: str = 'BANK',
+    bank_ledger_id: int = None,
+    cash_staff_id: int = None,
+    payment_utr: str = None,
+    notes: str = None
+) -> dict:
+    """
+    Accounts staff directly issues a cash/bank advance to a VGK partner (member).
+    Creates a standalone VGKCashIncomeEntry with kind='ADVANCE' and status='PAID'.
+    """
+    from app.models.vgk_cash_income import VGKCashIncomeEntry
+    from app.models.staff_accounts import OfficialPartner
+
+    partner = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
+    if not partner:
+        return {'success': False, 'error': f'Partner #{partner_id} not found'}
+
+    gross = Decimal(str(gross_amount or 0))
+    if gross <= Decimal('0'):
+        return {'success': False, 'error': 'Advance amount must be greater than zero'}
+
+    valid_kinds = {'ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE'}
+    k = (kind or 'ADVANCE').upper().strip()
+    if k not in valid_kinds:
+        k = 'ADVANCE'
+
+    now = _get_ist()
+    entry_no = _next_entry_number(db, company_id or partner.company_id or 4)
+
+    entry = VGKCashIncomeEntry(
+        company_id=company_id or partner.company_id or 4,
+        entry_number=entry_no,
+        partner_id=partner_id,
+        source_lead_id=None,
+        level=0,
+        deal_value_total=0,
+        deal_value_excl_tax=0,
+        commission_pct=0,
+        commission_amount=gross,
+        points_debit_required=0,
+        points_actually_debited=0,
+        kind=k,
+        status='PAID',
+        admin_charges=0,
+        tds_amount=0,
+        net_payout=gross,
+        advance_adjusted_amount=0,
+        confirmed_by_id=created_by_id,
+        confirmed_at=now,
+        released_by_id=created_by_id,
+        released_at=now,
+        paid_by_id=created_by_id,
+        paid_at=now,
+        payment_mode=(payment_mode or 'BANK').upper(),
+        payment_utr=payment_utr,
+        paid_bank_ledger_id=bank_ledger_id,
+        paid_cash_staff_id=cash_staff_id,
+        notes=notes or f'Direct {k} issued to member',
+        income_date=now.date()
+    )
+    db.add(entry)
+    db.flush()
+
+    summary = get_partner_advance_summary(db, partner_id, company_id)
+
+    return {
+        'success': True,
+        'entry_id': entry.id,
+        'entry_number': entry.entry_number,
+        'gross_amount': float(gross),
+        'kind': k,
+        'outstanding_advance_balance': summary.get('outstanding_advance_balance', float(gross)),
+        'message': f'Direct advance {entry.entry_number} of ₹{float(gross):.2f} issued successfully.'
+    }
+
+
 def release_cash_income(
     db: Session, entry_id: int, company_id: int,
     released_by_id: int, notes: str = None,
     force: bool = False,
+    advance_cut: Decimal = None,
 ) -> dict:
     """
     Accounts staff releases a PENDING entry.
@@ -1288,13 +1455,36 @@ def release_cash_income(
         return {'success': False, 'error': 'Partner not found'}
 
     gross   = entry.commission_amount or Decimal('0')
-    admin   = (gross * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
-    payable = gross - admin
-    # DC-FIX-2605-007: TDS must be on payable (=gross−admin), matching post_jv_paid.
-    # Using gross*2% caused a systematic discrepancy (e.g. ₹150 vs ₹138 on ₹7500 entries).
+
+    # Custom Advance Cut Calculation & Validation
+    _cut = Decimal('0')
+    if advance_cut is not None:
+        try:
+            _cut = Decimal(str(advance_cut))
+        except Exception:
+            _cut = Decimal('0')
+        if _cut < Decimal('0'):
+            _cut = Decimal('0')
+
+    if _cut > Decimal('0'):
+        adv_summary = get_partner_advance_summary(db, entry.partner_id, company_id)
+        out_bal = Decimal(str(adv_summary.get('outstanding_advance_balance', 0)))
+        max_allowed = min(gross, out_bal)
+        if _cut > max_allowed:
+            return {
+                'success': False,
+                'error': f'Advance cut (₹{float(_cut):.2f}) cannot exceed maximum allowed deduction of ₹{float(max_allowed):.2f} (Outstanding advance: ₹{float(out_bal):.2f})'
+            }
+
+    entry.advance_adjusted_amount = _cut
+    taxable_base = max(Decimal('0'), gross - _cut)
+
+    admin   = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
+    payable = max(Decimal('0'), taxable_base - admin)
+    # DC-FIX-2605-007: TDS must be on payable (=taxable_base−admin), matching post_jv_paid.
     tds     = (payable * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'))
-    net     = payable - tds
-    deductions = admin + tds
+    net     = max(Decimal('0'), payable - tds)
+    deductions = admin + tds + _cut
 
     # DC-VGK-FLOW-002: Points debit DEFERRED to mark_paid_cash_income (PAID stage).
     # Do NOT debit points here (Stage 1 Approve = AWAITING RELEASE, not yet physically paid).
@@ -1318,6 +1508,8 @@ def release_cash_income(
     entry.released_at     = now
     if notes:
         entry.notes = (entry.notes or '') + f' | Release note: {notes}'
+    if _cut > Decimal('0'):
+        entry.notes = (entry.notes or '') + f' | Advance Cut: ₹{float(_cut):.2f}'
     entry.updated_at = now
     partner.updated_at = now
 
@@ -1330,11 +1522,11 @@ def release_cash_income(
         """), {'rel_by': released_by_id, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
     _log_wallet_txn(
-        db, partner.id, partner.company_id,
+        db, partner.id, company_id or getattr(partner, 'company_id', None) or getattr(entry, 'company_id', 4) or 4,
         txn_type='INCOME_DEDUCTION', direction='DR', amount=deductions,
         wallet_before=wallet_before, wallet_after=wallet_after,
         ref_type='VGK_CASH_INCOME', ref_id=entry.id,
-        description=f'Admin {float(admin):.2f} + TDS {float(tds):.2f} deducted — {entry.entry_number}',
+        description=f'Admin {float(admin):.2f} + TDS {float(tds):.2f} + Advance Cut {float(_cut):.2f} deducted — {entry.entry_number}',
         staff_id=released_by_id,
     )
 
@@ -1348,7 +1540,7 @@ def release_cash_income(
         'tds_amount':       float(tds),
         'net_payout':       float(net),
         'new_wallet':       float(wallet_after),
-        'earned_total':     float(partner.vgk_cash_earned_total),
+        'earned_total':     float(partner.vgk_cash_earned_total or 0),
     }
 
 

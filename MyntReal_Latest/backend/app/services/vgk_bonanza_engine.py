@@ -106,7 +106,12 @@ def get_qualifying_leads_for_partner(
     # Query leads associated with partner
     leads_sql = f"""
         SELECT cl.id, cl.category_id, cl.solar_brand_id, cl.solar_pipeline_status, cl.status,
-               cl.first_payment_received_date, cl.submit_date, cl.complete_date,
+               COALESCE(
+                   cl.first_payment_received_date,
+                   (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                   (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+               ) AS first_payment_received_date,
+               cl.submit_date, cl.complete_date,
                cl.solar_pipeline_status_updated_at, cl.updated_at, cl.created_at
         FROM crm_leads cl
         WHERE (
@@ -115,7 +120,7 @@ def get_qualifying_leads_for_partner(
             OR cl.source_ref_id = CAST(:pid AS VARCHAR)
             OR EXISTS (
                 SELECT 1 FROM vgk_solar_cibil_advances a 
-                WHERE a.lead_id = cl.id AND a.partner_id = :pid AND a.level = 1 AND a.kind = 'ADVANCE'
+                WHERE a.lead_id = cl.id AND a.partner_id = :pid AND a.level = 1
             )
         )
         {seg_filter}
@@ -153,7 +158,9 @@ def get_qualifying_leads_for_partner(
         st = (l.status or '').strip().lower()
 
         is_completed_stage = False
-        if comp_criteria == 'completed':
+        if qual_event == 'first_payment':
+            is_completed_stage = True
+        elif comp_criteria == 'completed':
             is_completed_stage = (st == 'completed' or sps == 'completed')
         else:  # 'balance_received_plus' (crosses balance_pending)
             is_completed_stage = (sps in _SOLAR_COMPLETION_STAGES or st == 'completed')
@@ -538,7 +545,7 @@ def backfill_extra_commission(db: Session, bonanza_id: int) -> Dict[str, Any]:
                 cl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'load_extension', 'electricity_bill_change',
                                              'installation_pending', 'net_meter_pending', 'balance_pending',
                                              'balance_received', 'subsidy_pending', 'completed')
-                OR cl.id IN (SELECT lead_id FROM vgk_solar_cibil_advances WHERE status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID') AND kind = 'ADVANCE')
+                OR cl.id IN (SELECT lead_id FROM vgk_solar_cibil_advances WHERE status IN ('RELEASED', 'STAGE1_APPROVED', 'PAID') AND level = 1)
             )
         """
 

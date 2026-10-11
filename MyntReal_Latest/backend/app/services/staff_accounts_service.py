@@ -4016,6 +4016,21 @@ class IncomeEntryService:
                         _dvr_lead_id = _dvr_link[0]
                 if _dvr_lead_id:
                     db.flush()
+                    db.execute(
+                        _text("""
+                            UPDATE crm_leads
+                            SET deal_value_received = (
+                                    SELECT COALESCE(SUM(amount), 0) FROM income_entries 
+                                    WHERE lead_id = :lid AND status = 'CONFIRMED'
+                                ),
+                                deal_value_balance = GREATEST(0, COALESCE(deal_value_total, solar_value, deal_value, 0) - (
+                                    SELECT COALESCE(SUM(amount), 0) FROM income_entries 
+                                    WHERE lead_id = :lid AND status = 'CONFIRMED'
+                                ))
+                            WHERE id = :lid
+                        """),
+                        {'lid': _dvr_lead_id}
+                    )
                     _dvr_lead_chk = db.execute(
                         _text(
                             "SELECT id, deal_value_received, associated_partner_id "
@@ -4025,7 +4040,7 @@ class IncomeEntryService:
                     ).fetchone()
                     if (_dvr_lead_chk and
                             _dvr_lead_chk.associated_partner_id and
-                            float(_dvr_lead_chk.deal_value_received or 0) > 0):
+                            (float(_dvr_lead_chk.deal_value_received or 0) > 0 or float(entry.amount or 0) > 0)):
                         if getattr(entry, 'crm_transaction_id', None):
                             from app.services.vgk_solar_advance import process_payment_stage2_advance as _s2_ie_fn
                             _entry_amt = Decimal(str(entry.amount or 0))

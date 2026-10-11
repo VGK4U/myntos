@@ -361,11 +361,13 @@
                              type === 'announcement'  ? 'fa-bullhorn'     :
                              type === 'property'      ? 'fa-home'         :
                              type === 'progress'      ? 'fa-chart-line'   :
+                             (type === 'bonanza_achiever' || type === 'bonanza') ? 'fa-award' :
                              type === 'performance'   ? 'fa-trophy'       : 'fa-share-alt';
             var headerText = isReferral ? 'Share Referral Link' :
                              type === 'announcement'  ? 'Share Announcement' :
                              type === 'property'      ? 'Share Property'     :
                              type === 'progress'      ? 'Share Progress'     :
+                             (type === 'bonanza_achiever' || type === 'bonanza') ? 'Share Bonanza Achievement' :
                              type === 'performance'   ? 'Share Performance'  : 'Share';
 
             var initRef    = referrerId || defaultReferrerId;

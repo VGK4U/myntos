@@ -882,6 +882,36 @@ class FacebookLeadsService:
             if existing_att:
                 logger.info(f"[META-CONCURRENT-DEDUP] Meta lead {lead_id} was ingested concurrently. Returning existing lead #{existing_att.lead_id}.")
                 return db.query(CRMLead).filter(CRMLead.id == existing_att.lead_id).first()
+
+            # Handle phone number unique constraint collision across tenants/companies
+            if target_phone:
+                existing_phone_lead = db.query(CRMLead).filter(
+                    (CRMLead.phone == target_phone) | (CRMLead.alternate_phone == target_phone)
+                ).first()
+                if existing_phone_lead:
+                    logger.info(f"[META-PHONE-DEDUP] Phone {target_phone} already exists on Lead #{existing_phone_lead.id}. Linking Meta attribution.")
+                    try:
+                        attribution = MetaLeadsAttribution(
+                            company_id=existing_phone_lead.company_id,
+                            lead_id=existing_phone_lead.id,
+                            meta_lead_id=str(lead_id),
+                            meta_campaign_id=str(lead_data.get('campaign_id') or '') or None,
+                            meta_campaign_name=str(lead_data.get('campaign_name') or '') or None,
+                            meta_adset_id=str(lead_data.get('adset_id') or '') or None,
+                            meta_adset_name=str(lead_data.get('adset_name') or '') or None,
+                            meta_ad_id=str(lead_data.get('ad_id') or '') or None,
+                            meta_ad_name=str(lead_data.get('ad_name') or '') or None,
+                            meta_form_id=str(resolved_form_id or '') or None,
+                            meta_form_name=str(page_name) if page_name else None
+                        )
+                        db.add(attribution)
+                        db.commit()
+                        return existing_phone_lead
+                    except Exception as _attr_err:
+                        db.rollback()
+                        logger.warning(f"[META-ATTRIBUTION-ERROR] Could not link attribution to existing lead #{existing_phone_lead.id}: {_attr_err}")
+                        return existing_phone_lead
+
             logger.error(f"[DB-INTEGRITY-ERROR] Integrity error ingesting lead {lead_id}: {ie}")
             return None
 

@@ -24,7 +24,9 @@ if (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1" and os.getenv("PROD_
     db_url_raw = os.getenv("PROD_DATABASE_URL")
 else:
     db_url_raw = os.getenv("DATABASE_URL") or os.getenv("PROD_DATABASE_URL")
+
 if db_url_raw:
+    settings.DATABASE_URL = db_url_raw
     # Mask password in URL for logging
     masked_url = get_safe_db_url(db_url_raw)
     print(f"[DC-DB-INIT] DATABASE_URL found: {masked_url}", flush=True)

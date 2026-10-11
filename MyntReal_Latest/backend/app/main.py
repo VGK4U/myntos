@@ -9805,26 +9805,34 @@ def _startup_worker():
             # Upsert template
             _db_vgkt.execute(_tvgk("""
                 INSERT INTO whatsapp_templates
-                    (name, slug, segment, template_type, body_text, meta_template_name,
+                    (name, slug, segment, template_type, header_type, header_media_url, body_text, meta_template_name,
                      meta_template_language, is_meta_approved, is_active, is_system, created_at, updated_at)
                 VALUES
-                    ('VGK Member Welcome', 'vgk_member_welcome', 'vgk', 'text', :body,
-                     'vgk_member_welcome', 'en', false, true, false, NOW(), NOW())
-                ON CONFLICT (slug) DO NOTHING
+                    ('VGK Member Welcome', 'vgk_member_welcome', 'vgk', 'text', 'image', 'https://www.vgk4u.com/vgk4u-logo.png', :body,
+                     'vgk_welcome_6', 'en', true, true, false, NOW(), NOW())
+                ON CONFLICT (slug) DO UPDATE
+                SET meta_template_name = 'vgk_welcome_6',
+                    header_type = 'image',
+                    header_media_url = 'https://www.vgk4u.com/vgk4u-logo.png',
+                    is_meta_approved = true,
+                    is_active = true,
+                    updated_at = NOW()
             """), {"body": _vgk_body})
             # Upsert trigger
             _db_vgkt.execute(_tvgk("""
                 INSERT INTO whatsapp_auto_triggers
                     (event_key, event_label, event_category, recipient_type, is_enabled, delay_minutes, updated_at)
                 VALUES
-                    ('vgk_member_created', 'New VGK Member Registered', 'vgk', 'customer', false, 0, NOW())
-                ON CONFLICT (event_key) DO NOTHING
+                    ('vgk_member_created', 'New VGK Member Registered', 'vgk', 'customer', true, 0, NOW())
+                ON CONFLICT (event_key) DO UPDATE
+                SET is_enabled = true,
+                    updated_at = NOW()
             """))
             # Link trigger → template
             _db_vgkt.execute(_tvgk("""
                 UPDATE whatsapp_auto_triggers t
                 SET template_id = (SELECT id FROM whatsapp_templates WHERE slug='vgk_member_welcome' LIMIT 1)
-                WHERE t.event_key = 'vgk_member_created' AND t.template_id IS NULL
+                WHERE t.event_key = 'vgk_member_created'
             """))
             _db_vgkt.commit()
             print("[DC-VGK-TRIGGER-001] ✅ vgk_member_created trigger + VGK Member Welcome template seeded", flush=True)
@@ -17433,6 +17441,14 @@ FRONTEND_PUBLIC_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public")
 if os.path.isdir(FRONTEND_PUBLIC_DIR):
     app.mount("/public", StaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
     print(f"[DC-STATIC] ✅ Public assets mounted: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
+
+# DC-STORAGE-FIX-001: Do NOT mount StaticFiles on /storage, because StaticFiles shadows the @app.api_route("/storage/{file_path:path}")
+# endpoint and returns 404 for any files stored in AWS S3 Object Storage.
+# serve_storage_file dynamically checks AWS S3 Object Storage first, with local storage fallback.
+# BACKEND_STORAGE_DIR = os.path.join(_WORKSPACE_ROOT, "backend", "storage")
+# if os.path.isdir(BACKEND_STORAGE_DIR):
+#     app.mount("/storage", StaticFiles(directory=BACKEND_STORAGE_DIR, follow_symlink=True), name="backend_storage_assets")
+#     print(f"[DC-STATIC] ✅ Storage assets mounted: /storage -> {BACKEND_STORAGE_DIR}", flush=True)
 
 FRONTEND_JS_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "js")
 if os.path.isdir(FRONTEND_JS_DIR):

@@ -7668,15 +7668,17 @@ const server = http.createServer(async (req, res) => {
     if (isSuryanzDomain) {
       const suryanzRouter = require('./suryanz_router');
       const cleanPath = (reqPathLower.startsWith('/suryanz') ? reqPathLower.replace(/^\/suryanz/, '') : (reqPathLower.startsWith('/suryanzsolar') ? reqPathLower.replace(/^\/suryanzsolar/, '') : reqPathLower)) || '/';
+      const reqHost = getSafeHost(req) || 'suryanz.com';
+      const reqProto = ((req.headers['x-forwarded-proto'] || 'https').split(',')[0] || 'https').trim();
 
       if (cleanPath === '/sitemap.xml') {
         res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-        res.end(suryanzRouter.renderSitemapXml());
+        res.end(suryanzRouter.renderSitemapXml(reqHost, reqProto));
         return;
       }
       if (cleanPath === '/robots.txt') {
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end(suryanzRouter.renderRobotsTxt());
+        res.end(suryanzRouter.renderRobotsTxt(reqHost, reqProto));
         return;
       }
 
@@ -7684,47 +7686,47 @@ const server = http.createServer(async (req, res) => {
       const urlPrefix = reqPathLower.startsWith('/suryanz') ? '/suryanz' : '';
 
       if (cleanPath === '/' || cleanPath === '') {
-        res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/about') {
-        res.writeHead(200); res.end(suryanzRouter.renderAboutPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderAboutPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/why-suryanz') {
-        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderWhySuryanzPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/customer-protection') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerProtectionPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/technology') {
-        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderTechnologyPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/calculator') {
-        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCalculatorPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/projects') {
-        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderProjectsPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/customer-stories' || cleanPath === '/reviews') {
-        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderCustomerStoriesPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/faqs') {
-        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderFaqsPage(urlPrefix, reqHost, reqProto)); return;
       }
       if (cleanPath === '/contact') {
-        res.writeHead(200); res.end(suryanzRouter.renderContactPage(urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderContactPage(urlPrefix, reqHost, reqProto)); return;
       }
 
       // Solutions Sub-routes
       if (cleanPath.startsWith('/solutions/')) {
         const solutionSlug = cleanPath.replace('/solutions/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug, urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderSolutionPage(solutionSlug, urlPrefix, reqHost, reqProto)); return;
       }
 
       // Educational Knowledge Guides
       const knowledgeGuides = ['solar-guide', 'solar-pricing', 'solar-roi', 'solar-calculator-guide', 'solar-warranty-guide', 'solar-maintenance', 'solar-buying-guide'];
       const guideSlug = cleanPath.replace(/^\//, '');
       if (knowledgeGuides.includes(guideSlug)) {
-        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug, urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderKnowledgeGuidePage(guideSlug, urlPrefix, reqHost, reqProto)); return;
       }
 
       // Regional Location Hubs
@@ -7747,17 +7749,17 @@ const server = http.createServer(async (req, res) => {
           locName = 'Karnataka'; stateName = 'Karnataka';
         }
 
-        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName, urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderLocationPage(locSlug, locName, stateName, urlPrefix, reqHost, reqProto)); return;
       }
 
       // Legal Sub-routes
       if (cleanPath.startsWith('/legal/')) {
         const legalSlug = cleanPath.replace('/legal/', '').trim();
-        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug, urlPrefix)); return;
+        res.writeHead(200); res.end(suryanzRouter.renderLegalPage(legalSlug, urlPrefix, reqHost, reqProto)); return;
       }
 
       // Default Home Fallback
-      res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix)); return;
+      res.writeHead(200); res.end(suryanzRouter.renderHomePage(urlPrefix, reqHost, reqProto)); return;
     }
 
     // AWS ELB / Load Balancer Health Check Endpoint
@@ -19771,6 +19773,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('My VGK Registrations page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/sl/') || url.startsWith('/sl?') || url === '/sl' || url.startsWith('/shared-ledger/') || url.startsWith('/public/ledger-view') || url.startsWith('/public_shared_ledger.html')) {
+    const filePath = path.join(__dirname, 'public_shared_ledger.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Shared Ledger page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });

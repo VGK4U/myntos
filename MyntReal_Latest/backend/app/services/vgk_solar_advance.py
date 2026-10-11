@@ -262,8 +262,8 @@ def _legacy_check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
 
         if not lead:
             return {'created': False, 'reason': 'Lead not found'}
-        _SOLAR_CAT_IDS_ADV = (6, 19, 36, 48)
-        if (lead.category_id or 0) not in _SOLAR_CAT_IDS_ADV:
+        from app.services.vgk_cash_income import _resolve_category_slug
+        if _resolve_category_slug(db, lead) != 'solar':
             return {'created': False, 'reason': f'Not solar (category_id={lead.category_id})'}
         if not lead.associated_partner_id:
             return {'created': False, 'reason': 'No associated VGK partner'}

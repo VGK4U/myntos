@@ -472,9 +472,36 @@ class SoftphoneModal {
                 .join('')}
             </div>
 
-            <!-- In-Call 4 Control Buttons (Mute, Speaker, Hold, DTMF) -->
+            <!-- In-Call Add Call / Conference Drawer (2 Options) -->
+            <div id="spAddCallPad" style="display: none !important; width: 100% !important; max-width: 260px !important; flex-direction: column !important; gap: 8px !important; margin: 6px 0 !important; background: rgba(15,23,42,0.95) !important; border: 1px solid rgba(56,189,248,0.3) !important; border-radius: 12px !important; padding: 10px !important; box-sizing: border-box !important;">
+              <div style="font-weight: 700 !important; font-size: 11px !important; color: #38bdf8 !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; text-align: center !important;">Add a Call (Conference)</div>
+              
+              <!-- 2 Option Tabs -->
+              <div style="display: flex !important; gap: 4px !important; background: rgba(255,255,255,0.08) !important; padding: 3px !important; border-radius: 8px !important;">
+                <button id="spTabAddCallManual" style="flex: 1 !important; padding: 4px 6px !important; font-size: 10px !important; font-weight: 600 !important; border: none !important; border-radius: 6px !important; background: #38bdf8 !important; color: #0f172a !important; cursor: pointer !important;">1. Manual Number</button>
+                <button id="spTabAddCallSearch" style="flex: 1 !important; padding: 4px 6px !important; font-size: 10px !important; font-weight: 600 !important; border: none !important; border-radius: 6px !important; background: transparent !important; color: #94a3b8 !important; cursor: pointer !important;">2. Search Contact</button>
+              </div>
+
+              <!-- Option 1: Enter Number Manually -->
+              <div id="spPanelAddCallManual" style="display: flex !important; flex-direction: column !important; gap: 6px !important;">
+                <input id="spInputAddCallManual" type="tel" placeholder="Enter phone number..." style="width: 100% !important; padding: 6px 10px !important; border-radius: 8px !important; border: 1px solid rgba(255,255,255,0.2) !important; background: rgba(255,255,255,0.1) !important; color: white !important; font-size: 12px !important; box-sizing: border-box !important;" />
+                <button id="spBtnSubmitAddCallManual" style="width: 100% !important; padding: 6px !important; border-radius: 8px !important; background: #22c55e !important; border: none !important; color: white !important; font-weight: 700 !important; font-size: 11px !important; cursor: pointer !important;">
+                  ➕ Dial & Add to Conference
+                </button>
+              </div>
+
+              <!-- Option 2: Type & Search Contact -->
+              <div id="spPanelAddCallSearch" style="display: none !important; flex-direction: column !important; gap: 6px !important;">
+                <input id="spInputAddCallSearch" type="text" placeholder="Type name or number..." style="width: 100% !important; padding: 6px 10px !important; border-radius: 8px !important; border: 1px solid rgba(255,255,255,0.2) !important; background: rgba(255,255,255,0.1) !important; color: white !important; font-size: 12px !important; box-sizing: border-box !important;" />
+                <div id="spResultsAddCallSearch" style="max-height: 120px !important; overflow-y: auto !important; display: flex !important; flex-direction: column !important; gap: 4px !important;">
+                  <div style="font-size: 10px !important; color: #64748b !important; text-align: center !important; padding: 8px !important;">Type to search CRM leads or staff...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- In-Call Control Buttons (Mute, Speaker, Hold, DTMF, Add Call) -->
             <div style="display: flex !important; flex-direction: column !important; align-items: center !important; gap: 12px !important; width: 100% !important;">
-              <div style="display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important;">
+              <div style="display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; flex-wrap: wrap !important;">
                 <button id="spBtnMute" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(255,255,255,0.1) !important; border: 1px solid rgba(255,255,255,0.2) !important; color: white !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; font-size: 13px !important; cursor: pointer !important;">
                   🎤
                   <span style="font-size: 8px !important; margin-top: 1px !important;">Mute</span>
@@ -493,6 +520,11 @@ class SoftphoneModal {
                 <button id="spBtnKeypad" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(255,255,255,0.1) !important; border: 1px solid rgba(255,255,255,0.2) !important; color: white !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; font-size: 13px !important; cursor: pointer !important;">
                   🔢
                   <span style="font-size: 8px !important; margin-top: 1px !important;">Keypad</span>
+                </button>
+
+                <button id="spBtnAddCall" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(56,189,248,0.2) !important; border: 1px solid rgba(56,189,248,0.4) !important; color: #38bdf8 !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; font-size: 13px !important; cursor: pointer !important;" title="Add a Call (Conference)">
+                  👤+
+                  <span style="font-size: 8px !important; margin-top: 1px !important;">Add Call</span>
                 </button>
               </div>
 
@@ -789,6 +821,111 @@ class SoftphoneModal {
         const d = e.currentTarget.getAttribute('data-dtmf');
         if (d) telephonyService.sendDTMF(d);
       });
+    });
+
+    // In-Call Add Call / Conference Controls
+    this.modalEl.querySelector('#spBtnAddCall')?.addEventListener('click', () => {
+      const padEl = this.modalEl?.querySelector('#spAddCallPad') as HTMLElement;
+      if (padEl) {
+        const isOpening = padEl.style.display === 'none' || !padEl.style.display;
+        padEl.style.display = isOpening ? 'flex' : 'none';
+        if (isOpening) {
+          switchAddCallTabMobile('manual');
+        }
+      }
+    });
+
+    const switchAddCallTabMobile = (mode: 'manual' | 'search') => {
+      const btnManual = this.modalEl?.querySelector('#spTabAddCallManual') as HTMLElement;
+      const btnSearch = this.modalEl?.querySelector('#spTabAddCallSearch') as HTMLElement;
+      const panelManual = this.modalEl?.querySelector('#spPanelAddCallManual') as HTMLElement;
+      const panelSearch = this.modalEl?.querySelector('#spPanelAddCallSearch') as HTMLElement;
+
+      if (mode === 'manual') {
+        if (btnManual) { btnManual.style.background = '#38bdf8'; btnManual.style.color = '#0f172a'; }
+        if (btnSearch) { btnSearch.style.background = 'transparent'; btnSearch.style.color = '#94a3b8'; }
+        if (panelManual) panelManual.style.display = 'flex';
+        if (panelSearch) panelSearch.style.display = 'none';
+      } else {
+        if (btnSearch) { btnSearch.style.background = '#38bdf8'; btnSearch.style.color = '#0f172a'; }
+        if (btnManual) { btnManual.style.background = 'transparent'; btnManual.style.color = '#94a3b8'; }
+        if (panelSearch) panelSearch.style.display = 'flex';
+        if (panelManual) panelManual.style.display = 'none';
+      }
+    };
+
+    this.modalEl.querySelector('#spTabAddCallManual')?.addEventListener('click', () => switchAddCallTabMobile('manual'));
+    this.modalEl.querySelector('#spTabAddCallSearch')?.addEventListener('click', () => switchAddCallTabMobile('search'));
+
+    const submitConferenceAdd = async (phone: string, name: string) => {
+      if (!phone || !phone.trim()) {
+        alert('Please enter or select a valid phone number.');
+        return;
+      }
+      try {
+        const activeSessionId = telephonyService.getSession()?.sessionId;
+        const res = await apiService.post<any>('/api/v1/telephony/plivo/calls/conference/add-participant', {
+          call_session_id: activeSessionId,
+          participant_phone: phone,
+          participant_name: name || 'Conference Participant'
+        });
+        if (res && res.success) {
+          const participantInfo = res.data?.participant?.phone || res.participant?.phone || phone;
+          alert(`Dialing ${participantInfo} into conference...`);
+          const padEl = this.modalEl?.querySelector('#spAddCallPad') as HTMLElement;
+          if (padEl) padEl.style.display = 'none';
+        } else {
+          alert(`Failed to add participant: ${res?.error || res?.message || 'Unknown error'}`);
+        }
+      } catch (err: any) {
+        alert(`Failed to add participant: ${err?.message || err}`);
+      }
+    };
+
+    this.modalEl.querySelector('#spBtnSubmitAddCallManual')?.addEventListener('click', () => {
+      const inputEl = this.modalEl?.querySelector('#spInputAddCallManual') as HTMLInputElement;
+      if (inputEl) {
+        void submitConferenceAdd(inputEl.value, 'Manual Participant');
+      }
+    });
+
+    this.modalEl.querySelector('#spInputAddCallSearch')?.addEventListener('input', async (e: any) => {
+      const q = (e.target.value || '').trim();
+      const resultsContainer = this.modalEl?.querySelector('#spResultsAddCallSearch') as HTMLElement;
+      if (!resultsContainer) return;
+      if (q.length < 1) {
+        resultsContainer.innerHTML = `<div style="font-size: 10px; color: #64748b; text-align: center; padding: 8px;">Type to search CRM leads or staff...</div>`;
+        return;
+      }
+      try {
+        const res = await apiService.get<any>(`/api/v1/telephony/plivo/contacts/search?q=${encodeURIComponent(q)}&limit=20`);
+        const items = res?.data?.results || res?.results || [];
+        if (items.length === 0) {
+          resultsContainer.innerHTML = `<div style="font-size: 10px; color: #ef4444; text-align: center; padding: 6px;">No contacts found matching "${q}"</div>`;
+          return;
+        }
+        resultsContainer.innerHTML = items.map((item: any) => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
+            <div style="overflow: hidden; padding-right: 6px;">
+              <div style="font-weight: 700; font-size: 11px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+              <div style="font-size: 10px; color: #94a3b8;">${item.phone} • <span style="color: #38bdf8;">${item.badge || 'Contact'}</span></div>
+            </div>
+            <button data-phone="${item.phone}" data-name="${item.name.replace(/"/g, '&quot;')}" class="sp-btn-add-contact-item" style="background: #22c55e; border: none; color: white; border-radius: 4px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;">
+              Add
+            </button>
+          </div>
+        `).join('');
+
+        resultsContainer.querySelectorAll('.sp-btn-add-contact-item').forEach((btn) => {
+          btn.addEventListener('click', (evt: any) => {
+            const phone = evt.currentTarget.getAttribute('data-phone');
+            const name = evt.currentTarget.getAttribute('data-name');
+            void submitConferenceAdd(phone, name);
+          });
+        });
+      } catch (err) {
+        resultsContainer.innerHTML = `<div style="font-size: 10px; color: #ef4444; text-align: center; padding: 6px;">Error searching contacts</div>`;
+      }
     });
 
     // Explicit End Call Button

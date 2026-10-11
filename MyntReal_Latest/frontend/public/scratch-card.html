@@ -3,26 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scratch & Win | Zynova Mobility & MyntReal</title>
+    <title>Scratch & Win | Myntreal Rewards</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="/js/share-modal.js"></script>
     <style>
         :root {
-            --primary-gold: #d4af37;
-            --primary-dark: #0f172a;
-            --card-bg: #1e293b;
+            --primary-gold: #f59e0b;
+            --primary-dark: #090d16;
+            --card-bg: #131d2e;
+            --card-border: #1e293b;
+            --accent-green: #10b981;
             --accent-cyan: #38bdf8;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             background-color: var(--primary-dark);
             color: #f8fafc;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 10px;
+            padding: 24px 16px 50px 16px;
+            margin: 0;
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
         }
 
         .brand-header {
@@ -30,24 +41,50 @@
             margin-bottom: 20px;
         }
 
-        .brand-title {
-            font-size: 1.6rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #f59e0b, #d4af37, #38bdf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--primary-gold);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
-        .scratch-card-container {
+        .brand-title {
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #fcd34d 70%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        .brand-subtitle {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-top: 4px;
+        }
+
+        /* Scratch Card Box */
+        .scratch-card-wrapper {
             position: relative;
             width: 320px;
+            max-width: 90vw;
             height: 220px;
-            margin: 0 auto 25px auto;
-            border-radius: 16px;
+            margin: 10px auto 20px auto;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.2);
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 2px solid rgba(212, 175, 55, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.15);
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid rgba(245, 158, 11, 0.4);
         }
 
         .reward-underlay {
@@ -61,25 +98,35 @@
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding: 20px;
-            background: radial-gradient(circle, #334155 0%, #0f172a 100%);
+            padding: 16px;
+            background: radial-gradient(circle at center, #1e293b 20%, #0c1424 100%);
+            user-select: none;
+        }
+
+        .reward-underlay .congrats-tag {
+            color: var(--primary-gold);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .reward-amount {
-            font-size: 2.8rem;
+            font-size: 3.2rem;
             font-weight: 900;
-            color: #10b981;
-            text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-            margin: 5px 0;
+            color: var(--accent-green);
+            text-shadow: 0 0 25px rgba(16, 185, 129, 0.55);
+            line-height: 1.1;
+            margin: 6px 0;
         }
 
-        .reward-badge {
-            font-size: 0.85rem;
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            padding: 4px 12px;
-            border-radius: 20px;
-            border: 1px solid rgba(16, 185, 129, 0.4);
+        .reward-subtext {
+            color: #94a3b8;
+            font-size: 0.82rem;
+            font-weight: 500;
         }
 
         canvas#scratchCanvas {
@@ -91,28 +138,292 @@
             cursor: pointer;
             touch-action: none;
             z-index: 10;
+            transition: opacity 0.4s ease;
+        }
+
+        .action-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .btn-claim-action {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.05rem;
+            border-radius: 9999px;
+            padding: 14px 32px;
+            border: none;
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            animation: pulse-green 2s infinite;
+        }
+
+        .btn-claim-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(16, 185, 129, 0.55);
+            color: #fff;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .status-message {
+            font-size: 0.92rem;
+            margin-top: 12px;
+            text-align: center;
+            min-height: 24px;
+        }
+
+        /* Success Card Box */
+        .claimed-box {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 16px;
+            padding: 16px 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 480px;
+            margin-top: 16px;
+        }
+
+        /* Referral & Share Card */
+        .referral-box {
+            background: linear-gradient(145deg, #1e2638, #141c2c);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 18px;
+            padding: 18px 20px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.1);
+        }
+
+        .ref-link-display {
+            display: flex;
+            gap: 6px;
+            background: #0b111e;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 4px 6px;
+        }
+
+        .ref-link-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fcd34d;
+            font-size: 0.82rem;
+            padding: 6px 8px;
+            outline: none;
+            text-overflow: ellipsis;
+        }
+
+        .btn-copy-ref {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-copy-ref:hover {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .btn-wa-status {
+            background: #25d366;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-wa-status:hover {
+            background: #20bd5a;
+            transform: translateY(-1px);
+        }
+
+        .btn-universal-share {
+            background: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-universal-share:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        /* Quick Service Interest Options */
+        .quick-interest-box {
+            background: #111a2a;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 16px;
+            padding: 16px 18px;
+        }
+
+        .quick-pills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .quick-pill {
+            background: #1b263b;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 8px;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .quick-pill:hover {
+            background: #23324d;
+            border-color: var(--accent-cyan);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* Service Discount Banner */
+        .discounts-banner {
+            background: linear-gradient(145deg, #1a2538, #131c2b);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 18px;
+            padding: 20px 22px;
+            width: 100%;
+            max-width: 480px;
+            margin-top: 22px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        .discounts-banner h6 {
+            color: var(--primary-gold);
+            font-weight: 800;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .discounts-banner p {
+            color: #cbd5e1;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+
+        .helpline-box {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .helpline-number {
+            font-weight: 800;
+            font-size: 1.08rem;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-whatsapp-helpline {
+            background: #25d366;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.82rem;
+            border-radius: 9999px;
+            padding: 8px 16px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-whatsapp-helpline:hover {
+            background: #20bd5a;
+            color: #fff;
+            transform: scale(1.02);
+        }
+
+        /* Ecosystem Grid */
+        .ecosystem-section {
+            width: 100%;
+            max-width: 480px;
+            margin-top: 26px;
+        }
+
+        .ecosystem-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            text-align: center;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .verticals-grid {
-            width: 100%;
-            max-width: 480px;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
-            margin-top: 15px;
         }
 
         .vertical-card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 14px;
+            background: #152033;
+            border-radius: 14px;
+            padding: 12px 14px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             text-decoration: none;
             color: inherit;
             transition: transform 0.2s, border-color 0.2s;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .vertical-card:hover {
@@ -122,115 +433,384 @@
         }
 
         .vertical-icon {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             width: 38px;
             height: 38px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(56, 189, 248, 0.15);
-            color: var(--accent-cyan);
+            flex-shrink: 0;
         }
 
         .btn-recharge {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #fff;
-            font-weight: 700;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e2e8f0;
+            font-weight: 600;
+            font-size: 0.9rem;
             border-radius: 30px;
-            padding: 12px 28px;
+            padding: 10px 24px;
             text-decoration: none;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-            display: inline-block;
-            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s;
         }
 
         .btn-recharge:hover {
-            color: #fff;
-            opacity: 0.95;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
         }
 
-        .status-message {
+        /* Claim Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.25s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-box {
+            background: #111a2c;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            padding: 26px 24px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(245, 158, 11, 0.15);
+            position: relative;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px) scale(0.95); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #94a3b8;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .form-floating-custom {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .form-floating-custom label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .custom-input {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: #fff;
             font-size: 0.95rem;
-            margin-top: 10px;
-            min-height: 24px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+        }
+
+        .pin-lookup-status {
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-top: 4px;
+            min-height: 18px;
         }
     </style>
 </head>
 <body>
 
+    <!-- BRAND HEADER -->
     <div class="brand-header">
-        <h1 class="brand-title" id="brandHeaderTitle"><i class="fa-solid fa-bolt me-2"></i>Zynova Mobility</h1>
-        <p class="text-secondary small mb-0">Recharge Reward & Cashback Card</p>
+        <div class="brand-badge"><i class="fa-solid fa-gift"></i> Recharge Reward</div>
+        <h1 class="brand-title" id="brandHeaderTitle"><i class="fa-solid fa-shield-halved me-2 text-warning"></i>Myntreal</h1>
+        <div class="brand-subtitle">Scratch & Claim Your Exclusive Cashback</div>
     </div>
 
-    <!-- Scratch Card Box -->
-    <div class="scratch-card-container">
+    <!-- SCRATCH CARD CANVAS BOX -->
+    <div class="scratch-card-wrapper" id="scratchCardWrapper">
         <!-- Underlay revealed when scratched -->
         <div class="reward-underlay" id="rewardUnderlay">
-            <div class="text-warning small text-uppercase fw-bold"><i class="fa-solid fa-gift me-1"></i>Congratulations!</div>
-            <div class="reward-amount" id="rewardDisplay">₹0.00</div>
-            <div class="reward-badge" id="walletBadge"><i class="fa-solid fa-check-circle me-1"></i>Credited to Reward Wallet</div>
+            <div class="congrats-tag"><i class="fa-solid fa-trophy"></i> You Won</div>
+            <div class="reward-amount" id="rewardDisplay">₹--.--</div>
+            <div class="reward-subtext" id="rewardSubtext">Myntreal Wallet Cashback</div>
         </div>
 
         <!-- Canvas foil cover -->
         <canvas id="scratchCanvas" width="320" height="220"></canvas>
     </div>
 
+    <!-- INTERACTION & ACTION AREA -->
+    <div class="action-container">
+        <!-- Fallback reveal button (before foil cleared) -->
+        <button id="fallbackBtn" class="btn btn-outline-warning btn-sm rounded-pill mb-2 px-3">
+            <i class="fa-solid fa-hand-pointer me-1"></i> Scratch Or Tap To Reveal
+        </button>
+
+        <!-- Big Claim Action Button (appears once scratched) -->
+        <button id="claimActionBtn" class="btn-claim-action" style="display: none;">
+            <i class="fa-solid fa-hand-holding-dollar"></i> Claim Reward
+        </button>
+
+        <!-- Dynamic Status Message -->
+        <div class="status-message text-info fw-bold" id="statusMessage">
+            Scratch the foil card above to reveal your prize!
+        </div>
+    </div>
+
+    <!-- ALREADY CLAIMED SUMMARY (shown if card is claimed) -->
+    <div id="alreadyClaimedSection" style="display: none; width: 100%; max-width: 480px;">
+        <div class="claimed-box">
+            <div class="text-success fw-bold mb-1" style="font-size: 1.05rem;">
+                <i class="fa-solid fa-circle-check me-1"></i> Reward Claimed & Credited!
+            </div>
+            <div class="text-light small" id="claimedDetailsText">
+                Credited to your Myntreal Reward Ledger.
+            </div>
+            <div class="mt-2 text-secondary" style="font-size: 0.78rem;">
+                <i class="fa-brands fa-whatsapp text-success me-1"></i> An acknowledgment message was sent to your registered mobile number.
+            </div>
+        </div>
+    </div>
+
+    <!-- REFERRAL & SHARE BOX -->
+    <div id="referralShareSection" class="referral-box" style="display: none; width: 100%; max-width: 480px; margin-top: 18px;">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge bg-warning text-dark fw-bold px-2 py-1"><i class="fa-solid fa-coins me-1"></i> 50% REFERRAL BONUS</span>
+            <span class="text-secondary small">Up to 5 Friends</span>
+        </div>
+        <h6 class="fw-bold text-light mb-1"><i class="fa-solid fa-share-nodes text-warning me-2"></i>Share & Earn 50% Cash Bonus</h6>
+        <p class="text-secondary small mb-3">
+            Share your referral link on WhatsApp Status & with friends. When they recharge and scratch their card, <strong>you earn 50% of their cash reward</strong> credited directly to your Myntreal Wallet!
+        </p>
+        
+        <div class="ref-link-display mb-3">
+            <input type="text" id="referralLinkInput" readonly class="ref-link-input" value="https://www.myntreal.com/recharge.html">
+            <button type="button" class="btn-copy-ref" onclick="copyReferralLink()"><i class="fa-solid fa-copy me-1"></i> Copy</button>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn-wa-status flex-fill" onclick="shareWhatsAppStatus()">
+                <i class="fa-brands fa-whatsapp fa-lg me-1"></i> Share on WhatsApp Status
+            </button>
+            <button type="button" class="btn-universal-share" onclick="openUniversalShareModal()" title="More Sharing Options">
+                <i class="fa-solid fa-share-nodes"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- QUICK REPLIES / INSTANT SERVICE INTEREST -->
+    <div class="quick-interest-box" style="width: 100%; max-width: 480px; margin-top: 20px;">
+        <div class="text-center mb-1">
+            <span class="text-warning small text-uppercase fw-bold"><i class="fa-solid fa-bolt me-1"></i> Quick Connect</span>
+            <div class="text-light fw-bold" style="font-size: 0.92rem;">Interested in special discounts? Tap to connect:</div>
+        </div>
+        <div class="quick-pills-grid">
+            <button type="button" class="quick-pill" onclick="sendServiceInterest('Solar')">
+                <i class="fa-solid fa-sun text-warning fa-lg"></i>
+                <span>Interested in Solar</span>
+            </button>
+            <button type="button" class="quick-pill" onclick="sendServiceInterest('EV')">
+                <i class="fa-solid fa-charging-station text-info fa-lg"></i>
+                <span>Interested in EV</span>
+            </button>
+            <button type="button" class="quick-pill" onclick="sendServiceInterest('Training')">
+                <i class="fa-solid fa-wrench text-success fa-lg"></i>
+                <span>Interested in Training</span>
+            </button>
+            <button type="button" class="quick-pill" onclick="sendServiceInterest('Insurance')">
+                <i class="fa-solid fa-shield-heart text-danger fa-lg"></i>
+                <span>Interested in Insurance</span>
+            </button>
+        </div>
+        <div id="quickInterestFeedback" class="text-center mt-2 small text-success fw-bold" style="display: none;"></div>
+    </div>
+
+    <!-- SERVICE DISCOUNTS & HELPLINE CALLOUT -->
+    <div class="discounts-banner">
+        <h6><i class="fa-solid fa-tags"></i> Exclusive Service Discounts</h6>
+        <p>
+            Connect with Myntreal to unlock special discounts on <strong>Suryanz Solar</strong>, <strong>Electric Mobility</strong>, <strong>EVolution Technical Training</strong>, and <strong>VGK Real Dreams</strong> properties!
+        </p>
+        <div class="helpline-box">
+            <div>
+                <div class="text-muted" style="font-size: 0.72rem; text-transform: uppercase;">Official Customer Helpline</div>
+                <div class="helpline-number"><i class="fa-solid fa-phone me-1"></i>+91 85858 52738</div>
+            </div>
+            <div>
+                <a href="https://wa.me/918585852738?text=Hi%20Myntreal%2C%20I%20just%20claimed%20my%20scratch%20card%20reward!%20I%20would%20like%20to%20know%20more%20about%20your%20service%20discounts." target="_blank" class="btn-whatsapp-helpline">
+                    <i class="fa-brands fa-whatsapp fa-lg"></i> Chat on WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ECOSYSTEM VERTICALS GRID -->
+    <div class="ecosystem-section">
+        <div class="ecosystem-title">
+            <i class="fa-solid fa-layer-group text-warning"></i> Explore Our Ecosystem
+        </div>
+        <div class="verticals-grid">
+            <a href="/hub/verticals.html#solar" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+                    <i class="fa-solid fa-sun"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">Suryanz Solar</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">Rooftop & Commercial Solar</div>
+                </div>
+            </a>
+            <a href="/hub/verticals.html#ev" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">
+                    <i class="fa-solid fa-charging-station"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">Electric Mobility</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">Clean 2W & 3W EVs</div>
+                </div>
+            </a>
+            <a href="/hub/verticals.html#etc" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                    <i class="fa-solid fa-wrench"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">EVolution Skill</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">EV Technical Training</div>
+                </div>
+            </a>
+            <a href="/hub/verticals.html#realestate" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;">
+                    <i class="fa-solid fa-house"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">VGK Real Dreams</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">Real Estate & Plots</div>
+                </div>
+            </a>
+            <a href="/hub/verticals.html#insurance" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+                    <i class="fa-solid fa-shield-heart"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">VGK Care</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">Insurance & Protection</div>
+                </div>
+            </a>
+            <a href="/hub/index.html" class="vertical-card">
+                <div class="vertical-icon" style="background: rgba(236, 72, 153, 0.2); color: #ec4899;">
+                    <i class="fa-solid fa-hand-holding-heart"></i>
+                </div>
+                <div>
+                    <div class="fw-bold small">Myntreal Seva</div>
+                    <div class="text-secondary" style="font-size: 0.72rem;">Community Offers</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- RECHARGE AGAIN -->
     <div class="text-center">
-        <button id="fallbackBtn" class="btn btn-outline-warning btn-sm rounded-pill mb-2"><i class="fa-solid fa-hand-pointer me-1"></i>Click to Reveal Reward</button>
-        <div class="status-message text-info fw-bold" id="statusMessage">Scratch the card above to claim your instant reward!</div>
+        <a href="/recharge.html" class="btn-recharge">
+            <i class="fa-solid fa-mobile-screen-button"></i> Recharge Again / For a Friend
+        </a>
     </div>
 
-    <div class="text-center mt-3">
-        <a href="/recharge.html" class="btn-recharge"><i class="fa-solid fa-mobile-screen-button me-2"></i>Recharge Again / Friend</a>
-    </div>
+    <!-- CLAIM DETAILS MODAL -->
+    <div class="modal-overlay" id="claimModal">
+        <div class="modal-box">
+            <button type="button" class="modal-close-btn" onclick="closeClaimModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
 
-    <!-- Verticals & Ecosystem Services -->
-    <h5 class="mt-4 mb-2 text-warning fw-bold text-center" style="font-size: 1.1rem;"><i class="fa-solid fa-cubes me-2"></i>Explore Our Verticals</h5>
-    <div class="verticals-grid">
-        <a href="/hub/verticals.html#solar" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fa-solid fa-sun"></i></div>
-            <div>
-                <div class="fw-bold small">Suryanz Solar</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">Solar Energy</div>
+            <div class="text-center mb-3">
+                <div style="font-size: 2rem; color: #10b981; margin-bottom: 4px;">
+                    <i class="fa-solid fa-circle-dollar-to-slot"></i>
+                </div>
+                <h5 class="fw-bold text-light mb-1">Claim Your Reward</h5>
+                <p class="text-muted small mb-0">Enter your details to credit <strong class="text-warning" id="modalRewardAmount">₹0.00</strong> to your wallet.</p>
             </div>
-        </a>
-        <a href="/hub/verticals.html#ev" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;"><i class="fa-solid fa-charging-station"></i></div>
-            <div>
-                <div class="fw-bold small">Zynova EV</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">Electric Mobility</div>
-            </div>
-        </a>
-        <a href="/hub/verticals.html#etc" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;"><i class="fa-solid fa-wrench"></i></div>
-            <div>
-                <div class="fw-bold small">EVolution Skill</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">2W Technical Training</div>
-            </div>
-        </a>
-        <a href="/hub/verticals.html#insurance" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;"><i class="fa-solid fa-shield-halved"></i></div>
-            <div>
-                <div class="fw-bold small">VGK Care</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">Insurance Services</div>
-            </div>
-        </a>
-        <a href="/hub/verticals.html#realestate" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;"><i class="fa-solid fa-house"></i></div>
-            <div>
-                <div class="fw-bold small">VGK Real Dreams</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">Real Estate</div>
-            </div>
-        </a>
-        <a href="/hub/index.html" class="vertical-card">
-            <div class="vertical-icon" style="background: rgba(236, 72, 153, 0.2); color: #ec4899;"><i class="fa-solid fa-seedling"></i></div>
-            <div>
-                <div class="fw-bold small">MNR Benefits</div>
-                <div class="text-secondary" style="font-size: 0.72rem;">Seva & Offers</div>
-            </div>
-        </a>
+
+            <form id="claimForm" onsubmit="handleClaimSubmit(event)">
+                <div class="form-floating-custom">
+                    <label for="claimName"><i class="fa-solid fa-user me-1"></i> Full Name *</label>
+                    <input type="text" id="claimName" class="custom-input" placeholder="e.g. Ramesh Kumar" required autocomplete="name">
+                </div>
+
+                <div class="form-floating-custom">
+                    <label for="claimPincode"><i class="fa-solid fa-location-dot me-1"></i> 6-Digit PIN Code *</label>
+                    <input type="tel" id="claimPincode" class="custom-input" placeholder="e.g. 560001" maxlength="6" pattern="[0-9]{6}" required oninput="handlePincodeLookup(this.value)">
+                    <div class="pin-lookup-status" id="pinLookupStatus"></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="form-floating-custom mb-0">
+                            <label for="claimCity">City / District</label>
+                            <input type="text" id="claimCity" class="custom-input" placeholder="e.g. Bengaluru">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-floating-custom mb-0">
+                            <label for="claimState">State</label>
+                            <input type="text" id="claimState" class="custom-input" placeholder="e.g. Karnataka">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitClaimBtn" class="btn-claim-action" style="margin-top: 10px;">
+                    <i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward
+                </button>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -241,52 +821,96 @@
         const ctx = canvas.getContext('2d');
         const statusMsg = document.getElementById('statusMessage');
         const rewardDisplay = document.getElementById('rewardDisplay');
-        const walletBadge = document.getElementById('walletBadge');
         const fallbackBtn = document.getElementById('fallbackBtn');
+        const claimActionBtn = document.getElementById('claimActionBtn');
+        const claimModal = document.getElementById('claimModal');
+        const modalRewardAmount = document.getElementById('modalRewardAmount');
         const brandHeaderTitle = document.getElementById('brandHeaderTitle');
+        const alreadyClaimedSection = document.getElementById('alreadyClaimedSection');
+        const claimedDetailsText = document.getElementById('claimedDetailsText');
+        const pinLookupStatus = document.getElementById('pinLookupStatus');
+        const referralShareSection = document.getElementById('referralShareSection');
+        const referralLinkInput = document.getElementById('referralLinkInput');
+        const quickInterestFeedback = document.getElementById('quickInterestFeedback');
 
+        let isRevealed = false;
         let isClaimed = false;
-        let isClaiming = false;
         let isMouseDown = false;
+        let rewardRupees = 0;
+        let scratchCardData = null;
+        let currentReferralCode = '';
+        let currentReferralLink = '';
 
-        // Init Canvas Foil Overlay
+        // Initialize Canvas Metallic Scratch Foil
         function initCanvasFoil() {
-            ctx.fillStyle = '#94a3b8';
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#94a3b8');
+            gradient.addColorStop(0.3, '#cbd5e1');
+            gradient.addColorStop(0.6, '#64748b');
+            gradient.addColorStop(1, '#94a3b8');
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw Gold Pattern text
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillStyle = '#475569';
+
+            // Subtle speckles
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            for (let i = 0; i < 40; i++) {
+                const rx = Math.random() * canvas.width;
+                const ry = Math.random() * canvas.height;
+                ctx.beginPath();
+                ctx.arc(rx, ry, Math.random() * 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Central Banner
+            ctx.fillStyle = '#1e293b';
+            ctx.roundRect ? ctx.roundRect(30, 75, canvas.width - 60, 70, 12) : ctx.fillRect(30, 75, canvas.width - 60, 70);
+            ctx.fill();
+
+            ctx.font = 'bold 15px -apple-system, sans-serif';
+            ctx.fillStyle = '#f59e0b';
             ctx.textAlign = 'center';
-            ctx.fillText('SCRATCH HERE TO WIN', canvas.width / 2, canvas.height / 2);
+            ctx.fillText('MYNTREAL REWARDS', canvas.width / 2, 103);
+
+            ctx.font = 'bold 12px -apple-system, sans-serif';
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('SCRATCH TO REVEAL CASHBACK', canvas.width / 2, 125);
         }
 
         initCanvasFoil();
 
-        // Load Card Information
+        // Load card information from backend
         async function loadCardInfo() {
             if (!token) {
                 statusMsg.className = 'status-message text-danger fw-bold';
                 statusMsg.innerText = '❌ Invalid or missing scratch card token.';
+                fallbackBtn.style.display = 'none';
                 return;
             }
 
             try {
                 const res = await fetch(`/api/v1/scratch-card/info/${token}`);
                 const data = await res.json();
+                scratchCardData = data;
 
                 if (!res.ok || !data.valid) {
                     statusMsg.className = 'status-message text-danger fw-bold';
                     statusMsg.innerText = data.detail || 'Invalid or expired token.';
+                    fallbackBtn.style.display = 'none';
                     return;
                 }
 
-                if (data.brand) {
-                    brandHeaderTitle.innerHTML = `<i class="fa-solid fa-bolt me-2"></i>${data.brand}`;
+                rewardRupees = data.reward_amount_rupees || 0;
+                rewardDisplay.innerText = `₹${parseFloat(rewardRupees).toFixed(2)}`;
+                modalRewardAmount.innerText = `₹${parseFloat(rewardRupees).toFixed(2)}`;
+
+                if (data.referral_code) {
+                    currentReferralCode = data.referral_code;
+                    currentReferralLink = data.referral_link || `https://www.myntreal.com/recharge.html?ref=${data.referral_code}`;
+                    if (referralLinkInput) referralLinkInput.value = currentReferralLink;
                 }
 
                 if (data.is_claimed) {
-                    revealAlreadyClaimed(data.revealed_amount_rupees);
+                    revealAlreadyClaimed(data);
                 }
             } catch (err) {
                 console.error("Info load error:", err);
@@ -295,92 +919,306 @@
 
         loadCardInfo();
 
-        function revealAlreadyClaimed(amount) {
+        function revealAlreadyClaimed(data) {
             isClaimed = true;
+            isRevealed = true;
             canvas.style.display = 'none';
             fallbackBtn.style.display = 'none';
-            rewardDisplay.innerText = `₹${parseFloat(amount).toFixed(2)}`;
+            claimActionBtn.style.display = 'none';
+
+            const amt = data.revealed_amount_rupees || data.reward_amount_rupees || 0;
+            rewardDisplay.innerText = `₹${parseFloat(amt).toFixed(2)}`;
             statusMsg.className = 'status-message text-success fw-bold';
-            statusMsg.innerText = `✅ Already claimed & credited to reward wallet!`;
+            statusMsg.innerText = `🎉 ₹${parseFloat(amt).toFixed(2)} Cashback Reward Claimed!`;
+
+            if (data.customer_name) {
+                const loc = [data.city, data.state].filter(Boolean).join(', ');
+                claimedDetailsText.innerHTML = `Claimed by <strong>${escapeHtml(data.customer_name)}</strong> ${loc ? `(${escapeHtml(loc)})` : ''}<br>Credited to your Myntreal Reward Ledger.`;
+            }
+            alreadyClaimedSection.style.display = 'block';
+
+            // Show Referral Share Section
+            if (data.referral_code || currentReferralCode) {
+                const refCode = data.referral_code || currentReferralCode;
+                currentReferralLink = data.referral_link || `https://www.myntreal.com/recharge.html?ref=${refCode}`;
+                if (referralLinkInput) referralLinkInput.value = currentReferralLink;
+                referralShareSection.style.display = 'block';
+            }
         }
 
-        // Scratch mechanics
+        function triggerConfetti() {
+            if (window.confetti) {
+                try {
+                    window.confetti({
+                        particleCount: 60,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                } catch (e) {}
+            }
+        }
+
+        // Scratch interaction mechanics
         function scratch(e) {
-            if (isClaimed || isClaiming) return;
+            if (isRevealed || isClaimed) return;
             const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-            const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            if (clientX === undefined || clientY === undefined) return;
+
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
 
             ctx.globalCompositeOperation = 'destination-out';
             ctx.beginPath();
-            ctx.arc(x, y, 25, 0, Math.PI * 2, false);
+            ctx.arc(x, y, 22, 0, Math.PI * 2, false);
             ctx.fill();
 
             checkScratchPercent();
         }
 
         function checkScratchPercent() {
-            if (isClaimed || isClaiming) return;
+            if (isRevealed || isClaimed) return;
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             let cleared = 0;
-            for (let i = 3; i < imageData.data.length; i += 4) {
+            const dataLen = imageData.data.length;
+            for (let i = 3; i < dataLen; i += 16) {
                 if (imageData.data[i] === 0) cleared++;
             }
 
-            const percent = (cleared / (imageData.data.length / 4)) * 100;
-            if (percent > 40) {
-                claimReward();
+            const percent = (cleared / (dataLen / 16)) * 100;
+            if (percent > 35) {
+                revealReward();
             }
         }
 
-        async function claimReward() {
-            if (isClaimed || isClaiming) return;
-            isClaiming = true;
+        function revealReward() {
+            if (isRevealed) return;
+            isRevealed = true;
+
+            canvas.style.opacity = '0';
+            setTimeout(() => {
+                canvas.style.display = 'none';
+            }, 350);
+
+            fallbackBtn.style.display = 'none';
+            claimActionBtn.style.display = 'inline-flex';
+            claimActionBtn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> Claim ₹${parseFloat(rewardRupees).toFixed(2)} Reward`;
 
             statusMsg.className = 'status-message text-warning fw-bold';
-            statusMsg.innerText = '⏳ Claiming reward and updating wallet...';
+            statusMsg.innerText = `🎁 You revealed ₹${parseFloat(rewardRupees).toFixed(2)}! Tap 'Claim Reward' to save details.`;
+
+            triggerConfetti();
+        }
+
+        // Modal Handlers
+        function openClaimModal() {
+            if (isClaimed) return;
+            claimModal.classList.add('active');
+            setTimeout(() => {
+                document.getElementById('claimName')?.focus();
+            }, 150);
+        }
+
+        function closeClaimModal() {
+            claimModal.classList.remove('active');
+        }
+
+        // Pincode auto-lookup for City & State
+        let pinTimer = null;
+        function handlePincodeLookup(val) {
+            const pin = (val || '').trim();
+            clearTimeout(pinTimer);
+
+            if (pin.length < 6) {
+                pinLookupStatus.innerText = '';
+                return;
+            }
+
+            if (pin.length === 6 && /^\d{6}$/.test(pin)) {
+                pinLookupStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Detecting city and state...`;
+                pinTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+                        const data = await res.json();
+                        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                            const po = data[0].PostOffice[0];
+                            const city = po.District || po.Block || po.Circle || '';
+                            const state = po.State || '';
+                            if (city) document.getElementById('claimCity').value = city;
+                            if (state) document.getElementById('claimState').value = state;
+                            pinLookupStatus.innerHTML = `<span class="text-success"><i class="fa-solid fa-check me-1"></i> ${city}, ${state}</span>`;
+                        } else {
+                            pinLookupStatus.innerHTML = `<span class="text-muted">City/State not auto-found, you can enter manually</span>`;
+                        }
+                    } catch (e) {
+                        pinLookupStatus.innerHTML = `<span class="text-muted">Enter city/state manually</span>`;
+                    }
+                }, 300);
+            } else {
+                pinLookupStatus.innerText = 'Please enter a valid 6-digit numeric PIN';
+            }
+        }
+
+        // Claim Form Submission
+        async function handleClaimSubmit(e) {
+            e.preventDefault();
+            if (isClaimed) return;
+
+            const name = document.getElementById('claimName').value.trim();
+            const pincode = document.getElementById('claimPincode').value.trim();
+            const city = document.getElementById('claimCity').value.trim();
+            const state = document.getElementById('claimState').value.trim();
+            const submitBtn = document.getElementById('submitClaimBtn');
+
+            if (!name) {
+                alert('Please enter your full name.');
+                return;
+            }
+            if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
+                alert('Please enter a valid 6-digit PIN code.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Crediting Reward...`;
 
             try {
                 const res = await fetch('/api/v1/scratch-card/claim', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: token })
+                    body: JSON.stringify({
+                        token: token,
+                        name: name,
+                        pincode: pincode,
+                        city: city,
+                        state: state
+                    })
                 });
 
                 const data = await res.json();
-                isClaiming = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward`;
 
                 if (res.ok && (data.status === 'success' || data.status === 'already_claimed')) {
-                    isClaimed = true;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    canvas.style.display = 'none';
-                    fallbackBtn.style.display = 'none';
-
-                    const amt = data.amount_rupees || 0;
-                    rewardDisplay.innerText = `₹${parseFloat(amt).toFixed(2)}`;
-                    statusMsg.className = 'status-message text-success fw-bold';
-                    statusMsg.innerText = `🎉 Successfully credited ₹${parseFloat(amt).toFixed(2)} to your Wallet!`;
+                    closeClaimModal();
+                    revealAlreadyClaimed({
+                        revealed_amount_rupees: data.amount_rupees || rewardRupees,
+                        customer_name: name,
+                        city: city,
+                        state: state,
+                        referral_code: data.referral_code,
+                        referral_link: data.referral_link
+                    });
+                    triggerConfetti();
                 } else {
-                    statusMsg.className = 'status-message text-danger fw-bold';
-                    statusMsg.innerText = data.detail || data.message || 'Failed to claim reward.';
+                    alert(data.detail || data.message || 'Failed to claim reward. Please try again.');
                 }
             } catch (err) {
-                isClaiming = false;
-                statusMsg.className = 'status-message text-danger fw-bold';
-                statusMsg.innerText = 'Network error while claiming reward.';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward`;
+                alert('Network error while claiming reward. Please check your connection and try again.');
             }
+        }
+
+        // ── REFERRAL & SOCIAL SHARING ─────────────────────────────────────
+        function getShareText() {
+            const amtStr = parseFloat(rewardRupees || 10).toFixed(2);
+            return `I just won ₹${amtStr} cashback on Myntreal mobile recharge! 🎉 Recharge now and scratch to win up to ₹25 cash reward + get great discounts on Solar, EV & Real Estate:`;
+        }
+
+        function copyReferralLink() {
+            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.querySelector('.btn-copy-ref');
+                if (btn) {
+                    btn.innerHTML = `<i class="fa-solid fa-check me-1"></i> Copied!`;
+                    setTimeout(() => { btn.innerHTML = `<i class="fa-solid fa-copy me-1"></i> Copy`; }, 2000);
+                }
+            }).catch(() => {
+                alert('Copied link: ' + url);
+            });
+        }
+
+        function shareWhatsAppStatus() {
+            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            const text = `${getShareText()}\n👉 ${url}`;
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function openUniversalShareModal() {
+            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            const text = getShareText();
+
+            if (window.MyntShareModal && typeof window.MyntShareModal.show === 'function') {
+                window.MyntShareModal.show({
+                    url: url,
+                    title: 'Myntreal Recharge & Scratch Win',
+                    text: text,
+                    type: 'referral',
+                    subtitle: 'Earn 50% referral cash bonus whenever your friends recharge!'
+                });
+            } else {
+                shareWhatsAppStatus();
+            }
+        }
+
+        // ── QUICK SERVICE INTEREST LEAD CREATION ──────────────────────────
+        async function sendServiceInterest(category) {
+            const feedback = document.getElementById('quickInterestFeedback');
+            feedback.style.display = 'block';
+            feedback.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Connecting with ${category} specialist...`;
+
+            try {
+                const res = await fetch('/api/v1/scratch-card/interest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: token,
+                        category: category
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    feedback.className = 'text-center mt-2 small text-success fw-bold';
+                    feedback.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> ${data.message || `Interest in ${category} recorded! We'll call you shortly.`}`;
+                } else {
+                    feedback.className = 'text-center mt-2 small text-warning fw-bold';
+                    feedback.innerHTML = data.detail || `Thank you! Our ${category} team will contact you.`;
+                }
+            } catch (err) {
+                feedback.className = 'text-center mt-2 small text-success fw-bold';
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> Thank you! Our ${category} specialist will contact you on your registered number.`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Event listeners
         canvas.addEventListener('mousedown', () => isMouseDown = true);
-        canvas.addEventListener('mouseup', () => isMouseDown = false);
+        window.addEventListener('mouseup', () => isMouseDown = false);
         canvas.addEventListener('mousemove', (e) => { if (isMouseDown) scratch(e); });
 
-        canvas.addEventListener('touchstart', (e) => { isMouseDown = true; scratch(e); });
-        canvas.addEventListener('touchend', () => isMouseDown = false);
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); });
+        canvas.addEventListener('touchstart', (e) => { isMouseDown = true; scratch(e); }, { passive: false });
+        window.addEventListener('touchend', () => isMouseDown = false);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); }, { passive: false });
 
-        fallbackBtn.addEventListener('click', claimReward);
+        fallbackBtn.addEventListener('click', revealReward);
+        claimActionBtn.addEventListener('click', openClaimModal);
+
+        claimModal.addEventListener('click', (e) => {
+            if (e.target === claimModal) {
+                closeClaimModal();
+            }
+        });
     </script>
 </body>
 </html>

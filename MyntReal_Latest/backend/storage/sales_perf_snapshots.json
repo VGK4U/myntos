@@ -3036,5 +3036,92 @@
         "softphone_missed_count": 0
       }
     ]
+  },
+  "2026-10-10": {
+    "timestamp_ist": "2026-10-10 19:30:00",
+    "date_str": "10 October 2026",
+    "time_str": "07:30 PM",
+    "total_calls": 46,
+    "total_talk_seconds": 2242,
+    "total_talk_formatted": "00h 37m 22s",
+    "missed_calls": 14,
+    "new_leads": 1,
+    "leaderboard": [
+      {
+        "handled_by": "Mrs. Sontayana Appala Nookalakshmi",
+        "call_count": 45,
+        "missed_count": 14,
+        "talk_seconds": 1852,
+        "talk_time_formatted": "30m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 45,
+        "softphone_talk_seconds": 1852,
+        "softphone_talk_formatted": "30m 52s",
+        "softphone_missed_count": 14
+      },
+      {
+        "handled_by": "Mrs. Janapala Hema",
+        "call_count": 1,
+        "missed_count": 0,
+        "talk_seconds": 390,
+        "talk_time_formatted": "6m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 1,
+        "softphone_talk_seconds": 390,
+        "softphone_talk_formatted": "6m 30s",
+        "softphone_missed_count": 0
+      },
+      {
+        "handled_by": "Ms. Anusha Moyyi",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 0,
+        "softphone_talk_seconds": 0,
+        "softphone_talk_formatted": "00m",
+        "softphone_missed_count": 0
+      },
+      {
+        "handled_by": "Ms. Oleti Gayatri Nandana",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 0,
+        "softphone_talk_seconds": 0,
+        "softphone_talk_formatted": "00m",
+        "softphone_missed_count": 0
+      },
+      {
+        "handled_by": "Ms. Anushka Karri",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 0,
+        "softphone_talk_seconds": 0,
+        "softphone_talk_formatted": "00m",
+        "softphone_missed_count": 0
+      }
+    ]
   }
 }

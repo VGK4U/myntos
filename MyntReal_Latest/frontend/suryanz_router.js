@@ -219,34 +219,44 @@ function getSuryanzFooter(urlPrefix = '') {
 function renderSuryanzPage({
   title,
   description,
-  canonicalUrl = 'https://suryanzsolar.com/',
+  canonicalUrl = null,
   activePath = '/',
   bodyContent,
   jsonLd = null,
-  urlPrefix = ''
+  urlPrefix = '',
+  requestHost = 'suryanz.com',
+  requestProto = 'https'
 }) {
+  const hostClean = (requestHost || 'suryanz.com').split(':')[0].trim() || 'suryanz.com';
+  const protoClean = (requestProto || 'https').trim();
+  const domainUrl = `${protoClean}://${requestHost}`;
+  const normalizedPath = activePath.startsWith('/') ? activePath : '/' + activePath;
+  const resolvedCanonicalUrl = canonicalUrl || `${domainUrl}${normalizedPath}`;
+  const resolvedOgImage = `${domainUrl}/public/images/suryanz-og-preview.png`;
+
   const defaultSchema = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://suryanzsolar.com/#organization",
+        "@id": `${domainUrl}/#organization`,
         "name": "SURYANZ SOLAR",
         "legalName": "SURYANZ SOLAR",
-        "url": "https://suryanzsolar.com",
-        "logo": "https://suryanzsolar.com/public/images/suryanz-logo-transparent.png",
+        "url": domainUrl,
+        "logo": `${domainUrl}/public/images/suryanz-logo-transparent.png`,
         "description": "Premium engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities in India. Backed by 20+ years of team experience.",
         "slogan": "Powering a Brighter Tomorrow",
         "sameAs": [
-          "https://suryanz.com"
+          "https://suryanz.com",
+          "https://suryanzsolar.com"
         ]
       },
       {
         "@type": "LocalBusiness",
-        "@id": "https://suryanzsolar.com/#localbusiness",
+        "@id": `${domainUrl}/#localbusiness`,
         "name": "SURYANZ SOLAR EPC",
-        "image": "https://suryanzsolar.com/public/images/suryanz-logo-transparent.png",
-        "url": "https://suryanzsolar.com",
+        "image": resolvedOgImage,
+        "url": domainUrl,
         "priceRange": "₹₹₹",
         "description": "Engineering-first rooftop solar EPC contractor serving Andhra Pradesh, Telangana, and Karnataka.",
         "areaServed": [
@@ -257,15 +267,15 @@ function renderSuryanzPage({
       },
       {
         "@type": "Service",
-        "@id": "https://suryanzsolar.com/#service-residential",
+        "@id": `${domainUrl}/#service-residential`,
         "name": "Residential Rooftop Solar System Installation",
-        "provider": { "@id": "https://suryanzsolar.com/#organization" },
+        "provider": { "@id": `${domainUrl}/#organization` },
         "serviceType": "Solar Photovoltaic EPC Engineering",
         "description": "High-efficiency residential rooftop solar installation with 3-stage customer protection, net metering assistance, and 30-year linear performance warranty."
       },
       {
         "@type": "FAQPage",
-        "@id": "https://suryanzsolar.com/#faq",
+        "@id": `${domainUrl}/#faq`,
         "mainEntity": [
           {
             "@type": "Question",
@@ -287,10 +297,10 @@ function renderSuryanzPage({
       },
       {
         "@type": "WebSite",
-        "@id": "https://suryanzsolar.com/#website",
-        "url": "https://suryanzsolar.com",
+        "@id": `${domainUrl}/#website`,
+        "url": domainUrl,
         "name": "SURYANZ SOLAR Official Portal",
-        "publisher": { "@id": "https://suryanzsolar.com/#organization" }
+        "publisher": { "@id": `${domainUrl}/#organization` }
       }
     ]
   };
@@ -304,13 +314,29 @@ function renderSuryanzPage({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} | SURYANZ SOLAR</title>
   <meta name="description" content="${description}">
-  <link rel="canonical" href="${canonicalUrl}">
+  <link rel="canonical" href="${resolvedCanonicalUrl}">
+
+  <!-- OpenGraph / WhatsApp / Social Rich Share Card Tags -->
+  <meta property="og:site_name" content="SURYANZ SOLAR">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${resolvedCanonicalUrl}">
   <meta property="og:title" content="${title} | SURYANZ SOLAR">
   <meta property="og:description" content="${description}">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:image" content="${resolvedOgImage}">
+  <meta property="og:image:secure_url" content="${resolvedOgImage}">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="SURYANZ SOLAR - Clean Energy For A Brighter Tomorrow">
+
+  <!-- Twitter Card Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/svg+xml" href="/public/images/suryanz-logo.svg">
+  <meta name="twitter:title" content="${title} | SURYANZ SOLAR">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${resolvedOgImage}">
+
+  <link rel="icon" type="image/png" href="/public/images/suryanz-logo.png">
+  <link rel="shortcut icon" href="/public/images/suryanz-logo.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/public/css/suryanz-brand.css">
   <script type="application/ld+json">${schemaJson}</script>
@@ -944,14 +970,15 @@ function renderHomePage(urlPrefix = '') {
   return renderSuryanzPage({
     title: 'SURYANZ SOLAR | Real Projects, Real Engineering, Real Savings',
     description: 'SURYANZ SOLAR provides engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities across India. Backed by 20+ years of energy experience.',
-    canonicalUrl: 'https://suryanzsolar.com/',
     activePath: '/',
     bodyContent: content,
-    urlPrefix: urlPrefix
+    urlPrefix: urlPrefix,
+    requestHost: requestHost,
+    requestProto: requestProto
   });
 }
 
-function renderGenericPage(pageKey, title, description, urlPrefix = '') {
+function renderGenericPage(pageKey, title, description, urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
   const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : (urlPrefix || '');
   const isAbout = pageKey === 'about';
   
@@ -1007,31 +1034,32 @@ function renderGenericPage(pageKey, title, description, urlPrefix = '') {
   return renderSuryanzPage({
     title: `${title} | SURYANZ SOLAR`,
     description: description,
-    canonicalUrl: `https://suryanzsolar.com/${pageKey}`,
     activePath: `/${pageKey}`,
     bodyContent: content,
-    urlPrefix: urlPrefix
+    urlPrefix: urlPrefix,
+    requestHost: requestHost,
+    requestProto: requestProto
   });
 }
 
-function renderAboutPage(urlPrefix = '') {
-  return renderGenericPage('about', 'About SURYANZ SOLAR', 'Building India\'s most trusted, engineering-driven clean energy platform.', urlPrefix);
+function renderAboutPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('about', 'About SURYANZ SOLAR', 'Building India\'s most trusted, engineering-driven clean energy platform.', urlPrefix, requestHost, requestProto);
 }
 
-function renderWhySuryanzPage(urlPrefix = '') {
-  return renderGenericPage('why-suryanz', 'Why SURYANZ SOLAR', 'Discover the engineering difference that protects your 30-year solar investment.', urlPrefix);
+function renderWhySuryanzPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('why-suryanz', 'Why SURYANZ SOLAR', 'Discover the engineering difference that protects your 30-year solar investment.', urlPrefix, requestHost, requestProto);
 }
 
-function renderCustomerProtectionPage(urlPrefix = '') {
-  return renderGenericPage('customer-protection', 'Customer Protection & 30-Year Warranty', 'Documented 30-Year Linear Performance, 12-Year Product, and 10-Year Inverter Warranty portfolios.', urlPrefix);
+function renderCustomerProtectionPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('customer-protection', 'Customer Protection & 30-Year Warranty', 'Documented 30-Year Linear Performance, 12-Year Product, and 10-Year Inverter Warranty portfolios.', urlPrefix, requestHost, requestProto);
 }
 
-function renderTechnologyPage(urlPrefix = '') {
-  return renderGenericPage('technology', 'Technology & Specifications', 'Industrial-grade TOPCon panels, smart string inverters, and hot-dip galvanized mounting structures.', urlPrefix);
+function renderTechnologyPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('technology', 'Technology & Specifications', 'Industrial-grade TOPCon panels, smart string inverters, and hot-dip galvanized mounting structures.', urlPrefix, requestHost, requestProto);
 }
 
-function renderCalculatorPage(urlPrefix = '') {
-  const pageHtml = renderHomePage(urlPrefix);
+function renderCalculatorPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  const pageHtml = renderHomePage(urlPrefix, requestHost, requestProto);
   const scrollScript = `
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -1047,23 +1075,23 @@ function renderCalculatorPage(urlPrefix = '') {
   return pageHtml.replace('</body>', scrollScript);
 }
 
-function renderProjectsPage(urlPrefix = '') {
-  return renderGenericPage('projects', 'Projects & Case Studies', 'Real residential, commercial, and industrial rooftop solar installations across India.', urlPrefix);
+function renderProjectsPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('projects', 'Projects & Case Studies', 'Real residential, commercial, and industrial rooftop solar installations across India.', urlPrefix, requestHost, requestProto);
 }
 
-function renderCustomerStoriesPage(urlPrefix = '') {
-  return renderGenericPage('customer-stories', 'Customer Stories', 'Authentic reviews and experiences from SURYANZ SOLAR rooftop customers.', urlPrefix);
+function renderCustomerStoriesPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('customer-stories', 'Customer Stories', 'Authentic reviews and experiences from SURYANZ SOLAR rooftop customers.', urlPrefix, requestHost, requestProto);
 }
 
-function renderFaqsPage(urlPrefix = '') {
-  return renderGenericPage('faqs', 'Frequently Asked Questions', 'Practical answers about rooftop solar costs, net metering, panel sizing, and warranties.', urlPrefix);
+function renderFaqsPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('faqs', 'Frequently Asked Questions', 'Practical answers about rooftop solar costs, net metering, panel sizing, and warranties.', urlPrefix, requestHost, requestProto);
 }
 
-function renderContactPage(urlPrefix = '') {
-  return renderGenericPage('contact', 'Contact SURYANZ SOLAR', 'Speak directly with a solar engineer to get a free site assessment and customized quote.', urlPrefix);
+function renderContactPage(urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage('contact', 'Contact SURYANZ SOLAR', 'Speak directly with a solar engineer to get a free site assessment and customized quote.', urlPrefix, requestHost, requestProto);
 }
 
-function renderSolutionPage(solutionSlug, urlPrefix = '') {
+function renderSolutionPage(solutionSlug, urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
   const titles = {
     residential: 'Residential Rooftop Solar',
     commercial: 'Commercial Rooftop Solar',
@@ -1077,10 +1105,10 @@ function renderSolutionPage(solutionSlug, urlPrefix = '') {
     'operations-maintenance': 'Solar O&M / AMC Services'
   };
   const title = titles[solutionSlug] || 'Solar Solution';
-  return renderGenericPage(`solutions/${solutionSlug}`, title, `High-efficiency, engineer-designed ${title.toLowerCase()} systems built for 30 years reliability.`, urlPrefix);
+  return renderGenericPage(`solutions/${solutionSlug}`, title, `High-efficiency, engineer-designed ${title.toLowerCase()} systems built for 30 years reliability.`, urlPrefix, requestHost, requestProto);
 }
 
-function renderKnowledgeGuidePage(guideSlug, urlPrefix = '') {
+function renderKnowledgeGuidePage(guideSlug, urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
   const guideTitles = {
     'solar-guide': "Solar Buyer's Guide",
     'solar-pricing': "Rooftop Solar Cost & Pricing Guide",
@@ -1091,42 +1119,44 @@ function renderKnowledgeGuidePage(guideSlug, urlPrefix = '') {
     'solar-buying-guide': "Solar System Comparison Guide"
   };
   const title = guideTitles[guideSlug] || 'Solar Knowledge Guide';
-  return renderGenericPage(guideSlug, title, `Comprehensive educational guide on ${title.toLowerCase()} for property owners in India.`, urlPrefix);
+  return renderGenericPage(guideSlug, title, `Comprehensive educational guide on ${title.toLowerCase()} for property owners in India.`, urlPrefix, requestHost, requestProto);
 }
 
-function renderLocationPage(locSlug, locName, stateName, urlPrefix = '') {
-  return renderGenericPage(`location/${locSlug}`, `Solar EPC Services in ${locName}, ${stateName}`, `High-performance rooftop solar installations and EPC engineering services in ${locName}, ${stateName}.`, urlPrefix);
+function renderLocationPage(locSlug, locName, stateName, urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
+  return renderGenericPage(`location/${locSlug}`, `Solar EPC Services in ${locName}, ${stateName}`, `High-performance rooftop solar installations and EPC engineering services in ${locName}, ${stateName}.`, urlPrefix, requestHost, requestProto);
 }
 
-function renderLegalPage(legalSlug, urlPrefix = '') {
+function renderLegalPage(legalSlug, urlPrefix = '', requestHost = 'suryanz.com', requestProto = 'https') {
   const legalTitles = {
     'privacy-policy': 'Privacy Policy',
     'terms-and-conditions': 'Terms & Conditions',
     'warranty-terms': 'Warranty Terms & Portfolio'
   };
   const title = legalTitles[legalSlug] || 'Legal Policy';
-  return renderGenericPage(`legal/${legalSlug}`, title, `Official SURYANZ SOLAR ${title.toLowerCase()} and compliance documentation.`, urlPrefix);
+  return renderGenericPage(`legal/${legalSlug}`, title, `Official SURYANZ SOLAR ${title.toLowerCase()} and compliance documentation.`, urlPrefix, requestHost, requestProto);
 }
 
-function renderSitemapXml() {
+function renderSitemapXml(requestHost = 'suryanz.com', requestProto = 'https') {
+  const domain = `${requestProto}://${requestHost}`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://suryanzsolar.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://suryanzsolar.com/about</loc><priority>0.8</priority></url>
-  <url><loc>https://suryanzsolar.com/why-suryanz</loc><priority>0.8</priority></url>
-  <url><loc>https://suryanzsolar.com/customer-protection</loc><priority>0.8</priority></url>
-  <url><loc>https://suryanzsolar.com/technology</loc><priority>0.8</priority></url>
-  <url><loc>https://suryanzsolar.com/calculator</loc><priority>0.9</priority></url>
-  <url><loc>https://suryanzsolar.com/projects</loc><priority>0.8</priority></url>
-  <url><loc>https://suryanzsolar.com/faqs</loc><priority>0.7</priority></url>
-  <url><loc>https://suryanzsolar.com/contact</loc><priority>0.9</priority></url>
+  <url><loc>${domain}/</loc><priority>1.0</priority></url>
+  <url><loc>${domain}/about</loc><priority>0.8</priority></url>
+  <url><loc>${domain}/why-suryanz</loc><priority>0.8</priority></url>
+  <url><loc>${domain}/customer-protection</loc><priority>0.8</priority></url>
+  <url><loc>${domain}/technology</loc><priority>0.8</priority></url>
+  <url><loc>${domain}/calculator</loc><priority>0.9</priority></url>
+  <url><loc>${domain}/projects</loc><priority>0.8</priority></url>
+  <url><loc>${domain}/faqs</loc><priority>0.7</priority></url>
+  <url><loc>${domain}/contact</loc><priority>0.9</priority></url>
 </urlset>`;
 }
 
-function renderRobotsTxt() {
+function renderRobotsTxt(requestHost = 'suryanz.com', requestProto = 'https') {
+  const domain = `${requestProto}://${requestHost}`;
   return `User-agent: *
 Allow: /
-Sitemap: https://suryanzsolar.com/sitemap.xml`;
+Sitemap: ${domain}/sitemap.xml`;
 }
 
 module.exports = {

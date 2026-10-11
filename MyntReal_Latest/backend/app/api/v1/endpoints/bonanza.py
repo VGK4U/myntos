@@ -605,16 +605,19 @@ def _count_first_dvr_income_for_bonanza(db: Session, partner_id: int, bonanza) -
         SELECT COUNT(DISTINCT ie.lead_id)
         FROM income_entries ie
         JOIN crm_leads cl ON cl.id = ie.lead_id
-        WHERE cl.associated_partner_id = :pid
-          AND ie.status = 'CONFIRMED'
+        WHERE (
+            cl.associated_partner_id = :pid
+            OR cl.source_ref_id = :pcode
+            OR cl.source_ref_id = CAST(:pid AS VARCHAR)
+            OR ie.partner_id = :pid
+          )
+          AND ie.status IN ('CONFIRMED', 'PENDING')
           AND ie.lead_id IS NOT NULL
           AND ie.income_date >= :start
           AND ie.income_date <= :end + INTERVAL '1 day' * :grace
-          AND cl.submit_date IS NOT NULL
-          AND cl.submit_date >= CAST(:start AS DATE)
-          AND cl.submit_date <= CAST(:end AS DATE)
     """), {
         'pid': partner_id,
+        'pcode': str(partner_id),
         'start': bonanza.start_date,
         'end': bonanza.end_date,
         'grace': grace,
@@ -639,31 +642,44 @@ def _count_first_pmt_for_bonanza(db: Session, partner_id: int, bonanza) -> int:
     seg   = bonanza.segment_id
     if seg and seg in _SOLAR_CAT_IDS:
         seg_clause = "AND cl.category_id = ANY(:seg_list)"
-        params = {'pid': partner_id, 'start': bonanza.start_date,
+        params = {'pid': partner_id, 'pcode': str(partner_id), 'start': bonanza.start_date,
                   'end': bonanza.end_date, 'grace': grace,
                   'seg_list': list(_SOLAR_CAT_IDS)}
     elif seg:
         seg_clause = "AND cl.category_id = :seg"
-        params = {'pid': partner_id, 'start': bonanza.start_date,
+        params = {'pid': partner_id, 'pcode': str(partner_id), 'start': bonanza.start_date,
                   'end': bonanza.end_date, 'grace': grace, 'seg': seg}
     else:
         seg_clause = ""
-        params = {'pid': partner_id, 'start': bonanza.start_date,
+        params = {'pid': partner_id, 'pcode': str(partner_id), 'start': bonanza.start_date,
                   'end': bonanza.end_date, 'grace': grace}
     row = db.execute(text(f"""
         SELECT COUNT(DISTINCT cl.id)
         FROM crm_leads cl
-        WHERE COALESCE(
-                cl.associated_partner_id,
-                CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                          AND cl.source_ref_id IS NOT NULL
-                          AND cl.source_ref_id ~ '^[0-9]+$'
-                     THEN cl.source_ref_id::int END,
-                (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
-              ) = :pid
-          AND cl.first_payment_received_date IS NOT NULL
-          AND cl.first_payment_received_date >= CAST(:start AS DATE)
-          AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+        WHERE (
+            cl.associated_partner_id = :pid
+            OR cl.source_ref_id = :pcode
+            OR cl.source_ref_id = CAST(:pid AS VARCHAR)
+            OR (cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                AND cl.source_ref_id IS NOT NULL
+                AND cl.source_ref_id = CAST(:pid AS VARCHAR))
+            OR EXISTS (SELECT 1 FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.partner_id = :pid AND a.level = 1)
+          )
+          AND COALESCE(
+                cl.first_payment_received_date,
+                (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+              ) IS NOT NULL
+          AND COALESCE(
+                cl.first_payment_received_date,
+                (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+              ) >= CAST(:start AS DATE)
+          AND COALESCE(
+                cl.first_payment_received_date,
+                (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+              ) <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
           {seg_clause}
     """), params).scalar()
     return int(row or 0)
@@ -738,6 +754,7 @@ def _count_solar_advances_for_bonanza(db: Session, partner_id: int, bonanza, bas
         FROM vgk_solar_cibil_advances a
         JOIN crm_leads cl ON cl.id = a.lead_id
         WHERE a.partner_id = :pid
+          AND a.level = 1
           AND a.status IN ('RELEASED','PENDING')
           AND {null_guard}
           AND cl.submit_date >= CAST(:start AS DATE)
@@ -865,6 +882,7 @@ def _get_vgk_member_bonanzas(partner, db: Session) -> dict:
         # (CIBIL/DVR/BOTH) uses solar advance counting — NOT completed-deal counting.
         # Default '' (NULL basis) falls through to legacy completed-deal path.
         _bz_basis = (getattr(bonanza, 'advance_count_basis', None) or '').upper()
+        _qual_event = (getattr(bonanza, 'qualification_event', None) or 'first_payment').lower()
         if _bz_basis == 'FIRST_DVR':
             deal_count = _count_first_dvr_income_for_bonanza(db, partner.id, bonanza)
         elif _bz_basis in ('CIBIL', 'DVR', 'BOTH'):
@@ -876,6 +894,8 @@ def _get_vgk_member_bonanzas(partner, db: Session) -> dict:
             deal_count = _count_solar_advances_for_bonanza(db, partner.id, bonanza, basis_override='DVR')
         elif bonanza.reward_type == 'slab_wise':
             deal_count = _count_solar_advances_for_bonanza(db, partner.id, bonanza)
+        elif _qual_event == 'first_payment' or _bz_basis == 'FIRST_PAYMENT':
+            deal_count = _count_first_pmt_for_bonanza(db, partner.id, bonanza)
         else:
             deal_count = _count_vgk_completed_deals(db, partner_code, bonanza)
 
@@ -1255,6 +1275,7 @@ async def get_member_reward_files(
                ON bp.bonanza_id = b.id
               AND bp.partner_id = a.partner_id
         WHERE a.partner_id = :pid
+          AND a.level = 1
           AND a.status IN ('RELEASED','PENDING')
         ORDER BY b.start_date DESC, l.submit_date DESC
     """), {'pid': current_user.id}).fetchall()
@@ -1454,6 +1475,7 @@ def _vgk_partner_claim(partner, bonanza_id: int, db: Session):
     # and the claim eligibility check always produce the same count.
     partner_code = partner.partner_code or str(partner.id)
     _claim_bz_basis = (getattr(bonanza, 'advance_count_basis', None) or '').upper()
+    _claim_qual_event = (getattr(bonanza, 'qualification_event', None) or 'first_payment').lower()
     if _claim_bz_basis == 'FIRST_DVR':
         deal_count = _count_first_dvr_income_for_bonanza(db, partner.id, bonanza)
     elif _claim_bz_basis in ('CIBIL', 'DVR', 'BOTH'):
@@ -1464,6 +1486,8 @@ def _vgk_partner_claim(partner, bonanza_id: int, db: Session):
         deal_count = _count_solar_advances_for_bonanza(db, partner.id, bonanza, basis_override='DVR')
     elif bonanza.reward_type == 'slab_wise':
         deal_count = _count_solar_advances_for_bonanza(db, partner.id, bonanza)
+    elif _claim_qual_event == 'first_payment' or _claim_bz_basis == 'FIRST_PAYMENT':
+        deal_count = _count_first_pmt_for_bonanza(db, partner.id, bonanza)
     else:
         deal_count = _count_vgk_completed_deals(db, partner_code, bonanza)
     if deal_count < (bonanza.target_requirement or 1):
@@ -1484,6 +1508,21 @@ def _vgk_partner_claim(partner, bonanza_id: int, db: Session):
     )
     bonanza.current_winners = (bonanza.current_winners or 0) + 1
     db.add(progress)
+
+    # Sync to DynamicBonanzaHistory for single source of truth across tables
+    dbh_existing = db.query(DynamicBonanzaHistory).filter(
+        DynamicBonanzaHistory.bonanza_id == bonanza_id,
+        DynamicBonanzaHistory.user_id == str(partner.id)
+    ).first()
+    if not dbh_existing:
+        dbh = DynamicBonanzaHistory(
+            bonanza_id=bonanza_id,
+            user_id=str(partner.id),
+            processed_status='Pending',
+            claimed_at=now,
+            direct_count_achieved=deal_count
+        )
+        db.add(dbh)
     db.commit()
     db.refresh(progress)
     # DC_BONANZA_SLABWISE_001 (per-file): compute total payout for slab_wise
@@ -5229,6 +5268,7 @@ def admin_backfill_slab_bonus(
                     deal_count = db.execute(text("""
                         SELECT COUNT(*) FROM vgk_solar_cibil_advances
                         WHERE partner_id = :pid
+                          AND level = 1
                           AND created_at BETWEEN :s AND :e
                           AND status IN ('PENDING','RELEASED')
                     """), {
@@ -5315,9 +5355,21 @@ def vgk_member_tracking(
         filtered_bzs = []
         for b in bonanzas:
             grace = b.grace_days if b.grace_days is not None else 15
-            st = b.status
-            if b.status == 'Approved':
+            st = 'Running'
+            if b.status in ('Cancelled', 'Paused', 'Pending', 'Draft'):
+                st = b.status
+            elif b.start_date and b.end_date:
+                s_d = b.start_date
+                e_d = b.end_date + timedelta(days=grace)
+                if now < s_d:
+                    st = 'Upcoming'
+                elif now > e_d:
+                    st = 'Expired'
+                else:
+                    st = 'Running'
+            elif b.status == 'Approved':
                 st = 'Running'
+
             if st == current_status:
                 filtered_bzs.append(b)
         bonanzas = filtered_bzs
@@ -5327,10 +5379,12 @@ def vgk_member_tracking(
 
     # DC-BONANZA-ALL-PARTNERS-001: Include ALL registered partners regardless of activation.
     # Non-activated (is_active=false) members use the same bonanza target.
+    # DC-BONANZA-ALL-PARTNERS-001: Include ALL registered partners regardless of activation.
+    # Non-activated (is_active=false) members use the same bonanza target.
     all_partner_rows = db.execute(text("""
-        SELECT id, partner_name, partner_code
-        FROM official_partners
-        ORDER BY partner_name
+        SELECT op.id, op.partner_name, op.partner_code
+        FROM official_partners op
+        ORDER BY op.partner_name
     """)).fetchall()
 
     if partner_search:
@@ -5341,7 +5395,107 @@ def vgk_member_tracking(
         ]
 
     partner_ids = [r[0] for r in all_partner_rows]
-    partner_map = {r[0]: {"name": r[1] or '—', "code": r[2] or '—'} for r in all_partner_rows}
+
+    # Dynamic 4-stage KYC Passport Photo Resolution (Parity with Member Incomes / vgk_team.py)
+    passport_photo_map = {}
+    if partner_ids:
+        try:
+            # 1. Check kyc_document table by partner_id (document_type in passport_photo, profile_photo, photo, avatar, logo)
+            photo_rows = db.execute(text("""
+                SELECT DISTINCT ON (partner_id) partner_id, file_path, file_name
+                FROM kyc_document
+                WHERE partner_id = ANY(:ids)
+                AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo')
+                AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != ''))
+                AND LOWER(COALESCE(file_path, file_name)) NOT LIKE '%.pdf'
+                ORDER BY partner_id,
+                CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END,
+                CASE WHEN document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar') THEN 0 ELSE 1 END,
+                uploaded_at DESC NULLS LAST
+            """), {"ids": partner_ids}).fetchall()
+            for r in photo_rows:
+                if r[0]:
+                    pid_val = int(r[0])
+                    fp = r[1]
+                    fn = r[2]
+                    chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
+                    if chosen and not chosen.lower().endswith('.pdf'):
+                        passport_photo_map[pid_val] = chosen
+
+            # 2. Check vgk_kyc_documents table for missing ones
+            missing_vgk_ids = [pid for pid in partner_ids if pid not in passport_photo_map]
+            if missing_vgk_ids:
+                vgk_rows = db.execute(text("""
+                    SELECT DISTINCT ON (partner_id) partner_id, file_path
+                    FROM vgk_kyc_documents
+                    WHERE partner_id = ANY(:ids) AND file_path IS NOT NULL AND file_path != ''
+                    AND LOWER(file_path) NOT LIKE '%.pdf'
+                    ORDER BY partner_id, uploaded_at DESC NULLS LAST
+                """), {"ids": missing_vgk_ids}).fetchall()
+                for r in vgk_rows:
+                    if r[0] and r[1]:
+                        passport_photo_map[int(r[0])] = r[1]
+
+            # 3. Check kyc_document table by owner_id (matching partner_code)
+            missing_owner_ids = [pid for pid in partner_ids if pid not in passport_photo_map]
+            if missing_owner_ids:
+                code_rows = db.execute(text("""
+                    SELECT id, partner_code FROM official_partners WHERE id = ANY(:ids)
+                """), {"ids": missing_owner_ids}).fetchall()
+                code_to_pid = {str(r[1]).strip(): int(r[0]) for r in code_rows if r[1]}
+                pcodes = list(code_to_pid.keys())
+                if pcodes:
+                    owner_photo_rows = db.execute(text("""
+                        SELECT DISTINCT ON (owner_id) owner_id, file_path, file_name
+                        FROM kyc_document
+                        WHERE owner_id = ANY(:codes)
+                        AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo')
+                        AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != ''))
+                        AND LOWER(COALESCE(file_path, file_name)) NOT LIKE '%.pdf'
+                        ORDER BY owner_id,
+                        CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END,
+                        CASE WHEN document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar') THEN 0 ELSE 1 END,
+                        uploaded_at DESC NULLS LAST
+                    """), {"codes": pcodes}).fetchall()
+                    for r in owner_photo_rows:
+                        pid_val = code_to_pid.get(str(r[0]).strip())
+                        if pid_val and pid_val not in passport_photo_map:
+                            fp = r[1]
+                            fn = r[2]
+                            chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
+                            if chosen and not chosen.lower().endswith('.pdf'):
+                                passport_photo_map[pid_val] = chosen
+
+            # 4. Fallback to official_partners.logo_path
+            remaining_missing = [pid for pid in partner_ids if pid not in passport_photo_map]
+            if remaining_missing:
+                op_rows = db.execute(text("""
+                    SELECT id, logo_path FROM official_partners WHERE id = ANY(:ids)
+                """), {"ids": remaining_missing}).fetchall()
+                for opr in op_rows:
+                    p_photo = opr[1]
+                    if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
+                        passport_photo_map[int(opr[0])] = p_photo
+        except Exception:
+            pass
+
+    partner_map = {}
+    for r in all_partner_rows:
+        pid_val = r[0]
+        name_val = r[1] or '—'
+        code_val = r[2] or '—'
+        logo_val = passport_photo_map.get(pid_val)
+        photo_url = None
+        if logo_val:
+            if logo_val.startswith('/') or logo_val.startswith('http'):
+                photo_url = logo_val
+            else:
+                photo_url = f"/storage/{logo_val}"
+        partner_map[pid_val] = {
+            "name": name_val,
+            "code": code_val,
+            "photo_url": photo_url
+        }
     if not partner_ids:
         return {"success": True, "rows": [], "total_members": 0, "eligible_count": 0}
 
@@ -5497,37 +5651,44 @@ def vgk_member_tracking(
                     # Brand Bonanza: Eligible = first payment received in campaign range.
                     # Done = first payment received in campaign range + grace.
                     count_rows = db.execute(text(f"""
-                        SELECT COALESCE(
-                            cl.associated_partner_id,
-                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                                      AND cl.source_ref_id IS NOT NULL
-                                      AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END,
-                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
-                        ) AS partner_id,
-                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
-                                             AND cl.first_payment_received_date >= CAST(:start AS DATE) 
-                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) 
-                                       THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
-                                             AND cl.first_payment_received_date >= CAST(:start AS DATE) 
-                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
-                                       THEN cl.id END) AS done_count
+                        SELECT op.id AS partner_id,
+                               COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                                    AND pmt.first_pmt_date >= CAST(:start AS DATE) 
+                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) 
+                                               THEN cl.id END) AS eligible_count,
+                               COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                                    AND pmt.first_pmt_date >= CAST(:start AS DATE) 
+                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                                               THEN cl.id END) AS done_count
                         FROM crm_leads cl
-                        WHERE COALESCE(
-                            cl.associated_partner_id,
-                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                                      AND cl.source_ref_id IS NOT NULL
-                                      AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END,
-                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
-                        ) = ANY(:pids)
-                          AND cl.first_payment_received_date IS NOT NULL
-                          AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                          AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                        JOIN official_partners op ON op.id = ANY(:pids)
+                          AND (
+                              cl.associated_partner_id = op.id
+                              OR cl.source_ref_id = op.partner_code
+                              OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                              OR (
+                                  cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                  AND cl.source_ref_id IS NOT NULL
+                                  AND cl.source_ref_id = CAST(op.id AS VARCHAR)
+                              )
+                              OR EXISTS (
+                                  SELECT 1 FROM vgk_solar_cibil_advances a 
+                                  WHERE a.lead_id = cl.id AND a.partner_id = op.id AND a.level = 1
+                              )
+                          )
+                        CROSS JOIN LATERAL (
+                            SELECT COALESCE(
+                                cl.first_payment_received_date,
+                                (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                                (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                            ) AS first_pmt_date
+                        ) pmt
+                        WHERE pmt.first_pmt_date IS NOT NULL
+                          AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                          AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                           {seg_clause}
                           {brand_clause}
-                        GROUP BY partner_id
+                        GROUP BY op.id
                     """), params).fetchall()
                     for r in count_rows:
                         eligible_map[r[0]] = int(r[1])
@@ -5536,34 +5697,41 @@ def vgk_member_tracking(
                     # Standard Solar: Eligible = first payment received in campaign range.
                     # Done = first payment received in campaign range + grace days.
                     count_rows = db.execute(text(f"""
-                        SELECT COALESCE(
-                            cl.associated_partner_id,
-                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                                      AND cl.source_ref_id IS NOT NULL
-                                      AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END,
-                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
-                        ) AS partner_id,
-                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
-                                             AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
-                        COUNT(DISTINCT CASE WHEN cl.first_payment_received_date IS NOT NULL 
-                                             AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                                             AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
+                        SELECT op.id AS partner_id,
+                               COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                                    AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
+                               COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                                    AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
                         FROM crm_leads cl
-                        WHERE COALESCE(
-                            cl.associated_partner_id,
-                            CASE WHEN cl.source_ref_type IN ('vgk','vgk_partner','partner')
-                                      AND cl.source_ref_id IS NOT NULL
-                                      AND cl.source_ref_id ~ '^[0-9]+$'
-                                 THEN cl.source_ref_id::int END,
-                            (SELECT a.partner_id FROM vgk_solar_cibil_advances a WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' LIMIT 1)
-                        ) = ANY(:pids)
-                          AND cl.first_payment_received_date IS NOT NULL
-                          AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                          AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                        JOIN official_partners op ON op.id = ANY(:pids)
+                          AND (
+                              cl.associated_partner_id = op.id
+                              OR cl.source_ref_id = op.partner_code
+                              OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                              OR (
+                                  cl.source_ref_type IN ('vgk','vgk_partner','partner')
+                                  AND cl.source_ref_id IS NOT NULL
+                                  AND cl.source_ref_id = CAST(op.id AS VARCHAR)
+                              )
+                              OR EXISTS (
+                                  SELECT 1 FROM vgk_solar_cibil_advances a 
+                                  WHERE a.lead_id = cl.id AND a.partner_id = op.id AND a.level = 1
+                              )
+                          )
+                        CROSS JOIN LATERAL (
+                            SELECT COALESCE(
+                                cl.first_payment_received_date,
+                                (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                                (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                            ) AS first_pmt_date
+                        ) pmt
+                        WHERE pmt.first_pmt_date IS NOT NULL
+                          AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                          AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                           {seg_clause}
-                        GROUP BY partner_id
+                        GROUP BY op.id
                     """), params).fetchall()
                     for r in count_rows:
                         eligible_map[r[0]] = int(r[1])
@@ -5677,6 +5845,7 @@ def vgk_member_tracking(
                     "partner_id":   pid,
                     "partner_name": partner_map[pid]["name"],
                     "partner_code": partner_map[pid]["code"],
+                    "photo_url":    partner_map[pid].get("photo_url"),
                     "eligible":     eligible_map.get(pid, 0),
                     "achieved":     achieved,
                     "units_earned": units_earned,
@@ -5924,40 +6093,47 @@ def vgk_member_tracking_details(
             if is_brand_bonanza:
                 if only_triggered:
                     where_clause = """
-                        AND cl.first_payment_received_date IS NOT NULL
-                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                        AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                        AND pmt.first_pmt_date IS NOT NULL
+                        AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                        AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                     """
                 else:
                     where_clause = """
-                        AND cl.first_payment_received_date IS NOT NULL
-                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                        AND cl.first_payment_received_date <= CAST(:end AS DATE)
+                        AND pmt.first_pmt_date IS NOT NULL
+                        AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                        AND pmt.first_pmt_date <= CAST(:end AS DATE)
                     """
                 order_col = "sort_date"
             else:
                 if only_triggered:
                     where_clause = """
-                        AND cl.first_payment_received_date IS NOT NULL
-                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                        AND cl.first_payment_received_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                        AND pmt.first_pmt_date IS NOT NULL
+                        AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                        AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
                     """
-                    order_col = "cl.first_payment_received_date"
+                    order_col = "pmt.first_pmt_date"
                 else:
                     where_clause = """
-                        AND cl.first_payment_received_date IS NOT NULL
-                        AND cl.first_payment_received_date >= CAST(:start AS DATE)
-                        AND cl.first_payment_received_date <= CAST(:end AS DATE)
+                        AND pmt.first_pmt_date IS NOT NULL
+                        AND pmt.first_pmt_date >= CAST(:start AS DATE)
+                        AND pmt.first_pmt_date <= CAST(:end AS DATE)
                     """
-                    order_col = "cl.first_payment_received_date"
+                    order_col = "pmt.first_pmt_date"
                 
             query_str = f"""
-                SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, cl.first_payment_received_date, 
+                SELECT DISTINCT cl.id, cl.name, cl.phone, cl.submit_date, pmt.first_pmt_date, 
                        cl.status, cl.solar_pipeline_status, cl.category_id, cl.solar_brand_id, b.brand_name,
                        cl.deal_value_total,
-                       COALESCE(cl.first_payment_received_date, cl.submit_date) AS sort_date
+                       COALESCE(pmt.first_pmt_date, cl.submit_date) AS sort_date
                 FROM crm_leads cl
                 LEFT JOIN vgk_incentive_brands b ON b.id = cl.solar_brand_id
+                CROSS JOIN LATERAL (
+                    SELECT COALESCE(
+                        cl.first_payment_received_date,
+                        (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                        (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                    ) AS first_pmt_date
+                ) pmt
                 WHERE 1=1
                   {where_clause}
                   AND cl.category_id = ANY(:seg_list)
@@ -5974,15 +6150,16 @@ def vgk_member_tracking_details(
             if partner_id:
                 query_str += """ AND (
                     cl.associated_partner_id = :pid
+                    OR cl.source_ref_id = (SELECT partner_code FROM official_partners WHERE id = :pid)
+                    OR cl.source_ref_id = CAST(:pid AS VARCHAR)
                     OR (
                         cl.source_ref_type IN ('vgk','vgk_partner','partner')
                         AND cl.source_ref_id IS NOT NULL
-                        AND cl.source_ref_id ~ '^[0-9]+$'
-                        AND cl.source_ref_id::int = :pid
+                        AND cl.source_ref_id = CAST(:pid AS VARCHAR)
                     )
                     OR EXISTS (
                         SELECT 1 FROM vgk_solar_cibil_advances a 
-                        WHERE a.lead_id = cl.id AND a.level = 1 AND a.kind = 'ADVANCE' AND a.partner_id = :pid
+                        WHERE a.lead_id = cl.id AND a.partner_id = :pid AND a.level = 1
                     )
                 )"""
                 params['pid'] = partner_id

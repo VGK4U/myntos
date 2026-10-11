@@ -607,6 +607,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
   <div style="display:flex;gap:10px;align-items:center">
     <button onclick="openBulkWAModal()" style="background:#128c7e;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fab fa-whatsapp"></i> Bulk WA Send</button>
+    <button onclick="openAddMemberAdvanceModal()" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.3)"><i class="fas fa-hand-holding-usd"></i> + Add Member Advance</button>
     <button id="addMemberBtn" class="btn-banner white" onclick="openAddModal()" style="background:#7c3aed;color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fas fa-plus"></i> Add Channel Partner</button>
   </div>
 </div>
@@ -725,7 +726,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <th class="mb-sticky-2 sortable" onclick="toggleSort('code')" id="th_code" style="width:120px">Code</th>
         <th class="mb-sticky-3 sortable" onclick="toggleSort('name')" id="th_name" style="width:200px">Name</th>
         <th style="min-width:150px;color:#6d28d9;background:#faf5ff" id="th_referrer" title="Parent Channel Partner / Sponsor who referred this member">Referred By</th>
-        <th style="text-align:center;min-width:70px;color:#7c3aed;background:#f5f3ff" title="Downline Level (L1: Direct Referral, L2–L4: Multilevel Downlines)">LEVEL</th>
+        <th class="sortable" onclick="toggleSort('level')" id="th_level" style="text-align:center;min-width:70px;color:#7c3aed;background:#f5f3ff" title="Downline Level (Root: 0, L1: Direct Referral, L2–L4: Multilevel Downlines)">LEVEL ↕</th>
         <th class="sortable" onclick="toggleSort('registered')" id="th_registered" title="Registration date (created_at)">Reg Date</th>
         <th class="sortable" onclick="toggleSort('registered_by')" id="th_registered_by" title="Staff who registered this member">Reg By</th>
         <th style="min-width:140px;color:#1e40af;background:#eff6ff" title="Staff assigned to manage and contact this member">Assigned Staff</th>
@@ -1141,7 +1142,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           <th class="tpt-sticky-3" style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('name')">PARTNER ↕</th>
 
           <!-- RANK & CURRENT MONTH PERFORMANCE Group -->
-          <th colspan="5" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border-left:2px solid #ddd6fe;border-right:2px solid #ddd6fe">
+          <th colspan="6" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border-left:2px solid #ddd6fe;border-right:2px solid #ddd6fe">
             <i class="fas fa-award me-1" style="color:#7c3aed"></i>RANK & CURRENT MONTH PERFORMANCE
           </th>
 
@@ -1166,8 +1167,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           <th style="padding:6px;text-align:center;background:#f5f3ff;color:#7c3aed;border-left:2px solid #ddd6fe;cursor:pointer" onclick="_tptSort('rank_num')" title="Sort by Star Rank">CURRENT RANK ↕</th>
           <th style="padding:6px;text-align:center;background:#f5f3ff;color:#059669;cursor:pointer" onclick="_tptSort('rank_slab_pct')" title="Sort by Earning Slab %">EARNING SLAB ↕</th>
           <th style="padding:6px;text-align:right;background:#f5f3ff;color:#7c3aed;cursor:pointer" onclick="_tptSort('overall_payout')" title="Cumulative confirmed earnings/payouts all-time">OVERALL PAYOUT ↕</th>
+          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#9333ea;cursor:pointer" onclick="_tptSort('team_income')" title="Entire sum of total income received except from self leads">TEAM INCOME ↕</th>
           <th style="padding:6px;text-align:right;background:#f5f3ff;color:#047857;cursor:pointer" onclick="_tptSort('current_month_earning')" title="Confirmed payouts generated in current month">THIS MONTH PAYOUT ↕</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#1d4ed8;border-right:2px solid #ddd6fe;cursor:pointer" onclick="_tptSort('eligible_files_installed')" title="Installed Files / Total Files">ELIGIBILITY FILES ↕</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#1d4ed8;border-right:2px solid #ddd6fe;cursor:pointer" onclick="_tptSort('eligible_files_installed')" title="Processed Files / Total Files">ELIGIBILITY FILES ↕</th>
 
           <!-- Self Performance subheaders -->
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('total_leads')" title="Total leads submitted directly by this partner">SELF FILES ↕</th>
@@ -2400,7 +2402,7 @@ Best wishes from Team VGK4U! 🙏</div>
       .content-area{padding:10px!important}
       ${_hideTabs ? '.page-tabs{display:none!important}' : ''}
     </style>`);
-    /* StaffHeader.inject() sets inline display:flex on #headerContainer AFTER CSS loads —
+    /* StaffHeader.inject() sets inline display:flex on #headerContainer AFTER CSS loads -
        force-hide via JS once DOM is ready (DC-EMBED-FORCE-HIDE-001) */
     document.addEventListener('DOMContentLoaded', function(){
       if (document.body) document.body.classList.add('embed-mode');
@@ -2554,14 +2556,14 @@ function toggleSort(col) {
     _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
   } else {
     _sortBy = col;
-    _sortDir = 'desc';
+    _sortDir = col === 'level' ? 'asc' : 'desc';
   }
   updateSortHeaders();
   loadMembers(1);
 }
 
 function updateSortHeaders() {
-  const cols = ['code','name','registered','registered_by','last_contact_at','last_login','login_count','downline_count','src_revenue','leads_total','leads_won','leads_lost'];
+  const cols = ['code','name','registered','registered_by','last_contact_at','last_login','login_count','downline_count','src_revenue','leads_total','leads_won','leads_lost','level'];
   cols.forEach(c => {
     const th = document.getElementById('th_' + c);
     if (!th) return;
@@ -3428,10 +3430,10 @@ async function loadTopPartnersTable(page = 1) {
       const safePName = (p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const safePCode = (p.code || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-      const elInst = p.eligible_files_installed || 0;
-      const elTot = p.eligible_files_total || 0;
+      const elInst = p.eligible_files_installed !== undefined ? p.eligible_files_installed : (p.processed_count !== undefined ? p.processed_count : ((p.first_pmt_count || 0) + (p.completed_count || 0)));
+      const elTot = p.eligible_files_total !== undefined ? p.eligible_files_total : (p.total_leads || 0);
       const elInstHtml = elInst > 0 
-        ? `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','eligible_files_installed','Installed Eligibility Files')" style="background:#dcfce7;color:#047857;padding:1px 6px;font-size:10.5px" title="Click to view ${elInst} Installed Files">${elInst}</button>`
+        ? `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','eligible_files_installed','Processed Eligibility Files')" style="background:#dcfce7;color:#047857;padding:1px 6px;font-size:10.5px" title="Click to view ${elInst} Processed Eligibility Files">${elInst}</button>`
         : `<span style="color:#9ca3af">0</span>`;
       const elTotHtml = elTot > 0
         ? `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','eligible_files_total','Total Eligibility Files')" style="background:#dbeafe;color:#1e40af;padding:1px 6px;font-size:10.5px" title="Click to view all ${elTot} Eligible Files">${elTot}</button>`
@@ -3453,6 +3455,9 @@ async function loadTopPartnersTable(page = 1) {
         </td>
         <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
           <strong style="color:${(p.overall_payout||0)>0?'#7c3aed':'#9ca3af'};font-size:11.5px">${(p.overall_payout||0)>0 ? inr(p.overall_payout) : '—'}</strong>
+        </td>
+        <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
+          <strong style="color:${(p.team_income||0)>0?'#9333ea':'#6b7280'};font-size:11.5px">${inr(p.team_income || 0)}</strong>
         </td>
         <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
           <strong style="color:${(p.current_month_earning||0)>0?'#047857':'#9ca3af'};font-size:11.5px">${(p.current_month_earning||0)>0 ? inr(p.current_month_earning) : '—'}</strong>
@@ -3674,11 +3679,11 @@ function _tptExportCsv() {
       const partners = (json.data || {}).partners || [];
       if (partners.length === 0) { alert('No data available to export.'); return; }
 
-      let csv = 'Rank,Code,Partner,Current Rank,Earning Slab %,Overall Payout,This Month Payout,Eligibility Files,Self Files,Self Submits Count,Self With Bank,Self Submits Value,Self 1st Payment Count,Self Completed Count,Self Received Value,Self Processed Count,Team Members,Team Files,Team Submits Count,Team With Bank,Team Submits Value,Team 1st Payment Count,Team Completed Count,Team Received Value,Team Processed Count,Overall Win Rate %\n';
+      let csv = 'Rank,Code,Partner,Current Rank,Earning Slab %,Overall Payout,This Month Payout,Team Income,Eligibility Files,Self Files,Self Submits Count,Self With Bank,Self Submits Value,Self 1st Payment Count,Self Completed Count,Self Received Value,Self Processed Count,Team Members,Team Files,Team Submits Count,Team With Bank,Team Submits Value,Team 1st Payment Count,Team Completed Count,Team Received Value,Team Processed Count,Overall Win Rate %\n';
       partners.forEach(p => {
         const selfProc = (p.processed_count !== undefined ? p.processed_count : ((p.first_pmt_count || 0) + (p.completed_count || 0)));
         const teamProc = (p.team_processed_count !== undefined ? p.team_processed_count : ((p.team_first_pmt_count || 0) + (p.team_completed_count || 0)));
-        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.rank_display || ''}","${p.rank_slab_pct || 0}%","${p.overall_payout || 0}","${p.current_month_earning || 0}","${p.eligible_files_installed || 0}/${p.eligible_files_total || 0}","${p.total_leads}","${p.submits_count}","${p.with_bank_count || 0}","${p.submits_val}","${p.first_pmt_count || 0}","${p.completed_count || 0}","${p.received_val || 0}","${selfProc}","${p.team_added || 0}","${p.team_leads || 0}","${p.team_submits_count || 0}","${p.team_with_bank_count || 0}","${p.team_submits_val || 0}","${p.team_first_pmt_count || 0}","${p.team_completed_count || 0}","${p.team_total_received_val || 0}","${teamProc}","${p.win_rate}"\n`;
+        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.rank_display || ''}","${p.rank_slab_pct || 0}%","${p.overall_payout || 0}","${p.current_month_earning || 0}","${p.team_income || 0}","${p.eligible_files_installed || 0}/${p.eligible_files_total || 0}","${p.total_leads}","${p.submits_count}","${p.with_bank_count || 0}","${p.submits_val}","${p.first_pmt_count || 0}","${p.completed_count || 0}","${p.received_val || 0}","${selfProc}","${p.team_added || 0}","${p.team_leads || 0}","${p.team_submits_count || 0}","${p.team_with_bank_count || 0}","${p.team_submits_val || 0}","${p.team_first_pmt_count || 0}","${p.team_completed_count || 0}","${p.team_total_received_val || 0}","${teamProc}","${p.win_rate}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -4663,6 +4668,7 @@ function _renderMeDetailTable(partnerId){
         </div>
         <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-weight:700">Released/Paid: ${_meInr(totRcvNet)}</span>
         <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:6px;font-weight:700">Pending: ${_meInr(totPendingNet)}</span>
+        <button onclick="openShareLedgerModal('member', '${partnerId}', null)" style="background:linear-gradient(135deg,#4f46e5,#3730a3);color:white;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(79,70,229,0.4)"><i class="fas fa-share-alt"></i> Generate Ledger Link</button>
         <button onclick="generateMemberPoster('${partnerId}')" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.4)"><i class="fas fa-image"></i> Generate Achievement Poster</button>
       </div>
     </div>
@@ -4723,7 +4729,7 @@ function _renderMeDetailTable(partnerId){
             const _lvlColor = {0:'#6b7280',1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#db2777',6:'#c026d3'};
             const lvlC = _lvlColor[e.level]||'#6b7280';
             const lvlLabelText = _lvLvlLabel[e.level] || (e.level ? 'L'+e.level : '—');
-            const kindLabelText = _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level);
+            const kindLabelText = _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level, e.display_kind || e.entry_kind_label);
             
             const _k = String(e.kind || 'COMMISSION').toUpperCase();
             const isComm   = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
@@ -4891,7 +4897,9 @@ const _lvDetailCache = {};
 const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom'};
 const _ME_KIND_LABELS = {
   'ADVANCE': 'Stage 1 Advance',
-  'DVR_ADVANCE': 'Stage 2 Advance',
+  'STAGE1_ADVANCE': 'Stage 1 Advance',
+  'DVR_ADVANCE': '1st DVR Advance',
+  'STAGE2_ADVANCE': '1st DVR Advance',
   'SLAB_BONUS': 'Bonanza',
   'EXTRA_COMMISSION': 'Extra Bonanza',
   'BRAND_ADVANCE': 'Brand Comm.',
@@ -4901,7 +4909,8 @@ const _ME_KIND_LABELS = {
   'REFERRAL_BONUS': 'Referral Bonus'
 };
 
-function _getIncomeTypeLabel(kind, communityId, eventName, level) {
+function _getIncomeTypeLabel(kind, communityId, eventName, level, displayKind) {
+  if (displayKind) return displayKind;
   if (communityId) return eventName || 'Community Service';
   if (level === 5 && (!kind || String(kind).toUpperCase() === 'COMMISSION')) return 'L5 Support';
   if (!kind) return 'Final Comm.';
@@ -5225,7 +5234,7 @@ function _lvDetailRowHtml(lid, entries){
     const lvlColor = lvlColors[lvl] || '#6b7280';
     const stColor  = _ME_STATUS_COLOR[e.status] || '#6b7280';
     const stLabel  = _ME_STATUS_LABEL[e.status] || e.status;
-    const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name);
+    const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level, e.display_kind || e.entry_kind_label);
     const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
     
     let calcBase = e.base_value || e.deal_value_total || e.solar_value || e.confirmed_final_value || 0;
@@ -5427,6 +5436,7 @@ function _lvDetailRowHtml(lid, entries){
           <span style="font-size:10.5px;font-weight:700;color:#6b7280"><i class="fas fa-arrows-alt-h me-1"></i>Scroll Table:</span>
           <button type="button" onclick="document.getElementById('lv-scroll-wrap-${lid}')?.scrollBy({left:-350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll left">‹ Left</button>
           <button type="button" onclick="document.getElementById('lv-scroll-wrap-${lid}')?.scrollBy({left:350,behavior:'smooth'})" style="padding:2px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:#7c3aed" title="Scroll right">Right ›</button>
+          <button type="button" onclick="openShareLedgerModal('lead', null, '${lid}')" style="padding:2px 10px;border-radius:4px;border:none;background:linear-gradient(135deg,#4f46e5,#3730a3);color:#fff;cursor:pointer;font-size:11px;font-weight:700;margin-left:6px" title="Generate 3-Hour Shareable Ledger Link"><i class="fas fa-share-alt me-1"></i> Generate Ledger Link</button>
         </div>
       </div>
       <div id="lv-scroll-wrap-${lid}" class="me-subtable-scroll-wrap" style="width:100%;max-width:100%;box-sizing:border-box;margin-top:0">
@@ -5793,10 +5803,15 @@ function _renderTopPartners(d) {
             ${delta(p.delta_completed, prevLabel)}
           </td>
           <td style="text-align:right;background:#eff6ff;font-weight:700;color:#1d4ed8;font-size:12px">${fmtVal(p.completed_value)}</td>
-          <td style="text-align:center;background:#eff6ff;font-weight:700;color:${pctColor(p.completed_count, p.total_leads)}">${compPct}</td>
           <td style="text-align:right;font-weight:800;color:${overallColor};font-size:14px">${overallPct}</td>
         </tr>`;
-      }).join('')}
+      }).join('')}</tbody></table>`;
+}
+
+function _escJs(str) {
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 // Filter Bar Autocomplete Search for Hierarchy Member, Referred By, and Registered By
 let _hmSearchTimer = null;
 function debounceHierarchyMemberSearch(val) {
@@ -5811,18 +5826,18 @@ function debounceHierarchyMemberSearch(val) {
   }
   _hmSearchTimer = setTimeout(async () => {
     try {
-      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const res = await staffFetch(API + '/vgk/members/search?active_only=false&q=' + encodeURIComponent(q));
       const data = await res.json();
       const list = (data.success && data.data) ? data.data : [];
       if (!list.length) {
         dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching partners found</div>';
       } else {
         dropdown.innerHTML = list.map(m => `
-          <div onclick="selectHierarchyMemberOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+          <div onclick="selectHierarchyMemberOption('${_escJs(m.partner_code)}', '${_escJs(m.partner_name)}')"
                style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
                onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
             <div>
-              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>${!m.is_active ? ' <span style="font-size:10px;color:#dc2626;background:#fef2f2;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px">Inactive</span>' : ''}
             </div>
             <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
           </div>
@@ -5860,18 +5875,18 @@ function debounceReferrerFilterSearch(val) {
   }
   _refFilterSearchTimer = setTimeout(async () => {
     try {
-      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const res = await staffFetch(API + '/vgk/members/search?active_only=false&q=' + encodeURIComponent(q));
       const data = await res.json();
       const list = (data.success && data.data) ? data.data : [];
       if (!list.length) {
         dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching partners found</div>';
       } else {
         dropdown.innerHTML = list.map(m => `
-          <div onclick="selectReferrerFilterOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+          <div onclick="selectReferrerFilterOption('${_escJs(m.partner_code)}', '${_escJs(m.partner_name)}')"
                style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
                onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
             <div>
-              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>${!m.is_active ? ' <span style="font-size:10px;color:#dc2626;background:#fef2f2;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px">Inactive</span>' : ''}
             </div>
             <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
           </div>
@@ -5909,18 +5924,18 @@ function debounceRegByFilterSearch(val) {
   }
   _regByFilterSearchTimer = setTimeout(async () => {
     try {
-      const res = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+      const res = await staffFetch(API + '/vgk/members/search?active_only=false&q=' + encodeURIComponent(q));
       const data = await res.json();
       const list = (data.success && data.data) ? data.data : [];
       if (!list.length) {
         dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching staff/partners found</div>';
       } else {
         dropdown.innerHTML = list.map(m => `
-          <div onclick="selectRegByFilterOption('${(m.partner_code||'').replace(/'/g, "\\'")}', '${(m.partner_name||'').replace(/'/g, "\\'")}')"
+          <div onclick="selectRegByFilterOption('${_escJs(m.partner_code)}', '${_escJs(m.partner_name)}')"
                style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px"
                onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
             <div>
-              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>
+              <strong style="color:#7c3aed">${esc(m.partner_code||'')}</strong> — <span style="font-weight:600;color:#1e293b">${esc(m.partner_name||'')}</span>${!m.is_active ? ' <span style="font-size:10px;color:#dc2626;background:#fef2f2;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:4px">Inactive</span>' : ''}
             </div>
             <span style="font-size:10.5px;color:#64748b">${esc(m.phone || '')}</span>
           </div>
@@ -6031,7 +6046,7 @@ async function loadMembers(page = 1) {
     if (tb) tb.textContent = d.total || 0;
     const membersList = d.data || d.members || [];
     if (!membersList.length) {
-      const hasFilter = Boolean(search || status !== '' || assignedStaffFilter || contactedDaysFilter || desigFilter || categoryFilter || eligFilter || regByFilter || referrerFilter || curRegPeriod || curRegMonth);
+      const hasFilter = Boolean(search || status !== '' || assignedStaffFilter || contactedDaysFilter || desigFilter || categoryFilter || eligFilter || regByFilter || referrerFilter || hierarchyType || hierarchyMember || curRegPeriod || curRegMonth);
       let emptyTitle = 'No Channel Partners found';
       let emptyDesc = 'No Channel Partners match the selected search or filter criteria. Try adjusting your filters above.';
       if (!hasFilter) {
@@ -6142,7 +6157,7 @@ async function loadMembers(page = 1) {
           <td class="mb-sticky-2"><strong style="color:#7c3aed">${m.partner_code}</strong></td>
           <td class="mb-sticky-3"><div style="display:flex;align-items:center;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
           <td style="white-space:nowrap;background:#faf5ff">${(m.referrer_name || m.referrer_code) ? '<span style="font-size:11.5px;font-weight:600;color:#6d28d9">' + (m.referrer_name || 'Staff') + (m.referrer_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.referrer_code + ')</span>' : '') + '</span>' : '<span style="color:#cbd5e1">—</span>'}</td>
-          <td style="text-align:center">${(m.level_num || m.downline_level) ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-weight:800;font-size:11px">L${m.level_num || m.downline_level}</span>` : `<span style="color:#cbd5e1">—</span>`}</td>
+          <td style="text-align:center">${(m.downline_level !== undefined && m.downline_level !== null) ? (m.downline_level === 0 ? `<span class="badge" style="background:#fef3c7;color:#d97706;font-weight:800;font-size:11px">Root</span>` : `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-weight:800;font-size:11px">L${m.downline_level}</span>`) : (m.level_num ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-weight:800;font-size:11px">L${m.level_num}</span>` : `<span style="color:#cbd5e1">—</span>`)}</td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${(m.registered_by_emp_code === 'VGK07102207' || m.registered_by_name === 'VGK Support') ? '<span style="font-weight:600;color:#059669">VGK Support <span style="font-family:monospace;font-size:10px;color:#7c3aed">(VGK07102207)</span></span>' : (m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' + (m.registered_by_emp_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.registered_by_emp_code + ')</span>' : '') : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>'))}</td>
           <td>${assignedStaffHtml}</td>
@@ -11388,6 +11403,7 @@ function _renderCommDetailTable(partnerId) {
         <option value="leads_won">Won Leads</option>
         <option value="leads_lost">Lost Leads</option>
         <option value="registered_by">Registered By (Staff)</option>
+        <option value="level">Hierarchy Level (Root 0 → L1 → L4)</option>
       </select>
     </div>
     <!-- Sort Direction -->
@@ -12980,5 +12996,404 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <script src="/public/js/poster-modal-core.js?v=20260913_1825"></script>
+
+<!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
+<script>
+function closeShareLedgerModal() {
+    const modalEl = document.getElementById('shareLedgerModal');
+    if (!modalEl) return;
+
+    if (window.jQuery || window.$) {
+        try { window.$(modalEl).modal('hide'); } catch(e) {}
+    }
+
+    modalEl.style.display = 'none';
+    modalEl.classList.remove('show');
+
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+    document.body.style.removeProperty('overflow');
+}
+
+function openShareLedgerModal(viewType, partnerId, leadId) {
+    let modalEl = document.getElementById('shareLedgerModal');
+    if (!modalEl) {
+        modalEl = document.createElement('div');
+        modalEl.id = 'shareLedgerModal';
+        modalEl.className = 'modal fade';
+        modalEl.setAttribute('tabindex', '-1');
+        modalEl.onclick = function(e) { if (e.target === modalEl) closeShareLedgerModal(); };
+        modalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px;overflow:hidden;border:none;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
+                <div class="modal-header" style="background:linear-gradient(135deg,#4f46e5,#3730a3);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+                    <h6 class="modal-title fw-bold" id="slmTitle" style="margin:0"><i class="fas fa-share-alt me-2"></i> Generate 3-Hour Shared Ledger Link</h6>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeShareLedgerModal()" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;opacity:0.9"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body p-4" style="font-size:13px">
+                    <input type="hidden" id="slmViewType">
+                    <input type="hidden" id="slmPartnerId">
+                    <input type="hidden" id="slmLeadId">
+
+                    <div class="alert alert-light border p-3 mb-3" style="border-radius:10px">
+                        <div class="fw-bold text-dark mb-1"><i class="fas fa-clock text-warning me-1"></i> 3-Hour Expiration Security</div>
+                        <div class="text-muted small">The generated share link is cryptographically signed and will remain active for <strong>strictly 3 hours</strong>. Publicly accessible without requiring login credentials.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark mb-2">Payment Status Column Visibility:</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmShowStatus" value="show" checked>
+                            <label class="form-check-label fw-bold text-dark" for="slmShowStatus">
+                                <i class="fas fa-eye text-success me-1"></i> Show Payment Status Column (Includes Paid, Pending, Stage 1 Approved)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmHideStatus" value="hide">
+                            <label class="form-check-label fw-bold text-dark" for="slmHideStatus">
+                                <i class="fas fa-eye-slash text-danger me-1"></i> Hide Payment Status Column (Omits Status Column)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-dark mb-1">Target Phone Number (Optional for WhatsApp Dispatch):</label>
+                        <input type="text" id="slmPhone" class="form-control form-control-sm" placeholder="e.g. 9876543210">
+                    </div>
+
+                    <div id="slmResult" class="d-none mt-3 p-3 bg-light rounded border">
+                        <div class="fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> 3-Hour Share Link Generated</div>
+                        <input type="text" id="slmGeneratedUrl" class="form-control form-control-sm bg-white font-monospace mb-2" readonly>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="copySlmUrl()"><i class="fas fa-copy me-1"></i> Copy Link</button>
+                            <button type="button" class="btn btn-sm btn-success flex-fill" onclick="openUniversalWa()"><i class="fab fa-whatsapp me-1"></i> Open WhatsApp (App/Web)</button>
+                            <button type="button" class="btn btn-sm btn-outline-success flex-fill" onclick="dispatchSlmWa()"><i class="fas fa-paper-plane me-1"></i> API Dispatch</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeShareLedgerModal()" data-bs-dismiss="modal" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="submitGenerateLedgerLink()"><i class="fas fa-link me-1"></i> Generate Share Link</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modalEl);
+    }
+
+    document.getElementById('slmViewType').value = viewType || 'member';
+    document.getElementById('slmPartnerId').value = partnerId || '';
+    document.getElementById('slmLeadId').value = leadId || '';
+    document.getElementById('slmResult').classList.add('d-none');
+    document.getElementById('slmGeneratedUrl').value = '';
+
+    const titleEl = document.getElementById('slmTitle');
+    if (viewType === 'lead') {
+        titleEl.innerHTML = `<i class="fas fa-share-alt me-2"></i> Share Lead #${leadId} Breakdown (Valid 3 hrs)`;
+    } else {
+        titleEl.innerHTML = `<i class="fas fa-share-alt me-2"></i> Share Member Breakdown (Valid 3 hrs)`;
+    }
+
+    if (window.jQuery || window.$) {
+        window.$(modalEl).modal('show');
+    } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const bsModal = new bootstrap.Modal(modalEl);
+        bsModal.show();
+    } else {
+        modalEl.style.display = 'block';
+        modalEl.classList.add('show');
+    }
+}
+
+async function submitGenerateLedgerLink() {
+    const viewType = document.getElementById('slmViewType').value;
+    const partnerId = document.getElementById('slmPartnerId').value ? parseInt(document.getElementById('slmPartnerId').value) : null;
+    const leadId = document.getElementById('slmLeadId').value ? parseInt(document.getElementById('slmLeadId').value) : null;
+    const showStatus = document.getElementById('slmShowStatus').checked;
+
+    try {
+        const payload = {
+            view_type: viewType,
+            partner_id: partnerId,
+            lead_id: leadId,
+            show_status: showStatus
+        };
+
+        const res = await staffFetch('/api/v1/vgk/ledger/generate-link', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data && data.success) {
+            const fullUrl = window.location.origin + data.share_url;
+            document.getElementById('slmGeneratedUrl').value = fullUrl;
+            document.getElementById('slmResult').classList.remove('d-none');
+            window._latestSlmShareUrl = data.share_url;
+            window._latestSlmFullUrl = fullUrl;
+            window._latestSlmExpiresAt = data.expires_at || '3 hours';
+            window._latestSlmShowStatus = data.show_status;
+            window._latestSlmTargetName = data.target_name || (viewType === 'lead' ? `Lead #${leadId}` : `Member #${partnerId}`);
+        } else {
+            alert('Could not generate share link: ' + (data?.detail || data?.error || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Error generating share link: ' + err.message);
+    }
+}
+
+function copySlmUrl() {
+    const input = document.getElementById('slmGeneratedUrl');
+    input.select();
+    document.execCommand('copy');
+    alert('Shareable 3-hour ledger link copied to clipboard!');
+}
+
+function openUniversalWa() {
+    const fullUrl = window._latestSlmFullUrl || document.getElementById('slmGeneratedUrl').value;
+    if (!fullUrl) {
+        alert('Please click "Generate Share Link" first.');
+        return;
+    }
+    const phone = document.getElementById('slmPhone').value.trim();
+    const targetName = window._latestSlmTargetName || 'VGK Channel Partners Ledger';
+    const expiresAt = window._latestSlmExpiresAt || '3 hours';
+
+    const msg = `📊 *VGK4U Channel Partners - Shared Income Ledger*\nTarget: ${targetName}\n\n🔗 Access interactive breakdown:\n${fullUrl}\n\n⏱️ *Note: This link is active for 3 hours only* (expires at ${expiresAt}).\n- Team VGK4U | www.vgk4u.com`;
+
+    let waUrl = '';
+    if (phone) {
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+        waUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(msg)}`;
+    } else {
+        waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    }
+
+    window.open(waUrl, '_blank');
+}
+
+async function dispatchSlmWa() {
+    const phone = document.getElementById('slmPhone').value.trim();
+    if (!phone) {
+        alert('Please enter a target phone number for WhatsApp API dispatch.');
+        return;
+    }
+
+    try {
+        const payload = {
+            phone: phone,
+            share_url: window._latestSlmShareUrl || document.getElementById('slmGeneratedUrl').value,
+            target_name: window._latestSlmTargetName || document.getElementById('slmTitle').innerText,
+            expires_at: window._latestSlmExpiresAt || '3 hours',
+            show_status: window._latestSlmShowStatus !== undefined ? window._latestSlmShowStatus : true
+        };
+
+        const res = await staffFetch('/api/v1/vgk/ledger/share-whatsapp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data && data.success) {
+            alert('WhatsApp message queued successfully to ' + phone);
+        } else {
+            alert('WhatsApp share notice: ' + (data?.message || data?.detail || 'Generated for manual sharing'));
+        }
+    } catch (err) {
+        alert('WhatsApp dispatch error: ' + err.message);
+    }
+}
+
+// ── Direct Member Advance Modal & JS Functions ──
+function openAddMemberAdvanceModal(partnerId, partnerName, partnerCode) {
+  document.getElementById('advMemberSearch').value = '';
+  document.getElementById('advSelectedPartnerId').value = '';
+  document.getElementById('advSelectedMemberCard').style.display = 'none';
+  document.getElementById('advGrossAmount').value = '';
+  document.getElementById('advPaymentUtr').value = '';
+  document.getElementById('advNotes').value = '';
+  
+  const m = document.getElementById('addAdvModal');
+  if (m) {
+    m.style.display = 'flex';
+    m.classList.add('open');
+  }
+
+  if (partnerId) {
+    selectAdvMember(partnerId, partnerName || ('Partner #' + partnerId), partnerCode || '');
+  }
+}
+
+function closeAddAdvModal() {
+  const m = document.getElementById('addAdvModal');
+  if (m) {
+    m.style.display = 'none';
+    m.classList.remove('open');
+  }
+}
+
+async function onAdvMemberSearchInput() {
+  const q = document.getElementById('advMemberSearch').value.trim().toLowerCase();
+  const drop = document.getElementById('advMemberDrop');
+  if (!q) { drop.style.display = 'none'; return; }
+
+  try {
+    const r = await fetch('/api/v1/vgk-team/members?per_page=15&search=' + encodeURIComponent(q), {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+    });
+    const d = await r.json();
+    const members = d.members || d.data || [];
+    if (members.length === 0) {
+      drop.innerHTML = '<div style="padding:10px;font-size:12px;color:#6b7280;text-align:center">No matching members found</div>';
+    } else {
+      drop.innerHTML = members.map(p => `
+        <div onclick="selectAdvMember(${p.id}, '${(p.full_name||p.name||'').replace(/'/g, "\\'")}', '${p.partner_code||''}')"
+             style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0fdf4"
+             onmouseenter="this.style.background='#f0fdf4'" onmouseleave="this.style.background=''">
+          <strong>${p.full_name || p.name || p.partner_code}</strong> <small style="color:#6b7280">(${p.partner_code || ''})</small>
+        </div>
+      `).join('');
+    }
+    drop.style.display = 'block';
+  } catch (e) {
+    console.warn('Member search failed:', e);
+  }
+}
+
+async function selectAdvMember(id, name, code) {
+  document.getElementById('advSelectedPartnerId').value = id;
+  document.getElementById('advMemberSearch').value = `${name} (${code})`;
+  document.getElementById('advMemberDrop').style.display = 'none';
+
+  document.getElementById('advMemberNameTxt').textContent = name;
+  document.getElementById('advMemberCodeTxt').textContent = code;
+  document.getElementById('advMemberBalTxt').textContent = 'Loading...';
+  document.getElementById('advSelectedMemberCard').style.display = 'block';
+
+  try {
+    const r = await fetch('/api/v1/staff/vgk/partner-advance-summary/' + id, {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+    });
+    const d = await r.json();
+    if (r.ok && d.success) {
+      document.getElementById('advMemberBalTxt').textContent = '₹' + Number(d.outstanding_advance_balance || 0).toLocaleString('en-IN');
+    } else {
+      document.getElementById('advMemberBalTxt').textContent = '₹0.00';
+    }
+  } catch (e) {
+    document.getElementById('advMemberBalTxt').textContent = '₹0.00';
+  }
+}
+
+async function submitDirectAdvance() {
+  const partnerId = parseInt(document.getElementById('advSelectedPartnerId').value || '0');
+  const gross = parseFloat(document.getElementById('advGrossAmount').value || '0');
+  const kind = document.getElementById('advCategory').value || 'ADVANCE';
+  const payMode = document.getElementById('advPaymentMode').value || 'BANK';
+  const utr = document.getElementById('advPaymentUtr').value.trim();
+  const notes = document.getElementById('advNotes').value.trim();
+
+  if (!partnerId) { alert('Please search and select a member first'); return; }
+  if (!gross || gross <= 0) { alert('Please enter a valid advance amount'); return; }
+
+  const goBtn = document.getElementById('btnIssueAdvGo');
+  goBtn.disabled = true;
+
+  try {
+    const r = await fetch('/api/v1/staff/vgk/issue-direct-advance', {
+      method: 'POST',
+      headers: { 
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''), 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({
+        partner_id: partnerId,
+        gross_amount: gross,
+        kind: kind,
+        payment_mode: payMode,
+        payment_utr: utr,
+        notes: notes,
+        company_id: 4
+      })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.detail || d.error || 'Failed to issue advance');
+    alert(`Direct Advance ${d.entry_number} of ₹${Number(d.gross_amount).toLocaleString('en-IN')} issued successfully!`);
+    closeAddAdvModal();
+    if (typeof loadMembers === 'function') loadMembers(1);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    goBtn.disabled = false;
+  }
+}
+</script>
+
+<!-- Modal: Issue Direct Member Advance -->
+<div class="modal-overlay" id="addAdvModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box" style="background:#fff;border-radius:14px;padding:24px;width:540px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+    <div style="font-size:16px;font-weight:800;color:#059669;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-hand-holding-usd"></i> Issue Direct Member Advance
+    </div>
+    
+    <div style="margin-bottom:12px">
+      <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Search & Select Member</label>
+      <div style="position:relative">
+        <input type="text" id="advMemberSearch" placeholder="Type member name, code, or phone..." oninput="onAdvMemberSearchInput()" autocomplete="off" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+        <input type="hidden" id="advSelectedPartnerId">
+        <div id="advMemberDrop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #059669;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.15);z-index:9999;max-height:220px;overflow-y:auto"></div>
+      </div>
+      <div id="advSelectedMemberCard" style="display:none;margin-top:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;font-size:12.5px;color:#065f46">
+        <strong>Selected:</strong> <span id="advMemberNameTxt"></span> (<span id="advMemberCodeTxt"></span>)<br>
+        <span style="font-size:11px;color:#047857">Current Outstanding Advance: <strong id="advMemberBalTxt">₹0.00</strong></span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Gross Advance Amount (₹)</label>
+        <input type="number" id="advGrossAmount" placeholder="e.g. 10000" step="100" min="1" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Advance Category</label>
+        <select id="advCategory" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+          <option value="ADVANCE">Direct Cash Advance</option>
+          <option value="CIBIL_ADVANCE">CIBIL Advance</option>
+          <option value="DVR_ADVANCE">DVR Advance</option>
+          <option value="BRAND_ADVANCE">Brand Advance</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Payment Mode</label>
+        <select id="advPaymentMode" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+          <option value="BANK">Bank Transfer (NEFT/RTGS/UPI)</option>
+          <option value="CASH">Cash Disbursement</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">UTR / Ref Number</label>
+        <input type="text" id="advPaymentUtr" placeholder="Enter transaction reference / UTR" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Notes / Reason</label>
+      <textarea id="advNotes" rows="2" placeholder="e.g. Personal advance requested by partner, to be adjusted in payouts." style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" onclick="closeAddAdvModal()" style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button type="button" id="btnIssueAdvGo" onclick="submitDirectAdvance()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer">Issue Advance Payment</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

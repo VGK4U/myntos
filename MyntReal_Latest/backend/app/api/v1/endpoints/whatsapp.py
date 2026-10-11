@@ -664,7 +664,107 @@ async def meta_webhook_verify_canonical(request: Request, db: Session = Depends(
         print(f"[WA-WEBHOOK] ✅ Webhook verified")
         return Response(content=challenge, media_type="text/plain")
 
-    raise HTTPException(status_code=403, detail="Webhook verification failed")
+def handle_recharge_service_lead(
+    db: Session,
+    from_phone: str,
+    message_text: str,
+    from_name: Optional[str] = None
+):
+    """
+    Auto-creates a CRMLead with source='Recharge' when customer replies or clicks quick reply buttons:
+    - Interested in Solar
+    - Interested in EV
+    - Interested in Training
+    - Interested in Insurance
+    """
+    if not message_text or not from_phone:
+        return None
+
+    txt = str(message_text).strip().lower()
+
+    # Match triggers
+    interest_map = [
+        (["interested in solar", "solar", "1️⃣", "1"], "Solar", "Suryanz Solar (Rooftop Solar & Subsidy)"),
+        (["interested in ev", "ev", "electric mobility", "2️⃣", "2"], "EV", "Electric Mobility (Clean 2W/3W EVs)"),
+        (["interested in training", "training", "evolution", "course", "3️⃣", "3"], "Training", "EVolution Skill (EV Technical Training)"),
+        (["interested in insurance", "insurance", "vgk care", "policy", "4️⃣", "4"], "Insurance", "VGK Care (Insurance Protection)")
+    ]
+
+    matched_cat = None
+    matched_title = None
+
+    for triggers, cat, title in interest_map:
+        for t in triggers:
+            if t == txt or (len(t) > 2 and t in txt):
+                matched_cat = cat
+                matched_title = title
+                break
+        if matched_cat:
+            break
+
+    if not matched_cat:
+        return None
+
+    # Clean 10-digit phone
+    clean_digits = ''.join(filter(str.isdigit, str(from_phone)))
+    phone_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+
+    from app.models.crm import CRMLead
+    from app.models.reward_scratch import ScratchCard
+    from app.models.recharge import RechargeTransaction
+    from datetime import timedelta
+
+    # Deduplication guard: ignore if identical lead created in last 24h
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    existing_lead = db.query(CRMLead).filter(
+        CRMLead.phone == phone_10,
+        CRMLead.source == "Recharge",
+        CRMLead.looking_for == matched_cat,
+        CRMLead.created_at >= cutoff
+    ).first()
+
+    if existing_lead:
+        return existing_lead
+
+    # Find customer details from scratch card or recharge
+    sc = db.query(ScratchCard).filter(
+        ScratchCard.mobile_number.like(f"%{phone_10}%")
+    ).order_by(ScratchCard.id.desc()).first()
+
+    tx = db.query(RechargeTransaction).filter(
+        RechargeTransaction.mobile_number.like(f"%{phone_10}%")
+    ).order_by(RechargeTransaction.id.desc()).first()
+
+    resolved_name = (sc.customer_name if sc and sc.customer_name else None) or \
+                    (tx.guest_name if tx and tx.guest_name else None) or \
+                    (from_name.strip() if from_name and from_name.strip() else None) or \
+                    "Recharge Customer"
+
+    city = (sc.city if sc and sc.city else None) or (tx.circle if tx and tx.circle else None)
+    state = sc.state if sc and sc.state else None
+    pincode = sc.pincode if sc and sc.pincode else None
+
+    lead = CRMLead(
+        company_id=1,
+        name=resolved_name,
+        phone=phone_10,
+        phone_primary_whatsapp=True,
+        source="Recharge",
+        source_details=f"Scratch Card Quick Reply: {matched_title}",
+        looking_for=matched_cat,
+        requirements=f"Customer opted in via Scratch Card WhatsApp Acknowledgment: {matched_title}",
+        status="New",
+        city=city,
+        state=state,
+        pincode=pincode,
+        created_at=datetime.utcnow()
+    )
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+    logger.info(f"[RECHARGE-LEAD] ✅ Created CRM lead #{lead.id} ({resolved_name}, {phone_10}) for {matched_cat}")
+
+    return lead
 
 
 @router.post("/webhook")
@@ -857,9 +957,12 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                     lead_q = db.query(CRMLead).filter(
                         CRMLead.phone.in_([from_phone, clean, "91" + clean])
                     )
-                    if resolved_company_id:
-                        lead_q = lead_q.filter(CRMLead.company_id == resolved_company_id)
                     lead = lead_q.order_by(CRMLead.id.desc()).first()
+
+                    # Check if customer clicked/replied with recharge service interest
+                    rec_lead = handle_recharge_service_lead(db, from_phone, body_text, from_name)
+                    if rec_lead and not lead:
+                        lead = rec_lead
 
                     msg_company_id = resolved_company_id or (lead.company_id if lead else 1)
 
@@ -8140,6 +8243,10 @@ def ingest_bot_inbound_message(
         lead = db.query(CRMLead).filter(
             or_(CRMLead.phone.in_(phone_variants), CRMLead.alternate_phone.in_(phone_variants))
         ).order_by(CRMLead.id.desc()).first()
+
+        rec_lead = handle_recharge_service_lead(db, target_phone, payload.message_body or payload.caption, resolved_name)
+        if rec_lead and not lead:
+            lead = rec_lead
 
         if lead:
             lead_id = lead.id

@@ -2215,8 +2215,28 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
         msg += f" Referral bonus: +{referral_bonus_total:,} additional points credited!"
     if promo_redeemed:
         msg += f" Promo code {promo_redeemed} applied — {promo_points:,} bonus points credited!"
-    elif promo_error:
-        msg += f" Note: {promo_error}"
+    # [DC-VGK-WELCOME-001] Fire WhatsApp welcome message for new member registration
+    try:
+        from app.services.whatsapp_auto_service import send_auto_whatsapp
+        _wa_phone = (member.whatsapp_number or member.phone or "").strip()
+        if _wa_phone:
+            send_auto_whatsapp(
+                db=db,
+                event_key="vgk_member_created",
+                phone=_wa_phone,
+                context={
+                    "1": _title or ("Mr" if getattr(member, 'gender', '') == 'MALE' else "Ms/Mrs"),
+                    "2": _full_name or "Member",
+                    "3": partner_code,
+                    "4": request.password or "Welcome@VGK",
+                    "5": "https://www.vgk4u.com/vgk/login",
+                    "name": _full_name or "Member",
+                    "member_id": partner_code,
+                    "login_url": "https://www.vgk4u.com/vgk/login",
+                },
+            )
+    except Exception as _wa_err:
+        logger.warning(f"[VGK-SIGNUP] Welcome WA send failed (non-fatal): {_wa_err}")
 
     return {
         "success": True,

@@ -484,11 +484,49 @@
             <div class="tab-bar">
                 <button class="tab-btn active" id="tabLedger" onclick="switchTab('ledger')"><i class="fas fa-list me-2"></i>Recharge Logs</button>
                 <button class="tab-btn" id="tabFailed" onclick="switchTab('failed')"><i class="fas fa-exclamation-triangle me-2"></i>Failed/Pending</button>
+                <button class="tab-btn" id="tabScratchClaims" onclick="switchTab('scratch_claims')"><i class="fas fa-gift me-2 text-warning"></i>Scratch Rewards & Claims <span class="badge bg-warning text-dark ms-1" id="badgeClaimsCount">0</span></button>
                 <button class="tab-btn" id="tabAnalytics" onclick="switchTab('analytics')"><i class="fas fa-chart-bar me-2"></i>Operator Stats & Trends</button>
             </div>
 
             <!-- Content Panel -->
             <div class="data-card">
+                
+                <!-- SCRATCH REWARDS & CLAIMS TAB -->
+                <div class="tab-panel" id="panelScratchClaims">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div class="text-muted small">
+                            <span>Total Issued Cards: <strong class="text-light" id="statTotalCards">0</strong></span>
+                            <span class="ms-3">Claimed Rewards: <strong class="text-success" id="statClaimedCount">0</strong></span>
+                            <span class="ms-3">Total Amount Claimed: <strong class="text-warning" id="statClaimedAmount">₹0.00</strong></span>
+                        </div>
+                        <div>
+                            <input type="text" id="scratchSearchInput" class="filter-input" style="width: 280px;" placeholder="Search Name, Phone, PIN, City..." oninput="filterScratchTable()">
+                        </div>
+                    </div>
+                    <div class="table-responsive-custom">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Customer Name</th>
+                                    <th>Mobile Number</th>
+                                    <th>Reward Won</th>
+                                    <th>PIN Code</th>
+                                    <th>City</th>
+                                    <th>State</th>
+                                    <th>Recharge Details</th>
+                                    <th>A1Top Ref</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scratchClaimsTableBody">
+                                <tr>
+                                    <td colspan="10" class="text-center py-4 text-muted">Loading scratch claims...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 
                 <!-- LEDGER TAB -->
                 <div class="tab-panel active" id="panelLedger">
@@ -579,6 +617,7 @@
     <script>
         let currentTab = 'ledger';
         let rawTransactions = [];
+        let rawScratchClaims = [];
 
         document.addEventListener('DOMContentLoaded', async function() {
             if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
@@ -600,6 +639,9 @@
             } else if (tab === 'failed') {
                 document.getElementById('tabFailed').classList.add('active');
                 document.getElementById('panelFailed').classList.add('active');
+            } else if (tab === 'scratch_claims') {
+                document.getElementById('tabScratchClaims').classList.add('active');
+                document.getElementById('panelScratchClaims').classList.add('active');
             } else {
                 document.getElementById('tabAnalytics').classList.add('active');
                 document.getElementById('panelAnalytics').classList.add('active');
@@ -632,8 +674,24 @@
                     document.getElementById('kpiRate').textContent = `${data.kpis.success_rate}%`;
                     document.getElementById('kpiFailed').textContent = data.kpis.failed_recharges;
 
+                    // Update Scratch Claims KPIs
+                    if (document.getElementById('badgeClaimsCount')) {
+                        document.getElementById('badgeClaimsCount').textContent = data.kpis.total_claims_count || 0;
+                    }
+                    if (document.getElementById('statTotalCards')) {
+                        document.getElementById('statTotalCards').textContent = data.kpis.total_scratch_cards || 0;
+                    }
+                    if (document.getElementById('statClaimedCount')) {
+                        document.getElementById('statClaimedCount').textContent = data.kpis.total_claims_count || 0;
+                    }
+                    if (document.getElementById('statClaimedAmount')) {
+                        document.getElementById('statClaimedAmount').textContent = `₹${(data.kpis.total_claims_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    }
+
                     rawTransactions = data.logs || [];
+                    rawScratchClaims = data.scratch_claims || [];
                     renderTables();
+                    renderScratchClaims(rawScratchClaims);
                     
                     // If analytics tab is open, update charts
                     if (currentTab === 'analytics') {
@@ -696,6 +754,73 @@
                     </tr>
                 `).join('');
             }
+        }
+
+        function renderScratchClaims(claims) {
+            const body = document.getElementById('scratchClaimsTableBody');
+            if (!body) return;
+            const items = claims || rawScratchClaims || [];
+
+            if (items.length === 0) {
+                body.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No scratch rewards or claims found matching criteria</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = items.map(c => {
+                const dateStr = c.claimed_at ? new Date(c.claimed_at).toLocaleString() : (c.created_at ? new Date(c.created_at).toLocaleString() : '—');
+                const statusBadge = c.status === 'CLAIMED' 
+                    ? `<span class="status-badge success">Claimed</span>` 
+                    : (c.status === 'EXPIRED' ? `<span class="status-badge failed">Expired</span>` : `<span class="status-badge pending">${c.status || 'Active'}</span>`);
+                const rewardDisplay = `<span class="fw-bold text-warning">₹${Number(c.reward_amount || 0).toFixed(2)}</span>`;
+                const rechargeDisplay = c.recharge_amount ? `₹${c.recharge_amount} <span class="badge bg-secondary small ms-1">${c.operator || '—'}</span>` : '—';
+                
+                const referralInfo = c.referral_code && c.referral_code !== '—' 
+                    ? `<div class="mt-1"><span class="badge bg-warning text-dark small" title="Referral Code">Ref: ${c.referral_code}</span></div>` 
+                    : '';
+                const referredBadge = c.referred_by_card_id 
+                    ? `<div class="text-info small mt-1"><i class="fa-solid fa-user-plus me-1"></i>Referred by #${c.referred_by_card_id} ${c.referral_bonus_paid ? '<span class="badge bg-success text-light small ms-1">50% Paid</span>' : ''}</div>` 
+                    : '';
+
+                return `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>
+                            <div class="fw-bold text-light">${c.customer_name || 'Guest Customer'}</div>
+                            <div class="text-muted small">Card #${c.id}</div>
+                            ${referralInfo}
+                            ${referredBadge}
+                        </td>
+                        <td><strong>${c.mobile_number || '—'}</strong></td>
+                        <td>${rewardDisplay}</td>
+                        <td><span class="badge bg-dark border border-secondary text-light">${c.pincode || '—'}</span></td>
+                        <td>${c.city || '—'}</td>
+                        <td>${c.state || '—'}</td>
+                        <td>${rechargeDisplay}</td>
+                        <td><code>${c.api_tx_id || '—'}</code></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterScratchTable() {
+            const q = (document.getElementById('scratchSearchInput')?.value || '').toLowerCase().trim();
+            if (!q) {
+                renderScratchClaims(rawScratchClaims);
+                return;
+            }
+            const filtered = (rawScratchClaims || []).filter(c => {
+                const name = (c.customer_name || '').toLowerCase();
+                const mob = (c.mobile_number || '').toLowerCase();
+                const pin = (c.pincode || '').toLowerCase();
+                const city = (c.city || '').toLowerCase();
+                const state = (c.state || '').toLowerCase();
+                const tx = (c.api_tx_id || '').toLowerCase();
+                const op = (c.operator || '').toLowerCase();
+                const ref = (c.referral_code || '').toLowerCase();
+                return name.includes(q) || mob.includes(q) || pin.includes(q) || city.includes(q) || state.includes(q) || tx.includes(q) || op.includes(q) || ref.includes(q);
+            });
+            renderScratchClaims(filtered);
         }
 
         function renderCharts(data) {

@@ -15,3 +15,12 @@ __pycache__/
 *.db-wal
 *.db-shm
 
+
+# Git & GitHub Safeguards (Rule 7)
+*.env
+*.env.*
+*.zip
+scratch/
+**/kyc_documents/
+**/uploaded_files/
+**/public_storage/

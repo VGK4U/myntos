@@ -275,8 +275,8 @@ class TestScratchRewardSystem(unittest.TestCase):
 
     def test_canonical_domain_resolution_prevents_injection(self):
         # Untrusted injection origin -> falls back to trusted canonical origin
-        res1 = resolve_canonical_origin(brand="Zynova Mobility", origin_url="https://attacker-domain.com")
-        self.assertEqual(res1, "https://zynovamobility.com")
+        res1 = resolve_canonical_origin(brand="Myntreal", origin_url="https://attacker-domain.com")
+        self.assertEqual(res1, "https://www.myntreal.com")
 
         # Trusted allowlisted origin -> preserved
         res2 = resolve_canonical_origin(brand="MyntReal", origin_url="https://myntreal.com")
@@ -300,13 +300,61 @@ class TestScratchRewardSystem(unittest.TestCase):
         response = client.get("/scratch-card.html?token=test_token_abc123")
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/html", response.headers.get("content-type", ""))
-        self.assertIn("Zynova Mobility", response.text)
+        self.assertIn("Myntreal", response.text)
         self.assertIn("scratchCanvas", response.text)
 
         # Extensionless route
         response_extless = client.get("/scratch-card?token=test_token_abc123")
         self.assertEqual(response_extless.status_code, 200)
-        self.assertIn("Zynova Mobility", response_extless.text)
+        self.assertIn("Myntreal", response_extless.text)
+
+    def test_claim_scratch_card_with_customer_details_and_ack_outbox(self):
+        """Verify 2-step claim with Name, PIN, City, State and WhatsApp ack outbox creation."""
+        tx = RechargeTransaction(
+            mobile_number="9876543299",
+            operator="Airtel",
+            amount=399.0,
+            payment_status="Paid",
+            api_status="Success",
+            guest_name="Initial Guest"
+        )
+        self.db.add(tx)
+        self.db.commit()
+
+        card, raw_token, _ = allocate_scratch_card(self.db, tx, brand="Myntreal")
+        self.assertIsNotNone(card)
+
+        # Claim with full customer details
+        claim_req = ClaimScratchCardRequest(
+            token=raw_token,
+            name="Ramesh Kumar",
+            pincode="560001",
+            city="Bengaluru",
+            state="Karnataka"
+        )
+        res = claim_scratch_card(req=claim_req, db=self.db)
+        self.assertEqual(res["status"], "success")
+
+        # Verify card and transaction updated
+        self.db.refresh(card)
+        self.db.refresh(tx)
+        self.assertEqual(card.status, "CLAIMED")
+        self.assertEqual(card.customer_name, "Ramesh Kumar")
+        self.assertEqual(card.pincode, "560001")
+        self.assertEqual(card.city, "Bengaluru")
+        self.assertEqual(card.state, "Karnataka")
+        self.assertEqual(tx.guest_name, "Ramesh Kumar")
+
+        # Verify WhatsApp claim acknowledgment outbox entry
+        outbox = self.db.query(NotificationOutbox).filter(
+            NotificationOutbox.event_type == "RECHARGE_SCRATCH_CLAIM_ACK",
+            NotificationOutbox.destination_mobile == "9876543299"
+        ).first()
+        self.assertIsNotNone(outbox)
+        self.assertIn("Ramesh Kumar", outbox.payload_json)
+        self.assertIn("+91 85858 52738", outbox.payload_json)
+        self.assertIn("Myntreal", outbox.payload_json)
+        self.assertNotIn("Zynova", outbox.payload_json)
 
 
 if __name__ == "__main__":

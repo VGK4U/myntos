@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK4U Channel Partners - Shared Income Ledger</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --secondary: #7c3aed;
+            --bg-dark: #0f172a;
+            --card-bg: #ffffff;
+        }
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #1e293b;
+            padding-bottom: 40px;
+        }
+        .header-bar {
+            background: linear-gradient(135deg, var(--bg-dark), #1e1b4b);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .timer-badge {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid #f87171;
+            color: #dc2626;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-custom {
+            background: var(--card-bg);
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .table-custom {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        .table-custom th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 12px 10px;
+            white-space: nowrap;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        .table-custom td {
+            padding: 11px 10px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .badge-kind {
+            background: #ede9fe;
+            color: #6d28d9;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11.5px;
+        }
+        .badge-status-paid {
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .badge-status-pending {
+            background: #ffedd5;
+            color: #c2410c;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .expired-card {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #9f1239;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="mb-0 font-weight-bold"><i class="fas fa-chart-line text-warning me-2"></i> VGK4U Channel Partners</h4>
+                <small class="text-white-50">Shared Income Ledger & Payment Breakdown</small>
+            </div>
+            <div id="timerContainer">
+                <span class="timer-badge">
+                    <i class="fas fa-hourglass-half"></i> <span id="timerText">Validating link...</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        <!-- Expired Link Alert (Hidden by default) -->
+        <div id="expiredView" class="expired-card d-none">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3 text-danger"></i>
+            <h3 class="fw-bold">Shared Link Expired</h3>
+            <p class="mb-3">This share link was valid for strictly 3 hours and has now expired.</p>
+            <p class="text-muted small">Please contact your VGK Coordinator or generate a fresh link from the Channel Partners Portal.</p>
+        </div>
+
+        <!-- Active Ledger Content -->
+        <div id="ledgerView" class="d-none">
+            <div class="card-custom p-3 mb-3 bg-white">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="fw-bold mb-1" id="targetTitle">Loading breakdown...</h5>
+                        <div class="text-muted small" id="metaInfo">VGK4U Official Shared Income Report</div>
+                    </div>
+                    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                        <span class="badge bg-light text-dark border p-2" id="expiryMeta">Expires in 3h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom">
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover align-middle mb-0" id="ledgerTable">
+                        <thead>
+                            <tr id="headerRow">
+                                <th>Submit Date</th>
+                                <th>Trigger Date</th>
+                                <th>Payment Date</th>
+                                <th>Entry #</th>
+                                <th>Level / Role</th>
+                                <th>Customer / Member</th>
+                                <th>Entry Kind</th>
+                                <th>Deal Value ₹</th>
+                                <th>Calc %</th>
+                                <th>Gross ₹</th>
+                                <th>Stage 1 Adv.</th>
+                                <th>Stage 2 Adv.</th>
+                                <th>Advance Paid ₹</th>
+                                <th>Balance Gross ₹</th>
+                                <th>Admin (8%)</th>
+                                <th>TDS (2%)</th>
+                                <th>Net (90%)</th>
+                                <th id="thStatus">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="18" class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading income ledger...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/');
+        const codeFromPath = (pathParts.length >= 3 && (pathParts[1] === 'sl' || pathParts[1] === 'shared-ledger')) ? pathParts[2] : null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const code = codeFromPath || urlParams.get('code') || urlParams.get('c');
+        let countdownTimer = null;
+
+        async function loadSharedLedger() {
+            let apiUri = '';
+            if (code) {
+                apiUri = `/api/v1/vgk/public/ledger-data?code=${encodeURIComponent(code)}`;
+            } else if (token) {
+                apiUri = `/api/v1/vgk/public/ledger-data?token=${encodeURIComponent(token)}`;
+            } else {
+                showExpired("No share token or code provided in link.");
+                return;
+            }
+
+            try {
+                const res = await fetch(apiUri);
+                const data = await res.json();
+
+                if (!data.success || data.expired) {
+                    showExpired(data.reason || "Link expired (Valid for 3 hours only).");
+                    return;
+                }
+
+                renderLedger(data);
+                startCountdown(data.ttl_seconds_remaining);
+            } catch (err) {
+                showExpired("Error fetching ledger data.");
+            }
+        }
+
+        function showExpired(reason) {
+            document.getElementById('ledgerView').classList.add('d-none');
+            document.getElementById('expiredView').classList.remove('d-none');
+            document.getElementById('timerText').innerHTML = "Link Expired";
+        }
+
+        function startCountdown(initialSeconds) {
+            let secondsLeft = initialSeconds;
+            const timerEl = document.getElementById('timerText');
+
+            function updateDisplay() {
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownTimer);
+                    showExpired("Link expired.");
+                    return;
+                }
+                const h = Math.floor(secondsLeft / 3600);
+                const m = Math.floor((secondsLeft % 3600) / 60);
+                const s = secondsLeft % 60;
+                timerEl.textContent = `Expires in ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+                secondsLeft--;
+            }
+
+            updateDisplay();
+            countdownTimer = setInterval(updateDisplay, 1000);
+        }
+
+        function renderLedger(payload) {
+            document.getElementById('expiredView').classList.add('d-none');
+            document.getElementById('ledgerView').classList.remove('d-none');
+
+            document.getElementById('targetTitle').textContent = payload.target_name || "VGK Channel Partners Ledger";
+            document.getElementById('metaInfo').textContent = `Total Entries: ${payload.total_rows} | Option: ${payload.show_status ? 'Status Column Visible' : 'Status Column Hidden'}`;
+
+            const showStatus = payload.show_status;
+            if (!showStatus) {
+                document.getElementById('thStatus').style.display = 'none';
+            }
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (!payload.data || payload.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="text-center py-4 text-muted">No income breakdown entries found for this report.</td></tr>`;
+                return;
+            }
+
+            payload.data.forEach(row => {
+                const tr = document.createElement('tr');
+                const displayKind = row.display_kind || row.entry_kind_label || row.kind || 'Income';
+
+                let statusBadge = '—';
+                if (showStatus) {
+                    const st = (row.status || '').toUpperCase();
+                    if (st === 'PAID' || st === 'RELEASED') {
+                        statusBadge = `<span class="badge-status-paid"><i class="fas fa-check-circle me-1"></i>${st}</span>`;
+                    } else if (st === 'STAGE1_APPROVED') {
+                        statusBadge = `<span class="badge bg-info text-dark font-weight-bold">STAGE 1 APPROVED</span>`;
+                    } else {
+                        statusBadge = `<span class="badge-status-pending"><i class="fas fa-clock me-1"></i>${st}</span>`;
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td>${row.submit_date || '—'}</td>
+                    <td>${row.trigger_date || row.income_date || '—'}</td>
+                    <td>${row.payment_date || '—'}</td>
+                    <td class="font-monospace text-primary fw-bold">${row.entry_number || '—'}</td>
+                    <td><span class="badge bg-secondary">${row.level_label || 'L' + row.level}</span></td>
+                    <td class="fw-bold">${row.client_name || row.member_name || '—'}</td>
+                    <td><span class="badge-kind">${displayKind}</span></td>
+                    <td>₹${(row.deal_value || 0).toLocaleString('en-IN')}</td>
+                    <td>${row.commission_pct || 0}%</td>
+                    <td class="fw-bold text-dark">₹${(row.commission_amount || 0).toLocaleString('en-IN')}</td>
+                    <td>${row.stage1_adv ? '₹' + row.stage1_adv.toLocaleString('en-IN') : '—'}</td>
+                    <td>${row.stage2_adv ? '₹' + row.stage2_adv.toLocaleString('en-IN') : '—'}</td>
+                    <td>₹${(row.advance_paid || 0).toLocaleString('en-IN')}</td>
+                    <td class="fw-bold text-primary">₹${(row.balance_gross || 0).toLocaleString('en-IN')}</td>
+                    <td class="text-muted">₹${(row.admin_charges || 0).toLocaleString('en-IN')}</td>
+                    <td class="text-muted">₹${(row.tds_amount || 0).toLocaleString('en-IN')}</td>
+                    <td class="fw-bold text-success">₹${(row.net_payout || 0).toLocaleString('en-IN')}</td>
+                    ${showStatus ? `<td>${statusBadge}</td>` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        loadSharedLedger();
+    </script>
+</body>
+</html>

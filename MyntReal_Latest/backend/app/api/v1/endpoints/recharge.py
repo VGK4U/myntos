@@ -50,6 +50,7 @@ class CreateOrderRequest(BaseModel):
     service_type: Optional[str] = "mobile"
     value1: Optional[str] = None
     value2: Optional[str] = None
+    referred_by: Optional[str] = None
 
 @router.post("/create-order")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
@@ -91,6 +92,7 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
         service_type=req.service_type,
         value1=req.value1,
         value2=req.value2,
+        referred_by=req.referred_by,
         razorpay_order_id=payment_order['id'],
         payment_status="Pending",
         api_status="Pending"
@@ -156,11 +158,11 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         try:
             from app.services.scratch_reward_service import allocate_scratch_card
             from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
-            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Zynova Mobility")
+            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
             if card and token_secret:
                 enqueue_recharge_scratch_notification(
                     db=db,
-                    brand="Zynova Mobility",
+                    brand="Myntreal",
                     mobile_number=tx.mobile_number,
                     recharge_amount=tx.amount,
                     transaction_id=tx.id,
@@ -224,11 +226,11 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                         try:
                             from app.services.scratch_reward_service import allocate_scratch_card
                             from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
-                            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Zynova Mobility")
+                            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
                             if card and token_secret:
                                 enqueue_recharge_scratch_notification(
                                     db=db,
-                                    brand="Zynova Mobility",
+                                    brand="Myntreal",
                                     mobile_number=tx.mobile_number,
                                     recharge_amount=tx.amount,
                                     transaction_id=tx.id,
@@ -538,6 +540,58 @@ def get_a1top_admin_dashboard(
         {"date": d, "total": v["total"], "success": v["success"]} 
         for d, v in daily_data.items()
     ], key=lambda x: x["date"])
+
+    # Query Scratch Card Claims
+    from app.models.reward_scratch import ScratchCard
+    scratch_query = db.query(ScratchCard).outerjoin(RechargeTransaction, ScratchCard.recharge_transaction_id == RechargeTransaction.id)
+    if search:
+        search_like = f"%{search}%"
+        scratch_query = scratch_query.filter(
+            (ScratchCard.mobile_number.ilike(search_like)) |
+            (ScratchCard.customer_name.ilike(search_like)) |
+            (ScratchCard.pincode.ilike(search_like)) |
+            (ScratchCard.city.ilike(search_like)) |
+            (ScratchCard.state.ilike(search_like))
+        )
+    if from_date:
+        try:
+            fd = datetime.strptime(from_date, "%Y-%m-%d")
+            scratch_query = scratch_query.filter(ScratchCard.created_at >= fd)
+        except ValueError:
+            pass
+    if to_date:
+        try:
+            td = datetime.strptime(to_date, "%Y-%m-%d")
+            scratch_query = scratch_query.filter(ScratchCard.created_at <= td.replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
+
+    sc_list = scratch_query.order_by(ScratchCard.created_at.desc()).all()
+    scratch_claims = [
+        {
+            "id": sc.id,
+            "customer_name": sc.customer_name or (sc.recharge_transaction.guest_name if sc.recharge_transaction else None) or "Guest Customer",
+            "mobile_number": sc.mobile_number,
+            "reward_amount": sc.allocated_amount_paise / 100.0,
+            "pincode": sc.pincode or "—",
+            "city": sc.city or "—",
+            "state": sc.state or "—",
+            "recharge_amount": sc.recharge_transaction.amount if sc.recharge_transaction else 0.0,
+            "operator": sc.recharge_transaction.operator if sc.recharge_transaction else "—",
+            "circle": sc.recharge_transaction.circle if sc.recharge_transaction else "—",
+            "api_tx_id": sc.recharge_transaction.api_tx_id if sc.recharge_transaction else "—",
+            "referral_code": sc.referral_code or "—",
+            "referred_by_card_id": sc.referred_by_card_id,
+            "referral_bonus_paid": sc.referral_bonus_paid or False,
+            "status": sc.status,
+            "claimed_at": sc.claimed_at.isoformat() if sc.claimed_at else None,
+            "created_at": sc.created_at.isoformat() if sc.created_at else None
+        }
+        for sc in sc_list
+    ]
+
+    total_claims_count = len([c for c in sc_list if c.status == "CLAIMED"])
+    total_claims_amount = sum([c.allocated_amount_paise for c in sc_list if c.status == "CLAIMED"]) / 100.0
     
     return {
         "kpis": {
@@ -546,7 +600,10 @@ def get_a1top_admin_dashboard(
             "failed_recharges": failed_recharges,
             "pending_recharges": pending_recharges,
             "success_rate": round(success_rate, 1),
-            "api_balance": 15420.50
+            "api_balance": 15420.50,
+            "total_scratch_cards": len(sc_list),
+            "total_claims_count": total_claims_count,
+            "total_claims_amount": round(total_claims_amount, 2)
         },
         "logs": [
             {
@@ -563,6 +620,7 @@ def get_a1top_admin_dashboard(
                 "created_at": t.created_at.isoformat()
             } for t in txs
         ],
+        "scratch_claims": scratch_claims,
         "operator_breakdown": operator_breakdown,
         "daily_trends": sorted_trends[-30:]
     }

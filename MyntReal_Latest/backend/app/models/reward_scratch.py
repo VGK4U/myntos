@@ -30,6 +30,8 @@ class RewardCampaign(BaseModel):
     total_budget_paise = Column(BigInteger, default=50000, nullable=False) # e.g. 50,000 paise = ₹500
     reserved_liability_paise = Column(BigInteger, default=0, nullable=False) # issued but unclaimed
     settled_expenditure_paise = Column(BigInteger, default=0, nullable=False) # claimed rewards
+    referral_budget_paise = Column(BigInteger, default=50000, nullable=False) # e.g. 50,000 paise = ₹500 referral bonus pool
+    referral_expenditure_paise = Column(BigInteger, default=0, nullable=False) # referral rewards paid out
 
     max_cards = Column(Integer, default=100, nullable=False)
     issued_cards_count = Column(Integer, default=0, nullable=False)
@@ -61,10 +63,19 @@ class ScratchCard(BaseModel):
     recharge_transaction_id = Column(Integer, ForeignKey('recharge_transactions.id'), nullable=False, unique=True, index=True)
 
     mobile_number = Column(String(20), nullable=False, index=True)
-    brand = Column(String(50), default="Zynova Mobility", nullable=False)
+    brand = Column(String(50), default="Myntreal", nullable=False)
+
+    customer_name = Column(String(100), nullable=True)
+    pincode = Column(String(10), nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+
+    referral_code = Column(String(50), nullable=True, index=True)
+    referred_by_card_id = Column(Integer, nullable=True, index=True)
+    referral_bonus_paid = Column(Boolean, default=False, nullable=False)
 
     token_hash = Column(String(64), nullable=False, unique=True, index=True) # SHA256 hash of secret token
-    allocated_amount_paise = Column(Integer, nullable=False) # e.g. 100 to 1000
+    allocated_amount_paise = Column(Integer, nullable=False) # e.g. 300 to 2500
 
     status = Column(String(20), default="ISSUED", nullable=False) # ISSUED, CLAIMED, EXPIRED, CANCELLED
     
@@ -97,9 +108,9 @@ class RewardLedger(BaseModel):
     __tablename__ = 'reward_ledgers'
 
     id = Column(Integer, primary_key=True, index=True)
-    scratch_card_id = Column(Integer, ForeignKey('scratch_cards.id'), nullable=False, unique=True, index=True)
+    scratch_card_id = Column(Integer, ForeignKey('scratch_cards.id'), nullable=False, index=True)
     mobile_number = Column(String(20), nullable=False, index=True)
-    user_id = Column(String(12), ForeignKey('user.id'), nullable=True, index=True)
+    user_id = Column(String(12), nullable=True, index=True)
 
     amount_paise = Column(Integer, nullable=False)
     transaction_type = Column(String(50), default="SCRATCH_REWARD_CREDIT", nullable=False)
@@ -119,9 +130,9 @@ class NotificationOutbox(BaseModel):
     __tablename__ = 'notification_outbox'
 
     id = Column(Integer, primary_key=True, index=True)
-    event_type = Column(String(50), nullable=False) # e.g. RECHARGE_SCRATCH_CARD
+    event_type = Column(String(50), nullable=False) # e.g. RECHARGE_SCRATCH_CARD, RECHARGE_SCRATCH_CLAIM_ACK
     destination_mobile = Column(String(20), nullable=False, index=True)
-    brand = Column(String(50), default="Zynova Mobility", nullable=False)
+    brand = Column(String(50), default="Myntreal", nullable=False)
     payload_json = Column(Text, nullable=False)
 
     status = Column(String(20), default="PENDING", nullable=False, index=True) # PENDING, SENT, FAILED

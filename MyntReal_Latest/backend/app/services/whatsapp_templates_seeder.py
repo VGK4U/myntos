@@ -387,6 +387,36 @@ _TEMPLATES = [
         "event_category": "saas",
         "example_values": ["Suresh Patel", "Green Energy Corp", "suresh@greenenergy.com", "MN00124"],
     },
+    {
+        "slug": "myntreal_reward_claim_ack",
+        "name": "Myntreal Reward Claim Acknowledgment",
+        "body_text": (
+            "🎉 Congratulations, {{name}}!\n\n"
+            "Your scratch card cash reward of *₹{{amount}}* for mobile recharge ({{mobile}}) has been successfully claimed and credited! ✅\n\n"
+            "🌟 *Get Great Discounts on Our Services by Connecting with Us!*\n\n"
+            "As a valued Myntreal customer, you are eligible for exclusive discounts across our ecosystem:\n"
+            "☀️ Suryanz Solar — Save up to 90% on electricity bills + up to ₹78,000 PM Surya Ghar Govt. Subsidy & exclusive installation discounts!\n"
+            "⚡ Electric Mobility Solutions — Smart electric 2-wheelers with exclusive cashback & test ride offers\n"
+            "🛠️ EVolution Skill Training — Certified technical courses for EV technology\n"
+            "🛡️ VGK Care & Real Dreams — Verified real estate ventures & protection schemes\n\n"
+            "📞 Call or WhatsApp our team directly:\n"
+            "👉 +91 85858 52738\n\n"
+            "Warm Regards,\n"
+            "Team Myntreal"
+        ),
+        "footer_text": "myntreal.com",
+        "segment": "general",
+        "meta_category": "UTILITY",
+        "event_key": "recharge_scratch_claim_ack",
+        "event_label": "Recharge Scratch Reward Claimed Acknowledgment",
+        "event_category": "reward",
+        "buttons": [
+            {"type": "QUICK_REPLY", "text": "Interested in Solar"},
+            {"type": "QUICK_REPLY", "text": "Interested in EV"},
+            {"type": "QUICK_REPLY", "text": "Interested in Training"}
+        ],
+        "example_values": ["Ramesh Kumar", "10.00", "98****3210"],
+    },
 ]
 
 
@@ -442,6 +472,7 @@ def _do_seed(db) -> List[int]:
                 slug=tdef["slug"],
                 body_text=tdef["body_text"],
                 footer_text=tdef.get("footer_text", ""),
+                buttons=tdef.get("buttons", []),
                 segment=tdef.get("segment", "general"),
                 template_type="custom",
                 is_system=False,
@@ -554,6 +585,25 @@ def _submit_one(db, template_id: int):
 
     if tpl.footer_text and tpl.footer_text.strip():
         components.append({"type": "FOOTER", "text": tpl.footer_text.strip()[:60]})
+
+    if tpl.buttons and isinstance(tpl.buttons, list) and len(tpl.buttons) > 0:
+        btn_list = []
+        for b in tpl.buttons[:3]: # Meta allows up to 3 quick reply buttons
+            if isinstance(b, dict):
+                btn_list.append({
+                    "type": b.get("type", "QUICK_REPLY"),
+                    "text": b.get("text", "")[:25]
+                })
+            elif isinstance(b, str):
+                btn_list.append({
+                    "type": "QUICK_REPLY",
+                    "text": b[:25]
+                })
+        if btn_list:
+            components.append({
+                "type": "BUTTONS",
+                "buttons": btn_list
+            })
 
     payload = {
         "name": name,

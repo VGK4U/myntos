@@ -70,17 +70,25 @@ async def app_exception_handler(request: Request, exc: AppException):
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     """Handle database integrity errors"""
     error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
+    req_method = getattr(request, 'method', 'WEBSOCKET')
     
     import logging
     logger = logging.getLogger(__name__)
-    logger.error(f"IntegrityError caught on {request.method} {request.url.path}: {error_msg}")
+    logger.error(f"IntegrityError caught on {req_method} {request.url.path}: {error_msg}")
+    print(f"[DC-INTEGRITY-ERR] {req_method} {request.url.path} | {error_msg}", flush=True)
     
-    if 'unique constraint' in error_msg.lower() or 'duplicate' in error_msg.lower():
-        message = "This record already exists. Please check for duplicates."
-    elif 'foreign key' in error_msg.lower():
-        message = "Referenced record does not exist or cannot be deleted due to dependencies."
+    msg_lower = error_msg.lower()
+    if 'unique' in msg_lower or 'duplicate' in msg_lower:
+        message = "This record already exists. Please check for duplicate entries."
+    elif 'foreign key' in msg_lower or 'fk_' in msg_lower:
+        message = "Referenced record does not exist or cannot be modified due to active dependencies."
+    elif 'not-null' in msg_lower or 'null value' in msg_lower:
+        message = "Required database field cannot be empty."
+    elif 'check constraint' in msg_lower:
+        message = "Invalid value violates database field constraint."
     else:
-        message = "Database constraint violation occurred."
+        first_line = error_msg.splitlines()[0] if error_msg else "Constraint check failed."
+        message = f"Database constraint violation: {first_line}"
     
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
@@ -97,10 +105,11 @@ async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
     import logging
     import traceback
     logger = logging.getLogger(__name__)
+    req_method = getattr(request, 'method', 'WEBSOCKET')
     
     error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
     error_trace = traceback.format_exc()
-    logger.error(f"SQLAlchemy Error on {request.method} {request.url.path}: {error_msg}")
+    logger.error(f"SQLAlchemy Error on {req_method} {request.url.path}: {error_msg}")
     logger.error(f"Full traceback: {error_trace}")
     
     return JSONResponse(
@@ -117,13 +126,14 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     """Handle request validation errors"""
     import logging
     logger = logging.getLogger(__name__)
+    req_method = getattr(request, 'method', 'WEBSOCKET')
     
     errors = []
     for error in exc.errors():
         field = '.'.join(str(loc) for loc in error['loc'])
         error_msg = f"{field}: {error['msg']}"
         errors.append(error_msg)
-        logger.error(f"Validation Error on {request.method} {request.url.path} - {error_msg}")
+        logger.error(f"Validation Error on {req_method} {request.url.path} - {error_msg}")
     
     detailed_message = "; ".join(errors)
     
@@ -141,8 +151,9 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 async def generic_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions"""
     import traceback
+    req_method = getattr(request, 'method', 'WEBSOCKET')
     # DC-ERR-LOG-001: single-line log first (never truncated in deployment logs)
-    print(f"[DC-500] {request.method} {request.url.path} | {type(exc).__name__}: {exc}", flush=True)
+    print(f"[DC-500] {req_method} {request.url.path} | {type(exc).__name__}: {exc}", flush=True)
     traceback.print_exc()
 
     return JSONResponse(

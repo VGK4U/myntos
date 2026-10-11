@@ -20,6 +20,8 @@ class RechargeTransaction(Base):
     service_type = Column(String, default="Mobile")
     value1 = Column(String, nullable=True)
     value2 = Column(String, nullable=True)
+    referral_code = Column(String(50), nullable=True, index=True)
+    referred_by = Column(String(50), nullable=True, index=True)
     
     # Razorpay Payment Details
     razorpay_order_id = Column(String, unique=True, index=True, nullable=True)

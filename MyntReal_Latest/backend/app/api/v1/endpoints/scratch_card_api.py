@@ -39,13 +39,17 @@ def enforce_staff_admin_access(current_user):
 
 class ClaimScratchCardRequest(BaseModel):
     token: str
+    name: Optional[str] = None
+    pincode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
     mobile_number: Optional[str] = None
 
 
 @router.get("/info/{token}")
 def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
     """
-    Retrieve safe display information for a scratch card token without revealing the un-scratched amount.
+    Retrieve display information for a scratch card token, including revealed reward amount.
     """
     token_hash = ScratchCard.hash_token(token)
     card = db.query(ScratchCard).filter(ScratchCard.token_hash == token_hash).first()
@@ -64,15 +68,23 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
 
     response = {
         "valid": True,
-        "brand": card.brand or "Zynova Mobility",
+        "brand": "Myntreal",
         "masked_mobile": masked_mobile,
         "status": card.status,
         "expires_at": card.expires_at.isoformat(),
         "recharge_amount": card.recharge_transaction.amount if card.recharge_transaction else 0.0,
-        "is_claimed": card.status == "CLAIMED"
+        "reward_amount_rupees": card.allocated_amount_paise / 100.0,
+        "is_claimed": card.status == "CLAIMED",
+        "customer_name": card.customer_name or "",
+        "pincode": card.pincode or "",
+        "city": card.city or "",
+        "state": card.state or "",
+        "referral_code": card.referral_code or f"MYNT{card.id:04d}",
+        "referral_link": f"https://www.myntreal.com/recharge.html?ref={card.referral_code or f'MYNT{card.id:04d}'}",
+        "referral_bonus_pct": 50,
+        "max_referred_members": 5
     }
 
-    # Only expose revealed amount if already claimed
     if card.status == "CLAIMED":
         response["revealed_amount_rupees"] = card.allocated_amount_paise / 100.0
 
@@ -82,7 +94,7 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
 @router.post("/claim")
 def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_db)):
     """
-    Phase 5: Atomic Claim Execution & Wallet Credit
+    Phase 5: Atomic Claim Execution with Lead Details (Name, PIN, City, State), Wallet Credit & 50% Referral Bonus
     """
     if not req.token:
         raise HTTPException(status_code=400, detail="Token is required.")
@@ -100,12 +112,18 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
 
         # Check if already claimed
         if card.status == "CLAIMED":
+            ref_code = card.referral_code or f"MYNT{card.id:04d}"
             return {
                 "status": "already_claimed",
                 "message": "This scratch card has already been claimed.",
                 "amount_rupees": card.allocated_amount_paise / 100.0,
                 "amount_paise": card.allocated_amount_paise,
-                "claimed_at": card.claimed_at.isoformat() if card.claimed_at else None
+                "customer_name": card.customer_name,
+                "claimed_at": card.claimed_at.isoformat() if card.claimed_at else None,
+                "referral_code": ref_code,
+                "referral_link": f"https://www.myntreal.com/recharge.html?ref={ref_code}",
+                "referral_bonus_pct": 50,
+                "max_referred_members": 5
             }
 
         now = get_indian_time()
@@ -116,6 +134,23 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
 
         if card.status != "ISSUED":
             raise HTTPException(status_code=400, detail=f"Scratch card cannot be claimed (status: {card.status}).")
+
+        # Save Customer Details from Claim Form
+        if req.name and req.name.strip():
+            card.customer_name = req.name.strip()[:100]
+        if req.pincode and req.pincode.strip():
+            card.pincode = req.pincode.strip()[:10]
+        if req.city and req.city.strip():
+            card.city = req.city.strip()[:100]
+        if req.state and req.state.strip():
+            card.state = req.state.strip()[:100]
+
+        if card.recharge_transaction and card.customer_name:
+            card.recharge_transaction.guest_name = card.customer_name
+
+        # Ensure card has a referral_code
+        if not card.referral_code:
+            card.referral_code = f"MYNT{card.id:04d}"
 
         # Campaign updates
         campaign = db.query(RewardCampaign).filter(
@@ -157,15 +192,99 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
             card.wallet_ledger_id = ledger.id
             db.commit()
 
+        # ── 50% Referral Bonus Processing (Up to maximum 5 members) ─────────
+        if card.referred_by_card_id and not card.referral_bonus_paid:
+            try:
+                referrer_card = db.query(ScratchCard).filter(ScratchCard.id == card.referred_by_card_id).first()
+                if referrer_card and referrer_card.id != card.id:
+                    # Count how many referral bonuses this referrer has already earned
+                    paid_ref_count = db.query(ScratchCard).filter(
+                        ScratchCard.referred_by_card_id == referrer_card.id,
+                        ScratchCard.referral_bonus_paid == True
+                    ).count()
+
+                    if paid_ref_count < 5:
+                        bonus_paise = card.allocated_amount_paise // 2 # 50% of referred member's scratch reward
+                        # Check referral pool budget (₹500 / 50,000 paise pool)
+                        ref_budget = getattr(campaign, 'referral_budget_paise', 50000) or 50000
+                        ref_spent = getattr(campaign, 'referral_expenditure_paise', 0) or 0
+
+                        if ref_spent + bonus_paise <= ref_budget:
+                            ref_idempotency = f"SCRATCH_REF_BONUS_{referrer_card.id}_{card.id}"
+                            existing_ref_ledger = db.query(RewardLedger).filter(
+                                RewardLedger.idempotency_key == ref_idempotency
+                            ).first()
+
+                            if not existing_ref_ledger:
+                                ref_user = db.query(User).filter(User.phone_number == referrer_card.mobile_number).first()
+                                ref_user_id = ref_user.id if ref_user else None
+
+                                ref_ledger = RewardLedger(
+                                    scratch_card_id=card.id,
+                                    mobile_number=referrer_card.mobile_number,
+                                    user_id=ref_user_id,
+                                    amount_paise=bonus_paise,
+                                    transaction_type="SCRATCH_REFERRAL_BONUS",
+                                    idempotency_key=ref_idempotency,
+                                    created_at=now
+                                )
+                                db.add(ref_ledger)
+                                db.flush()
+
+                                if ref_user:
+                                    ref_user.wallet_balance = float(ref_user.wallet_balance or 0.0) + (bonus_paise / 100.0)
+
+                                if campaign:
+                                    campaign.referral_expenditure_paise = ref_spent + bonus_paise
+
+                                card.referral_bonus_paid = True
+                                db.commit()
+
+                                # Dispatch referral notification to referrer
+                                try:
+                                    from app.services.notification_outbox_service import enqueue_scratch_referral_reward_notification
+                                    enqueue_scratch_referral_reward_notification(
+                                        db=db,
+                                        referrer_name=referrer_card.customer_name or "Valued Partner",
+                                        referrer_mobile=referrer_card.mobile_number,
+                                        referred_name=card.customer_name or "Your friend",
+                                        bonus_rupees=bonus_paise / 100.0,
+                                        scratch_card_id=card.id
+                                    )
+                                except Exception as ref_notify_err:
+                                    print(f"Scratch referral notify error: {ref_notify_err}")
+            except Exception as ref_err:
+                print(f"[SCRATCH-CLAIM] Referral processing error: {ref_err}")
+
         amount_in_rs = card.allocated_amount_paise / 100.0
 
+        # Dispatch WhatsApp claim acknowledgment message
+        try:
+            from app.services.notification_outbox_service import enqueue_scratch_claim_ack_notification
+            enqueue_scratch_claim_ack_notification(
+                db=db,
+                customer_name=card.customer_name or "Valued Customer",
+                mobile_number=card.mobile_number,
+                amount_rupees=amount_in_rs,
+                scratch_card_id=card.id,
+                referral_code=card.referral_code
+            )
+        except Exception as notify_err:
+            print(f"Scratch claim ack notify error: {notify_err}")
+
+        ref_code = card.referral_code or f"MYNT{card.id:04d}"
         return {
             "status": "success",
-            "message": f"Congratulations! You won ₹{amount_in_rs:.2f}!",
+            "message": f"Congratulations {card.customer_name or ''}! You claimed ₹{amount_in_rs:.2f}!",
             "amount_rupees": amount_in_rs,
             "amount_paise": card.allocated_amount_paise,
+            "customer_name": card.customer_name,
             "claimed_at": card.claimed_at.isoformat() if card.claimed_at else now.isoformat(),
-            "mobile_number": card.mobile_number
+            "mobile_number": card.mobile_number,
+            "referral_code": ref_code,
+            "referral_link": f"https://www.myntreal.com/recharge.html?ref={ref_code}",
+            "referral_bonus_pct": 50,
+            "max_referred_members": 5
         }
 
     except HTTPException:
@@ -174,6 +293,91 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to claim scratch card: {str(e)}")
+
+
+class ScratchInterestRequest(BaseModel):
+    token: str
+    category: str # "Solar", "EV", "Training", "Insurance"
+    customer_name: Optional[str] = None
+    mobile_number: Optional[str] = None
+
+
+@router.post("/interest")
+def register_scratch_interest(req: ScratchInterestRequest, db: Session = Depends(get_db)):
+    """
+    Direct endpoint for customer to express interest in ecosystem services (Solar, EV, Training, Insurance)
+    from the scratch card page or quick replies. Automatically creates a CRMLead with source='Recharge'.
+    """
+    if not req.token:
+        raise HTTPException(status_code=400, detail="Token is required.")
+
+    token_hash = ScratchCard.hash_token(req.token)
+    card = db.query(ScratchCard).filter(ScratchCard.token_hash == token_hash).first()
+
+    phone = (card.mobile_number if card else None) or req.mobile_number
+    if not phone:
+        raise HTTPException(status_code=400, detail="Mobile number not associated with token.")
+
+    clean_digits = ''.join(filter(str.isdigit, str(phone)))
+    phone_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+
+    cat = (req.category or "").strip()
+    title_map = {
+        "Solar": "Suryanz Solar (Rooftop Solar & Subsidy)",
+        "EV": "Electric Mobility (Clean 2W/3W EVs)",
+        "Training": "EVolution Skill (EV Technical Training)",
+        "Insurance": "VGK Care (Insurance Protection)"
+    }
+    title = title_map.get(cat, f"{cat} Services")
+
+    from app.models.crm import CRMLead
+    from datetime import timedelta
+
+    name = (card.customer_name if card and card.customer_name else None) or req.customer_name or "Recharge Customer"
+    city = card.city if card else None
+    state = card.state if card else None
+    pincode = card.pincode if card else None
+
+    # Check recent lead created in the last 24h for this category
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    existing = db.query(CRMLead).filter(
+        CRMLead.phone == phone_10,
+        CRMLead.source == "Recharge",
+        CRMLead.looking_for == cat,
+        CRMLead.created_at >= cutoff
+    ).first()
+
+    if existing:
+        return {
+            "status": "success",
+            "message": f"Interest in {cat} already recorded. Our team will contact you shortly!",
+            "lead_id": existing.id
+        }
+
+    lead = CRMLead(
+        company_id=1,
+        name=name,
+        phone=phone_10,
+        phone_primary_whatsapp=True,
+        source="Recharge",
+        source_details=f"Scratch Card Web Interest: {title}",
+        looking_for=cat,
+        requirements=f"Customer registered interest in {title} on Scratch Card Claim page.",
+        status="New",
+        city=city,
+        state=state,
+        pincode=pincode,
+        created_at=datetime.utcnow()
+    )
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+
+    return {
+        "status": "success",
+        "message": f"Thank you! Our {cat} specialist will connect with you on {phone_10} with exclusive discounts.",
+        "lead_id": lead.id
+    }
 
 
 # ── PHASE 10: ADMINISTRATIVE CONTROLS & RECONCILIATION ────────────────────────

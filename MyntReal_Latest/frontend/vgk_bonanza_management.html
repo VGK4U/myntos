@@ -11,6 +11,7 @@
 <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="/public/js/share-modal.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -110,26 +111,32 @@ tbody tr { background: #ffffff !important; }
             <!-- Title & Campaign Info -->
             <div style="flex: 1; min-width: 280px;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                    <span style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;">
-                        <i class="fas fa-crown me-1"></i> JULY 2026 ACHIEVERS POSTER
+                    <span id="heroBadgeTag" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;">
+                        <i class="fas fa-crown me-1"></i> VGK BONANZA ACHIEVERS POSTER
                     </span>
-                    <span style="color: #fbbf24; font-size: 12px; font-weight: 600;"><i class="fas fa-umbrella-beach me-1"></i> Resort Party Entry Ticket</span>
+                    <span id="heroSubtitle" style="color: #fbbf24; font-size: 12px; font-weight: 600;"><i class="fas fa-award me-1"></i> Special Campaign Rewards</span>
                 </div>
 
-                <h1 style="font-size: 23px; font-weight: 800; color: #ffffff; margin-bottom: 6px; font-family: 'Segoe UI', sans-serif;">
+                <h1 id="heroTitle" style="font-size: 23px; font-weight: 800; color: #ffffff; margin-bottom: 6px; font-family: 'Segoe UI', sans-serif;">
                     <i class="fas fa-trophy text-warning me-2"></i>VGK Bonanza Management
                 </h1>
-                <p style="color: #cbd5e1; font-size: 13px; margin: 0 0 14px 0;">
-                    Campaign Period: <strong>13 JUL 2026 → 31 JUL 2026</strong> | Qualification: DVR with 1st Payment Received
+                <p id="heroPeriod" style="color: #cbd5e1; font-size: 13px; margin: 0 0 14px 0;">
+                    Campaign Period: <strong>Select Campaign to View Details</strong>
                 </p>
 
                 <!-- Quick Action Buttons -->
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                    <a href="/public/images/bonanza/resort_party_achievers_july2026.jpg" download="VGK_July2026_Resort_Party_Achievers.jpg" class="btn-banner" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; border: none; box-shadow: 0 4px 12px rgba(245,158,11,0.4);">
-                        <i class="fas fa-file-download me-1"></i> Download Poster with Photos
-                    </a>
-                    <button class="btn-banner outline" onclick="openPosterModal()">
-                        <i class="fas fa-eye me-1"></i> View Full Poster
+                    <button class="btn-banner" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; border: none; box-shadow: 0 4px 12px rgba(245,158,11,0.4);" onclick="openPosterModal()">
+                        <i class="fas fa-eye me-1"></i> View Dynamic Poster
+                    </button>
+                    <button class="btn-banner outline" onclick="triggerHeroShare('default')">
+                        <i class="fas fa-share-alt me-1"></i> Share Campaign
+                    </button>
+                    <button class="btn-banner outline" style="border-color:#25D366;color:#25D366;" onclick="triggerHeroShare('whatsapp')">
+                        <i class="fab fa-whatsapp me-1"></i> WhatsApp
+                    </button>
+                    <button class="btn-banner outline" onclick="triggerHeroShare('copy')">
+                        <i class="fas fa-link me-1"></i> Copy Link
                     </button>
                     <a href="/staff/vgk/bonanza-claims" class="btn-banner outline"><i class="fas fa-clipboard-check"></i>Claims</a>
                     <button class="btn-banner white" onclick="openCreateModal()"><i class="fas fa-plus"></i>New Bonanza</button>
@@ -139,15 +146,18 @@ tbody tr { background: #ffffff !important; }
             <!-- Achievers Poster Interactive Card Thumbnail -->
             <div style="text-align: center;">
                 <div onclick="openPosterModal()" style="position: relative; cursor: pointer; border-radius: 12px; overflow: hidden; border: 2px solid #fbbf24; box-shadow: 0 8px 20px rgba(0,0,0,0.5); width: 220px; height: 130px; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='scale(1.04)';" onmouseout="this.style.transform='scale(1)';">
-                    <img src="/public/images/bonanza/resort_party_achievers_july2026.jpg" alt="Resort Party Achievers July 2026" style="width: 100%; height: 100%; object-fit: cover; object-position: top; display: block;">
+                    <div id="heroPosterPreviewContainer" style="width: 100%; height: 100%; background: linear-gradient(135deg, #1e1b4b, #31104b); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px;">
+                        <i class="fas fa-award text-warning" style="font-size: 32px; margin-bottom: 6px;"></i>
+                        <span id="heroPosterPreviewTitle" style="color: #fff; font-size: 11px; font-weight: 800; text-align: center;">VGK Achievers Poster</span>
+                    </div>
                     <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%); display: flex; align-items: flex-end; justify-content: center; padding: 8px;">
                         <span style="color: #000; background: #fbbf24; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px;">
                             <i class="fas fa-search-plus"></i> View & Download Poster
                         </span>
                     </div>
                 </div>
-                <div style="font-size: 11px; color: #fbbf24; font-weight: 700; margin-top: 6px;">
-                    <i class="fas fa-users me-1"></i> 4 Achievers with Photos
+                <div id="heroAchieversCount" style="font-size: 11px; color: #fbbf24; font-weight: 700; margin-top: 6px;">
+                    <i class="fas fa-users me-1"></i> <span id="heroAchieverNum">0</span> Achievers with Photos
                 </div>
             </div>
         </div>
@@ -185,8 +195,8 @@ tbody tr { background: #ffffff !important; }
         <div>
             <label>Current Status</label>
             <select class="form-select" id="filterCurrentStatus" style="min-width:140px">
-                <option value="" selected>All</option>
-                <option value="Running">🏃 Running</option>
+                <option value="Running" selected>🏃 Running</option>
+                <option value="">All</option>
                 <option value="Expired">⌛ Expired</option>
                 <option value="Cancelled">🚫 Cancelled</option>
             </select>
@@ -932,7 +942,7 @@ async function loadBonanzas() {
         const elClaims = document.getElementById('statClaims');
 
         if (elTotal) elTotal.textContent = d.total || allItems.length || 0;
-        if (elActive) elActive.textContent = allItems.filter(b => b.status === 'Approved').length;
+        if (elActive) elActive.textContent = allItems.filter(b => getCampaignCurrentStatus(b) === 'Running').length;
         if (elPending) elPending.textContent = allItems.filter(b => b.status === 'Pending').length;
         if (elClaims) elClaims.textContent = allItems.reduce((s,b) => s + (b.total_claims||0), 0);
 
@@ -2026,11 +2036,13 @@ async function activateBonanza(id, name, currentStatus) {
 }
 
 function getCampaignCurrentStatus(b) {
+    if (!b) return 'Expired';
     if (b.status === 'Cancelled') return 'Cancelled';
     if (b.status === 'Paused') return 'Paused';
     if (b.status === 'Pending') return 'Pending';
     if (b.status === 'Draft') return 'Draft';
-    if (b.status === 'Approved') return 'Running';
+    
+    if (!b.start_date || !b.end_date) return 'Running';
     
     const now = new Date();
     const start = new Date(b.start_date);
@@ -2633,7 +2645,7 @@ function mgmtRenderTracking(d) {
                 if (!memberMap[m.partner_id]) {
                     memberMap[m.partner_id] = {
                         partner_id: m.partner_id, partner_name: m.partner_name,
-                        partner_code: m.partner_code, claim_status: m.claim_status,
+                        partner_code: m.partner_code, photo_url: m.photo_url || '', claim_status: m.claim_status,
                         tiers: {}, any_eligible: false,
                         ec_stats: m.ec_stats || {levels: {}, total_earnings: 0.0}
                     };
@@ -2641,11 +2653,16 @@ function mgmtRenderTracking(d) {
                 }
                 memberMap[m.partner_id].tiers[tier.row_key] = {
                     eligible: m.eligible ?? 0,
-                    achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible
+                    achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible,
+                    award_name: tier.award_name,
+                    tier_label: tier.tier_label,
+                    reward_amount: tier.reward_amount,
+                    tier_index: ti
                 };
                 if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
             });
         });
+        g.memberMap = memberMap;
 
         let displayOrder = baseOrder;
         if (_mgmtTrackView === 'achieved') {
@@ -2655,35 +2672,6 @@ function mgmtRenderTracking(d) {
                 isEc ? (memberMap[pid].ec_stats.total_earnings > 0) :
                 Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0 || (t.eligible || 0) > 0)
             );
-        }
-
-        let tierColHeaders = '';
-        let tierSubHeaders = '';
-        let totalCols = 0;
-
-        if (isEc) {
-            tierColHeaders = ecLevels.map(lvl => {
-                return `<th style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap;padding:10px 8px">
-                    <div style="color:#7c3aed;font-size:11px;font-weight:700">L${lvl.level}</div>
-                    <div style="color:#6b7280;font-size:10px">${lvl.trigger}</div>
-                </th>`;
-            }).join('') + `<th style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap;padding:10px 8px">
-                <div style="color:#10b981;font-size:11px;font-weight:700">Earnings</div>
-            </th>`;
-            totalCols = 2 + ecLevels.length + 1 + 1;
-        } else {
-            tierColHeaders = g.tiers.map(tier => {
-                const lbl = tier.tier_label || `🏅 ${tier.award_name || 'Reward'} (${tier.target} deals)`;
-                const achieversText = tier.eligible_count > 0 ? `${tier.eligible_count} Achieved (Target Met)` : `0 Achieved (Target: ${tier.target} deals)`;
-                return `<th colspan="3" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
-                    <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
-                    <div style="color:#6b7280;font-size:10px;font-weight:600">${achieversText}</div>
-                </th>`;
-            }).join('');
-            tierSubHeaders = g.tiers.map(() =>
-                `<th style="text-align:center;border-left:1px solid #e5e7eb" title="Qualifying files submitted/payment-received in campaign window">Elig</th><th style="text-align:center" title="Completed qualifying deals count">Done</th><th style="text-align:center" title="Remaining deals needed to achieve milestone">Need</th>`
-            ).join('');
-            totalCols = 2 + g.tiers.length * 3 + 1;
         }
 
         const TIER_BG_PALETTE = [
@@ -2796,12 +2784,16 @@ function mgmtRenderTracking(d) {
             const claimBadge = md.claim_status
                 ? `<span style="display:inline-block;padding:1px 6px;border-radius:12px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
                 : `<span style="color:#9ca3af;font-size:10px">—</span>`;
+            const shareBtn = md.any_eligible
+                ? `<button onclick="openPosterModal(${g.bonanza_id}, ${md.partner_id})" class="btn-share-row" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-size: 10px; font-weight: 800; border: none; padding: 2px 7px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; margin-left: 5px;" title="Share Achievement Poster"><i class="fas fa-share-alt"></i> Share</button>`
+                : '';
             const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
             return `<tr class="${rowCls}">
                 <td style="width:22px;color:#9ca3af;font-size:11px;text-align:center;padding:4px 2px">${idx+1}</td>
                 <td style="white-space:nowrap;padding:4px 6px;max-width:170px;overflow:hidden;text-overflow:ellipsis" title="${escH(md.partner_name)} (${escH(md.partner_code)})">
                     <span style="font-weight:700;font-size:12px;color:#111827">${escBonanzaH(md.partner_name)}</span>
                     <span style="font-size:10px;color:#6b7280;margin-left:3px">(${escBonanzaH(md.partner_code)})</span>
+                    ${shareBtn}
                 </td>
                 ${tierCells}
                 ${isEc ? '' : `<td style="text-align:center;padding:4px 2px">${claimBadge}</td>`}
@@ -2880,9 +2872,6 @@ function mgmtRenderTracking(d) {
             </tr>`;
         }
 
-            </tr>`;
-        }
-
         const tbodyContent = overallTotalRowHtml + (memberRows || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`);
 
         if (isEc) {
@@ -2930,7 +2919,28 @@ function mgmtRenderTracking(d) {
     }).join('');
 
     content.innerHTML = html;
+    if (groupOrder.length > 0) {
+        window._mgmtGroupOrder = groupOrder;
+        const primaryGroup = groupOrder[0];
+        const primaryAchievers = Object.values(primaryGroup.memberMap || {}).filter(m => isTrueAchiever(m, primaryGroup));
+        _currentActiveBonanza = primaryGroup;
+        _currentActiveAchievers = primaryAchievers;
+        updateDynamicHeroBanner(primaryGroup, primaryAchievers);
+        renderDynamicAchieversPoster(primaryGroup, primaryAchievers);
+    }
     _applyMgmtBtnState(_mgmtTrackView);
+}
+
+function isTrueAchiever(m, g) {
+    if (!m) return false;
+    const isEc = g && (g.tiers?.[0]?.reward_type === 'extra_commission' || g.tiers?.[0]?.reward_type === 'brand_wise_commission');
+    if (isEc) {
+        return (m.ec_stats && m.ec_stats.total_earnings > 0) || m.any_eligible === true;
+    }
+    if (m.tiers) {
+        return Object.values(m.tiers).some(t => t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid');
+    }
+    return m.is_eligible === true;
 }
 // ── End DC-VGK-MEMBER-TRACKING-002 ───────────────────────────────────────────
 
@@ -3120,203 +3130,671 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
 }
 </script>
 
-<!-- Poster View & Download Modal Overlay (Dynamic Canvas Generator) -->
-<div id="posterModalOverlay" class="modal-overlay" onclick="if(event.target===this) closePosterModal()">
-    <div style="background: #0f172a; border-radius: 16px; width: 92%; max-width: 880px; max-height: 94vh; overflow: hidden; border: 2px solid #fbbf24; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column;">
-        <div style="padding: 16px 20px; background: linear-gradient(135deg, #1e1b4b, #311042); border-bottom: 1px solid rgba(251,191,36,0.3); display: flex; align-items: center; justify-content: space-between;">
+<!-- Poster View & Download Modal Overlay (Interactive Achievers Poster Builder) -->
+<div id="posterModalOverlay" class="modal-overlay" onclick="if(event.target===this) closePosterModal()" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+    <div style="background:#0f172a; border-radius:16px; width:96vw; max-width:1440px; box-shadow:0 25px 60px rgba(0,0,0,0.7); display:flex; flex-direction:column; height:92vh; max-height:92vh; overflow:hidden; border:2px solid #fbbf24;">
+        
+        <!-- Modal Header Bar -->
+        <div style="background:linear-gradient(135deg, #1e1b4b, #311042); padding:16px 24px; border-bottom:1px solid rgba(251,191,36,0.35); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <div>
-                <h4 style="color: #ffffff; font-size: 16px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-crown text-warning"></i> Official Bonanza Achievers Poster Builder
+                <h4 style="color:#ffffff; font-size:17px; font-weight:800; margin:0; display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-crown text-warning"></i> Generate VGK Bonanza Achievers Poster
                 </h4>
-                <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">Includes Official VGK4U & MYNTREAL Logos and Member Photos</div>
+                <div style="color:#cbd5e1; font-size:12px; margin-top:2px;">Customize campaign details, select members, and generate a premium poster for sharing</div>
             </div>
-            <button onclick="closePosterModal()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+            <button onclick="closePosterModal()" style="background:rgba(255,255,255,0.1); border:none; color:#fff; width:34px; height:34px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px;" title="Close Modal">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
-        <div style="padding: 20px; overflow-y: auto; text-align: center; background: #020617; flex: 1;">
+
+        <!-- Modal Body (Two-Column Split Layout) -->
+        <div style="display:flex; flex:1; overflow:hidden; background:#020617;">
             
-            <!-- Hidden file input for photo upload -->
-            <input type="file" id="achieverPhotoInput" accept="image/*" style="display: none;" onchange="handleAchieverPhotoUpload(event)">
-
-            <!-- DYNAMIC POSTER CANVAS CONTENT -->
-            <div id="dynamicPosterContent" style="width: 100%; max-width: 800px; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); color: white; padding: 24px 20px; border-radius: 16px; border: 3px solid #f59e0b; position: relative; font-family: 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; overflow: hidden; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
-
-                <!-- Ambient Glow -->
-                <div style="position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 500px; height: 500px; background: radial-gradient(circle, rgba(245,158,11,0.2) 0%, transparent 70%); pointer-events: none;"></div>
-
-                <!-- 1. Header Logos Row -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: relative; z-index: 2; padding: 0 8px;">
-                    <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
-                        <img src="/public/vgk4u-logo-200.png" alt="VGK4U Logo" style="height: 38px; object-fit: contain;">
-                    </div>
-                    <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
-                        <img src="/public/myntreal-logo-trans.png" alt="MYNTREAL Logo" style="height: 34px; object-fit: contain;">
-                    </div>
-                </div>
-
-                <!-- 2. Campaign Header Badge -->
-                <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
-                    <div style="display: inline-block; background: linear-gradient(135deg, #b45309, #d97706, #f59e0b); color: #ffffff; font-weight: 800; font-size: 12px; padding: 5px 22px; border-radius: 20px; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.2px; box-shadow: 0 4px 15px rgba(245,158,11,0.4);">
-                        JULY 2026 — Resort Party ENTRY TICKET ACHIEVERS
-                    </div>
-                </div>
-
-                <!-- 3. Title & Subtitle -->
-                <div style="text-align: center; margin-bottom: 18px; position: relative; z-index: 2;">
-                    <h1 style="font-size: 30px; font-weight: 900; background: linear-gradient(90deg, #fff, #fef08a, #f59e0b, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">
-                        CONGRATULATIONS!
-                    </h1>
-                    <div style="font-size: 16px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <i class="fas fa-star" style="font-size: 12px;"></i>
-                        <span>to Our Bonanza Achievers</span>
-                        <i class="fas fa-star" style="font-size: 12px;"></i>
-                    </div>
-                    <div style="font-size: 13px; color: #e2e8f0; margin-top: 4px; font-weight: 600;">
-                        You've Qualified for the Resort Party Entry Ticket!
-                    </div>
-                </div>
-
-                <!-- 4. Campaign Period & Qualification Pill -->
-                <div style="display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 10px 16px; margin: 0 auto 18px auto; max-width: 620px; position: relative; z-index: 2;">
-                    <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
-                        <div style="background: rgba(245,158,11,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 15px;">
-                            <i class="far fa-calendar-alt"></i>
-                        </div>
-                        <div>
-                            <div style="font-size: 9.5px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">CAMPAIGN PERIOD</div>
-                            <div style="font-size: 12.5px; font-weight: 700; color: #ffffff;">13 JUL 2026 → 31 JUL 2026</div>
-                        </div>
-                    </div>
-                    <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.2);"></div>
-                    <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
-                        <div style="background: rgba(16,185,129,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 15px;">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div>
-                            <div style="font-size: 9.5px; font-weight: 800; color: #34d399; text-transform: uppercase;">QUALIFICATION</div>
-                            <div style="font-size: 12.5px; font-weight: 700; color: #ffffff;">DVR with Eligible 1st Payment Received</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 5. Achievers Section Header -->
-                <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
-                    <span style="background: linear-gradient(90deg, #1e3a8a, #3b82f6); border: 1px solid #60a5fa; color: #ffffff; font-weight: 800; font-size: 12px; padding: 4px 18px; border-radius: 20px; letter-spacing: 1px;">
-                        ⭐ OUR BONANZA ACHIEVERS ⭐
-                    </span>
-                </div>
-
-                <!-- 6. 4 Achiever Cards Grid -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; position: relative; z-index: 2;">
-                    
-                    <!-- Achiever 1 -->
-                    <div style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;">
-                        <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
-                            <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
-                                <img id="posterImg_233" src="/public/images/bonanza/achiever_233.jpg" alt="Jalumuri Trimurthulu" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                            <button onclick="triggerAchieverPhotoUpload('posterImg_233')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                        <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2;">Mr. Jalumuri Trimurthulu</div>
-                        <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">VGK07104994</div>
-                    </div>
-
-                    <!-- Achiever 2 -->
-                    <div style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;">
-                        <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
-                            <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
-                                <img id="posterImg_161" src="/public/images/bonanza/achiever_161.jpg" alt="Koribilli Gowri Naidu" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                            <button onclick="triggerAchieverPhotoUpload('posterImg_161')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                        <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2;">Mr. Koribilli Gowri Naidu</div>
-                        <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">VGK07104865</div>
-                    </div>
-
-                    <!-- Achiever 3 -->
-                    <div style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;">
-                        <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
-                            <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
-                                <img id="posterImg_152" src="/public/images/bonanza/achiever_152.jpg" alt="Pothala Chiranjeevi" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                            <button onclick="triggerAchieverPhotoUpload('posterImg_152')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                        <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2;">Mr. Pothala Chiranjeevi</div>
-                        <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">VGK07108189</div>
-                    </div>
-
-                    <!-- Achiever 4 -->
-                    <div style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative;">
-                        <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
-                            <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
-                                <img id="posterImg_123" src="/public/images/bonanza/achiever_123.jpg" alt="Jarra Kumari" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-                            <button onclick="triggerAchieverPhotoUpload('posterImg_123')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                        <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2;">Ms. Jarra Kumari</div>
-                        <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">VGK07105861</div>
-                    </div>
-                </div>
-
-                <!-- 7. Footer Slogans -->
-                <div style="text-align: center; margin-top: 10px; position: relative; z-index: 2;">
-                    <div style="font-size: 13px; font-weight: 700; color: #cbd5e1; margin-bottom: 2px;">
-                        Your Hard Work, Dedication & Commitment are the Real Inspiration!
-                    </div>
-                    <div style="font-size: 14px; font-weight: 800; color: #fef08a; font-style: italic;">
-                        Keep Growing... Keep Winning... Many More Bonanzas Await You!
-                    </div>
-                </div>
-
-                <!-- 8. Bottom Bar Slogans -->
-                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: space-around; font-size: 10px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">
-                    <div><i class="fas fa-trophy me-1"></i> MORE EFFORTS MORE REWARDS</div>
-                    <div><i class="fas fa-users me-1"></i> TOGETHER WE GROW</div>
-                    <div><i class="fas fa-bullseye me-1"></i> TOGETHER WE ACHIEVE</div>
-                    <div><i class="fas fa-chart-line me-1"></i> TOGETHER WE CELEBRATE</div>
-                </div>
+            <!-- Left Pane: Controls & Member Selection Checklist -->
+            <div style="width:380px; min-width:340px; background:#0f172a; border-right:1px solid rgba(255,255,255,0.1); padding:20px; overflow-y:auto; box-sizing:border-box; color:#cbd5e1;">
                 
-                <div style="text-align: center; margin-top: 6px; font-size: 12px; font-weight: 800; color: #34d399; letter-spacing: 0.8px;">
-                    🌿 Go Solar. Give Back. Grow Together. 🌿
+                <h5 style="font-size:13px; font-weight:800; color:#fbbf24; text-transform:uppercase; margin:0 0 14px 0; border-bottom:1px solid rgba(245,158,11,0.3); padding-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-sliders-h"></i> Poster Details & Controls
+                </h5>
+
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    
+                    <!-- Campaign Dropdown Selector -->
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#fbbf24; display:block; margin-bottom:4px;">
+                            <i class="fas fa-trophy me-1"></i> SELECT CAMPAIGN
+                        </label>
+                        <select id="posterCampaignSelect" onchange="switchPosterCampaign(this.value)" style="width:100%; padding:8px 10px; font-size:12px; font-weight:700; border:1.5px solid #fbbf24; border-radius:6px; background:#1e293b; color:#fff; outline:none; cursor:pointer;">
+                        </select>
+                    </div>
+
+                    <!-- Campaign Title -->
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#94a3b8; display:block; margin-bottom:4px;">POSTER TITLE / CAMPAIGN</label>
+                        <input type="text" id="posterControlTitle" oninput="updatePosterFromControls()" style="width:100%; padding:8px 10px; font-size:12px; border:1.5px solid rgba(245,158,11,0.4); border-radius:6px; background:#1e293b; color:#fff; outline:none;" placeholder="e.g. VGK Mega Solar Festival Bonanza 2026">
+                    </div>
+
+                    <!-- Subtitle / Slogan -->
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#94a3b8; display:block; margin-bottom:4px;">CONGRATULATIONS SUBTITLE</label>
+                        <input type="text" id="posterControlSubtitle" oninput="updatePosterFromControls()" style="width:100%; padding:8px 10px; font-size:12px; border:1.5px solid rgba(245,158,11,0.4); border-radius:6px; background:#1e293b; color:#fff; outline:none;" placeholder="e.g. You've Qualified for the Bonanza Reward!">
+                    </div>
+
+                    <!-- Campaign Period -->
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#94a3b8; display:block; margin-bottom:4px;">CAMPAIGN PERIOD</label>
+                        <input type="text" id="posterControlPeriod" oninput="updatePosterFromControls()" style="width:100%; padding:8px 10px; font-size:12px; border:1.5px solid rgba(245,158,11,0.4); border-radius:6px; background:#1e293b; color:#fff; outline:none;" placeholder="e.g. 01 SEPT 2026 → 31 OCT 2026">
+                    </div>
+
+                    <!-- Qualification Basis -->
+                    <div>
+                        <label style="font-size:11px; font-weight:700; color:#94a3b8; display:block; margin-bottom:4px;">QUALIFICATION CRITERIA</label>
+                        <input type="text" id="posterControlQual" oninput="updatePosterFromControls()" style="width:100%; padding:8px 10px; font-size:12px; border:1.5px solid rgba(245,158,11,0.4); border-radius:6px; background:#1e293b; color:#fff; outline:none;" placeholder="e.g. DVR with 1st Payment Received">
+                    </div>
+
+                    <!-- Achievers Checklist Header -->
+                    <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:10px; padding-top:14px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                            <label style="font-size:11px; font-weight:800; color:#34d399; text-transform:uppercase;">
+                                <i class="fas fa-user-check me-1"></i> SELECT ACHIEVERS TO DISPLAY
+                            </label>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" onclick="selectAllPosterAchievers(true)" style="font-size:10px; font-weight:700; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981; border-radius:4px; padding:2px 6px; cursor:pointer;">All</button>
+                                <button type="button" onclick="selectAllPosterAchievers(false)" style="font-size:10px; font-weight:700; background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; border-radius:4px; padding:2px 6px; cursor:pointer;">None</button>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Checklist -->
+                        <div id="posterAchieverChecklist" style="max-height:220px; overflow-y:auto; background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px;">
+                            <!-- Dynamically populated checkboxes -->
+                        </div>
+                    </div>
+
+                    <div style="font-size:11px; color:#94a3b8; line-height:1.4; margin-top:6px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); border-radius:6px; padding:8px;">
+                        <i class="fas fa-camera text-warning me-1"></i> Click the camera icon on any achiever's photo in the live preview to upload or replace custom photo.
+                    </div>
+
                 </div>
             </div>
 
-        </div>
-        
-        <div style="padding: 14px 20px; background: #0f172a; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-            <div style="color: #94a3b8; font-size: 12px; font-weight: 600;">
-                <i class="fas fa-camera text-warning me-1"></i> Click camera icon on any photo circle to change image
+            <!-- Right Pane: Live Poster Preview & Custom Creative Tab -->
+            <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; background:#020617; padding:16px;">
+                
+                <!-- Tab Controls -->
+                <div style="display:flex; gap:10px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+                    <button id="posterTabBtnAuto" onclick="switchPosterTab('auto')" style="background:linear-gradient(90deg, #f59e0b, #d97706); color:#000; font-weight:800; border:none; padding:7px 18px; border-radius:8px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-paint-brush"></i> 🎨 AUTO-GENERATED POSTER
+                    </button>
+                    <button id="posterTabBtnCustom" onclick="switchPosterTab('custom')" style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-weight:700; border:1px solid rgba(255,255,255,0.2); padding:7px 18px; border-radius:8px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-cloud-upload-alt"></i> 🖼️ UPLOADED CUSTOM CREATIVE
+                    </button>
+                </div>
+
+                <!-- Hidden file input for photo upload -->
+                <input type="file" id="achieverPhotoInput" accept="image/*" style="display: none;" onchange="handleAchieverPhotoUpload(event)">
+                <input type="file" id="customCreativeInput" accept="image/*" style="display: none;" onchange="handleCustomCreativeUpload(event)">
+
+                <!-- Tab Content 1: Auto-Generated Poster Preview -->
+                <div id="posterTabContentAuto" style="flex:1; overflow-y:auto; text-align:center; padding-right:6px;">
+                    
+                    <!-- DYNAMIC POSTER CANVAS CONTENT -->
+                    <div id="dynamicPosterContent" style="width: 100%; max-width: 820px; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); color: white; padding: 26px 22px; border-radius: 16px; border: 3px solid #f59e0b; position: relative; font-family: 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; overflow: hidden; margin: 0 auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7);">
+
+                        <!-- Ambient Glow -->
+                        <div style="position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 500px; height: 500px; background: radial-gradient(circle, rgba(245,158,11,0.2) 0%, transparent 70%); pointer-events: none;"></div>
+
+                        <!-- 1. Header Logos Row -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: relative; z-index: 2; padding: 0 8px;">
+                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
+                                <img src="/public/vgk4u-logo-200.png" alt="VGK4U Logo" style="height: 38px; object-fit: contain;">
+                            </div>
+                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
+                                <img src="/public/myntreal-logo-trans.png" alt="MYNTREAL Logo" style="height: 34px; object-fit: contain;">
+                            </div>
+                        </div>
+
+                        <!-- 2. Campaign Header Badge -->
+                        <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
+                            <div id="posterHeaderBadge" style="display: inline-block; background: linear-gradient(135deg, #b45309, #d97706, #f59e0b); color: #ffffff; font-weight: 800; font-size: 13px; padding: 6px 24px; border-radius: 20px; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.2px; box-shadow: 0 4px 15px rgba(245,158,11,0.4);">
+                                VGK BONANZA ACHIEVERS POSTER
+                            </div>
+                        </div>
+
+                        <!-- 3. Title & Subtitle -->
+                        <div style="text-align: center; margin-bottom: 18px; position: relative; z-index: 2;">
+                            <h1 style="font-size: 30px; font-weight: 900; background: linear-gradient(90deg, #fff, #fef08a, #f59e0b, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">
+                                CONGRATULATIONS!
+                            </h1>
+                            <div style="font-size: 16px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fas fa-star" style="font-size: 12px;"></i>
+                                <span id="posterSubHeaderTitle">to Our Bonanza Achievers</span>
+                                <i class="fas fa-star" style="font-size: 12px;"></i>
+                            </div>
+                            <div id="posterSubHeaderSlogan" style="font-size: 13px; color: #e2e8f0; margin-top: 4px; font-weight: 600;">
+                                You've Qualified for the Bonanza Reward!
+                            </div>
+                        </div>
+
+                        <!-- 4. Campaign Period & Qualification Pill -->
+                        <div style="display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 10px 16px; margin: 0 auto 18px auto; max-width: 640px; position: relative; z-index: 2;">
+                            <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
+                                <div style="background: rgba(245,158,11,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 15px;">
+                                    <i class="far fa-calendar-alt"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 9.5px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">CAMPAIGN PERIOD</div>
+                                    <div id="posterPeriodText" style="font-size: 12.5px; font-weight: 700; color: #ffffff;">01 SEPT 2026 → 31 OCT 2026</div>
+                                </div>
+                            </div>
+                            <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.2);"></div>
+                            <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
+                                <div style="background: rgba(16,185,129,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 15px;">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 9.5px; font-weight: 800; color: #34d399; text-transform: uppercase;">QUALIFICATION</div>
+                                    <div id="posterQualText" style="font-size: 12.5px; font-weight: 700; color: #ffffff;">DVR with Eligible 1st Payment Received</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Achievers Section Header -->
+                        <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
+                            <span style="background: linear-gradient(90deg, #1e3a8a, #3b82f6); border: 1px solid #60a5fa; color: #ffffff; font-weight: 800; font-size: 12px; padding: 4px 18px; border-radius: 20px; letter-spacing: 1px;">
+                                ⭐ OUR BONANZA ACHIEVERS ⭐
+                            </span>
+                        </div>
+
+                        <!-- 6. Achiever Cards Grid (Dynamic Center Alignment) -->
+                        <div id="posterAchieversGrid" style="width: 100%; display: flex; flex-wrap: wrap; justify-content: center !important; align-items: center !important; gap: 18px; margin: 0 auto 20px auto; box-sizing: border-box; position: relative; z-index: 2; text-align: center;">
+                            <!-- Dynamically generated achiever cards -->
+                        </div>
+
+                        <!-- 7. Footer Slogans -->
+                        <div style="text-align: center; margin-top: 10px; position: relative; z-index: 2;">
+                            <div style="font-size: 13px; font-weight: 700; color: #cbd5e1; margin-bottom: 2px;">
+                                Your Hard Work, Dedication & Commitment are the Real Inspiration!
+                            </div>
+                            <div style="font-size: 14px; font-weight: 800; color: #fef08a; font-style: italic;">
+                                Keep Growing... Keep Winning... Many More Bonanzas Await You!
+                            </div>
+                        </div>
+
+                        <!-- 8. Bottom Bar Slogans -->
+                        <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: space-around; font-size: 10px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">
+                            <div><i class="fas fa-trophy me-1"></i> MORE EFFORTS MORE REWARDS</div>
+                            <div><i class="fas fa-users me-1"></i> TOGETHER WE GROW</div>
+                            <div><i class="fas fa-bullseye me-1"></i> TOGETHER WE ACHIEVE</div>
+                            <div><i class="fas fa-chart-line me-1"></i> TOGETHER WE CELEBRATE</div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 6px; font-size: 12px; font-weight: 800; color: #34d399; letter-spacing: 0.8px;">
+                            🌿 Go Solar. Give Back. Grow Together. 🌿
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content 2: Uploaded Custom Creative -->
+                <div id="posterTabContentCustom" style="display:none; flex:1; overflow-y:auto; text-align:center; padding:30px;">
+                    <div style="max-width:500px; margin:0 auto; background:#0f172a; border:2px dashed rgba(245,158,11,0.5); border-radius:16px; padding:40px 20px; color:#cbd5e1;">
+                        <i class="fas fa-cloud-upload-alt text-warning" style="font-size:48px; margin-bottom:14px;"></i>
+                        <h4 style="color:#fff; font-size:16px; font-weight:800; margin:0 0 8px 0;">Upload Custom Creative / Poster</h4>
+                        <p style="font-size:12px; color:#94a3b8; margin:0 0 20px 0;">Have a ready-made flyer or graphic designed in Photoshop or Canva? Click below to upload it.</p>
+                        <button onclick="document.getElementById('customCreativeInput').click()" style="background:linear-gradient(90deg, #10b981, #059669); color:#fff; font-weight:800; border:none; padding:10px 24px; border-radius:8px; font-size:13px; cursor:pointer;">
+                            <i class="fas fa-folder-open me-2"></i> Select Image File
+                        </button>
+                        <div id="customCreativePreview" style="margin-top:20px; display:none;">
+                            <img id="customCreativeImg" src="" style="max-width:100%; max-height:300px; border-radius:10px; border:2px solid #fbbf24;" alt="Custom Creative Preview">
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closePosterModal()" class="btn-secondary-vgk" style="padding: 7px 16px; font-size: 13px;">Close</button>
-                <button onclick="downloadDynamicPoster()" class="btn-primary-vgk" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; padding: 7px 18px; border: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
-                    <i class="fas fa-download"></i> Download HD Poster (PNG)
+        </div>
+
+        <!-- Modal Bottom Multi-Option Action Bar -->
+        <div style="padding:14px 24px; background:#0f172a; border-top:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; flex-shrink:0;">
+            <button onclick="closePosterModal()" style="background:rgba(255,255,255,0.1); color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                Cancel
+            </button>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <button onclick="triggerHeroShare('test')" style="background:#0284c7; color:#fff; font-weight:700; border:none; padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-paper-plane me-1"></i> Test Share (Custom No)
+                </button>
+                <button onclick="triggerHeroShare('whatsapp')" style="background:#25D366; color:#fff; font-weight:800; border:none; padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fab fa-whatsapp me-1"></i> Share on WhatsApp
+                </button>
+                <button onclick="triggerHeroShare('poster')" style="background:#8b5cf6; color:#fff; font-weight:800; border:none; padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-share-alt me-1"></i> Share Poster
+                </button>
+                <button onclick="triggerHeroShare('default')" style="background:#3b82f6; color:#fff; font-weight:800; border:none; padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-share me-1"></i> Share Default
+                </button>
+                <button onclick="triggerHeroShare('portal')" style="background:#ec4899; color:#fff; font-weight:800; border:none; padding:8px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-bullhorn me-1"></i> Post to Portal
+                </button>
+                <button onclick="downloadDynamicPoster()" style="background:linear-gradient(90deg, #f59e0b, #d97706); color:#000; font-weight:800; border:none; padding:8px 20px; border-radius:8px; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(245,158,11,0.4);">
+                    <i class="fas fa-download me-1"></i> Download HD Image (PNG)
                 </button>
             </div>
         </div>
+
     </div>
 </div>
 
 <script>
 let currentEditingTargetImgId = null;
+let _currentActiveBonanza = null;
+let _currentActiveAchievers = [];
+let _posterActiveTab = 'auto';
+let _uploadedCustomCreativeData = null;
 
-function openPosterModal() {
+function openPosterModal(bonanzaId, partnerId) {
     const modal = document.getElementById('posterModalOverlay');
-    if (modal) modal.classList.add('open');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+
+    populatePosterCampaignDropdown();
+
+    const targetBId = bonanzaId || (_currentActiveBonanza ? _currentActiveBonanza.bonanza_id : null);
+    if (targetBId) {
+        switchPosterCampaign(targetBId, partnerId);
+    } else if (_currentActiveBonanza) {
+        switchPosterCampaign(_currentActiveBonanza.bonanza_id, partnerId);
+    }
 }
+
+function populatePosterCampaignDropdown() {
+    const sel = document.getElementById('posterCampaignSelect');
+    if (!sel) return;
+    const groups = window._mgmtGroupOrder || (_currentActiveBonanza ? [_currentActiveBonanza] : []);
+    sel.innerHTML = groups.map(g => `<option value="${g.bonanza_id}" ${(_currentActiveBonanza && _currentActiveBonanza.bonanza_id === g.bonanza_id) ? 'selected' : ''}>${escBonanzaH(g.name)}</option>`).join('');
+}
+
+function switchPosterCampaign(bonanzaId, singlePartnerId) {
+    const groups = window._mgmtGroupOrder || [];
+    const targetGroup = groups.find(g => String(g.bonanza_id) === String(bonanzaId)) || _currentActiveBonanza;
+    if (!targetGroup) return;
+
+    _currentActiveBonanza = targetGroup;
+    _currentActiveAchievers = Object.values(targetGroup.memberMap || {}).filter(m => isTrueAchiever(m, targetGroup));
+
+    const fmtD = s => s ? new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '?';
+    
+    const titleIn = document.getElementById('posterControlTitle');
+    const subIn = document.getElementById('posterControlSubtitle');
+    const periodIn = document.getElementById('posterControlPeriod');
+    const qualIn = document.getElementById('posterControlQual');
+
+    if (titleIn) titleIn.value = targetGroup.name || '';
+    if (subIn) subIn.value = "You've Qualified for the Bonanza Reward!";
+    if (periodIn) periodIn.value = `${fmtD(targetGroup.start_date)} → ${fmtD(targetGroup.end_date)}`;
+    if (qualIn) qualIn.value = targetGroup.basis || 'Target Achievement';
+
+    populatePosterMemberChecklist(_currentActiveAchievers, singlePartnerId);
+    renderDynamicAchieversPoster(_currentActiveBonanza, _currentActiveAchievers);
+    updateDynamicHeroBanner(_currentActiveBonanza, _currentActiveAchievers);
+}
+
 function closePosterModal() {
     const modal = document.getElementById('posterModalOverlay');
-    if (modal) modal.classList.remove('open');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('open');
+    }
+}
+
+function populatePosterMemberChecklist(achieversList, singlePartnerId) {
+    const container = document.getElementById('posterAchieverChecklist');
+    if (!container) return;
+
+    const list = achieversList || [];
+    if (!list.length) {
+        container.innerHTML = `<div style="font-size:11px; color:#94a3b8; padding:8px; text-align:center;">No qualified members found</div>`;
+        return;
+    }
+
+    container.innerHTML = list.map((m, idx) => {
+        const isChecked = singlePartnerId ? (String(m.partner_id) === String(singlePartnerId)) : true;
+        return `
+            <label style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:#e2e8f0; cursor:pointer; user-select:none; padding:3px 4px; border-radius:4px; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.background='transparent';">
+                <input type="checkbox" class="poster-member-chk" data-partner-id="${m.partner_id}" ${isChecked ? 'checked' : ''} onchange="updatePosterFromControls()" style="accent-color:#059669; width:14px; height:14px; cursor:pointer;">
+                <span style="font-weight:700; color:#fff;">${escBonanzaH(m.partner_name)}</span>
+                <span style="font-size:10px; color:#f59e0b;">(${escBonanzaH(m.partner_code)})</span>
+            </label>
+        `;
+    }).join('');
+}
+
+function selectAllPosterAchievers(checkState) {
+    const chks = document.querySelectorAll('.poster-member-chk');
+    chks.forEach(chk => chk.checked = checkState);
+    updatePosterFromControls();
+}
+
+function updatePosterFromControls() {
+    if (_currentActiveBonanza && _currentActiveAchievers) {
+        renderDynamicAchieversPoster(_currentActiveBonanza, _currentActiveAchievers);
+    }
+}
+
+function switchPosterTab(tab) {
+    _posterActiveTab = tab;
+    const btnAuto = document.getElementById('posterTabBtnAuto');
+    const btnCustom = document.getElementById('posterTabBtnCustom');
+    const contentAuto = document.getElementById('posterTabContentAuto');
+    const contentCustom = document.getElementById('posterTabContentCustom');
+
+    if (tab === 'auto') {
+        if (btnAuto) { btnAuto.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)'; btnAuto.style.color = '#000'; }
+        if (btnCustom) { btnCustom.style.background = 'rgba(255,255,255,0.08)'; btnCustom.style.color = '#cbd5e1'; }
+        if (contentAuto) contentAuto.style.display = 'block';
+        if (contentCustom) contentCustom.style.display = 'none';
+    } else {
+        if (btnCustom) { btnCustom.style.background = 'linear-gradient(90deg, #10b981, #059669)'; btnCustom.style.color = '#fff'; }
+        if (btnAuto) { btnAuto.style.background = 'rgba(255,255,255,0.08)'; btnAuto.style.color = '#cbd5e1'; }
+        if (contentCustom) contentCustom.style.display = 'block';
+        if (contentAuto) contentAuto.style.display = 'none';
+    }
+}
+
+function handleCustomCreativeUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            _uploadedCustomCreativeData = evt.target.result;
+            const img = document.getElementById('customCreativeImg');
+            const preview = document.getElementById('customCreativePreview');
+            if (img && preview) {
+                img.src = evt.target.result;
+                preview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function updateDynamicHeroBanner(g, achieversList) {
+    if (!g) return;
+    const badgeTag = document.getElementById('heroBadgeTag');
+    const subtitle = document.getElementById('heroSubtitle');
+    const title = document.getElementById('heroTitle');
+    const period = document.getElementById('heroPeriod');
+    const countNum = document.getElementById('heroAchieverNum');
+    const previewTitle = document.getElementById('heroPosterPreviewTitle');
+
+    const fmtD = s => s ? new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '?';
+
+    if (badgeTag) badgeTag.innerHTML = `<i class="fas fa-crown me-1"></i> VGK BONANZA ACHIEVERS POSTER`;
+    if (subtitle) subtitle.innerHTML = `<i class="fas fa-award me-1"></i> ${escBonanzaH(g.name)}`;
+    if (title) title.innerHTML = `<i class="fas fa-trophy text-warning me-2"></i> ${escBonanzaH(g.name)}`;
+    if (period) period.innerHTML = `Campaign Period: <strong>${fmtD(g.start_date)} → ${fmtD(g.end_date)} | Basis: ${escBonanzaH(g.basis)}</strong>`;
+    if (countNum) countNum.textContent = (achieversList || []).length;
+    if (previewTitle) previewTitle.textContent = (g.name || 'VGK') + ' Achievers Poster';
+}
+
+function getCleanMemberInitials(name) {
+    if (!name) return 'MB';
+    const parts = name.replace(/^(mr\.|ms\.|mrs\.|dr\.)\s+/i, '').trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+}
+
+function renderDynamicAchieversPoster(g, achieversList) {
+    if (!g) return;
+
+    const titleVal = (document.getElementById('posterControlTitle')?.value || g.name || 'VGK BONANZA').trim();
+    const subVal   = (document.getElementById('posterControlSubtitle')?.value || "You've Qualified for the Bonanza Reward!").trim();
+    const periodVal= (document.getElementById('posterControlPeriod')?.value || '01 SEPT 2026 → 31 OCT 2026').trim();
+    const qualVal  = (document.getElementById('posterControlQual')?.value || g.basis || 'Target Achievement').trim();
+
+    const headerBadge = document.getElementById('posterHeaderBadge');
+    const periodText  = document.getElementById('posterPeriodText');
+    const qualText    = document.getElementById('posterQualText');
+    const sloganText  = document.getElementById('posterSubHeaderSlogan');
+    const achieversGrid = document.getElementById('posterAchieversGrid');
+
+    if (headerBadge) headerBadge.textContent = `${titleVal.toUpperCase()} ACHIEVERS`;
+    if (periodText)  periodText.textContent  = periodVal;
+    if (qualText)    qualText.textContent    = qualVal;
+    if (sloganText)  sloganText.textContent  = subVal;
+
+    if (!achieversGrid) return;
+
+    // Filter by left-pane checkboxes if checklist rendered
+    const chkEls = document.querySelectorAll('.poster-member-chk');
+    const selectedIds = new Set();
+    if (chkEls.length > 0) {
+        chkEls.forEach(chk => {
+            if (chk.checked) selectedIds.add(String(chk.getAttribute('data-partner-id')));
+        });
+    }
+
+    const allList = achieversList || [];
+    const list = chkEls.length > 0 ? allList.filter(m => selectedIds.has(String(m.partner_id))) : allList;
+
+    if (list.length === 0) {
+        achieversGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 28px; text-align: center; background: rgba(255,255,255,0.05); border: 1px dashed rgba(245,158,11,0.4); border-radius: 12px; color: #fbbf24;">
+                <i class="fas fa-award" style="font-size: 36px; margin-bottom: 8px;"></i>
+                <div style="font-size: 14px; font-weight: 700; color: #fff;">No Achievers Selected</div>
+                <div style="font-size: 11.5px; color: #cbd5e1; margin-top: 4px;">Check member boxes in the left control panel to display achievers on this poster.</div>
+            </div>
+        `;
+        return;
+    }
+
+    achieversGrid.innerHTML = list.map((m, idx) => {
+        const imgId = `posterImg_${m.partner_id}_${idx}`;
+        const initials = getCleanMemberInitials(m.partner_name);
+        const hasPhoto = m.photo_url && m.photo_url.trim() !== '' && m.photo_url !== 'null';
+
+        const photoContentHtml = hasPhoto
+            ? `<img id="${imgId}" src="${m.photo_url}" crossorigin="anonymous" alt="${escBonanzaH(m.partner_name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 100%; height: 100%; object-fit: cover;">
+               <div style="display:none; width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:24px; font-weight:900; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`
+            : `<div id="${imgId}_avatar" style="width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:24px; font-weight:900; display:flex; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`;
+
+        // Compute eligible tier gifts/awards for this member
+        const qualifiedTiers = [];
+        if (m.tiers) {
+            Object.values(m.tiers).forEach((t, ti) => {
+                const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
+                // RULE 1: 1st tier (tierIdx === 0) is baseline qualification gate — DO NOT SHOW TIER 1!
+                if (tierIdx === 0) return;
+
+                if (t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid') {
+                    // RULE 2: Always show gift name, NEVER generic "Tier 1" / "Tier 2"!
+                    let giftTitle = t.award_name || t.tier_label || '';
+                    if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                    if (!giftTitle && t.reward_amount) giftTitle = `₹${Number(t.reward_amount).toLocaleString('en-IN')}`;
+                    
+                    // Fallback to g.tiers[tierIdx] if still generic or empty
+                    if (!giftTitle || /^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) {
+                        const targetTierObj = (g.tiers && g.tiers[tierIdx]) ? g.tiers[tierIdx] : null;
+                        if (targetTierObj) {
+                            giftTitle = targetTierObj.award_name || targetTierObj.tier_label || '';
+                            if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                        }
+                    }
+
+                    // Remove any remaining generic 'Tier N' or 'Milestone N' text
+                    if (/^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) giftTitle = '';
+
+                    if (giftTitle) qualifiedTiers.push(giftTitle);
+                }
+            });
+        }
+
+        const tierGiftsHtml = qualifiedTiers.length > 0
+            ? `<div style="display: flex; flex-direction: column; gap: 3px; align-items: center; margin-top: 5px;">
+                ${qualifiedTiers.map(gift => `
+                    <span style="background: rgba(245,158,11,0.25); border: 1px solid #f59e0b; color: #fef08a; font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; max-width: 155px; overflow: hidden; text-overflow: ellipsis;" title="${escBonanzaH(gift)}">
+                        <i class="fas fa-gift text-warning me-1"></i>${escBonanzaH(gift)}
+                    </span>
+                `).join('')}
+               </div>`
+            : '';
+
+        return `
+            <div style="flex: 0 0 190px; width: 190px; max-width: 200px; margin: 0 auto; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 10px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box;">
+                <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
+                    <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
+                        ${photoContentHtml}
+                    </div>
+                    <button onclick="triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escBonanzaH(m.partner_name)}">${escBonanzaH(m.partner_name)}</div>
+                <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">${escBonanzaH(m.partner_code)}</div>
+                ${tierGiftsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+async function capturePosterCanvasDataUrl() {
+    let target = document.getElementById('dynamicPosterContent');
+    if (_posterActiveTab === 'custom' && _uploadedCustomCreativeData) {
+        return _uploadedCustomCreativeData;
+    }
+    if (!target) return null;
+    try {
+        const canvas = await html2canvas(target, {
+            scale: 2.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+        });
+        return canvas.toDataURL('image/png', 1.0);
+    } catch (e) {
+        console.warn('Canvas capture failed:', e);
+        return null;
+    }
+}
+
+async function triggerHeroShare(mode) {
+    if (!_currentActiveBonanza) {
+        alert("Please wait for bonanza data to load");
+        return;
+    }
+    const g = _currentActiveBonanza;
+    const activeAchievers = _currentActiveAchievers || [];
+
+    // Filter by selected checkboxes if inside modal checklist
+    const chkEls = document.querySelectorAll('.poster-achiever-chk');
+    const selectedIds = new Set();
+    chkEls.forEach(chk => { if (chk.checked) selectedIds.add(chk.value); });
+    const achieversList = chkEls.length > 0 ? activeAchievers.filter(m => selectedIds.has(String(m.partner_id))) : activeAchievers;
+    const achieverCount = achieversList.length;
+
+    const fmtD = s => s ? new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '?';
+
+    // Format Member-wise & Gift-wise Achievers List
+    const achieversTextList = achieversList.map((m) => {
+        const qualifiedTiers = [];
+        if (m.tiers) {
+            Object.values(m.tiers).forEach((t, ti) => {
+                const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
+                if (tierIdx === 0) return; // Tier 1 baseline gate excluded!
+                if (t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid') {
+                    let giftTitle = t.award_name || t.tier_label || '';
+                    if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                    if (!giftTitle && t.reward_amount) giftTitle = `₹${Number(t.reward_amount).toLocaleString('en-IN')}`;
+                    if (!giftTitle || /^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) {
+                        const targetTierObj = (g.tiers && g.tiers[tierIdx]) ? g.tiers[tierIdx] : null;
+                        if (targetTierObj) {
+                            giftTitle = targetTierObj.award_name || targetTierObj.tier_label || '';
+                            if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                        }
+                    }
+                    if (/^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) giftTitle = '';
+                    if (giftTitle) qualifiedTiers.push(giftTitle);
+                }
+            });
+        }
+        const giftsStr = qualifiedTiers.length > 0 ? ` — 🎁 *${qualifiedTiers.join(', ')}*` : '';
+        return `• *${m.partner_name}* (${m.partner_code})${giftsStr}`;
+    });
+
+    const achieverSection = achieversTextList.length > 0 
+        ? `\n\n🌟 *QUALIFIED ACHIEVERS & GIFTS:*\n${achieversTextList.join('\n')}` 
+        : '';
+
+    const text = `🏆 *${(g.name || 'VGK BONANZA').toUpperCase()} ACHIEVERS POSTER* 🏆\n\n🎯 *${g.name}*\n📅 Campaign Period: ${fmtD(g.start_date)} to ${fmtD(g.end_date)}\n✨ Qualification: ${g.basis}\n⭐ Total Qualified Achievers: ${achieverCount}${achieverSection}\n\nView live bonanza poster & claims on MyntReal:\n${window.location.origin}/staff/vgk/bonanza-management`;
+
+    // Capture poster canvas image
+    let shareImg = await capturePosterCanvasDataUrl();
+
+    // Auto-download poster image when sharing so file is saved locally for WhatsApp/Social media
+    if (shareImg && mode !== 'copy') {
+        try {
+            const campaignName = (g.name || 'VGK_Bonanza').replace(/[^a-zA-Z0-9]/g, '_');
+            const link = document.createElement('a');
+            link.download = `VGK_${campaignName}_Achievers_Poster_HD.png`;
+            link.href = shareImg;
+            link.click();
+        } catch(e){}
+    }
+
+    if (mode === 'whatsapp') {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    } else if (mode === 'test') {
+        const customNo = prompt("Enter mobile number to share poster (e.g. 919876543210):");
+        if (customNo && customNo.trim()) {
+            const cleanNo = customNo.replace(/[^0-9]/g, '');
+            window.open(`https://api.whatsapp.com/send?phone=${cleanNo}&text=${encodeURIComponent(text)}`, '_blank');
+        }
+    } else if (mode === 'copy') {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => alert("Campaign details copied to clipboard!"));
+        } else {
+            prompt("Copy campaign details:", text);
+        }
+    } else if (mode === 'portal') {
+        alert("Campaign poster ready to broadcast on Portal!");
+    } else {
+        if (typeof MyntShareModal !== 'undefined' && MyntShareModal.show) {
+            const memberContacts = achieversList.map(m => ({
+                id: m.partner_id,
+                name: m.partner_name,
+                code: m.partner_code,
+                mobile: m.mobile || ''
+            }));
+            MyntShareModal.show({
+                url: `${window.location.origin}/staff/vgk/bonanza-management`,
+                title: g.name + ' Achievers Poster',
+                text: text,
+                image: shareImg,
+                type: 'bonanza_achiever',
+                recipients: memberContacts
+            });
+        } else {
+            openPosterModal();
+        }
+    }
+}
+
+function triggerRowShare(partnerName, partnerCode, campaignName) {
+    const text = `🎉 *CONGRATULATIONS ${partnerName} (${partnerCode})!* 🎉\n\n🏆 Achieved Qualification in *${campaignName}*!\n🌟 Outstanding Performance with VGK4U & MyntReal!\n\nView live bonanza details:\n${window.location.origin}/staff/vgk/bonanza-management`;
+
+    if (typeof MyntShareModal !== 'undefined' && MyntShareModal.show) {
+        MyntShareModal.show({
+            url: `${window.location.origin}/staff/vgk/bonanza-management`,
+            title: `Achiever: ${partnerName}`,
+            text: text,
+            type: 'bonanza_achiever'
+        });
+    } else {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => alert(`Share text for ${partnerName} copied to clipboard!`));
+        } else {
+            prompt("Copy achiever share text:", text);
+        }
+    }
 }
 
 function triggerAchieverPhotoUpload(imgId) {
@@ -3329,25 +3807,41 @@ function handleAchieverPhotoUpload(e) {
     if (file && currentEditingTargetImgId) {
         const reader = new FileReader();
         reader.onload = function(evt) {
-            document.getElementById(currentEditingTargetImgId).src = evt.target.result;
+            const el = document.getElementById(currentEditingTargetImgId);
+            if (el) {
+                if (el.tagName === 'IMG') {
+                    el.src = evt.target.result;
+                    el.style.display = 'block';
+                } else {
+                    const parent = el.parentElement;
+                    if (parent) {
+                        parent.innerHTML = `<img id="${currentEditingTargetImgId}" src="${evt.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    }
+                }
+            }
         };
         reader.readAsDataURL(file);
     }
 }
 
 async function downloadDynamicPoster() {
-    const target = document.getElementById('dynamicPosterContent');
+    let target = document.getElementById('dynamicPosterContent');
+    if (_posterActiveTab === 'custom' && _uploadedCustomCreativeData) {
+        target = document.getElementById('customCreativeImg');
+    }
     if (!target) return;
+
     try {
         const canvas = await html2canvas(target, {
-            scale: 2,
+            scale: 3,
             useCORS: true,
             allowTaint: true,
             backgroundColor: null
         });
+        const campaignName = (_currentActiveBonanza && _currentActiveBonanza.name) ? _currentActiveBonanza.name.replace(/[^a-zA-Z0-9]/g, '_') : 'VGK_Bonanza';
         const link = document.createElement('a');
-        link.download = 'VGK_July2026_Resort_Party_Achievers.png';
-        link.href = canvas.toDataURL('image/png');
+        link.download = `VGK_${campaignName}_Achievers_Poster_HD.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
         link.click();
     } catch (err) {
         alert('Could not generate poster: ' + err.message);

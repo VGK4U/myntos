@@ -286,21 +286,87 @@ def list_pending_entries(
     }
 
 
-@router.post('/staff/vgk/cash-income/{entry_id}/release')
-def release_entry(
-    entry_id: int,
-    company_id: int = Query(...),
+@router.get('/staff/vgk/partner-advance-summary/{partner_id}')
+def fetch_partner_advance_summary(
+    partner_id: int,
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Accounts staff: Fetch partner's advance summary, total given, recovered, and active balance.
+    """
+    from app.services.vgk_cash_income import get_partner_advance_summary
+    res = get_partner_advance_summary(db, partner_id, company_id)
+    if not res.get('success'):
+        raise HTTPException(status_code=404, detail=res.get('error', 'Partner advance summary not found'))
+    return res
+
+
+@router.post('/staff/vgk/issue-direct-advance')
+def issue_direct_advance_endpoint(
+    partner_id: int = Body(..., embed=True),
+    gross_amount: float = Body(..., embed=True),
+    company_id: Optional[int] = Body(None, embed=True),
+    kind: Optional[str] = Body('ADVANCE', embed=True),
+    payment_mode: Optional[str] = Body('BANK', embed=True),
+    bank_ledger_id: Optional[int] = Body(None, embed=True),
+    cash_staff_id: Optional[int] = Body(None, embed=True),
+    payment_utr: Optional[str] = Body(None, embed=True),
     notes: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """
+    Accounts staff: Issue direct member cash/bank advance.
+    """
+    from app.services.vgk_cash_income import issue_direct_advance
+    from decimal import Decimal
+
+    res = issue_direct_advance(
+        db=db,
+        company_id=company_id or getattr(current_employee, 'company_id', 4) or 4,
+        partner_id=partner_id,
+        gross_amount=Decimal(str(gross_amount)),
+        created_by_id=current_employee.id,
+        kind=kind or 'ADVANCE',
+        payment_mode=payment_mode or 'BANK',
+        bank_ledger_id=bank_ledger_id,
+        cash_staff_id=cash_staff_id,
+        payment_utr=payment_utr,
+        notes=notes
+    )
+    if not res.get('success'):
+        raise HTTPException(status_code=400, detail=res.get('error', 'Failed to issue advance'))
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f'[VGK-CI] issue advance commit failed: {e}')
+        raise HTTPException(status_code=500, detail='Database error — please retry')
+
+    return res
+
+
+@router.post('/staff/vgk/cash-income/{entry_id}/release')
+def release_entry(
+    entry_id: int,
+    company_id: int = Query(...),
+    notes: Optional[str] = Body(None, embed=True),
+    advance_cut: Optional[float] = Body(None, embed=True),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
     Accounts staff: release PENDING -> RELEASED.
-    Deducts 8% admin charges + 2% TDS; credits net to partner's vgk_cash_wallet.
+    Deducts custom advance cut, 8% admin charges + 2% TDS on net taxable base.
     """
     from app.services.vgk_cash_income import release_cash_income
+    from decimal import Decimal
 
-    result = release_cash_income(db, entry_id, company_id, current_employee.id, notes)
+    adv_cut_dec = Decimal(str(advance_cut)) if advance_cut is not None else None
+    result = release_cash_income(db, entry_id, company_id, current_employee.id, notes, advance_cut=adv_cut_dec)
     if not result.get('success'):
         status_code = result.get('status_code', 400)
         raise HTTPException(status_code=status_code, detail=result.get('error', 'Release failed'))
@@ -1431,6 +1497,7 @@ def unified_action(
     entry_ids: Optional[List[int]] = Body(None, embed=True),
     action: str = Body(..., embed=True),
     notes: Optional[str] = Body(None, embed=True),
+    advance_cut: Optional[float] = Body(None, embed=True),
     rejection_reason: Optional[str] = Body(None, embed=True),
     payment_mode: Optional[str] = Body(None, embed=True),
     bank_ledger_id: Optional[int] = Body(None, embed=True),
@@ -1450,6 +1517,9 @@ def unified_action(
         mark_paid_cash_income, post_jv_confirm, post_jv_release,
         post_jv_reject_reversal, is_super_skip_user, _get_ist,
     )
+    from decimal import Decimal
+
+    adv_cut_dec = Decimal(str(advance_cut)) if advance_cut is not None else None
 
     act = (action or '').lower().strip()
     if act not in ('confirm', 'release', 'mark_paid', 'reject', 'stage1_approve'):
@@ -1537,7 +1607,7 @@ def unified_action(
                     raise HTTPException(status_code=400, detail=f'Entry must be PENDING or RELEASED to approve (got {entry.status})')
 
                 if entry.kind not in ('ADVANCE', 'SLAB_BONUS', 'DVR_ADVANCE') and entry.status == 'PENDING':
-                    inner_rel = release_cash_income(db, target_id, entry.company_id, current_employee.id, notes)
+                    inner_rel = release_cash_income(db, target_id, entry.company_id, current_employee.id, notes, advance_cut=adv_cut_dec)
                     if not inner_rel.get('success'):
                         raise HTTPException(status_code=400, detail=inner_rel.get('error', 'Wallet deduction at Stage1 failed'))
                     post_jv_release(db, entry, current_employee.id)

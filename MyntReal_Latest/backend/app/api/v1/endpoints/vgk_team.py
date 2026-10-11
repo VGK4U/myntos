@@ -354,7 +354,7 @@ class FreelancerUpdate(BaseModel):
 @router.get("/members/search")
 def search_vgk_members(
     q: str = Query("", description="Name, phone or partner code search"),
-    active_only: bool = Query(True, description="True = active members only (default). False = include inactive."),
+    active_only: bool = Query(False, description="True = active members only. False = include inactive (default)."),
     purpose: Optional[str] = Query(None, description="ground_source | freelancer_support | referrer | sponsor | upline | vgk_member"),
     db: Session = Depends(get_db)
 ):
@@ -539,6 +539,10 @@ def list_vgk_members(
         ).all()
         root_staff_codes = [r[0] for r in root_staff]
 
+        if root_ids:
+            for rid in root_ids:
+                downline_level_map[rid] = 0
+
         # Level 1 (Direct Referrals / Sponsor)
         l1_conds = []
         if root_ids:
@@ -548,12 +552,12 @@ def list_vgk_members(
 
         if l1_conds:
             l1_rows = db.query(OfficialPartner.id).filter(or_(*l1_conds)).all()
-            l1_ids = [r[0] for r in l1_rows]
+            l1_ids = [r[0] for r in l1_rows if r[0] not in downline_level_map]
             for lid in l1_ids:
                 downline_level_map[lid] = 1
 
             htype = hierarchy_type.strip().lower() if isinstance(hierarchy_type, str) else ''
-            if htype in ('upliner', 'upline', 'all') and l1_ids:
+            if htype not in ('sponsor', 'direct') and l1_ids:
                 # Level 2
                 l2_rows = db.query(OfficialPartner.id).filter(OfficialPartner.parent_partner_id.in_(l1_ids)).all()
                 l2_ids = [r[0] for r in l2_rows if r[0] not in downline_level_map]
@@ -574,10 +578,8 @@ def list_vgk_members(
                         for lid in l4_ids:
                             downline_level_map[lid] = 4
 
-            if downline_level_map:
-                query = query.filter(OfficialPartner.id.in_(list(downline_level_map.keys())))
-            else:
-                query = query.filter(OfficialPartner.id == -1)
+        if downline_level_map:
+            query = query.filter(OfficialPartner.id.in_(list(downline_level_map.keys())))
         else:
             query = query.filter(OfficialPartner.id == -1)
     elif isinstance(hierarchy_type, str) and hierarchy_type.strip().lower() in ('sponsor', 'direct'):
@@ -734,11 +736,11 @@ def list_vgk_members(
         except Exception:
             pass
     # DC_CP_CARD_001: computed fields that require full-dataset Python sort/filter
-    _COMPUTED_SORT_FIELDS = {'downline_count', 'src_revenue', 'leads_total', 'leads_won', 'leads_lost'}
+    _COMPUTED_SORT_FIELDS = {'downline_count', 'src_revenue', 'leads_total', 'leads_won', 'leads_lost', 'level'}
     _sb_str = sort_by if isinstance(sort_by, str) else ''
     _do_python_sort  = _sb_str in _COMPUTED_SORT_FIELDS
     _des_str = designation_tier if isinstance(designation_tier, str) else ''
-    _needs_full_fetch = _do_python_sort or bool(_des_str.strip()) or bool(rank_level) or bool(eligibility_filter)
+    _needs_full_fetch = _do_python_sort or bool(_des_str.strip()) or bool(rank_level) or bool(eligibility_filter) or bool(downline_level_map)
 
     # Sorting
     _sort_col = OfficialPartner.id
@@ -1033,6 +1035,8 @@ def list_vgk_members(
         d['eligible_files_installed']  = _lm['installed_files']
         d['cm_files_total']            = _lm['cm_total_files']
         d['cm_files_installed']        = _lm['cm_installed_files']
+        if downline_level_map:
+            d['downline_level'] = downline_level_map.get(m.id)
 
         items.append(d)
 
@@ -1058,8 +1062,15 @@ def list_vgk_members(
     if isinstance(designation_tier, str) and designation_tier.strip():
         items = [i for i in items if i.get('designation_tier') == designation_tier.strip()]
 
-    # DC_CP_CARD_001: Python-side sort for computed fields
-    if _do_python_sort:
+    # DC_CP_CARD_001: Python-side sort for computed fields and hierarchy level
+    if _sb_str == 'level' or (downline_level_map and not _sb_str):
+        # Hierarchy Level Sort: Default ascending so Root (Level 0) is top row (#1), followed by L1..L4
+        is_reverse = (sort_dir == 'desc') if _sb_str == 'level' else False
+        def _lvl_key(x):
+            lvl = x.get('downline_level')
+            return (lvl if lvl is not None else 9999, x.get('id', 0))
+        items.sort(key=_lvl_key, reverse=is_reverse)
+    elif _do_python_sort:
         _sort_key_map = {
             'downline_count': 'activated_people',
             'src_revenue':    'src_revenue',
@@ -2416,10 +2427,14 @@ def create_vgk_member(
                 event_key="vgk_member_created",
                 phone=_wa_phone,
                 context={
-                    "1": member.partner_name or "Member",
-                    "2": member.partner_code,
-                    "3": "https://www.vgk4u.com/vgk/login",
-                    "4": "20,000",
+                    "1": getattr(member, 'name_title', '') or ("Mr" if getattr(member, 'gender', '') == 'MALE' else "Ms/Mrs"),
+                    "2": member.partner_name or "Member",
+                    "3": member.partner_code,
+                    "4": "Welcome@VGK",
+                    "5": "https://www.vgk4u.com/vgk/login",
+                    "name": member.partner_name or "Member",
+                    "member_id": member.partner_code,
+                    "login_url": "https://www.vgk4u.com/vgk/login",
                 },
             )
     except Exception as _wa_err:
@@ -6039,7 +6054,7 @@ def member_earnings_dashboard(
     else:
         status_sql = ""
 
-    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (_cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 650)) "
+    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (e.kind != 'ADVANCE' OR _cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 650)) "
 
     if earners_only or status_val:
         if status_sql:
@@ -6890,6 +6905,42 @@ def fetch_member_income_entries_data(
             except: pass
             print(f"[ERROR-ADV-MAP] Failed to compute adv_map: {_exc}")
 
+    dvr_seq_map: dict = {}
+    if lead_ids:
+        try:
+            int_lids = [int(x) for x in lead_ids if x is not None]
+            d_rows = db.execute(text("""
+                SELECT id, source_lead_id,
+                       DENSE_RANK() OVER (
+                           PARTITION BY source_lead_id
+                           ORDER BY CASE WHEN source_transaction_id IS NOT NULL THEN source_transaction_id ELSE 0 END ASC,
+                                    COALESCE(income_date::date, created_at::date) ASC
+                       ) as seq
+                FROM vgk_cash_income_entries
+                WHERE source_lead_id = ANY(:lids)
+                  AND kind IN ('DVR_ADVANCE', 'STAGE2_ADVANCE')
+                  AND status != 'CANCELLED'
+            """), {"lids": int_lids}).fetchall()
+            for dr in d_rows:
+                if dr.source_lead_id and dr.id:
+                    dvr_seq_map[(int(dr.source_lead_id), int(dr.id))] = int(dr.seq)
+        except Exception:
+            pass
+
+    txn_seq_map: dict = {}
+    if lead_ids:
+        try:
+            int_lids = [int(x) for x in lead_ids if x is not None]
+            t_rows = db.execute(text(
+                "SELECT id, lead_id, ROW_NUMBER() OVER (PARTITION BY lead_id ORDER BY id ASC) as seq "
+                "FROM crm_lead_transactions "
+                "WHERE lead_id = ANY(:lids) AND validation_status = 'validated'"
+            ), {"lids": int_lids}).fetchall()
+            for tr in t_rows:
+                txn_seq_map[(int(tr.lead_id), int(tr.id))] = int(tr.seq)
+        except Exception:
+            pass
+
     # Compute lost lead advance deductions for partner across all income entries
     lost_ded_map = {}
     try:
@@ -7095,11 +7146,41 @@ def fetch_member_income_entries_data(
             tds_amount = round(bal_gross * 0.02, 2)
             net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
 
+        _kind_raw = (r.kind or ("SLAB_BONUS" if is_bp else ("DVR_ADVANCE" if is_vsca else "COMMISSION"))).upper()
+        _seq = 1
+        _lid_val = int(r.source_lead_id) if getattr(r, 'source_lead_id', None) is not None else None
+        _rid_val = int(r.id) if getattr(r, 'id', None) is not None else None
+        _tid_val = getattr(r, 'source_transaction_id', None)
+        if _lid_val and _rid_val and (_lid_val, _rid_val) in dvr_seq_map:
+            _seq = dvr_seq_map[(_lid_val, _rid_val)]
+        elif _tid_val and _lid_val:
+            _seq = txn_seq_map.get((_lid_val, int(_tid_val)), 1)
+        
+        def format_kind_label(k: str, seq: int = 1) -> str:
+            k_upper = (k or '').strip().upper()
+            if k_upper in ('ADVANCE', 'STAGE1_ADVANCE'):
+                return 'Stage 1 Advance'
+            if k_upper in ('DVR_ADVANCE', 'STAGE2_ADVANCE'):
+                ords = {1: '1st', 2: '2nd', 3: '3rd'}
+                s_str = ords.get(seq, f"{seq}th")
+                return f"{s_str} DVR Advance"
+            if k_upper == 'SLAB_BONUS':
+                return 'Slab Bonus'
+            if k_upper in ('EXTRA_COMMISSION', 'BONANZA_BONUS'):
+                return 'Extra Bonanza'
+            if k_upper == 'COMMISSION':
+                return 'Final Commission'
+            return k_upper.replace('_', ' ').title()
+
+        display_kind_str = format_kind_label(_kind_raw, _seq)
+
         return {
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
             "status":            r.status,
-            "kind":              r.kind or ("SLAB_BONUS" if is_bp else ("DVR_ADVANCE" if is_vsca else "COMMISSION")),
+            "kind":              _kind_raw,
+            "display_kind":      display_kind_str,
+            "entry_kind_label":  display_kind_str,
             "level":             _lvl_int,
             "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else "—",
             "income_date":       r.entry_date,
@@ -7478,6 +7559,39 @@ def lead_income_members_detail(
     except Exception:
         pass
 
+    dvr_seq_map_lead: dict = {}
+    try:
+        d_rows = db.execute(text("""
+            SELECT id,
+                   DENSE_RANK() OVER (
+                       PARTITION BY source_lead_id
+                       ORDER BY CASE WHEN source_transaction_id IS NOT NULL THEN source_transaction_id ELSE 0 END ASC,
+                                COALESCE(income_date::date, created_at::date) ASC
+                   ) as seq
+            FROM vgk_cash_income_entries
+            WHERE source_lead_id = :lid AND kind IN ('DVR_ADVANCE', 'STAGE2_ADVANCE') AND status != 'CANCELLED'
+        """), {"lid": lead_id}).fetchall()
+        for dr in d_rows:
+            dvr_seq_map_lead[int(dr.id)] = int(dr.seq)
+    except Exception:
+        pass
+
+    def format_lead_kind_label(k: str, seq: int = 1) -> str:
+        k_upper = (k or '').strip().upper()
+        if k_upper in ('ADVANCE', 'STAGE1_ADVANCE'):
+            return 'Stage 1 Advance'
+        if k_upper in ('DVR_ADVANCE', 'STAGE2_ADVANCE'):
+            ords = {1: '1st', 2: '2nd', 3: '3rd'}
+            s_str = ords.get(seq, f"{seq}th")
+            return f"{s_str} DVR Advance"
+        if k_upper == 'SLAB_BONUS':
+            return 'Slab Bonus'
+        if k_upper in ('EXTRA_COMMISSION', 'BONANZA_BONUS'):
+            return 'Extra Bonanza'
+        if k_upper == 'COMMISSION':
+            return 'Final Commission'
+        return k_upper.replace('_', ' ').title()
+
     res_data = []
     for r in rows:
         bv = float(r.base_value)
@@ -7487,6 +7601,9 @@ def lead_income_members_detail(
             pct = round(amt / bv * 100.0, 2)
 
         _kind_upper = (r.kind or 'COMMISSION').upper()
+        _seq = dvr_seq_map_lead.get(int(r.id), 1)
+        disp_kind = format_lead_kind_label(_kind_upper, _seq)
+
         adv_adjusted = float(getattr(r, "advance_adjusted_amount", 0) or 0.0)
         stage1_adv = 0.0
         stage2_adv = 0.0
@@ -7524,6 +7641,8 @@ def lead_income_members_detail(
             "entry_number":      r.entry_number or f"INC-{r.id}",
             "status":            r.status,
             "kind":              r.kind or "COMMISSION",
+            "display_kind":      disp_kind,
+            "entry_kind_label":  disp_kind,
             "level":             r.level,
             "submit_date":       r.submit_date,
             "income_date":       r.trigger_date,
@@ -7976,6 +8095,38 @@ def vgk_top_partners_leaderboard_table(
     )).fetchall()
     overall_income_map = {r[0]: float(r[1]) for r in overall_income_rows}
 
+    # Bulk fetch team income (entire sum of total income received except from self leads)
+    team_income_where = [
+        "e.status != 'CANCELLED'",
+        "NOT (COALESCE(l.associated_partner_id, 0) = e.partner_id OR (e.source_lead_id IS NOT NULL AND e.level = 1))"
+    ]
+    team_income_params = {}
+    if f_from and f_to:
+        team_income_where.append("COALESCE(e.income_date, e.created_at::date) >= CAST(:from_d AS date) AND COALESCE(e.income_date, e.created_at::date) <= CAST(:to_d AS date)")
+        team_income_params["from_d"] = f_from.isoformat()
+        team_income_params["to_d"] = f_to.isoformat()
+    if company_id:
+        team_income_where.append("e.company_id = :cid")
+        team_income_params["cid"] = company_id
+    if category_id:
+        if str(category_id).isdigit():
+            team_income_where.append("e.category_id = :catid")
+            team_income_params["catid"] = int(category_id)
+
+    team_income_sql = f"""
+        SELECT e.partner_id, COALESCE(SUM(e.commission_amount), 0)
+        FROM vgk_cash_income_entries e
+        LEFT JOIN crm_leads l ON l.id = e.source_lead_id
+        WHERE {" AND ".join(team_income_where)}
+        GROUP BY e.partner_id
+    """
+    try:
+        team_income_rows = db.execute(text(team_income_sql), team_income_params).fetchall()
+        team_income_map = {r[0]: float(r[1]) for r in team_income_rows}
+    except Exception as e:
+        print("[TPT_TEAM_INCOME_ERR]", e)
+        team_income_map = {}
+
     # Bulk fetch installed files
     inst_lead_rows = db.execute(text(
         "SELECT associated_partner_id, "
@@ -8040,8 +8191,9 @@ def vgk_top_partners_leaderboard_table(
             "rank_slab_pct": resolved_slab,
             "overall_payout": overall_income_map.get(pid, 0.0),
             "current_month_earning": cm_income_map.get(pid, 0.0),
-            "eligible_files_total": _lm["total_files"],
-            "eligible_files_installed": _lm["installed_files"],
+            "team_income": team_income_map.get(pid, 0.0),
+            "eligible_files_total": tot,
+            "eligible_files_installed": first_pmt_c + comp_c,
             "team_added": tm_added,
             "total_leads": tot,
             "submits_count": sub_c, "submits_val": sub_v, "submits_pct": sub_pct,
@@ -8107,6 +8259,7 @@ def vgk_top_partners_leaderboard_table(
         "eligible_files_total": lambda x: x["eligible_files_total"],
         "overall_payout": lambda x: x["overall_payout"],
         "current_month_earning": lambda x: x["current_month_earning"],
+        "team_income": lambda x: x.get("team_income", 0.0),
         "team_leads": lambda x: x["team_leads"],
         "team_submits_count": lambda x: x["team_submits_count"],
         "team_with_bank_count": lambda x: x["team_with_bank_count"],
@@ -8134,6 +8287,7 @@ def vgk_top_partners_leaderboard_table(
     team_first_pmt_count = sum(p["team_first_pmt_count"] for p in partners)
     team_completed_count = sum(p["team_completed_count"] for p in partners)
     team_total_received_val = sum(p["team_total_received_val"] for p in partners)
+    total_team_income = sum(p.get("team_income", 0.0) for p in partners)
 
     team_summary = {
         "total_team_members": total_team_members,
@@ -8144,7 +8298,8 @@ def vgk_top_partners_leaderboard_table(
         "completed_count": team_completed_count,
         "dvr_count": team_first_pmt_count,
         "dvr_val": team_total_received_val,
-        "total_received_val": team_total_received_val
+        "total_received_val": team_total_received_val,
+        "total_team_income": total_team_income
     }
 
     rank_summary = {
@@ -8332,8 +8487,10 @@ def vgk_top_partners_leads(
         )""")
     elif metric in ("eligible_files_installed", "eligible_installed"):
         where_clauses.append("""(
-            cl.installation_date IS NOT NULL 
-            OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed')
+            (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
+            OR cl.installation_date IS NOT NULL 
+            OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') 
+            OR cl.status = 'completed'
         )""")
 
     if company_id:
@@ -8701,5 +8858,277 @@ def get_storage_file_as_data_url(path: str, db: Session = Depends(get_db)):
     b64_str = base64.b64encode(file_data).decode('utf-8')
     data_url = f"data:{mime_type};base64,{b64_str}"
     return {"success": True, "path": clean_path, "data_url": data_url}
+
+
+# ── DC Protocol: 3-Hour Time-Bound Shared Ledger Engine ──
+
+class SharedLedgerCreateRequest(BaseModel):
+    view_type: str = "member"  # "member" or "lead"
+    partner_id: Optional[int] = None
+    lead_id: Optional[int] = None
+    show_status: bool = True
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    search: Optional[str] = None
+    customer_search: Optional[str] = None
+    registered_by_emp_code: Optional[str] = None
+    category_id: Optional[int] = None
+
+
+@router.post("/ledger/generate-link")
+def generate_shared_ledger_link(
+    req: SharedLedgerCreateRequest,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate short code link (/sl/:code) backed by cryptographically signed token valid for strictly 3 hours (10,800 seconds).
+    Publicly viewable without login authentication.
+    """
+    import json, base64, hmac, hashlib, time, secrets, string
+    from app.core.config import settings
+
+    now_ts = int(time.time())
+    ttl = 10800  # 3 hours in seconds
+    exp_ts = now_ts + ttl
+
+    # 1. Resolve target name from DB
+    target_name = "VGK Channel Partners Ledger"
+    if req.partner_id:
+        p_row = db.execute(text("SELECT partner_name, partner_code FROM official_partners WHERE id = :pid"), {"pid": req.partner_id}).fetchone()
+        if p_row:
+            p_code = (p_row[1] or '').strip()
+            p_name = (p_row[0] or '').strip()
+            target_name = f"{p_name} ({p_code})" if p_code else p_name
+    elif req.lead_id:
+        l_row = db.execute(text("SELECT name FROM crm_leads WHERE id = :lid"), {"lid": req.lead_id}).fetchone()
+        if l_row:
+            target_name = f"Lead #{req.lead_id} - {l_row[0]}"
+
+    payload = {
+        "view_type": req.view_type,
+        "partner_id": req.partner_id,
+        "lead_id": req.lead_id,
+        "show_status": req.show_status,
+        "date_from": req.date_from,
+        "date_to": req.date_to,
+        "search": req.search,
+        "customer_search": req.customer_search,
+        "registered_by_emp_code": req.registered_by_emp_code,
+        "category_id": req.category_id,
+        "created_by": getattr(current_user, 'emp_code', None) or getattr(current_user, 'partner_code', None) or getattr(current_user, 'full_name', None) or 'staff',
+        "iat": now_ts,
+        "exp": exp_ts
+    }
+
+    payload_bytes = json.dumps(payload, sort_keys=True).encode('utf-8')
+    b64_payload = base64.urlsafe_b64encode(payload_bytes).decode('utf-8').rstrip('=')
+    sig = hmac.new(settings.SECRET_KEY.encode('utf-8'), b64_payload.encode('utf-8'), hashlib.sha256).hexdigest()
+    token = f"{b64_payload}.{sig}"
+
+    from datetime import datetime
+    from pytz import timezone
+    exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone('Asia/Kolkata'))
+    exp_str = exp_dt.strftime('%Y-%m-%d %H:%M:%S IST')
+
+    # Ensure vgk_short_links table exists
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS vgk_short_links (
+                id SERIAL PRIMARY KEY,
+                short_code VARCHAR(32) UNIQUE NOT NULL,
+                token TEXT NOT NULL,
+                target_name VARCHAR(255),
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except Exception:
+        try: db.rollback()
+        except: pass
+
+    # Generate 6-char random short_code
+    alphabet = string.ascii_letters + string.digits
+    short_code = ''.join(secrets.choice(alphabet) for _ in range(6))
+    
+    try:
+        db.execute(text("""
+            INSERT INTO vgk_short_links (short_code, token, target_name, expires_at)
+            VALUES (:code, :token, :tname, TO_TIMESTAMP(:exp_ts))
+        """), {"code": short_code, "token": token, "tname": target_name, "exp_ts": exp_ts})
+        db.commit()
+    except Exception as _e_sl:
+        try: db.rollback()
+        except: pass
+
+    share_url = f"/sl/{short_code}"
+
+    return {
+        "success": True,
+        "short_code": short_code,
+        "token": token,
+        "share_url": share_url,
+        "target_name": target_name,
+        "expires_at": exp_str,
+        "ttl_seconds": ttl,
+        "show_status": req.show_status
+    }
+
+
+class SharedLedgerWhatsAppRequest(BaseModel):
+    phone: str
+    share_url: str
+    target_name: str
+    expires_at: str
+    show_status: bool = True
+
+
+@router.post("/ledger/share-whatsapp")
+def share_ledger_via_whatsapp(
+    req: SharedLedgerWhatsAppRequest,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Dispatch preformatted 3-hour shared ledger link via WhatsApp API / Universal WhatsApp Service.
+    """
+    from app.services.whatsapp_canonical_service import send_whatsapp_message
+    
+    clean_phone = (req.phone or '').strip()
+    if not clean_phone:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+
+    status_note = "Status Column: Included" if req.show_status else "Status Column: Hidden"
+    msg = (
+        f"*VGK4U Channel Partners - Shared Ledger Breakdown*\n"
+        f"Target: {req.target_name}\n"
+        f"{status_note}\n\n"
+        f"🔗 Access interactive breakdown:\n"
+        f"https://www.vgk4u.com{req.share_url}\n\n"
+        f"⏳ *Note: This link is active for 3 hours only* (expires at {req.expires_at}).\n"
+        f"- Team VGK4U | www.vgk4u.com"
+    )
+
+    try:
+        res = send_whatsapp_message(db, clean_phone, msg)
+        return {"success": True, "message": "WhatsApp dispatch queued", "result": res}
+    except Exception as e:
+        logger.warning(f"[LEDGER-WA-SHARE] WhatsApp share failed: {e}")
+        return {"success": True, "message": "Link generated for manual sharing", "wa_error": str(e)}
+
+
+@router.get("/public/ledger-data")
+def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """
+    Public unauthenticated API endpoint to fetch breakdown data for a valid 3-hour ledger share token or short code (/sl/:code).
+    Enforces 3-hour expiration check. Respects show_status toggle.
+    """
+    import json, base64, hmac, hashlib, time
+    from app.core.config import settings
+
+    target_name_override = None
+
+    # Resolve short_code if code is provided or token is a short code
+    if code or (token and '.' not in token):
+        sc = (code or token).strip()
+        try:
+            sl_row = db.execute(text("SELECT token, target_name, expires_at FROM vgk_short_links WHERE short_code = :sc"), {"sc": sc}).fetchone()
+            if not sl_row:
+                return {"success": False, "expired": True, "reason": "Short link not found or expired"}
+            token = sl_row[0]
+            target_name_override = sl_row[1]
+        except Exception as _e_sc:
+            return {"success": False, "expired": True, "reason": f"Short link error: {str(_e_sc)}"}
+
+    if not token:
+        return {"success": False, "expired": True, "reason": "No share token or code provided"}
+
+    try:
+        parts = token.split('.')
+        if len(parts) != 2:
+            return {"success": False, "expired": True, "reason": "Invalid token format"}
+        b64_payload, sig = parts
+        expected_sig = hmac.new(settings.SECRET_KEY.encode('utf-8'), b64_payload.encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected_sig):
+            return {"success": False, "expired": True, "reason": "Invalid signature"}
+
+        padded = b64_payload + '=' * (-len(b64_payload) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode('utf-8'))
+
+        now_ts = int(time.time())
+        exp_ts = payload.get("exp", 0)
+        if now_ts > exp_ts:
+            return {
+                "success": False,
+                "expired": True,
+                "reason": "Link expired (Valid for 3 hours only)",
+                "expired_at": exp_ts
+            }
+
+        # Resolve data using token filters
+        view_type = payload.get("view_type", "member")
+        partner_id = payload.get("partner_id")
+        lead_id = payload.get("lead_id")
+        show_status = payload.get("show_status", True)
+        date_from = payload.get("date_from")
+        date_to = payload.get("date_to")
+        search = payload.get("search")
+        cat_id = payload.get("category_id")
+
+        target_name = target_name_override or "VGK Channel Partners Ledger"
+        if not target_name_override:
+            if partner_id:
+                p_row = db.execute(text("SELECT partner_name, partner_code FROM official_partners WHERE id = :pid"), {"pid": partner_id}).fetchone()
+                if p_row:
+                    p_code = (p_row[1] or '').strip()
+                    p_name = (p_row[0] or '').strip()
+                    target_name = f"{p_name} ({p_code})" if p_code else p_name
+            elif lead_id:
+                l_row = db.execute(text("SELECT name FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
+                if l_row:
+                    target_name = f"Lead #{lead_id} - {l_row[0]}"
+
+        if partner_id:
+            report_data = fetch_member_income_entries_data(
+                partner_id=partner_id,
+                date_from=date_from,
+                date_to=date_to,
+                db=db
+            )
+        else:
+            report_data = get_vgk_members_income_report(
+                db=db,
+                partner_id=partner_id,
+                lead_id=lead_id,
+                date_from=date_from,
+                date_to=date_to,
+                category_id=cat_id,
+                search=search
+            )
+
+        rows = report_data.get("data", [])
+        if not show_status:
+            for r in rows:
+                r["status"] = "—"
+
+        from datetime import datetime
+        from pytz import timezone
+        exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone('Asia/Kolkata'))
+
+        return {
+            "success": True,
+            "expired": False,
+            "view_type": view_type,
+            "target_name": target_name,
+            "show_status": show_status,
+            "expires_at": exp_dt.strftime('%Y-%m-%d %H:%M:%S IST'),
+            "ttl_seconds_remaining": max(0, exp_ts - now_ts),
+            "total_rows": len(rows),
+            "data": rows
+        }
+    except Exception as e:
+        return {"success": False, "expired": True, "reason": f"Verification error: {str(e)}"}
+
 
 

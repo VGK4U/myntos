@@ -2031,9 +2031,36 @@
                                     `).join('')}
                                 </div>
 
-                                <!-- In-Call 4-Action Button Grid -->
+                                <!-- In-Call Add Call / Conference Drawer (2 Options) -->
+                                <div id="inCallAddCallPad" style="display: none; width: 100%; max-width: 260px; flex-direction: column; gap: 8px; margin: 6px 0; background: rgba(15,23,42,0.95); border: 1px solid rgba(56,189,248,0.3); border-radius: 12px; padding: 10px; box-sizing: border-box;">
+                                    <div style="font-weight: 700; font-size: 11px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Add a Call (Conference)</div>
+                                    
+                                    <!-- 2 Option Tabs -->
+                                    <div style="display: flex; gap: 4px; background: rgba(255,255,255,0.08); padding: 3px; border-radius: 8px;">
+                                        <button id="tabAddCallManual" onclick="window.PlivoSoftphone.switchAddCallTab('manual')" style="flex: 1; padding: 4px 6px; font-size: 10px; font-weight: 600; border: none; border-radius: 6px; background: #38bdf8; color: #0f172a; cursor: pointer;">1. Manual Number</button>
+                                        <button id="tabAddCallSearch" onclick="window.PlivoSoftphone.switchAddCallTab('search')" style="flex: 1; padding: 4px 6px; font-size: 10px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #94a3b8; cursor: pointer;">2. Search Contact</button>
+                                    </div>
+
+                                    <!-- Option 1: Enter Number Manually -->
+                                    <div id="panelAddCallManual" style="display: flex; flex-direction: column; gap: 6px;">
+                                        <input id="inputAddCallManual" type="tel" placeholder="Enter phone number..." style="width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-size: 12px; box-sizing: border-box;" />
+                                        <button onclick="window.PlivoSoftphone.submitAddCallParticipant(document.getElementById('inputAddCallManual').value, 'Manual Participant')" style="width: 100%; padding: 6px; border-radius: 8px; background: #22c55e; border: none; color: white; font-weight: 700; font-size: 11px; cursor: pointer;">
+                                            <i class="fa-solid fa-user-plus me-1"></i> Dial & Add to Conference
+                                        </button>
+                                    </div>
+
+                                    <!-- Option 2: Type & Search Contact -->
+                                    <div id="panelAddCallSearch" style="display: none; flex-direction: column; gap: 6px;">
+                                        <input id="inputAddCallSearch" type="text" placeholder="Type name or number..." oninput="window.PlivoSoftphone.searchAddCallContacts(this.value)" style="width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-size: 12px; box-sizing: border-box;" />
+                                        <div id="resultsAddCallSearch" style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+                                            <div style="font-size: 10px; color: #64748b; text-align: center; padding: 8px;">Type to search CRM leads or staff...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- In-Call Action Button Grid (Mute, Speaker, Hold, Keypad, Add Call) -->
                                 <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
-                                    <div style="display: flex; justify-content: center; gap: 14px; width: 100%;">
+                                    <div style="display: flex; justify-content: center; gap: 8px; width: 100%; flex-wrap: wrap;">
                                         <button id="btnMuteCall" onclick="window.PlivoSoftphone.toggleMute()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-microphone"></i>
                                             <span style="font-size: 8.5px; margin-top: 1px;">Mute</span>
@@ -2049,6 +2076,10 @@
                                         <button onclick="window.PlivoSoftphone.toggleDTMFPad()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-grip"></i>
                                             <span style="font-size: 8.5px; margin-top: 1px;">Keypad</span>
+                                        </button>
+                                        <button id="btnAddCall" onclick="window.PlivoSoftphone.toggleAddCallPad()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(56,189,248,0.2); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;" title="Add a Call (Conference)">
+                                            <i class="fa-solid fa-user-plus"></i>
+                                            <span style="font-size: 8.5px; margin-top: 1px;">Add Call</span>
                                         </button>
                                     </div>
 
@@ -2427,6 +2458,109 @@
             const pad = document.getElementById('inCallDTMFPad');
             if (pad) {
                 pad.style.display = pad.style.display === 'none' ? 'grid' : 'none';
+            }
+        }
+
+        toggleAddCallPad() {
+            const pad = document.getElementById('inCallAddCallPad');
+            if (pad) {
+                const isOpening = pad.style.display === 'none' || !pad.style.display;
+                pad.style.display = isOpening ? 'flex' : 'none';
+                if (isOpening) {
+                    this.switchAddCallTab('manual');
+                }
+            }
+        }
+
+        switchAddCallTab(mode) {
+            const btnManual = document.getElementById('tabAddCallManual');
+            const btnSearch = document.getElementById('tabAddCallSearch');
+            const panelManual = document.getElementById('panelAddCallManual');
+            const panelSearch = document.getElementById('panelAddCallSearch');
+
+            if (mode === 'manual') {
+                if (btnManual) { btnManual.style.background = '#38bdf8'; btnManual.style.color = '#0f172a'; }
+                if (btnSearch) { btnSearch.style.background = 'transparent'; btnSearch.style.color = '#94a3b8'; }
+                if (panelManual) panelManual.style.display = 'flex';
+                if (panelSearch) panelSearch.style.display = 'none';
+                const input = document.getElementById('inputAddCallManual');
+                if (input) input.focus();
+            } else {
+                if (btnSearch) { btnSearch.style.background = '#38bdf8'; btnSearch.style.color = '#0f172a'; }
+                if (btnManual) { btnManual.style.background = 'transparent'; btnManual.style.color = '#94a3b8'; }
+                if (panelSearch) panelSearch.style.display = 'flex';
+                if (panelManual) panelManual.style.display = 'none';
+                const input = document.getElementById('inputAddCallSearch');
+                if (input) {
+                    input.focus();
+                    if (input.value) this.searchAddCallContacts(input.value);
+                }
+            }
+        }
+
+        searchAddCallContacts(query) {
+            const container = document.getElementById('resultsAddCallSearch');
+            if (!container) return;
+            const q = (query || '').trim();
+            if (q.length < 1) {
+                container.innerHTML = `<div style="font-size: 10px; color: #64748b; text-align: center; padding: 8px;">Type to search CRM leads or staff...</div>`;
+                return;
+            }
+
+            this.fetchContactResults(q, (results) => {
+                if (!results || results.length === 0) {
+                    container.innerHTML = `<div style="font-size: 10px; color: #ef4444; text-align: center; padding: 6px;">No contacts found matching "${q}"</div>`;
+                    return;
+                }
+
+                container.innerHTML = results.map(item => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="overflow: hidden; padding-right: 6px;">
+                            <div style="font-weight: 700; font-size: 11px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                            <div style="font-size: 10px; color: #94a3b8;">${item.phone} • <span style="color: #38bdf8;">${item.badge || 'Contact'}</span></div>
+                        </div>
+                        <button onclick="window.PlivoSoftphone.submitAddCallParticipant('${item.phone}', '${item.name.replace(/'/g, "\\'")}')" style="background: #22c55e; border: none; color: white; border-radius: 4px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer; flex-shrink: 0;">
+                            Add
+                        </button>
+                    </div>
+                `).join('');
+            });
+        }
+
+        async submitAddCallParticipant(phone, name) {
+            if (!phone || !phone.trim()) {
+                alert('Please enter or select a valid phone number.');
+                return;
+            }
+
+            const activeSessionId = this.activeSessionId;
+            const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+
+            try {
+                const resp = await fetch('/api/v1/telephony/plivo/calls/conference/add-participant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        call_session_id: activeSessionId,
+                        participant_phone: phone,
+                        participant_name: name || 'Conference Participant'
+                    })
+                });
+
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    alert(`Dialing ${data.participant?.phone || phone} into conference...`);
+                    const pad = document.getElementById('inCallAddCallPad');
+                    if (pad) pad.style.display = 'none';
+                } else {
+                    alert(`Failed to add participant: ${data.detail || data.message || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('[SOFTPHONE] Add conference participant error:', err);
+                alert(`Failed to add participant: ${err.message}`);
             }
         }
 
