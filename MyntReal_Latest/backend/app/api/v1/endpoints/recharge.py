@@ -150,10 +150,27 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         tx.api_status = "Success"
         tx.api_tx_id = f"MOCK_A1_{tx.id}"
         tx.api_operator_id = "MOCK_OP_123"
+        db.commit()
         
+        # Phase 2 & 7: Allocate Scratch Card and Enqueue Notification Outbox
+        try:
+            from app.services.scratch_reward_service import allocate_scratch_card
+            from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
+            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Zynova Mobility")
+            if card and token_secret:
+                enqueue_recharge_scratch_notification(
+                    db=db,
+                    brand="Zynova Mobility",
+                    mobile_number=tx.mobile_number,
+                    recharge_amount=tx.amount,
+                    transaction_id=tx.id,
+                    raw_secret_token=token_secret
+                )
+        except Exception as scratch_err:
+            print(f"Scratch card trigger error: {scratch_err}")
+            
         success_msg = f"✅ (TEST MODE) Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
         background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
-        db.commit()
     else:
         # Call Real A1Topup API
         if settings.A1TOPUP_USERNAME and settings.A1TOPUP_PASSWORD:
@@ -201,6 +218,24 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                         tx.api_status = "Success"
                         tx.api_tx_id = str(data.get("txid", ""))
                         tx.api_operator_id = str(data.get("opid", ""))
+                        db.commit()
+
+                        # Phase 2 & 7: Allocate Scratch Card and Enqueue Notification Outbox
+                        try:
+                            from app.services.scratch_reward_service import allocate_scratch_card
+                            from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
+                            card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Zynova Mobility")
+                            if card and token_secret:
+                                enqueue_recharge_scratch_notification(
+                                    db=db,
+                                    brand="Zynova Mobility",
+                                    mobile_number=tx.mobile_number,
+                                    recharge_amount=tx.amount,
+                                    transaction_id=tx.id,
+                                    raw_secret_token=token_secret
+                                )
+                        except Exception as scratch_err:
+                            print(f"Scratch card trigger error: {scratch_err}")
                         
                         success_msg = f"✅ Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
                         background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)

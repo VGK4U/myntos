@@ -27,3 +27,7 @@ MyntReal_Latest/scratch/*
 **/storage/wa_media/*
 
 
+
+/scratch_*.py
+/scratch_*.js
+

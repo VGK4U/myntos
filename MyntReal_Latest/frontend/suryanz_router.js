@@ -82,12 +82,28 @@ function getSuryanzHeader(activePath = '/', urlPrefix = '') {
   </div>
 
   <script>
-    function toggleMobileDrawer() {
-      var d = document.getElementById('mobileDrawer');
-      if (d) {
-        d.classList.toggle('open');
-      }
-    }
+    (function() {
+      window.toggleMobileDrawer = function() {
+        var d = document.getElementById('mobileDrawer');
+        var btn = document.querySelector('.suryanz-mobile-toggle');
+        if (d) {
+          var isOpen = d.classList.toggle('open');
+          if (btn) {
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          }
+          d.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        }
+      };
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          var d = document.getElementById('mobileDrawer');
+          if (d && d.classList.contains('open')) {
+            window.toggleMobileDrawer();
+          }
+        }
+      });
+    })();
   </script>`;
 }
 
@@ -96,10 +112,10 @@ function getSuryanzMobileActionBar(urlPrefix = '') {
   return `
   <div class="suryanz-mobile-action-bar">
     <div class="suryanz-mobile-action-bar-inner">
-      <a href="tel:+919876543210" class="suryanz-mobile-action-btn" style="background:#f1f5f9; color:#0f172a;">
+      <a href="tel:+918585852738" class="suryanz-mobile-action-btn" style="background:#f1f5f9; color:#0f172a;">
         <i class="fas fa-phone-alt"></i> Call
       </a>
-      <a href="https://wa.me/919876543210?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20know%20more%20about%20rooftop%20solar." class="suryanz-mobile-action-btn" style="background:#25D366; color:#ffffff;" target="_blank">
+      <a href="https://wa.me/918585852738?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20know%20more%20about%20rooftop%20solar." class="suryanz-mobile-action-btn" style="background:#25D366; color:#ffffff;" target="_blank">
         <i class="fab fa-whatsapp"></i> WhatsApp
       </a>
       <a href="${p}/contact" class="suryanz-mobile-action-btn" style="background:#d97706; color:#ffffff;">
@@ -914,12 +930,12 @@ function renderHomePage(urlPrefix = '') {
         <a href="${p}/contact" class="suryanz-btn-cta" style="padding:0.9rem 2rem; font-size:1rem;">
           <i class="fas fa-clipboard-check"></i> Get a Free Solar Assessment
         </a>
-        <a href="https://wa.me/919876543210?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20speak%20with%20a%20solar%20expert." class="suryanz-btn-amber" style="padding:0.9rem 2rem; font-size:1rem; background:#25D366; border-color:#25D366;" target="_blank">
+        <a href="https://wa.me/918585852738?text=Hi%20Suryanz%20Solar,%20I%20want%20to%20speak%20with%20a%20solar%20expert." class="suryanz-btn-amber" style="padding:0.9rem 2rem; font-size:1rem; background:#25D366; border-color:#25D366;" target="_blank">
           <i class="fab fa-whatsapp"></i> Talk to a Solar Expert
         </a>
       </div>
       <div style="font-size:0.9rem; color:rgba(255,255,255,0.75);">
-        Direct Hotline: <strong style="color:#ffffff;">+91 98765 43210</strong> · Email: <strong style="color:#ffffff;">contact@suryanzsolar.com</strong>
+        Direct Hotline: <strong style="color:#ffffff;">+91 85858 52738</strong> · Email: <strong style="color:#ffffff;">contact@suryanzsolar.com</strong>
       </div>
     </div>
   </section>
@@ -930,6 +946,69 @@ function renderHomePage(urlPrefix = '') {
     description: 'SURYANZ SOLAR provides engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities across India. Backed by 20+ years of energy experience.',
     canonicalUrl: 'https://suryanzsolar.com/',
     activePath: '/',
+    bodyContent: content,
+    urlPrefix: urlPrefix
+  });
+}
+
+function renderGenericPage(pageKey, title, description, urlPrefix = '') {
+  const p = (urlPrefix && urlPrefix.endsWith('/')) ? urlPrefix.slice(0, -1) : (urlPrefix || '');
+  const isAbout = pageKey === 'about';
+  
+  // Implementation C: Understated partner-brand note exclusively for About Us page
+  const partnerBrandNote = isAbout ? `
+  <div class="suryanz-partner-brand-note" style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; text-align: center;">
+    <p style="font-size: 0.85rem; color: #64748b; line-height: 1.6; max-width: 750px; margin: 0 auto;">
+      Suryanz Solar provides solar solutions featuring leading brands, including APS (Australian Premium Solar), Navgrun, Waree, Tata, Adani, Servotec, and other solar brands.
+    </p>
+  </div>` : '';
+
+  const content = `
+  <section class="suryanz-page-hero" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 4rem 1rem 3rem; text-align: center;">
+    <div class="suryanz-container" style="max-width: 900px;">
+      <div style="color: #fbbf24; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+        <i class="fas fa-certificate me-1"></i> SURYANZ SOLAR
+      </div>
+      <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; color: #ffffff;">${title}</h1>
+      <p style="font-size: 1.1rem; color: rgba(255,255,255,0.85); line-height: 1.6; margin-bottom: 0;">${description}</p>
+    </div>
+  </section>
+
+  <section class="suryanz-section" style="background: #ffffff; padding: 3.5rem 1rem;">
+    <div class="suryanz-container" style="max-width: 1000px;">
+      <div class="suryanz-page-body-content">
+        <p style="font-size: 1.05rem; color: #334155; line-height: 1.7; margin-bottom: 1.5rem;">
+          Welcome to <strong>SURYANZ SOLAR</strong> — engineering-driven rooftop solar EPC services designed for long-term power independence and 30-year operational endurance across Andhra Pradesh, Telangana, and Karnataka.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+          <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <h4 style="margin-top:0; color: #0f172a; font-weight: 700;"><i class="fas fa-solar-panel me-2" style="color:#f59e0b;"></i> Tier-1 Photovoltaic Modules</h4>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 0;">540W–580W TOPCon & N-Type modules engineered for high heat tolerance and peak solar yield.</p>
+          </div>
+          <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+            <h4 style="margin-top:0; color: #0f172a; font-weight: 700;"><i class="fas fa-shield-alt me-2" style="color:#3b82f6;"></i> 3-Stage Customer Protection</h4>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 0;">Comprehensive shadow analysis, structural verification, and 30-year linear performance warranty.</p>
+          </div>
+          <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981;">
+            <h4 style="margin-top:0; color: #0f172a; font-weight: 700;"><i class="fas fa-calculator me-2" style="color:#10b981;"></i> Custom Energy Sizing</h4>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 0;">Precision daily load profiling and DISCOM net-metering documentation assistance.</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 2.5rem;">
+          <a href="${p || ''}/contact" class="suryanz-btn-cta" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            <i class="fas fa-clipboard-check me-2"></i> Get a Free Solar Assessment
+          </a>
+        </div>
+      </div>
+      ${partnerBrandNote}
+    </div>
+  </section>`;
+
+  return renderSuryanzPage({
+    title: `${title} | SURYANZ SOLAR`,
+    description: description,
+    canonicalUrl: `https://suryanzsolar.com/${pageKey}`,
+    activePath: `/${pageKey}`,
     bodyContent: content,
     urlPrefix: urlPrefix
   });
@@ -952,7 +1031,20 @@ function renderTechnologyPage(urlPrefix = '') {
 }
 
 function renderCalculatorPage(urlPrefix = '') {
-  return renderHomePage(urlPrefix);
+  const pageHtml = renderHomePage(urlPrefix);
+  const scrollScript = `
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var calcEl = document.getElementById('solar-calculator');
+      if (calcEl) {
+        setTimeout(function() {
+          calcEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }
+    });
+  </script>
+  </body>`;
+  return pageHtml.replace('</body>', scrollScript);
 }
 
 function renderProjectsPage(urlPrefix = '') {

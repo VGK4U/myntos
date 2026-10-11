@@ -601,19 +601,43 @@
               <h3 style="font-size:15px;font-weight:700;margin:0"><i class="fas fa-shield-alt" style="color:#059669"></i> POSIX Locked System Audit Log</h3>
               <p style="font-size:12.5px;color:#4b5563;margin:4px 0 0">System transmission history and POSIX <code>fcntl</code> file-locked audit records (<code>whatsapp_audit_service.py</code>).</p>
             </div>
-            <div class="filter-wrap" style="margin:0">
+            <div class="filter-wrap" style="margin:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div style="position:relative;display:inline-block;">
+                <input id="auditContactSearchInput" type="text" placeholder="🔍 Search Name or Phone..." oninput="onAuditContactSearchInput(this.value)" onkeydown="onAuditContactSearchKeyDown(event)" autocomplete="off" style="padding:6px 26px 6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;width:190px;outline:none;background:#fff;" />
+                <button id="auditContactClearBtn" onclick="clearAuditContactSearch()" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;padding:0;" title="Clear search">✕</button>
+                <div id="auditContactDropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;max-height:240px;overflow-y:auto;width:270px;margin-top:4px;text-align:left;"></div>
+              </div>
               <select id="auditDaysSel" onchange="loadAuditLogHub()">
                 <option value="3" selected>📅 Last 3 Days</option>
                 <option value="7">📅 Last 7 Days</option>
                 <option value="30">📅 Last 30 Days</option>
                 <option value="0">📅 All Time</option>
               </select>
+              <select id="auditChannelSel" onchange="loadAuditLogHub()">
+                <option value="all" selected>📡 All Channels (Meta API &amp; Scanned)</option>
+                <option value="api">⚡ Meta Cloud API</option>
+                <option value="scanned">📲 Scanned WhatsApp</option>
+              </select>
               <select id="auditTriggerTypeSel" onchange="loadAuditLogHub()">
-                <option value="all" selected>🔄 All Triggers (Broadcasts, Bots, Manual)</option>
-                <option value="broadcast">📢 Broadcasts &amp; Campaigns</option>
-                <option value="auto">🤖 Auto Event Bots (Lead &amp; CRM)</option>
+                <option value="all" selected>🔄 All Triggers</option>
+                <option value="morning">🌅 All Daily Morning Greetings &amp; Member Statements</option>
+                <option value="morning_member">🏆 VGK Member Morning Statements &amp; Earner Cards</option>
+                <option value="morning_staff">👔 Staff Morning Leadership &amp; Reminders</option>
                 <option value="manual">👤 Manual Staff Dispatches</option>
+                <option value="broadcast">📢 Broadcasts &amp; Group Campaigns</option>
+                <option value="performance">📊 Leaderboard &amp; Field Journey Reports</option>
+                <option value="missed_call">📞 Missed Call Auto-ACKs</option>
+                <option value="auto">🤖 Auto Event Bots (Lead &amp; CRM)</option>
                 <option value="otp">🔐 OTP Authentication</option>
+              </select>
+              <select id="auditRecipientSel" onchange="loadAuditLogHub()">
+                <option value="all" selected>👤 Message To: All Recipients</option>
+                <option value="leads">🎯 Leads &amp; Customers</option>
+                <option value="vgk_members">💼 VGK Members &amp; Executive Partners</option>
+                <option value="staff">👔 Internal Staff &amp; Leadership</option>
+                <option value="partner">🤝 Channel Partners</option>
+                <option value="students">🎓 ETC Trainees &amp; Students</option>
+                <option value="others">⚙️ System &amp; Others</option>
               </select>
               <select id="auditSegmentSel" onchange="loadAuditLogHub()">
                 <option value="" selected>🏢 All Segments</option>
@@ -634,6 +658,12 @@
                 <option value="success">Sent / Delivered Only</option>
                 <option value="failed">Failed / Error Only</option>
               </select>
+              <button id="btnApplyAuditFilters" onclick="loadAuditLogHub()" style="padding:6px 14px;font-size:12px;font-weight:600;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" title="Apply all selected filters">
+                <i class="fas fa-filter"></i> Apply Filters
+              </button>
+              <button id="btnResetAuditFilters" onclick="resetAuditFilters()" style="padding:6px 12px;font-size:12px;font-weight:500;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;background:#fff;color:#4b5563;display:inline-flex;align-items:center;gap:4px;" title="Reset all filters">
+                <i class="fas fa-undo"></i> Reset
+              </button>
             </div>
           </div>
           <div id="auditLogBox"><div style="padding:30px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading Audit Log...</div></div>
@@ -3554,17 +3584,159 @@ async function removeJobTargetSubmit(targetId, targetName) {
 
 // ── TAB 5: AUDIT LOG ────────────────────────────────────────────────────────
 let auditLogsCache = [];
+let selectedContactSearch = '';
+let auditContactSearchDebounceTimer = null;
+
+function onAuditContactSearchInput(val) {
+  const clearBtn = document.getElementById('auditContactClearBtn');
+  const dropdown = document.getElementById('auditContactDropdown');
+  if (clearBtn) clearBtn.style.display = val.trim() ? 'block' : 'none';
+
+  if (!val.trim()) {
+    selectedContactSearch = '';
+    if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+    loadAuditLogHub();
+    return;
+  }
+
+  clearTimeout(auditContactSearchDebounceTimer);
+  auditContactSearchDebounceTimer = setTimeout(async () => {
+    try {
+      if (dropdown) {
+        dropdown.style.display = 'block';
+        dropdown.innerHTML = '<div style="padding:10px;text-align:center;font-size:11.5px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1"></i> Searching contacts...</div>';
+      }
+      const res = await apiFetch(`${API}/whatsapp/contacts-search?query=${encodeURIComponent(val.trim())}&scope=all`);
+      const results = res.contacts || res.results || [];
+      
+      if (!dropdown) return;
+
+      if (!results.length) {
+        dropdown.innerHTML = `<div style="padding:10px;font-size:11.5px;color:#6b7280;text-align:center">No matching contact found.<br/><a href="#" onclick="selectAuditContact('${val.trim().replace(/'/g, "\\'")}', '${val.trim().replace(/'/g, "\\'")}');return false;" style="color:#059669;font-weight:600;text-decoration:underline;">Search log for "${val.trim()}"</a></div>`;
+        return;
+      }
+
+      let html = '';
+      results.forEach(c => {
+        const nameEsc = (c.name || 'Contact').replace(/'/g, "\\'");
+        const phoneEsc = (c.phone || '').replace(/'/g, "\\'");
+        const badge = c.badge || '👤 Contact';
+        html += `
+          <div onclick="selectAuditContact('${phoneEsc}', '${nameEsc}')" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+            <div>
+              <div style="font-weight:600;font-size:12px;color:#1f2937">${c.name || 'Unknown'}</div>
+              <div style="font-size:11px;color:#6b7280">📱 ${c.phone || '—'} ${c.details ? '• ' + c.details : ''}</div>
+            </div>
+            <span style="font-size:10.5px;padding:2px 6px;border-radius:4px;background:#f3f4f6;color:#374151;white-space:nowrap">${badge}</span>
+          </div>
+        `;
+      });
+      dropdown.innerHTML = html;
+    } catch(err) {
+      if (dropdown) dropdown.innerHTML = `<div style="padding:8px;font-size:11px;color:#dc2626">Error: ${err.message}</div>`;
+    }
+  }, 250);
+}
+
+function selectAuditContact(phone, name) {
+  selectedContactSearch = phone || name;
+  const input = document.getElementById('auditContactSearchInput');
+  const dropdown = document.getElementById('auditContactDropdown');
+  const clearBtn = document.getElementById('auditContactClearBtn');
+  if (input) input.value = name && phone ? `${name} (${phone})` : (phone || name);
+  if (clearBtn) clearBtn.style.display = 'block';
+  if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+  loadAuditLogHub();
+}
+
+function clearAuditContactSearch() {
+  selectedContactSearch = '';
+  const input = document.getElementById('auditContactSearchInput');
+  const dropdown = document.getElementById('auditContactDropdown');
+  const clearBtn = document.getElementById('auditContactClearBtn');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.style.display = 'none';
+  if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+  loadAuditLogHub();
+}
+
+function onAuditContactSearchKeyDown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const input = document.getElementById('auditContactSearchInput');
+    const dropdown = document.getElementById('auditContactDropdown');
+    if (input && input.value.trim()) {
+      selectedContactSearch = input.value.trim();
+      if (dropdown) dropdown.style.display = 'none';
+      loadAuditLogHub();
+    }
+  }
+}
+
+document.addEventListener('click', function(e) {
+  const container = document.getElementById('auditContactSearchInput')?.parentElement;
+  const dropdown = document.getElementById('auditContactDropdown');
+  if (dropdown && container && !container.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+function resetAuditFilters() {
+  selectedContactSearch = '';
+  const input = document.getElementById('auditContactSearchInput');
+  const clearBtn = document.getElementById('auditContactClearBtn');
+  const dropdown = document.getElementById('auditContactDropdown');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.style.display = 'none';
+  if (dropdown) dropdown.style.display = 'none';
+
+  if (document.getElementById('auditDaysSel')) document.getElementById('auditDaysSel').value = '3';
+  if (document.getElementById('auditChannelSel')) document.getElementById('auditChannelSel').value = 'all';
+  if (document.getElementById('auditTriggerTypeSel')) document.getElementById('auditTriggerTypeSel').value = 'all';
+  if (document.getElementById('auditRecipientSel')) document.getElementById('auditRecipientSel').value = 'all';
+  if (document.getElementById('auditSegmentSel')) document.getElementById('auditSegmentSel').value = '';
+  if (document.getElementById('auditStatusSel')) document.getElementById('auditStatusSel').value = '';
+
+  loadAuditLogHub();
+}
+
+function openAuditContactHistory(phone, name) {
+  if (!phone || phone === '—' || phone === 'None') {
+    showToast('No phone number associated with this audit log.', 'warning');
+    return;
+  }
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone) {
+    showToast('Invalid phone number for contact history.', 'warning');
+    return;
+  }
+  openChatFromInbox(cleanPhone);
+}
 
 async function loadAuditLogHub() {
+  const applyBtn = document.getElementById('btnApplyAuditFilters');
+  const auditBox = document.getElementById('auditLogBox');
+  if (applyBtn) {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Filtering...';
+  }
+  if (auditBox) {
+    auditBox.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Applying filter criteria &amp; fetching audit logs...</div>';
+  }
+
   try {
     const days = document.getElementById('auditDaysSel')?.value || '3';
     const triggerType = document.getElementById('auditTriggerTypeSel')?.value || 'all';
+    const channel = document.getElementById('auditChannelSel')?.value || 'all';
     const statusFilter = document.getElementById('auditStatusSel')?.value || '';
     const segment = document.getElementById('auditSegmentSel')?.value || '';
 
-    let url = `${API}/whatsapp/delivery-logs?days=${days}&trigger_type=${triggerType}&limit=100`;
+    const recipientCategory = document.getElementById('auditRecipientSel')?.value || 'all';
+
+    let url = `${API}/whatsapp/delivery-logs?days=${days}&trigger_type=${triggerType}&channel=${channel}&recipient_category=${recipientCategory}&limit=100&_t=${Date.now()}`;
     if (statusFilter) url += `&status=${statusFilter}`;
     if (segment) url += `&segment=${encodeURIComponent(segment)}`;
+    if (selectedContactSearch) url += `&search=${encodeURIComponent(selectedContactSearch)}`;
 
     const data = await apiFetch(url);
     auditLogsCache = data.logs || data.items || [];
@@ -3573,27 +3745,57 @@ async function loadAuditLogHub() {
     html += `
       <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left">
         <th style="padding:10px 8px">Timestamp</th>
+        <th style="padding:10px 8px">Sent From</th>
         <th style="padding:10px 8px">Trigger Source</th>
         <th style="padding:10px 8px">Recipient / Contact</th>
         <th style="padding:10px 8px">Status</th>
-        <th style="padding:10px 8px">Message SID</th>
-        <th style="padding:10px 8px;text-align:right">Message Content</th>
+        <th style="padding:10px 8px">Message Content Preview</th>
+        <th style="padding:10px 8px;text-align:right">Actions</th>
       </tr>
     `;
 
     auditLogsCache.forEach((l, idx) => {
       const timestamp = l.sent_at || l.time_str || l.created_at || 'LOG';
       const recipient = l.mobile_number || l.recipient || l.to_phone || '—';
-      const userName = (l.user_name && l.user_name !== '—') ? ` (${l.user_name})` : '';
+      const rawName = (l.user_name && l.user_name !== '—' && l.user_name !== 'None') ? l.user_name.trim() : '';
+      const maskedPhoneStr = maskPhone(recipient);
       const status = (l.current_status || l.status || 'SENT').toUpperCase();
       const wamid = l.message_sid || l.wamid || '—';
-      const isOk = status === 'SENT' || status === 'DELIVERED' || status === 'READ';
-      const statusBadge = isOk 
-        ? `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> ${status}</span>`
-        : `<span class="ei-chip" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${status}</span>`;
+      const isOk = status === 'SENT' || status === 'DELIVERED' || status === 'READ' || status === 'RECEIVED';
+      let statusBadge = '';
+      if (status === 'RECEIVED') {
+        statusBadge = `<span class="ei-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"><i class="fas fa-inbox"></i> RECEIVED</span>`;
+      } else if (isOk) {
+        statusBadge = `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> ${status}</span>`;
+      } else {
+        statusBadge = `<span class="ei-chip" style="background:#fef2f2;color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${status}</span>`;
+      }
+
+      // Sent From & Channel badges
+      const modSource = (l.sent_from_module || '').toLowerCase();
+      let moduleIcon = '🤖';
+      if (modSource.includes('dialer')) moduleIcon = '📞';
+      else if (modSource.includes('softphone') || modSource.includes('crm')) moduleIcon = '🎧';
+      else if (modSource.includes('whatsapp center')) moduleIcon = '💬';
+      else if (modSource.includes('broadcast')) moduleIcon = '📢';
+      else if (modSource.includes('morning')) moduleIcon = '🌅';
+
+      const moduleName = l.sent_from_module || (l.trigger_category === 'manual' ? 'WhatsApp Center' : 'Auto Bot / API');
+      const isScanned = l.channel_kind === 'scanned' || (l.provider && l.provider.toLowerCase().includes('scanned'));
+      const channelBadge = isScanned
+        ? `<span class="ei-chip" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10px;padding:2px 6px;margin-top:2px;display:inline-block;"><i class="fab fa-whatsapp"></i> Scanned</span>`
+        : `<span class="ei-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10px;padding:2px 6px;margin-top:2px;display:inline-block;"><i class="fas fa-bolt"></i> Meta API</span>`;
 
       let triggerBadge = '';
-      if (l.trigger_category === 'broadcast' || (l.trigger_source && l.trigger_source.includes('broadcast'))) {
+      if (l.trigger_category === 'morning_member' || (l.trigger_label && (l.trigger_label.includes('Earner') || l.trigger_label.includes('Member')))) {
+        triggerBadge = `<span class="ei-chip" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:600;"><i class="fas fa-trophy"></i> ${l.trigger_label || '🏆 VGK Member Statement'}</span>`;
+      } else if (l.trigger_category === 'morning_staff' || (l.trigger_label && (l.trigger_label.includes('Staff') && l.trigger_label.includes('Morning')))) {
+        triggerBadge = `<span class="ei-chip" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;font-weight:600;"><i class="fas fa-user-tie"></i> ${l.trigger_label || '👔 Staff Morning Leadership'}</span>`;
+      } else if (l.trigger_category === 'morning' || (l.trigger_label && (l.trigger_label.includes('Morning') || l.trigger_label.includes('🌅')))) {
+        triggerBadge = `<span class="ei-chip" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:600;"><i class="fas fa-sun"></i> ${l.trigger_label || '🌅 Morning Wish'}</span>`;
+      } else if (l.trigger_category === 'performance') {
+        triggerBadge = `<span class="ei-chip" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-weight:600;"><i class="fas fa-chart-line"></i> ${l.trigger_label || '📊 Leaderboard & Report'}</span>`;
+      } else if (l.trigger_category === 'broadcast' || (l.trigger_source && l.trigger_source.includes('broadcast'))) {
         triggerBadge = `<span class="ei-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600;"><i class="fas fa-bullhorn"></i> ${l.trigger_label || '📢 Broadcast Message'}</span>`;
       } else if (l.trigger_category === 'manual' || l.trigger_source === 'manual') {
         triggerBadge = `<span class="ei-chip ei-crm" style="background:#f3e8ff;color:#6b21a8;font-weight:600;"><i class="fas fa-user-edit"></i> ${l.trigger_label || '👤 Manual Staff'}</span>`;
@@ -3603,28 +3805,59 @@ async function loadAuditLogHub() {
         triggerBadge = `<span class="ei-chip ei-service" style="background:#e0f2fe;color:#0369a1;font-weight:600;"><i class="fas fa-robot"></i> ${l.trigger_label || '🤖 Auto Bot'}</span>`;
       }
 
+      const rawBody = l.message_body || l.body_text || l.message || '';
+      let msgPreview = rawBody.replace(/[\r\n]+/g, ' ').trim();
+      if (!msgPreview || msgPreview === '—' || msgPreview === 'None') {
+        msgPreview = '📱 Automated WhatsApp Message Payload';
+      }
+      const shortPreview = msgPreview.length > 55 ? msgPreview.substring(0, 55) + '...' : msgPreview;
+
+      const recipientHtml = rawName 
+        ? `<div style="font-weight:600;color:#0f172a;font-size:12px;">${escapeHtmlText(rawName)}</div>
+           <div style="font-size:11px;color:#6b7280;margin-top:1px;"><i class="fas fa-phone-alt" style="font-size:10px;margin-right:3px;color:#94a3b8;"></i>${maskedPhoneStr}</div>`
+        : `<div style="font-weight:600;color:#0f172a;font-size:12px;">${maskedPhoneStr}</div>
+           <div style="font-size:10.5px;color:#9ca3af;font-style:italic;">Contact / Guest</div>`;
+
       html += `
         <tr style="border-bottom:1px solid #f3f4f6;align-items:center">
-          <td style="padding:10px 8px;font-size:11.5px;color:#4b5563">${timestamp}</td>
-          <td style="padding:10px 8px">${triggerBadge}</td>
+          <td style="padding:10px 8px;font-size:11.5px;color:#4b5563;white-space:nowrap">${timestamp}</td>
           <td style="padding:10px 8px">
-            <strong>${maskPhone(recipient)}</strong> <span style="font-size:11px;color:#6b7280">${userName}</span>
+            <div style="font-size:11.5px;font-weight:600;color:#1e293b;">${moduleIcon} ${moduleName}</div>
+            <div>${channelBadge}</div>
           </td>
+          <td style="padding:10px 8px">${triggerBadge}</td>
+          <td style="padding:10px 8px">${recipientHtml}</td>
           <td style="padding:10px 8px">${statusBadge}</td>
-          <td style="padding:10px 8px"><code style="font-size:10.5px;color:#374151">${wamid}</code></td>
-          <td style="padding:10px 8px;text-align:right">
-            <button class="btn-custom btn-outline-custom" style="padding:3px 9px;font-size:11px" onclick="openAuditMsgModal(${idx})">
-              <i class="fas fa-eye"></i> View Message
+          <td style="padding:10px 8px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:#334155;cursor:pointer;" onclick="openAuditMsgModal(${idx})" title="Click to view full message">
+            ${shortPreview}
+          </td>
+          <td style="padding:10px 8px;text-align:right;white-space:nowrap;">
+            <button class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;margin-right:4px;" onclick="openAuditMsgModal(${idx})" title="View single transmission message payload">
+              <i class="fas fa-eye"></i> Payload
+            </button>
+            <button class="btn-custom" style="padding:3px 8px;font-size:11px;background:#1d4ed8;color:#fff;border:none;border-radius:4px;cursor:cursor;" onclick="openAuditContactHistory('${recipient}', '${rawName.replace(/'/g, "\\'")}')" title="Open full universal interaction history for this contact">
+              <i class="fas fa-history"></i> History
             </button>
           </td>
         </tr>
       `;
     });
 
-    html += '</table>';
-    document.getElementById('auditLogBox').innerHTML = auditLogsCache.length ? html : '<div style="padding:20px;color:#9ca3af;text-align:center">No audit log records found for selected filter criteria.</div>';
+    const emptyStateHtml = `
+      <div style="padding:40px 20px;text-align:center;background:#f9fafb;border-radius:10px;margin-top:15px;border:1px dashed #cbd5e1;">
+        <div style="font-size:28px;margin-bottom:6px;color:#94a3b8;"><i class="fas fa-search"></i></div>
+        <div style="font-size:13.5px;font-weight:700;color:#334155;">No records found for selected filter criteria</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Try selecting a different trigger category (e.g., 👔 Staff Morning Leadership) or expanding the Date Range.</div>
+      </div>
+    `;
+    document.getElementById('auditLogBox').innerHTML = auditLogsCache.length ? html : emptyStateHtml;
   } catch(err) {
-    document.getElementById('auditLogBox').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading audit log: ${err.message}</div>`;
+    if (auditBox) auditBox.innerHTML = `<div style="padding:20px;color:#dc2626">Error loading audit log: ${err.message}</div>`;
+  } finally {
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = '<i class="fas fa-filter"></i> Apply Filters';
+    }
   }
 }
 
@@ -3652,7 +3885,24 @@ function openAuditMsgModal(idx) {
   document.getElementById('auditMetaTimestamp').innerHTML = `<i class="fas fa-clock"></i> ${timestamp}`;
   document.getElementById('auditMetaRecipient').innerHTML = `<i class="fas fa-user"></i> ${recipient}`;
   document.getElementById('auditMetaWamid').innerHTML = `<i class="fas fa-hashtag"></i> SID: ${wamid}`;
-  document.getElementById('auditMsgContent').textContent = bodyText;
+  
+  const contentElem = document.getElementById('auditMsgContent');
+  if (contentElem) {
+    contentElem.style.whiteSpace = 'pre-wrap';
+    contentElem.style.wordBreak = 'break-word';
+    contentElem.style.fontFamily = 'inherit';
+    contentElem.style.background = '#f8fafc';
+    contentElem.style.padding = '14px';
+    contentElem.style.borderRadius = '10px';
+    contentElem.style.border = '1px solid #cbd5e1';
+    contentElem.style.maxHeight = '380px';
+    contentElem.style.overflowY = 'auto';
+    contentElem.style.fontSize = '13px';
+    contentElem.style.lineHeight = '1.5';
+    contentElem.style.color = '#0f172a';
+    contentElem.style.marginTop = '10px';
+    contentElem.textContent = bodyText;
+  }
 
   document.getElementById('auditMsgModal').classList.add('open');
 }

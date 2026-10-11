@@ -1,7 +1,7 @@
 /**
  * Suryanz Solar - Client Lead Submission Engine
  * Submits to /api/v1/public/suryanz/lead
- * Features: Client retry queue, idempotency, loading feedback
+ * Features: Form validation, loading state, accessible feedback, network error handling
  */
 document.addEventListener('DOMContentLoaded', function() {
   const forms = document.querySelectorAll('.suryanz-lead-form');
@@ -12,13 +12,23 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       
       const submitBtn = form.querySelector('button[type="submit"]');
-      const msgBox = form.querySelector('.suryanz-form-response') || document.createElement('div');
-      if (!msgBox.parentElement) {
+      let msgBox = form.querySelector('.suryanz-form-response');
+      if (!msgBox) {
+        msgBox = document.createElement('div');
         msgBox.className = 'suryanz-form-response';
         msgBox.style.marginTop = '1rem';
+        msgBox.style.padding = '0.75rem 1rem';
+        msgBox.style.borderRadius = '6px';
         msgBox.style.fontSize = '0.9rem';
+        msgBox.style.fontWeight = '500';
         form.appendChild(msgBox);
       }
+
+      // Reset message state
+      msgBox.style.display = 'block';
+      msgBox.className = 'suryanz-form-response';
+      msgBox.innerText = '';
+      msgBox.removeAttribute('role');
 
       const nameEl = form.querySelector('[name="name"]');
       const phoneEl = form.querySelector('[name="phone"]');
@@ -34,15 +44,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const phone = phoneEl ? phoneEl.value.trim() : '';
       
       if (!name || name.length < 2) {
-        msgBox.style.color = '#ef4444';
-        msgBox.innerText = 'Please enter your full name.';
+        msgBox.setAttribute('role', 'alert');
+        msgBox.style.color = '#dc2626';
+        msgBox.style.background = '#fef2f2';
+        msgBox.style.border = '1px solid #fca5a5';
+        msgBox.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please enter your full name.';
+        if (nameEl) nameEl.focus();
         return;
       }
 
       const cleanPhone = phone.replace(/\D/g, '');
-      if (!cleanPhone || cleanPhone.length < 10) {
-        msgBox.style.color = '#ef4444';
-        msgBox.innerText = 'Please enter a valid 10-digit mobile number.';
+      const phoneRegex = /^[6-9]\d{9}$/;
+      if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
+        msgBox.setAttribute('role', 'alert');
+        msgBox.style.color = '#dc2626';
+        msgBox.style.background = '#fef2f2';
+        msgBox.style.border = '1px solid #fca5a5';
+        msgBox.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please enter a valid 10-digit mobile number.';
+        if (phoneEl) phoneEl.focus();
         return;
       }
 
@@ -50,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (submitBtn) {
         originalBtnHtml = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
       }
 
       // Collect UTM parameters
@@ -78,21 +97,30 @@ document.addEventListener('DOMContentLoaded', function() {
           body: JSON.stringify(payload)
         });
 
-        const resData = await resp.json();
+        const resData = await resp.json().catch(() => ({}));
 
-        if (resData && (resp.ok || resData.success)) {
-          msgBox.style.color = '#10b981';
-          msgBox.innerHTML = '<i class="fas fa-check-circle"></i> ' + (resData.message || 'Thank you! Your solar assessment request has been submitted.');
+        if (resp.ok && resData && resData.success) {
+          msgBox.setAttribute('role', 'status');
+          msgBox.setAttribute('aria-live', 'polite');
+          msgBox.style.color = '#15803d';
+          msgBox.style.background = '#f0fdf4';
+          msgBox.style.border = '1px solid #86efac';
+          msgBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ' + (resData.message || 'Thank you! Your solar assessment request has been submitted.');
           form.reset();
         } else {
-          msgBox.style.color = '#ef4444';
-          msgBox.innerText = (resData && (resData.message || resData.detail)) ? (resData.message || resData.detail) : 'Submission error. Please try again.';
+          msgBox.setAttribute('role', 'alert');
+          msgBox.style.color = '#dc2626';
+          msgBox.style.background = '#fef2f2';
+          msgBox.style.border = '1px solid #fca5a5';
+          msgBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> ' + ((resData && (resData.message || resData.detail)) ? (resData.message || resData.detail) : 'Submission error. Please try again.');
         }
       } catch (err) {
-        console.warn('Lead submission network issue:', err);
-        msgBox.style.color = '#10b981';
-        msgBox.innerHTML = '<i class="fas fa-check-circle"></i> Thank you! Your request has been recorded. Our solar engineer will contact you shortly.';
-        form.reset();
+        console.warn('[SURYANZ-LEAD] Lead submission network issue:', err);
+        msgBox.setAttribute('role', 'alert');
+        msgBox.style.color = '#dc2626';
+        msgBox.style.background = '#fef2f2';
+        msgBox.style.border = '1px solid #fca5a5';
+        msgBox.innerHTML = '<i class="fas fa-wifi me-1"></i> Network error. Please check your connection and try again.';
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;

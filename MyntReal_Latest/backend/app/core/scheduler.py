@@ -5048,6 +5048,33 @@ def init_scheduler():
     except Exception as _sync_sched_e:
         logger.warning(f"   📥 Meta Ads: Periodic Sync schedule failed: {_sync_sched_e}")
 
+    # Fix 1: Recharge Scratch Card Notification Outbox Worker (Every 60s)
+    try:
+        def run_recharge_scratch_outbox_worker():
+            try:
+                from app.core.database import SessionLocal
+                from app.services.notification_outbox_service import process_pending_outbox_batch
+                db = SessionLocal()
+                try:
+                    process_pending_outbox_batch(db, batch_size=50, max_retries=3)
+                finally:
+                    db.close()
+            except Exception as _outbox_err:
+                logger.warning(f"⚠️ [SCRATCH-OUTBOX-WORKER] Error in outbox processing: {_outbox_err}")
+
+        scheduler.add_job(
+            run_recharge_scratch_outbox_worker,
+            trigger=CronTrigger(minute='*', timezone='Asia/Kolkata'),
+            id='recharge_scratch_outbox_worker',
+            name='Recharge Scratch Card: Notification Outbox Worker (Every 60s)',
+            replace_existing=True,
+            misfire_grace_time=60,
+            max_instances=1,
+        )
+        logger.info("   🎁 Recharge Scratch Card: Notification Outbox Worker scheduled (Every 60s)")
+    except Exception as _scratch_sched_e:
+        logger.warning(f"   🎁 Recharge Scratch Card: Outbox worker schedule failed: {_scratch_sched_e}")
+
     scheduler.start()
     logger.info("✅ APScheduler initialized with IST timezone - All jobs scheduled in Asia/Kolkata time")
     logger.info(f"   📅 Next midnight run: {scheduler.get_job('midnight_income_calculation').next_run_time}")

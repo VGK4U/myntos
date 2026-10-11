@@ -538,13 +538,18 @@ def _submit_one(db, template_id: int):
 
         raw_body = re.sub(r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}', _replace, raw_body)
 
-    positional_count = len(re.findall(r'\{\{\d+\}\}', raw_body))
-    examples = tpl.example_values or []
+    # Count unique positional variables {{1}}, {{2}}, etc.
+    unique_positions = set(re.findall(r'\{\{(\d+)\}\}', raw_body))
+    positional_count = len(unique_positions)
+    examples = list(tpl.example_values or [])
+    while len(examples) < positional_count:
+        examples.append(f"Sample {len(examples) + 1}")
+    sample_list = [str(x) for x in examples[:positional_count]]
 
     components = []
     body_comp: dict = {"type": "BODY", "text": raw_body}
-    if positional_count > 0 and examples:
-        body_comp["example"] = {"body_text": [list(examples[:positional_count])]}
+    if positional_count > 0:
+        body_comp["example"] = {"body_text": [sample_list]}
     components.append(body_comp)
 
     if tpl.footer_text and tpl.footer_text.strip():

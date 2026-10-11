@@ -17611,6 +17611,23 @@ async def serve_delete_account_root():
             return FileResponse(path, media_type="text/html")
     raise HTTPException(status_code=404, detail="Account Deletion page not found")
 
+@app.get("/scratch-card.html", include_in_schema=False)
+@app.get("/scratch-card", include_in_schema=False)
+async def serve_scratch_card_root():
+    """
+    Fix 2: Serve customer scratch card UI at its advertised canonical URL.
+    Preserves ?token=... query string and returns 404 if file is unavailable.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "scratch-card.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "scratch-card.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "scratch-card.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Scratch card page not found")
+
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
 

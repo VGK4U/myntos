@@ -32,6 +32,11 @@ from app.models.ev_coupon_claim import EVCouponClaim
 from app.models.training_course import TrainingCourse
 from app.models.training_claim import TrainingClaim
 from app.models.feedback import FeedbackCategory, FeedbackSubmission, FeedbackMedia, FeedbackApproval, SubmissionType, SubmissionStatus, ApprovalAction, AnnouncementRating
+# Recharge Scratch Card & Rewards Models
+from app.models.reward_scratch import (
+    RewardCampaign, ScratchCard, RewardLedger, NotificationOutbox
+)
+
 # Compliance tracking removed - following DC Protocol: query from source tables directly (pending_income, company_earnings)
 
 # Expense Category Models (DC Protocol Compliant - Required for Staff Accounts)

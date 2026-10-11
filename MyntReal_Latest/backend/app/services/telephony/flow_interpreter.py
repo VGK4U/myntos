@@ -1397,6 +1397,62 @@ class CallFlowInterpreter:
         return None
 
     @classmethod
+    def _get_suryanz_greeting_xml(cls) -> str:
+        """
+        Resolves the Suryanz Solar inbound greeting Plivo XML.
+        Checks if pre-recorded MP3 audio asset exists on disk at storage/audio/suryanz_welcome_greeting.mp3.
+        If found, returns <Play> node. Otherwise, returns <Speak Polly.Aditi> TTS node as development fallback.
+        """
+        storage_base = getattr(settings, 'STORAGE_DIR', None) or os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'storage'))
+        mp3_path = os.path.join(storage_base, 'audio', 'suryanz_welcome_greeting.mp3')
+        if os.path.exists(mp3_path):
+            return '<Play>https://www.myntreal.com/storage/audio/suryanz_welcome_greeting.mp3</Play>'
+        return '<Speak voice="Polly.Aditi" language="en-IN">Hi, welcome to Suryanz Solar.</Speak>'
+
+    @classmethod
+    def _is_suryanz_context_call(
+        cls,
+        db: Session,
+        caller_phone: str,
+        called_did: str,
+        headers: Optional[Dict[str, str]] = None,
+        raw_payload: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Determines whether an inbound call on a shared business number (+91 85858 52738)
+        originates from Suryanz Solar page click, SIP metadata, or linked Suryanz CRM lead.
+        """
+        headers = headers or {}
+        raw_payload = raw_payload or {}
+
+        # 1. Check SIP headers / custom parameters passed from WebRTC click-to-call or page bridge
+        brand_hdr = str(headers.get("x-ph-brand") or headers.get("X-PH-Brand") or raw_payload.get("brand") or "").upper()
+        if "SURYANZ" in brand_hdr:
+            return True
+
+        category_hdr = str(headers.get("x-ph-category") or headers.get("X-PH-Category") or raw_payload.get("category_id") or "")
+        if category_hdr in ("6", "solar", "SURYANZ"):
+            return True
+
+        # 2. Check CRM Lead Callback Association (recent lead created from Suryanz Solar page)
+        digits_phone = re.sub(r'\D', '', str(caller_phone or ''))[-10:]
+        if digits_phone:
+            try:
+                lead = db.query(CRMLead).filter(
+                    CRMLead.phone.ilike(f"%{digits_phone}%"),
+                    or_(
+                        CRMLead.source == "SURYANZ_SOLAR_WEBSITE",
+                        CRMLead.category_id == 6
+                    )
+                ).order_by(CRMLead.id.desc()).first()
+                if lead:
+                    return True
+            except Exception as le:
+                logger.warning(f"[FLOW-INTERPRETER] Lead lookup error: {le}")
+
+        return False
+
+    @classmethod
     def _is_qualified_sticky_caller(
         cls,
         db: Session,

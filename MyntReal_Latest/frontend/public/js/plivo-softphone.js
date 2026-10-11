@@ -1095,6 +1095,10 @@
             const leadName = extraHeaders?.['X-PH-Lead-Name'] || 'Incoming Inquiry';
             const maskedPhone = this.maskPhone(callerPhone);
 
+            const brandHeader = String(extraHeaders?.['X-PH-Brand'] || extraHeaders?.['X-PH-Tenant'] || extraHeaders?.['X-PH-Category'] || '').toUpperCase();
+            const isSuryanzCall = brandHeader.includes('SURYANZ') || (extraHeaders?.['X-PH-Category-Id'] === '6') || (extraHeaders?.['X-PH-Category-Id'] === 6);
+            const suryanzTag = isSuryanzCall ? '<span class="suryanz-call-badge" style="background:#dc2626; color:#ffffff; font-weight:800; font-size:0.75rem; padding:2px 8px; border-radius:4px; margin-right:6px; letter-spacing:0.05em; display:inline-block;">SURYANZ</span>' : '';
+
             this.activeDestination = callerPhone;
             this.activeLeadName = leadName;
 
@@ -1102,7 +1106,9 @@
             if (banner) {
                 const nameEl = document.getElementById('incomingCallerName');
                 const phoneEl = document.getElementById('incomingCallerPhone');
-                if (nameEl) nameEl.textContent = leadName;
+                if (nameEl) {
+                    nameEl.innerHTML = suryanzTag + (leadName ? String(leadName).replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'Incoming Call');
+                }
                 if (phoneEl) phoneEl.textContent = maskedPhone;
                 banner.style.display = 'block';
                 this.playRingtone();

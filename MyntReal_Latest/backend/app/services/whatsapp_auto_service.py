@@ -70,7 +70,26 @@ def get_channel_business_contacts(channel: str = "whatsapp") -> Dict[str, str]:
         Display:   📞 +91 85858 52738 | +91 80317 28899
     """
     ch = (channel or "whatsapp").strip().lower()
+    is_suryanz = ch in ("suryanz", "suryanz_solar", "solar")
     is_ivy = ch in ("ivy", "ivr", "telephony", "plivo")
+
+    if is_suryanz:
+        try:
+            from app.core.config import settings
+            primary = getattr(settings, "SURYANZ_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
+            company = "SURYANZ SOLAR"
+        except Exception:
+            primary = "+91 85858 52738"
+            company = "SURYANZ SOLAR"
+        return {
+            "channel": "suryanz",
+            "primary": primary,
+            "secondary": primary,
+            "company": company,
+            "combined_formatted": primary,
+            "canonical_display": f"📞 {primary}",
+        }
+
     try:
         from app.core.config import settings
         if is_ivy:
