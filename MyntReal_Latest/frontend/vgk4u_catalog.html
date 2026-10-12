@@ -199,11 +199,15 @@
             margin: 0 auto;
             padding: 0 20px;
         }
+        .vgk-nav .catalog-container {
+            max-width: 1440px;
+            padding: 0 20px;
+        }
         .nav-link-pill {
             color: var(--text-body);
             font-weight: 600;
-            font-size: 0.88rem;
-            padding: 6px 14px;
+            font-size: 0.85rem;
+            padding: 5px 12px;
             border-radius: 9999px;
             text-decoration: none;
             transition: all 0.2s ease;
@@ -216,6 +220,11 @@
         [data-theme="dark"] .nav-link-pill:hover, [data-theme="dark"] .nav-link-pill.active {
             color: #ffffff;
             background: #1e293b;
+        }
+        .vgk-nav .btn-gold-glow {
+            padding: 7px 18px !important;
+            font-size: 0.88rem !important;
+            min-height: 36px !important;
         }
 
         /* ── BUTTON STYLES ── */
@@ -291,6 +300,132 @@
             background: rgba(245, 158, 11, 0.15);
             color: #d97706;
             border-color: #d97706;
+        }
+
+        /* ── NAVBAR 7 JEWELS INTERACTIVE DROPDOWN ── */
+        .nav-item-dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .nav-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 260px;
+            background: #0f1523;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(6px);
+            transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+            z-index: 1060;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .nav-item-dropdown:hover .nav-dropdown-menu,
+        .nav-item-dropdown:focus-within .nav-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        [data-theme="light"] .nav-dropdown-menu {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+        }
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            color: #e2e8f0;
+            font-size: 0.84rem;
+            font-weight: 700;
+            text-decoration: none;
+            border-radius: 9px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        [data-theme="light"] .nav-dropdown-item {
+            color: #1e293b;
+        }
+        .nav-dropdown-item:hover {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            transform: translateX(3px);
+        }
+        [data-theme="light"] .nav-dropdown-item:hover {
+            background: #fffbeb;
+            color: #b45309;
+        }
+
+        /* ── LIGHT MODE COMPREHENSIVE STYLES FOR 7 JEWELS SECTION (GEMS 1 TO 7) ── */
+        [data-theme="light"] #verticals {
+            background: #ffffff !important;
+        }
+        [data-theme="light"] .jewel-showcase-card {
+            background: #ffffff !important;
+            border: 1.5px solid #e2e8f0 !important;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .jewel-showcase-card:hover {
+            border-color: #d97706 !important;
+            box-shadow: 0 18px 40px rgba(217, 119, 6, 0.16) !important;
+            transform: translateY(-6px);
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .jewel-showcase-card.active-jewel {
+            border-color: #d97706 !important;
+            box-shadow: 0 18px 42px rgba(217, 119, 6, 0.22) !important;
+            background: #ffffff !important;
+        }
+        [data-theme="light"] .jewel-card-title {
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .jewel-card-desc {
+            color: #334155 !important;
+        }
+        [data-theme="light"] .jewel-number-badge {
+            background: rgba(245, 158, 11, 0.12) !important;
+            border: 1px solid rgba(217, 119, 6, 0.35) !important;
+            color: #b45309 !important;
+        }
+        [data-theme="light"] .jewel-card-media {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        [data-theme="light"] .jewel-pill-btn {
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .jewel-pill-btn span {
+            color: #b45309 !important;
+        }
+        [data-theme="light"] .jewel-pill-btn:hover {
+            background: #fffbeb !important;
+            border-color: #d97706 !important;
+            color: #b45309 !important;
+        }
+        [data-theme="light"] .jewel-pill-btn.active {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            border-color: #d97706 !important;
+            color: #090e17 !important;
+            font-weight: 800 !important;
+        }
+        [data-theme="light"] .jewel-pill-btn.active span {
+            color: #090e17 !important;
+        }
+        .jewel-link-purple {
+            color: #c4b5fd;
+        }
+        [data-theme="light"] .jewel-link-purple {
+            color: #7c3aed !important;
         }
         .btn-outline-gold {
             background: transparent;
@@ -1460,7 +1595,18 @@
         }
 
         @media (max-width: 991px) {
-            .mobile-quick-actions { display: flex; }
+            .mobile-quick-actions {
+                display: flex !important;
+                gap: 6px !important;
+                padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)) 10px !important;
+            }
+            .mobile-quick-actions .btn {
+                font-size: 0.8rem !important;
+                padding: 6px 4px !important;
+                min-height: 40px !important;
+                white-space: nowrap !important;
+                flex: 1 1 0 !important;
+            }
             .btn-scroll-to-top {
                 bottom: calc(76px + env(safe-area-inset-bottom, 0px));
                 right: 18px;
@@ -1504,6 +1650,22 @@
             .vgk-lightbox-next { right: 10px; }
         }
         @media (max-width: 576px) {
+            .vgk-nav {
+                padding: 8px 0 !important;
+            }
+            .vgk-nav .catalog-container {
+                padding: 0 12px !important;
+            }
+            .vgk-nav .btn-gold-glow {
+                padding: 6px 13px !important;
+                font-size: 0.82rem !important;
+                min-height: 34px !important;
+                gap: 5px !important;
+            }
+            .vgk-hamburger-btn {
+                width: 34px !important;
+                height: 34px !important;
+            }
             .vertical-panel-card,
             .jewel-showcase-card {
                 width: 260px;
@@ -1520,6 +1682,44 @@
                 min-width: 150px;
                 padding: 9px 10px;
             }
+        }
+
+        /* ── LIGHT MODE MOBILE DRAWER & QUICK ACTIONS ── */
+        [data-theme="light"] .mobile-quick-actions {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -8px 25px rgba(15, 23, 42, 0.08) !important;
+        }
+        [data-theme="light"] .mobile-quick-actions .btn-outline-light {
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+            background: #f8fafc !important;
+        }
+        [data-theme="light"] .mobile-quick-actions .btn-outline-light:hover {
+            background: #e2e8f0 !important;
+            color: #000000 !important;
+        }
+        [data-theme="light"] .mobile-quick-actions .btn-outline-warning {
+            color: #b45309 !important;
+            border-color: #d97706 !important;
+            background: rgba(245, 158, 11, 0.08) !important;
+        }
+        [data-theme="light"] .vgk-mobile-drawer-content {
+            background: #ffffff !important;
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .mobile-drawer-link {
+            color: #1e293b !important;
+        }
+        [data-theme="light"] .mobile-drawer-link:hover {
+            background: #f1f5f9 !important;
+            color: #d97706 !important;
+        }
+        [data-theme="light"] .vgk-mobile-drawer-content .border-bottom {
+            border-color: #e2e8f0 !important;
+        }
+        [data-theme="light"] .vgk-mobile-drawer-content button.btn-link {
+            color: #0f172a !important;
         }
     </style>
 </head>
@@ -1547,6 +1747,9 @@
                 <div class="text-white-50 small d-none d-sm-inline">
                     <i class="fas fa-lock text-warning me-1"></i> <span data-i18n="free_joining">100% Free Joining</span>
                 </div>
+                <a href="/vgk/login" class="text-white-50 text-decoration-none small d-none d-md-inline hover-warning">
+                    <i class="fas fa-sign-in-alt text-warning me-1"></i> <span data-i18n="btn_member_signin">Member Sign In</span>
+                </a>
                 <button class="btn btn-sm btn-link text-white p-0 text-decoration-none" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
                     <i class="fas fa-moon" id="themeToggleIcon"></i>
                 </button>
@@ -1559,7 +1762,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <nav class="vgk-nav">
         <div class="catalog-container d-flex justify-content-between align-items-center">
-            <a href="#hero" class="d-flex align-items-center gap-2 text-decoration-none">
+            <a href="#hero" class="d-flex align-items-center gap-2 text-decoration-none flex-shrink-0">
                 <img src="/public/hub/Assets/vgk4u-logo.png" alt="VGK4U Logo" style="height: 38px;" onerror="this.src='/public/vgk4u-logo.png'">
                 <div class="d-flex flex-column">
                     <span style="font-weight: 900; font-size: 1.18rem; color: #d97706; line-height: 1;">VGK4U</span>
@@ -1567,36 +1770,41 @@
                 </div>
             </a>
 
-            <!-- Desktop Nav Links -->
-            <div class="d-none d-xl-flex align-items-center gap-1">
-                <a href="#verticals" class="nav-link-pill" data-i18n="nav_verticals">💎 7 Jewels</a>
+            <!-- Desktop Nav Links (Streamlined with 7 Jewels Interactive Dropdown) -->
+            <div class="d-none d-lg-flex align-items-center gap-1 mx-2">
+                <!-- 💎 7 Jewels Dropdown -->
+                <div class="nav-item-dropdown position-relative">
+                    <a href="#verticals" class="nav-link-pill d-inline-flex align-items-center gap-1" id="navJewelsDropdownToggle">
+                        <span data-i18n="nav_verticals">💎 7 Jewels</span> <i class="fas fa-chevron-down ms-1" style="font-size: 0.62rem; opacity: 0.7;"></i>
+                    </a>
+                    <div class="nav-dropdown-menu">
+                        <a href="#solar" class="nav-dropdown-item"><i class="fas fa-sun text-warning"></i> <span>1. Har Ghar Solar EPC</span></a>
+                        <a href="#insurance" class="nav-dropdown-item"><i class="fas fa-shield-alt text-primary"></i> <span>2. VGK Care Insurance</span></a>
+                        <a href="#ev" class="nav-dropdown-item"><i class="fas fa-motorcycle text-success"></i> <span>3. Manthra EV 2W</span></a>
+                        <a href="#realestate" class="nav-dropdown-item"><i class="fas fa-building text-warning"></i> <span>4. VGK Real Dreams</span></a>
+                        <a href="#training" class="nav-dropdown-item"><i class="fas fa-graduation-cap" style="color: #8b5cf6;"></i> <span>5. EV Training (ETC)</span></a>
+                        <a href="#hub-career" class="nav-dropdown-item"><i class="fas fa-store text-danger"></i> <span>6. MyntReal Hub</span></a>
+                        <a href="/catalog/ev-spares/ev-spares-and-chargers" class="nav-dropdown-item"><i class="fas fa-plug text-info"></i> <span>7. EV Spares &amp; Tech</span></a>
+                    </div>
+                </div>
                 <a href="#earnings" class="nav-link-pill" data-i18n="nav_earnings">Career &amp; Earnings</a>
                 <a href="#simulator" class="nav-link-pill" data-i18n="nav_calc">Calculator</a>
-                <a href="#solar" class="nav-link-pill" data-i18n="nav_solar">Solar</a>
-                <a href="#insurance" class="nav-link-pill" data-i18n="nav_insurance">Insurance</a>
-                <a href="#ev" class="nav-link-pill" data-i18n="nav_ev">Manthra EV</a>
-                <a href="#realestate" class="nav-link-pill" data-i18n="nav_re">Real Estate</a>
-                <a href="#training" class="nav-link-pill" data-i18n="nav_training">EV Training</a>
-                <a href="#hub-career" class="nav-link-pill" data-i18n="nav_hub">MYNTREAL Hub</a>
                 <a href="#join" class="nav-link-pill" data-i18n="nav_kit">Kit &amp; Join</a>
             </div>
 
-            <!-- Header Action CTAs -->
-            <div class="d-flex align-items-center gap-2">
-                <a href="/recharge" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Instant Recharge & Bill Payments">
-                    <i class="fas fa-bolt"></i> <span>Recharge</span>
+            <!-- Header Action CTAs (Guaranteed Flex-Shrink-0 & Complete Visibility) -->
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+                <a href="/recharge" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Instant Recharge & Bill Payments">
+                    <i class="fas fa-bolt"></i> <span class="d-none d-sm-inline">Recharge</span>
                 </a>
-                <a href="/vgk/login" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-none d-md-inline-flex align-items-center gap-1">
-                    <i class="fas fa-sign-in-alt"></i> <span data-i18n="btn_member_signin">Member Sign In</span>
-                </a>
-                <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-none d-sm-inline-flex align-items-center gap-1" onclick="shareOnWhatsApp()">
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-none d-xxl-inline-flex align-items-center gap-1" onclick="shareOnWhatsApp()">
                     <i class="fab fa-whatsapp"></i> <span data-i18n="btn_share">Share</span>
                 </button>
-                <a href="/vgk/login?tab=signup" class="btn-gold-glow py-2 px-3 fs-6">
+                <a href="/vgk/login?tab=signup" class="btn-gold-glow">
                     <i class="fas fa-user-plus"></i> <span data-i18n="btn_join_free">Join Free</span>
                 </a>
                 <!-- Mobile Navigation Menu Toggle Button -->
-                <button type="button" class="vgk-hamburger-btn d-inline-flex d-xl-none" onclick="toggleMobileNav(true)" aria-label="Open Navigation Menu" title="Open Menu">
+                <button type="button" class="vgk-hamburger-btn d-inline-flex d-lg-none" onclick="toggleMobileNav(true)" aria-label="Open Navigation Menu" title="Open Menu">
                     <i class="fas fa-bars fs-6"></i>
                 </button>
             </div>
@@ -1898,7 +2106,7 @@
                 <!-- Jewel 05: EV Training -->
                 <a href="#training" class="jewel-showcase-card vertical-panel-card jewel-card">
                     <div class="jewel-card-top">
-                        <span class="jewel-number-badge"><i class="fas fa-gem" style="color: #c4b5fd;"></i> <span data-i18n="j_badge_5">Jewel 05</span></span>
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-purple" style="color: #8b5cf6;"></i> <span data-i18n="j_badge_5">Jewel 05</span></span>
                         <span class="vertical-badge-tag text-white" style="background: #8b5cf6;" data-i18n="j5_tag">EV TRAINING</span>
                     </div>
                     <div class="jewel-card-media">
@@ -1907,7 +2115,7 @@
                     <div class="jewel-card-body">
                         <h4 class="jewel-card-title" data-i18n="j5_title">EVolution (ETC) Labs</h4>
                         <p class="jewel-card-desc" data-i18n="j5_desc">Hands-on technician, battery BMS assembly &amp; solar installation labs.</p>
-                        <div class="jewel-card-link" style="color: #c4b5fd;" data-i18n="j5_link">95% Placement Record →</div>
+                        <div class="jewel-card-link jewel-link-purple" data-i18n="j5_link">95% Placement Record →</div>
                     </div>
                 </a>
 
@@ -1930,8 +2138,8 @@
                 <!-- Jewel 07: EV Spares & Fast Chargers -->
                 <a href="/catalog/ev-spares/ev-spares-and-chargers" class="jewel-showcase-card vertical-panel-card jewel-card">
                     <div class="jewel-card-top">
-                        <span class="jewel-number-badge"><i class="fas fa-gem text-light"></i> <span data-i18n="j_badge_7">Jewel 07</span></span>
-                        <span class="vertical-badge-tag bg-light text-dark" data-i18n="j7_tag">SPARES &amp; TECH</span>
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-info"></i> <span data-i18n="j_badge_7">Jewel 07</span></span>
+                        <span class="vertical-badge-tag bg-info text-white" data-i18n="j7_tag">SPARES &amp; TECH</span>
                     </div>
                     <div class="jewel-card-media">
                         <img src="/public/hub/Assets/Battery.png" alt="EV Spares, Fast Chargers &amp; LFP Batteries">
