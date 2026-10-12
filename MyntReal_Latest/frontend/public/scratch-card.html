@@ -634,7 +634,7 @@
         </p>
         
         <div class="ref-link-display mb-3">
-            <input type="text" id="referralLinkInput" readonly class="ref-link-input" value="https://www.myntreal.com/recharge.html">
+            <input type="text" id="referralLinkInput" readonly class="ref-link-input" value="https://www.vgk4u.com/recharge">
             <button type="button" class="btn-copy-ref" onclick="copyReferralLink()"><i class="fa-solid fa-copy me-1"></i> Copy</button>
         </div>
 
@@ -905,7 +905,7 @@
 
                 if (data.referral_code) {
                     currentReferralCode = data.referral_code;
-                    currentReferralLink = data.referral_link || `https://www.myntreal.com/recharge.html?ref=${data.referral_code}`;
+                    currentReferralLink = data.referral_link || `https://www.vgk4u.com/recharge?ref=${data.referral_code}`;
                     if (referralLinkInput) referralLinkInput.value = currentReferralLink;
                 }
 
@@ -940,7 +940,7 @@
             // Show Referral Share Section
             if (data.referral_code || currentReferralCode) {
                 const refCode = data.referral_code || currentReferralCode;
-                currentReferralLink = data.referral_link || `https://www.myntreal.com/recharge.html?ref=${refCode}`;
+                currentReferralLink = data.referral_link || `https://www.vgk4u.com/recharge?ref=${refCode}`;
                 if (referralLinkInput) referralLinkInput.value = currentReferralLink;
                 referralShareSection.style.display = 'block';
             }
@@ -1131,7 +1131,7 @@
         }
 
         function copyReferralLink() {
-            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            const url = referralLinkInput?.value || currentReferralLink || 'https://www.vgk4u.com/recharge';
             navigator.clipboard.writeText(url).then(() => {
                 const btn = document.querySelector('.btn-copy-ref');
                 if (btn) {
@@ -1144,14 +1144,14 @@
         }
 
         function shareWhatsAppStatus() {
-            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            const url = referralLinkInput?.value || currentReferralLink || 'https://www.vgk4u.com/recharge';
             const text = `${getShareText()}\n👉 ${url}`;
             const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
             window.open(waUrl, '_blank');
         }
 
         function openUniversalShareModal() {
-            const url = referralLinkInput?.value || currentReferralLink || window.location.origin + '/recharge.html';
+            const url = referralLinkInput?.value || currentReferralLink || 'https://www.vgk4u.com/recharge';
             const text = getShareText();
 
             if (window.MyntShareModal && typeof window.MyntShareModal.show === 'function') {

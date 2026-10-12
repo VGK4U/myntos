@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Recharge & Bill Payments | MyntReal & VGK4U</title>
+    <!-- Bootstrap 5 CSS & JS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        :root {
+            --primary-dark: #090e17;
+            --card-dark: #111a28;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --gold: #f59e0b;
+            --gold-glow: rgba(245, 158, 11, 0.25);
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.25);
+            --cyan: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--primary-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 15% 70%, rgba(56, 189, 248, 0.08) 0%, transparent 40%);
+        }
+
+        /* ── Top Navigation Bar ── */
+        .top-navbar {
+            background: rgba(9, 14, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 14px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-logo-wrap img {
+            height: 38px;
+            border-radius: 8px;
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-back-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-back-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            transform: translateX(-2px);
+        }
+
+        /* ── Hero Banner ── */
+        .hero-banner {
+            text-align: center;
+            padding: 32px 16px 20px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--gold);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 4px 14px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .hero-title {
+            font-size: 2.1rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .hero-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        /* ── Services Tabs Navigation ── */
+        .services-nav-container {
+            max-width: 1040px;
+            margin: 20px auto 0;
+            padding: 0 16px;
+        }
+
+        .services-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            scrollbar-width: none;
+        }
+
+        .services-nav-grid::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 991px) {
+            .services-nav-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 575px) {
+            .services-nav-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+        }
+
+        .service-tab-btn {
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 12px 6px;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            text-decoration: none;
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .service-tab-btn i {
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+        }
+
+        .service-tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .service-tab-btn.active {
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.15), rgba(245, 158, 11, 0.12));
+            border-color: var(--gold);
+            color: #fff;
+            box-shadow: 0 4px 20px var(--gold-glow);
+        }
+
+        .service-tab-btn.active i {
+            transform: scale(1.15);
+            color: var(--gold);
+        }
+
+        /* ── Main Form Container ── */
+        .form-card-container {
+            max-width: 680px;
+            margin: 24px auto 60px;
+            padding: 0 16px;
+        }
+
+        .service-card {
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 28px 24px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(16, 185, 129, 0.05);
+            position: relative;
+        }
+
+        .card-header-badge {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .card-title-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        .cashback-pill {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Form Labels & Inputs */
+        .form-group-custom {
+            margin-bottom: 18px;
+        }
+
+        .form-label-custom {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-label-custom span.sub-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .input-custom {
+            width: 100%;
+            background: #090e17;
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 13px 16px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .input-custom:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+            background: #0c1320;
+        }
+
+        select.input-custom {
+            cursor: pointer;
+        }
+
+        select.input-custom option {
+            background: #111a28;
+            color: #fff;
+        }
+
+        /* Operator Selector Cards */
+        .operator-pills-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .op-chip {
+            background: #090e17;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 10px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+        }
+
+        .op-chip:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .op-chip.selected {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--gold);
+            color: var(--gold);
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+        }
+
+        /* Quick Amount Chips */
+        .quick-amounts {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .amt-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .amt-chip:hover, .amt-chip.selected {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--emerald);
+            color: #fff;
+        }
+
+        /* Plan Browser Trigger */
+        .btn-browse-plans {
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--cyan);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 50px;
+            padding: 5px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-browse-plans:hover {
+            background: rgba(56, 189, 248, 0.22);
+            color: #fff;
+        }
+
+        /* Submit Action Button */
+        .btn-proceed-pay {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            color: #090e17;
+            font-weight: 800;
+            font-size: 1.05rem;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.35);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .btn-proceed-pay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(245, 158, 11, 0.45);
+            color: #000;
+        }
+
+        .btn-proceed-pay:active {
+            transform: translateY(0);
+        }
+
+        .btn-proceed-pay:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .trust-badge-footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 18px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* ── Plans Grid & Authentic Cards ── */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+            gap: 10px;
+            max-height: 290px;
+            overflow-y: auto;
+            padding: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        .plans-grid::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .plans-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .plan-card {
+            background: #0d1522;
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .plan-card:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: #121c2d;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        }
+
+        .plan-card.selected {
+            border-color: var(--emerald) !important;
+            background: rgba(16, 185, 129, 0.12) !important;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35) !important;
+        }
+
+        .plan-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .plan-card-price {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--emerald);
+            letter-spacing: -0.5px;
+        }
+
+        .plan-card-validity {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--gold);
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 2px 8px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        .plan-card-data {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--cyan);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .plan-card-desc {
+            font-size: 0.74rem;
+            color: #94a3b8;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .plan-card-tags {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .plan-tag {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--gold);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .plan-tag-5g {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+        }
+
+        /* ── Category Filter Pills ── */
+        .plan-category-pills {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+
+        .plan-category-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .cat-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 50px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .cat-pill:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        .cat-pill.active {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--gold);
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* ── Plans Modal ── */
+        .plans-modal-body {
+            background: #090e17;
+            color: #fff;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <header class="top-navbar">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a href="/" class="brand-logo-wrap">
+                <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
+                <div>
+                    <div class="brand-name">MyntReal • VGK4U</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Secure Utility & Bill Payments</div>
+                </div>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="tel:+918585852738" class="nav-back-btn d-none d-sm-inline-flex">
+                    <i class="fa-solid fa-phone me-1 text-warning"></i> +91 85858 52738
+                </a>
+                <a href="/catalog/vgk4u" class="nav-back-btn text-warning" style="border-color: rgba(245, 158, 11, 0.4);">
+                    <i class="fa-solid fa-book-open"></i> Catalog
+                </a>
+                <a href="/" class="nav-back-btn">
+                    <i class="fa-solid fa-house"></i> Home
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO HEADER -->
+    <section class="hero-banner">
+        <div class="hero-badge">
+            <i class="fa-solid fa-gift"></i> Recharge &amp; Win Instant Scratch Card Cashback
+        </div>
+        <h1 class="hero-title">Recharge &amp; Bill Payments</h1>
+        <p class="hero-subtitle">
+            Fast, secure recharge &amp; utility payments across all major operators &amp; boards in India. Every payment unlocks an exclusive cash reward!
+        </p>
+    </section>
+
+    <!-- SERVICES NAVIGATION TABS -->
+    <div class="services-nav-container">
+        <div class="services-nav-grid" id="servicesNavTabs">
+            <button type="button" class="service-tab-btn active" data-tab="mobile" onclick="switchService('mobile')">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <span>Mobile</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="postpaid" onclick="switchService('postpaid')">
+                <i class="fa-solid fa-phone"></i>
+                <span>Postpaid</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="dth" onclick="switchService('dth')">
+                <i class="fa-solid fa-tv"></i>
+                <span>DTH TV</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="electricity" onclick="switchService('electricity')">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Electricity</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="fastag" onclick="switchService('fastag')">
+                <i class="fa-solid fa-car"></i>
+                <span>FASTag</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="gas" onclick="switchService('gas')">
+                <i class="fa-solid fa-fire-burner"></i>
+                <span>Gas Bill</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="insurance" onclick="switchService('insurance')">
+                <i class="fa-solid fa-shield-heart"></i>
+                <span>Insurance</span>
+            </button>
+            <button type="button" class="service-tab-btn" data-tab="googleplay" onclick="switchService('googleplay')">
+                <i class="fa-brands fa-google-play"></i>
+                <span>Google Play</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN FORM CONTAINER -->
+    <div class="form-card-container">
+        <div class="service-card">
+            
+            <div class="card-header-badge">
+                <div class="card-title-text" id="activeServiceTitle">
+                    <i class="fa-solid fa-mobile-screen-button text-warning"></i> Mobile Prepaid Recharge
+                </div>
+                <div class="cashback-pill">
+                    <i class="fa-solid fa-coins"></i> Up to ₹25 Cashback
+                </div>
+            </div>
+
+            <form id="universalRechargeForm" onsubmit="handleUniversalSubmit(event)">
+                <input type="hidden" id="currentServiceType" value="mobile">
+                
+                <!-- Target Account Input (Mobile / Consumer / Vehicle / Policy / VC) -->
+                <div class="form-group-custom">
+                    <label class="form-label-custom" id="lblTargetAccount">
+                        <span id="targetAccountLabelText">Mobile Number</span>
+                        <span class="sub-hint" id="targetAccountHint">10-digit numeric mobile</span>
+                    </label>
+                    <input type="text" id="targetAccountNumber" required class="input-custom" placeholder="e.g. 9876543210" autocomplete="off">
+                </div>
+
+                <!-- Operator Selector Area -->
+                <div class="form-group-custom" id="operatorGroup">
+                    <label class="form-label-custom">
+                        <span id="operatorLabelText">Select Operator</span>
+                    </label>
+                    
+                    <!-- Operator Chips (For Mobile / Postpaid) -->
+                    <div class="operator-pills-row" id="operatorChipsRow">
+                        <div class="op-chip selected" data-code="Airtel" onclick="selectOpChip('Airtel', this)">Airtel</div>
+                        <div class="op-chip" data-code="Jio" onclick="selectOpChip('Jio', this)">Jio</div>
+                        <div class="op-chip" data-code="VI" onclick="selectOpChip('VI', this)">VI</div>
+                        <div class="op-chip" data-code="BSNL" onclick="selectOpChip('BSNL', this)">BSNL</div>
+                    </div>
+
+                    <!-- Operator Dropdown (For Electricity, DTH, FASTag, Gas, Insurance) -->
+                    <select id="operatorSelect" class="input-custom" style="display: none;" onchange="handleOperatorChange(this.value)">
+                        <option value="">Select Service Provider</option>
+                    </select>
+                </div>
+
+                <!-- Extra Field 1 (Sub-division / Billing Unit for Electricity OR DOB for Insurance) -->
+                <div class="form-group-custom" id="extraField1Group" style="display: none;">
+                    <label class="form-label-custom">
+                        <span id="lblExtraField1">Sub-Division / Billing Unit</span>
+                        <span class="sub-hint" id="extraField1Hint">As shown on your bill</span>
+                    </label>
+                    <input type="text" id="extraField1Value" class="input-custom" placeholder="">
+                </div>
+
+                <!-- Customer Phone Number (Required for Utility Bills to receive WhatsApp receipt & Scratch Card) -->
+                <div class="form-group-custom" id="customerPhoneGroup" style="display: none;">
+                    <label class="form-label-custom">
+                        <span>Your Contact Mobile Number</span>
+                        <span class="sub-hint text-warning">For WhatsApp Receipt &amp; Scratch Card</span>
+                    </label>
+                    <input type="tel" id="customerContactPhone" maxlength="10" class="input-custom" placeholder="10-digit mobile number">
+                </div>
+
+                <!-- Dynamic Available Plans Section (Inline on Form) -->
+                <div id="plansSection" class="form-group-custom" style="display: none; margin-bottom: 20px;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="form-label-custom mb-0">
+                            <span><i class="fa-solid fa-bolt text-warning me-1"></i> Available Plans for <strong id="plansOperatorName" class="text-warning">Airtel</strong></span>
+                        </label>
+                        <button type="button" class="btn-browse-plans" onclick="openPlansModal()">
+                            <i class="fa-solid fa-expand"></i> Browse All Plans (<span id="plansCountBadge">0</span>)
+                        </button>
+                    </div>
+                    <div class="plan-category-pills mb-2" id="inlineCategoryPills">
+                        <span class="cat-pill active" onclick="filterPlanCategory('all', this, false)">All Plans</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('daily', this, false)">Daily Data</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('5g', this, false)">Unlimited 5G</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('long', this, false)">Long Validity</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('booster', this, false)">Data Boosters</span>
+                    </div>
+                    <div id="rechargePlansContainer" class="plans-grid">
+                        <div class="text-center py-3 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading plans...</div>
+                    </div>
+                </div>
+
+                <!-- Amount Input -->
+                <div class="form-group-custom">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label-custom mb-0">
+                            <span>Recharge / Bill Amount (₹)</span>
+                        </label>
+                        <button type="button" id="browsePlansBtn" class="btn-browse-plans" onclick="openPlansModal()">
+                            <i class="fa-solid fa-list-check"></i> Browse Plans
+                        </button>
+                    </div>
+                    <input type="number" id="rechargeAmountInput" required min="10" class="input-custom" placeholder="Enter amount or select a plan above">
+                    
+                    <!-- Quick Amount Chips -->
+                    <div class="quick-amounts" id="quickAmountChips">
+                        <span class="amt-chip" onclick="setQuickAmount(199)">₹199</span>
+                        <span class="amt-chip" onclick="setQuickAmount(299)">₹299</span>
+                        <span class="amt-chip" onclick="setQuickAmount(349)">₹349</span>
+                        <span class="amt-chip" onclick="setQuickAmount(649)">₹649</span>
+                        <span class="amt-chip" onclick="setQuickAmount(859)">₹859</span>
+                    </div>
+                </div>
+
+                <!-- Optional Guest Name & Email -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <input type="text" id="guestNameInput" class="input-custom" style="padding: 10px 14px; font-size: 0.85rem;" placeholder="Your Name (Optional)">
+                    </div>
+                    <div class="col-6">
+                        <input type="email" id="guestEmailInput" class="input-custom" style="padding: 10px 14px; font-size: 0.85rem;" placeholder="Email (For Receipt)">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btnSubmitRecharge" class="btn-proceed-pay">
+                    <i class="fa-solid fa-lock"></i> <span id="btnPayText">Proceed to Pay</span>
+                </button>
+
+                <div class="trust-badge-footer">
+                    <span><i class="fa-solid fa-shield-halved text-success me-1"></i> 256-bit Secure</span>
+                    <span><i class="fa-solid fa-bolt text-warning me-1"></i> Instant Processing</span>
+                    <span><i class="fa-solid fa-receipt text-info me-1"></i> Official BBPS / A1Topup</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PLANS BROWSER MODAL -->
+    <div class="modal fade" id="plansModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(8px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="background: #111a28; border: 1px solid var(--card-border); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.85);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding: 18px 24px;">
+                    <div>
+                        <h5 class="modal-title text-light fw-bold mb-0">
+                            <i class="fa-solid fa-bolt text-warning me-2"></i><span id="modalOperatorTitle">Airtel</span> Recharge Plans
+                        </h5>
+                        <div class="small text-muted mt-1">Official tariff plans direct from operator database</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" onclick="closePlansModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="d-flex gap-2 mb-2">
+                        <input type="text" id="planSearchInput" class="input-custom" placeholder="Search ₹ amount, 5G, validity, data (e.g. 84, 1.5GB, 5G)..." onkeyup="filterPlansSearch(this.value)">
+                    </div>
+                    <div class="plan-category-pills mb-3" id="modalCategoryPills">
+                        <span class="cat-pill active" onclick="filterPlanCategory('all', this, true)">All Plans</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('daily', this, true)">Daily Data</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('5g', this, true)">Unlimited 5G</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('long', this, true)">Long Validity (56/84/365D)</span>
+                        <span class="cat-pill" onclick="filterPlanCategory('booster', this, true)">Data Boosters</span>
+                    </div>
+                    <div id="plansListContainer" class="plans-grid" style="max-height: 440px;">
+                        <div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading plans...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLIENT LOGIC & SERVICES METADATA -->
+    <script>
+        // Service Specifications & Operator Catalogues
+        const SERVICE_CATALOG = {
+            'mobile': {
+                title: 'Mobile Prepaid Recharge',
+                icon: 'fa-mobile-screen-button text-warning',
+                accountLabel: 'Mobile Number',
+                accountHint: '10-digit numeric mobile',
+                placeholder: 'e.g. 9876543210',
+                hasOperatorChips: true,
+                defaultOp: 'Airtel',
+                chips: ['Airtel', 'Jio', 'VI', 'BSNL'],
+                hasPlans: true,
+                quickAmounts: [199, 239, 299, 666, 2999]
+            },
+            'postpaid': {
+                title: 'Postpaid Mobile Bill Payment',
+                icon: 'fa-phone text-info',
+                accountLabel: 'Postpaid Mobile Number',
+                accountHint: '10-digit mobile number',
+                placeholder: 'e.g. 9876543210',
+                hasOperatorChips: true,
+                defaultOp: 'PAT',
+                chips: [
+                    { label: 'Airtel Postpaid', code: 'PAT' },
+                    { label: 'Jio Postpaid', code: 'JPP' },
+                    { label: 'Vi Postpaid', code: 'VP' },
+                    { label: 'BSNL Postpaid', code: 'BP' }
+                ],
+                hasPlans: false,
+                quickAmounts: [499, 699, 999, 1499]
+            },
+            'dth': {
+                title: 'DTH Satellite TV Recharge',
+                icon: 'fa-tv text-primary',
+                accountLabel: 'Subscriber ID / VC Number',
+                accountHint: 'Smart card or viewing card number',
+                placeholder: 'e.g. 1029384756',
+                hasDropdown: true,
+                requiresCustomerPhone: true,
+                operators: [
+                    { code: 'TTV', name: 'Tata Play (Tata Sky)' },
+                    { code: 'ATV', name: 'Airtel Digital TV' },
+                    { code: 'DTV', name: 'Dish TV' },
+                    { code: 'VTV', name: 'Videocon D2H' },
+                    { code: 'STV', name: 'Sun Direct' }
+                ],
+                hasPlans: false,
+                quickAmounts: [150, 250, 350, 500, 1000]
+            },
+            'electricity': {
+                title: 'Electricity Bill Payment',
+                icon: 'fa-bolt text-warning',
+                accountLabel: 'Consumer Number / Service No',
+                accountHint: 'As shown on electricity bill',
+                placeholder: 'e.g. 1002345678',
+                hasDropdown: true,
+                hasExtraField1: true,
+                extraField1Label: 'Sub-Division / Billing Unit (BU)',
+                extraField1Hint: 'Required by select boards',
+                requiresCustomerPhone: true,
+                operators: [
+                    // Andhra Pradesh & Telangana
+                    { code: 'APCPDCL', name: 'APCPDCL - Andhra Pradesh Central Power' },
+                    { code: 'APSPDCL', name: 'APSPDCL - Andhra Pradesh Southern Power' },
+                    { code: 'APEPDCL', name: 'APEPDCL - Andhra Pradesh Eastern Power' },
+                    { code: 'TSSPDCL', name: 'TSSPDCL - Telangana Southern Power' },
+                    { code: 'TSNPDCL', name: 'TSNPDCL - Telangana Northern Power' },
+                    // Karnataka & Tamil Nadu
+                    { code: 'BESCOM', name: 'BESCOM - Bangalore Electricity Supply' },
+                    { code: 'HESCOM', name: 'HESCOM - Hubli Electricity Supply' },
+                    { code: 'MESCOM', name: 'MESCOM - Mangalore Electricity' },
+                    { code: 'TNEB', name: 'TNEB / TANGEDCO - Tamil Nadu' },
+                    // Maharashtra & Delhi
+                    { code: 'MSEDC', name: 'MSEDCL - Mahavitaran (Maharashtra)' },
+                    { code: 'AEML', name: 'Adani Electricity Mumbai' },
+                    { code: 'TPM', name: 'Tata Power Mumbai' },
+                    { code: 'BSES', name: 'BSES Rajdhani - Delhi' },
+                    { code: 'BSESY', name: 'BSES Yamuna - Delhi' },
+                    { code: 'TPDDL', name: 'Tata Power DDL - Delhi' },
+                    // UP, Gujarat, Rajasthan & WB
+                    { code: 'UPPCLU', name: 'UPPCL - Uttar Pradesh Urban' },
+                    { code: 'UPPCLR', name: 'UPPCL - Uttar Pradesh Rural' },
+                    { code: 'DGVCL', name: 'DGVCL - Dakshin Gujarat Vij' },
+                    { code: 'MGVCL', name: 'MGVCL - Madhya Gujarat Vij' },
+                    { code: 'JVVNL', name: 'JVVNL - Jaipur Vidyut Vitran' },
+                    { code: 'AVVNL', name: 'AVVNL - Ajmer Vidyut Vitran' },
+                    { code: 'WBSEDCL', name: 'WBSEDCL - West Bengal State' },
+                    { code: 'CESC', name: 'CESC - Kolkata Electricity' }
+                ],
+                hasPlans: false,
+                quickAmounts: [500, 1000, 1500, 2500, 5000]
+            },
+            'fastag': {
+                title: 'FASTag Electronic Toll Recharge',
+                icon: 'fa-car text-success',
+                accountLabel: 'Vehicle Registration Number',
+                accountHint: 'Format: AP09AB1234 or TS08CD5678',
+                placeholder: 'e.g. AP09AB1234',
+                hasDropdown: true,
+                requiresCustomerPhone: true,
+                operators: [
+                    { code: 'ICF', name: 'ICICI Bank FASTag' },
+                    { code: 'HDF', name: 'HDFC Bank FASTag' },
+                    { code: 'PTF', name: 'Paytm Payments Bank FASTag' },
+                    { code: 'SBF', name: 'State Bank of India (SBI) FASTag' },
+                    { code: 'AXF', name: 'Axis Bank FASTag' },
+                    { code: 'KMF', name: 'Kotak Mahindra Bank FASTag' },
+                    { code: 'IDF', name: 'IDFC FIRST Bank FASTag' },
+                    { code: 'INF', name: 'IndusInd Bank FASTag' },
+                    { code: 'APF', name: 'Airtel Payments Bank FASTag' }
+                ],
+                hasPlans: false,
+                quickAmounts: [200, 500, 1000, 2000]
+            },
+            'gas': {
+                title: 'Gas Cylinder & Piped Gas Bill',
+                icon: 'fa-fire-burner text-danger',
+                accountLabel: 'Customer ID / LPG ID',
+                accountHint: '17-digit LPG ID or 10-digit registered number',
+                placeholder: 'e.g. 17-digit LPG ID',
+                hasDropdown: true,
+                requiresCustomerPhone: true,
+                operators: [
+                    { code: 'HPCLGC', name: 'HP Gas (LPG Cylinder)' },
+                    { code: 'BPCLGC', name: 'Bharat Gas (LPG Cylinder)' },
+                    { code: 'IOCLGC', name: 'Indane Gas (LPG Cylinder)' },
+                    { code: 'AG', name: 'Adani Total Gas (Piped PNG)' },
+                    { code: 'IG', name: 'Indraprastha Gas Limited (IGL PNG)' },
+                    { code: 'MGL', name: 'Mahanagar Gas Limited (MGL PNG)' },
+                    { code: 'GG', name: 'Gujarat Gas (Piped PNG)' }
+                ],
+                hasPlans: false,
+                quickAmounts: [850, 900, 1050, 1200]
+            },
+            'insurance': {
+                title: 'Insurance & LIC Premium Payment',
+                icon: 'fa-shield-heart text-danger',
+                accountLabel: 'Policy Number',
+                accountHint: 'As mentioned in policy schedule',
+                placeholder: 'e.g. 123456789',
+                hasDropdown: true,
+                hasExtraField1: true,
+                extraField1Label: 'Date of Birth (DD-MM-YYYY)',
+                extraField1Hint: 'Required for policy authentication',
+                requiresCustomerPhone: true,
+                operators: [
+                    { code: 'LIC', name: 'Life Insurance Corporation of India (LIC)' },
+                    { code: 'ICP', name: 'ICICI Prudential Life Insurance' },
+                    { code: 'TAI', name: 'Tata AIA Life Insurance' },
+                    { code: 'HDFCL', name: 'HDFC Life Insurance' },
+                    { code: 'SBIL', name: 'SBI Life Insurance' },
+                    { code: 'MAXL', name: 'Max Life Insurance' }
+                ],
+                hasPlans: false,
+                quickAmounts: [1500, 2500, 5000, 10000]
+            },
+            'googleplay': {
+                title: 'Google Play Gift Card / Code',
+                icon: 'fa-brands fa-google-play text-info',
+                accountLabel: 'Mobile Number',
+                accountHint: 'Where the redeem code will be sent',
+                placeholder: '10-digit mobile number',
+                hasDropdown: false,
+                hasOperatorChips: false,
+                selectedOperator: 'GLF',
+                hasPlans: false,
+                quickAmounts: [10, 50, 100, 250, 500, 1000, 1500]
+            }
+        };
+
+        let currentActiveService = 'mobile';
+        let currentSelectedOperator = 'Airtel';
+        let loadedPlans = [];
+
+        // Switch Active Service
+        function switchService(serviceKey) {
+            const spec = SERVICE_CATALOG[serviceKey];
+            if (!spec) return;
+
+            currentActiveService = serviceKey;
+            document.getElementById('currentServiceType').value = serviceKey;
+
+            // Update Tab Highlights
+            document.querySelectorAll('.service-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-tab') === serviceKey);
+            });
+
+            // Update Title & Header
+            document.getElementById('activeServiceTitle').innerHTML = `<i class="fa-solid ${spec.icon} me-2"></i> ${spec.title}`;
+            document.getElementById('targetAccountLabelText').innerText = spec.accountLabel;
+            document.getElementById('targetAccountHint').innerText = spec.accountHint;
+            document.getElementById('targetAccountNumber').placeholder = spec.placeholder;
+
+            // Target Account formatting helper
+            const targetInput = document.getElementById('targetAccountNumber');
+            if (serviceKey === 'fastag') {
+                targetInput.style.textTransform = 'uppercase';
+            } else {
+                targetInput.style.textTransform = 'none';
+            }
+
+            // Operator Chips vs Dropdown
+            const chipsRow = document.getElementById('operatorChipsRow');
+            const opSelect = document.getElementById('operatorSelect');
+            const opGroup = document.getElementById('operatorGroup');
+
+            if (spec.hasOperatorChips) {
+                opGroup.style.display = 'block';
+                chipsRow.style.display = 'grid';
+                opSelect.style.display = 'none';
+                opSelect.removeAttribute('required');
+
+                // Render Chips
+                let chipsHtml = '';
+                if (serviceKey === 'postpaid') {
+                    spec.chips.forEach((c, idx) => {
+                        chipsHtml += `<div class="op-chip ${idx === 0 ? 'selected' : ''}" data-code="${c.code}" onclick="selectOpChip('${c.code}', this)">${c.label}</div>`;
+                    });
+                    currentSelectedOperator = spec.chips[0].code;
+                } else {
+                    spec.chips.forEach((c, idx) => {
+                        chipsHtml += `<div class="op-chip ${idx === 0 ? 'selected' : ''}" data-code="${c}" onclick="selectOpChip('${c}', this)">${c}</div>`;
+                    });
+                    currentSelectedOperator = spec.chips[0];
+                }
+                chipsRow.innerHTML = chipsHtml;
+
+            } else if (spec.hasDropdown) {
+                opGroup.style.display = 'block';
+                chipsRow.style.display = 'none';
+                opSelect.style.display = 'block';
+                opSelect.setAttribute('required', 'true');
+
+                let opts = '<option value="">Select Service Provider / Board</option>';
+                spec.operators.forEach(op => {
+                    opts += `<option value="${op.code}">${op.name}</option>`;
+                });
+                opSelect.innerHTML = opts;
+                currentSelectedOperator = '';
+            } else {
+                // E.g. Google Play
+                opGroup.style.display = 'none';
+                opSelect.removeAttribute('required');
+                currentSelectedOperator = spec.selectedOperator || 'GLF';
+            }
+
+            // Extra Field 1 (Electricity Sub-division OR Insurance DOB)
+            const extra1Group = document.getElementById('extraField1Group');
+            const extra1Input = document.getElementById('extraField1Value');
+            if (spec.hasExtraField1) {
+                extra1Group.style.display = 'block';
+                document.getElementById('lblExtraField1').innerText = spec.extraField1Label;
+                document.getElementById('extraField1Hint').innerText = spec.extraField1Hint;
+                extra1Input.setAttribute('required', 'true');
+                if (serviceKey === 'insurance') {
+                    extra1Input.placeholder = 'DD-MM-YYYY (e.g. 15-08-1988)';
+                } else {
+                    extra1Input.placeholder = 'e.g. 4501 or BU-2';
+                }
+            } else {
+                extra1Group.style.display = 'none';
+                extra1Input.removeAttribute('required');
+                extra1Input.value = '';
+            }
+
+            // Customer Contact Phone (For Utilities)
+            const customerPhoneGroup = document.getElementById('customerPhoneGroup');
+            const customerPhoneInput = document.getElementById('customerContactPhone');
+            if (spec.requiresCustomerPhone) {
+                customerPhoneGroup.style.display = 'block';
+                customerPhoneInput.setAttribute('required', 'true');
+            } else {
+                customerPhoneGroup.style.display = 'none';
+                customerPhoneInput.removeAttribute('required');
+                customerPhoneInput.value = '';
+            }
+
+            // Browse Plans Button
+            document.getElementById('browsePlansBtn').style.display = spec.hasPlans ? 'inline-flex' : 'none';
+
+            // Reset amounts
+            document.getElementById('rechargeAmountInput').value = '';
+
+            // If mobile service, show inline plans section and fetch plans from database
+            const plansSection = document.getElementById('plansSection');
+            if (serviceKey === 'mobile') {
+                if (plansSection) plansSection.style.display = 'block';
+                loadPlansForOperator(currentSelectedOperator || 'Airtel');
+            } else {
+                if (plansSection) plansSection.style.display = 'none';
+                // Quick Amount Chips for utilities
+                const quickRow = document.getElementById('quickAmountChips');
+                let amtHtml = '';
+                (spec.quickAmounts || [199, 299, 499, 999]).forEach(amt => {
+                    amtHtml += `<span class="amt-chip" onclick="setQuickAmount(${amt})">₹${amt}</span>`;
+                });
+                quickRow.innerHTML = amtHtml;
+            }
+        }
+
+        let activePlanCategory = 'all';
+
+        function selectOpChip(opCode, element) {
+            document.querySelectorAll('.op-chip').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+            currentSelectedOperator = opCode;
+            if (currentActiveService === 'mobile') {
+                loadPlansForOperator(opCode);
+            }
+        }
+
+        function handleOperatorChange(val) {
+            currentSelectedOperator = val;
+        }
+
+        function setQuickAmount(amt) {
+            document.getElementById('rechargeAmountInput').value = amt;
+            document.querySelectorAll('.amt-chip').forEach(c => {
+                c.classList.toggle('selected', c.innerText.trim() === `₹${amt}`);
+            });
+            // Also highlight matching plan card if present
+            document.querySelectorAll('.plan-card').forEach(c => {
+                const pAmt = parseFloat(c.getAttribute('data-amount'));
+                c.classList.toggle('selected', pAmt === parseFloat(amt));
+            });
+        }
+
+        // Categorize a plan based on its genuine database attributes
+        function categorizePlan(p) {
+            const desc = (p.description || '').toLowerCase();
+            const data = (p.data_benefit || '').toLowerCase();
+            const val = (p.validity || '').toLowerCase();
+            const tags = (p.tags || '').toLowerCase();
+            
+            const cats = ['all'];
+            if (data.includes('/day') || desc.includes('gb/day') || desc.includes('/day')) {
+                cats.push('daily');
+            }
+            if (desc.includes('5g') || tags.includes('5g') || data.includes('5g')) {
+                cats.push('5g');
+            }
+            if (['56', '84', '105', '160', '336', '365', '395'].some(k => val.includes(k))) {
+                cats.push('long');
+            }
+            if (desc.includes('booster') || val.includes('base plan') || val.includes('1 day') || desc.includes('add-on') || desc.includes('data pack')) {
+                cats.push('booster');
+            }
+            return cats;
+        }
+
+        // Generate Plan Card HTML
+        function renderPlanCard(p, isModal) {
+            const is5G = (p.description || '').toLowerCase().includes('5g') || (p.tags || '').toLowerCase().includes('5g');
+            const currentAmt = parseFloat(document.getElementById('rechargeAmountInput').value);
+            const isSelected = currentAmt === parseFloat(p.amount);
+            
+            return `
+                <div class="plan-card ${isSelected ? 'selected' : ''}" data-amount="${p.amount}" onclick="selectPlan(${p.amount}, this, ${isModal})">
+                    <div>
+                        <div class="plan-card-header">
+                            <span class="plan-card-price">₹${p.amount}</span>
+                            <span class="plan-card-validity"><i class="fa-solid fa-clock me-1"></i>${escapeHtml(p.validity || 'Standard')}</span>
+                        </div>
+                        <div class="plan-card-data">
+                            <i class="fa-solid fa-wifi"></i>
+                            <span>${escapeHtml(p.data_benefit || 'Voice & Data')}</span>
+                        </div>
+                        <div class="plan-card-desc" title="${escapeHtml(p.description || '')}">${escapeHtml(p.description || 'Unlimited calls & standard data pack.')}</div>
+                    </div>
+                    <div class="plan-card-tags mt-1">
+                        ${is5G ? '<span class="plan-tag plan-tag-5g"><i class="fa-solid fa-bolt me-1"></i>True 5G</span>' : ''}
+                        ${p.tags ? `<span class="plan-tag">${escapeHtml(p.tags)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Fetch genuine plans from database for operator
+        async function loadPlansForOperator(opName) {
+            const inlineContainer = document.getElementById('rechargePlansContainer');
+            const modalContainer = document.getElementById('plansListContainer');
+            const opDisplay = opName || 'Airtel';
+
+            document.getElementById('plansOperatorName').innerText = opDisplay;
+            document.getElementById('modalOperatorTitle').innerText = opDisplay;
+
+            if (inlineContainer) {
+                inlineContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading genuine plans for ' + opDisplay + '...</div>';
+            }
+            if (modalContainer) {
+                modalContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading genuine plans for ' + opDisplay + '...</div>';
+            }
+
+            try {
+                const res = await fetch(`/api/v1/recharge/plans?operator=${encodeURIComponent(opDisplay)}`);
+                const plans = await res.json();
+                loadedPlans = Array.isArray(plans) ? plans : [];
+
+                document.getElementById('plansCountBadge').innerText = loadedPlans.length;
+
+                // Dynamically populate quick amount chips with top popular plans from DB
+                const quickRow = document.getElementById('quickAmountChips');
+                if (quickRow && loadedPlans.length > 0) {
+                    const topPicks = loadedPlans.filter(p => [189, 199, 239, 249, 299, 349, 409, 599, 649, 666, 859].includes(Math.round(p.amount))).slice(0, 5);
+                    const picksToUse = topPicks.length >= 3 ? topPicks : loadedPlans.slice(0, 5);
+                    let qHtml = '';
+                    picksToUse.forEach(p => {
+                        qHtml += `<span class="amt-chip" onclick="setQuickAmount(${p.amount})">₹${p.amount}</span>`;
+                    });
+                    quickRow.innerHTML = qHtml;
+                }
+
+                activePlanCategory = 'all';
+                renderAllPlansLists();
+
+            } catch (err) {
+                console.error("Error loading plans:", err);
+                const errMsg = '<div class="text-center py-3 text-warning w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-triangle-exclamation me-1"></i>Could not load live plans. Please enter amount directly.</div>';
+                if (inlineContainer) inlineContainer.innerHTML = errMsg;
+                if (modalContainer) modalContainer.innerHTML = errMsg;
+            }
+        }
+
+        function renderAllPlansLists() {
+            const inlineContainer = document.getElementById('rechargePlansContainer');
+            const modalContainer = document.getElementById('plansListContainer');
+
+            let filtered = loadedPlans;
+            if (activePlanCategory && activePlanCategory !== 'all') {
+                filtered = loadedPlans.filter(p => categorizePlan(p).includes(activePlanCategory));
+            }
+
+            if (filtered.length === 0) {
+                const emptyMsg = '<div class="text-center py-3 text-muted w-100" style="grid-column: 1 / -1;">No plans found in this category.</div>';
+                if (inlineContainer) inlineContainer.innerHTML = emptyMsg;
+                if (modalContainer) modalContainer.innerHTML = emptyMsg;
+                return;
+            }
+
+            let inlineHtml = '';
+            filtered.forEach(p => {
+                inlineHtml += renderPlanCard(p, false);
+            });
+            if (inlineContainer) inlineContainer.innerHTML = inlineHtml;
+
+            let modalHtml = '';
+            filtered.forEach(p => {
+                modalHtml += renderPlanCard(p, true);
+            });
+            if (modalContainer) modalContainer.innerHTML = modalHtml;
+        }
+
+        function filterPlanCategory(cat, element, isModal) {
+            activePlanCategory = cat;
+            // Sync active pill state in both views
+            document.querySelectorAll('#inlineCategoryPills .cat-pill, #modalCategoryPills .cat-pill').forEach(p => {
+                p.classList.toggle('active', p.innerText.toLowerCase().includes(cat) || (cat === 'all' && p.innerText.includes('All')));
+            });
+            renderAllPlansLists();
+        }
+
+        function filterPlansSearch(term) {
+            const lower = (term || '').trim().toLowerCase();
+            const modalContainer = document.getElementById('plansListContainer');
+            if (!modalContainer) return;
+
+            let filtered = loadedPlans;
+            if (lower) {
+                filtered = loadedPlans.filter(p => 
+                    p.amount.toString().includes(lower) ||
+                    (p.validity && p.validity.toLowerCase().includes(lower)) ||
+                    (p.data_benefit && p.data_benefit.toLowerCase().includes(lower)) ||
+                    (p.description && p.description.toLowerCase().includes(lower)) ||
+                    (p.tags && p.tags.toLowerCase().includes(lower))
+                );
+            } else if (activePlanCategory !== 'all') {
+                filtered = loadedPlans.filter(p => categorizePlan(p).includes(activePlanCategory));
+            }
+
+            if (filtered.length === 0) {
+                modalContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;">No matching plans found for "' + escapeHtml(term) + '".</div>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(p => {
+                html += renderPlanCard(p, true);
+            });
+            modalContainer.innerHTML = html;
+        }
+
+        function selectPlan(amount, cardElement, isModal) {
+            document.getElementById('rechargeAmountInput').value = amount;
+            
+            // Highlight across both views
+            document.querySelectorAll('.plan-card').forEach(c => {
+                const cAmt = parseFloat(c.getAttribute('data-amount'));
+                c.classList.toggle('selected', cAmt === parseFloat(amount));
+            });
+
+            // Highlight matching quick chip
+            document.querySelectorAll('.amt-chip').forEach(c => {
+                c.classList.toggle('selected', c.innerText.trim() === `₹${amount}`);
+            });
+
+            if (isModal) {
+                closePlansModal();
+                if (window.Swal) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: `Plan ₹${amount} Selected`,
+                        showConfirmButton: false,
+                        timer: 1600
+                    });
+                }
+            }
+        }
+
+        // Dual-Safety Modal Controller (Bootstrap 5 + DOM Fallback)
+        function openPlansModal() {
+            const modalEl = document.getElementById('plansModal');
+            if (!modalEl) return;
+
+            // Make sure plans are loaded
+            if (loadedPlans.length === 0 && currentActiveService === 'mobile') {
+                loadPlansForOperator(currentSelectedOperator || 'Airtel');
+            }
+
+            modalEl.style.display = 'block';
+
+            if (window.bootstrap && bootstrap.Modal) {
+                try {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                    return;
+                } catch (e) {
+                    console.warn("Bootstrap modal show error, using fallback:", e);
+                }
+            }
+            // DOM Fallback
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+            modalEl.removeAttribute('aria-hidden');
+            modalEl.setAttribute('aria-modal', 'true');
+            document.body.classList.add('modal-open');
+            let backdrop = document.getElementById('customModalBackdrop');
+            if (!backdrop) {
+                backdrop = document.createElement('div');
+                backdrop.id = 'customModalBackdrop';
+                backdrop.className = 'modal-backdrop fade show';
+                document.body.appendChild(backdrop);
+            }
+        }
+
+        function closePlansModal() {
+            const modalEl = document.getElementById('plansModal');
+            if (!modalEl) return;
+
+            if (window.bootstrap && bootstrap.Modal) {
+                try {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                } catch (e) {}
+            }
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.removeAttribute('aria-modal');
+            document.body.classList.remove('modal-open');
+            const backdrop = document.getElementById('customModalBackdrop');
+            if (backdrop) backdrop.remove();
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        }
+
+        // Close on backdrop click fallback & Escape key
+        document.addEventListener('click', function(e) {
+            const modalEl = document.getElementById('plansModal');
+            if (e.target === modalEl) {
+                closePlansModal();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePlansModal();
+        });
+
+        // Form Submission & Razorpay Checkout
+        async function handleUniversalSubmit(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btnSubmitRecharge');
+            const btnText = document.getElementById('btnPayText');
+
+            const serviceType = currentActiveService;
+            const targetAccount = document.getElementById('targetAccountNumber').value.trim();
+            const amount = parseFloat(document.getElementById('rechargeAmountInput').value);
+            const guestName = document.getElementById('guestNameInput').value.trim() || null;
+            const guestEmail = document.getElementById('guestEmailInput').value.trim() || null;
+            const extra1 = document.getElementById('extraField1Value').value.trim() || null;
+            const contactPhone = document.getElementById('customerContactPhone').value.trim() || null;
+
+            if (!targetAccount) {
+                alert('Please enter a valid account / service number.');
+                return;
+            }
+
+            if (!currentSelectedOperator) {
+                alert('Please select a service provider or board.');
+                return;
+            }
+
+            if (!amount || amount < 10) {
+                alert('Please enter a valid recharge amount (minimum ₹10).');
+                return;
+            }
+
+            // Capture Referral Parameter from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const referralCode = urlParams.get('ref') || urlParams.get('referred_by') || null;
+
+            // Construct payload
+            const payload = {
+                mobile_number: targetAccount,
+                operator: currentSelectedOperator,
+                amount: amount,
+                service_type: serviceType,
+                value1: extra1,
+                value2: contactPhone,
+                guest_name: guestName,
+                guest_email: guestEmail,
+                referred_by: referralCode
+            };
+
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Initializing Payment...';
+
+            try {
+                const res = await fetch('/api/v1/recharge/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const orderData = await res.json();
+
+                if (!res.ok) {
+                    alert(orderData.detail || 'Failed to initiate order. Please try again.');
+                    submitBtn.disabled = false;
+                    btnText.innerText = 'Proceed to Pay';
+                    return;
+                }
+
+                // Razorpay Checkout Options
+                const options = {
+                    "key": orderData.key_id,
+                    "amount": orderData.amount,
+                    "currency": orderData.currency || "INR",
+                    "name": "VGK4U Recharge & Bill Pay",
+                    "description": `${SERVICE_CATALOG[serviceType].title} for ${targetAccount}`,
+                    "order_id": orderData.order_id,
+                    "handler": async function (paymentResponse) {
+                        Swal.fire({
+                            title: 'Confirming Service Payment...',
+                            html: '<i class="fa-solid fa-spinner fa-spin fa-2x text-warning mb-3"></i><br>Connecting with operator gateway. Please do not refresh.',
+                            allowOutsideClick: false,
+                            showConfirmButton: false
+                        });
+
+                        try {
+                            const verifyRes = await fetch('/api/v1/recharge/verify-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            const verifyData = await verifyRes.json();
+
+                            if (verifyRes.ok) {
+                                triggerCelebration();
+                                Swal.fire({
+                                    title: '🎉 Payment Successful!',
+                                    html: `
+                                        <p class="text-success fw-bold mb-2">${verifyData.message || 'Service payment initiated successfully!'}</p>
+                                        <p class="text-muted small">Transaction ID: <strong>#${verifyData.transaction_id}</strong></p>
+                                        <hr>
+                                        <div class="p-3 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
+                                            <div class="text-warning fw-bold"><i class="fa-solid fa-gift me-1"></i> Scratch Card Cashback Unlocked!</div>
+                                            <div class="small text-light mt-1">An exclusive scratch card link was sent to your registered mobile via WhatsApp.</div>
+                                        </div>
+                                    `,
+                                    icon: 'success',
+                                    confirmButtonText: 'Done',
+                                    confirmButtonColor: '#10b981'
+                                });
+                                document.getElementById('universalRechargeForm').reset();
+                            } else {
+                                Swal.fire('Verification Alert', verifyData.detail || 'Payment processed but verification delayed. Our team is tracking it.', 'warning');
+                            }
+                        } catch (err) {
+                            Swal.fire('Error', 'Network error verifying payment. Please keep your transaction ID handy.', 'error');
+                        } finally {
+                            submitBtn.disabled = false;
+                            btnText.innerText = 'Proceed to Pay';
+                        }
+                    },
+                    "prefill": {
+                        "name": guestName || "",
+                        "email": guestEmail || "",
+                        "contact": contactPhone || (targetAccount.length === 10 ? targetAccount : "")
+                    },
+                    "theme": {
+                        "color": "#10b981"
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp) {
+                    alert('Payment Cancelled or Failed: ' + (resp.error ? resp.error.description : ''));
+                    submitBtn.disabled = false;
+                    btnText.innerText = 'Proceed to Pay';
+                });
+                rzp.open();
+
+            } catch (err) {
+                alert('Connection error. Please check your internet connection.');
+                submitBtn.disabled = false;
+                btnText.innerText = 'Proceed to Pay';
+            }
+        }
+
+        function triggerCelebration() {
+            if (window.confetti) {
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+
+        function escapeHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        // On Load: Auto-select service from URL query params (e.g. ?service=dth)
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const reqService = (params.get('service') || '').toLowerCase();
+            if (reqService && SERVICE_CATALOG[reqService]) {
+                switchService(reqService);
+            } else {
+                switchService('mobile');
+            }
+        });
+    </script>
+</body>
+</html>

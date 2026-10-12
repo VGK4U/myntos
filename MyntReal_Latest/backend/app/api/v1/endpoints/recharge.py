@@ -159,11 +159,12 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             from app.services.scratch_reward_service import allocate_scratch_card
             from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
             card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
+            recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
             if card and token_secret:
                 enqueue_recharge_scratch_notification(
                     db=db,
                     brand="Myntreal",
-                    mobile_number=tx.mobile_number,
+                    mobile_number=recipient_phone,
                     recharge_amount=tx.amount,
                     transaction_id=tx.id,
                     raw_secret_token=token_secret
@@ -171,8 +172,15 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         except Exception as scratch_err:
             print(f"Scratch card trigger error: {scratch_err}")
             
-        success_msg = f"✅ (TEST MODE) Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
-        background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
+        service_titles = {
+            "mobile": "Mobile recharge", "postpaid": "Postpaid bill payment", "dth": "DTH recharge",
+            "electricity": "Electricity bill payment", "fastag": "FASTag recharge", "gas": "Gas bill payment",
+            "insurance": "Insurance premium payment", "googleplay": "Google Play recharge code"
+        }
+        svc_label = service_titles.get((tx.service_type or "mobile").lower(), "Recharge")
+        recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
+        success_msg = f"✅ (TEST MODE) Success! Your {svc_label} of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
+        background_tasks.add_task(notify_user_bg, recipient_phone, success_msg)
     else:
         # Call Real A1Topup API
         if settings.A1TOPUP_USERNAME and settings.A1TOPUP_PASSWORD:
@@ -227,11 +235,12 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                             from app.services.scratch_reward_service import allocate_scratch_card
                             from app.services.notification_outbox_service import enqueue_recharge_scratch_notification
                             card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
+                            recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
                             if card and token_secret:
                                 enqueue_recharge_scratch_notification(
                                     db=db,
                                     brand="Myntreal",
-                                    mobile_number=tx.mobile_number,
+                                    mobile_number=recipient_phone,
                                     recharge_amount=tx.amount,
                                     transaction_id=tx.id,
                                     raw_secret_token=token_secret
@@ -239,8 +248,15 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                         except Exception as scratch_err:
                             print(f"Scratch card trigger error: {scratch_err}")
                         
-                        success_msg = f"✅ Success! Your mobile recharge of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
-                        background_tasks.add_task(notify_user_bg, tx.mobile_number, success_msg)
+                        service_titles = {
+                            "mobile": "Mobile recharge", "postpaid": "Postpaid bill payment", "dth": "DTH recharge",
+                            "electricity": "Electricity bill payment", "fastag": "FASTag recharge", "gas": "Gas bill payment",
+                            "insurance": "Insurance premium payment", "googleplay": "Google Play recharge code"
+                        }
+                        svc_label = service_titles.get((tx.service_type or "mobile").lower(), "Recharge")
+                        recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
+                        success_msg = f"✅ Success! Your {svc_label} of ₹{int(tx.amount)} for {tx.mobile_number} is complete. TXN ID: {tx.id}"
+                        background_tasks.add_task(notify_user_bg, recipient_phone, success_msg)
                     else:
                         tx.api_status = "Failed"
                         tx.api_tx_id = str(data.get("txid", "ERROR"))
@@ -250,8 +266,15 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                     print(f"A1Topup API Request TIMEOUT for Txn {tx.id}.")
                     tx.api_status = "Timeout - Manual Check Required"
                     
-                    delay_msg = f"⏳ Recharge Update: Your recharge of ₹{int(tx.amount)} for {tx.mobile_number} is taking longer than expected due to network delays. We will update you shortly once confirmed."
-                    background_tasks.add_task(notify_user_bg, tx.mobile_number, delay_msg)
+                    service_titles = {
+                        "mobile": "Mobile recharge", "postpaid": "Postpaid bill payment", "dth": "DTH recharge",
+                        "electricity": "Electricity bill payment", "fastag": "FASTag recharge", "gas": "Gas bill payment",
+                        "insurance": "Insurance premium payment", "googleplay": "Google Play recharge code"
+                    }
+                    svc_label = service_titles.get((tx.service_type or "mobile").lower(), "Recharge")
+                    recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
+                    delay_msg = f"⏳ Service Update: Your {svc_label} of ₹{int(tx.amount)} for {tx.mobile_number} is taking longer than expected due to network delays. We will update you shortly once confirmed."
+                    background_tasks.add_task(notify_user_bg, recipient_phone, delay_msg)
                     
                 except Exception as e:
                     print(f"A1Topup API Request Error: {e}")

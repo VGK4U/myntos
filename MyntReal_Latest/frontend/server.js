@@ -7639,6 +7639,23 @@ const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
   try {
     const hostHeader = (req.headers['host'] || '').toLowerCase();
+
+    // SOLUTION A (Razorpay Compliance): If user initiates recharge/checkout from myntreal.com / other domains,
+    // redirect them directly to the approved vgk4u.com domain so Razorpay verification succeeds without domain rejection.
+    const rawPath = req.url.split('?')[0].toLowerCase();
+    const rawQs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    const isRechargeReq = rawPath === '/recharge' || rawPath === '/recharge/' || rawPath === '/recharge.html' || rawPath === '/bill-payments' || rawPath === '/services/recharge' || (rawPath === '/landing' && rawQs.includes('openRecharge=true'));
+    if (isRechargeReq) {
+      if (hostHeader.includes('myntreal') || hostHeader.includes('mynreal')) {
+        res.writeHead(302, {
+          'Location': 'https://www.vgk4u.com/recharge' + rawQs,
+          'Cache-Control': 'no-cache'
+        });
+        res.end();
+        return;
+      }
+    }
+
     if (hostHeader === 'myntreal.com' || hostHeader.startsWith('myntreal.com:')) {
       res.writeHead(301, {
         'Location': `https://www.myntreal.com${req.url}`,
@@ -7656,6 +7673,24 @@ const server = http.createServer(async (req, res) => {
       } else if (p === '/login' || p === '/login/' || p === '/staff/login' || p === '/staff/login/' || p === '/staff_login' || p === '/staff-login') {
         req.url = req.url.replace(p, '/saas/login');
       }
+    }
+
+    // DC Protocol / Oct 2026: VGK4U Domain Routing & Redirect (vgk4u.com / www.vgk4u.com / vjkforyou.com)
+    // Ensures visiting vgk4u.com explicitly redirects to the canonical /catalog/vgk4u URL in the browser
+    if (hostHeader.includes('vgk4u.com') || hostHeader.includes('vgk4u') || hostHeader.includes('vjkforyou')) {
+      const p = req.url.split('?')[0];
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      if (p === '/' || p === '' || p === '/index.html' || p === '/index') {
+        res.writeHead(302, { 'Location': `/catalog/vgk4u${qs}`, 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+        res.end();
+        return;
+      } else if (p === '/landing' && qs.includes('openRecharge=true')) {
+        res.writeHead(302, { 'Location': `/recharge${qs}`, 'Cache-Control': 'no-cache' });
+        res.end();
+        return;
+      }
+    } else if (rawPath === '/landing' && rawQs.includes('openRecharge=true')) {
+      req.url = '/recharge' + rawQs;
     }
 
     const url = req.url;
@@ -10281,6 +10316,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
   // LEGACY ROUTE HANDLING (if/else chain)
   // This executes when route-map is disabled OR route not found in map
   if (url === '/' || url.startsWith('/?') || url === '/index.html' || url.startsWith('/index.html?') || url === '/index' || url.startsWith('/index?')) {
+    const incomingHost = (req.headers.host || '').toLowerCase();
+    const queryPart = url.includes('?') ? url.substring(url.indexOf('?')) : '';
+    // If request originates from vgk4u.com / vjkforyou.com domain, redirect directly to VGK4U catalog
+    if (incomingHost.includes('vgk4u') || incomingHost.includes('vjkforyou') || incomingHost.includes('vgk')) {
+      res.writeHead(302, { 'Location': `/catalog/vgk4u${queryPart}`, 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end();
+      return;
+    }
     // Root URL redirects to Myntreal Hub public website
     // 301 Permanent redirect — signals to search engines that /hub is the canonical destination
     res.writeHead(301, { 'Location': '/hub', 'Cache-Control': 'public, max-age=86400' });
@@ -31100,6 +31143,32 @@ async function processAction(id, action){
     const vgkPath = path.join(__dirname, 'vgk4u_catalog.html');
     fs.readFile(vgkPath, 'utf8', (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK4U catalog page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/recharge') || url.startsWith('/bill-payments') || url.startsWith('/services/recharge')) {
+    // Dedicated Recharge & Bill Payments Portal (Mobile Prepaid, Postpaid, DTH, Electricity, FASTag, Gas, LIC/Insurance, Google Play)
+    const rechargePath = path.join(__dirname, 'public', 'recharge_bills.html');
+    fs.readFile(rechargePath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Recharge & Bill Payments portal not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/scratch-card') || url.startsWith('/scratch_card')) {
+    // Dedicated Scratch Card Cashback & Claim Portal
+    const scratchPath = path.join(__dirname, 'public', 'scratch-card.html');
+    fs.readFile(scratchPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Scratch card portal not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

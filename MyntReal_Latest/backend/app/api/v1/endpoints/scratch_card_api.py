@@ -80,7 +80,7 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
         "city": card.city or "",
         "state": card.state or "",
         "referral_code": card.referral_code or f"MYNT{card.id:04d}",
-        "referral_link": f"https://www.myntreal.com/recharge.html?ref={card.referral_code or f'MYNT{card.id:04d}'}",
+        "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
         "referral_bonus_pct": 50,
         "max_referred_members": 5
     }
@@ -121,7 +121,7 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
                 "customer_name": card.customer_name,
                 "claimed_at": card.claimed_at.isoformat() if card.claimed_at else None,
                 "referral_code": ref_code,
-                "referral_link": f"https://www.myntreal.com/recharge.html?ref={ref_code}",
+                "referral_link": f"https://www.vgk4u.com/recharge?ref={ref_code}",
                 "referral_bonus_pct": 50,
                 "max_referred_members": 5
             }
@@ -282,7 +282,7 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
             "claimed_at": card.claimed_at.isoformat() if card.claimed_at else now.isoformat(),
             "mobile_number": card.mobile_number,
             "referral_code": ref_code,
-            "referral_link": f"https://www.myntreal.com/recharge.html?ref={ref_code}",
+            "referral_link": f"https://www.vgk4u.com/recharge?ref={ref_code}",
             "referral_bonus_pct": 50,
             "max_referred_members": 5
         }

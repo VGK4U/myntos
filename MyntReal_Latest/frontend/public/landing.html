@@ -811,7 +811,7 @@
             <a href="/hub">Home</a>
             <a href="/hub/about">About</a>
             <a href="/hub/media">Media</a>
-            <a href="#" data-bs-toggle="modal" data-bs-target="#rechargeModal" style="color: #10b981; font-weight: 700;">📱 Mobile Recharge</a>
+            <a href="/recharge" style="color: #10b981; font-weight: 700;"><i class="fas fa-bolt me-1"></i> Recharge &amp; Bills</a>
             <div class="hub-dropdown">
               <button class="hub-dropdown-trigger">Verticals ▾</button>
               <div class="hub-dropdown-menu">
@@ -867,16 +867,16 @@
 
                     <ul class="offering-list">
                     
-                        <!-- Mobile Recharge — Green -->
-                        <li class="offering-item has-link" data-bs-toggle="modal" data-bs-target="#rechargeModal" style="background:linear-gradient(135deg,#064e3b,#059669);border-color:rgba(110,231,183,0.35);box-shadow:0 4px 18px rgba(5,150,105,0.45);">
+                        <!-- Recharge & Bill Payments — Green -->
+                        <li class="offering-item has-link" onclick="navigateTo('/recharge')" style="background:linear-gradient(135deg,#064e3b,#059669);border-color:rgba(110,231,183,0.35);box-shadow:0 4px 18px rgba(5,150,105,0.45);">
                             <div class="offering-icon" style="background:linear-gradient(135deg,#10b981,#047857);box-shadow:0 3px 12px rgba(16,185,129,0.45);">
-                                <i class="fas fa-mobile-alt" style="color:#fff;"></i>
+                                <i class="fas fa-bolt" style="color:#fff;"></i>
                             </div>
                             <div style="flex:1;min-width:0;">
-                                <div class="offering-text">Mobile Recharge</div>
-                                <div class="offering-sub">Instant Top-ups · All Operators · No Login Required</div>
+                                <div class="offering-text">Recharge &amp; Bill Payments</div>
+                                <div class="offering-sub">Mobile · DTH · Electricity · FASTag · Gas · Insurance &amp; More</div>
                             </div>
-                            <span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(16,185,129,0.4);">RECHARGE</span>
+                            <span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(16,185,129,0.4);">PAY BILLS</span>
                         </li>
 
                         <!-- VGK4U EV Spares — Dark Blue -->
@@ -1629,6 +1629,10 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+            <div class="p-2 mb-3 rounded d-flex align-items-center justify-content-between" style="background: rgba(16, 185, 129, 0.1); border: 1px dashed #10b981;">
+              <span style="font-size: 0.78rem; color: #047857; font-weight: 700;"><i class="fas fa-receipt me-1"></i> Pay Electricity, DTH, FASTag, Gas &amp; LIC</span>
+              <a href="/recharge" class="btn btn-sm" style="background: #10b981; color: white; font-size: 0.72rem; font-weight: 700; border-radius: 20px; padding: 3px 10px;">All Services &rarr;</a>
+            </div>
             <form id="rechargeForm">
               <div class="mb-3">
                 <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Mobile Number</label>
@@ -1756,13 +1760,17 @@
           btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
           btn.disabled = true;
 
+          const urlParams = new URLSearchParams(window.location.search);
+          const refParam = urlParams.get('ref') || urlParams.get('referred_by') || null;
+
           const data = {
               mobile_number: document.getElementById('rechargeMobile').value,
               operator: document.getElementById('rechargeOperator').value,
               circle: document.getElementById('rechargeCircle').value || null,
               amount: parseFloat(document.getElementById('rechargeAmount').value),
               guest_name: document.getElementById('rechargeGuestName').value || null,
-              guest_email: document.getElementById('rechargeGuestEmail').value || null
+              guest_email: document.getElementById('rechargeGuestEmail').value || null,
+              referred_by: refParam
           };
 
           try {

@@ -221,8 +221,8 @@
         /* ── BUTTON STYLES ── */
         .btn-gold-glow {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #000000 !important;
-            font-weight: 800;
+            color: #090e17 !important;
+            font-weight: 800 !important;
             border: none;
             border-radius: 9999px;
             padding: 12px 28px;
@@ -230,14 +230,67 @@
             transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            text-decoration: none;
+            text-decoration: none !important;
             cursor: pointer;
+            white-space: nowrap !important;
+            flex-shrink: 0;
+        }
+        .btn-gold-glow,
+        .btn-gold-glow:link,
+        .btn-gold-glow:visited,
+        .btn-gold-glow:hover,
+        .btn-gold-glow:active,
+        .btn-gold-glow:focus {
+            color: #090e17 !important;
+            text-decoration: none !important;
+            font-weight: 800 !important;
+        }
+        .btn-gold-glow * {
+            color: inherit !important;
         }
         .btn-gold-glow:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 28px rgba(245, 158, 11, 0.6);
-            color: #000000 !important;
+            color: #090e17 !important;
+        }
+
+        /* ── Light Mode Specific Navbar Contrast Enhancements ── */
+        [data-theme="light"] .vgk-nav {
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+        }
+        [data-theme="light"] .vgk-nav .btn-outline-warning {
+            color: #b45309 !important;
+            border: 1.5px solid #d97706 !important;
+            background: rgba(245, 158, 11, 0.08) !important;
+        }
+        [data-theme="light"] .vgk-nav .btn-outline-warning:hover {
+            color: #ffffff !important;
+            background: #d97706 !important;
+            border-color: #d97706 !important;
+        }
+        [data-theme="light"] .vgk-nav .btn-outline-success {
+            color: #15803d !important;
+            border: 1.5px solid #16a34a !important;
+            background: rgba(22, 163, 74, 0.08) !important;
+        }
+        [data-theme="light"] .vgk-nav .btn-outline-success:hover {
+            color: #ffffff !important;
+            background: #16a34a !important;
+            border-color: #16a34a !important;
+        }
+        [data-theme="light"] .vgk-hamburger-btn {
+            background: rgba(15, 23, 42, 0.06);
+            color: #0f172a;
+            border-color: rgba(15, 23, 42, 0.15);
+        }
+        [data-theme="light"] .vgk-hamburger-btn:hover {
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            border-color: #d97706;
         }
         .btn-outline-gold {
             background: transparent;
@@ -278,9 +331,156 @@
             color: #ffffff !important;
         }
 
+        /* ── BUTTON PHYSICS & TACTILE TOUCH FEEDBACK ── */
+        button, .btn, .btn-gold-glow, .btn-wa-glow, .btn-outline-gold, .nav-link-pill {
+            touch-action: manipulation;
+        }
+        .btn-gold-glow:active, .btn-wa-glow:active, .btn-outline-gold:active, .btn:active {
+            transform: translateY(0) scale(0.97) !important;
+            transition: transform 0.1s ease !important;
+        }
+        .btn-gold-glow {
+            min-height: 44px;
+            letter-spacing: 0.01em;
+        }
+        .btn-wa-glow {
+            min-height: 44px;
+            letter-spacing: 0.01em;
+        }
+
+        /* ── CUSTOM CROSS-BROWSER RANGE SLIDERS (SIMULATOR & EV) ── */
+        input[type=range].form-range {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+            outline: none;
+            padding: 0;
+            margin: 14px 0;
+            border: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+        }
+        input[type=range].form-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3.5px solid #f59e0b;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.75), 0 2px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+        }
+        input[type=range].form-range::-webkit-slider-thumb:hover {
+            transform: scale(1.18);
+            box-shadow: 0 0 22px rgba(245, 158, 11, 1), 0 4px 10px rgba(0,0,0,0.4);
+        }
+        input[type=range].form-range::-moz-range-thumb {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3.5px solid #f59e0b;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.75);
+            cursor: pointer;
+        }
+
+        /* ── VALUE READOUT DISPLAY BADGES ── */
+        .sim-val-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 900;
+            font-size: 1.45rem;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            padding: 4px 14px;
+            border-radius: 12px;
+            letter-spacing: -0.02em;
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
+            display: inline-block;
+        }
+
+        /* ── MOBILE OFFCANVAS DRAWER & HAMBURGER MENU ── */
+        .vgk-hamburger-btn {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #d97706;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        [data-theme="dark"] .vgk-hamburger-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #f59e0b;
+        }
+        .vgk-hamburger-btn:hover {
+            background: rgba(245, 158, 11, 0.2);
+            transform: scale(1.05);
+        }
+        .vgk-mobile-drawer {
+            position: fixed;
+            inset: 0;
+            z-index: 2060;
+            display: none;
+        }
+        .vgk-mobile-drawer.active {
+            display: block;
+        }
+        .vgk-mobile-drawer-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(5, 7, 12, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .vgk-mobile-drawer-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(340px, 86vw);
+            background: #090d16;
+            border-left: 1px solid rgba(245, 158, 11, 0.25);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes drawerSlideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .mobile-drawer-link {
+            padding: 10px 14px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            transition: all 0.15s ease;
+        }
+        .mobile-drawer-link:hover, .mobile-drawer-link:active {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            transform: translateX(4px);
+        }
+
         /* ── CHAPTER SECTION WRAPPERS ── */
         .chapter-section {
-            padding: 80px 0;
+            padding: clamp(48px, 6vw, 84px) 0;
             position: relative;
             scroll-margin-top: 75px;
         }
@@ -991,6 +1191,30 @@
         .career-step-box p {
             color: #475569 !important;
         }
+        [data-theme="dark"] .career-step-box {
+            background: #111827 !important;
+            border-color: #1e293b !important;
+            color: #f8fafc !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        }
+        [data-theme="dark"] .career-step-box h5 {
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .career-step-box p {
+            color: #94a3b8 !important;
+        }
+        [data-theme="dark"] .model-card-item {
+            background: #111827;
+            border-color: #1e293b;
+            color: #f8fafc;
+        }
+        [data-theme="dark"] .model-card-item .text-dark {
+            color: #f8fafc !important;
+        }
+        [data-theme="dark"] .partner-logo-pill {
+            background: #111827;
+            border-color: #1e293b;
+        }
         .career-step-box.core-box {
             border-color: #f59e0b !important;
             box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
@@ -1178,13 +1402,23 @@
             left: 0;
             right: 0;
             z-index: 1050;
-            background: rgba(9, 13, 22, 0.95);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            background: rgba(9, 13, 22, 0.94);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-top: 1px solid rgba(245, 158, 11, 0.3);
-            padding: 10px 16px;
+            padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)) 16px;
             display: none;
             gap: 10px;
+            box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.45);
+        }
+        .mobile-quick-actions .btn {
+            border-radius: 9999px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* ── SCROLL TO TOP OVERLAY BUTTON ── */
@@ -1228,13 +1462,13 @@
         @media (max-width: 991px) {
             .mobile-quick-actions { display: flex; }
             .btn-scroll-to-top {
-                bottom: 76px;
+                bottom: calc(76px + env(safe-area-inset-bottom, 0px));
                 right: 18px;
                 width: 44px;
                 height: 44px;
                 font-size: 17px;
             }
-            body { padding-bottom: 70px; }
+            body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
             .vertical-panel-card,
             .jewel-showcase-card {
                 width: 285px;
@@ -1349,7 +1583,10 @@
 
             <!-- Header Action CTAs -->
             <div class="d-flex align-items-center gap-2">
-                <a href="/vgk/login" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1">
+                <a href="/recharge" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Instant Recharge & Bill Payments">
+                    <i class="fas fa-bolt"></i> <span>Recharge</span>
+                </a>
+                <a href="/vgk/login" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-none d-md-inline-flex align-items-center gap-1">
                     <i class="fas fa-sign-in-alt"></i> <span data-i18n="btn_member_signin">Member Sign In</span>
                 </a>
                 <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-none d-sm-inline-flex align-items-center gap-1" onclick="shareOnWhatsApp()">
@@ -1358,9 +1595,58 @@
                 <a href="/vgk/login?tab=signup" class="btn-gold-glow py-2 px-3 fs-6">
                     <i class="fas fa-user-plus"></i> <span data-i18n="btn_join_free">Join Free</span>
                 </a>
+                <!-- Mobile Navigation Menu Toggle Button -->
+                <button type="button" class="vgk-hamburger-btn d-inline-flex d-xl-none" onclick="toggleMobileNav(true)" aria-label="Open Navigation Menu" title="Open Menu">
+                    <i class="fas fa-bars fs-6"></i>
+                </button>
             </div>
         </div>
     </nav>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MOBILE OFFCANVAS NAVIGATION DRAWER                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="vgk-mobile-drawer" id="vgkMobileDrawer">
+        <div class="vgk-mobile-drawer-backdrop" onclick="toggleMobileNav(false)"></div>
+        <div class="vgk-mobile-drawer-content">
+            <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="/public/hub/Assets/vgk4u-logo.png" alt="VGK4U Logo" style="height: 32px;" onerror="this.src='/public/vgk4u-logo.png'">
+                    <div>
+                        <div class="fw-black text-warning" style="font-size: 1.05rem; line-height: 1;">VGK4U</div>
+                        <div class="small text-muted" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em;">DIGITAL CATALOG</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-white p-1" onclick="toggleMobileNav(false)" aria-label="Close Menu">
+                    <i class="fas fa-times fs-5"></i>
+                </button>
+            </div>
+            <div class="p-3" style="overflow-y: auto; max-height: calc(100vh - 70px);">
+                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">5 Business Verticals</div>
+                <div class="d-flex flex-column gap-1 mb-3">
+                    <a href="#verticals" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-gem text-warning me-2"></i> 7 Jewels for Success</a>
+                    <a href="#solar" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-solar-panel text-warning me-2"></i> Har Ghar Solar (EPC)</a>
+                    <a href="#insurance" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-shield-heart text-info me-2"></i> VGK Care (Insurance)</a>
+                    <a href="#ev" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-motorcycle text-success me-2"></i> Manthra EV 2-Wheelers</a>
+                    <a href="#realestate" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-building text-primary me-2"></i> VGK Real Dreams (Real Estate)</a>
+                    <a href="#training" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-graduation-cap text-danger me-2"></i> EVolution Training Center</a>
+                </div>
+                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">Partner Growth &amp; Tools</div>
+                <div class="d-flex flex-column gap-1 mb-3">
+                    <a href="#hub-career" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-chart-line text-info me-2"></i> Career Ladder &amp; Awards</a>
+                    <a href="#earnings" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-coins text-warning me-2"></i> Multi-Tier Earnings</a>
+                    <a href="#simulator" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-calculator text-success me-2"></i> Earnings Calculator</a>
+                    <a href="#join" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-box-open text-primary me-2"></i> Executive Welcome Kit</a>
+                </div>
+                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">Quick Actions</div>
+                <div class="d-flex flex-column gap-2 mt-2">
+                    <a href="/recharge" class="btn btn-outline-warning w-100 fw-bold py-2"><i class="fas fa-bolt me-1"></i> Recharge &amp; Bill Payments</a>
+                    <a href="/vgk/login?tab=signup" class="btn-gold-glow w-100 justify-content-center py-2"><i class="fas fa-user-plus me-1"></i> Join Free Partner</a>
+                    <button type="button" class="btn btn-wa-glow w-100 justify-content-center py-2" onclick="shareOnWhatsApp()"><i class="fab fa-whatsapp me-1"></i> Share on WhatsApp</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <!-- CHAPTER 1: HERO OPENING & 30,000 POINTS GATEWAY                     -->
@@ -3005,6 +3291,9 @@
 
     <!-- ── FLOATING MOBILE BAR ── -->
     <div class="mobile-quick-actions">
+        <a href="/recharge" class="btn btn-outline-warning flex-fill py-2 fw-bold text-warning d-flex align-items-center justify-content-center text-nowrap">
+            <i class="fas fa-bolt me-1"></i> <span>Recharge</span>
+        </a>
         <a href="/vgk/login" class="btn btn-outline-light flex-fill py-2 fw-bold text-nowrap">
             <i class="fas fa-sign-in-alt me-1"></i> <span data-i18n="mob_signin">Sign In</span>
         </a>
@@ -3217,7 +3506,20 @@
             document.getElementById('galleryCounter').textContent = `${currentGalleryCategory.toUpperCase()} • ${currentGalleryIndex + 1} of ${list.length}`;
         }
 
-        // Keyboard handler for gallery
+        // ── 1.1 MOBILE NAVIGATION DRAWER CONTROLLER ──
+        function toggleMobileNav(open) {
+            const drawer = document.getElementById('vgkMobileDrawer');
+            if (!drawer) return;
+            if (open) {
+                drawer.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } else {
+                drawer.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Keyboard handler for gallery, modals & mobile drawer
         window.addEventListener('keydown', (e) => {
             const overlay = document.getElementById('galleryOverlay');
             if (overlay && overlay.classList.contains('active')) {
@@ -3228,6 +3530,10 @@
             const evModal = document.getElementById('evModelModal');
             if (evModal && evModal.classList.contains('active')) {
                 if (e.key === 'Escape') closeEVModal();
+            }
+            const drawer = document.getElementById('vgkMobileDrawer');
+            if (drawer && drawer.classList.contains('active')) {
+                if (e.key === 'Escape') toggleMobileNav(false);
             }
         });
 
@@ -5095,23 +5401,28 @@
                 btnTop.classList.toggle('visible', scrollPos > 280);
             }
 
-            // Active nav pill highlight
-            const links = document.querySelectorAll('.nav-link-pill');
+            // Active nav pill & mobile drawer link highlight
+            const desktopLinks = document.querySelectorAll('.nav-link-pill');
+            const drawerLinks = document.querySelectorAll('.mobile-drawer-link');
             const navOffset = scrollPos + 140;
-            links.forEach(link => {
-                const targetId = link.getAttribute('href');
-                if (targetId && targetId.startsWith('#')) {
-                    const section = document.querySelector(targetId);
-                    if (section) {
-                        const top = section.offsetTop;
-                        const height = section.offsetHeight;
-                        if (navOffset >= top && navOffset < top + height) {
-                            links.forEach(l => l.classList.remove('active'));
-                            link.classList.add('active');
-                        }
-                    }
+            let currentActiveId = '';
+
+            document.querySelectorAll('section[id], div[id]').forEach(sec => {
+                const top = sec.offsetTop;
+                const height = sec.offsetHeight;
+                if (navOffset >= top && navOffset < top + height) {
+                    currentActiveId = '#' + sec.id;
                 }
             });
+
+            if (currentActiveId) {
+                desktopLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === currentActiveId);
+                });
+                drawerLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === currentActiveId);
+                });
+            }
         }, { passive: true });
 
         // Initialize EV calculator default
