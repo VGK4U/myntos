@@ -33,7 +33,8 @@ def create_zip():
         'local_test.jpg', 'login_test.html', 'build_placeholders.py', 'build_zip_fix_yaml.py',
         'MNR_Staff_System_Reimplementation_Plan.docx', 'curl_out.txt', 'git_push.log',
         'git_res.txt', 'flake8_errors.txt', 'test_output.txt', 'node.log', 'uvicorn.log',
-        'servers.log', 'nohup.out', 'fetch.err', 'fetch.out'
+        'servers.log', 'nohup.out', 'fetch.err', 'fetch.out', 'verify_e2e_readiness.py',
+        'check_imports.py'
     }
     
     print(f"Creating clean production zip at {final_zip_path}...")
@@ -99,9 +100,12 @@ def create_zip():
                 
     shutil.copyfile(temp_zip_path, deploy_zip_path)
     shutil.copyfile(temp_zip_path, final_zip_path)
+    shutil.copyfile(temp_zip_path, root_deploy_zip_path)
+    shutil.copyfile(temp_zip_path, root_final_zip_path)
     if os.path.exists(temp_zip_path):
         os.remove(temp_zip_path)
     print(f"Deployment zip updated successfully: {deploy_zip_path} ({os.path.getsize(deploy_zip_path)} bytes)")
+    print(f"Root deployment zip updated successfully: {root_deploy_zip_path} ({os.path.getsize(root_deploy_zip_path)} bytes)")
 
 if __name__ == "__main__":
     create_zip()

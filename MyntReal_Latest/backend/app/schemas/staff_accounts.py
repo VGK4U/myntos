@@ -2979,6 +2979,7 @@ class ExpenseEntryCreate(BaseModel):
 
 class ExpenseEntryUpdate(BaseModel):
     """Schema for updating an expense entry"""
+    company_id: Optional[int] = None
     sub_category_id: Optional[int] = None
     expense_date: Optional[date] = None
     amount: Optional[Decimal] = Field(None, gt=0)
@@ -2994,6 +2995,9 @@ class ExpenseEntryUpdate(BaseModel):
     custom_category_name: Optional[str] = Field(None, max_length=100)
 
     narration: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=500)
+    main_category_id: Optional[int] = None
+    status: Optional[str] = Field(None, max_length=20)
 
     bill_number: Optional[str] = Field(None, max_length=50)
     bill_date: Optional[date] = None

@@ -2229,10 +2229,11 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
                     "2": _full_name or "Member",
                     "3": partner_code,
                     "4": request.password or "Welcome@VGK",
-                    "5": "https://www.vgk4u.com/vgk/login",
+                    "5": "https://www.vgk4u.com/vgk/login\n\n📖 Explore Official Business Catalogue:\n👉 https://www.vgk4u.com/catalog/vgk4u",
                     "name": _full_name or "Member",
                     "member_id": partner_code,
                     "login_url": "https://www.vgk4u.com/vgk/login",
+                    "catalog_url": "https://www.vgk4u.com/catalog/vgk4u",
                 },
             )
     except Exception as _wa_err:

@@ -287,6 +287,33 @@ class WhatsAppCanonicalService:
 
                 logger.error(f"[WA-CANONICAL] Meta API Rejected ({resp.status_code}): Code {err_code} - {full_reason}")
 
+                # Automatic Failover to MyntReal Scanned Indian Mobile Gateway / Bot Queue
+                if raw_body_fallback:
+                    try:
+                        from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                        logger.info(f"[WA-CANONICAL] Meta failed ({err_code}). Failing over to MyntReal Indian mobile number for {recipient}")
+                        fb_res = dispatch_scanned_lead_fallback(
+                            db=db,
+                            phone=recipient,
+                            message=raw_body_fallback,
+                            lead_id=lead_id,
+                            staff_id=staff_id,
+                            event_key=message_type,
+                            reason=f"Meta Error {err_code}: {full_reason}"
+                        )
+                        if fb_res.get("success"):
+                            logger.info(f"[WA-CANONICAL] Fallback to MyntReal Indian mobile successful for {recipient}")
+                            return {
+                                "success": True,
+                                "provider": fb_res.get("provider", "SCANNED_FALLBACK"),
+                                "message_log_id": fb_res.get("message_log_id"),
+                                "status": "sent",
+                                "fallback": True,
+                                "meta_error": full_reason
+                            }
+                    except Exception as fbe:
+                        logger.error(f"[WA-CANONICAL] Scanned mobile fallback failed: {fbe}")
+
                 log_entry = MessageLog(
                     message_sid=f"failed_meta_{int(now_utc.timestamp())}_{recipient[-4:]}",
                     mobile_number=recipient,
@@ -312,6 +339,31 @@ class WhatsAppCanonicalService:
 
         except Exception as exc:
             logger.error(f"[WA-CANONICAL] Network/Exception during Meta send: {exc}")
+            # Automatic Failover to MyntReal Scanned Indian Mobile Gateway on network/timeout error
+            if raw_body_fallback:
+                try:
+                    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                    logger.info(f"[WA-CANONICAL] Network exception on Meta. Failing over to MyntReal Indian mobile number for {recipient}")
+                    fb_res = dispatch_scanned_lead_fallback(
+                        db=db,
+                        phone=recipient,
+                        message=raw_body_fallback,
+                        lead_id=lead_id,
+                        staff_id=staff_id,
+                        event_key=message_type,
+                        reason=f"Meta Network Exception: {exc}"
+                    )
+                    if fb_res.get("success"):
+                        return {
+                            "success": True,
+                            "provider": fb_res.get("provider", "SCANNED_FALLBACK"),
+                            "message_log_id": fb_res.get("message_log_id"),
+                            "status": "sent",
+                            "fallback": True
+                        }
+                except Exception as fbe:
+                    logger.error(f"[WA-CANONICAL] Fallback after network exception failed: {fbe}")
+
             log_entry = MessageLog(
                 message_sid=f"failed_exc_{int(now_utc.timestamp())}_{recipient[-4:]}",
                 mobile_number=recipient,
@@ -371,8 +423,38 @@ class WhatsAppCanonicalService:
             tmpl_id = getattr(template, 'id', 'None') if template else 'None'
             logger.warning(
                 f"[WA-CANONICAL] Unmapped/Unapproved template (ID: {tmpl_id}, Name: {tmpl_name}) for event '{event_key}'. "
-                f"Freeform text fallback DISABLED to eliminate Meta 131047 errors."
+                f"Attempting MyntReal Scanned Indian Mobile Number fallback."
             )
+            # Reconstruct message body from template if available
+            body_text = getattr(template, 'body_text', '') or ''
+            if context and body_text:
+                for k, v in context.items():
+                    body_text = body_text.replace(f"{{{{{k}}}}}", str(v) if v else "")
+            
+            if body_text:
+                try:
+                    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                    fb_res = dispatch_scanned_lead_fallback(
+                        db=db,
+                        phone=phone,
+                        message=body_text,
+                        lead_id=lead_id,
+                        staff_id=staff_id,
+                        event_key=event_key,
+                        reason=f"Meta template {tmpl_name} not approved"
+                    )
+                    if fb_res.get("success"):
+                        logger.info(f"[WA-CANONICAL] Fallback for unapproved template successful for {phone}")
+                        return {
+                            "success": True,
+                            "provider": fb_res.get("provider", "SCANNED_FALLBACK"),
+                            "message_log_id": fb_res.get("message_log_id"),
+                            "status": "sent",
+                            "fallback": True
+                        }
+                except Exception as _fbe:
+                    logger.error(f"[WA-CANONICAL] Scanned fallback on unapproved template failed: {_fbe}")
+
             recipient = cls.normalize_phone(phone) or phone
             now_utc = datetime.utcnow()
             log_entry = MessageLog(

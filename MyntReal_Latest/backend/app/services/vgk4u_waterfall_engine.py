@@ -182,10 +182,14 @@ class VGK4UWaterfallEngine:
         if is_apex_producer:
             effective_producer_pct = max_network_pool
         else:
-            # Pure Model: Personal sales commission is flat base_rate (5.00%)
-            # (+ 1.00% Brand Allowance disbursed separately).
-            # Higher designations earn team overrides on downline sales, not higher self rates.
-            effective_producer_pct = base_rate
+            # Option 1: Personal sales commission resolves dynamically from producer's qualified personal rate
+            # (1-4 files: 5.00%, 5-9 files: 6.50%, 10-15 files: 7.50%, 16+ files: 8.00%)
+            # Applied strictly on future files that receive 1st payment.
+            eff_rate_val = producer_status.get('effective_personal_producer_rate')
+            if eff_rate_val is not None and float(eff_rate_val) > 0:
+                effective_producer_pct = Decimal(str(eff_rate_val)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            else:
+                effective_producer_pct = base_rate
 
         # 3. Build Network Allocations
         allocations: List[Dict[str, Any]] = []
@@ -228,60 +232,55 @@ class VGK4UWaterfallEngine:
                 return 1
             return 0
 
-        # 4. Direct Sponsor Override (Decision 3 - Immediate Direct Sponsor ONLY)
-        # Paid ONLY to the immediate parent of L1 Producer. Requires active Channel Partner (Rank >= 1).
-        # NEVER paid to indirect uplines. If missing/inactive/unqualified, sweeps to APEX_REMAINDER.
+        # 4. Direct Sponsor Override (Immediate Direct Sponsor ONLY)
+        # Paid ONLY to the immediate parent of L1 Producer. Requires active Channel Partner (own_qualifying_files >= 1).
+        # NEVER paid to indirect uplines.
         resolved_sponsor_id = direct_sponsor_id or producer_status.get('parent_partner_id')
+        sponsor_allocated = False
         if sponsor_rate_cfg > Decimal('0.00') and not is_apex_producer and resolved_sponsor_id:
             s_info = career_status_map.get(resolved_sponsor_id)
             if s_info and s_info.get('is_active', False):
-                s_rank = _get_rank_order(s_info.get('career_designation'), s_info.get('is_apex_node', False))
-                if s_rank >= 1:
-                    sp_pct = min(sponsor_rate_cfg, remaining_differential_pool)
-                    if sp_pct > Decimal('0.00'):
-                        sp_gross = (deal_val * (sp_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        sp_ded = cls.compute_deductions(sp_gross)
-                        allocations.append({
-                            'role': 'DIRECT_SPONSOR_OVERRIDE',
-                            'level': 2,
-                            'partner_id': resolved_sponsor_id,
-                            'partner_code': s_info['partner_code'],
-                            'partner_name': s_info['partner_name'],
-                            'career_designation': s_info['career_designation'],
-                            'personal_prod_qualification': s_info['personal_prod_qualification'],
-                            'commission_pct': sp_pct,
-                            'commission_amount': sp_gross,
-                            'admin_charges': sp_ded['admin'],
-                            'tds_amount': sp_ded['tds'],
-                            'net_payout': sp_ded['net'],
-                            'is_differential': False,
-                            'notes': f'Direct Sponsor Override (+{sp_pct}%)'
-                        })
-                        remaining_differential_pool -= sp_pct
-                        current_tier_rate += sp_pct
+                s_files = s_info.get('own_qualifying_files', 0)
+                if s_files >= 1 or s_info.get('is_apex_node', False):
+                    sp_pct = sponsor_rate_cfg
+                    sp_gross = (deal_val * (sp_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    sp_ded = cls.compute_deductions(sp_gross)
+                    allocations.append({
+                        'role': 'DIRECT_SPONSOR_OVERRIDE',
+                        'level': 2,
+                        'partner_id': resolved_sponsor_id,
+                        'partner_code': s_info['partner_code'],
+                        'partner_name': s_info['partner_name'],
+                        'career_designation': s_info['career_designation'],
+                        'personal_prod_qualification': s_info['personal_prod_qualification'],
+                        'commission_pct': sp_pct,
+                        'commission_amount': sp_gross,
+                        'admin_charges': sp_ded['admin'],
+                        'tds_amount': sp_ded['tds'],
+                        'net_payout': sp_ded['net'],
+                        'is_differential': False,
+                        'notes': f'Direct Sponsor Override (+{sp_pct}%)'
+                    })
+                    sponsor_allocated = True
 
-        # 5. Dynamic Roll-Up Leadership Differentials (Decision 4 - Senior 1.50%, Extended 1.00%, Core 0.50%)
-        senior_rate = mgr_diff_rate
-        extended_rate = gm_diff_rate
-        core_rate = rm_diff_rate
+        # 5. Dynamic Roll-Up Leadership Differentials / Team Overrides (Active Direct Team Members)
+        # Decoupled Model: Personal production commission (Attachment 1: 5%-8%) is strictly for self
+        # and has ZERO absorption/blocking impact on team overrides!
+        # Active Direct Member = direct partner with >= 3 files having 1st payment received.
+        level1_rate = Decimal('0.50')     # >= 1 Active Direct Member (+0.50%)
+        level2_rate = Decimal('1.00')     # >= 5 Active Direct Members (+1.00%)
+        level3_rate = Decimal('1.50')     # >= 10 Active Direct Members (+1.50%)
+        remaining_team_pool = level1_rate + level2_rate + level3_rate  # 3.00%
 
-        senior_allocated = False
-        extended_allocated = False
-        core_allocated = False
-
-        # If producer absorbed any tiers (e.g. higher producer rate):
-        if effective_producer_pct >= (base_rate + senior_rate):
-            senior_allocated = True
-        if effective_producer_pct >= (base_rate + senior_rate + extended_rate):
-            extended_allocated = True
-        if effective_producer_pct >= max_network_pool:
-            core_allocated = True
+        level1_allocated = False
+        level2_allocated = False
+        level3_allocated = False
 
         # Traverse upline chain starting with immediate parent
         curr_partner_id = resolved_sponsor_id
         visited_parents = {producer_partner_id}
 
-        while curr_partner_id and remaining_differential_pool > Decimal('0.00') and not (senior_allocated and extended_allocated and core_allocated):
+        while curr_partner_id and remaining_team_pool > Decimal('0.00') and not (level1_allocated and level2_allocated and level3_allocated):
             if curr_partner_id in visited_parents:
                 logger.warning(f'Cycle detected in unilevel tree at partner {curr_partner_id}')
                 break
@@ -297,48 +296,45 @@ class VGK4UWaterfallEngine:
 
             p_career = p_info.get('career_designation')
             p_is_apex = p_info.get('is_apex_node', False) or (curr_partner_id == ROOT_APEX_PARTNER_ID)
-            p_rank = _get_rank_order(p_career, p_is_apex)
+            p_legs = p_info.get('active_team_legs', 0)
 
             claimed_pct = Decimal('0.00')
             notes_parts = []
+            claimed_roles = []
 
-            # 1. Senior Differential (1.50%)
-            if p_rank >= 2 and not senior_allocated and senior_rate > Decimal('0.00'):
-                claimed_pct += senior_rate
-                senior_allocated = True
-                notes_parts.append(f'Senior Differential (+{senior_rate}%)')
+            # 1. Level 1 Team Override (0.50%) - >= 1 Active Direct Member
+            if (p_legs >= 1 or p_is_apex) and not level1_allocated and level1_rate > Decimal('0.00'):
+                claimed_pct += level1_rate
+                level1_allocated = True
+                notes_parts.append(f'Tier 2 Team Override (+{level1_rate}%)')
+                claimed_roles.append('MANAGER_DIFFERENTIAL')
 
-            # 2. Extended Differential (1.00%)
-            if p_rank >= 3 and not extended_allocated and extended_rate > Decimal('0.00'):
-                claimed_pct += extended_rate
-                extended_allocated = True
-                notes_parts.append(f'Extended Differential (+{extended_rate}%)')
+            # 2. Level 2 Team Royalties (1.00%) - >= 5 Active Direct Members
+            if (p_legs >= 5 or p_is_apex) and not level2_allocated and level2_rate > Decimal('0.00'):
+                claimed_pct += level2_rate
+                level2_allocated = True
+                notes_parts.append(f'Tier 3 Team Royalties (+{level2_rate}%)')
+                claimed_roles.append('GM_DIFFERENTIAL')
 
-            # 3. Core Differential (0.50%)
-            if p_rank >= 4 and not core_allocated and core_rate > Decimal('0.00'):
-                claimed_pct += core_rate
-                core_allocated = True
-                notes_parts.append(f'Core Differential (+{core_rate}%)')
+            # 3. Level 3 Team Depth & Lifetime (1.50%) - >= 10 Active Direct Members
+            if (p_legs >= 10 or p_is_apex) and not level3_allocated and level3_rate > Decimal('0.00'):
+                claimed_pct += level3_rate
+                level3_allocated = True
+                notes_parts.append(f'Tier 4 Team Depth & Lifetime Pool (+{level3_rate}%)')
+                claimed_roles.append('RM_DIFFERENTIAL')
 
             if claimed_pct > Decimal('0.00'):
-                alloc_pct = min(claimed_pct, remaining_differential_pool)
+                alloc_pct = min(claimed_pct, remaining_team_pool)
                 if alloc_pct > Decimal('0.00'):
                     alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     ded = cls.compute_deductions(alloc_gross)
 
-                    if p_rank >= 4:
-                        role_name = 'RM_DIFFERENTIAL'
-                        level_num = 4
-                    elif p_rank >= 3:
-                        role_name = 'GM_DIFFERENTIAL'
-                        level_num = 3
-                    else:
-                        role_name = 'MANAGER_DIFFERENTIAL'
-                        level_num = 2
+                    primary_role = claimed_roles[-1] if claimed_roles else 'MANAGER_DIFFERENTIAL'
+                    role_level = 4 if 'RM_DIFFERENTIAL' in claimed_roles else (3 if 'GM_DIFFERENTIAL' in claimed_roles else 2)
 
                     allocations.append({
-                        'role': role_name,
-                        'level': level_num,
+                        'role': primary_role,
+                        'level': role_level,
                         'partner_id': curr_partner_id,
                         'partner_code': p_info['partner_code'],
                         'partner_name': p_info['partner_name'],
@@ -352,18 +348,17 @@ class VGK4UWaterfallEngine:
                         'is_differential': True,
                         'notes': f"{', '.join(notes_parts)} (Total: +{alloc_pct}%)"
                     })
-                    remaining_differential_pool -= alloc_pct
-                    current_tier_rate += alloc_pct
+                    remaining_team_pool -= alloc_pct
 
             curr_partner_id = p_info.get('parent_partner_id')
 
-        # D. Apex Remainder Absorption
-        field_roles = ('PRODUCER', 'DIRECT_SPONSOR_OVERRIDE', 'MANAGER_DIFFERENTIAL', 'GM_DIFFERENTIAL', 'RM_DIFFERENTIAL')
-        total_field_network_pct = sum(a['commission_pct'] for a in allocations if a['role'] in field_roles)
-        apex_remainder_pct = max_network_pool - total_field_network_pct
+        # D. Apex Remainder Absorption (Unallocated Team Overrides + Sponsor Override)
+        unallocated_team_pct = remaining_team_pool
+        if sponsor_rate_cfg > Decimal('0.00') and not sponsor_allocated and not is_apex_producer:
+            unallocated_team_pct += sponsor_rate_cfg
 
-        if apex_remainder_pct > Decimal('0.00'):
-            apex_gross = (deal_val * (apex_remainder_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if unallocated_team_pct > Decimal('0.00'):
+            apex_gross = (deal_val * (unallocated_team_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             apex_info = career_status_map.get(ROOT_APEX_PARTNER_ID, {
                 'partner_code': ROOT_APEX_PARTNER_CODE,
                 'partner_name': 'VGK Support',
@@ -378,13 +373,13 @@ class VGK4UWaterfallEngine:
                 'partner_name': apex_info.get('partner_name', 'VGK Support'),
                 'career_designation': apex_info.get('career_designation', DESIGNATION_APEX_NODE),
                 'personal_prod_qualification': apex_info.get('personal_prod_qualification', None),
-                'commission_pct': apex_remainder_pct,
+                'commission_pct': unallocated_team_pct,
                 'commission_amount': apex_gross,
                 'admin_charges': Decimal('0.00'),
                 'tds_amount': Decimal('0.00'),
                 'net_payout': apex_gross,
                 'is_differential': False,
-                'notes': f'Apex Corporate Remainder ({apex_remainder_pct}%)'
+                'notes': f'Apex Corporate Remainder ({unallocated_team_pct}%)'
             })
 
         # 5. Operational Field Support (Outside Network Pool)
@@ -469,12 +464,12 @@ class VGK4UWaterfallEngine:
                         'notes': f'Showroom Override Fee ({sh_pct}% outside network pool)'
                     })
 
-        # Network Pool Invariant Assertion
+        # Network Pool Invariant Assertion: Base network pool (9.0%) + Producer Personal Production Boost (up to +3.0%)
         network_roles = ('PRODUCER', 'DIRECT_SPONSOR_OVERRIDE', 'MANAGER_DIFFERENTIAL', 'GM_DIFFERENTIAL', 'RM_DIFFERENTIAL', 'APEX_REMAINDER')
         total_network_pct = sum(a['commission_pct'] for a in allocations if a['role'] in network_roles)
         total_network_gross = sum(a['commission_amount'] for a in allocations if a['role'] in network_roles)
-
-        assert total_network_pct <= max_network_pool, f'CRITICAL: Network pool {total_network_pct}% exceeded max {max_network_pool}%'
+        network_pool_ceiling = max_network_pool + max(Decimal('0.00'), effective_producer_pct - base_rate)
+        assert total_network_pct <= network_pool_ceiling, f'CRITICAL: Network pool {total_network_pct}% exceeded max {network_pool_ceiling}%'
 
         return {
             'success': True,

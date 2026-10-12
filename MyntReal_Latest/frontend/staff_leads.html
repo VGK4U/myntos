@@ -2769,7 +2769,7 @@
                 const safeCatEsc = (lead.category_name || lead.category || '').replace(/'/g, "\\'");
                 const safeOwnerEsc = (lead.assigned_staff_name || lead.telecaller_name || '').replace(/'/g, "\\'");
                 const rowCallIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); triggerLeadCall('${cleanP}', '${safeNameEsc}', ${lead.id})" class="btn btn-sm btn-outline-primary p-0 px-1 ms-1" style="font-size:10px;" title="Softphone WebRTC Call"><i class="fas fa-phone-alt"></i> Call</button>` : '';
-                const rowWAIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); openLeadWAModal('${lead.id}', '${cleanP}', '${safeNameEsc}', ${leadCompanyIdParam})" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp"></i> Chat</button>` : '';
+                const rowWAIcon = cleanP ? `<button type="button" onclick="event.stopPropagation(); openLeadWAModal('${lead.id}', '${cleanP}', '${safeNameEsc}', ${leadCompanyIdParam}, null, { source: 'crm_leads', category: '${safeCatEsc}', companyId: ${leadCompanyIdParam} })" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" style="font-size:10px;" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp"></i> Chat</button>` : '';
                 const rowHistoryIcon = `<button type="button" onclick="event.stopPropagation(); openUniversalHistory({entityType:'crm_lead', entityId:${lead.id}, name:'${safeNameEsc}', phone:'${cleanP}', status:'${lead.status||''}', stage:'${lead.stage||lead.solar_pipeline_status||''}', category:'${safeCatEsc}', assignedTo:'${safeOwnerEsc}'})" class="btn btn-sm btn-outline-secondary p-0 px-1 ms-1" style="font-size:10px;" title="Universal History"><i class="fas fa-history"></i> History</button>`;
 
                 return `
@@ -3467,8 +3467,9 @@
             const name = document.getElementById('leadName')?.value || 'Customer';
             const targetLeadId = document.getElementById('leadId')?.value || currentLeadId || 'new';
             const targetCompanyId = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+            const targetCategory = document.getElementById('leadCategory')?.value || '';
             if (typeof openLeadWAModal === 'function') {
-                openLeadWAModal(targetLeadId, phone.slice(-10), name, targetCompanyId);
+                openLeadWAModal(targetLeadId, phone.slice(-10), name, targetCompanyId, null, { source: 'crm_lead_form', category: targetCategory, companyId: targetCompanyId });
             } else {
                 window.open(`https://wa.me/91${phone.slice(-10)}`, '_blank');
             }
@@ -3483,8 +3484,9 @@
                 if (typeof showToast === 'function') showToast('No valid phone number for this lead', 'warning');
                 return;
             }
+            const targetCat = (document.getElementById('detailCategory')?.textContent || '').trim();
             if (typeof openLeadWAModal === 'function' && currentLeadId) {
-                openLeadWAModal(currentLeadId, phone.slice(-10), name, selectedLeadCompanyId);
+                openLeadWAModal(currentLeadId, phone.slice(-10), name, selectedLeadCompanyId, null, { source: 'crm_lead_detail', category: targetCat, companyId: selectedLeadCompanyId });
             } else {
                 window.open(`https://wa.me/91${phone.slice(-10)}`, '_blank');
             }
@@ -4598,7 +4600,7 @@
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
                     const safeLeadName = (lead.name || '').replace(/'/g, "\\'");
                     const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${safeLeadName}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
-                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${safeLeadName}', '${lead.company_id || effectiveCompanyId}')" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
+                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${safeLeadName}', '${lead.company_id || effectiveCompanyId}', null, { source: 'crm_leads', category: '${(lead.category_name||lead.category||'').replace(/'/g, "\\'")}', companyId: '${lead.company_id || effectiveCompanyId}' })" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
                     const historyBtnHtml = `<button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="openUniversalHistory({entityType:'crm_lead', entityId:${lead.id}, name:'${safeLeadName}', phone:'${cleanP10}', status:'${lead.status||''}', stage:'${lead.stage||lead.solar_pipeline_status||''}', category:'${(lead.category_name||lead.category||'').replace(/'/g, "\\'")}', assignedTo:'${(lead.assigned_staff_name||lead.telecaller_name||'').replace(/'/g, "\\'")}'})" title="Universal History"><i class="fas fa-history me-1"></i> History</button>`;
                     const detailPhoneEl = document.getElementById('detailPhone');
                     if (detailPhoneEl) {

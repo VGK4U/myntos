@@ -21,7 +21,7 @@ class WAConversation(Base):
     company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='RESTRICT'), nullable=False, index=True)
     lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='CASCADE'), nullable=False, index=True)
     
-    phone = Column(String(20), nullable=False, index=True)
+    phone = Column(String(100), nullable=False, index=True)
     session_uuid = Column(String(100), unique=True, nullable=False, index=True)
     
     current_state = Column(String(50), nullable=False, default='NEW_LEAD', index=True)

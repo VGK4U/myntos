@@ -2365,7 +2365,7 @@
                         <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
                             ${(cleanPhone && cleanPhone.length >= 6) ? `
                                 <button class="btn btn-outline-success btn-sm px-2.5 py-1 fw-semibold d-flex align-items-center gap-1 shadow-sm" 
-                                        onclick="openLeadWAModal('${escapeHtml(c.effective_lead_id || c.crm_lead_id || '')}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}', null, 'softphone_hub')" 
+                                        onclick="openLeadWAModal('${escapeHtml(c.effective_lead_id || c.crm_lead_id || '')}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}', null, { source: 'incoming_calls_bar', companyId: '${escapeHtml(c.company_id || '')}' })" 
                                         title="Send WhatsApp / Digital Catalog to ${name}">
                                     <i class="fab fa-whatsapp text-success fs-6"></i>
                                     <span class="d-none d-sm-inline small">WA</span>
@@ -2941,7 +2941,7 @@
                                                 data-phone="${escapeHtml(cleanPhoneNum)}" 
                                                 data-name="${escapeHtml(safeCustName)}" 
                                                 data-company-id="${escapeHtml(c.company_id || '')}"
-                                                onclick="openLeadWAModal(this.getAttribute('data-lead-id'), this.getAttribute('data-phone'), this.getAttribute('data-name'), this.getAttribute('data-company-id'))"
+                                                onclick="openLeadWAModal(this.getAttribute('data-lead-id'), this.getAttribute('data-phone'), this.getAttribute('data-name'), this.getAttribute('data-company-id'), null, { source: 'incoming_calls_table', companyId: this.getAttribute('data-company-id') })"
                                                 title="Send WhatsApp to ${escapeHtml(safeCustName)}">
                                             <i class="fab fa-whatsapp"></i> WA
                                         </button>
@@ -3173,8 +3173,9 @@
                 name = '';
             }
             const companyId = activeHistoryState.companyId || '';
+            const category = activeHistoryState.category || '';
             if (typeof openLeadWAModal === 'function') {
-                openLeadWAModal(leadId, phone, name, companyId, null, 'softphone_history_drawer');
+                openLeadWAModal(leadId, phone, name, companyId, null, { source: 'incoming_history_drawer', companyId: companyId, category: category });
             } else {
                 window.open(`https://wa.me/91${phone}`, '_blank');
             }
@@ -3185,6 +3186,7 @@
             customerName: '',
             leadId: '',
             companyId: '',
+            category: '',
             callData: null,
             waData: null,
             activeTab: 'all' // 'all' | 'calls' | 'messages'
@@ -3212,6 +3214,7 @@
                 customerName: !isPlaceholderClientName(customerName) ? customerName : '',
                 leadId: '',
                 companyId: '',
+                category: '',
                 callData: null,
                 waData: null,
                 activeTab: 'all'
@@ -3247,6 +3250,7 @@
                 activeHistoryState.customerName = resolvedName;
                 activeHistoryState.leadId = (callRes && callRes.lead && callRes.lead.id) || (waRes && waRes.crm_leads && waRes.crm_leads[0] && waRes.crm_leads[0].id) || '';
                 activeHistoryState.companyId = (callRes && callRes.lead && callRes.lead.company_id) || '';
+                activeHistoryState.category = (callRes && callRes.lead && (callRes.lead.category || callRes.lead.category_name)) || '';
 
                 renderCustomerHistoryDrawer();
             } catch (err) {
@@ -3274,6 +3278,7 @@
             activeHistoryState.cleanPhone = (data.phone || data.raw_phone || '').replace(/\D/g, '').slice(-10);
             activeHistoryState.leadId = (data.lead && data.lead.id) || '';
             activeHistoryState.companyId = (data.lead && data.lead.company_id) || '';
+            activeHistoryState.category = (data.lead && (data.lead.category || data.lead.category_name)) || '';
             renderCustomerHistoryDrawer();
         }
 
@@ -3475,7 +3480,7 @@
                             <span class="text-muted small" style="font-size: 10.5px;"><i class="fa-solid fa-phone-volume text-info me-1"></i>Call #${escapeHtml(h.id || '')}</span>
                             <button class="btn btn-outline-success btn-sm py-0.5 px-2 fw-semibold" 
                                     style="font-size: 11px;"
-                                    onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(isPlaceholderClientName(custName) ? '' : custName)}', '${escapeHtml(companyId)}', null, 'softphone_call_item')" 
+                                    onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(isPlaceholderClientName(custName) ? '' : custName)}', '${escapeHtml(companyId)}', null, { source: 'incoming_call_item', companyId: '${escapeHtml(companyId)}' })" 
                                     title="Send WhatsApp or Catalog Template">
                                 <i class="fab fa-whatsapp me-1"></i> Send WA
                             </button>

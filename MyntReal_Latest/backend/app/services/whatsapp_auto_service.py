@@ -371,34 +371,41 @@ def _build_template_components(template, context: Dict[str, Any]) -> list:
 
 
 def _send_meta(phone: str, message: str, template=None, db=None,
-               context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+               context: Optional[Dict[str, Any]] = None,
+               is_internal_system: bool = False) -> Dict[str, Any]:
     """
     Send via Meta Cloud API.
     If template has meta_template_name + is_meta_approved → use template type with
     full components (image header, body params, URL buttons).
     FAIL-CLOSED: If template is missing or unapproved, REJECTS freeform text fallback
     to prevent Meta 131047 re-engagement errors on cold outbound customer outreach.
+    is_internal_system: If True, bypasses customer 24h window check to deliver internal admin reports (e.g. 8875551666 morning snapshot).
     """
     # Reject invalid/placeholder numbers
     if not _is_valid_phone(phone):
         logger.warning("[WA-AUTO] Skipping invalid/placeholder phone: %s", phone)
         return {"success": False, "reason": "invalid_phone_number", "error_code": "INV_PHONE"}
 
+    use_template = False
     # 1. Template-based send validation
-    if template:
-        if not getattr(template, 'meta_template_name', None) or not getattr(template, 'is_meta_approved', False):
-            tmpl_id = getattr(template, 'id', 'None')
-            tmpl_name = getattr(template, 'name', 'Selected template')
-            status = getattr(template, 'meta_approval_status', 'UNAPPROVED')
-            logger.warning(
-                f"[WA-AUTO] Unapproved template (ID: {tmpl_id}, Name: {tmpl_name}, Status: {status}). "
-                f"Cannot dispatch unapproved template via Meta Cloud API."
-            )
-            return {
-                "success": False,
-                "reason": f"Template '{tmpl_name}' is not approved by Meta (status: {status or 'UNAPPROVED'}). Please select an approved Meta template or send via Scanned WhatsApp.",
-                "error_code": "TMPL_NOT_APPROVED"
-            }
+    if template and getattr(template, 'is_meta_approved', False) and getattr(template, 'meta_template_name', None):
+        use_template = True
+    elif is_internal_system:
+        # Internal system/admin message — send freeform text directly via Meta Cloud API
+        use_template = False
+    elif template:
+        tmpl_id = getattr(template, 'id', 'None')
+        tmpl_name = getattr(template, 'name', 'Selected template')
+        status = getattr(template, 'meta_approval_status', 'UNAPPROVED')
+        logger.warning(
+            f"[WA-AUTO] Unapproved template (ID: {tmpl_id}, Name: {tmpl_name}, Status: {status}). "
+            f"Cannot dispatch unapproved template via Meta Cloud API."
+        )
+        return {
+            "success": False,
+            "reason": f"Template '{tmpl_name}' is not approved by Meta (status: {status or 'UNAPPROVED'}). Please select an approved Meta template or send via Scanned WhatsApp.",
+            "error_code": "TMPL_NOT_APPROVED"
+        }
     else:
         # 2. Freeform text send validation (Meta 24-Hour Customer Service Window)
         is_window_open = False
@@ -429,6 +436,7 @@ def _send_meta(phone: str, message: str, template=None, db=None,
                 "reason": "Meta 24-hour customer service window has expired. Direct 1-to-1 customer messaging via Baileys is disabled to protect SIM accounts.",
                 "error_code": "WINDOW_EXPIRED"
             }
+        use_template = False
 
     # [DC-WA-CREDS] Get live credentials from DB if available
     token, phone_id = _get_meta_creds(db)
@@ -446,7 +454,7 @@ def _send_meta(phone: str, message: str, template=None, db=None,
 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    if template:
+    if use_template and template:
         tpl_payload: Dict[str, Any] = {
             "name": template.meta_template_name,
             "language": {"code": template.meta_template_language or "en"},
@@ -462,7 +470,7 @@ def _send_meta(phone: str, message: str, template=None, db=None,
             "template": tpl_payload,
         }
     else:
-        # Freeform text inside 24h window
+        # Freeform text (either inside 24h window or internal system send)
         payload = {
             "messaging_product": "whatsapp",
             "to": recipient,
@@ -706,9 +714,9 @@ def send_auto_whatsapp(
         if lead_id and result.get("success"):
             _log_to_crm_note(db, lead_id, message, event_key, staff_id, result.get("wamid"))
 
-        if not result.get("success") and (lead_id or event_key.startswith("crm_lead_")):
+        if not result.get("success"):
             logger.warning(
-                "[WA-AUTO] Meta API failed for lead event '%s' (%s). Executing Scanned WhatsApp fallback with pacing delay...",
+                "[WA-AUTO] Meta API failed for event '%s' (%s). Executing Scanned WhatsApp fallback with pacing delay...",
                 event_key, phone
             )
             fb_res = dispatch_scanned_lead_fallback(
@@ -1023,8 +1031,40 @@ def dispatch_scanned_lead_fallback(
             logger.warning("[WA-LEAD-FALLBACK] MessageLog write warning: %s", _log_e)
             return {"success": True, "wamid": wamid, "channel": "scanned_fallback", "via": "direct_gateway"}
 
-    # Scanned WhatsApp anti-ban safeguard: NEVER enqueue 1-on-1 lead messages into Scanned WA queue.
-    # Individual lead messages must exclusively use official Meta Cloud API or explicit manual user action.
+    # Scanned WhatsApp anti-ban safeguard:
+    # Individual cold customer lead messages must not be enqueued to prevent spam bans.
+    # However, internal staff and leadership alerts (e.g., morning snapshot to 8875551666) are safe to enqueue.
+    is_internal_staff = (
+        event_key in ('staff_morning_leadership', 'staff_morning_reminder', 'manual_staff', 'internal_alert', 'staff_alert')
+        or event_key.startswith('staff_')
+        or 'leadership' in event_key
+        or clean_10 in ('8875551666', '8897797667', '8019045667')
+    )
+    if is_internal_staff:
+        try:
+            from sqlalchemy import text as _sql_text
+            res_q = db.execute(_sql_text("""
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id)
+                VALUES ('individual', :jid, :msg, 'pending', :now_utc, :payload, :job_id, :exec_id)
+                RETURNING id
+            """), {
+                "jid": target_jid,
+                "msg": message,
+                "now_utc": now_utc,
+                "payload": json.dumps({"source": "internal_staff_fallback", "event_key": event_key, "phone": clean_p}),
+                "job_id": "internal_staff_alert",
+                "exec_id": exec_id
+            })
+            qid = res_q.fetchone()[0]
+            db.commit()
+            logger.info("✅ [WA-STAFF-FALLBACK] Successfully enqueued internal staff message for %s (Queue ID: %s)", clean_10, qid)
+            return {"success": True, "queue_id": qid, "channel": "scanned_queue", "via": "whatsapp_bot_queue"}
+        except Exception as _qe:
+            db.rollback()
+            logger.error("[WA-STAFF-FALLBACK] Error enqueuing internal staff message: %s", _qe)
+            return {"success": False, "reason": str(_qe), "error_code": "QUEUE_INSERT_ERROR"}
+
+    # Individual cold lead messages must exclusively use official Meta Cloud API or explicit manual user action.
     logger.info("🛑 [WA-LEAD-FALLBACK] Individual lead message for %s suppressed from Scanned WA queue to prevent account bans.", clean_10)
     return {
         "success": False,
@@ -1052,9 +1092,14 @@ def send_lead_welcome(
             logger.warning("[WA-WELCOME] Invalid phone %s — skipping", phone)
             return {"success": False, "reason": "invalid_phone"}
 
-        # Detect Solar lead or ETC Training lead
-        is_etc_training = False
+        # Multi-vertical segment detection
         is_solar = False
+        is_ev = False
+        is_real_estate = False
+        is_etc_training = False
+        catalog_url = "https://www.vgk4u.com/catalog/vgk4u"
+        segment_name = "general"
+
         if lead_id:
             try:
                 from app.models.crm import CRMLead
@@ -1068,21 +1113,49 @@ def send_lead_welcome(
                             logger.info("[WA-WELCOME] Suppressed welcome for lead %s (Freelancer Ground Source WITHOUT_COMMUNICATION)", lead_id)
                             return {"success": False, "reason": "suppressed_by_freelancer_setting"}
 
-                    if lead_obj.category_id == 16 or lead_obj.company_id == 2 or 'etc' in (lead_obj.tags or '').lower() or 'training' in (lead_obj.tags or '').lower():
-                        is_etc_training = True
-                    if (getattr(lead_obj, 'company_id', None) == 4 or
-                        'solar' in (getattr(lead_obj, 'tags', None) or '').lower() or
+                    tags_lower = (getattr(lead_obj, 'tags', None) or '').lower()
+                    notes_lower = (getattr(lead_obj, 'notes', None) or '').lower()
+                    cid = getattr(lead_obj, 'company_id', None)
+                    cat_id = getattr(lead_obj, 'category_id', None)
+
+                    # 1. Solar Energy
+                    if (cid == 4 or 'solar' in tags_lower or 'solar' in notes_lower or
                         getattr(lead_obj, 'solar_pipeline_status', None) or
                         getattr(lead_obj, 'solar_brand_id', None) or
                         getattr(lead_obj, 'solar_capacity', None)):
                         is_solar = True
-            except Exception:
-                pass
+                        segment_name = "solar"
+                        catalog_url = "https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te"
+                    # 2. EV Skill Training (ETC)
+                    elif (cat_id == 16 or cid == 2 or 'etc' in tags_lower or 'training' in tags_lower or 'skill' in tags_lower or 'etc' in notes_lower):
+                        is_etc_training = True
+                        segment_name = "training"
+                        catalog_url = "https://www.myntreal.com/catalog/etc-training"
+                    # 3. Electric Vehicles (EV)
+                    elif (cid == 1 or 'ev' in tags_lower or 'bike' in tags_lower or 'scooter' in tags_lower or 'mobility' in tags_lower or 'ev' in notes_lower):
+                        is_ev = True
+                        segment_name = "ev"
+                        catalog_url = "https://www.myntreal.com/catalog/ev-b2c-pricing"
+                    # 4. Real Estate
+                    elif (cid == 3 or 'real' in tags_lower or 'estate' in tags_lower or 'plot' in tags_lower or 'villa' in tags_lower or 'property' in tags_lower or 'land' in tags_lower or 'real' in notes_lower):
+                        is_real_estate = True
+                        segment_name = "realestate"
+                        catalog_url = "https://www.myntreal.com/catalog/real-dreams"
+                    else:
+                        segment_name = "general"
+                        catalog_url = "https://www.vgk4u.com/catalog/vgk4u"
+            except Exception as _det_err:
+                logger.warning(f"[WA-WELCOME] Error resolving lead segment: {_det_err}")
 
+        # Map segment to primary event_key / template slug
         if is_solar:
             event_key = "lead_welcome_solar"
+        elif is_ev:
+            event_key = "lead_welcome_ev"
+        elif is_real_estate:
+            event_key = "lead_welcome_realestate"
         elif is_etc_training:
-            event_key = "lead_welcome_etc_training"
+            event_key = "lead_welcome_training"
         elif partner_phone:
             event_key = "lead_welcome_walkin"
         else:
@@ -1128,54 +1201,24 @@ def send_lead_welcome(
 
         from app.models.whatsapp import WhatsAppTemplate
         template = db.query(WhatsAppTemplate).filter_by(slug=event_key, is_active=True).first()
-        if not template:
-            if event_key == "lead_welcome_solar":
-                _sol_body = (
-                    "Hello {{name}}! ☀️\n\n"
-                    "Welcome to *MyntReal Har Ghar Solar* — India's trusted clean energy platform.\n\n"
-                    "Explore our official Digital Catalog & Subsidy Calculator:\n"
-                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
-                    "⚡ Key Highlights:\n"
-                    "• 90% power bill reduction\n"
-                    "• ₹78,000 Central Govt Subsidy (PM Surya Ghar)\n"
-                    "• ₹1 Solar Scheme & Zero-Down Payment Bank Loans\n"
-                    "• Tier-1 Brands (Tata, Adani, Waaree, Goldi) with 25-Year Warranty\n\n"
-                    "Our Solar Specialist will connect with you shortly for your free site survey.\n\n"
-                    "📞 Helpline: +91 85858 52738\n"
-                    "🌐 www.myntreal.com\n\n"
-                    "———————————————\n"
-                    "నమస్కారం {{name}}! ☀️\n\n"
-                    "*MyntReal హర్ ఘర్ సోలార్* కు స్వాగతం.\n\n"
-                    "మా డిజిటల్ క్యాటలాగ్ & సబ్సిడీ కాలిక్యులేటర్ లింక్ ఇక్కడ చూడండి:\n"
-                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
-                    "కరెంట్ బిల్లు 90% వరకు ఆదా, ₹78,000 కేంద్ర సబ్సిడీ మరియు ₹1 కే సోలార్ వివరాలను పై లింక్ ద్వారా తెలుసుకోండి. మా సోలార్ స్పెషలిస్ట్ త్వరలోనే మిమ్మల్ని సంప్రదిస్తారు!\n\n"
-                    "📞 సంప్రదించండి: +91 85858 52738\n\n"
-                    "*— టీమ్ MyntReal Har Ghar Solar*"
-                )
-                template = WhatsAppTemplate(
-                    slug="lead_welcome_solar",
-                    name="Lead Welcome — Solar Rooftop Inquiry",
-                    segment="solar",
-                    template_type="text",
-                    body_text=_sol_body,
-                    meta_template_name="myntreal_lead_welcome_solar",
-                    meta_template_language="en",
-                    is_meta_approved=False,
-                    is_active=True
-                )
-            else:
-                # Fallback to general template if specific template is missing
-                template = db.query(WhatsAppTemplate).filter_by(slug="lead_welcome_general", is_active=True).first()
-
-        # Fallback to approved myntreal_lead_thankyou_general if template is missing or unapproved
+        
+        # If primary template is missing or unapproved, fallback to approved template for that segment
         if not template or not getattr(template, 'is_meta_approved', False):
-            if (event_key in ("lead_welcome_general", "lead_welcome_solar") or not template or not getattr(template, 'is_meta_approved', False)):
+            seg_fallbacks = {
+                "solar": "solar_thank_you_connecting",
+                "ev": "ev_b2c_thank_you_connecting",
+                "realestate": "real_estate_thank_you_connecting",
+                "training": "etc_training_thank_you_connecting",
+                "general": "myntreal_lead_thankyou_general"
+            }
+            fb_slug = seg_fallbacks.get(segment_name, "myntreal_lead_thankyou_general")
+            fb_tpl = db.query(WhatsAppTemplate).filter_by(slug=fb_slug, is_active=True).first()
+            if fb_tpl and getattr(fb_tpl, 'is_meta_approved', False):
+                template = fb_tpl
+                event_key = fb_slug
+            else:
                 fallback = db.query(WhatsAppTemplate).filter_by(slug="myntreal_lead_thankyou_general", is_active=True).first()
                 if fallback and getattr(fallback, 'is_meta_approved', False):
-                    logger.info(
-                        "[WA-WELCOME] Falling back from unapproved/missing '%s' to approved 'myntreal_lead_thankyou_general'",
-                        event_key
-                    )
                     template = fallback
                     event_key = "myntreal_lead_thankyou_general"
 
@@ -1187,11 +1230,13 @@ def send_lead_welcome(
         now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
         context = {
             "1": safe_lead_name,
+            "2": catalog_url,
             "name": safe_lead_name,
             "lead_name": safe_lead_name,
             "customer_name": safe_lead_name,
             "lead_ref": f"#{lead_id}" if lead_id else "LEAD",
-            "catalog_url": "https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te",
+            "catalog_url": catalog_url,
+            "segment_catalog_url": catalog_url,
             "date": now_ist.strftime("%d-%m-%Y")
         }
         if partner_phone:
@@ -1315,21 +1360,174 @@ def send_lead_assigned_staff_wa(
         return {"success": False, "reason": str(e)}
 
 
+def _format_inr(val: float) -> str:
+    negative = val < 0
+    val = round(abs(val))
+    s = f"{val:.0f}"
+    if len(s) <= 3:
+        res = s
+    else:
+        last3 = s[-3:]
+        rem = s[:-3]
+        parts = []
+        while rem:
+            parts.insert(0, rem[-2:])
+            rem = rem[:-2]
+        res = ",".join(parts) + "," + last3
+    return f"-₹{res}" if negative else f"₹{res}"
+
+
+def _get_morning_bank_balances_block(db: Session) -> str:
+    try:
+        from collections import defaultdict
+        from sqlalchemy import text as _text
+        bank_rows = db.execute(_text("""
+            SELECT 
+                ac.id AS company_id,
+                ac.company_name,
+                alm.account_name,
+                alm.account_code,
+                (COALESCE(alm.opening_balance, 0) + COALESCE(SUM(al.debit_amount), 0) - COALESCE(SUM(al.credit_amount), 0)) AS balance
+            FROM account_ledger_masters alm
+            JOIN associated_companies ac ON ac.id = alm.company_id
+            LEFT JOIN account_ledger al ON al.company_id = alm.company_id 
+                                       AND al.account_name = alm.account_name
+                                       AND al.source_status != 'CANCELLED'
+            WHERE alm.account_type = 'BANK'
+              AND alm.is_active = TRUE
+            GROUP BY ac.id, ac.company_name, alm.account_name, alm.account_code, alm.opening_balance
+            HAVING (COALESCE(alm.opening_balance, 0) + COALESCE(SUM(al.debit_amount), 0) - COALESCE(SUM(al.credit_amount), 0)) != 0
+                OR COALESCE(SUM(al.debit_amount), 0) > 0
+            ORDER BY ac.id, alm.account_name
+        """)).fetchall()
+
+        companies = defaultdict(list)
+        for r in bank_rows:
+            bal = float(r[4] or 0)
+            clean_acct = (r[2] or 'Bank Account').replace('\ufffd', '-').strip()
+            companies[r[1]].append({'account': clean_acct, 'balance': bal})
+
+        if not companies:
+            return "• All accounts ₹0.00"
+
+        bank_lines = []
+        grand_bank_total = 0.0
+        for comp_name, accts in companies.items():
+            comp_total = sum(a['balance'] for a in accts)
+            grand_bank_total += comp_total
+            disp_comp = comp_name.replace(" Mega Natural Resources", "").replace(" Pvt Ltd", "").strip()
+            sig_accts = [a for a in accts if abs(a['balance']) >= 100]
+            if len(sig_accts) == 1:
+                bank_lines.append(f"• {disp_comp}: *{_format_inr(comp_total)}* ({sig_accts[0]['account']})")
+            elif len(sig_accts) > 1:
+                bank_lines.append(f"• {disp_comp}: *{_format_inr(comp_total)}*")
+                for a in sig_accts:
+                    bank_lines.append(f"   ▫ {a['account']}: {_format_inr(a['balance'])}")
+            else:
+                bank_lines.append(f"• {disp_comp}: *{_format_inr(comp_total)}*")
+
+        bank_lines.append(f"💰 *Total Bank:* *{_format_inr(grand_bank_total)}*")
+        return "\n".join(bank_lines)
+    except Exception as e:
+        logger.error("[WA-MORNING-BANK] Error building bank block: %s", e)
+        return "• Bank details unavailable"
+
+
+def _get_morning_cash_balances_block(db: Session, yesterday_date) -> str:
+    try:
+        from app.services.staff_accounts_service import list_unified_employee_ledger
+        class _AdminViewer:
+            id = 1
+            emp_code = 'MR10001'
+            role = None
+
+        entries, _, _ = list_unified_employee_ledger(
+            db, _AdminViewer(), {"team_view": True, "include_historical": False}
+        )
+
+        staff_cash = {}
+        for e in entries:
+            eid = e.get('employee_id')
+            if not eid:
+                continue
+            if eid not in staff_cash:
+                clean_name = (e.get('employee_name') or 'Staff').replace("Mr. ", "").replace("Ms. ", "").strip()
+                staff_cash[eid] = {
+                    'name': clean_name,
+                    'code': e.get('emp_code', ''),
+                    'opening': 0.0,
+                    'added_yesterday': 0.0,
+                    'out_yesterday': 0.0,
+                    'overall': 0.0,
+                }
+
+            edate_str = e['expense_date'][:10] if e.get('expense_date') else ''
+            cr = float(e.get('credit_amount') or 0)
+            dr = float(e.get('debit_amount') or 0)
+            net = cr - dr
+            staff_cash[eid]['overall'] += net
+
+            if edate_str:
+                if edate_str < str(yesterday_date):
+                    staff_cash[eid]['opening'] += net
+                elif edate_str == str(yesterday_date):
+                    staff_cash[eid]['added_yesterday'] += cr
+                    staff_cash[eid]['out_yesterday'] += dr
+            else:
+                staff_cash[eid]['opening'] += net
+
+        cash_lines = []
+        grand_cash_total = 0.0
+        for eid, sc in sorted(staff_cash.items(), key=lambda x: abs(x[1]['overall']), reverse=True):
+            if (abs(sc['opening']) >= 1 or abs(sc['added_yesterday']) >= 1
+                    or abs(sc['out_yesterday']) >= 1 or abs(sc['overall']) >= 1):
+                grand_cash_total += sc['overall']
+                cash_lines.append(
+                    f"• {sc['name']}: Op: {_format_inr(sc['opening'])} | In: {_format_inr(sc['added_yesterday'])} | Out: {_format_inr(sc['out_yesterday'])} | Bal: *{_format_inr(sc['overall'])}*"
+                )
+
+        if not cash_lines:
+            return "• No cash in hand balances"
+        cash_lines.append(f"💼 *Total Cash:* *{_format_inr(grand_cash_total)}*")
+        return "\n".join(cash_lines)
+    except Exception as e:
+        logger.error("[WA-MORNING-CASH] Error building cash block: %s", e)
+        return "• Cash details unavailable"
+
+
 def send_staff_morning_leadership(
     db: Session,
-    staff_employee,
+    staff_employee=None,
     portal_base_url: str = "https://www.myntreal.com",
+    override_phone: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Send morning leadership summary WhatsApp to Key Leadership / EA / VGK Supreme staff.
-    Queries real-time DB stats for team snapshot.
+    Queries real-time DB stats for team snapshot including leads performance,
+    company-wise bank balances, and person-wise cash balances.
     event_key: staff_morning_leadership
     """
-    phone = getattr(staff_employee, 'phone', None)
-    name = getattr(staff_employee, 'full_name', None) or getattr(staff_employee, 'name', 'Leader')
+    phone = override_phone or getattr(staff_employee, 'phone', None) or "8875551666"
+    emp_code = getattr(staff_employee, 'emp_code', '') or ''
+    role_obj = getattr(staff_employee, 'role', None)
+    role_code = (getattr(role_obj, 'role_code', '') or '').lower() if role_obj else ''
+
+    if emp_code == 'MR10001' or '8875551666' in str(phone or '') or role_code in ('vgk4u', 'super_admin'):
+        name = "System Administrator (VGK4U Supreme)"
+    else:
+        name = (getattr(staff_employee, 'full_name', None) 
+                or f"{getattr(staff_employee, 'first_name', '') or ''} {getattr(staff_employee, 'last_name', '') or ''}".strip()
+                or getattr(staff_employee, 'name', 'Leader'))
 
     if not phone or not _is_valid_phone(phone):
         return {"success": False, "reason": "no_valid_phone"}
+
+    # Strict Restriction: ONLY 8875551666 receives this morning leadership financial report
+    import re as _re
+    clean_digits = _re.sub(r'\D', '', str(phone or ''))
+    if not clean_digits.endswith('8875551666'):
+        logger.info("[WA-LEADERSHIP-MORNING] Suppressed for %s (%s) — strictly restricted to 8875551666", name, phone)
+        return {"success": False, "reason": "restricted_to_8875551666_only"}
 
     if _is_paused(db):
         return {"success": False, "reason": "paused"}
@@ -1341,6 +1539,9 @@ def send_staff_morning_leadership(
         today_str = today_ist.strftime('%a, %d %b %Y')
         today_midnight_utc = (today_ist.replace(hour=0, minute=0, second=0, microsecond=0)
                               - timedelta(hours=5, minutes=30))
+        yesterday_date = today_date - timedelta(days=1)
+        yesterday_start_utc = datetime.combine(yesterday_date, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        today_start_utc = datetime.combine(today_date, datetime.min.time()) - timedelta(hours=5, minutes=30)
 
         stats = db.execute(_text("""
             SELECT
@@ -1356,14 +1557,71 @@ def send_staff_morning_leadership(
                 (SELECT COUNT(*) FROM service_ticket
                     WHERE sub_status NOT IN ('closed')) AS open_tickets,
                 (SELECT COUNT(*) FROM service_ticket
-                    WHERE sub_status='closed' AND closed_date >= :today_midnight) AS closed_today
+                    WHERE sub_status='closed' AND closed_date >= :today_midnight) AS closed_today,
+                (SELECT COUNT(*) FROM crm_leads WHERE LOWER(status) = 'new') AS new_leads_overall,
+                (SELECT COUNT(*) FROM crm_leads WHERE created_at >= :yesterday_start AND created_at < :today_start) AS yesterday_new_leads,
+                (SELECT COUNT(*) FROM crm_leads WHERE LOWER(status) = 'lost' AND COALESCE(lost_at, updated_at) >= :yesterday_start AND COALESCE(lost_at, updated_at) < :today_start) AS yesterday_lost_leads
         """), {
             'today': today_date,
             'now_utc': datetime.utcnow(),
             'today_midnight': today_midnight_utc,
+            'yesterday_start': yesterday_start_utc,
+            'today_start': today_start_utc,
         }).fetchone()
 
+        bank_balances_block = _get_morning_bank_balances_block(db)
+        cash_balances_block = _get_morning_cash_balances_block(db, yesterday_date)
+
+        # Check if Meta has approved the template
+        try:
+            from app.models.whatsapp import WhatsAppAutoTrigger, WhatsAppTemplate
+            trigger = db.query(WhatsAppAutoTrigger).filter_by(
+                event_key='staff_morning_leadership', is_enabled=True
+            ).first()
+            if trigger and trigger.template:
+                tmpl = trigger.template
+                if not tmpl.is_meta_approved and tmpl.meta_template_id:
+                    try:
+                        from app.services.wa_credentials import get_wa_credentials
+                        import urllib.request, json
+                        creds = get_wa_credentials(db)
+                        _tok = creds.get("access_token")
+                        if _tok:
+                            _chk_url = f"https://graph.facebook.com/v21.0/{tmpl.meta_template_id}"
+                            _req = urllib.request.Request(_chk_url, headers={"Authorization": f"Bearer {_tok}"})
+                            with urllib.request.urlopen(_req, timeout=5) as _resp:
+                                _mdata = json.loads(_resp.read().decode('utf-8'))
+                                if _mdata.get('status') == 'APPROVED':
+                                    tmpl.is_meta_approved = True
+                                    tmpl.meta_approval_status = 'APPROVED'
+                                    db.commit()
+                                    logger.info("[WA-LEADERSHIP-MORNING] Meta template %s is now APPROVED!", tmpl.meta_template_id)
+                    except Exception as _poll_e:
+                        logger.debug("[WA-LEADERSHIP-MORNING] Polling Meta status: %s", _poll_e)
+        except Exception as _sync_err:
+            logger.warning("[WA-LEADERSHIP-MORNING] Template sync warning: %s", _sync_err)
+
+        # Extract total bank balance and total cash balance
+        total_bank_match = _re.search(r'Total Bank:\*?\s*\*?([^\*\n]+)', bank_balances_block)
+        total_bank_str = total_bank_match.group(1).strip() if total_bank_match else "₹0"
+        total_cash_match = _re.search(r'Total Cash:\*?\s*\*?([^\*\n]+)', cash_balances_block)
+        total_cash_str = total_cash_match.group(1).strip() if total_cash_match else "₹0"
+
         context = {
+            '1': name,
+            '2': today_str,
+            '3': str(stats[0] if stats else 0),
+            '4': str(stats[1] if stats else 0),
+            '5': str(stats[2] if stats else 0),
+            '6': str(stats[3] if stats else 0),
+            '7': str(stats[4] if stats else 0),
+            '8': str(stats[5] if stats else 0),
+            '9': str(stats[6] if stats else 0),
+            '10': str(stats[7] if stats else 0),
+            '11': str(stats[8] if stats else 0),
+            '12': str(stats[9] if stats else 0),
+            '13': total_bank_str,
+            '14': total_cash_str,
             'name': name,
             'date': today_str,
             'active_staff': str(stats[0] if stats else 0),
@@ -1373,19 +1631,63 @@ def send_staff_morning_leadership(
             'overdue_leads': str(stats[4] if stats else 0),
             'open_tickets': str(stats[5] if stats else 0),
             'closed_today': str(stats[6] if stats else 0),
+            'new_leads_overall': str(stats[7] if stats else 0),
+            'yesterday_new_leads': str(stats[8] if stats else 0),
+            'yesterday_lost_leads': str(stats[9] if stats else 0),
+            'total_bank_balance': total_bank_str,
+            'total_cash_balance': total_cash_str,
+            'bank_balances_block': bank_balances_block,
+            'cash_balances_block': cash_balances_block,
             'portal_url': f"{portal_base_url}/staff/dashboard",
         }
 
-        result = send_auto_whatsapp(
+        # ── TRIGGER 1: Official Meta WhatsApp Cloud API ───────────────────────
+        meta_result = send_auto_whatsapp(
             db=db,
             event_key='staff_morning_leadership',
             phone=phone,
             context=context,
             staff_id=getattr(staff_employee, 'id', None),
         )
-        logger.info("[WA-LEADERSHIP-MORNING] %s (%s): %s", name, phone,
-                    "OK" if result.get("success") else result.get("reason", "FAIL"))
-        return result
+
+        # ── TRIGGER 2: Scanned WhatsApp Bot (Rich Multi-Line Breakdown) ───────
+        rendered_msg = (
+            f"🏢 Good morning, {name}!\n\n"
+            f"📅 *{today_str}* — Team Snapshot 📊\n\n"
+            f"👥 Active Staff: {context['active_staff']}\n"
+            f"📋 Open Tasks: {context['open_tasks']} | ⚠️ Overdue: {context['overdue_tasks']}\n"
+            f"🎫 Open Tickets: {context['open_tickets']} | ✅ Closed Today: {context['closed_today']}\n\n"
+            f"📞 *Leads Performance:*\n"
+            f"• Open Leads: {context['open_leads']} | 🔴 Follow-up Due: {context['overdue_leads']}\n"
+            f"• New Leads (Overall): {context['new_leads_overall']}\n"
+            f"• Yesterday New: {context['yesterday_new_leads']} | Yesterday Lost: {context['yesterday_lost_leads']}\n\n"
+            f"🏦 *Bank Balances (Company-wise):*\n"
+            f"{context['bank_balances_block']}\n\n"
+            f"💵 *Cash Balances (Person-wise):*\n"
+            f"{context['cash_balances_block']}\n\n"
+            f"Drive the team forward! 🚀\n"
+            f"🔗 {context['portal_url']}"
+        )
+        logger.info("[WA-LEADERSHIP-MORNING] Dual-dispatch: Triggering rich Scanned WhatsApp breakdown for %s (%s)", name, phone)
+        scanned_result = dispatch_scanned_lead_fallback(
+            db=db,
+            phone=phone,
+            message=rendered_msg,
+            staff_id=getattr(staff_employee, 'id', None),
+            event_key='staff_morning_leadership_scanned',
+            reason="Dual Trigger: Leadership Snapshot Rich Breakdown"
+        )
+
+        is_success = bool((meta_result and meta_result.get("success")) or (scanned_result and scanned_result.get("success")))
+        logger.info("[WA-LEADERSHIP-MORNING] %s (%s): Meta=%s, Scanned=%s",
+                    name, phone,
+                    "OK" if (meta_result and meta_result.get("success")) else (meta_result.get("reason") if meta_result else "FAIL"),
+                    "OK" if (scanned_result and scanned_result.get("success")) else (scanned_result.get("reason") if scanned_result else "FAIL"))
+        return {
+            "success": is_success,
+            "meta_result": meta_result,
+            "scanned_result": scanned_result
+        }
 
     except Exception as e:
         logger.error("[WA-LEADERSHIP-MORNING] Error for %s: %s", name, e)

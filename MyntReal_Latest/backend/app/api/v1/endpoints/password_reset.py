@@ -83,14 +83,30 @@ async def forgot_password(
                     user_name=user.name
                 )
                 
-                if result['success']:
+                if result.get('success'):
                     return {
                         "success": True,
                         "message": f"Password reset code sent to your WhatsApp number ending in {mobile_number[-4:]}",
                         "otp_sent": True
                     }
+                else:
+                    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                    otp_msg = f"🔐 Your MyntReal verification code is *{reset_code}*. Valid for 10 minutes. For your security, do not share this OTP with anyone.\n\n*— MyntReal Security Team*"
+                    fb = dispatch_scanned_lead_fallback(db=db, phone=mobile_number, message=otp_msg, event_key="whatsapp_otp", reason="Meta OTP unconfirmed")
+                    if fb.get("success"):
+                        return {
+                            "success": True,
+                            "message": f"Password reset code sent to your WhatsApp number ending in {mobile_number[-4:]}",
+                            "otp_sent": True
+                        }
             except Exception as e:
                 print(f"Error sending WhatsApp OTP: {str(e)}")
+                try:
+                    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                    otp_msg = f"🔐 Your MyntReal verification code is *{reset_code}*. Valid for 10 minutes. For your security, do not share this OTP with anyone.\n\n*— MyntReal Security Team*"
+                    dispatch_scanned_lead_fallback(db=db, phone=mobile_number, message=otp_msg, event_key="whatsapp_otp", reason=f"Meta OTP exception: {e}")
+                except Exception:
+                    pass
     
     # Generic response for security (don't reveal if user exists)
     return {
@@ -341,9 +357,19 @@ async def portal_forgot_password(
 
         try:
             wa = WhatsAppService(db)
-            wa.send_otp(mobile_number=phone, otp_code=otp, user_name=display_name or "User")
+            res = wa.send_otp(mobile_number=phone, otp_code=otp, user_name=display_name or "User")
+            if not res or not res.get("success"):
+                from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                otp_msg = f"🔐 Your VGK4U verification code is *{otp}*. Valid for 10 minutes. For your security, do not share this OTP with anyone.\n\n*— VGK4U Security Team*"
+                dispatch_scanned_lead_fallback(db=db, phone=phone, message=otp_msg, event_key="whatsapp_otp", reason="Meta OTP unconfirmed")
         except Exception as _we:
             print(f"[DC-OTP] WA send error: {_we}")
+            try:
+                from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                otp_msg = f"🔐 Your VGK4U verification code is *{otp}*. Valid for 10 minutes. For your security, do not share this OTP with anyone.\n\n*— VGK4U Security Team*"
+                dispatch_scanned_lead_fallback(db=db, phone=phone, message=otp_msg, event_key="whatsapp_otp", reason=f"Meta send exception: {_we}")
+            except Exception:
+                pass
 
         # [DC-VGK-CHANNEL-001] For VGK portal: send channel links as a follow-up free-form message
         if portal == "vgk_partner":

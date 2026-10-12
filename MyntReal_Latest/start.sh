@@ -69,7 +69,7 @@ if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ] && [ -d "$SCRIPT_DI
         export NODE_PATH="$SCRIPT_DIR/frontend/node_modules:$SCRIPT_DIR/backend/whatsapp-group-bot/node_modules:${NODE_PATH}"
         while true; do
             echo "[SUPERVISOR] Starting WhatsApp Bot daemon on port 5002..."
-            node server.js || true
+            node --max-old-space-size=256 server.js || true
             echo "[SUPERVISOR] WhatsApp Bot daemon exited. Restarting in 30 seconds..."
             sleep 30
         done
@@ -101,9 +101,9 @@ echo "======================================"
 while true; do
   echo "[SUPERVISOR] Starting Node.js Frontend on port ${PORT:-5000}..."
   if [ -f "server.js" ]; then
-    node server.js || true
+    node --max-old-space-size=512 server.js || true
   elif [ -f "static-server.js" ]; then
-    node static-server.js || true
+    node --max-old-space-size=512 static-server.js || true
   else
     echo "ERROR: Neither static-server.js nor server.js found in $(pwd)"
     sleep 5

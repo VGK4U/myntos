@@ -93,6 +93,7 @@
     '<i class="fas fa-book-open" style="color:#15803d;font-size:13px"></i>',
     '<select id="_lwaCatSel" onchange="window._lwaOnCatalogSelect(this.value)" style="flex:1;font-size:11.5px;font-weight:700;color:#166534;background:#fff;border:1.5px solid #86efac;border-radius:6px;padding:3px 6px;cursor:pointer;outline:none">',
     '<option value="solar">☀️ Solar Rooftop & EPC</option>',
+    '<option value="vgk4u">⭐ VGK4U (5-Vertical Catalog)</option>',
     '<option value="industrial_hub">🏢 MyntReal Hub (5-in-1 Franchise)</option>',
     '<option value="hub_pricing">🏷️ Hub Commercials & Pricing (24h)</option>',
     '<option value="ev_b2b">🚚 Commercial EV Fleet & Cargo (B2B)</option>',
@@ -371,6 +372,46 @@
       _s.name = item.name;
       _s.leadId = item.lead_id || null;
       _s.partnerId = item.partner_id || null;
+      if (item.company_id) _s.companyId = item.company_id;
+      if (item.category) _s.category = item.category;
+
+      var autoCatKey = '';
+      var autoSeg = '';
+      var cidStr = String(_s.companyId || '').trim();
+      var cCatStr = String(_s.category || '').toLowerCase();
+      if (cidStr === '4' || cCatStr.indexOf('solar') !== -1) {
+        autoCatKey = 'solar';
+        autoSeg = 'solar';
+      } else if (cidStr === '2' || cCatStr.indexOf('ev') !== -1) {
+        autoCatKey = 'ev_b2c';
+        autoSeg = 'ev_b2c';
+      } else if (cidStr === '1' || cCatStr.indexOf('real') !== -1 || cCatStr.indexOf('dream') !== -1) {
+        autoCatKey = 'real_estate';
+        autoSeg = 'real_estate';
+      } else if (cCatStr.indexOf('insur') !== -1) {
+        autoCatKey = 'insurance';
+        autoSeg = 'insurance';
+      } else if (cCatStr.indexOf('etc') !== -1 || cCatStr.indexOf('train') !== -1) {
+        autoCatKey = 'etc_training';
+        autoSeg = 'etc_training';
+      } else if (cidStr === '88' || cCatStr.indexOf('vgk') !== -1) {
+        autoCatKey = 'vgk4u';
+        autoSeg = 'vgk';
+      }
+
+      if (autoCatKey) {
+        _selectedCatalogKey = autoCatKey;
+        var catSelEl = document.getElementById('_lwaCatSel');
+        if (catSelEl) catSelEl.value = autoCatKey;
+        _onCatalogSelect(autoCatKey);
+        if (autoSeg) {
+          var segEl = document.getElementById('_lwaSeg');
+          if (segEl) {
+            segEl.value = autoSeg;
+            _loadTpls();
+          }
+        }
+      }
 
       var sub = document.getElementById('_lwaSub');
       if (sub) {
@@ -890,15 +931,29 @@
     return '\n\nRegards,\nStaff\n📞 +91 85858 52738 | +91 8897797667';
   }
 
-  function _getVerticalQuickMessage(action, customerName, context) {
+  function _getVerticalQuickMessage(action, customerName, context, companyId, category) {
     var cName = (customerName || 'Customer').trim();
     var ctx = (context || '').toLowerCase();
+    var cId = String(companyId || (_s && _s.companyId) || '').trim();
+    var cat = String(category || (_s && _s.category) || '').toLowerCase();
+    var curCatKey = (_selectedCatalogKey || '').toLowerCase();
+
     var vertical = 'general';
-    if (ctx.indexOf('solar') !== -1) vertical = 'solar';
-    else if (ctx.indexOf('real') !== -1 || ctx.indexOf('property') !== -1 || ctx.indexOf('estate') !== -1) vertical = 'real_estate';
-    else if (ctx.indexOf('insur') !== -1 || ctx.indexOf('care') !== -1) vertical = 'insurance';
-    else if (ctx.indexOf('ev') !== -1 || ctx.indexOf('spare') !== -1 || ctx.indexOf('zynova') !== -1 || ctx.indexOf('vehicle') !== -1) vertical = 'ev';
-    else if (ctx.indexOf('etc') !== -1 || ctx.indexOf('train') !== -1 || ctx.indexOf('skill') !== -1) vertical = 'etc';
+    if (cId === '4' || cat.indexOf('solar') !== -1 || ctx.indexOf('solar') !== -1 || curCatKey === 'solar') {
+      vertical = 'solar';
+    } else if (cId === '2' || cat.indexOf('ev') !== -1 || ctx.indexOf('ev') !== -1 || ctx.indexOf('spare') !== -1 || curCatKey.indexOf('ev') !== -1) {
+      vertical = 'ev';
+    } else if (cId === '1' || cat.indexOf('real') !== -1 || cat.indexOf('property') !== -1 || cat.indexOf('estate') !== -1 || cat.indexOf('dream') !== -1 || ctx.indexOf('real') !== -1 || ctx.indexOf('property') !== -1 || ctx.indexOf('estate') !== -1 || curCatKey === 'real_estate') {
+      vertical = 'real_estate';
+    } else if (cat.indexOf('insur') !== -1 || cat.indexOf('care') !== -1 || ctx.indexOf('insur') !== -1 || ctx.indexOf('care') !== -1 || curCatKey === 'insurance') {
+      vertical = 'insurance';
+    } else if (cat.indexOf('etc') !== -1 || cat.indexOf('train') !== -1 || cat.indexOf('skill') !== -1 || ctx.indexOf('etc') !== -1 || ctx.indexOf('train') !== -1 || curCatKey === 'etc_training') {
+      vertical = 'etc';
+    } else if (curCatKey === 'industrial_hub' || ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.indexOf('franchise') !== -1 && ctx.indexOf('softphone') === -1)) {
+      vertical = 'industrial_hub';
+    } else if (curCatKey === 'vgk4u' || cId === '88' || cat.indexOf('vgk') !== -1) {
+      vertical = 'vgk4u';
+    }
 
     if (action === 'thanks_connecting') {
       switch (vertical) {
@@ -912,8 +967,14 @@
           return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal EV & Spares గురించి మాతో కనెక్ట్ అయినందుకు ధన్యవాదాలు. లేటెస్ట్ ఎలక్ట్రిక్ వెహికల్ మోడల్స్, రేంజ్, బ్యాటరీ వారంటీ, ఫైనాన్స్ ఆప్షన్స్ మరియు టెస్ట్ రైడ్ వివరాలను మా ఈవీ స్పెషలిస్ట్ మీకు త్వరలోనే అందిస్తారు.\n\n⚡ మా అధికారిక ఈవీ ప్రైసింగ్ & క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/ev-b2c-pricing?lang=te';
         case 'etc':
           return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal ETC Skill Training ప్రోగ్రామ్స్ గురించి మాట్లాడినందుకు ధన్యవాదాలు. మీ కెరీర్ గ్రోత్‌కు అవసరమైన సర్టిఫైడ్ ట్రైనింగ్ కోర్సులు, బ్యాచ్ టైమింగ్స్ మరియు జాబ్ అసిస్టెన్స్ వివరాలు మా కోఆర్డినేటర్ మీకు పంపిస్తారు.\n\n🎓 మా అధికారిక ఈటీసీ సర్టిఫికేషన్ ప్రోగ్రామ్స్:\n👉 https://www.myntreal.com/catalog/etc-training/etc-renewable-certifications?lang=te';
+        case 'industrial_hub':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Hub (5-in-1 ఇన్వెస్టర్ ఫ్రాంచైజ్) గురించి మాట్లాడినందుకు ధన్యవాదాలు. ఒకే హబ్‌లో EV, Solar, Insurance, Real Estate & Training వ్యాపార అవకాశాలు మరియు ₹12–15 లక్షల పెట్టుబడిపై అత్యుత్తమ రాబడుల వివరాలు మా ఫ్రాంచైజ్ టీమ్ మీకు అందిస్తారు.\n\n🏢 మా అధికారిక హబ్ ఫ్రాంచైజ్ క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te';
+        case 'vgk4u':
         default:
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!';
+          if (cId === '4') {
+            return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Solar Rooftop గురించి మాతో మాట్లాడినందుకు ధన్యవాదాలు. మీ ఇంటి లేదా కమర్షియల్ కరెంట్ బిల్లును 90% వరకు తగ్గించుకుంటూ, Government Subsidy పొందే పూర్తి వివరాలు & Customized Solar Quotation త్వరలోనే మా సోలార్ ఎక్స్‌పర్ట్ మీకు షేర్ చేస్తారు. ఏవైనా డౌట్స్ ఉంటే దయచేసి ఇక్కడ మెసేజ్ చేయండి.\n\n☀️ మా అధికారిక సోలార్ క్యాటలాగ్ & సబ్సిడీ వివరాలు:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te';
+          }
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal & VGK4U తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\n👉 https://www.myntreal.com/catalog/vgk4u?lang=te\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!';
       }
     } else {
       switch (vertical) {
@@ -927,14 +988,20 @@
           return 'నమస్కారం ' + cName + ' గారు! 📞 మీ EV Vehicle & Spares ఎంక్వైరీ కోసం MyntReal నుండి కాల్ చేశాము, మాట్లాడటం వీలుపడలేదు. మీరు వీలైనప్పుడు రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. టెస్ట్ రైడ్ మరియు మోడల్స్ వివరాలు మీకు తెలియజేస్తాము.\n\n⚡ ఈవీ మోడల్స్ & ప్రైసింగ్:\n👉 https://www.myntreal.com/catalog/ev-b2c-pricing?lang=te';
         case 'etc':
           return 'నమస్కారం ' + cName + ' గారు! 📞 మీ ETC Skill Training కోర్సు వివరాల కోసం MyntReal నుండి కాల్ చేశాము, కాల్ కనెక్ట్ అవ్వలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి మెసేజ్ చేయండి. అప్‌కమింగ్ బ్యాచ్ టైమింగ్స్ మరియు ఫీజు వివరాలు చర్చిద్దాం.\n\n🎓 ట్రైనింగ్ కోర్సులు:\n👉 https://www.myntreal.com/catalog/etc-training/etc-renewable-certifications?lang=te';
+        case 'industrial_hub':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ MyntReal Hub ఫ్రాంచైజ్ ఎంక్వైరీ కోసం ఇప్పుడే కాల్ చేశాము, కానీ మాట్లాడటం వీలుపడలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి.\n\n🏢 మా హబ్ ఫ్రాంచైజ్ వివరాలు:\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te';
+        case 'vgk4u':
         default:
-          return 'నమస్కారం ' + cName + ' గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!';
+          if (cId === '4') {
+            return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Solar Rooftop ఎంక్వైరీ కోసం MyntReal నుండి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి. సోలార్ సబ్సిడీ మరియు సేవింగ్స్ వివరాలు తెలియజేస్తాము.\n\n☀️ మా సోలార్ క్యాటలాగ్ ఇక్కడ చూడండి:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te';
+          }
+          return 'నమస్కారం ' + cName + ' గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\n👉 https://www.myntreal.com/catalog/vgk4u?lang=te\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!';
       }
     }
   }
 
   function _applyQuick(action) {
-    var msg = _getVerticalQuickMessage(action, _s.name, _s.context || '');
+    var msg = _getVerticalQuickMessage(action, _s.name, _s.context || '', _s.companyId, _s.category);
     var sig = _getStaffSignature();
     var msgBox = document.getElementById('_lwaMsg');
     if (msgBox) {
@@ -1536,6 +1603,64 @@
             'முழு விலை மற்றும் வருவாய் விவரங்களை அறிய மேலே உள்ள இணைப்பை கிளிக் செய்யவும்.';
         }
       }
+    },
+    vgk4u: {
+      name: 'VGK4U (5 High-Growth Verticals)',
+      btnLabel: 'VGK4U 5-Vertical',
+      segmentSlug: 'vgk4u',
+      catalogSlug: '',
+      brochureUrl: '/catalog/mnr-catalog-web.pdf',
+      desc: 'Sends official VGK4U 5-Vertical Business Journey catalog: Solar Rooftop, Manthra EV, Real Estate, Insurance & Training.',
+      messages: {
+        te: function(cName, url) {
+          return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
+            '🌟 *VGK4U — 5 హై-గ్రోత్ బిజినెస్ వర్టికల్స్ అధికారిక డిజిటల్ క్యాటలాగ్:*\n' +
+            '👉 ' + url + '\n\n' +
+            '✨ *మా 5 ప్రధాన విభాగాలు:*\n' +
+            '• ☀️ *హర్ ఘర్ సోలార్:* 90% కరెంట్ బిల్లు ఆదా & ₹78,000 Govt సబ్సిడీ\n' +
+            '• 🛵 *మంత్ ఈవీ & స్పేర్స్:* స్మార్ట్ ఎలక్ట్రిక్ బైక్స్, ఫాస్ట్ ఛార్జర్లు & బ్యాటరీలు\n' +
+            '• 🏡 *రియల్ డ్రీమ్స్:* 100% వెరిఫైడ్ RERA గేటెడ్ లేఅవుట్లు & సోలార్ టౌన్‌షిప్స్\n' +
+            '• 🛡️ *VGK కేర్ ఇన్సూరెన్స్:* మోటార్, సోలార్ & హెల్త్ రిస్క్ ప్రొటెక్షన్\n' +
+            '• 🎓 *ETC ట్రైనింగ్ సెంటర్:* అధునాతన ఈవీ & రెన్యూవబుల్ స్కిల్ సర్టిఫికేషన్స్\n\n' +
+            'పై లింక్ క్లిక్ చేసి పూర్తి వివరాలు మరియు అవకాశాలను చూడగలరు.';
+        },
+        en: function(cName, url) {
+          return 'Namaskaram ' + cName + '! 🙏\n\n' +
+            '🌟 *VGK4U — 5 High-Growth Business Verticals Official Digital Catalog:*\n' +
+            '👉 ' + url + '\n\n' +
+            '✨ *Our 5 Core Verticals:*\n' +
+            '• ☀️ *Har Ghar Solar:* Up to 90% power bill savings & ₹78,000 Govt subsidy\n' +
+            '• 🛵 *Manthra EV & Spares:* Smart electric 2W, fast chargers & battery tech\n' +
+            '• 🏡 *Real Dreams:* 100% verified RERA gated townships & properties\n' +
+            '• 🛡️ *VGK Care Insurance:* Motor, solar plant EPC & cashless health coverage\n' +
+            '• 🎓 *ETC Training Centre:* Certified renewable energy & EV technicians\n\n' +
+            'Click the link above to explore all verticals & services.';
+        },
+        hi: function(cName, url) {
+          return 'नमस्ते ' + cName + ' जी! 🙏\n\n' +
+            '🌟 *VGK4U — 5 प्रमुख व्यावसायिक कार्यक्षेत्र डिजिटल कैटलॉग:*\n' +
+            '👉 ' + url + '\n\n' +
+            '✨ *मुख्य वर्टिकल्स:*\n' +
+            '• ☀️ *हर घर सोलर:* बिजली बिल में 90% बचत एवं ₹78,000 सरकारी सब्सिडी\n' +
+            '• 🛵 *मंत्रा ईवी एवं स्पेयर पार्ट्स:* आधुनिक इलेक्ट्रिक वाहन और चार्जर\n' +
+            '• 🏡 *रियल ड्रीम्स:* सत्यापित रेरा प्रमाणित गेटेड प्लॉट्स और टाउनशिप\n' +
+            '• 🛡️ *वीजीకే केयर बीमा:* वाहन, सोलर प्लांट एवं स्वास्थ्य सुरक्षा\n' +
+            '• 🎓 *ईटीसी ट्रेनिंग:* तकनीकी कौशल प्रशिक्षण एवं सर्टिफिकेशन्स\n\n' +
+            'कृपया ऊपर दिए गए लिंक पर क्लिक करके पूरी जानकारी देखें।';
+        },
+        ta: function(cName, url) {
+          return 'வணக்கம் ' + cName + '! 🙏\n\n' +
+            '🌟 *VGK4U — 5 முதன்மை வணிக துறைகள் டிஜிட்டல் கேட்லாக்:*\n' +
+            '👉 ' + url + '\n\n' +
+            '✨ *முக்கிய பிரிவுகள்:*\n' +
+            '• ☀️ *ஹர் கர் சோலார்:* 90% மின் கட்டண சேமிப்பு & ₹78,000 அரசு மானியம்\n' +
+            '• 🛵 *மாந்த்ரா இ-வாகனங்கள்:* நவீன மின்சார வாகனங்கள் & பேட்டரிகள்\n' +
+            '• 🏡 *ரியல் ட்ரீம்ஸ்:* அங்கீகரிக்கப்பட்ட சொத்துக்கள் & டவுன்ஷிப்\n' +
+            '• 🛡️ *VGK கேர் காப்பீடு:* வாகனம், சோலார் மற்றும் மருத்துவ பாதுகாப்பு\n' +
+            '• 🎓 *ETC பயிற்சி:* திறன் மேம்பாட்டு சான்றிதழ் படிப்புகள்\n\n' +
+            'முழு விவரங்களையும் காண மேலே உள்ள இணைப்பைக் கிளிக் செய்க.';
+        }
+      }
     }
   };
 
@@ -1573,7 +1698,12 @@
         origin = wOrigin;
       }
     }
-    var catalogUrl = origin + '/catalog/' + cat.segmentSlug + '/' + cat.catalogSlug + '?lang=' + encodeURIComponent(lang || 'te');
+    var catalogUrl = '';
+    if (cat.catalogSlug) {
+      catalogUrl = origin + '/catalog/' + cat.segmentSlug + '/' + cat.catalogSlug + '?lang=' + encodeURIComponent(lang || 'te');
+    } else {
+      catalogUrl = origin + '/catalog/' + cat.segmentSlug + '?lang=' + encodeURIComponent(lang || 'te');
+    }
     if (catKey === 'hub_pricing' && !catalogUrl.includes('exp=')) {
       catalogUrl += '&exp=' + (Math.floor(Date.now() / 1000) + 86400);
     }
@@ -1687,11 +1817,24 @@
     var cleanP = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
 
     var ctxObj = (typeof context === 'object' && context !== null) ? context : {};
-    var ctxStr = (typeof context === 'string') ? context : (ctxObj.catalogKey || ctxObj.segmentCode || '');
+    var ctxStr = (typeof context === 'string') ? context : (ctxObj.catalogKey || ctxObj.source || ctxObj.segmentCode || '');
     var catalogId = ctxObj.catalogId || null;
     var forcedCatKey = ctxObj.catalogKey || null;
+    var passedCategory = ctxObj.category || '';
+    var effectiveCompId = companyId || ctxObj.companyId || null;
 
-    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '', context: ctxStr, catalogId: catalogId };
+    _s = {
+      leadId: leadId,
+      phone: cleanP,
+      name: name,
+      companyId: effectiveCompId,
+      category: passedCategory,
+      mode: 'scanned',
+      tpls: [],
+      bodyTpl: '',
+      context: ctxStr,
+      catalogId: catalogId
+    };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + _maskPhone(cleanP)) : '');
@@ -1711,46 +1854,107 @@
     var searchRes = document.getElementById('_lwaSearchResults');
     if (searchRes) { searchRes.innerHTML = ''; searchRes.style.display = 'none'; }
 
+    /* Clean context: strip UI origin tokens like 'softphone_hub', 'softphone_history_drawer' */
+    var ctxLower = (ctxStr || '').toLowerCase();
+    var ctxClean = ctxLower.replace(/softphone_[a-z_]+/g, '').replace(/softphone/g, '').trim();
+
     /* Contextual catalog & segment auto-selection (always editable by user) */
     var initialSeg = '';
-    var initialCatKey = forcedCatKey || 'solar';
-    var ctxLower = (ctxStr || '').toLowerCase();
+    var initialCatKey = forcedCatKey || '';
+    var cIdStr = String(effectiveCompId || '').trim();
+    var catLower = String(passedCategory || '').toLowerCase();
+
     if (!forcedCatKey) {
-      if (ctxLower.indexOf('solar') !== -1 || companyId === 4 || companyId === '4') {
+      if (cIdStr === '4' || catLower.indexOf('solar') !== -1 || ctxClean.indexOf('solar') !== -1) {
         initialSeg = 'solar';
         initialCatKey = 'solar';
-      } else if (ctxLower.indexOf('real') !== -1 || ctxLower.indexOf('property') !== -1) {
+      } else if (cIdStr === '2' || catLower.indexOf('ev') !== -1 || ctxClean.indexOf('ev') !== -1) {
+        if (catLower.indexOf('spare') !== -1 || ctxClean.indexOf('spare') !== -1) {
+          initialSeg = 'EV_SPARES';
+          initialCatKey = 'ev_spares';
+        } else if (catLower.indexOf('b2b') !== -1 || ctxClean.indexOf('b2b') !== -1 || ctxClean.indexOf('cargo') !== -1 || ctxClean.indexOf('fleet') !== -1) {
+          initialSeg = 'ev_b2b';
+          initialCatKey = 'ev_b2b';
+        } else {
+          initialSeg = 'ev_b2c';
+          initialCatKey = 'ev_b2c';
+        }
+      } else if (cIdStr === '1' || catLower.indexOf('real') !== -1 || catLower.indexOf('dream') !== -1 || ctxClean.indexOf('real') !== -1 || ctxClean.indexOf('property') !== -1) {
         initialSeg = 'real_estate';
         initialCatKey = 'real_estate';
-      } else if (ctxLower.indexOf('spare') !== -1) {
-        initialSeg = 'EV_SPARES';
-        initialCatKey = 'ev_spares';
-      } else if (ctxLower.indexOf('cargo') !== -1 || ctxLower.indexOf('fleet') !== -1 || ctxLower.indexOf('b2b') !== -1) {
-        initialSeg = 'ev_b2b';
-        initialCatKey = 'ev_b2b';
-      } else if (ctxLower.indexOf('ev') !== -1 || companyId === 2 || companyId === '2') {
-        initialSeg = 'ev_b2c';
-        initialCatKey = 'ev_b2c';
-      } else if (ctxLower.indexOf('etc') !== -1 || ctxLower.indexOf('train') !== -1) {
+      } else if (catLower.indexOf('insur') !== -1 || ctxClean.indexOf('insur') !== -1) {
+        initialSeg = 'insurance';
+        initialCatKey = 'insurance';
+      } else if (catLower.indexOf('etc') !== -1 || catLower.indexOf('train') !== -1 || ctxClean.indexOf('etc') !== -1 || ctxClean.indexOf('train') !== -1) {
         initialSeg = 'etc_training';
         initialCatKey = 'etc_training';
-      } else if (ctxLower.indexOf('insur') !== -1) {
-        initialCatKey = 'insurance';
-      } else if (ctxLower.indexOf('pricing') !== -1 || ctxLower.indexOf('margin') !== -1 || ctxLower.indexOf('commercial') !== -1) {
+      } else if (ctxClean.indexOf('pricing') !== -1 || ctxClean.indexOf('margin') !== -1) {
+        initialSeg = 'HUB_PRICING';
         initialCatKey = 'hub_pricing';
-      } else if (ctxLower.indexOf('hub') !== -1 || ctxLower.indexOf('franchise') !== -1) {
+      } else if (ctxClean === 'industrial_hub' || ctxClean.indexOf('franchise') !== -1) {
+        initialSeg = 'HUB';
         initialCatKey = 'industrial_hub';
+      } else if (cIdStr === '88' || catLower.indexOf('vgk') !== -1 || ctxClean.indexOf('vgk') !== -1) {
+        initialSeg = 'vgk';
+        initialCatKey = 'vgk4u';
+      } else {
+        // Universal default for retail consumers: VGK4U 5-Vertical Catalog (NEVER investor franchise)
+        initialSeg = 'vgk';
+        initialCatKey = 'vgk4u';
       }
     } else {
       if (forcedCatKey === 'solar') initialSeg = 'solar';
+      else if (forcedCatKey === 'vgk4u') initialSeg = 'vgk';
       else if (forcedCatKey === 'ev_spares') initialSeg = 'EV_SPARES';
-      else if (forcedCatKey === 'ev_b2c') initialSeg = 'EV_B2C';
-      else if (forcedCatKey === 'ev_b2b') initialSeg = 'EV_B2B';
-      else if (forcedCatKey === 'etc_training') initialSeg = 'ETC';
-      else if (forcedCatKey === 'real_estate') initialSeg = 'REAL_ESTATE';
-      else if (forcedCatKey === 'insurance') initialSeg = 'INSURANCE';
+      else if (forcedCatKey === 'ev_b2c') initialSeg = 'ev_b2c';
+      else if (forcedCatKey === 'ev_b2b') initialSeg = 'ev_b2b';
+      else if (forcedCatKey === 'etc_training') initialSeg = 'etc_training';
+      else if (forcedCatKey === 'real_estate') initialSeg = 'real_estate';
+      else if (forcedCatKey === 'insurance') initialSeg = 'insurance';
       else if (forcedCatKey === 'industrial_hub') initialSeg = 'HUB';
       else if (forcedCatKey === 'hub_pricing') initialSeg = 'HUB_PRICING';
+    }
+
+    // Smart background auto-detection: if phone or leadId is present but companyId or category was unknown
+    if ((cleanP || leadId) && (!cIdStr || cIdStr === '0' || !passedCategory) && !forcedCatKey) {
+      var queryTarget = cleanP || leadId;
+      fetch('/api/v1/digital-catalogs/recipients/search?q=' + encodeURIComponent(queryTarget), { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var matched = (d && d.results && d.results.length) ? d.results[0] : null;
+          if (matched && (matched.company_id || matched.category)) {
+            if (matched.company_id) _s.companyId = matched.company_id;
+            if (matched.category) _s.category = matched.category;
+            var mCid = String(matched.company_id || '').trim();
+            var mCat = String(matched.category || '').toLowerCase();
+            var detectedKey = '';
+            var detectedSeg = '';
+            if (mCid === '4' || mCat.indexOf('solar') !== -1) {
+              detectedKey = 'solar'; detectedSeg = 'solar';
+            } else if (mCid === '2' || mCat.indexOf('ev') !== -1) {
+              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
+            } else if (mCid === '1' || mCat.indexOf('real') !== -1 || mCat.indexOf('dream') !== -1) {
+              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            } else if (mCat.indexOf('insur') !== -1) {
+              detectedKey = 'insurance'; detectedSeg = 'insurance';
+            } else if (mCat.indexOf('etc') !== -1 || mCat.indexOf('train') !== -1) {
+              detectedKey = 'etc_training'; detectedSeg = 'etc_training';
+            } else if (mCid === '88' || mCat.indexOf('vgk') !== -1) {
+              detectedKey = 'vgk4u'; detectedSeg = 'vgk';
+            }
+            if (detectedKey && detectedKey !== _selectedCatalogKey) {
+              _selectedCatalogKey = detectedKey;
+              var cSel = document.getElementById('_lwaCatSel');
+              if (cSel) cSel.value = detectedKey;
+              _onCatalogSelect(detectedKey);
+              if (detectedSeg) {
+                var sSel = document.getElementById('_lwaSeg');
+                if (sSel) { sSel.value = detectedSeg; _loadTpls(); }
+              }
+            }
+          }
+        })
+        .catch(function() {});
     }
 
     var segEl = document.getElementById('_lwaSeg');

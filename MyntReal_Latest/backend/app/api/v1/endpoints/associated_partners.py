@@ -99,7 +99,7 @@ def _get_partner(pid: int, db: Session):
 
 # ─── Staff endpoints ──────────────────────────────────────────────────────────
 @router.get('/vgk/partners')
-async def list_partners(db: Session = Depends(get_db), _=Depends(require_vgk_admin)):
+def list_partners(db: Session = Depends(get_db), _=Depends(require_vgk_admin)):
     rows = db.execute(text(
         "SELECT * FROM associated_partners_hub WHERE status != 'deleted' ORDER BY display_order ASC, id ASC"
     )).fetchall()
@@ -107,7 +107,7 @@ async def list_partners(db: Session = Depends(get_db), _=Depends(require_vgk_adm
 
 
 @router.post('/vgk/partners')
-async def create_partner(
+def create_partner(
     company_name:     str           = Body(...),
     address:          Optional[str] = Body(None),
     established_year: Optional[str] = Body(None),
@@ -134,7 +134,7 @@ async def create_partner(
 
 
 @router.patch('/vgk/partners/{partner_id}')
-async def update_partner(
+def update_partner(
     partner_id: int,
     company_name:     Optional[str] = Body(None),
     address:          Optional[str] = Body(None),
@@ -167,7 +167,7 @@ async def update_partner(
 
 
 @router.delete('/vgk/partners/{partner_id}')
-async def delete_partner(
+def delete_partner(
     partner_id: int,
     db: Session = Depends(get_db),
     _=Depends(require_vgk_admin)
@@ -195,7 +195,7 @@ async def upload_partner_logo(
 
 # ─── Public endpoints ─────────────────────────────────────────────────────────
 @router.get('/hub/partners')
-async def public_list_partners(db: Session = Depends(get_db)):
+def public_list_partners(db: Session = Depends(get_db)):
     rows = db.execute(text(
         "SELECT * FROM associated_partners_hub WHERE status='active' ORDER BY display_order ASC, id ASC"
     )).fetchall()
@@ -203,7 +203,7 @@ async def public_list_partners(db: Session = Depends(get_db)):
 
 
 @router.get('/hub/partners/{partner_id}')
-async def public_get_partner(partner_id: int, db: Session = Depends(get_db)):
+def public_get_partner(partner_id: int, db: Session = Depends(get_db)):
     row = db.execute(text(
         "SELECT * FROM associated_partners_hub WHERE id=:id AND status='active'"
     ), {'id': partner_id}).fetchone()
@@ -240,7 +240,7 @@ async def _upload_gallery_photo(file: UploadFile) -> str:
 
 # ─── Gallery — Staff endpoints ────────────────────────────────────────────────
 @router.get('/vgk/partners/{partner_id}/gallery')
-async def list_gallery(partner_id: int, db: Session = Depends(get_db), _=Depends(require_vgk_admin)):
+def list_gallery(partner_id: int, db: Session = Depends(get_db), _=Depends(require_vgk_admin)):
     _get_partner(partner_id, db)
     rows = db.execute(text(
         "SELECT * FROM partner_gallery WHERE partner_id=:pid ORDER BY display_order ASC, id ASC"
@@ -272,7 +272,7 @@ async def upload_gallery_photo(
 
 
 @router.delete('/vgk/partners/{partner_id}/gallery/{photo_id}')
-async def delete_gallery_photo(
+def delete_gallery_photo(
     partner_id: int,
     photo_id: int,
     db: Session = Depends(get_db),
@@ -291,7 +291,7 @@ async def delete_gallery_photo(
 
 # ─── Gallery — Public endpoint ────────────────────────────────────────────────
 @router.get('/hub/partners/{partner_id}/gallery')
-async def public_gallery(partner_id: int, db: Session = Depends(get_db)):
+def public_gallery(partner_id: int, db: Session = Depends(get_db)):
     row = db.execute(text(
         "SELECT id FROM associated_partners_hub WHERE id=:id AND status='active'"
     ), {'id': partner_id}).fetchone()

@@ -192,6 +192,25 @@ class WhatsAppService:
             }
         except Exception as e:
             logger.error(f"[DC-OTP-TEMPLATE-001] Meta API OTP send failed for {mobile_number}: {e}")
+            try:
+                from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                otp_msg = f"🔐 Your MyntReal / VGK4U verification code is *{otp_code}*. Valid for 10 minutes. For your security, do not share this OTP with anyone.\n\n*— Security Team*"
+                fb_res = dispatch_scanned_lead_fallback(
+                    db=self.db,
+                    phone=mobile_number,
+                    message=otp_msg,
+                    event_key="whatsapp_otp",
+                    reason=f"Meta API OTP error: {str(e)[:50]}"
+                )
+                if fb_res.get("success"):
+                    return {
+                        'success': True,
+                        'message': f'WhatsApp OTP delivered via Scanned Bot fallback for {mobile_number}',
+                        'delivery_status': 'DELIVERED_FALLBACK',
+                        'provider': fb_res.get('provider', 'SCANNED_FALLBACK')
+                    }
+            except Exception as _fb_err:
+                logger.error(f"[DC-OTP-FALLBACK] Scanned bot fallback failed: {_fb_err}")
             return {
                 'success': False,
                 'message': f'Failed to send WhatsApp OTP: {str(e)}'
@@ -851,6 +870,30 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                         full_reason = f"{err_msg}: {details}" if details else err_msg
                         ml.failure_reason = full_reason[:95] if full_reason else full_reason
 
+                    # [DC-WA-FAILOVER-001] Automated failover for critical system messages (OTP & Member Registration)
+                    # When Meta asynchronously reports failure (e.g. 131042 billing hold, 131026, policy block),
+                    # immediately failover to deliver via Scanned WhatsApp Bot Gateway
+                    try:
+                        is_critical = (
+                            ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome')
+                            or (ml.message_type and ml.message_type.startswith(('auto_', 'crm_lead_')))
+                        )
+                        if is_critical and ml.message_body and ml.mobile_number:
+                            if getattr(ml, 'status_source', None) != 'FAILOVER_DISPATCHED':
+                                from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                                fb_res = dispatch_scanned_lead_fallback(
+                                    db=db,
+                                    phone=ml.mobile_number,
+                                    message=ml.message_body,
+                                    event_key=ml.message_type or "system_failover",
+                                    reason=f"Meta async failure: {err_code or 'UNKNOWN'}"
+                                )
+                                if fb_res.get("success"):
+                                    ml.status_source = 'FAILOVER_DISPATCHED'
+                                    logger.info(f"[WA-FAILOVER] Successfully failed over {wamid} ({ml.message_type}) to Scanned WhatsApp Bot")
+                    except Exception as _fb_dispatch_err:
+                        logger.warning(f"[WA-FAILOVER] Webhook failover error for {wamid}: {_fb_dispatch_err}")
+
                 # Structured Logging
                 logger.info(f"WHATSAPP_STATUS message_id={wamid} recipient={recipient_id or ml.mobile_number} status={mapped} timestamp={status_timestamp} error_code={err_code} error_message={err_msg}")
                 
@@ -906,7 +949,11 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                     pass
                 print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
 
-            db.commit()
+            try:
+                db.commit()
+            except Exception as _commit_err:
+                db.rollback()
+                logger.warning(f"[WA-WEBHOOK] Status batch commit notice: {_commit_err}")
 
             # ── 2. Incoming messages ────────────────────────────────────────
             metadata = value.get("metadata", {})
@@ -1072,7 +1119,11 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                 except Exception as _msg_err:
                     print(f"[WA-INBOX] ⚠️ Error saving message: {_msg_err}")
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        logger.warning(f"[WA-WEBHOOK] Inbound message batch commit notice: {_commit_err}")
     return {"status": "success"}
 
 
@@ -6023,6 +6074,20 @@ def get_wa_scheduler_status(
             "today": _get_job_day_status("service_summary", d0_str),
             "latest_stats": _get_latest_job_stats("service_summary"),
             "is_active": True
+        },
+        {
+            "job_id": "staff_morning_leadership",
+            "name": "Staff Morning Leadership Snapshot (8875551666)",
+            "category": "Executive Intelligence",
+            "archetype": "leadership_snapshot",
+            "schedule": "Daily 08:00 AM IST (Mon-Sat)",
+            "next_run": "Tomorrow 08:00 AM IST" if (now_ist.hour > 8 or (now_ist.hour == 8 and now_ist.minute >= 0)) else "Today 08:00 AM IST",
+            "recipients": [{"name": "System Administrator (VGK4U Supreme)", "type": "individual", "identifier": "8875551666"}],
+            "day_2_ago": _get_job_day_status("staff_morning_leadership", d2_str),
+            "yesterday": _get_job_day_status("staff_morning_leadership", d1_str),
+            "today": _get_job_day_status("staff_morning_leadership", d0_str),
+            "latest_stats": _get_latest_job_stats("staff_morning_leadership"),
+            "is_active": True
         }
     ]
 
@@ -6455,12 +6520,38 @@ def trigger_wa_job_manual(
             )
             return {"success": True, "message": "Service Summary Report dispatched", "detail": res}
 
+        elif job_id in ("staff_morning_leadership", "staff_morning_leadership_summary"):
+            from app.services.whatsapp_auto_service import send_staff_morning_leadership
+            from app.models.staff import StaffEmployee
+            emp = db.query(StaffEmployee).filter(StaffEmployee.phone.like('%8875551666%')).first()
+            res = send_staff_morning_leadership(db, staff_employee=emp, override_phone="8875551666")
+            _record_job_trigger_audit_log(db, "staff_morning_leadership", "Staff Morning Leadership Snapshot (8875551666)", {"success": True}, staff_label)
+            return {"success": True, "message": "Staff Morning Leadership Snapshot dispatched to 8875551666", "detail": res}
+
         else:
             raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
 
     except Exception as e:
         logger.error(f"❌ [WA-SCHEDULER-TRIGGER] Error triggering job '{job_id}': {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/staff-morning-leadership/trigger", summary="Trigger Staff Morning Leadership Snapshot (to 8875551666)")
+def trigger_staff_morning_leadership_api(
+    target_phone: Optional[str] = "8875551666",
+    db: Session = Depends(get_db),
+    current_employee=Depends(_require_staff_optional)
+):
+    """
+    Triggers the live Team Snapshot (Active Staff, Tasks, Tickets, Leads, Bank Balances, Cash Balances)
+    and dispatches it dynamically to the leadership phone number (default: 8875551666).
+    """
+    from app.services.whatsapp_auto_service import send_staff_morning_leadership
+    from app.models.staff import StaffEmployee
+    clean_p = (target_phone or "8875551666").strip()
+    emp = db.query(StaffEmployee).filter(StaffEmployee.phone.like(f"%{clean_p[-10:]}%")).first()
+    res = send_staff_morning_leadership(db, staff_employee=emp, override_phone=clean_p)
+    return {"success": True, "target_phone": clean_p, "result": res}
 
 
 @router.get("/scheduler-templates/{job_id}")
@@ -8172,6 +8263,8 @@ class WABotInboundPayload(BaseModel):
     from_name: Optional[str] = None
     message_type: str = "text"
     body_text: Optional[str] = None
+    message_body: Optional[str] = None
+    caption: Optional[str] = None
     media_url: Optional[str] = None
     media_mime_type: Optional[str] = None
     media_name: Optional[str] = None
@@ -8244,7 +8337,8 @@ def ingest_bot_inbound_message(
             or_(CRMLead.phone.in_(phone_variants), CRMLead.alternate_phone.in_(phone_variants))
         ).order_by(CRMLead.id.desc()).first()
 
-        rec_lead = handle_recharge_service_lead(db, target_phone, payload.message_body or payload.caption, resolved_name)
+        inbound_text = payload.body_text or payload.message_body or payload.caption or ""
+        rec_lead = handle_recharge_service_lead(db, target_phone, inbound_text, resolved_name)
         if rec_lead and not lead:
             lead = rec_lead
 
@@ -8317,22 +8411,30 @@ def ingest_bot_inbound_message(
     db.add(inbox_entry)
 
     # 6. Persist to MessageLog for unified history and audit logs
-    log_entry = MessageLog(
-        message_sid=clean_wamid,
-        mobile_number=target_phone if is_grp else (f"91{target_phone}" if len(target_phone) == 10 else target_phone),
-        user_name=resolved_name,
-        message_type=f"scanned_{m_type}" if not is_grp else f"group_{m_type}",
-        message_body=payload.body_text or (f"[Media: {payload.media_url}]" if payload.media_url else ""),
-        provider="BAILEYS",
-        initial_status="sent" if payload.is_from_me else "received",
-        current_status="sent" if payload.is_from_me else "received",
-        sent_at=now_utc,
-        sent_by_staff_id=assigned_emp_id,
-        sender_type="staff" if payload.is_from_me else "user",
-        webhook_data=payload.raw_payload
-    )
-    db.add(log_entry)
-    db.commit()
+    existing_log = db.query(MessageLog).filter(MessageLog.message_sid == clean_wamid).first()
+    if not existing_log:
+        norm_phone = target_phone if is_grp else (f"91{target_phone}" if len(target_phone) == 10 else target_phone)
+        log_entry = MessageLog(
+            message_sid=clean_wamid,
+            mobile_number=norm_phone[:100],
+            user_name=(resolved_name or "")[:100],
+            message_type=(f"scanned_{m_type}" if not is_grp else f"group_{m_type}")[:50],
+            message_body=payload.body_text or payload.message_body or (f"[Media: {payload.media_url}]" if payload.media_url else ""),
+            provider="BAILEYS",
+            initial_status="sent" if payload.is_from_me else "received",
+            current_status="sent" if payload.is_from_me else "received",
+            sent_at=now_utc,
+            sent_by_staff_id=assigned_emp_id,
+            sender_type="staff" if payload.is_from_me else "user",
+            webhook_data=payload.raw_payload
+        )
+        db.add(log_entry)
+
+    try:
+        db.commit()
+    except Exception as commit_err:
+        db.rollback()
+        logger.warning(f"[WA-BOT-INBOUND] Commit notice for {clean_wamid}: {commit_err}")
 
     return {
         "success": True,

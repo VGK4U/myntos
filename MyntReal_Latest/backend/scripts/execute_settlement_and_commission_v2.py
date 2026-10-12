@@ -24,10 +24,10 @@ def run_settlement(db_url: str):
         conn.execute(text("""
             UPDATE vgk4u_category_commission_configs
             SET producer_base_pct = 5.00,
-                sponsor_override_pct = 1.50,
-                manager_diff_pct = 1.00,
-                gm_diff_pct = 0.50,
-                rm_diff_pct = 0.00,
+                sponsor_override_pct = 1.00,
+                manager_diff_pct = 0.50,
+                gm_diff_pct = 1.00,
+                rm_diff_pct = 1.50,
                 support_journey_pct = 0.75,
                 support_end_to_end_pct = 1.50,
                 max_network_pool_pct = 9.50,
@@ -41,9 +41,9 @@ def run_settlement(db_url: str):
         career_updates = [
             (0, 'MEMBER', 'Member', 0, 0, 0.00, 0.00),
             (1, 'CHANNEL_PARTNER', 'Channel Partner', 1, 0, 5.00, 0.00),
-            (2, 'SENIOR', 'Senior', 1, 1, 6.50, 1.50),
+            (2, 'SENIOR', 'Senior', 1, 1, 6.50, 0.50),
             (3, 'EXTENDED', 'Extended', 1, 5, 7.50, 1.00),
-            (4, 'CORE', 'Core', 1, 10, 8.00, 0.50),
+            (4, 'CORE', 'Core', 1, 10, 8.00, 1.50),
         ]
         for order, code, name, req_files, req_legs, self_pct, diff_pct in career_updates:
             # Check if row with this order exists

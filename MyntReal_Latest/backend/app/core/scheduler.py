@@ -4236,11 +4236,10 @@ def run_staff_morning_reminders():
             sent, skipped, errors = 0, 0, 0
             for emp in employees:
                 try:
-                    _role = getattr(emp, 'role', None)
-                    _level = getattr(_role, 'hierarchy_level', 0) if _role else 0
-                    _role_code = (getattr(_role, 'role_code', '') or '').lower() if _role else ''
-                    _is_leadership = _level >= 90 or _role_code in ('ea', 'key_leadership', 'vgk4u')
-                    if _is_leadership:
+                    import re as _re
+                    _phone = _re.sub(r'\D', '', str(getattr(emp, 'phone', '') or ''))
+                    _is_supreme = _phone.endswith('8875551666')
+                    if _is_supreme:
                         result = send_staff_morning_leadership(db, emp)
                     else:
                         result = send_staff_morning_reminder(db, emp)

@@ -112,9 +112,27 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         active_team_cnt = len(active_rows)
 
         paid_lead_rows = db.execute(text("""
-            SELECT DISTINCT source_lead_id FROM vgk_cash_income_entries
-            WHERE status IN ('PAID', 'RELEASED', 'CONFIRMED')
-        """)).fetchall()
+            SELECT id FROM crm_leads
+            WHERE associated_partner_id IN :dids
+              AND (
+                  first_payment_received_date IS NOT NULL
+                  OR COALESCE(deal_value_received, 0) > 0
+                  OR status = 'completed'
+                  OR solar_pipeline_status IN (
+                      'subsidy_pending', 'completed', 'installation_pending', 'installed',
+                      'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+                      'completed_paid', 'subsidy_received'
+                  )
+                  OR EXISTS (
+                      SELECT 1 FROM vgk_cash_income_entries vci 
+                      WHERE vci.source_lead_id = crm_leads.id AND vci.status IN ('PAID', 'RELEASED', 'CONFIRMED')
+                  )
+                  OR EXISTS (
+                      SELECT 1 FROM vgk_solar_cibil_advances vsa 
+                      WHERE vsa.lead_id = crm_leads.id AND vsa.status IN ('PAID', 'RELEASED', 'CONFIRMED', 'STAGE1_APPROVED', 'STAGE2_PAID')
+                  )
+              )
+        """), {'dids': tuple(downline_ids)}).fetchall()
         paid_lead_set = set(r[0] for r in paid_lead_rows if r[0])
 
         downline_paid_counts = {}
@@ -136,7 +154,15 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         SELECT 1 FROM crm_leads cl
         WHERE cl.associated_partner_id = :pid
           AND (
-            EXISTS (
+            cl.first_payment_received_date IS NOT NULL
+            OR COALESCE(cl.deal_value_received, 0) > 0
+            OR cl.status = 'completed'
+            OR cl.solar_pipeline_status IN (
+                'subsidy_pending', 'completed', 'installation_pending', 'installed',
+                'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+                'completed_paid', 'subsidy_received'
+            )
+            OR EXISTS (
               SELECT 1 FROM vgk_cash_income_entries vci 
               WHERE vci.source_lead_id = cl.id AND vci.status IN ('PAID', 'RELEASED', 'CONFIRMED')
             )
@@ -215,8 +241,8 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         effective_desig = 'Regional Manager'
 
     eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
-    resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.0 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.5 else 0 if eff_rate < 5.0 else 0
-    resolved_amt = 18000.0 if eff_rate >= 9.0 else 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
+    resolved_stars = 4 if eff_rate >= 8.0 else 3 if eff_rate >= 7.5 else 2 if eff_rate >= 6.5 else 1 if eff_rate >= 5.0 else 0
+    resolved_amt = 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
 
     return {
         "partner_id": partner_id,
@@ -270,12 +296,25 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
         downlines_map[pid] = dids
         all_downline_pids.update(dids)
         
-    # 2. Fetch all paid lead IDs once
+    # 2. Fetch all paid lead IDs once (paid means at least 1 payment received)
     paid_lead_rows = db.execute(text("""
+        SELECT id FROM crm_leads
+        WHERE first_payment_received_date IS NOT NULL
+           OR COALESCE(deal_value_received, 0) > 0
+           OR status = 'completed'
+           OR solar_pipeline_status IN (
+               'subsidy_pending', 'completed', 'installation_pending', 'installed',
+               'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+               'completed_paid', 'subsidy_received'
+           )
+        UNION
         SELECT DISTINCT source_lead_id FROM vgk_cash_income_entries
         WHERE status IN ('PAID', 'RELEASED', 'CONFIRMED') AND source_lead_id IS NOT NULL
+        UNION
+        SELECT DISTINCT lead_id FROM vgk_solar_cibil_advances
+        WHERE status IN ('PAID', 'RELEASED', 'CONFIRMED', 'STAGE1_APPROVED', 'STAGE2_PAID') AND lead_id IS NOT NULL
     """)).fetchall()
-    paid_lead_set = {r[0] for r in paid_lead_rows}
+    paid_lead_set = {r[0] for r in paid_lead_rows if r[0]}
     
     # 3. Fetch all leads associated with any downline partner in ONE query
     downline_leads_map = defaultdict(list)
@@ -294,7 +333,15 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
         FROM crm_leads cl
         WHERE cl.associated_partner_id = ANY(:pids)
           AND (
-            EXISTS (
+            cl.first_payment_received_date IS NOT NULL
+            OR COALESCE(cl.deal_value_received, 0) > 0
+            OR cl.status = 'completed'
+            OR cl.solar_pipeline_status IN (
+                'subsidy_pending', 'completed', 'installation_pending', 'installed',
+                'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+                'completed_paid', 'subsidy_received'
+            )
+            OR EXISTS (
               SELECT 1 FROM vgk_cash_income_entries vci 
               WHERE vci.source_lead_id = cl.id AND vci.status IN ('PAID', 'RELEASED', 'CONFIRMED')
             )
@@ -403,8 +450,8 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
             effective_desig = 'Regional Manager'
 
         eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
-        resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.0 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.5 else 0 if eff_rate < 5.0 else 0
-        resolved_amt = 18000.0 if eff_rate >= 9.0 else 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
+        resolved_stars = 4 if eff_rate >= 8.0 else 3 if eff_rate >= 7.5 else 2 if eff_rate >= 6.5 else 1 if eff_rate >= 5.0 else 0
+        resolved_amt = 16000.0 if eff_rate >= 8.0 else 15000.0 if eff_rate >= 7.5 else 13000.0 if eff_rate >= 6.5 else 10000.0 if eff_rate >= 5.0 else 0.0
 
         results[partner_id] = {
             "partner_id": partner_id,

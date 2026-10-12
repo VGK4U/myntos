@@ -628,20 +628,38 @@ def list_vgk_members(
             query = query.filter(OfficialPartner.last_contact_at < max_dt, OfficialPartner.last_contact_at.isnot(None))
         elif cd in ('never', 'none'):
             query = query.filter(OfficialPartner.last_contact_at.is_(None))
-    # [DC-VGK-BLOCKED-001] Status filter (Active / Inactive / Blocked)
+    # [DC-VGK-BLOCKED-001] Status filter (Active / Deactivated / All)
     if isinstance(status, str) and status.strip():
         st = status.strip().lower()
-        if st == 'blocked':
+        if st in ('blocked',):
             query = query.filter(OfficialPartner.is_blocked == True)
-        elif st == 'active':
-            query = query.filter(OfficialPartner.is_active == True, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
-        elif st == 'inactive':
-            query = query.filter(OfficialPartner.is_active == False, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+        elif st in ('deactivated', 'inactive'):
+            query = query.filter(or_(
+                OfficialPartner.is_active == False,
+                OfficialPartner.is_blocked == True,
+                OfficialPartner.member_status.in_(['INACTIVE', 'BLOCKED'])
+            ))
+        elif st in ('active',):
+            query = query.filter(
+                OfficialPartner.is_active == True,
+                or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
+                or_(OfficialPartner.member_status.is_(None), OfficialPartner.member_status != 'BLOCKED')
+            )
+        elif st in ('all', '*'):
+            pass  # Show all members without status restriction
     elif isinstance(is_active, bool):
         if is_active:
-            query = query.filter(OfficialPartner.is_active == True, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+            query = query.filter(
+                OfficialPartner.is_active == True,
+                or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
+                or_(OfficialPartner.member_status.is_(None), OfficialPartner.member_status != 'BLOCKED')
+            )
         else:
-            query = query.filter(OfficialPartner.is_active == False, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+            query = query.filter(or_(
+                OfficialPartner.is_active == False,
+                OfficialPartner.is_blocked == True,
+                OfficialPartner.member_status.in_(['INACTIVE', 'BLOCKED'])
+            ))
     if isinstance(search, str) and search.strip():
         term = f"%{search.strip()}%"
         query = query.filter(or_(
@@ -2431,10 +2449,11 @@ def create_vgk_member(
                     "2": member.partner_name or "Member",
                     "3": member.partner_code,
                     "4": "Welcome@VGK",
-                    "5": "https://www.vgk4u.com/vgk/login",
+                    "5": "https://www.vgk4u.com/vgk/login\n\n📖 Explore Official Business Catalogue:\n👉 https://www.vgk4u.com/catalog/vgk4u",
                     "name": member.partner_name or "Member",
                     "member_id": member.partner_code,
                     "login_url": "https://www.vgk4u.com/vgk/login",
+                    "catalog_url": "https://www.vgk4u.com/catalog/vgk4u",
                 },
             )
     except Exception as _wa_err:
@@ -6663,7 +6682,7 @@ def fetch_member_income_entries_data(
         _extra_where += f" AND ({' OR '.join(_cond_parts)})"
     try:
         rows = db.execute(text(
-            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, "
+            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, e.company_id, e.payment_utr, "
             "  COALESCE(e.income_date::text, e.created_at::date::text, e.confirmed_at::date::text) AS entry_date, "
             "  COALESCE(e.commission_pct, 0)::float        AS commission_pct, "
             "  COALESCE(e.commission_amount, 0)::float     AS commission_amount, "
@@ -6708,6 +6727,7 @@ def fetch_member_income_entries_data(
                 _vsca_params["vsca_date_to"] = date_to
             vsca_rows = db.execute(text(
                 "SELECT a.id, a.entry_number, a.status, a.kind, a.level, "
+                "  a.company_id, NULL::text AS payment_utr, "
                 "  COALESCE(a.released_at::date, a.created_at::date)::text AS entry_date, "
                 "  0::float                AS commission_pct, "
                 "  a.advance_amount::float AS commission_amount, "
@@ -6795,6 +6815,8 @@ def fetch_member_income_entries_data(
                 "  ELSE 0 END::float AS net_payout, "
                 "  becl.lead_id AS source_lead_id, "
                 "  NULL::integer AS category_id, "
+                "  4::integer AS company_id, "
+                "  NULL::text AS payment_utr, "
                 "  0::float AS solar_value_entry, "
                 "  0::float AS cfv_raw, "
                 "  0::float AS dvt_raw "
@@ -7219,6 +7241,8 @@ def fetch_member_income_entries_data(
             "vgk_field_support_id": _li.get("vgk_field_support_id") if _li else None,
             "is_field_support":  (_li.get("vgk_field_support_id") == partner_id) if _li else False,
             "potential_overall_earning": potential_amount,
+            "company_id":        getattr(r, "company_id", 4) or 4,
+            "payment_utr":       getattr(r, "payment_utr", None),
         }
 
     for r in rows:
@@ -7861,6 +7885,7 @@ def vgk_top_partners_filtered(
 @router.get("/dashboard/top-partners-table")
 def vgk_top_partners_leaderboard_table(
     period: str = Query("overall", description="overall|today|yesterday|this_week|last_week|this_month|last_month|this_fy|custom"),
+    status_filter: str = Query("active", description="active|deactivated|all"),
     date_from: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
     date_to: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
     company_id: Optional[int] = Query(None),
@@ -7881,6 +7906,7 @@ def vgk_top_partners_leaderboard_table(
     rank and performance metrics, date presets, filters, sorting, and pagination.
     """
     period = period if isinstance(period, str) else "overall"
+    status_filter = status_filter.strip().lower() if isinstance(status_filter, str) and status_filter.strip() else "active"
     company_id = company_id if isinstance(company_id, int) else None
     category_id = category_id if isinstance(category_id, (int, str)) else None
     search = search if isinstance(search, str) else None
@@ -7928,6 +7954,12 @@ def vgk_top_partners_leaderboard_table(
     f_from, f_to = _get_dates(period)
 
     where_clauses = ["op.category = 'VGK_TEAM'"]
+    if status_filter == "active":
+        where_clauses.append("(op.is_active = TRUE AND COALESCE(op.is_blocked, FALSE) = FALSE AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED')")
+    elif status_filter in ("deactivated", "inactive", "blocked"):
+        where_clauses.append("(op.is_active = FALSE OR op.is_blocked = TRUE OR op.member_status IN ('INACTIVE', 'BLOCKED'))")
+    elif status_filter in ("all", "*"):
+        pass  # Include all members
     params: dict = {}
 
     if f_from and f_to:
@@ -8000,6 +8032,9 @@ def vgk_top_partners_leaderboard_table(
                op.partner_name,
                op.partner_code,
                (SELECT COUNT(*) FROM official_partners sub WHERE sub.parent_partner_id = op.id) AS team_added,
+               COALESCE(op.is_active, FALSE) AS is_active,
+               COALESCE(op.member_status, 'ACTIVE') AS member_status,
+               COALESCE(op.is_blocked, FALSE) AS is_blocked,
                COUNT(cl.id) AS total_leads,
                COUNT(*) FILTER (WHERE (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
                                   AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
@@ -8064,7 +8099,7 @@ def vgk_top_partners_leaderboard_table(
         LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id
         {join_staff}
         WHERE {where_sql}
-        GROUP BY op.id, op.partner_name, op.partner_code
+        GROUP BY op.id, op.partner_name, op.partner_code, op.is_active, op.member_status, op.is_blocked
     """
 
     try:
@@ -8178,7 +8213,7 @@ def vgk_top_partners_leaderboard_table(
         rpos = bulk_rpos_map.get(pid) or {}
         resolved_stars = rpos.get('stars', 1)
         resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
-        resolved_display = rpos.get('rank_display', '1★ Channel Partner')
+        resolved_display = rpos.get('rank_display', 'Channel Partner')
 
         _lm = inst_lead_map.get(pid, {"total_files": 0, "installed_files": 0})
 
@@ -8186,9 +8221,18 @@ def vgk_top_partners_leaderboard_table(
             "id": pid,
             "name": m.get("partner_name", r[1]) or "Unknown Partner",
             "code": m.get("partner_code", r[2]) or f"VGK{pid}",
+            "is_active": bool(m.get("is_active", True)),
+            "member_status": str(m.get("member_status", "ACTIVE")),
+            "is_blocked": bool(m.get("is_blocked", False)),
             "rank_num": resolved_stars,
             "rank_display": resolved_display,
             "rank_slab_pct": resolved_slab,
+            "career_designation": rpos.get('career_designation') or resolved_display,
+            "current_designation": rpos.get('current_designation') or resolved_display,
+            "effective_personal_producer_rate": rpos.get('effective_personal_producer_rate', resolved_slab),
+            "personal_prod_qualification": rpos.get('personal_prod_qualification', 'None'),
+            "active_team_legs": rpos.get('active_team_legs', 0),
+            "own_qualifying_files": rpos.get('own_qualifying_files', 0),
             "overall_payout": overall_income_map.get(pid, 0.0),
             "current_month_earning": cm_income_map.get(pid, 0.0),
             "team_income": team_income_map.get(pid, 0.0),
@@ -8251,6 +8295,9 @@ def vgk_top_partners_leaderboard_table(
         "win_rate": lambda x: x["win_rate"],
         "rank_num": lambda x: x["rank_num"],
         "current_rank": lambda x: x["rank_num"],
+        "career_designation": lambda x: str(x.get("career_designation") or "").lower(),
+        "current_designation": lambda x: str(x.get("current_designation") or "").lower(),
+        "effective_personal_producer_rate": lambda x: float(x.get("effective_personal_producer_rate") or 0.0),
         "rank_slab_pct": lambda x: x["rank_slab_pct"],
         "earning_slab": lambda x: x["rank_slab_pct"],
         "eligible_files_installed": lambda x: x["eligible_files_installed"],
@@ -8319,6 +8366,7 @@ def vgk_top_partners_leaderboard_table(
         "success": True,
         "data": {
             "period": period,
+            "status_filter": status_filter,
             "date_from": f_from.isoformat() if f_from else None,
             "date_to": f_to.isoformat() if f_to else None,
             "total_count": total_count,

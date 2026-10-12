@@ -1232,8 +1232,8 @@ def unified_list(
     # Stage 1 Approval Authority: Anushka, Nandana, Accounts Department, and Leadership
     can_stage1   = is_privileged or can_accounts or _is_anushka or _is_nandana
     
-    # Payment Authority (Mark Paid): Subash, Accounts Department, Key Leadership, and MR10001
-    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or 'finance' in dept or 'bank' in dept
+    # Payment Authority (Mark Paid): Subash, Accounts Department, Nandana, Key Leadership, and MR10001
+    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or _is_nandana or 'finance' in dept or 'bank' in dept
 
     def _actions_for(e):
         # DC-NO-RELEASE-001: Release button removed. All income flows PENDING->Stage1->Stage2(Paid).
@@ -1519,7 +1519,10 @@ def unified_action(
     )
     from decimal import Decimal
 
-    adv_cut_dec = Decimal(str(advance_cut)) if advance_cut is not None else None
+    try:
+        adv_cut_dec = Decimal(str(advance_cut)) if advance_cut is not None and not hasattr(advance_cut, 'default') else None
+    except Exception:
+        adv_cut_dec = None
 
     act = (action or '').lower().strip()
     if act not in ('confirm', 'release', 'mark_paid', 'reject', 'stage1_approve'):
@@ -1556,17 +1559,28 @@ def unified_action(
     is_privileged = is_super or _is_mr10001 or _is_subash or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
     can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept or getattr(current_employee, 'department_id', None) == 15
     can_stage1   = is_privileged or can_accounts or _is_anushka or _is_nandana
-    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or 'finance' in dept or 'bank' in dept
+    can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or _is_nandana or 'finance' in dept or 'bank' in dept
 
     if act == 'stage1_approve' and not can_stage1:
         raise HTTPException(status_code=403, detail="Unauthorized: Stage 1 approval authority is assigned to Anushka, Nandana, Accounts Department, or Leadership")
     if act == 'mark_paid' and not can_pay:
-        raise HTTPException(status_code=403, detail="Unauthorized: Payment authority is assigned to Subash, Accounts Department, Key Leadership, or MR10001")
+        raise HTTPException(status_code=403, detail="Unauthorized: Payment authority is assigned to Subash, Accounts Department, Nandana, Key Leadership, or MR10001")
 
     for target_id in ids_to_process:
         entry = db.query(VGKCashIncomeEntry).filter(
             VGKCashIncomeEntry.id == target_id,
         ).first()
+        if not entry:
+            # Fallback: check if target_id corresponds to a vgk_solar_cibil_advances row
+            try:
+                from app.services.vgk_cash_income import record_solar_advance_as_income_row
+                adv_rec = db.execute(text("SELECT * FROM vgk_solar_cibil_advances WHERE id = :aid"), {'aid': target_id}).fetchone()
+                if adv_rec:
+                    m_res = record_solar_advance_as_income_row(db, adv_rec, current_employee.id)
+                    if m_res.get('entry_id'):
+                        entry = db.query(VGKCashIncomeEntry).filter(VGKCashIncomeEntry.id == m_res['entry_id']).first()
+            except Exception as _fb_err:
+                logger.warning(f"[VGK-UNIFIED-FALLBACK] VSCA mirror fallback error: {_fb_err}")
         if not entry:
             if len(ids_to_process) == 1:
                 raise HTTPException(status_code=404, detail=f'Entry {target_id} not found')

@@ -51,8 +51,15 @@ _TEMPLATES = [
             "📅 *{{date}}* — Team Snapshot 📊\n\n"
             "👥 Active Staff: {{active_staff}}\n"
             "📋 Open Tasks: {{open_tasks}} | ⚠️ Overdue: {{overdue_tasks}}\n"
-            "📞 Open Leads: {{open_leads}} | 🔴 Follow-up Due: {{overdue_leads}}\n"
             "🎫 Open Tickets: {{open_tickets}} | ✅ Closed Today: {{closed_today}}\n\n"
+            "📞 *Leads Performance:*\n"
+            "• Open Leads: {{open_leads}} | 🔴 Follow-up Due: {{overdue_leads}}\n"
+            "• New Leads (Overall): {{new_leads_overall}}\n"
+            "• Yesterday New: {{yesterday_new_leads}} | Yesterday Lost: {{yesterday_lost_leads}}\n\n"
+            "🏦 *Bank Balances (Company-wise):*\n"
+            "{{bank_balances_block}}\n\n"
+            "💵 *Cash Balances (Person-wise):*\n"
+            "{{cash_balances_block}}\n\n"
             "Drive the team forward! 🚀\n"
             "🔗 {{portal_url}}"
         ),
@@ -62,8 +69,9 @@ _TEMPLATES = [
         "event_key": "staff_morning_leadership",
         "event_label": "Leadership Morning Team Summary",
         "event_category": "staff",
-        "example_values": ["Anjali Singh", "Wed, 07 May 2026", "24", "12", "3",
-                           "45", "8", "7", "2", "myntreal.com/staff/dashboard"],
+        "example_values": ["Anjali Singh", "Mon, 12 Oct 2026", "27", "55", "48",
+                           "79", "0", "2915", "1623", "264", "4", "0",
+                           "Bank Balances", "Cash Balances", "myntreal.com/staff/dashboard"],
     },
     {
         "slug": "myntreal_task_overdue_alert",

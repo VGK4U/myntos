@@ -8403,27 +8403,66 @@ async def edit_expense_entry_endpoint(
     Accounts/VEA roles only. Only DRAFT or SUBMITTED entries may be edited.
     """
     try:
-        from app.models.staff_accounts import ExpenseEntry as _EE
-        from app.models.expense_category import ExpenseMainCategory as _MC, ExpenseSubCategory as _SC
+        from decimal import Decimal
+        emp_code = (getattr(current_user, 'emp_code', '') or '').strip().upper()
+        is_mr10001 = (emp_code == 'MR10001')
+        is_accounts = is_accounts_allowed_employee(current_user)
+        is_privileged = is_mr10001 or is_accounts
 
-        if not is_accounts_allowed_employee(current_user):
-            return JSONResponse(status_code=403, content={"success": False, "detail": "Accounts/VEA access required"})
-
-        entry = db.query(_EE).filter(_EE.id == entry_id).first()
+        entry = db.query(ExpenseEntry).filter(ExpenseEntry.id == entry_id).first()
         if not entry:
             return JSONResponse(status_code=404, content={"success": False, "detail": "Expense entry not found"})
-        if entry.status not in ('DRAFT', 'SUBMITTED'):
-            return JSONResponse(status_code=400, content={"success": False, "detail": f"Cannot edit entry with status '{entry.status}'"})
+
+        # DC-EXPENSE-EDIT-001: Accounts Department & MR10001 can edit at ALL levels / statuses.
+        # Regular creators can only edit their own DRAFT entries.
+        if not is_privileged:
+            if entry.created_by_id != current_user.id or entry.status != 'DRAFT':
+                return JSONResponse(status_code=403, content={"success": False, "detail": "Accounts department or MR10001 access required to edit this expense"})
 
         update_fields = data.model_dump(exclude_unset=True) if data else {}
+
+        # Handle notes alias -> narration
+        if 'notes' in update_fields:
+            n_val = update_fields.pop('notes')
+            if n_val is not None and 'narration' not in update_fields:
+                update_fields['narration'] = n_val
+
+        # Status update permissions: only Accounts / MR10001 can adjust status
+        if 'status' in update_fields:
+            new_status = update_fields.pop('status')
+            if is_privileged and new_status and new_status != entry.status:
+                entry.status = new_status
+                from datetime import datetime as _dt
+                if new_status == 'PAID':
+                    entry.is_paid = True
+                    if not entry.paid_at:
+                        entry.paid_at = _dt.utcnow()
+                    if not entry.paid_by_id:
+                        entry.paid_by_id = current_user.id
+                elif new_status == 'APPROVED':
+                    if not entry.approved_at:
+                        entry.approved_at = _dt.utcnow()
+                    if not entry.approved_by_id:
+                        entry.approved_by_id = current_user.id
+                elif new_status in ('DRAFT', 'SUBMITTED'):
+                    entry.is_paid = False
+
         for field, value in update_fields.items():
             if hasattr(entry, field):
                 setattr(entry, field, value)
+
+        # Recalculate net_amount if amount, gst, or tds changed
+        if 'amount' in update_fields or 'gst_amount' in update_fields or 'tds_amount' in update_fields:
+            amt = entry.amount or Decimal('0.00')
+            gst_amt = entry.gst_amount or Decimal('0.00')
+            tds_amt = entry.tds_amount or Decimal('0.00')
+            entry.net_amount = amt + gst_amt - tds_amt
+
         from datetime import datetime as _dt
         entry.updated_at = _dt.utcnow()
         db.commit()
         db.refresh(entry)
-        return JSONResponse(content={"success": True, "message": "Expense entry updated", "entry_id": entry.id})
+        return JSONResponse(content={"success": True, "message": "Expense entry updated", "entry_id": entry.id, "status": entry.status, "amount": float(entry.amount)})
     except Exception as e:
         return handle_accounts_error(e)
 

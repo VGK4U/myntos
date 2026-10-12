@@ -58,13 +58,13 @@ class MessageLog(Base):
     
     # Message content
     message_body = Column(Text)
-    from_number = Column(String(20))
-    to_number = Column(String(30))  # whatsapp:+91XXXXXXXXXX format
+    from_number = Column(String(100))
+    to_number = Column(String(100))  # whatsapp:+91XXXXXXXXXX or group format
     
     # Delivery tracking
     provider = Column(String(50), default='TWILIO_WHATSAPP')
-    initial_status = Column(String(20))  # queued, sent, delivered, failed, etc.
-    current_status = Column(String(20))
+    initial_status = Column(String(50))  # queued, sent, delivered, failed, etc.
+    current_status = Column(String(50))
     status_source = Column(String(50), default='SYSTEM')  # 'SYSTEM', 'META_WEBHOOK', 'SYNTHETIC_TEST'
     
     # Timestamps
@@ -75,7 +75,7 @@ class MessageLog(Base):
     last_status_update = Column(DateTime, default=datetime.utcnow)
     
     # Error tracking
-    error_code = Column(String(20))
+    error_code = Column(String(50))
     error_message = Column(Text)
     failure_reason = Column(Text, nullable=True)
     webhook_data = Column(Text, nullable=True)
@@ -374,7 +374,7 @@ class WAInbox(Base):
 
     id              = Column(Integer, primary_key=True)
     wamid           = Column(String(100), unique=True, nullable=True)
-    from_phone      = Column(String(30), nullable=False, index=True)
+    from_phone      = Column(String(100), nullable=False, index=True)
     from_name       = Column(String(200), nullable=True)
     message_type    = Column(String(30), default='text')
     body_text       = Column(Text, nullable=True)

@@ -17644,6 +17644,28 @@ async def serve_scratch_card_root():
             return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
     raise HTTPException(status_code=404, detail="Scratch card page not found")
 
+@app.get("/catalog/vgk4u", include_in_schema=False)
+@app.get("/catalog/vgk4u.html", include_in_schema=False)
+@app.get("/catalog/vgk-4u", include_in_schema=False)
+@app.get("/vgk4u-catalog", include_in_schema=False)
+@app.get("/vgk4u_catalog", include_in_schema=False)
+@app.get("/vgk-catalogue", include_in_schema=False)
+@app.get("/vgk4u", include_in_schema=False)
+async def serve_vgk4u_catalog_root():
+    """
+    Dedicated VGK4U Dynamic Web Catalogue Page (Dual-Track Earning Architecture).
+    Serves frontend/vgk4u_catalog.html directly.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(_WORKSPACE_ROOT, "frontend", "vgk4u_catalog.html"),
+        os.path.join(FRONTEND_PUBLIC_DIR, "vgk4u_catalog.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    raise HTTPException(status_code=404, detail="VGK4U Catalog page not found")
+
+
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
 

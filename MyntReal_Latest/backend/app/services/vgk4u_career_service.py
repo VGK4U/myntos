@@ -34,12 +34,16 @@ DESIGNATION_REGIONAL_MANAGER = 'Core'
 
 # Canonical Personal Production Qualifications
 PROD_QUAL_NONE = 'None'
-PROD_QUAL_BASE = 'Base'
-PROD_QUAL_GM = 'GM Commission Qualified'
-PROD_QUAL_EXT = 'Extended Commission Qualified'
-PROD_QUAL_CORE = 'Core Commission Qualified'
+PROD_QUAL_BASE = 'Base Qualified (5.00%)'
+PROD_QUAL_SENIOR = 'Senior Qualified (6.50%)'
+PROD_QUAL_EXTENDED = 'Extended Qualified (7.50%)'
+PROD_QUAL_CORE = 'Core Qualified (8.00%)'
 PROD_QUAL_APEX = 'Apex Top Commission Qualified'
-PROD_QUAL_RM = 'Core Commission Qualified'
+
+# Backward-compatible aliases
+PROD_QUAL_GM = 'Senior Qualified (6.50%)'
+PROD_QUAL_EXT = 'Extended Qualified (7.50%)'
+PROD_QUAL_RM = 'Core Qualified (8.00%)'
 
 # Corporate Master Root ID
 ROOT_APEX_PARTNER_ID = 31
@@ -52,13 +56,29 @@ class VGK4UCareerService:
     """
 
     @staticmethod
-    def is_lead_qualifying(lead_status: Optional[str], solar_pipeline_status: Optional[str]) -> bool:
+    def is_lead_qualifying(
+        lead_status: Optional[str] = None,
+        solar_pipeline_status: Optional[str] = None,
+        first_payment_received_date: Optional[Any] = None,
+        deal_value_received: Optional[float] = None
+    ) -> bool:
         """
-        Rule E: A lead qualifies if status == 'completed' OR solar_pipeline_status in ('subsidy_pending', 'completed').
+        Rule: Paid means at least 1 payment received.
+        A lead qualifies if:
+        - first_payment_received_date is present OR COALESCE(deal_value_received, 0) > 0
+        - status == 'completed'
+        - solar_pipeline_status in ('subsidy_pending', 'completed', 'installation_pending', 'installed',
+          'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+          'completed_paid', 'subsidy_received')
         """
         st = (lead_status or '').strip().lower()
         sps = (solar_pipeline_status or '').strip().lower()
-        return (st == 'completed') or (sps in ('subsidy_pending', 'completed'))
+        has_pmt = (first_payment_received_date is not None) or ((deal_value_received or 0.0) > 0)
+        return has_pmt or (st == 'completed') or (sps in (
+            'subsidy_pending', 'completed', 'installation_pending', 'installed',
+            'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+            'completed_paid', 'subsidy_received'
+        ))
 
     @classmethod
     def get_bulk_partner_career_status(
@@ -84,12 +104,21 @@ class VGK4UCareerService:
         if not partners_by_id:
             return {}
 
-        # 2. Fetch qualifying file counts per partner
+        # 2. Fetch qualifying file counts per partner (paid means at least 1 payment received)
         query_qual = """
             SELECT associated_partner_id, count(*) as file_count
             FROM crm_leads
             WHERE associated_partner_id IS NOT NULL
-              AND (status = 'completed' OR solar_pipeline_status IN ('subsidy_pending', 'completed'))
+              AND (
+                  first_payment_received_date IS NOT NULL
+                  OR COALESCE(deal_value_received, 0) > 0
+                  OR status = 'completed'
+                  OR solar_pipeline_status IN (
+                      'subsidy_pending', 'completed', 'installation_pending', 'installed',
+                      'net_meter_done', 'net_meter_pending', 'balance_received', 'balance_pending',
+                      'completed_paid', 'subsidy_received'
+                  )
+              )
             GROUP BY associated_partner_id
         """
         qual_raw = db.execute(text(query_qual)).fetchall()
@@ -105,9 +134,9 @@ class VGK4UCareerService:
                 parent_map[pid] = parent_id
                 children_map[parent_id].append(pid)
 
-        # 4. Identify active producers (personal files >= 1)
+        # 4. Identify active producers (personal files >= 3 per Active Direct Member rule)
         is_active_producer = {
-            pid: (qual_file_map.get(pid, 0) >= 1)
+            pid: (qual_file_map.get(pid, 0) >= 3)
             for pid in partners_by_id
         }
 
@@ -165,132 +194,127 @@ class VGK4UCareerService:
             own_files = qual_file_map.get(pid, 0)
             active_legs = active_legs_map[pid]
 
-            # --- A. Career Designation (Organizational Leadership) ---
-            # Dual criteria: Cumulative Personal Files AND Active Team Legs
+            # --- A. Career Designation / Production Tier (Attachment 1: Personal Files) ---
+            # Dual-track decoupled model: Designation reflects Personal Production Tier Level
             if is_apex:
                 career_desig = DESIGNATION_APEX_NODE
             elif own_files == 0:
                 career_desig = DESIGNATION_MEMBER
-            elif own_files >= 16 and active_legs >= 10:
+            elif own_files >= 16:
                 career_desig = DESIGNATION_CORE
-            elif own_files >= 10 and active_legs >= 5:
+            elif own_files >= 10:
                 career_desig = DESIGNATION_EXTENDED
-            elif own_files >= 5 and active_legs >= 1:
+            elif own_files >= 5:
                 career_desig = DESIGNATION_SENIOR
             elif own_files >= 1:
                 career_desig = DESIGNATION_CHANNEL_PARTNER
             else:
                 career_desig = DESIGNATION_MEMBER
 
-            # --- B. Personal Direct Sales Commission & Production Qualification ---
+            # --- B. Personal Direct Sales Commission & Production Qualification (Attachment 1) ---
+            # Strictly based on own personal qualifying files (Option 1)
+            # 1 – 4 files: 5.00% (Tier 1)
+            # 5 – 9 files: 6.50% (Tier 2)
+            # 10 – 15 files: 7.50% (Tier 3)
+            # 16+ files: 8.00% (Tier 4)
             if is_apex:
                 prod_qual = None
                 effective_personal_rate = 0.0  # Corporate entity; does not earn personal commissions
+            elif own_files >= 16:
+                prod_qual = PROD_QUAL_CORE
+                effective_personal_rate = 8.00
+            elif own_files >= 10:
+                prod_qual = PROD_QUAL_EXTENDED
+                effective_personal_rate = 7.50
+            elif own_files >= 5:
+                prod_qual = PROD_QUAL_SENIOR
+                effective_personal_rate = 6.50
             elif own_files >= 1:
                 prod_qual = PROD_QUAL_BASE
-                effective_personal_rate = 5.00  # Pure Model: Flat 5.00% Personal Direct Sales Commission
+                effective_personal_rate = 5.00
             else:
                 prod_qual = PROD_QUAL_NONE
-                effective_personal_rate = 0.0  # Unlocks 5.00% upon closing 1st personal file
+                effective_personal_rate = 0.0  # Unlocks upon closing 1st personal file
 
-            # --- C. Leadership Team Differentials & Direct Sponsor Override ---
+            # --- C. Team Overrides & Leadership Differentials (Attachment 2: Active Team Legs) ---
+            # Strictly based on Active Direct Team Members (Decoupled from Personal Production Slab)
+            # Active Direct Member = direct partner with >= 3 files having 1st payment received.
+            # 0 Team Members: Direct Earnings (L1) -> 0.00%
+            # >= 1 Active Direct: +0.50% Tier 2 Overrides (Cum 0.50%)
+            # >= 5 Active Directs: +1.00% Tier 3 Royalties (Cum 1.50%)
+            # >= 10 Active Directs: +1.50% Tier 4 Depth & Lifetime Pool (Cum 3.00%)
             if is_apex:
                 team_diff_rate = 0.0
                 cum_diff_rate = 0.0
                 sponsor_rate = 0.0
-            elif career_desig == DESIGNATION_CORE:
-                team_diff_rate = 0.50
-                cum_diff_rate = 3.00  # 1.50% (Senior) + 1.00% (Extended) + 0.50% (Core)
-                sponsor_rate = 1.00
-            elif career_desig == DESIGNATION_EXTENDED:
-                team_diff_rate = 1.00
-                cum_diff_rate = 2.50  # 1.50% (Senior) + 1.00% (Extended)
-                sponsor_rate = 1.00
-            elif career_desig == DESIGNATION_SENIOR:
+            elif active_legs >= 10:
                 team_diff_rate = 1.50
-                cum_diff_rate = 1.50  # 1.50% (Senior)
-                sponsor_rate = 1.00
-            elif career_desig == DESIGNATION_CHANNEL_PARTNER:
-                team_diff_rate = 0.00
-                cum_diff_rate = 0.00
-                sponsor_rate = 1.00
+                cum_diff_rate = 3.00  # 0.50% (1+ Team) + 1.00% (5+ Team) + 1.50% (10+ Team)
+                sponsor_rate = 1.00 if own_files >= 1 else 0.00
+            elif active_legs >= 5:
+                team_diff_rate = 1.00
+                cum_diff_rate = 1.50  # 0.50% (1+ Team) + 1.00% (5+ Team)
+                sponsor_rate = 1.00 if own_files >= 1 else 0.00
+            elif active_legs >= 1:
+                team_diff_rate = 0.50
+                cum_diff_rate = 0.50  # 0.50% (1+ Team)
+                sponsor_rate = 1.00 if own_files >= 1 else 0.00
             else:
                 team_diff_rate = 0.00
                 cum_diff_rate = 0.00
-                sponsor_rate = 0.00
+                sponsor_rate = 1.00 if own_files >= 1 else 0.00
 
-            # --- D. Next Career Milestone ---
+            # --- D. Next Team Leadership Milestone (Active Direct Team Members) ---
             if is_apex:
-                next_career = {'target_title': None, 'required_files': 0, 'current_files': 0, 'remaining_files': 0, 'required_legs': 0, 'current_legs': active_legs, 'remaining': 0, 'remaining_legs': 0}
-            elif career_desig == DESIGNATION_MEMBER:
+                next_career = {'target_title': None, 'required_legs': 0, 'current_legs': active_legs, 'remaining_legs': 0, 'remaining': 0}
+            elif active_legs >= 10:
                 next_career = {
-                    'target_title': DESIGNATION_CHANNEL_PARTNER,
-                    'required_files': 1,
-                    'current_files': own_files,
-                    'remaining': max(0, 1 - own_files),
-                    'remaining_files': max(0, 1 - own_files),
-                    'required_legs': 0,
+                    'target_title': 'Top Leadership Tier Achieved (10+ Active Direct Members)',
+                    'required_legs': 10,
                     'current_legs': active_legs,
-                    'remaining_legs': 0
+                    'remaining_legs': 0,
+                    'remaining': 0
                 }
-            elif career_desig == DESIGNATION_CHANNEL_PARTNER:
-                rem_files = max(0, 5 - own_files)
-                rem_legs = max(0, 1 - active_legs)
-                next_career = {
-                    'target_title': DESIGNATION_SENIOR,
-                    'required_files': 5,
-                    'current_files': own_files,
-                    'remaining': rem_files + rem_legs,
-                    'remaining_files': rem_files,
-                    'required_legs': 1,
-                    'current_legs': active_legs,
-                    'remaining_legs': rem_legs
-                }
-            elif career_desig == DESIGNATION_SENIOR:
-                rem_files = max(0, 10 - own_files)
-                rem_legs = max(0, 5 - active_legs)
-                next_career = {
-                    'target_title': DESIGNATION_EXTENDED,
-                    'required_files': 10,
-                    'current_files': own_files,
-                    'remaining': rem_files + rem_legs,
-                    'remaining_files': rem_files,
-                    'required_legs': 5,
-                    'current_legs': active_legs,
-                    'remaining_legs': rem_legs
-                }
-            elif career_desig == DESIGNATION_EXTENDED:
-                rem_files = max(0, 16 - own_files)
+            elif active_legs >= 5:
                 rem_legs = max(0, 10 - active_legs)
                 next_career = {
-                    'target_title': DESIGNATION_CORE,
-                    'required_files': 16,
-                    'current_files': own_files,
-                    'remaining': rem_files + rem_legs,
-                    'remaining_files': rem_files,
+                    'target_title': 'Tier 4 Core (10+ Active Direct Members: Overrides +1.50%)',
                     'required_legs': 10,
                     'current_legs': active_legs,
-                    'remaining_legs': rem_legs
+                    'remaining_legs': rem_legs,
+                    'remaining': rem_legs
                 }
-            else: # Core
+            elif active_legs >= 1:
+                rem_legs = max(0, 5 - active_legs)
                 next_career = {
-                    'target_title': 'Top Rank Achieved',
-                    'required_files': 16,
-                    'current_files': own_files,
-                    'remaining': 0,
-                    'remaining_files': 0,
-                    'required_legs': 10,
+                    'target_title': 'Tier 3 Extended (5+ Active Direct Members: Overrides +1.00%)',
+                    'required_legs': 5,
                     'current_legs': active_legs,
-                    'remaining_legs': 0
+                    'remaining_legs': rem_legs,
+                    'remaining': rem_legs
+                }
+            else:
+                next_career = {
+                    'target_title': 'Tier 2 Senior (1+ Active Direct Member: Overrides +0.50%)',
+                    'required_legs': 1,
+                    'current_legs': active_legs,
+                    'remaining_legs': 1,
+                    'remaining': 1
                 }
 
-            # --- E. Next Personal Production Milestone ---
+            # --- E. Next Personal Production Milestone (Attachment 1: Personal Files) ---
             if is_apex:
                 next_prod = {'target_tier': None, 'required_files': 0, 'current_files': own_files, 'remaining': 0}
+            elif own_files >= 16:
+                next_prod = {'target_tier': 'Top Direct Commission (8.00% - Tier 4 Core) Achieved', 'required_files': 16, 'current_files': own_files, 'remaining': 0}
+            elif own_files >= 10:
+                next_prod = {'target_tier': 'Tier 4 Core Personal Commission (8.00%)', 'required_files': 16, 'current_files': own_files, 'remaining': max(0, 16 - own_files)}
+            elif own_files >= 5:
+                next_prod = {'target_tier': 'Tier 3 Extended Personal Commission (7.50%)', 'required_files': 10, 'current_files': own_files, 'remaining': max(0, 10 - own_files)}
             elif own_files >= 1:
-                next_prod = {'target_tier': 'Personal Sales Commission (Flat 5.0%) Qualified', 'required_files': 1, 'current_files': own_files, 'remaining': 0}
+                next_prod = {'target_tier': 'Tier 2 Senior Personal Commission (6.50%)', 'required_files': 5, 'current_files': own_files, 'remaining': max(0, 5 - own_files)}
             else:
-                next_prod = {'target_tier': 'Active Channel Partner (5.0% Direct Commission)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
+                next_prod = {'target_tier': 'Tier 1 Channel Partner (5.00% Direct Commission)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
 
             sponsor_name = ""
             sponsor_code = ""
@@ -317,6 +341,9 @@ class VGK4UCareerService:
                 'team_differential_rate': team_diff_rate,
                 'cumulative_differential_rate': cum_diff_rate,
                 'sponsor_override_rate': sponsor_rate,
+                'can_claim_senior_override': (active_legs >= 1),
+                'can_claim_extended_override': (active_legs >= 5),
+                'can_claim_core_override': (active_legs >= 10),
                 'next_career_milestone': next_career,
                 'next_personal_milestone': next_prod,
             }
@@ -348,8 +375,10 @@ class VGK4UCareerService:
         db.execute(text("""
             UPDATE official_partners
             SET vgk4u_current_designation = :desig,
+                current_position = :desig,
                 vgk4u_personal_prod_qualification = :prod_qual,
                 vgk4u_own_qualifying_files = :files,
+                solar_qualifying_files_count = :files,
                 vgk4u_active_team_count = :active_legs,
                 vgk4u_designation_updated_at = NOW()
             WHERE id = :pid
@@ -377,8 +406,10 @@ class VGK4UCareerService:
             db.execute(text("""
                 UPDATE official_partners
                 SET vgk4u_current_designation = :desig,
+                    current_position = :desig,
                     vgk4u_personal_prod_qualification = :prod_qual,
                     vgk4u_own_qualifying_files = :files,
+                    solar_qualifying_files_count = :files,
                     vgk4u_active_team_count = :active_legs,
                     vgk4u_designation_updated_at = NOW()
                 WHERE id = :pid

@@ -1609,9 +1609,9 @@ def search_catalog_recipients(
         # 1. Recent Call Logs (calls from staff)
         try:
             calls_sql = text("""
-                SELECT contact_name, phone_number, call_datetime, call_type
+                SELECT contact_name, phone_number, call_datetime, call_type, company_id, matched_lead_id
                 FROM (
-                    SELECT contact_name, phone_number, call_datetime, call_type,
+                    SELECT contact_name, phone_number, call_datetime, call_type, company_id, matched_lead_id,
                            ROW_NUMBER() OVER (
                                PARTITION BY RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10)
                                ORDER BY id DESC
@@ -1625,7 +1625,7 @@ def search_catalog_recipients(
                 LIMIT 10;
             """)
             call_rows = db.execute(calls_sql).fetchall()
-            for c_name, c_ph, c_dt, c_type in call_rows:
+            for c_name, c_ph, c_dt, c_type, c_cid, c_mlid in call_rows:
                 if not c_ph:
                     continue
                 cp = re.sub(r'[^0-9]', '', str(c_ph))[-10:]
@@ -1634,6 +1634,7 @@ def search_catalog_recipients(
                     time_str = c_dt.strftime("%d %b, %I:%M %p") if c_dt else "Recent"
                     c_type_label = (c_type or "Call").capitalize()
                     disp_name = (c_name or "").strip()
+                    cat_hint = "solar" if c_cid == 4 else ("ev_b2c" if c_cid == 2 else ("real_estate" if c_cid == 1 else ""))
                     results.append({
                         "name": disp_name if disp_name else f"Caller ({cp})",
                         "phone": cp,
@@ -1642,9 +1643,13 @@ def search_catalog_recipients(
                         "badge_class": "badge-call",
                         "badge_color": "#0284c7",
                         "subtitle": f"{c_type_label} • {time_str}",
-                        "lead_id": None,
+                        "lead_id": c_mlid,
                         "partner_id": None,
-                        "city": ""
+                        "city": "",
+                        "company_id": c_cid,
+                        "category": cat_hint,
+                        "category_name": cat_hint.replace("_", " ").title() if cat_hint else "",
+                        "tags": ""
                     })
         except Exception as e:
             logger.warning(f"[RECIPIENT-SEARCH] Error loading recent calls: {e}")
@@ -1652,14 +1657,17 @@ def search_catalog_recipients(
         # 2. Recent Active CRM Leads
         try:
             leads_sql = text("""
-                SELECT id, name, phone, alternate_phone, city, status
-                FROM crm_leads
-                WHERE phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
-                ORDER BY id DESC
+                SELECT l.id, l.name, l.phone, l.alternate_phone, l.city, l.status,
+                       l.company_id, l.category_id, sc.name as category_name, sc.slug as category_slug,
+                       l.tags
+                FROM crm_leads l
+                LEFT JOIN signup_categories sc ON l.category_id = sc.id
+                WHERE l.phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g')) >= 10
+                ORDER BY l.id DESC
                 LIMIT 10;
             """)
             lead_rows = db.execute(leads_sql).fetchall()
-            for lid, l_name, l_ph, l_alt, l_city, l_stat in lead_rows:
+            for lid, l_name, l_ph, l_alt, l_city, l_stat, l_cid, l_cat_id, l_cname, l_cslug, l_tags in lead_rows:
                 for ph in (l_ph, l_alt):
                     if not ph:
                         continue
@@ -1668,6 +1676,7 @@ def search_catalog_recipients(
                         seen_phones.add(cp)
                         disp_name = (l_name or "Valued Lead").strip()
                         sub = f"{l_stat or 'Active'} • {l_city or ''}".strip(" •")
+                        resolved_cat = (l_cslug or l_cname or (l_tags or '') or ('solar' if l_cid == 4 else ('ev_b2c' if l_cid == 2 else ('real_estate' if l_cid == 1 else '')))).lower()
                         results.append({
                             "name": disp_name,
                             "phone": cp,
@@ -1678,7 +1687,11 @@ def search_catalog_recipients(
                             "subtitle": sub if sub else "Active Lead",
                             "lead_id": lid,
                             "partner_id": None,
-                            "city": l_city or ""
+                            "city": l_city or "",
+                            "company_id": l_cid,
+                            "category": resolved_cat,
+                            "category_name": l_cname or resolved_cat.replace("_", " ").title(),
+                            "tags": l_tags or ""
                         })
         except Exception as e:
             logger.warning(f"[RECIPIENT-SEARCH] Error loading recent leads: {e}")
@@ -1712,7 +1725,11 @@ def search_catalog_recipients(
                         "subtitle": sub if sub else "Channel Partner",
                         "lead_id": None,
                         "partner_id": pid,
-                        "city": p_city or ""
+                        "city": p_city or "",
+                        "company_id": None,
+                        "category": (p_cat or '').lower(),
+                        "category_name": p_cat or '',
+                        "tags": ""
                     })
         except Exception as e:
             logger.warning(f"[RECIPIENT-SEARCH] Error loading key partners: {e}")
@@ -1728,11 +1745,14 @@ def search_catalog_recipients(
     # 1. Search CRM Leads (matches name, city, or phone digits)
     try:
         leads_sql = text("""
-            SELECT id, name, phone, alternate_phone, city, status
-            FROM crm_leads
-            WHERE (name ILIKE :q_like OR city ILIKE :q_like)
-               OR (:has_digits AND (phone LIKE :d_like OR alternate_phone LIKE :d_like))
-            ORDER BY id DESC
+            SELECT l.id, l.name, l.phone, l.alternate_phone, l.city, l.status,
+                   l.company_id, l.category_id, sc.name as category_name, sc.slug as category_slug,
+                   l.tags
+            FROM crm_leads l
+            LEFT JOIN signup_categories sc ON l.category_id = sc.id
+            WHERE (l.name ILIKE :q_like OR l.city ILIKE :q_like)
+               OR (:has_digits AND (l.phone LIKE :d_like OR l.alternate_phone LIKE :d_like))
+            ORDER BY l.id DESC
             LIMIT 20;
         """)
         lead_rows = db.execute(leads_sql, {
@@ -1740,7 +1760,7 @@ def search_catalog_recipients(
             "has_digits": has_digits,
             "d_like": d_like
         }).fetchall()
-        for lid, l_name, l_ph, l_alt, l_city, l_stat in lead_rows:
+        for lid, l_name, l_ph, l_alt, l_city, l_stat, l_cid, l_cat_id, l_cname, l_cslug, l_tags in lead_rows:
             for ph in (l_ph, l_alt):
                 if not ph:
                     continue
@@ -1749,6 +1769,7 @@ def search_catalog_recipients(
                     seen_phones.add(cp)
                     disp_name = (l_name or "Valued Lead").strip()
                     sub = f"{l_stat or 'Lead'} • {l_city or ''}".strip(" •")
+                    resolved_cat = (l_cslug or l_cname or (l_tags or '') or ('solar' if l_cid == 4 else ('ev_b2c' if l_cid == 2 else ('real_estate' if l_cid == 1 else '')))).lower()
                     results.append({
                         "name": disp_name,
                         "phone": cp,
@@ -1759,7 +1780,11 @@ def search_catalog_recipients(
                         "subtitle": sub if sub else "CRM Lead",
                         "lead_id": lid,
                         "partner_id": None,
-                        "city": l_city or ""
+                        "city": l_city or "",
+                        "company_id": l_cid,
+                        "category": resolved_cat,
+                        "category_name": l_cname or resolved_cat.replace("_", " ").title(),
+                        "tags": l_tags or ""
                     })
     except Exception as e:
         logger.warning(f"[RECIPIENT-SEARCH] Error searching CRM leads: {e}")
@@ -1767,9 +1792,9 @@ def search_catalog_recipients(
     # 2. Search Staff Call Logs (matches contact name or phone digits)
     try:
         calls_sql = text("""
-            SELECT contact_name, phone_number, call_datetime, call_type
+            SELECT contact_name, phone_number, call_datetime, call_type, company_id, matched_lead_id
             FROM (
-                SELECT contact_name, phone_number, call_datetime, call_type,
+                SELECT contact_name, phone_number, call_datetime, call_type, company_id, matched_lead_id,
                        ROW_NUMBER() OVER (
                            PARTITION BY RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10)
                            ORDER BY id DESC
@@ -1787,7 +1812,7 @@ def search_catalog_recipients(
             "has_digits": has_digits,
             "d_like": d_like
         }).fetchall()
-        for c_name, c_ph, c_dt, c_type in call_rows:
+        for c_name, c_ph, c_dt, c_type, c_cid, c_mlid in call_rows:
             if not c_ph:
                 continue
             cp = re.sub(r'[^0-9]', '', str(c_ph))[-10:]
@@ -1796,6 +1821,7 @@ def search_catalog_recipients(
                 time_str = c_dt.strftime("%d %b") if c_dt else "Call"
                 c_type_label = (c_type or "Call").capitalize()
                 disp_name = (c_name or "").strip()
+                cat_hint = "solar" if c_cid == 4 else ("ev_b2c" if c_cid == 2 else ("real_estate" if c_cid == 1 else ""))
                 results.append({
                     "name": disp_name if disp_name else f"Caller ({cp})",
                     "phone": cp,
@@ -1804,9 +1830,13 @@ def search_catalog_recipients(
                     "badge_class": "badge-call",
                     "badge_color": "#0284c7",
                     "subtitle": f"{c_type_label} • {time_str}",
-                    "lead_id": None,
+                    "lead_id": c_mlid,
                     "partner_id": None,
-                    "city": ""
+                    "city": "",
+                    "company_id": c_cid,
+                    "category": cat_hint,
+                    "category_name": cat_hint.replace("_", " ").title() if cat_hint else "",
+                    "tags": ""
                 })
     except Exception as e:
         logger.warning(f"[RECIPIENT-SEARCH] Error searching call logs: {e}")

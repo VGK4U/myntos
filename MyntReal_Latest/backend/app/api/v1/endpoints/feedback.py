@@ -736,8 +736,7 @@ async def submit_staff_announcement(
                 file_path="pending",
                 file_type=file.content_type or "application/octet-stream",
                 media_status=media_status,
-                is_visible=is_supreme,
-                media_index=idx
+                is_visible=is_supreme
             )
             db.add(media)
             db.flush()

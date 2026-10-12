@@ -187,6 +187,21 @@
         .empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
         .empty-icon  { font-size: 40px; margin-bottom: 12px; }
         .loading-state { text-align: center; padding: 32px; color: #6b7280; }
+
+        /* ── Consolidated Expenses Tab Styles ── */
+        .qf-strip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+        .qf-pill { padding: 5px 14px; border-radius: 20px; border: 1px solid #d1d5db; background: #fff; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .15s; white-space: nowrap; line-height: 1.6; }
+        .qf-pill:hover { border-color: #6366f1; color: #6366f1; background: #f5f3ff; }
+        .qf-pill.qf-active { background: #6366f1; color: #fff; border-color: #6366f1; }
+        .qf-custom-row { display: none; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+        .qf-custom-row input[type=date] { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .badge-status { padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-draft { background: #e5e7eb; color: #4b5563; }
+        .badge-submitted { background: #fef3c7; color: #d97706; }
+        .badge-approved { background: #d1fae5; color: #059669; }
+        .badge-rejected { background: #fee2e2; color: #dc2626; }
+        .badge-paid { background: #ede9fe; color: #5b21b6; }
+        .badge-cat { background: #f0f9ff; color: #0369a1; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -265,6 +280,9 @@
         </button>
         <button class="tab-btn" id="tab_cwise" onclick="switchTab('cwise')">
             <i class="fas fa-building"></i>Company Summary
+        </button>
+        <button class="tab-btn" id="tab_consolidated" onclick="switchTab('consolidated')">
+            <i class="fas fa-table"></i>Consolidated Expenses
         </button>
     </div>
 
@@ -676,6 +694,187 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: CONSOLIDATED EXPENSES
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_consolidated" style="display:none;">
+
+        <!-- Quick date filter strip -->
+        <div class="qf-strip" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+            <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
+            <button class="qf-pill qf-active" data-tab="consolidated" data-preset="overall" onclick="setQuickFilter('consolidated','overall')">Overall</button>
+            <button class="qf-pill" data-tab="consolidated" data-preset="today" onclick="setQuickFilter('consolidated','today')">Today</button>
+            <button class="qf-pill" data-tab="consolidated" data-preset="yesterday" onclick="setQuickFilter('consolidated','yesterday')">Yesterday</button>
+            <button class="qf-pill" data-tab="consolidated" data-preset="this_week" onclick="setQuickFilter('consolidated','this_week')">This Week</button>
+            <button class="qf-pill" data-tab="consolidated" data-preset="last_week" onclick="setQuickFilter('consolidated','last_week')">Last Week</button>
+            <button class="qf-pill" data-tab="consolidated" data-preset="custom" onclick="toggleCustomDateUI('consolidated')">Custom ▾</button>
+            <div id="customDateWrap_consolidated" style="display:none;align-items:center;gap:6px;background:#f8fafc;padding:3px 8px;border-radius:6px;border:1px solid #cbd5e1;">
+                <span style="font-size:11px;font-weight:600;color:#475569;">From:</span>
+                <input type="date" id="consoFromDate" onchange="onManualDateChange('consolidated'); loadConsolidatedSummary();" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+                <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
+                <input type="date" id="consoToDate" onchange="onManualDateChange('consolidated'); loadConsolidatedSummary();" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#1e40af;margin-left:auto;cursor:pointer;background:#eff6ff;padding:4px 10px;border-radius:6px;border:1px solid #bfdbfe;" title="Show only staff with IN transactions (funds received/allocated) and hide staff unrelated to expenses">
+                <input type="checkbox" id="consoOnlyWithIn" onchange="loadConsolidatedSummary()" style="cursor:pointer;" checked>
+                <i class="fas fa-filter text-primary"></i> Show only with IN transactions
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;" title="Toggle to view all historical expenses prior to 17-Sep-2026">
+                <input type="checkbox" id="consoIncludeHistorical" onchange="loadConsolidatedSummary()" style="cursor:pointer;">
+                <i class="fas fa-history text-secondary"></i> Include Pre-Reset History
+            </label>
+        </div>
+
+        <!-- Filter bar -->
+        <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:16px 20px;margin-bottom:16px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">COMPANY</label>
+                    <select id="consoCompany" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:150px;">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">ENTRY TYPE</label>
+                    <select id="consoFilterType" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                        <option value="">All Types</option>
+                        <option value="INCOME">Cash In (Credit)</option>
+                        <option value="EXPENSE">Cash Out (Expense)</option>
+                        <option value="FUND_ALLOCATION">Fund Allocation</option>
+                        <option value="TRANSFER">Transfer</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">IN LEDGER</label>
+                    <select id="consoFilterLedger" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:120px;">
+                        <option value="">All Entries</option>
+                        <option value="ledger_only">In Ledger Only</option>
+                        <option value="non_ledger">Non-Ledger (Excluded)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">EXTERNAL</label>
+                    <select id="consoFilterExternal" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                        <option value="">All Parties</option>
+                        <option value="external_only">External Only</option>
+                        <option value="internal_only">Internal Only</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">STATUS</label>
+                    <select id="consoFilterStatus" onchange="loadConsolidatedSummary()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:110px;">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="PAID">Paid</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">EMPLOYEE</label>
+                    <input type="text" id="consoSearch" oninput="debounceConsoSearch()" placeholder="Search name or code..." style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
+                </div>
+                <button onclick="loadConsolidatedSummary()" style="padding:8px 16px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button onclick="resetConsoFilters()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                    <i class="fas fa-undo me-1"></i>Reset
+                </button>
+                <button onclick="exportConsolidatedCSV()" style="padding:8px 14px;background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary stat cards -->
+        <div id="consoStats" style="display:none;background:linear-gradient(135deg,#4f46e5,#6366f1);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;color:#fff;"></div>
+
+        <!-- Table wrapper -->
+        <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow-x:auto;">
+            <div id="consoLoading" style="padding:48px;text-align:center;color:#9ca3af;display:none;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Loading consolidated data…
+            </div>
+            <div id="consoEmpty" style="padding:48px;text-align:center;color:#9ca3af;display:none;">
+                <i class="fas fa-chart-bar fa-3x" style="margin-bottom:14px;display:block;"></i>
+                Click <strong>Load / Refresh</strong> to view the summary
+            </div>
+            <table id="consoTable" style="display:none;width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <!-- Tier 1 Group Headers -->
+                    <tr style="border-bottom:1px solid #cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">
+                        <th colspan="4" style="background:#f1f5f9;color:#334155;padding:8px 10px;text-align:left;border-right:2px solid #cbd5e1;font-weight:700;">
+                            <i class="fas fa-user-circle me-1"></i> Staff Details
+                        </th>
+                        <th colspan="4" style="background:#ecfdf5;color:#065f46;padding:8px 10px;text-align:center;border-right:2px solid #a7f3d0;font-weight:700;">
+                            <i class="fas fa-arrow-circle-down me-1"></i> Section 1: Confirmed IN (Inflow)
+                        </th>
+                        <th colspan="4" style="background:#fef2f2;color:#991b1b;padding:8px 10px;text-align:center;border-right:2px solid #fecaca;font-weight:700;">
+                            <i class="fas fa-arrow-circle-up me-1"></i> Section 1: Confirmed OUT (Outflow)
+                        </th>
+                        <th colspan="1" style="background:#eff6ff;color:#1e40af;padding:8px 10px;text-align:right;border-right:2px solid #bfdbfe;font-weight:700;">
+                            <i class="fas fa-balance-scale me-1"></i> Net Balance
+                        </th>
+                        <th colspan="4" style="background:#fffbeb;color:#92400e;padding:8px 10px;text-align:center;border-right:2px solid #fde68a;font-weight:700;">
+                            <i class="fas fa-edit me-1"></i> Section 2: Drafts Only Flow
+                        </th>
+                        <th colspan="5" style="background:#f8fafc;color:#475569;padding:8px 10px;text-align:center;border-right:2px solid #e2e8f0;font-weight:700;">
+                            <i class="fas fa-list-ol me-1"></i> Section 3: Expense Counts
+                        </th>
+                        <th colspan="5" style="background:#f8fafc;color:#475569;padding:8px 10px;text-align:center;font-weight:700;">
+                            <i class="fas fa-rupee-sign me-1"></i> Section 3: Expense Amounts
+                        </th>
+                    </tr>
+                    <!-- Tier 2 Column Headers -->
+                    <tr style="background:#f8fafc;border-bottom:2px solid #cbd5e1;font-size:12px;">
+                        <th style="padding:10px 8px;text-align:center;font-weight:700;color:#374151;width:34px;"></th>
+                        <th style="padding:10px 10px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;width:30px;">#</th>
+                        <th style="padding:10px 12px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Employee</th>
+                        <th style="padding:10px 12px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;border-right:2px solid #cbd5e1;">Dept / Role</th>
+                        
+                        <!-- SECTION 1: INFLOW -->
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#0891b2;white-space:nowrap;">Income Entries</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;">Bank Ledgers</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Fund Transfer (IN)</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#047857;white-space:nowrap;background:#d1fae5;border-right:2px solid #a7f3d0;">Total IN</th>
+                        
+                        <!-- SECTION 1: OUTFLOW -->
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Ledger Expense</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#ea580c;white-space:nowrap;">External Expense</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;white-space:nowrap;">Fund Transfer (OUT)</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;white-space:nowrap;background:#fee2e2;border-right:2px solid #fecaca;">Total OUT</th>
+                        
+                        <!-- SECTION 1: BALANCE -->
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;background:#dbeafe;border-right:2px solid #bfdbfe;">Net Balance</th>
+                        
+                        <!-- SECTION 2: DRAFTS FLOW -->
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;background:#fefce8;">Drafts IN</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;background:#fefce8;">Drafts OUT</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b45309;white-space:nowrap;background:#fef3c7;">Drafts Bal</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:800;color:#6d28d9;white-space:nowrap;background:#ede9fe;border-right:2px solid #ddd6fe;">Final Balance</th>
+
+                        <!-- SECTION 3: EXPENSE COUNTS -->
+                        <th style="padding:10px 10px;text-align:center;font-weight:700;color:#6b7280;white-space:nowrap;">Draft</th>
+                        <th style="padding:10px 10px;text-align:center;font-weight:700;color:#d97706;white-space:nowrap;">Submitted</th>
+                        <th style="padding:10px 10px;text-align:center;font-weight:700;color:#059669;white-space:nowrap;">Approved</th>
+                        <th style="padding:10px 10px;text-align:center;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected</th>
+                        <th style="padding:10px 10px;text-align:center;font-weight:700;color:#7c3aed;white-space:nowrap;border-right:2px solid #e2e8f0;">Paid</th>
+                        
+                        <!-- SECTION 3: EXPENSE AMOUNTS -->
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#6b7280;white-space:nowrap;">Draft Amt</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;">Submitted Amt</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Approved Amt</th>
+                        <th style="padding:10px 12px;text-align:right;color:#dc2626;white-space:nowrap;">Rejected Amt</th>
+                        <th style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid Amt</th>
+                    </tr>
+                </thead>
+                <tbody id="consoTableBody"></tbody>
+                <tfoot id="consoTableFoot" style="background:#f0f9ff;border-top:2px solid #bfdbfe;font-weight:700;"></tfoot>
+            </table>
+        </div>
+
+    </div>
+
+
 <!-- ═══ Entry Edit Modal ═══ -->
 <div class="modal-overlay" id="entryEditModal">
     <div class="modal-box" style="max-width:620px;">
@@ -932,7 +1131,7 @@ async function init() {
         const resp = await staffFetch(`${API_BASE}/companies?page_size=100`);
         const d = resp.ok ? await resp.json() : {};
         _companies = d.companies || d.items || [];
-        ['fCompany','headsCompany','pvCompany','cwCompany','cCompany','lCompany','aCompany'].forEach(id => {
+        ['fCompany','headsCompany','pvCompany','cwCompany','cCompany','lCompany','aCompany','consoCompany'].forEach(id => {
             const sel = document.getElementById(id);
             if (!sel) return;
             _companies.forEach(c => {
@@ -960,18 +1159,19 @@ async function init() {
 /* ── Tab switching ─────────────────────────────────────────────────── */
 function switchTab(tab) {
     _activeTab = tab;
-    const tabs = ['entries','create','cards','banks','txaccounts','parties','cwise'];
+    const tabs = ['entries','create','cards','banks','txaccounts','parties','cwise','consolidated'];
     tabs.forEach(t => {
         const btn = document.getElementById('tab_' + t);
         const sec = document.getElementById('sec_' + t);
         if (btn) btn.classList.toggle('active', t === tab);
         if (sec) sec.style.display = (t === tab) ? '' : 'none';
     });
-    if (tab === 'banks')      loadHeads();
-    if (tab === 'cards')      loadMasters();
-    if (tab === 'txaccounts') loadAccounts();
-    if (tab === 'parties')    loadParties();
-    if (tab === 'cwise')      loadCompanyWise();
+    if (tab === 'banks')        loadHeads();
+    if (tab === 'cards')        loadMasters();
+    if (tab === 'txaccounts')   loadAccounts();
+    if (tab === 'parties')      loadParties();
+    if (tab === 'cwise')        loadCompanyWise();
+    if (tab === 'consolidated') loadConsolidatedSummary();
 }
 
 /* ── Company label helpers ─────────────────────────────────────────── */
@@ -2673,6 +2873,659 @@ function closeVoucherViewModal() {
 document.getElementById('voucherViewModal').addEventListener('click', function(e) {
     if (e.target === this) closeVoucherViewModal();
 });
+/* ═══════════════════════════════════════════════════════════════════
+   CONSOLIDATED EXPENSES TAB (Synced from Cash Expenses Page)
+═══════════════════════════════════════════════════════════════════ */
+let _qfPreset = { consolidated: 'overall' };
+let _consoSearchDebounce = null;
+window._lastNormalizedRows = [];
+window._lastConsoTotals = {};
+window._entryLookup = {};
+
+function formatConsoDate(d) {
+    if (!d) return '-';
+    try {
+        const dt = new Date(d);
+        if (isNaN(dt.getTime())) return d;
+        return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return d; }
+}
+
+function truncateConsoText(str, n = 30) {
+    if (!str) return '-';
+    return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+function setQuickFilter(tab, preset) {
+    _qfPreset[tab] = preset;
+    document.querySelectorAll(`.qf-pill[data-tab="${tab}"]`).forEach(btn => {
+        btn.classList.toggle('qf-active', btn.getAttribute('data-preset') === preset);
+    });
+
+    const wrap = document.getElementById(`customDateWrap_${tab}`);
+    if (wrap) wrap.style.display = (preset === 'custom') ? 'inline-flex' : 'none';
+
+    const fromInput = document.getElementById('consoFromDate');
+    const toInput   = document.getElementById('consoToDate');
+
+    const pad = n => String(n).padStart(2, '0');
+    const toYMD = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+    const now = new Date();
+    if (preset === 'overall') {
+        if (fromInput) fromInput.value = '';
+        if (toInput)   toInput.value   = '';
+    } else if (preset === 'today') {
+        const s = toYMD(now);
+        if (fromInput) fromInput.value = s;
+        if (toInput)   toInput.value   = s;
+    } else if (preset === 'yesterday') {
+        const y = new Date(now);
+        y.setDate(y.getDate() - 1);
+        const s = toYMD(y);
+        if (fromInput) fromInput.value = s;
+        if (toInput)   toInput.value   = s;
+    } else if (preset === 'this_week') {
+        const d = new Date(now);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
+        if (fromInput) fromInput.value = toYMD(monday);
+        if (toInput)   toInput.value   = toYMD(now);
+    } else if (preset === 'last_week') {
+        const d = new Date(now);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1) - 7;
+        const lastMon = new Date(d.setDate(diff));
+        const lastSun = new Date(lastMon);
+        lastSun.setDate(lastSun.getDate() + 6);
+        if (fromInput) fromInput.value = toYMD(lastMon);
+        if (toInput)   toInput.value   = toYMD(lastSun);
+    }
+
+    if (preset !== 'custom') {
+        loadConsolidatedSummary();
+    }
+}
+
+function toggleCustomDateUI(tab) {
+    const wrap = document.getElementById(`customDateWrap_${tab}`);
+    if (!wrap) return;
+    const isShowing = wrap.style.display === 'inline-flex';
+    if (isShowing) {
+        wrap.style.display = 'none';
+        setQuickFilter(tab, 'overall');
+    } else {
+        setQuickFilter(tab, 'custom');
+    }
+}
+
+function onManualDateChange(tab) {
+    _qfPreset[tab] = 'custom';
+    document.querySelectorAll(`.qf-pill[data-tab="${tab}"]`).forEach(btn => {
+        btn.classList.toggle('qf-active', btn.getAttribute('data-preset') === 'custom');
+    });
+    const wrap = document.getElementById(`customDateWrap_${tab}`);
+    if (wrap) wrap.style.display = 'inline-flex';
+}
+
+function debounceConsoSearch() {
+    clearTimeout(_consoSearchDebounce);
+    _consoSearchDebounce = setTimeout(() => {
+        loadConsolidatedSummary();
+    }, 350);
+}
+
+function resetConsoFilters() {
+    if (document.getElementById('consoCompany')) document.getElementById('consoCompany').value = '';
+    if (document.getElementById('consoFilterType')) document.getElementById('consoFilterType').value = '';
+    if (document.getElementById('consoFilterLedger')) document.getElementById('consoFilterLedger').value = '';
+    if (document.getElementById('consoFilterExternal')) document.getElementById('consoFilterExternal').value = '';
+    if (document.getElementById('consoFilterStatus')) document.getElementById('consoFilterStatus').value = '';
+    if (document.getElementById('consoSearch')) document.getElementById('consoSearch').value = '';
+    if (document.getElementById('consoOnlyWithIn')) document.getElementById('consoOnlyWithIn').checked = true;
+    if (document.getElementById('consoIncludeHistorical')) document.getElementById('consoIncludeHistorical').checked = false;
+    setQuickFilter('consolidated', 'overall');
+}
+
+async function loadConsolidatedSummary() {
+    const company  = document.getElementById('consoCompany') ? document.getElementById('consoCompany').value : '';
+    const isOverall = (_qfPreset['consolidated'] === 'overall');
+    if (isOverall) {
+        if (document.getElementById('consoFromDate')) document.getElementById('consoFromDate').value = '';
+        if (document.getElementById('consoToDate')) document.getElementById('consoToDate').value = '';
+    }
+    const from     = isOverall ? '' : (document.getElementById('consoFromDate') ? document.getElementById('consoFromDate').value : '');
+    const to       = isOverall ? '' : (document.getElementById('consoToDate') ? document.getElementById('consoToDate').value : '');
+    const search   = document.getElementById('consoSearch') ? document.getElementById('consoSearch').value.trim() : '';
+
+    const loadingEl = document.getElementById('consoLoading');
+    const tableEl   = document.getElementById('consoTable');
+    const emptyEl   = document.getElementById('consoEmpty');
+    const statsEl   = document.getElementById('consoStats');
+
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (tableEl)   tableEl.style.display   = 'none';
+    if (emptyEl)   emptyEl.style.display   = 'none';
+    if (statsEl)   statsEl.style.display   = 'none';
+
+    let url = `${API_BASE}/expense-consolidated?_=${Date.now()}`;
+    if (company) url += `&company_id=${company}`;
+    if (from)    url += `&from_date=${from}`;
+    if (to)      url += `&to_date=${to}`;
+    if (search)  url += `&search=${encodeURIComponent(search)}`;
+    if (document.getElementById('consoIncludeHistorical')?.checked) {
+        url += '&include_historical=true';
+    }
+    const onlyWithIn = document.getElementById('consoOnlyWithIn') ? document.getElementById('consoOnlyWithIn').checked : false;
+    if (onlyWithIn) {
+        url += '&only_with_in=true';
+    }
+
+    try {
+        const r = await staffFetch(url);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
+        const d = await r.json();
+        const rawRows = d.rows || [];
+        const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+        const loggedInEmpCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
+        const isMr10001 = loggedInEmpCode === 'MR10001';
+        const isSupremeViewer = isMr10001 || loggedInEmpCode === 'MR10016' || !!window._hasAccountsAccess || (window.staffAuth && window.staffAuth.isSupreme && window.staffAuth.isSupreme());
+        
+        const rows = rawRows.filter(r => {
+            if (onlyWithIn && (Number(r.total_in || 0) <= 0 && Number(r.draft_in || 0) <= 0)) {
+                return false;
+            }
+            if (isSupremeViewer) return true;
+            const rowCode = (r.emp_code || r.employee_code || '').trim().toUpperCase();
+            const rowId = Number(r.employee_id || r.id || 0);
+            const rowName = (r.full_name || '').toLowerCase();
+            if (rowCode === 'MR10001' || rowId === 1 || rowName.includes('mr10001') || rowName.includes('vgk4u supreme')) {
+                return false;
+            }
+            return true;
+        });
+
+        if (!rows.length) {
+            if (emptyEl) {
+                emptyEl.style.display = 'block';
+                emptyEl.innerHTML = '<i class="fas fa-inbox fa-3x" style="margin-bottom:14px;display:block;color:#d1d5db;"></i>No consolidated records found for the selected filters';
+            }
+            return;
+        }
+
+        const fmtVal  = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        const normalizedRows = rows.map(r => {
+            const inc_in    = Number(r.income_entries ?? r.cust_cash_received ?? 0);
+            const bank_in   = Number(r.bank_alloc_in ?? r.fund_allocated ?? 0);
+            const ft_in     = Number(r.fund_transferred_in ?? 0);
+            const tot_in    = Number(r.total_in ?? (inc_in + bank_in + ft_in));
+
+            const ledg_exp  = Number(r.ledger_exp ?? r.ledger_exp_amount ?? 0);
+            const ext_exp   = Number(r.ext_exp ?? r.ext_exp_amount ?? 0);
+            const ft_out    = Number(r.fund_transferred_out ?? 0);
+            const tot_out   = Number(r.total_out ?? (ledg_exp + ext_exp + ft_out));
+
+            const bal       = Number(r.net_balance ?? r.balance ?? (tot_in - tot_out));
+
+            const d_in      = Number(r.draft_in ?? 0);
+            const d_out     = Number(r.draft_out ?? (r.draft_amount ?? 0));
+            const d_bal     = Number(r.draft_balance ?? (d_in - d_out));
+            const f_bal     = Number(r.final_balance ?? (bal + d_bal));
+
+            return {
+                ...r,
+                income_entries: inc_in,
+                bank_alloc_in: bank_in,
+                fund_transferred_in: ft_in,
+                total_in: tot_in,
+                ledger_exp: ledg_exp,
+                ext_exp: ext_exp,
+                fund_transferred_out: ft_out,
+                total_out: tot_out,
+                net_balance: bal,
+                draft_in: d_in,
+                draft_out: d_out,
+                draft_balance: d_bal,
+                final_balance: f_bal,
+                total_expenses: Number(r.total_expenses ?? 0),
+                draft_count: Number(r.draft_count ?? 0),
+                submitted_count: Number(r.submitted_count ?? 0),
+                approved_count: Number(r.approved_count ?? 0),
+                rejected_count: Number(r.rejected_count ?? 0),
+                paid_count: Number(r.paid_count ?? 0),
+                draft_amount: Number(r.draft_amount ?? 0),
+                submitted_amount: Number(r.submitted_amount ?? 0),
+                approved_amount: Number(r.approved_amount ?? 0),
+                rejected_amount: Number(r.rejected_amount ?? 0),
+                paid_amount: Number(r.paid_amount ?? 0),
+            };
+        });
+
+        // Totals
+        const T = normalizedRows.reduce((acc, r) => {
+            acc.income_entries        += (r.income_entries || 0);
+            acc.bank_alloc_in         += (r.bank_alloc_in || 0);
+            acc.fund_transferred_in   += (r.fund_transferred_in || 0);
+            acc.total_in              += (r.total_in || 0);
+            acc.ledger_exp            += (r.ledger_exp || 0);
+            acc.ext_exp               += (r.ext_exp || 0);
+            acc.fund_transferred_out  += (r.fund_transferred_out || 0);
+            acc.total_out             += (r.total_out || 0);
+            acc.net_balance           += (r.net_balance || 0);
+            acc.draft_in              += (r.draft_in || 0);
+            acc.draft_out             += (r.draft_out || 0);
+            acc.draft_balance         += (r.draft_balance || 0);
+            acc.final_balance         += (r.final_balance || 0);
+            acc.total_expenses        += (r.total_expenses || 0);
+            acc.draft_count           += (r.draft_count || 0);
+            acc.submitted_count       += (r.submitted_count || 0);
+            acc.approved_count        += (r.approved_count || 0);
+            acc.rejected_count        += (r.rejected_count || 0);
+            acc.paid_count            += (r.paid_count || 0);
+            acc.approved_amount       += (r.approved_amount || 0);
+            acc.rejected_amount       += (r.rejected_amount || 0);
+            acc.paid_amount           += (r.paid_amount || 0);
+            acc.draft_amount          += (r.draft_amount || 0);
+            acc.submitted_amount      += (r.submitted_amount || 0);
+            return acc;
+        }, {income_entries:0, bank_alloc_in:0, fund_transferred_in:0, total_in:0, ledger_exp:0, ext_exp:0, fund_transferred_out:0, total_out:0, net_balance:0, draft_in:0, draft_out:0, draft_balance:0, final_balance:0, total_expenses:0, draft_count:0, submitted_count:0, approved_count:0, rejected_count:0, paid_count:0, approved_amount:0, rejected_amount:0, paid_amount:0, draft_amount:0, submitted_amount:0});
+
+        window._lastNormalizedRows = normalizedRows;
+        window._lastConsoTotals = T;
+
+        // Render stats bar
+        if (statsEl) {
+            statsEl.style.display = 'grid';
+            statsEl.innerHTML = [
+                ['Employees', normalizedRows.length, ''],
+                ['Confirmed IN', fmtVal(T.total_in), ''],
+                ['Confirmed OUT', fmtVal(T.total_out), ''],
+                ['Net Balance', fmtVal(T.net_balance), ''],
+                ['Drafts OUT', fmtVal(T.draft_out), `${T.draft_count} entries`],
+                ['Draft Balance', fmtVal(T.draft_balance), ''],
+                ['Final Balance', fmtVal(T.final_balance), 'Net + Drafts'],
+                ['Pending Review', T.submitted_count, fmtVal(T.submitted_amount)],
+                ['Approved', T.approved_count, fmtVal(T.approved_amount)],
+                ['Paid', T.paid_count, fmtVal(T.paid_amount)],
+            ].map(([lbl, val, subVal]) =>
+                `<div style="text-align:center;padding:6px 0;">
+                    <div style="font-size:16px;font-weight:700;">${val}</div>
+                    ${subVal ? `<div style="font-size:11px;font-weight:700;color:#c7d2fe;margin-top:1px;">${subVal}</div>` : ''}
+                    <div style="font-size:10px;opacity:.85;margin-top:2px;">${lbl}</div>
+                </div>`
+            ).join('');
+        }
+
+        const badgeHtml = (val, bg, fg) =>
+            `<span style="display:inline-block;min-width:28px;padding:2px 7px;border-radius:10px;font-size:12px;font-weight:600;background:${bg};color:${fg};">${val}</span>`;
+
+        const tbody = document.getElementById('consoTableBody');
+        tbody.innerHTML = normalizedRows.map((row, idx) => `
+            <tr data-emp-id="${row.employee_id}" data-emp-name="${(row.full_name||'').replace(/"/g,'&quot;')}"
+                style="border-bottom:1px solid #f1f5f9;${idx%2===1?'background:#fafafa;':''}transition:background .15s;"
+            >
+                <td style="padding:10px 8px;text-align:center;">
+                    <button id="btnExpandConso_${row.employee_id}" 
+                        onclick="toggleConsoEmpLedger(${row.employee_id}, '${(row.full_name||'').replace(/'/g, "\\'")}', event)" 
+                        title="Expand individual passbook for ${row.full_name}"
+                        style="padding:3px 8px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;font-weight:700;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+                <td style="padding:10px 10px;color:#9ca3af;font-size:12px;">${idx+1}</td>
+                <td style="padding:10px 12px;cursor:pointer;" onclick="toggleConsoEmpLedger(${row.employee_id}, '${(row.full_name||'').replace(/'/g, "\\'")}', event)">
+                    <div style="font-weight:700;color:#4f46e5;">${row.full_name} <i class="fas fa-chevron-right ms-1" style="font-size:10px;opacity:.6;"></i></div>
+                    <div style="font-size:11px;color:#9ca3af;">${row.emp_code}</div>
+                </td>
+                <td style="padding:10px 12px;border-right:2px solid #cbd5e1;">
+                    <div style="font-size:12px;color:#374151;">${row.department || '—'}</div>
+                    <div style="font-size:11px;color:#9ca3af;">${row.role || '—'}</div>
+                </td>
+
+                <!-- SECTION 1: INFLOW (CONFIRMED) -->
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#0891b2;">
+                    ${fmtVal(row.income_entries)}
+                    ${row.income_receipt_count > 0 ? `<div style="font-size:10px;font-weight:400;color:#6b7280;">${row.income_receipt_count} rcpt${row.income_receipt_count>1?'s':''}</div>` : ''}
+                </td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#1e40af;">${fmtVal(row.bank_alloc_in)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#059669;">${fmtVal(row.fund_transferred_in)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:700;color:#047857;background:#ecfdf5;border-right:2px solid #a7f3d0;">${fmtVal(row.total_in)}</td>
+
+                <!-- SECTION 1: OUTFLOW (CONFIRMED) -->
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#dc2626;">${fmtVal(row.ledger_exp)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#ea580c;">${fmtVal(row.ext_exp)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#b91c1c;">${fmtVal(row.fund_transferred_out)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:700;color:#b91c1c;background:#fef2f2;border-right:2px solid #fecaca;">${fmtVal(row.total_out)}</td>
+
+                <!-- SECTION 1: NET BALANCE -->
+                <td style="padding:10px 12px;text-align:right;font-weight:700;background:#eff6ff;border-right:2px solid #bfdbfe;color:${row.net_balance >= 0 ? '#059669' : '#dc2626'};">
+                    ${fmtVal(row.net_balance)}
+                </td>
+
+                <!-- SECTION 2: DRAFTS FLOW -->
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#059669;background:#fefce8;">${fmtVal(row.draft_in)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;color:#d97706;background:#fefce8;">${fmtVal(row.draft_out)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:700;color:#b45309;background:#fef3c7;">${fmtVal(row.draft_balance)}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:800;background:#ede9fe;border-right:2px solid #ddd6fe;color:${row.final_balance >= 0 ? '#059669' : '#7c3aed'};">
+                    ${fmtVal(row.final_balance)}
+                </td>
+
+                <!-- SECTION 3: EXPENSE COUNTS -->
+                <td style="padding:10px 10px;text-align:center;">${badgeHtml(row.draft_count,     '#f3f4f6','#4b5563')}</td>
+                <td style="padding:10px 10px;text-align:center;">${badgeHtml(row.submitted_count, '#fef3c7','#d97706')}</td>
+                <td style="padding:10px 10px;text-align:center;">${badgeHtml(row.approved_count,  '#d1fae5','#059669')}</td>
+                <td style="padding:10px 10px;text-align:center;">${badgeHtml(row.rejected_count,  '#fee2e2','#dc2626')}</td>
+                <td style="padding:10px 10px;text-align:center;border-right:2px solid #e2e8f0;">${badgeHtml(row.paid_count, '#ede9fe','#7c3aed')}</td>
+
+                <!-- SECTION 3: EXPENSE AMOUNTS -->
+                <td style="padding:10px 12px;text-align:right;color:#6b7280;font-weight:600;">${fmtVal(row.draft_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#d97706;font-weight:600;">${fmtVal(row.submitted_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#059669;font-weight:600;">${fmtVal(row.approved_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#dc2626;font-weight:600;">${fmtVal(row.rejected_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#7c3aed;font-weight:600;">${fmtVal(row.paid_amount)}</td>
+            </tr>
+            <tr id="consoDetailRow_${row.employee_id}" style="display:none;background:#f8fafc;">
+                <td colspan="27" style="padding:16px 20px;border-top:1px solid #e2e8f0;border-bottom:2px solid #cbd5e1;">
+                    <div id="consoDetailContent_${row.employee_id}"></div>
+                </td>
+            </tr>
+        `).join('');
+
+        // Totals footer
+        document.getElementById('consoTableFoot').innerHTML = `
+            <tr style="font-weight:700;font-size:12px;">
+                <td style="padding:10px 12px;" colspan="4"><strong>TOTAL (${normalizedRows.length} employees)</strong></td>
+                <!-- SECTION 1: INFLOW -->
+                <td style="padding:10px 12px;text-align:right;color:#0891b2;">${fmtVal(T.income_entries)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#1e40af;">${fmtVal(T.bank_alloc_in)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#059669;">${fmtVal(T.fund_transferred_in)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#047857;background:#d1fae5;border-right:2px solid #a7f3d0;">${fmtVal(T.total_in)}</td>
+                <!-- SECTION 1: OUTFLOW -->
+                <td style="padding:10px 12px;text-align:right;color:#dc2626;">${fmtVal(T.ledger_exp)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#ea580c;">${fmtVal(T.ext_exp)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#b91c1c;">${fmtVal(T.fund_transferred_out)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#b91c1c;background:#fee2e2;border-right:2px solid #fecaca;">${fmtVal(T.total_out)}</td>
+                <!-- SECTION 1: BALANCE -->
+                <td style="padding:10px 12px;text-align:right;background:#dbeafe;border-right:2px solid #bfdbfe;color:${T.net_balance >= 0 ? '#059669' : '#dc2626'};">${fmtVal(T.net_balance)}</td>
+                <!-- SECTION 2: DRAFTS FLOW -->
+                <td style="padding:10px 12px;text-align:right;color:#059669;background:#fefce8;">${fmtVal(T.draft_in)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#d97706;background:#fefce8;">${fmtVal(T.draft_out)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#b45309;background:#fef3c7;">${fmtVal(T.draft_balance)}</td>
+                <td style="padding:10px 12px;text-align:right;background:#ede9fe;border-right:2px solid #ddd6fe;color:${T.final_balance >= 0 ? '#059669' : '#7c3aed'};">${fmtVal(T.final_balance)}</td>
+                <!-- SECTION 3: EXPENSE COUNTS -->
+                <td style="padding:10px 10px;text-align:center;">${T.draft_count}</td>
+                <td style="padding:10px 10px;text-align:center;">${T.submitted_count}</td>
+                <td style="padding:10px 10px;text-align:center;">${T.approved_count}</td>
+                <td style="padding:10px 10px;text-align:center;">${T.rejected_count}</td>
+                <td style="padding:10px 10px;text-align:center;border-right:2px solid #e2e8f0;">${T.paid_count}</td>
+                <!-- SECTION 3: EXPENSE AMOUNTS -->
+                <td style="padding:10px 12px;text-align:right;color:#6b7280;">${fmtVal(T.draft_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#d97706;">${fmtVal(T.submitted_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#059669;">${fmtVal(T.approved_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#dc2626;">${fmtVal(T.rejected_amount)}</td>
+                <td style="padding:10px 12px;text-align:right;color:#7c3aed;">${fmtVal(T.paid_amount)}</td>
+            </tr>`;
+
+        if (tableEl) tableEl.style.display = 'table';
+
+    } catch(err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (emptyEl) {
+            emptyEl.style.display = 'block';
+            emptyEl.innerHTML = '<i class="fas fa-exclamation-circle fa-2x" style="color:#ef4444;margin-bottom:12px;display:block;"></i>Failed to load consolidated expenses — ' + (err.message || 'network error');
+        }
+    }
+}
+
+async function toggleConsoEmpLedger(empId, empName, event) {
+    if (event) event.stopPropagation();
+    const detailRow = document.getElementById(`consoDetailRow_${empId}`);
+    const btn = document.getElementById(`btnExpandConso_${empId}`);
+    if (!detailRow) return;
+
+    if (detailRow.style.display !== 'none') {
+        detailRow.style.display = 'none';
+        if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
+        return;
+    }
+
+    detailRow.style.display = 'table-row';
+    if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    const contentDiv = document.getElementById(`consoDetailContent_${empId}`);
+    contentDiv.innerHTML = `
+        <div style="padding:24px;text-align:center;color:#6b7280;">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary" style="margin-bottom:8px;"></i>
+            <div>Loading detailed transaction ledger for <strong>${empName}</strong>...</div>
+        </div>
+    `;
+
+    try {
+        const params = new URLSearchParams({
+            view_mode: 'ledger',
+            employee_id: empId,
+            page: 1,
+            page_size: 100,
+            _t: Date.now()
+        });
+
+        const company = document.getElementById('consoCompany') ? document.getElementById('consoCompany').value : '';
+        const from = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoFromDate') ? document.getElementById('consoFromDate').value : '');
+        const to = (_qfPreset['consolidated'] === 'overall') ? '' : (document.getElementById('consoToDate') ? document.getElementById('consoToDate').value : '');
+        const entryType = document.getElementById('consoFilterType') ? document.getElementById('consoFilterType').value : '';
+        const ledgerFilter = document.getElementById('consoFilterLedger') ? document.getElementById('consoFilterLedger').value : '';
+        const externalFilter = document.getElementById('consoFilterExternal') ? document.getElementById('consoFilterExternal').value : '';
+        const status = document.getElementById('consoFilterStatus') ? document.getElementById('consoFilterStatus').value : '';
+
+        if (company) params.append('company_id', company);
+        if (from) params.append('from_date', from);
+        if (to) params.append('to_date', to);
+        if (entryType) params.append('entry_type', entryType);
+        if (ledgerFilter) params.append('ledger_filter', ledgerFilter);
+        if (externalFilter) params.append('external_filter', externalFilter);
+        if (status) params.append('status', status);
+        if (document.getElementById('consoIncludeHistorical')?.checked) {
+            params.append('include_historical', 'true');
+        }
+
+        const res = await staffFetch(`${API_BASE}/expense-entries?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const entries = data.entries || [];
+        const summary = data.summary || {};
+
+        if (btn) btn.innerHTML = '<i class="fas fa-minus"></i>';
+
+        if (!entries.length) {
+            contentDiv.innerHTML = `
+                <div style="padding:20px;text-align:center;background:#fff;border-radius:8px;border:1px dashed #cbd5e1;color:#6b7280;">
+                    <i class="fas fa-folder-open fa-2x mb-2" style="color:#9ca3af;display:block;"></i>
+                    No ledger transactions found for <strong>${empName}</strong> with the selected filters.
+                </div>
+            `;
+            return;
+        }
+
+        const fmtVal = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        let tableRowsHtml = entries.map((exp, idx) => {
+            const expId = String(exp.id || '');
+            const realId = String(exp.real_id || exp.id || '');
+            _entryLookup[expId] = exp;
+            if (realId) _entryLookup[realId] = exp;
+
+            const isCredit = exp.direction === 'IN' || (exp.credit_amount && exp.credit_amount > 0);
+            const statusLabel = exp.is_paid
+                ? `<span class="badge-status badge-approved">${exp.status}</span> <span class="badge-status badge-paid">PAID</span>`
+                : `<span class="badge-status badge-${(exp.status||'').toLowerCase()}">${exp.status}</span>`;
+
+            let typeBadge = '';
+            if (exp.entry_type === 'INCOME') {
+                typeBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-arrow-down me-1"></i>INCOME</span>`;
+            } else if (exp.entry_type === 'FUND_ALLOCATION' || exp.entry_type === 'BANK_PAYMENT') {
+                typeBadge = `<span class="badge" style="background:#cffafe;color:#0e7490;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-university me-1"></i>BANK IN</span>`;
+            } else if (exp.entry_type === 'TRANSFER_IN') {
+                typeBadge = `<span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER IN</span>`;
+            } else if (exp.entry_type === 'TRANSFER_OUT') {
+                typeBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-exchange-alt me-1"></i>TRANSFER OUT</span>`;
+            } else {
+                typeBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;"><i class="fas fa-arrow-up me-1"></i>EXPENSE</span>`;
+            }
+
+            const catBadge = exp.category_name ? `<span class="badge-cat" style="margin-left:3px;font-size:10px;">${exp.category_name}</span>` : '';
+            const descText = exp.narration || exp.description || exp.notes || exp.purpose || '-';
+            const partyText = exp.party_name || exp.vendor_name || exp.paid_to || '-';
+
+            const inHtml = isCredit
+                ? `<span style="color:#059669;font-weight:700;font-family:monospace;">+${fmtVal(exp.credit_amount || exp.amount)}</span>`
+                : `<span style="color:#9ca3af;">—</span>`;
+
+            const outHtml = !isCredit
+                ? `<span style="color:#dc2626;font-weight:700;font-family:monospace;">${fmtVal(exp.debit_amount || exp.amount)}</span>`
+                : `<span style="color:#9ca3af;">—</span>`;
+
+            const balVal = exp.running_balance != null ? exp.running_balance : 0;
+            const balColor = balVal >= 0 ? '#1e40af' : '#dc2626';
+            const balHtml = `<span style="color:${balColor};font-weight:700;font-family:monospace;">${fmtVal(balVal)}</span>`;
+
+            return `
+                <tr style="border-bottom:1px solid #e5e7eb;font-size:12px;${idx%2===1?'background:#f9fafb;':'background:#ffffff;'}">
+                    <td style="padding:8px 10px;"><code>${exp.entry_number || ('#' + expId)}</code></td>
+                    <td style="padding:8px 10px;white-space:nowrap;">${formatConsoDate(exp.expense_date || exp.created_at)}</td>
+                    <td style="padding:8px 10px;font-size:11px;">${exp.company_name || '-'}</td>
+                    <td style="padding:8px 10px;">${typeBadge} ${catBadge}</td>
+                    <td style="padding:8px 10px;font-weight:600;color:#1f2937;">${partyText}</td>
+                    <td style="padding:8px 10px;"><div title="${descText.replace(/"/g,'&quot;')}">${truncateConsoText(descText, 35)}</div></td>
+                    <td style="padding:8px 10px;text-align:right;">${inHtml}</td>
+                    <td style="padding:8px 10px;text-align:right;">${outHtml}</td>
+                    <td style="padding:8px 10px;text-align:right;background:#fafafa;">${balHtml}</td>
+                    <td style="padding:8px 10px;">${statusLabel}</td>
+                </tr>
+            `;
+        }).join('');
+
+        contentDiv.innerHTML = `
+            <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.05);overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div>
+                        <div style="font-size:15px;font-weight:700;"><i class="fas fa-book-open me-2"></i>${empName} - Individual Passbook</div>
+                        <div style="font-size:11px;opacity:0.85;">Total Records: ${entries.length}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                            <div style="font-size:10px;opacity:0.8;">Total IN</div>
+                            <div style="font-size:12px;font-weight:700;">${fmtVal(summary.total_in || 0)}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:6px;text-align:center;">
+                            <div style="font-size:10px;opacity:0.8;">Total OUT</div>
+                            <div style="font-size:12px;font-weight:700;">${fmtVal(summary.total_out || 0)}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,0.3);">
+                            <div style="font-size:10px;opacity:0.8;">Net Balance</div>
+                            <div style="font-size:12px;font-weight:800;">${fmtVal(summary.net_balance != null ? summary.net_balance : ((summary.total_in||0)-(summary.total_out||0)))}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:11px;text-transform:uppercase;color:#475569;">
+                                <th style="padding:8px 10px;text-align:left;">Voucher #</th>
+                                <th style="padding:8px 10px;text-align:left;">Date</th>
+                                <th style="padding:8px 10px;text-align:left;">Company</th>
+                                <th style="padding:8px 10px;text-align:left;">Type / Category</th>
+                                <th style="padding:8px 10px;text-align:left;">Party / Vendor</th>
+                                <th style="padding:8px 10px;text-align:left;">Narration</th>
+                                <th style="padding:8px 10px;text-align:right;">In (Dr)</th>
+                                <th style="padding:8px 10px;text-align:right;">Out (Cr)</th>
+                                <th style="padding:8px 10px;text-align:right;">Balance</th>
+                                <th style="padding:8px 10px;text-align:left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch(err) {
+        if (btn) btn.innerHTML = '<i class="fas fa-plus"></i>';
+        contentDiv.innerHTML = `<div style="padding:16px;text-align:center;color:#ef4444;"><i class="fas fa-exclamation-circle me-1"></i>Failed to load ledger: ${err.message}</div>`;
+    }
+}
+
+function exportConsolidatedCSV() {
+    const rows = window._lastNormalizedRows || [];
+    if (!rows || !rows.length) {
+        alert('Please load data first before exporting.');
+        return;
+    }
+    const headers = [
+        'S.No', 'Employee Code', 'Employee Name', 'Department', 'Role',
+        'Income Entries', 'Bank Ledgers', 'Fund Transfer IN', 'Total IN',
+        'Ledger Expense', 'External Expense', 'Fund Transfer OUT', 'Total OUT',
+        'Net Balance',
+        'Drafts IN', 'Drafts OUT', 'Drafts Balance', 'Final Balance',
+        'Draft Count', 'Submitted Count', 'Approved Count', 'Rejected Count', 'Paid Count',
+        'Draft Amount', 'Submitted Amount', 'Approved Amount', 'Rejected Amount', 'Paid Amount'
+    ];
+
+    const escapeCSV = (val) => {
+        if (val === null || val === undefined) return '""';
+        let str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+        return `"${str}"`;
+    };
+
+    const csvLines = [];
+    csvLines.push(headers.map(h => `"${h}"`).join(','));
+
+    rows.forEach((r, idx) => {
+        const line = [
+            idx + 1,
+            escapeCSV(r.emp_code || ''),
+            escapeCSV(r.full_name || ''),
+            escapeCSV(r.department || ''),
+            escapeCSV(r.role || ''),
+            Number(r.income_entries || 0).toFixed(2),
+            Number(r.bank_alloc_in || 0).toFixed(2),
+            Number(r.fund_transferred_in || 0).toFixed(2),
+            Number(r.total_in || 0).toFixed(2),
+            Number(r.ledger_exp || 0).toFixed(2),
+            Number(r.ext_exp || 0).toFixed(2),
+            Number(r.fund_transferred_out || 0).toFixed(2),
+            Number(r.total_out || 0).toFixed(2),
+            Number(r.net_balance || 0).toFixed(2),
+            Number(r.draft_in || 0).toFixed(2),
+            Number(r.draft_out || 0).toFixed(2),
+            Number(r.draft_balance || 0).toFixed(2),
+            Number(r.final_balance || 0).toFixed(2),
+            Number(r.draft_count || 0),
+            Number(r.submitted_count || 0),
+            Number(r.approved_count || 0),
+            Number(r.rejected_count || 0),
+            Number(r.paid_count || 0),
+            Number(r.draft_amount || 0).toFixed(2),
+            Number(r.submitted_amount || 0).toFixed(2),
+            Number(r.approved_amount || 0).toFixed(2),
+            Number(r.rejected_amount || 0).toFixed(2),
+            Number(r.paid_amount || 0).toFixed(2)
+        ];
+        csvLines.push(line.join(','));
+    });
+
+    const csvContent = '\uFEFF' + csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `general_ledger_consolidated_expenses_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>

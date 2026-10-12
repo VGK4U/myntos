@@ -628,10 +628,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
   </div>
   <div class="fgroup"><label>Status</label>
     <select class="form-select" id="statusFilter" onchange="loadMembers(1)">
-      <option value="">All Status</option>
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
-      <option value="blocked">Blocked</option>
+      <option value="active" selected>Active Members (Default)</option>
+      <option value="deactivated">Deactivated / Blocked</option>
+      <option value="all">All Members</option>
     </select>
   </div>
   <div class="fgroup"><label>Assigned Staff</label>
@@ -1121,6 +1120,15 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
         <span>Referred By:</span>
         <input type="text" id="tptReferredBy" placeholder="Referrer name or code…" onchange="_tptReload()" onkeydown="if(event.key==='Enter')_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;width:160px;outline:none">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
+        <span>Status:</span>
+        <select id="tptStatusFilter" onchange="_tptReload()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;font-weight:600">
+          <option value="active" selected>Active Members (Default)</option>
+          <option value="deactivated">Deactivated / Blocked</option>
+          <option value="all">All Members</option>
+        </select>
       </div>
 
       <button onclick="_tptReload()" style="padding:7px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer"><i class="fas fa-search me-1"></i>Apply</button>
@@ -2486,6 +2494,28 @@ function _isCardAdmin() {
     const desig = (_staffMe.designation || '').trim().toUpperCase();
     return code === 'MR10001' || desig === 'EA';
 }
+
+// DC-VGK-MARK-PAID-001: Payment authority allowed only for MR10001, Accounts department, and Nandana Staff
+function _canMarkIncomePaid() {
+    if (!_staffMe) return false;
+    const code = (_staffMe.emp_code || '').toUpperCase().trim();
+    const dept = String(_staffMe.department || _staffMe.department_name || '').toLowerCase();
+    const name = (_staffMe.full_name || _staffMe.name || _staffMe.first_name || '').toLowerCase();
+    const deptId = _staffMe.department_id;
+    const role = String(_staffMe.role_code || _staffMe.role || '').toLowerCase();
+    const st = String(_staffMe.staff_type || '').toLowerCase();
+
+    // 1. MR10001 / Key Leadership / Super Admin
+    if (code === 'MR10001' || st.includes('supreme') || role.includes('key_leadership')) return true;
+
+    // 2. Nandana Staff (MN10009, MN10010, or name matching nandana)
+    if (code === 'MN10009' || code === 'MN10010' || name.includes('nandana')) return true;
+
+    // 3. Accounts department / Finance / Store
+    if (dept.includes('account') || dept.includes('finance') || deptId === 15) return true;
+
+    return false;
+}
 async function _initStaffMe() {
     try {
         const r = await staffFetch(API + '/staff/auth/me');
@@ -2574,7 +2604,7 @@ function updateSortHeaders() {
 
 function resetFilters() {
   document.getElementById('searchInput').value = '';
-  document.getElementById('statusFilter').value = '';
+  document.getElementById('statusFilter').value = 'active';
   const asEl = document.getElementById('assignedStaffFilter');
   if (asEl) asEl.value = '';
   const cdEl = document.getElementById('contactedDaysFilter');
@@ -3354,6 +3384,7 @@ function _tptReset() {
   if (document.getElementById('tptRankFilter')) document.getElementById('tptRankFilter').value = '';
   if (document.getElementById('tptRegBy')) document.getElementById('tptRegBy').value = '';
   if (document.getElementById('tptReferredBy')) document.getElementById('tptReferredBy').value = '';
+  if (document.getElementById('tptStatusFilter')) document.getElementById('tptStatusFilter').value = 'active';
   if (document.getElementById('tptDateFrom')) document.getElementById('tptDateFrom').value = '';
   if (document.getElementById('tptDateTo')) document.getElementById('tptDateTo').value = '';
   document.querySelectorAll('#tabTopPartnersTab .me-period-btn').forEach(b => b.classList.remove('active'));
@@ -3379,6 +3410,7 @@ async function loadTopPartnersTable(page = 1) {
   const rankFilter = document.getElementById('tptRankFilter')?.value || '';
   const regBy = document.getElementById('tptRegBy')?.value?.trim() || '';
   const referredBy = document.getElementById('tptReferredBy')?.value?.trim() || '';
+  const statusFilter = document.getElementById('tptStatusFilter')?.value || 'active';
   const dateFrom = document.getElementById('tptDateFrom')?.value || '';
   const dateTo = document.getElementById('tptDateTo')?.value || '';
 
@@ -3389,6 +3421,7 @@ async function loadTopPartnersTable(page = 1) {
   if (rankFilter) url += `&rank_level=${encodeURIComponent(rankFilter)}`;
   if (regBy) url += `&reg_by=${encodeURIComponent(regBy)}`;
   if (referredBy) url += `&referred_by=${encodeURIComponent(referredBy)}`;
+  if (statusFilter) url += `&status_filter=${encodeURIComponent(statusFilter)}`;
   if (_tptPeriod === 'custom' && dateFrom && dateTo) {
     url += `&date_from=${dateFrom}&date_to=${dateTo}`;
   }
@@ -3444,7 +3477,10 @@ async function loadTopPartnersTable(page = 1) {
         <td class="tpt-sticky-2" style="padding:10px 12px;font-weight:700;color:#7c3aed">
           <a href="javascript:void(0)" onclick="openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','total_leads','All Self Files')" style="color:#7c3aed;text-decoration:none" title="Click to view all files for ${safePName}">${p.code}</a>
         </td>
-        <td class="tpt-sticky-3" style="padding:10px 12px;font-weight:700;color:#111827">${p.name}</td>
+        <td class="tpt-sticky-3" style="padding:10px 12px;font-weight:700;color:#111827">
+          ${p.name}
+          ${p.is_blocked ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:4px;background:#fef2f2;color:#dc2626;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid #fecaca">Blocked</span>` : (!p.is_active ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:4px;background:#f3f4f6;color:#6b7280;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid #e5e7eb">Deactivated</span>` : `<span style="font-size:9.5px;padding:2px 6px;border-radius:4px;background:#dcfce7;color:#15803d;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid #bbf7d0">Active</span>`)}
+        </td>
 
         <!-- RANK & CURRENT MONTH PERFORMANCE Cells -->
         <td style="padding:10px 8px;text-align:center;background:#f5f3ff;border-left:2px solid #ddd6fe">
@@ -3660,6 +3696,7 @@ function _tptExportCsv() {
   const categoryId = document.getElementById('tptCategory')?.value || '';
   const regBy = document.getElementById('tptRegBy')?.value?.trim() || '';
   const referredBy = document.getElementById('tptReferredBy')?.value?.trim() || '';
+  const statusFilter = document.getElementById('tptStatusFilter')?.value || 'active';
   const dateFrom = document.getElementById('tptDateFrom')?.value || '';
   const dateTo = document.getElementById('tptDateTo')?.value || '';
 
@@ -3669,6 +3706,7 @@ function _tptExportCsv() {
   if (categoryId) url += `&category_id=${encodeURIComponent(categoryId)}`;
   if (regBy) url += `&reg_by=${encodeURIComponent(regBy)}`;
   if (referredBy) url += `&referred_by=${encodeURIComponent(referredBy)}`;
+  if (statusFilter) url += `&status_filter=${encodeURIComponent(statusFilter)}`;
   if (_tptPeriod === 'custom' && dateFrom && dateTo) {
     url += `&date_from=${dateFrom}&date_to=${dateTo}`;
   }
@@ -4787,13 +4825,29 @@ function _renderMeDetailTable(partnerId){
             const balGrossHtml = balGross > 0 ? _meInr(balGross) : ((isComm || isDvr) ? '—' : '<span style="color:#9ca3af;font-size:10px">N/A</span>');
 
             const isPaidSt = (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'VERIFIED');
-            const resolvedPmtDate = e.payment_date || (isPaidSt ? (e.trigger_date || e.income_date) : null);
+            const resolvedPmtDate = e.payment_date || (e.status === 'PAID' ? (e.paid_at || e.trigger_date || e.income_date) : (isPaidSt ? (e.trigger_date || e.income_date) : null));
             const pmtCellHtml = resolvedPmtDate ? fmtDate(resolvedPmtDate) : '<span style="color:#d1d5db">—</span>';
+            const utrCellSub = (e.status === 'PAID' && e.payment_utr) ? `<div style="font-size:9.5px;color:#059669;font-family:monospace;font-weight:600;margin-top:2px" title="Payment ID: ${e.payment_utr}"><i class="fas fa-receipt me-1"></i>${e.payment_utr}</div>` : '';
+
+            let statusCellHtml = '';
+            if (e.status === 'PAID') {
+              statusCellHtml = `<span style="background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><i class="fas fa-check-circle"></i> PAID</span>`;
+            } else if (_canMarkIncomePaid() && (e.status === 'STAGE1_APPROVED' || e.status === 'RELEASED' || e.status === 'PENDING')) {
+              statusCellHtml = `
+                <div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+                  <span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:2px 7px;border-radius:20px;font-size:9.5px;font-weight:700">${e.status}</span>
+                  <button type="button" onclick="_openMarkPaidModal(${partnerId}, ${JSON.stringify(e).replace(/"/g, '&quot;')})" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 1px 3px rgba(5,150,105,0.3);white-space:nowrap" title="Mark as Paid with Payment ID">
+                    <i class="fas fa-money-bill-wave"></i> Mark Paid
+                  </button>
+                </div>`;
+            } else {
+              statusCellHtml = `<span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span>`;
+            }
 
             return `<tr style="border-bottom:1px solid #f3f4f6">
               <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.submit_date?fmtDate(e.submit_date):'<span style="color:#d1d5db">—</span>'}</td>
               <td style="padding:7px 10px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
-              <td style="padding:7px 10px;color:${resolvedPmtDate?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}</td>
+              <td style="padding:7px 10px;color:${e.status==='PAID'?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}${utrCellSub}</td>
               <td style="padding:7px 10px;font-family:monospace;color:#1f2937;font-size:11px">${e.entry_number||'—'}</td>
               <td style="padding:7px 10px;text-align:center">
                 <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlC}22;color:${lvlC}">${lvlLabelText}</span>
@@ -4813,7 +4867,7 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
               <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
+              <td style="padding:7px 10px;text-align:center">${statusCellHtml}</td>
             </tr>`;
           }).join('');
 
@@ -5978,7 +6032,7 @@ async function loadMembers(page = 1) {
   if (!tbody) return;
 
   const search = (document.getElementById('searchInput')?.value || '').trim();
-  const status = document.getElementById('statusFilter')?.value ?? '';
+  const status = document.getElementById('statusFilter')?.value || 'active';
   const assignedStaffFilter = (document.getElementById('assignedStaffFilter')?.value || '').trim();
   const contactedDaysFilter = (document.getElementById('contactedDaysFilter')?.value || '').trim();
   const desigFilter = (document.getElementById('designationFilter')?.value || '').trim();
@@ -5986,12 +6040,8 @@ async function loadMembers(page = 1) {
   const eligFilter = (document.getElementById('eligibilityFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
-  if (status !== '') {
-    if (status === 'blocked' || status === 'active' || status === 'inactive') {
-      url += '&status=' + encodeURIComponent(status);
-    } else {
-      url += '&is_active=' + encodeURIComponent(status);
-    }
+  if (status) {
+    url += '&status=' + encodeURIComponent(status);
   }
   if (assignedStaffFilter) url += '&assigned_staff_id=' + encodeURIComponent(assignedStaffFilter);
   if (contactedDaysFilter) url += '&contacted_days=' + encodeURIComponent(contactedDaysFilter);
@@ -8612,7 +8662,7 @@ function _asmUpdateSummary() {
   const gv = id => (document.getElementById(id)?.value || '');
   const parts = [];
   const s = gv('asm_search');    if (s)        parts.push(`Search: "${s}"`);
-  const st = gv('asm_status');   if (st)        parts.push(`Status: ${st === 'true' ? 'Active' : 'Inactive'}`);
+  const st = gv('asm_status');   if (st)        parts.push(`Status: ${st === 'active' ? 'Active' : (st === 'deactivated' ? 'Deactivated' : 'All')}`);
   const de = gv('asm_designation'); if (de)     parts.push(`Desig: ${de.replace(/_/g,' ')}`);
   const rb = gv('asm_regby');    if (rb)        parts.push(`Reg By: ${rb}`);
   const rm = gv('asm_regmonth'); if (rm)        parts.push(`Month: ${rm}`);
@@ -11290,6 +11340,17 @@ function _renderCommDetailTable(partnerId) {
       </thead>
       <tbody>
       ${rows.length ? rows.map(e => {
+        const commStatusHtml = (e.status === 'PAID')
+          ? `<span style="background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><i class="fas fa-check-circle"></i> PAID</span>${e.payment_utr ? '<div style="font-size:9.5px;color:#059669;font-family:monospace;font-weight:600;margin-top:2px" title="Payment ID: '+e.payment_utr+'"><i class="fas fa-receipt me-1"></i>'+e.payment_utr+'</div>' : ''}`
+          : (_canMarkIncomePaid() && (e.status === 'STAGE1_APPROVED' || e.status === 'RELEASED' || e.status === 'PENDING')
+            ? `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
+                 <span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:2px 7px;border-radius:20px;font-size:9.5px;font-weight:700">${e.status}</span>
+                 <button type="button" onclick="_openMarkPaidModal(${partnerId}, ${JSON.stringify(e).replace(/"/g, '&quot;')})" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 1px 3px rgba(5,150,105,0.3);white-space:nowrap" title="Mark as Paid with Payment ID">
+                   <i class="fas fa-money-bill-wave"></i> Mark Paid
+                 </button>
+               </div>`
+            : `<span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span>`);
+
         return `<tr style="border-bottom:1px solid #f3f4f6">
         <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${fmtDate(e.income_date)}</td>
         <td style="padding:7px 10px;color:#6b7280;white-space:nowrap">${e.submit_date ? fmtDate(e.submit_date) : '<span style="color:#d1d5db">—</span>'}</td>
@@ -11306,7 +11367,7 @@ function _renderCommDetailTable(partnerId) {
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${e.net_payout > 0 ? _meInr(e.net_payout) : '—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.commission_amount) : '<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.net_payout > 0 ? e.net_payout : e.commission_amount * 0.9) + '<span style="font-size:9px;color:#d97706;margin-left:2px">' + (e.net_payout > 0 ? '' : '~') + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
-        <td style="padding:7px 10px;text-align:center"><span style="background:${sc(e.status)}20;color:${sc(e.status)};padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">${e.status}</span></td>
+        <td style="padding:7px 10px;text-align:center">${commStatusHtml}</td>
       </tr>`;
       }).join('')
       : '<tr><td colspan="16" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>'}
@@ -11350,9 +11411,9 @@ function _renderCommDetailTable(partnerId) {
     <div>
       <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px"><i class="fas fa-toggle-on me-1" style="color:#059669"></i>Status</label>
       <select id="asm_status" class="form-select" onchange="_asmUpdateSummary()" style="font-size:13px">
-        <option value="">All Status</option>
-        <option value="true">Active</option>
-        <option value="false">Inactive</option>
+        <option value="active">Active Members (Default)</option>
+        <option value="deactivated">Deactivated / Blocked</option>
+        <option value="all">All Members</option>
       </select>
     </div>
     <!-- Designation -->
@@ -13332,6 +13393,248 @@ async function submitDirectAdvance() {
     goBtn.disabled = false;
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DC-VGK-MARK-PAID-001: Mark Income Entry as PAID Modal & Controller
+// Allowed only for MR10001, Accounts department, and Nandana Staff
+// ─────────────────────────────────────────────────────────────────────────────
+let _mpiCurrentEntry = null;
+let _mpiCurrentPartnerId = null;
+let _mpiMode = 'BANK';
+let _mpiAllBanks = [];
+
+async function _openMarkPaidModal(partnerId, entry) {
+  _mpiCurrentPartnerId = partnerId;
+  _mpiCurrentEntry = entry;
+  _mpiMode = 'BANK';
+
+  const modal = document.getElementById('markPaidIncomeModal');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('mpiSubTitle');
+  if (titleEl) {
+    titleEl.textContent = `${entry.entry_number || ('ID #' + entry.id)} · ${entry.display_kind || entry.kind || 'Income'}`;
+  }
+
+  const gross = parseFloat(entry.commission_amount || 0);
+  const net = (entry.net_payout !== undefined && entry.net_payout !== null && parseFloat(entry.net_payout) > 0)
+    ? parseFloat(entry.net_payout)
+    : Math.round(gross * 0.90);
+  const admin = (entry.admin_charges !== undefined && entry.admin_charges !== null && parseFloat(entry.admin_charges) > 0)
+    ? parseFloat(entry.admin_charges)
+    : Math.round(gross * 0.08);
+  const tds = (entry.tds_amount !== undefined && entry.tds_amount !== null && parseFloat(entry.tds_amount) > 0)
+    ? parseFloat(entry.tds_amount)
+    : Math.round(gross * 0.02);
+
+  const infoCard = document.getElementById('mpiInfoCard');
+  if (infoCard) {
+    infoCard.innerHTML = `
+      <div><span style="color:#6b7280">Client:</span> <strong>${_esc(entry.client_name || '—')}</strong></div>
+      <div><span style="color:#6b7280">Level / Kind:</span> <strong>${_esc(entry.level_label || ('L' + (entry.level || 0)))} · ${_esc(entry.display_kind || entry.kind || '')}</strong></div>
+      <div><span style="color:#6b7280">Gross Amount:</span> <strong>${_meInr(gross)}</strong></div>
+      <div><span style="color:#6b7280">Admin (8%) / TDS (2%):</span> <span>${_meInr(admin)} / ${_meInr(tds)}</span></div>
+      <div style="grid-column:1 / -1;border-top:1px dashed #cbd5e1;padding-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700;color:#1e293b">Net Payout Due:</span>
+        <strong style="font-size:15px;color:#059669;font-weight:900">${_meInr(net)}</strong>
+      </div>
+    `;
+  }
+
+  const utrInp = document.getElementById('mpiUtrInp');
+  if (utrInp) utrInp.value = '';
+  const cVoucherInp = document.getElementById('mpiCashVoucherInp');
+  if (cVoucherInp) cVoucherInp.value = '';
+  const notesInp = document.getElementById('mpiNotes');
+  if (notesInp) notesInp.value = '';
+
+  _setMpiMode('BANK');
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+
+  await _loadMpiPaymentOptions(entry.company_id || 4);
+}
+
+function _closeMarkPaidModal() {
+  const modal = document.getElementById('markPaidIncomeModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+  _mpiCurrentEntry = null;
+  _mpiCurrentPartnerId = null;
+}
+
+function _setMpiMode(mode) {
+  _mpiMode = mode;
+  const isBank = (mode === 'BANK');
+  const bBtn = document.getElementById('mpiModeBank');
+  const cBtn = document.getElementById('mpiModeCash');
+  if (bBtn) {
+    bBtn.style.border = isBank ? '1.5px solid #059669' : '1.5px solid #e5e7eb';
+    bBtn.style.background = isBank ? '#f0fdf4' : '#fff';
+    bBtn.style.color = isBank ? '#059669' : '#6b7280';
+  }
+  if (cBtn) {
+    cBtn.style.border = !isBank ? '1.5px solid #059669' : '1.5px solid #e5e7eb';
+    cBtn.style.background = !isBank ? '#f0fdf4' : '#fff';
+    cBtn.style.color = !isBank ? '#059669' : '#6b7280';
+  }
+  const bp = document.getElementById('mpiBankPanel');
+  const cp = document.getElementById('mpiCashPanel');
+  if (bp) bp.style.display = isBank ? '' : 'none';
+  if (cp) cp.style.display = isBank ? 'none' : '';
+}
+
+async function _loadMpiPaymentOptions(prefCompanyId) {
+  try {
+    const r = await staffFetch(API + '/vgk/staff/vgk/cash-income/payment-options');
+    const d = await r.json();
+    if (!d || !d.success) return;
+    _mpiAllBanks = d.banks || [];
+    
+    const cmpSel = document.getElementById('mpiCompanySel');
+    if (cmpSel) {
+      cmpSel.innerHTML = (d.companies || []).map(c =>
+        `<option value="${c.id}" ${c.id === prefCompanyId ? 'selected' : ''}>${_esc(c.name)}${c.code ? ' (' + c.code + ')' : ''}</option>`
+      ).join('') || '<option value="4">MyntReal</option>';
+    }
+    _filterMpiBanksByCompany();
+
+    const cashSel = document.getElementById('mpiCashSel');
+    if (cashSel) {
+      cashSel.innerHTML = (d.cash_staff || []).map(s =>
+        `<option value="${s.staff_id}">${_esc(s.label)}</option>`
+      ).join('') || '<option value="">No active staff</option>';
+    }
+  } catch(e) {
+    console.error('Failed to load payment options:', e);
+  }
+}
+
+function _filterMpiBanksByCompany() {
+  const cmpId = parseInt(document.getElementById('mpiCompanySel')?.value || '0');
+  const bsel = document.getElementById('mpiBankSel');
+  if (!bsel) return;
+  const filtered = cmpId ? _mpiAllBanks.filter(b => b.company_id === cmpId) : _mpiAllBanks;
+  if (!filtered.length) {
+    bsel.innerHTML = '<option value="">No bank accounts configured</option>';
+  } else {
+    bsel.innerHTML = filtered.map(b =>
+      `<option value="${b.ledger_id}">${_esc(b.label)}${b.is_primary ? ' ★' : ''}</option>`
+    ).join('');
+  }
+}
+
+async function _submitMarkPaid(bypass = false) {
+  if (!_mpiCurrentEntry) return;
+  const e = _mpiCurrentEntry;
+  const partnerId = _mpiCurrentPartnerId;
+  const coId = parseInt(document.getElementById('mpiCompanySel')?.value || e.company_id || '4');
+  
+  const body = {
+    entry_ids: [e.id],
+    action: 'mark_paid',
+    notes: (document.getElementById('mpiNotes')?.value || '').trim() || null,
+    bypass: bypass
+  };
+
+  if (_mpiMode === 'BANK') {
+    const utr = (document.getElementById('mpiUtrInp')?.value || '').trim();
+    if (!utr) {
+      showToast('Payment ID / UTR is required for bank payment', 'error');
+      document.getElementById('mpiUtrInp')?.focus();
+      return;
+    }
+    const bankId = parseInt(document.getElementById('mpiBankSel')?.value || '0');
+    if (!bankId) {
+      showToast('Please select a company bank account', 'error');
+      return;
+    }
+    body.payment_mode = 'BANK';
+    body.payment_utr = utr;
+    body.bank_ledger_id = bankId;
+  } else {
+    const cashStaffId = parseInt(document.getElementById('mpiCashSel')?.value || '0');
+    if (!cashStaffId) {
+      showToast('Please select paying staff for cash payment', 'error');
+      return;
+    }
+    const voucher = (document.getElementById('mpiCashVoucherInp')?.value || '').trim();
+    body.payment_mode = 'CASH';
+    body.cash_staff_id = cashStaffId;
+    body.payment_utr = voucher || `CASH-${Date.now()}`;
+  }
+
+  const btn = document.getElementById('mpiSubmitBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+  }
+
+  try {
+    const res = await staffFetch(`${API}/vgk/staff/vgk/cash-income/unified-action?company_id=${coId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await res.json();
+
+    if (!res.ok || !d.success) {
+      if (d.error === 'CAPPED_WARNING' || d.capped_warning || d.detail === 'CAPPED_WARNING') {
+        const cap = d.cap_info || {};
+        const remain = 3 - (d.bypass_count || 0);
+        const confirmMsg = `⚠️ 50% ADVANCE CAP REACHED\n` +
+          `--------------------------------------------------\n` +
+          `• Total Submitted Files: ${cap.eligible_files || 0}\n` +
+          `• 50% Cap Limit: ${cap.cap_limit || 0}\n` +
+          `• Already Advanced (Paid/Released): ${cap.paid_advances || 0}\n\n` +
+          `Since already-advanced files (${cap.paid_advances || 0}) exceed the 50% cap (${cap.cap_limit || 0}), new advances are put on hold.\n` +
+          `Skip times remaining: ${remain} skip(s) available.\n\n` +
+          `Do you want to PROCEED (skip the cap and mark as paid) or HOLD?`;
+        if (confirm(confirmMsg)) {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Mark as Paid'; }
+          return _submitMarkPaid(true);
+        } else {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Mark as Paid'; }
+          return;
+        }
+      }
+      throw new Error(d.detail || d.message || d.error || 'Failed to mark as paid');
+    }
+
+    showToast(`✅ Successfully marked ${e.entry_number || ('ID #' + e.id)} as PAID!`, 'success');
+    _closeMarkPaidModal();
+
+    // In-place reactive cache update
+    if (partnerId && _meDetailCache[partnerId]) {
+      const cached = _meDetailCache[partnerId].find(x => x.id === e.id);
+      if (cached) {
+        cached.status = 'PAID';
+        cached.payment_utr = body.payment_utr;
+        cached.payment_date = new Date().toISOString().slice(0, 10);
+      }
+      _renderMeDetailTable(partnerId);
+      if (typeof _renderCommDetailTable === 'function') {
+        _renderCommDetailTable(partnerId);
+      }
+    }
+  } catch (err) {
+    showToast(err.message || 'Error marking payment', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm &amp; Mark as Paid';
+    }
+  }
+}
+
+window._openMarkPaidModal = _openMarkPaidModal;
+window._closeMarkPaidModal = _closeMarkPaidModal;
+window._setMpiMode = _setMpiMode;
+window._filterMpiBanksByCompany = _filterMpiBanksByCompany;
+window._submitMarkPaid = _submitMarkPaid;
 </script>
 
 <!-- Modal: Issue Direct Member Advance -->
@@ -13392,6 +13695,90 @@ async function submitDirectAdvance() {
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button type="button" onclick="closeAddAdvModal()" style="background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
       <button type="button" id="btnIssueAdvGo" onclick="submitDirectAdvance()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer">Issue Advance Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Mark Income Entry as Paid (DC-VGK-MARK-PAID-001) -->
+<div class="modal-overlay" id="markPaidIncomeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div class="modal-box" style="width:520px;max-width:95vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.25)">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#059669,#047857);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff">
+      <div>
+        <div style="font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px">
+          <i class="fas fa-money-bill-wave"></i> Mark Entry as Paid
+        </div>
+        <div id="mpiSubTitle" style="font-size:11.5px;opacity:0.85;margin-top:2px">Entry #...</div>
+      </div>
+      <button type="button" onclick="_closeMarkPaidModal()" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:18px 20px">
+      <!-- Info Card -->
+      <div id="mpiInfoCard" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+        <!-- populated dynamically -->
+      </div>
+
+      <!-- Payment Mode Tabs -->
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:6px">Payment Mode</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="mpiModeBank" onclick="_setMpiMode('BANK')" style="flex:1;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #059669;background:#f0fdf4;color:#059669;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-university"></i> Bank Transfer / UPI
+          </button>
+          <button type="button" id="mpiModeCash" onclick="_setMpiMode('CASH')" style="flex:1;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-money-bill-wave"></i> Cash
+          </button>
+        </div>
+      </div>
+
+      <!-- Bank Panel -->
+      <div id="mpiBankPanel">
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:4px">Paying Company</label>
+          <select id="mpiCompanySel" onchange="_filterMpiBanksByCompany()" style="width:100%;padding:8px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:12.5px;outline:none;background:#fff"></select>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:4px">Company Bank Account</label>
+          <select id="mpiBankSel" style="width:100%;padding:8px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:12.5px;outline:none;background:#fff"></select>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;display:block;margin-bottom:4px">
+            Payment ID / UTR / Reference Number <span style="color:#dc2626">*</span>
+          </label>
+          <input type="text" id="mpiUtrInp" placeholder="Enter Bank UTR / IMPS / NEFT Ref / Cheque No..." maxlength="80" style="width:100%;padding:9px 12px;border:1.5px solid #059669;border-radius:8px;font-size:13px;outline:none;font-family:monospace;box-sizing:border-box">
+          <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Mandatory transaction reference for accounts audit trail.</div>
+        </div>
+      </div>
+
+      <!-- Cash Panel -->
+      <div id="mpiCashPanel" style="display:none">
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:4px">Paying Staff (Cash Custodian) <span style="color:#dc2626">*</span></label>
+          <select id="mpiCashSel" style="width:100%;padding:8px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:12.5px;outline:none;background:#fff"></select>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;display:block;margin-bottom:4px">Voucher / Receipt # (Optional)</label>
+          <input type="text" id="mpiCashVoucherInp" placeholder="e.g. CSH-2026-001..." maxlength="80" style="width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+      </div>
+
+      <!-- Notes (optional) -->
+      <div style="margin-bottom:6px">
+        <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Payment Remarks / Notes (Optional)</label>
+        <textarea id="mpiNotes" rows="2" placeholder="e.g. Disbursed by Accounts / Approved by Leadership" style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box"></textarea>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:14px 20px;border-top:1px solid #f0f0f0;display:flex;justify-content:flex-end;gap:10px;background:#f8fafc">
+      <button type="button" onclick="_closeMarkPaidModal()" style="padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;color:#374151;font-size:12.5px;font-weight:600;cursor:pointer">Cancel</button>
+      <button type="button" id="mpiSubmitBtn" onclick="_submitMarkPaid()" style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#059669,#047857);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.4)">
+        <i class="fas fa-check-circle"></i> Confirm &amp; Mark as Paid
+      </button>
     </div>
   </div>
 </div>

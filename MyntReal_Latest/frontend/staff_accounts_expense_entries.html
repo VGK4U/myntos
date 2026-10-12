@@ -1050,6 +1050,7 @@
         let _expenseEmployees = [];   // DC_EXP_BEHALF_001: cached employee list for behalf-of selector
         let _canCreateOnBehalf = false;
         let _entryLookup = {};
+        let _cachedMainCategories = [];
         
         let _activeExpenseTab = 'my';
         let _teamPage = 1, _teamTotalPages = 1;
@@ -1457,12 +1458,12 @@
                     const data = await response.json();
                     const companies = data.companies || [];
                     
-                    ['filterCompany', 'formCompany', 'consoCompany', 'teamFilterCompany', 'transferCompany'].forEach(id => {
+                    ['filterCompany', 'formCompany', 'consoCompany', 'teamFilterCompany', 'transferCompany', 'editExpCompany'].forEach(id => {
                         const select = document.getElementById(id);
                         if (!select) return;
                         const firstOption = select.options[0];
                         select.innerHTML = '';
-                        select.appendChild(firstOption);
+                        if (firstOption) select.appendChild(firstOption);
                         
                         companies.forEach(company => {
                             const option = document.createElement('option');
@@ -1487,6 +1488,7 @@
                     
                     // API returns main categories with nested sub_categories array
                     const mainCats = categories.filter(c => c.is_active !== false);
+                    _cachedMainCategories = mainCats;
                     ['filterCategory', 'formCategory'].forEach(id => {
                         const select = document.getElementById(id);
                         const firstOption = select.options[0];
@@ -1843,12 +1845,17 @@
 
             buttons += `<button class="btn-action btn-view" onclick="viewExpense('${realId}')" title="View"><i class="fas fa-eye"></i></button>`;
 
+            // DC-EXPENSE-EDIT-001: Accounts Department & MR10001 can edit expenses at ALL levels/statuses
+            // Creator can edit when in DRAFT status
+            if (exp.entry_type === 'EXPENSE') {
+                if ((exp.status === 'DRAFT' && isCreator) || hasAccountsAccess) {
+                    buttons += ` <button class="btn-action btn-edit" onclick="openEditExpenseModal('${realId}')" title="Edit Expense"><i class="fas fa-edit"></i></button>`;
+                }
+            }
+
             if (exp.status === 'DRAFT' && exp.entry_type === 'EXPENSE') {
                 if (isCreator || hasFullAccess) {
                     buttons += ` <button class="btn-action btn-submit" onclick="submitExpense('${realId}')" title="Submit for Approval"><i class="fas fa-paper-plane"></i></button>`;
-                }
-                if (isCreator || hasAccountsAccess) {
-                    buttons += ` <button class="btn-action btn-edit" onclick="openEditExpenseModal('${realId}')" title="Edit"><i class="fas fa-edit"></i></button>`;
                 }
             }
 
@@ -3270,12 +3277,19 @@
 
                 // Inject quick-action buttons inside view panel
                 const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
                 const isCreator = e.created_by_id === userData.id;
-                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name);
-                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r));
+                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name)
+                    || ['MR10001', 'MR10016'].includes(loggedCode);
+                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r))
+                    || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
                 const actDiv = document.getElementById('viewExpActions');
-                if (e.status === 'DRAFT' && (isCreator || hasFullAccess)) {
+
+                // DC-EXPENSE-EDIT-001: Accounts Department & MR10001 can edit at ALL levels/statuses
+                if ((e.status === 'DRAFT' && isCreator) || hasAccountsAccess) {
                     actDiv.innerHTML += `<button onclick="closeViewExp();openEditExpenseModal(${e.id})" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-edit me-1"></i>Edit</button>`;
+                }
+                if (e.status === 'DRAFT' && (isCreator || hasFullAccess)) {
                     actDiv.innerHTML += `<button onclick="closeViewExp();submitExpense(${e.id})" style="padding:8px 16px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-paper-plane me-1"></i>Submit</button>`;
                 }
                 if (e.status === 'SUBMITTED' && hasFullAccess) {
@@ -3520,8 +3534,65 @@
             }
         }
 
-        // ========== EDIT EXPENSE MODAL ==========
+        // ========== EDIT EXPENSE MODAL (DC-EXPENSE-EDIT-001) ==========
         let editExpenseId = null;
+
+        function populateEditCategories(selectedMainId, selectedSubId) {
+            const mainSelect = document.getElementById('editExpMainCat');
+            const subSelect = document.getElementById('editExpSubCat');
+            if (!mainSelect || !subSelect) return;
+
+            mainSelect.innerHTML = '<option value="">Select Main Category</option>';
+            subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+
+            const catsToUse = (_cachedMainCategories && _cachedMainCategories.length > 0) ? _cachedMainCategories : [];
+            catsToUse.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                opt.dataset.subs = JSON.stringify(cat.sub_categories || []);
+                if (selectedMainId && String(cat.id) === String(selectedMainId)) {
+                    opt.selected = true;
+                }
+                mainSelect.appendChild(opt);
+            });
+
+            function updateEditSubs(subToSelect) {
+                subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+                const sel = mainSelect.options[mainSelect.selectedIndex];
+                if (sel && sel.dataset.subs) {
+                    try {
+                        const subs = JSON.parse(sel.dataset.subs);
+                        subs.filter(s => s.is_active !== false).forEach(sub => {
+                            const o = document.createElement('option');
+                            o.value = sub.id;
+                            o.textContent = sub.name;
+                            if (subToSelect && String(sub.id) === String(subToSelect)) {
+                                o.selected = true;
+                            }
+                            subSelect.appendChild(o);
+                        });
+                    } catch(err){}
+                }
+            }
+
+            mainSelect.onchange = function() {
+                updateEditSubs(null);
+            };
+
+            if (selectedMainId) {
+                updateEditSubs(selectedSubId);
+            }
+        }
+
+        function updateEditNetAmt() {
+            const amt = parseFloat(document.getElementById('editExpAmount')?.value) || 0;
+            const gst = parseFloat(document.getElementById('editExpGstAmount')?.value) || 0;
+            const tds = parseFloat(document.getElementById('editExpTdsAmount')?.value) || 0;
+            const net = Math.max(0, amt + gst - tds);
+            const previewEl = document.getElementById('editExpNetPreview');
+            if (previewEl) previewEl.textContent = '₹' + net.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
 
         async function openEditExpenseModal(id) {
             editExpenseId = id;
@@ -3530,10 +3601,66 @@
                 if (!r.ok) { alert('Failed to load expense'); return; }
                 const d = await r.json();
                 const exp = d.expense_entry || d;
-                document.getElementById('editExpId').textContent = '#' + exp.id;
+
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
+                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name)
+                    || ['MR10001', 'MR10016'].includes(loggedCode);
+                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r))
+                    || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+
+                document.getElementById('editExpId').textContent = '#' + (exp.entry_number || exp.id);
                 document.getElementById('editExpStatus').textContent = exp.status || '-';
-                document.getElementById('editExpAmount').value = exp.amount || '';
-                document.getElementById('editExpNotes').value = exp.notes || exp.description || '';
+                
+                // Company
+                const compEl = document.getElementById('editExpCompany');
+                if (compEl) compEl.value = exp.company_id || '';
+
+                // Core fields
+                document.getElementById('editExpAmount').value = exp.amount != null ? exp.amount : '';
+                document.getElementById('editExpDate').value = exp.expense_date ? exp.expense_date.split('T')[0] : '';
+                document.getElementById('editExpVendor').value = exp.vendor_name || '';
+                document.getElementById('editExpVendorContact').value = exp.vendor_contact || '';
+                document.getElementById('editExpPaymentMode').value = exp.payment_mode || 'CASH';
+                document.getElementById('editExpPaymentRef').value = exp.payment_reference || '';
+                document.getElementById('editExpBillNumber').value = exp.bill_number || '';
+                document.getElementById('editExpBillDate').value = exp.bill_date ? exp.bill_date.split('T')[0] : '';
+                
+                // GST & TDS
+                const gstCb = document.getElementById('editExpGstApplicable');
+                if (gstCb) gstCb.checked = !!exp.gst_applicable;
+                document.getElementById('editExpGstAmount').value = exp.gst_amount != null ? exp.gst_amount : '0.00';
+                
+                const tdsCb = document.getElementById('editExpTdsApplicable');
+                if (tdsCb) tdsCb.checked = !!exp.tds_applicable;
+                document.getElementById('editExpTdsAmount').value = exp.tds_amount != null ? exp.tds_amount : '0.00';
+
+                // Show in ledger
+                const ledgerCb = document.getElementById('editExpShowInLedger');
+                if (ledgerCb) ledgerCb.checked = !!exp.show_in_ledger;
+
+                document.getElementById('editExpNotes').value = exp.narration || exp.notes || exp.description || '';
+
+                // Populate categories
+                populateEditCategories(exp.main_category_id, exp.sub_category_id);
+
+                // Entry status field for Accounts / MR10001
+                const statusSelect = document.getElementById('editExpStatusSelect');
+                const statusGroup = document.getElementById('editExpStatusGroup');
+                if (statusSelect) {
+                    statusSelect.value = exp.status || 'DRAFT';
+                    if (hasAccountsAccess) {
+                        statusSelect.disabled = false;
+                        if (statusGroup) statusGroup.style.display = 'block';
+                    } else {
+                        statusSelect.disabled = true;
+                        if (statusGroup) statusGroup.style.display = 'none';
+                    }
+                }
+                const privNotice = document.getElementById('editExpPrivilegeNotice');
+                if (privNotice) privNotice.style.display = hasAccountsAccess ? 'inline-block' : 'none';
+
+                updateEditNetAmt();
                 document.getElementById('editExpModal').classList.add('active');
             } catch(e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
@@ -3542,18 +3669,62 @@
         }
 
         async function saveEditExpense() {
+            const company_id = parseInt(document.getElementById('editExpCompany')?.value) || null;
             const amount = parseFloat(document.getElementById('editExpAmount').value);
+            const expense_date = document.getElementById('editExpDate')?.value || null;
+            const main_category_id = parseInt(document.getElementById('editExpMainCat')?.value) || null;
+            const sub_category_id = parseInt(document.getElementById('editExpSubCat')?.value) || null;
+            const vendor_name = document.getElementById('editExpVendor')?.value || null;
+            const vendor_contact = document.getElementById('editExpVendorContact')?.value || null;
+            const payment_mode = document.getElementById('editExpPaymentMode')?.value || 'CASH';
+            const payment_reference = document.getElementById('editExpPaymentRef')?.value || null;
+            const bill_number = document.getElementById('editExpBillNumber')?.value || null;
+            const bill_date = document.getElementById('editExpBillDate')?.value || null;
+
+            const gst_applicable = document.getElementById('editExpGstApplicable')?.checked || false;
+            const gst_amount = parseFloat(document.getElementById('editExpGstAmount')?.value) || 0;
+            const tds_applicable = document.getElementById('editExpTdsApplicable')?.checked || false;
+            const tds_amount = parseFloat(document.getElementById('editExpTdsAmount')?.value) || 0;
+            const show_in_ledger = document.getElementById('editExpShowInLedger')?.checked || false;
+
             const notes = document.getElementById('editExpNotes').value;
+            const statusSelect = document.getElementById('editExpStatusSelect');
+            const status = (statusSelect && !statusSelect.disabled) ? statusSelect.value : null;
+
             if (!amount || amount <= 0) { alert('Please enter a valid amount'); return; }
+
+            const payload = {
+                company_id,
+                amount,
+                expense_date,
+                main_category_id,
+                sub_category_id,
+                vendor_name,
+                vendor_contact,
+                payment_mode,
+                payment_reference,
+                bill_number,
+                bill_date,
+                gst_applicable,
+                gst_amount,
+                tds_applicable,
+                tds_amount,
+                show_in_ledger,
+                narration: notes,
+                notes: notes
+            };
+            if (status) payload.status = status;
+
             try {
                 const r = await staffFetch(API_BASE + '/expense-entries/' + editExpenseId + '/edit', {
                     method: 'PUT',
                     headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ amount, notes })
+                    body: JSON.stringify(payload)
                 });
                 if (r.ok) {
                     document.getElementById('editExpModal').classList.remove('active');
                     loadExpenses();
+                    if (typeof loadTeamExpenses === 'function') loadTeamExpenses(_teamPage || 1);
                 } else {
                     const err = await r.json().catch(() => ({}));
                     alert(err.detail || 'Failed to save changes');
@@ -4211,25 +4382,149 @@
 
     <!-- Edit Expense Modal -->
     <div class="modal-overlay" id="editExpModal">
-        <div class="modal-content" style="max-width:460px;">
+        <div class="modal-content" style="max-width:680px;width:95%;max-height:92vh;overflow-y:auto;">
             <div class="modal-header">
-                <h3><i class="fas fa-edit me-2"></i>Edit Expense <span id="editExpId" style="color:#6b7280;font-size:14px;"></span></h3>
+                <h3><i class="fas fa-edit me-2" style="color:#ef4444;"></i>Edit Expense <span id="editExpId" style="color:#6b7280;font-size:14px;font-weight:600;"></span></h3>
                 <button class="modal-close" onclick="document.getElementById('editExpModal').classList.remove('active')">&times;</button>
             </div>
-            <div class="modal-body">
-                <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:#92400e;">
-                    <i class="fas fa-info-circle me-1"></i>Status: <strong id="editExpStatus"></strong>
+            <div class="modal-body" style="padding:18px 20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
+                    <span><i class="fas fa-info-circle me-1"></i>Current Status: <strong id="editExpStatus" style="text-transform:uppercase;"></strong></span>
+                    <span id="editExpPrivilegeNotice" style="font-size:11px;color:#b45309;font-weight:600;"><i class="fas fa-user-shield me-1"></i>Accounts / MR10001 Full Edit Mode</span>
                 </div>
-                <div class="form-group">
-                    <label>Amount (₹) *</label>
-                    <input type="number" id="editExpAmount" step="0.01" min="0.01" placeholder="0.00">
+
+                <!-- Section: Company & Expense Date -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Associated Company *</label>
+                        <select id="editExpCompany">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Expense Date *</label>
+                        <input type="date" id="editExpDate" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Notes / Description</label>
-                    <textarea id="editExpNotes" placeholder="Reason for edit or updated description"></textarea>
+
+                <!-- Section: Categories -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Main Category *</label>
+                        <select id="editExpMainCat">
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Sub Category</label>
+                        <select id="editExpSubCat">
+                            <option value="">Select Sub Category</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Section: Amount, GST & TDS -->
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+                    <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+                        <span><i class="fas fa-calculator me-1" style="color:#2563eb;"></i>Amount & Tax Breakdown</span>
+                        <span style="font-size:12px;color:#059669;font-weight:700;">Net Payable: <span id="editExpNetPreview">₹0.00</span></span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <label>Base Amount (₹) *</label>
+                            <input type="number" id="editExpAmount" step="0.01" min="0.01" placeholder="0.00" oninput="updateEditNetAmt()" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <input type="checkbox" id="editExpGstApplicable" style="width:auto;margin:0;"> GST Applicable
+                            </label>
+                            <input type="number" id="editExpGstAmount" step="0.01" min="0" placeholder="GST Amount (₹)" oninput="updateEditNetAmt()">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <input type="checkbox" id="editExpTdsApplicable" style="width:auto;margin:0;"> TDS Applicable
+                            </label>
+                            <input type="number" id="editExpTdsAmount" step="0.01" min="0" placeholder="TDS Amount (₹)" oninput="updateEditNetAmt()">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;padding-top:22px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;font-weight:600;">
+                                <input type="checkbox" id="editExpShowInLedger" style="width:auto;margin:0;transform:scale(1.15);"> Show in Fund Ledger
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Vendor Details -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vendor / Payee Name</label>
+                        <input type="text" id="editExpVendor" placeholder="e.g. Supplier / Store Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor Phone / Contact</label>
+                        <input type="text" id="editExpVendorContact" placeholder="Phone or email">
+                    </div>
+                </div>
+
+                <!-- Section: Payment Details -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Payment Mode *</label>
+                        <select id="editExpPaymentMode">
+                            <option value="CASH">Cash</option>
+                            <option value="BANK">Bank Transfer</option>
+                            <option value="UPI">UPI</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="NEFT">NEFT</option>
+                            <option value="RTGS">RTGS</option>
+                            <option value="DD">DD</option>
+                            <option value="CARD">Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Ref / UTR / Cheque #</label>
+                        <input type="text" id="editExpPaymentRef" placeholder="Transaction ID or Ref">
+                    </div>
+                </div>
+
+                <!-- Section: Bill Details -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bill / Invoice Number</label>
+                        <input type="text" id="editExpBillNumber" placeholder="Bill or Voucher #">
+                    </div>
+                    <div class="form-group">
+                        <label>Bill Date</label>
+                        <input type="date" id="editExpBillDate">
+                    </div>
+                </div>
+
+                <!-- Privileged Status Override (Accounts & MR10001) -->
+                <div id="editExpStatusGroup" class="form-group" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;">
+                    <label style="color:#166534;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <i class="fas fa-shield-alt"></i> Entry Status (Accounts & MR10001 Privilege)
+                    </label>
+                    <select id="editExpStatusSelect" style="width:100%;padding:9px 12px;border:1px solid #86efac;border-radius:6px;font-weight:600;background:#ffffff;">
+                        <option value="DRAFT">DRAFT (Under Preparation)</option>
+                        <option value="SUBMITTED">SUBMITTED (Pending Approval)</option>
+                        <option value="APPROVED">APPROVED (Approved for Payment)</option>
+                        <option value="PAID">PAID (Disbursed & Settled)</option>
+                        <option value="REJECTED">REJECTED (Declined)</option>
+                    </select>
+                    <div style="font-size:11px;color:#15803d;margin-top:5px;line-height:1.4;">
+                        <i class="fas fa-check-circle me-1"></i>Saving with status <strong>PAID</strong> or <strong>APPROVED</strong> automatically timestamps and registers your actor profile.
+                    </div>
+                </div>
+
+                <!-- Section: Notes / Narration -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Notes / Description / Narration</label>
+                    <textarea id="editExpNotes" rows="3" placeholder="Reason for edit or updated description"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="padding:14px 20px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('editExpModal').classList.remove('active')">Cancel</button>
                 <button class="btn btn-primary" onclick="saveEditExpense()"><i class="fas fa-save me-1"></i>Save Changes</button>
             </div>

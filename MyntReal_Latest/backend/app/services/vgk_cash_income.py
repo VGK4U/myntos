@@ -2679,6 +2679,35 @@ def mark_paid_cash_income(
             WHERE source_lead_id = :lid AND partner_id = :pid AND kind = 'BRAND_COMMISSION'
         """), {'pd_by': paid_by_id, 'pmode': pm, 'putr': utr, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
+    # Synchronize linked advance record in vgk_solar_cibil_advances (if exists)
+    if entry.source_lead_id and entry.partner_id and entry.level is not None:
+        try:
+            db.execute(text("""
+                UPDATE vgk_solar_cibil_advances
+                SET status = 'RELEASED',
+                    released_by_id = COALESCE(released_by_id, :pd_by),
+                    released_at = COALESCE(released_at, :now),
+                    notes = CASE WHEN notes IS NOT NULL AND notes != '' THEN notes || ' | Paid UTR: ' || :utr ELSE 'Paid UTR: ' || :utr END,
+                    updated_at = :now
+                WHERE lead_id = :lid AND partner_id = :pid AND level = :lvl
+                  AND status IN ('PENDING', 'RELEASED')
+            """), {'utr': utr or '', 'pd_by': paid_by_id, 'now': now.replace(tzinfo=None), 'lid': entry.source_lead_id, 'pid': entry.partner_id, 'lvl': entry.level})
+        except Exception as _vsca_sync_err:
+            logger.warning(f"[VGK-MARK-PAID] VSCA sync error (non-fatal): {_vsca_sync_err}")
+
+    # Synchronize linked bonanza progress (if slab bonus)
+    if entry.kind == 'SLAB_BONUS' and entry.bonanza_id:
+        try:
+            db.execute(text("""
+                UPDATE bonanza_progress
+                SET processed_status = 'Paid',
+                    processed_date = :now
+                WHERE partner_id = :pid AND bonanza_id = :bid
+                  AND processed_status != 'Paid'
+            """), {'pid': entry.partner_id, 'bid': entry.bonanza_id, 'now': now.replace(tzinfo=None)})
+        except Exception as _bp_sync_err:
+            logger.warning(f"[VGK-MARK-PAID] BP sync error (non-fatal): {_bp_sync_err}")
+
     # DC_VGK_POINTS_AT_PAID_001 + DC-FIX-ADV-WALLET-EARNED-001:
     # For ADVANCE kind entries at PAID time:
     #   1. Debit vgk_points_balance by net_payout (advance+slab combined net)

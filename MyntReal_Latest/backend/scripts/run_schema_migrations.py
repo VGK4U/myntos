@@ -1170,6 +1170,22 @@ def run_migrations():
                 """))
                 logger.info("✅ DC-GDRIVE-GUC: guc_admin_users table verified/created")
 
+                # 4.34 WhatsApp Message Log & Inbox Field Width Expansion (OOM / Truncation Prevention)
+                for ddl_col in [
+                    "ALTER TABLE message_log ALTER COLUMN mobile_number TYPE VARCHAR(100)",
+                    "ALTER TABLE message_log ALTER COLUMN from_number TYPE VARCHAR(100)",
+                    "ALTER TABLE message_log ALTER COLUMN to_number TYPE VARCHAR(100)",
+                    "ALTER TABLE message_log ALTER COLUMN error_code TYPE VARCHAR(50)",
+                    "ALTER TABLE message_log ALTER COLUMN failure_reason TYPE TEXT",
+                    "ALTER TABLE wa_inbox ALTER COLUMN from_phone TYPE VARCHAR(100)",
+                    "ALTER TABLE wa_conversations ALTER COLUMN phone TYPE VARCHAR(100)",
+                ]:
+                    try:
+                        conn.execute(text(ddl_col))
+                    except Exception as ddl_e:
+                        logger.warning(f"Non-fatal column width update notice ({ddl_col}): {ddl_e}")
+                logger.info("✅ WhatsApp message_log & wa_inbox column widths verified/expanded")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
