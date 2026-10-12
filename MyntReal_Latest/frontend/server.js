@@ -7682,6 +7682,16 @@ const server = http.createServer(async (req, res) => {
           res.end(suryanzRouter.renderRobotsTxt(reqHost, reqProto));
           return;
         }
+        if (cleanPath === '/llms.txt' || cleanPath === '/.well-known/llms.txt') {
+          res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end(suryanzRouter.renderLlmsTxt(reqHost, reqProto));
+          return;
+        }
+        if (cleanPath === '/knowledge' || cleanPath === '/knowledge.json' || cleanPath === '/api/knowledge') {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify(suryanzRouter.getSuryanzKnowledgeBase(reqHost, reqProto), null, 2));
+          return;
+        }
 
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         const urlPrefix = reqPathLower.startsWith('/suryanz') ? '/suryanz' : '';
@@ -20862,6 +20872,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/configuration/integrations') || url.startsWith('/staff/integrations')) {
     const filePath = path.join(__dirname, 'staff_integrations.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/configuration/social-media') || url.startsWith('/staff/social-media')) {
+    const filePath = path.join(__dirname, 'staff_social_media.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);

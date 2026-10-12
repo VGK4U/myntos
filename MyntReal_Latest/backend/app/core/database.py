@@ -81,14 +81,19 @@ else:
     _is_neon   = "neon.tech" in _db_url_str
 
     _use_sqlite_fallback = False
+    _allow_prod = (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1"
     try:
-        _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": 3})
+        _conn_timeout = 15 if _allow_prod else 5
+        _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": _conn_timeout, "sslmode": "require"})
         _test_conn = _test_eng.connect()
         _test_conn.close()
         _test_eng.dispose()
     except Exception as _db_conn_err:
-        print(f"[DC-DB-INIT] Primary Database unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
-        _use_sqlite_fallback = True
+        if _allow_prod:
+            print(f"[DC-DB-INIT] Primary Database warning ({_db_conn_err}), retrying with standard pool...", flush=True)
+        else:
+            print(f"[DC-DB-INIT] Primary Database unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
+            _use_sqlite_fallback = True
 
     if _use_sqlite_fallback:
         print("[DC-DB-INIT] Creating SQLite engine (development fallback mode with WAL & 30s timeout)...", flush=True)

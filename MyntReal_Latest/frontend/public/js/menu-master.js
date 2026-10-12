@@ -301,6 +301,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "PORTAL_AUDIENCE_SCOPE", label: "Portal & Audience Scope", route: "/staff/configuration/scope", icon: "fas fa-layer-group", audience: ["STAFF", "VGK4U"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
       { menu_code: "VGK_MEDIA_MANAGER", label: "Media Manager", route: "/staff/vgk/media", icon: "fas fa-globe", audience: ["STAFF"] },
+      { menu_code: "SOCIAL_MEDIA_MANAGER", label: "Social Media Manager", route: "/staff/configuration/social-media", icon: "fas fa-share-nodes", audience: ["STAFF", "VGK4U", "SAAS"] },
       { menu_code: "MNR_VIEW_ANNOUNCEMENTS", label: "View Announcements", route: "/staff/mnr/announcements/view", icon: "fas fa-globe", audience: ["STAFF"] },
       { menu_code: "MNR_USER_CREATE_ANNOUNCEMENT", label: "Create Announcement", route: "/staff/mnr-user/announcements/create", icon: "fas fa-globe", audience: ["STAFF"] }
     ]

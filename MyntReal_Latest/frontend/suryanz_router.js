@@ -242,27 +242,90 @@ function renderSuryanzPage({
         "@id": `${domainUrl}/#organization`,
         "name": "SURYANZ SOLAR",
         "legalName": "SURYANZ SOLAR",
+        "alternateName": [
+          "Suryanz",
+          "Suryanz Solar",
+          "Suryanz Energy",
+          "Suryanz Solar EPC",
+          "Suryanz Rooftop Solar",
+          "sunryanz"
+        ],
         "url": domainUrl,
         "logo": `${domainUrl}/public/images/suryanz-logo-transparent.png`,
         "description": "Premium engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities in India. Backed by 20+ years of team experience.",
+        "disambiguatingDescription": "Suryanz Solar (also known as Suryanz) is an Indian clean-energy engineering and solar EPC company providing residential, commercial, and industrial rooftop solar power solutions across Andhra Pradesh, Telangana, and Karnataka. It is distinct from Suryan Energy Systems, Suryansh Solar, or Surya Solar.",
         "slogan": "Powering a Brighter Tomorrow",
+        "telephone": "+91-85858-52738",
+        "email": "contact@suryanzsolar.com",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Rama Talkies Road, CBM Compound",
+          "addressLocality": "Visakhapatnam",
+          "addressRegion": "Andhra Pradesh",
+          "postalCode": "530013",
+          "addressCountry": "IN"
+        },
+        "knowsAbout": [
+          "Rooftop Solar PV Systems",
+          "Solar EPC Engineering",
+          "On-Grid Solar Net Metering",
+          "Hybrid Solar with Battery Storage",
+          "Commercial & Industrial Solar Plants",
+          "PM Surya Ghar Muft Bijli Yojana Subsidies",
+          "Tier-1 Solar Photovoltaic Modules",
+          "Solar Operations and Maintenance"
+        ],
+        "brand": {
+          "@type": "Brand",
+          "@id": `${domainUrl}/#brand`,
+          "name": "SURYANZ",
+          "alternateName": ["Suryanz Solar", "Suryanz Solar EPC", "sunryanz"]
+        },
         "sameAs": [
           "https://suryanz.com",
           "https://suryanzsolar.com"
         ]
       },
       {
+        "@type": "Brand",
+        "@id": `${domainUrl}/#brand`,
+        "name": "SURYANZ",
+        "alternateName": ["Suryanz Solar", "Suryanz Solar EPC", "sunryanz"],
+        "url": domainUrl,
+        "logo": `${domainUrl}/public/images/suryanz-logo-transparent.png`,
+        "slogan": "Powering a Brighter Tomorrow",
+        "description": "Smart solar energy solutions engineered for 30 years of clean energy performance."
+      },
+      {
         "@type": "LocalBusiness",
         "@id": `${domainUrl}/#localbusiness`,
         "name": "SURYANZ SOLAR EPC",
+        "alternateName": ["Suryanz", "Suryanz Solar"],
         "image": resolvedOgImage,
         "url": domainUrl,
+        "telephone": "+91-85858-52738",
+        "email": "contact@suryanzsolar.com",
         "priceRange": "₹₹₹",
+        "currenciesAccepted": "INR",
+        "paymentAccepted": "Cash, Credit Card, Bank Transfer, Net Banking, EMI",
         "description": "Engineering-first rooftop solar EPC contractor serving Andhra Pradesh, Telangana, and Karnataka.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Rama Talkies Road, CBM Compound",
+          "addressLocality": "Visakhapatnam",
+          "addressRegion": "Andhra Pradesh",
+          "postalCode": "530013",
+          "addressCountry": "IN"
+        },
         "areaServed": [
           { "@type": "AdministrativeArea", "name": "Andhra Pradesh" },
           { "@type": "AdministrativeArea", "name": "Telangana" },
-          { "@type": "AdministrativeArea", "name": "Karnataka" }
+          { "@type": "AdministrativeArea", "name": "Karnataka" },
+          { "@type": "City", "name": "Visakhapatnam" },
+          { "@type": "City", "name": "Vijayawada" },
+          { "@type": "City", "name": "Hyderabad" },
+          { "@type": "City", "name": "Bengaluru" },
+          { "@type": "City", "name": "Mangalore" }
         ]
       },
       {
@@ -277,6 +340,46 @@ function renderSuryanzPage({
         "@type": "FAQPage",
         "@id": `${domainUrl}/#faq`,
         "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Suryanz Solar (Suryanz)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Suryanz Solar (also known as Suryanz) is an engineering-driven clean energy and rooftop solar EPC company. It provides residential, commercial, and industrial rooftop solar installations with 3-stage customer protection and up to 30-year performance warranties across Andhra Pradesh, Telangana, and Karnataka."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Suryanz Solar the same as Suryan Energy Systems or Suryansh Solar?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Suryanz Solar (suryanzsolar.com) is an independent solar EPC engineering enterprise headquartered in South India, specializing in engineer-designed rooftop solar systems. It is distinct from Suryan Energy Systems in AP or Suryansh Solar in Maharashtra."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What solar solutions does Suryanz Solar offer?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Suryanz Solar provides turnkey on-grid rooftop solar, hybrid solar systems with battery storage, off-grid systems, commercial and industrial solar EPC, PM Surya Ghar net-metering subsidy support, and solar operations & maintenance (O&M/AMC)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where does Suryanz Solar provide solar EPC services?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Suryanz Solar operates regional hubs across Andhra Pradesh (Visakhapatnam, Vijayawada), Telangana (Hyderabad), and Karnataka (Bengaluru, Mangalore)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I contact Suryanz Solar?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can reach Suryanz Solar by phone at +91 85858 52738, by email at contact@suryanzsolar.com, or through the official portals at suryanzsolar.com and suryanz.com."
+            }
+          },
           {
             "@type": "Question",
             "name": "How much does a rooftop solar installation cost?",
@@ -314,11 +417,15 @@ function renderSuryanzPage({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} | SURYANZ SOLAR</title>
   <meta name="description" content="${description}">
+  <meta name="keywords" content="Suryanz, Suryanz Solar, Suryanz Energy, Suryanz Solar EPC, sunryanz, rooftop solar, solar panels, solar installer, Visakhapatnam solar, Hyderabad solar, Bengaluru solar, on-grid solar, hybrid solar battery, PM Surya Ghar">
+  <meta name="author" content="Suryanz Solar">
+  <meta name="publisher" content="Suryanz Solar">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <link rel="canonical" href="${resolvedCanonicalUrl}">
 
   <!-- OpenGraph / WhatsApp / Social Rich Share Card Tags -->
   <meta property="og:site_name" content="SURYANZ SOLAR">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="business.business">
   <meta property="og:url" content="${resolvedCanonicalUrl}">
   <meta property="og:title" content="${title} | SURYANZ SOLAR">
   <meta property="og:description" content="${description}">
@@ -364,12 +471,12 @@ function renderHomePage(urlPrefix = '', requestHost = 'suryanz.com', requestProt
     <div class="suryanz-hero-container">
       <div>
         <div class="suryanz-hero-tag">
-          <i class="fas fa-certificate"></i> SURYANZ SOLAR
+          <i class="fas fa-certificate"></i> SURYANZ SOLAR EPC
         </div>
-        <h1 class="suryanz-hero-title-main">Powering a Brighter Tomorrow</h1>
+        <h1 class="suryanz-hero-title-main">SURYANZ SOLAR — Powering a Brighter Tomorrow</h1>
         <div class="suryanz-hero-title-sub">Smart Solar. Reliable Energy. Built for the next 30 years.</div>
         <p class="suryanz-hero-subtitle">
-          Engineer-designed solar systems for homes, businesses and industrial facilities — from site assessment and design to installation, net metering and long-term support.
+          <strong>Suryanz Solar (Suryanz)</strong> provides engineer-designed rooftop solar systems for homes, businesses, and industrial facilities across Andhra Pradesh, Telangana, and Karnataka — from site assessment and design to installation, net metering, and 30-year warranty protection.
         </p>
         <div class="suryanz-hero-ctas">
           <a href="${p}/contact" class="suryanz-btn-cta"><i class="fas fa-clipboard-check"></i> Get a Free Solar Assessment</a>
@@ -968,8 +1075,8 @@ function renderHomePage(urlPrefix = '', requestHost = 'suryanz.com', requestProt
   `;
 
   return renderSuryanzPage({
-    title: 'SURYANZ SOLAR | Real Projects, Real Engineering, Real Savings',
-    description: 'SURYANZ SOLAR provides engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities across India. Backed by 20+ years of energy experience.',
+    title: 'SURYANZ SOLAR (Suryanz) | Rooftop Solar EPC & Clean Energy Solutions',
+    description: 'Suryanz Solar (Suryanz) provides engineer-designed rooftop solar systems for homes, commercial hubs, and industrial facilities across India. Backed by 20+ years of energy experience.',
     activePath: '/',
     bodyContent: content,
     urlPrefix: urlPrefix,
@@ -1138,17 +1245,60 @@ function renderLegalPage(legalSlug, urlPrefix = '', requestHost = 'suryanz.com',
 
 function renderSitemapXml(requestHost = 'suryanz.com', requestProto = 'https') {
   const domain = `${requestProto}://${requestHost}`;
+  const now = new Date().toISOString().split('T')[0];
+  const urls = [
+    { loc: '/', priority: '1.0', changefreq: 'weekly' },
+    { loc: '/about', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/why-suryanz', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/customer-protection', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/technology', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/calculator', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/projects', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/customer-stories', priority: '0.8', changefreq: 'weekly' },
+    { loc: '/faqs', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/contact', priority: '0.9', changefreq: 'monthly' },
+    // Solutions
+    { loc: '/solutions/residential', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/solutions/commercial', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/solutions/industrial', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/solutions/epc', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/solutions/on-grid', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solutions/hybrid', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solutions/off-grid', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solutions/solar-battery', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solutions/apartments', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solutions/operations-maintenance', priority: '0.8', changefreq: 'monthly' },
+    // Knowledge Guides
+    { loc: '/solar-guide', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-pricing', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-roi', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-calculator-guide', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-warranty-guide', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-maintenance', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/solar-buying-guide', priority: '0.8', changefreq: 'monthly' },
+    // Regional Hubs
+    { loc: '/location/andhra-pradesh', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/telangana', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/karnataka', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/visakhapatnam', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/vijayawada', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/hyderabad', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/bengaluru', priority: '0.8', changefreq: 'monthly' },
+    { loc: '/location/mangalore', priority: '0.8', changefreq: 'monthly' },
+    // Legal
+    { loc: '/legal/privacy-policy', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/legal/terms-and-conditions', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/legal/warranty-terms', priority: '0.3', changefreq: 'yearly' }
+  ];
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${domain}/</loc><priority>1.0</priority></url>
-  <url><loc>${domain}/about</loc><priority>0.8</priority></url>
-  <url><loc>${domain}/why-suryanz</loc><priority>0.8</priority></url>
-  <url><loc>${domain}/customer-protection</loc><priority>0.8</priority></url>
-  <url><loc>${domain}/technology</loc><priority>0.8</priority></url>
-  <url><loc>${domain}/calculator</loc><priority>0.9</priority></url>
-  <url><loc>${domain}/projects</loc><priority>0.8</priority></url>
-  <url><loc>${domain}/faqs</loc><priority>0.7</priority></url>
-  <url><loc>${domain}/contact</loc><priority>0.9</priority></url>
+${urls.map(u => `  <url>
+    <loc>${domain}${u.loc}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n')}
 </urlset>`;
 }
 
@@ -1156,7 +1306,135 @@ function renderRobotsTxt(requestHost = 'suryanz.com', requestProto = 'https') {
   const domain = `${requestProto}://${requestHost}`;
   return `User-agent: *
 Allow: /
-Sitemap: ${domain}/sitemap.xml`;
+
+# Dedicated Directives for AI Search Engines & LLM Web Crawlers
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: ${domain}/sitemap.xml
+`;
+}
+
+function renderLlmsTxt(requestHost = 'suryanz.com', requestProto = 'https') {
+  const domain = `${requestProto}://${requestHost}`;
+  return `# SURYANZ SOLAR (Suryanz)
+
+> Suryanz Solar (also known as Suryanz) is an engineering-driven clean energy and rooftop solar EPC (Engineering, Procurement, and Construction) company. We specialize in designing, procuring, and installing high-performance residential, commercial, and industrial rooftop solar systems built for 30 years of reliable generation.
+
+## Official Brand Entities & Web Properties
+- Master Brand: SURYANZ
+- Vertical Brand: SURYANZ SOLAR
+- Common Aliases: Suryanz, Suryanz Solar, Suryanz Energy, Suryanz Solar EPC, sunryanz
+- Primary Domains: ${domain}, https://suryanzsolar.com, https://suryanz.com
+- Contact Hotline: +91 85858 52738
+- Official Email: contact@suryanzsolar.com
+- Headquarters & Regional Hubs: Visakhapatnam, Vijayawada (Andhra Pradesh), Hyderabad (Telangana), Bengaluru (Karnataka)
+
+## Entity Disambiguation Note
+Suryanz Solar (suryanzsolar.com) is an independent rooftop solar EPC provider headquartered in South India. It is completely distinct from Suryan Energy Systems (Visakhapatnam), Suryansh Solar (Maharashtra/Telangana), or Surya Solar (Gujarat).
+
+## Core Capabilities & Services
+- Residential Rooftop Solar: On-grid systems tailored for independent villas, row houses, and apartments with PM Surya Ghar Muft Bijli Yojana subsidy support.
+- Commercial & Industrial Solar EPC: High-capacity rooftop and ground-mount PV plants for factories, educational institutions, hospitals, and commercial real estate.
+- Hybrid Solar + Battery Energy Storage: Seamless off-grid fallback and peak shaving with high-density lithium-ion battery integration.
+- Solar Net-Metering & DISCOM Approvals: Complete liaisoning for grid interconnection with APEPDCL, APCPDCL, TSSPDCL, TSNPDCL, and BESCOM.
+- Operations, Maintenance & AMC: Scheduled thermal drone inspections, panel cleaning, inverter diagnostics, and output auditing.
+
+## 3-Stage Customer Protection Framework
+1. Before Installation: Detailed 3D shadow analysis, structural load evaluation, transparent itemized quotation, and guaranteed generation simulation.
+2. During Installation: Tier-1 TOPCon and N-Type high-efficiency panels (540W–580W), certified anodized aluminum and HDG mounting structures, DC/AC SPD surge protection.
+3. After Installation: 30-Year Linear Performance Warranty, 12-Year Panel Product Warranty, 8 to 10-Year Inverter Warranty, and dedicated customer support desk.
+
+## Core Website Pages
+- Home: ${domain}/
+- About Suryanz: ${domain}/about
+- Why Choose Suryanz: ${domain}/why-suryanz
+- Customer Protection Framework: ${domain}/customer-protection
+- Technology Specifications: ${domain}/technology
+- Solar Savings Calculator: ${domain}/calculator
+- Projects & Case Studies: ${domain}/projects
+- Customer Reviews & Stories: ${domain}/customer-stories
+- Frequently Asked Questions: ${domain}/faqs
+- Contact & Free Assessment: ${domain}/contact
+- Residential Solutions: ${domain}/solutions/residential
+- Commercial Solutions: ${domain}/solutions/commercial
+- Industrial Solar: ${domain}/solutions/industrial
+- Solar EPC Services: ${domain}/solutions/epc
+- On-Grid Systems: ${domain}/solutions/on-grid
+- Hybrid Systems: ${domain}/solutions/hybrid
+- Visakhapatnam Solar EPC: ${domain}/location/visakhapatnam
+- Vijayawada Rooftop Solar: ${domain}/location/vijayawada
+- Hyderabad Commercial Solar: ${domain}/location/hyderabad
+- Bengaluru Solar Solutions: ${domain}/location/bengaluru
+`;
+}
+
+function getSuryanzKnowledgeBase(requestHost = 'suryanz.com', requestProto = 'https') {
+  const domain = `${requestProto}://${requestHost}`;
+  return {
+    brand: {
+      master_brand: "SURYANZ",
+      vertical_brand: "SURYANZ SOLAR",
+      aliases: ["Suryanz", "Suryanz Solar", "Suryanz Energy", "Suryanz Solar EPC", "sunryanz"],
+      tagline: "Powering a Brighter Tomorrow",
+      positioning: "Smart Solar. Reliable Energy. Engineered for 30 Years Performance.",
+      background: "Backed by 20+ years of team experience in the solar and clean energy sector.",
+      primary_domain: domain,
+      solar_domain: "https://suryanzsolar.com",
+      corporate_domain: "https://suryanz.com",
+      hotline: "+91 85858 52738",
+      email: "contact@suryanzsolar.com",
+      headquarters: "Visakhapatnam, Andhra Pradesh, India",
+      regional_hubs: ["Visakhapatnam", "Vijayawada", "Hyderabad", "Bengaluru", "Mangalore"],
+      disambiguation: "Suryanz Solar (suryanzsolar.com) is an independent solar EPC engineering provider in South India, distinct from Suryan Energy Systems, Suryansh Solar, or Surya Solar."
+    },
+    solutions_offered: [
+      "Residential Rooftop Solar Systems",
+      "Commercial & Industrial Solar EPC",
+      "On-Grid / Grid-Tied Solar Systems",
+      "Hybrid Solar + Battery Energy Storage",
+      "Off-Grid Remote Solar Energy Systems",
+      "Housing Societies & Apartments Solar",
+      "Solar Operations, Maintenance & AMC (O&M)"
+    ],
+    warranties: {
+      panel_performance: "30-Year Linear Performance Warranty",
+      panel_product: "12-Year Product Warranty",
+      inverter_warranty: "8 to 10-Year Inverter Warranty"
+    },
+    regions_covered: [
+      "Andhra Pradesh (Visakhapatnam, Vijayawada, Guntur, Tirupati)",
+      "Telangana (Hyderabad, Warangal, Karimnagar)",
+      "Karnataka (Bengaluru, Mangalore, Mysuru, Hubballi)"
+    ]
+  };
 }
 
 module.exports = {
@@ -1178,5 +1456,7 @@ module.exports = {
   renderLocationPage,
   renderLegalPage,
   renderSitemapXml,
-  renderRobotsTxt
+  renderRobotsTxt,
+  renderLlmsTxt,
+  getSuryanzKnowledgeBase
 };

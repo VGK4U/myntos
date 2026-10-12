@@ -25543,6 +25543,14 @@ const server = http.createServer(async (req, res) => {
       res.end(data);
     });
 
+  } else if (url.startsWith('/staff/configuration/social-media') || url.startsWith('/staff/social-media')) {
+    const filePath = path.join(__dirname, 'staff_social_media.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Page not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(data);
+    });
+    return;
   } else if (/^\/staff\/\d+$/.test(url.split('?')[0])) {
     // WhatsApp media attachment redirect guard - prevents 404 on relative attachment clicks
     const mediaId = url.split('?')[0].replace('/staff/', '');

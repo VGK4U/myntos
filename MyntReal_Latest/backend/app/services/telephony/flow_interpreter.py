@@ -574,6 +574,18 @@ class CallFlowInterpreter:
             logger.info(f"[FLOW-INTERPRETER] Presenting Direct Routing Extension Prompt ({len(direct_routing_options)} options) to non-sticky caller {caller_phone}")
             return cls._get_direct_routing_menu_xml(db, company_id, called_did, direct_routing_options, lang="en", session_id=session_id)
 
+        # Gate 4d-0: Suryanz Solar Inbound Brand Context Gate
+        # Activates ONLY if reliable brand context is verified (SIP brand headers or recognized Suryanz CRM lead).
+        # Direct anonymous calls without context bypass this gate and proceed to the default company IVR.
+        if cls._is_suryanz_context_call(db, caller_phone, called_did, headers=headers, raw_payload=raw_payload):
+            logger.info(f"[FLOW-INTERPRETER] Recognized Suryanz Solar context call from {caller_phone} on DID {called_did}")
+            greeting_xml = cls._get_suryanz_greeting_xml()
+            solar_dial = cls._build_telesales_simultaneous_dial(db, company_id, "Solar Support", called_did, lang="en")
+            return cls._generate_xml_response([
+                greeting_xml,
+                solar_dial
+            ])
+
         # Gate 4d: CRM Lead Language Check
         known_lang = cls._detect_crm_caller_language(db, caller_phone)
         if known_lang in ('te', 'telugu'):

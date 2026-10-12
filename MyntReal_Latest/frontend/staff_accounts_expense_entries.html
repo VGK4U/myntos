@@ -288,6 +288,10 @@
                     <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
                     <input type="date" id="filterToDate" onchange="onManualDateChange('my')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
                 </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;margin-left:auto;cursor:pointer;background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;" title="Toggle to view all historical expenses prior to 17-Sep-2026">
+                    <input type="checkbox" id="myIncludeHistorical" onchange="loadExpenses()" style="cursor:pointer;">
+                    <i class="fas fa-history text-primary"></i> Include Pre-Reset History
+                </label>
             </div>
 
             <div class="filter-section">
@@ -447,6 +451,10 @@
                     <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
                     <input type="date" id="teamFilterTo" onchange="onManualDateChange('team')" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
                 </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;margin-left:auto;cursor:pointer;background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;" title="Toggle to view all historical expenses prior to 17-Sep-2026">
+                    <input type="checkbox" id="teamIncludeHistorical" onchange="loadTeamExpenses(1)" style="cursor:pointer;">
+                    <i class="fas fa-history text-primary"></i> Include Pre-Reset History
+                </label>
             </div>
 
             <!-- Team Filter Bar matching Tab 1 -->
@@ -607,6 +615,14 @@
                     <span style="font-size:11px;font-weight:600;color:#475569;">To:</span>
                     <input type="date" id="consoToDate" onchange="onManualDateChange('consolidated'); loadConsolidatedSummary();" style="padding:3px 6px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;">
                 </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#1e40af;margin-left:auto;cursor:pointer;background:#eff6ff;padding:4px 10px;border-radius:6px;border:1px solid #bfdbfe;" title="Show only staff with IN transactions (funds received/allocated) and hide staff unrelated to expenses">
+                    <input type="checkbox" id="consoOnlyWithIn" onchange="loadConsolidatedSummary()" style="cursor:pointer;" checked>
+                    <i class="fas fa-filter text-primary"></i> Show only with IN transactions
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;" title="Toggle to view all historical expenses prior to 17-Sep-2026">
+                    <input type="checkbox" id="consoIncludeHistorical" onchange="loadConsolidatedSummary()" style="cursor:pointer;">
+                    <i class="fas fa-history text-secondary"></i> Include Pre-Reset History
+                </label>
             </div>
 
             <!-- Filters -->
@@ -1047,12 +1063,14 @@
             updateHeaderUserInfo();
 
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
             const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
-                || userData.emp_code === 'MR10001';
+                || ['MR10001', 'MR10016'].includes(loggedCode);
             const hasAccountsAccess = hasFullAccess
                 || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
                 || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
             window._hasAccountsAccess = hasAccountsAccess;
+            window._isSupremeViewer = hasAccountsAccess;
             if (hasAccountsAccess) {
                 document.getElementById('btnOpeningBal').style.display = '';
                 document.getElementById('tabConsolidated').style.display = '';
@@ -1163,6 +1181,8 @@
             const to = isOverall ? '' : (document.getElementById('teamFilterTo')?.value || '');
 
             let url = `${API_BASE}/expense-entries?team_view=true&view_mode=ledger&page=${page}&page_size=30`;
+            const isHistorical = document.getElementById('teamIncludeHistorical')?.checked;
+            if (isHistorical) url += '&include_historical=true';
             if (entryType) url += `&entry_type=${entryType}`;
             if (ledgerFilter) url += `&ledger_filter=${ledgerFilter}`;
             if (externalFilter) url += `&external_filter=${externalFilter}`;
@@ -1615,6 +1635,7 @@
             if (toDate) params.append('to_date', toDate);
             if (ledgerFilter) params.append('ledger_filter', ledgerFilter);
             if (externalFilter) params.append('external_filter', externalFilter);
+            if (document.getElementById('myIncludeHistorical')?.checked) params.append('include_historical', 'true');
             
             document.getElementById('loadingState').style.display = 'flex';
             document.getElementById('tableContainer').style.display = 'none';
@@ -1804,9 +1825,10 @@
             if (realId) _entryLookup[realId] = exp;
 
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
             const isCreator = exp.created_by_id === userData.id;
             const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
-                || userData.emp_code === 'MR10001';
+                || ['MR10001', 'MR10016'].includes(loggedCode);
             const hasAccountsAccess = hasFullAccess
                 || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
                 || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
@@ -1949,8 +1971,8 @@
                 if (_expenseEmployees.length === 0) { _canCreateOnBehalf = false; return; }
                 _canCreateOnBehalf = true;
                 _populateEmpSelect(_expenseEmployees);
-                // DC_TEAM_EMP_FILTER_001: Populate team-view member filter from same list
-                _populateTeamFilterEmployees(_expenseEmployees);
+                // DC_TEAM_EMP_FILTER_001: Populate team-view member filter from full list
+                _populateTeamFilterEmployees(d.employees || []);
                 // Any user with at least one behalf employee gets the Consolidated tab
                 // (privileged users get all active staff; reporting managers get their direct reports)
                 const isPrivileged = (d.employees || []).length > 0;
@@ -2025,6 +2047,8 @@
             if (document.getElementById('consoFromDate')) document.getElementById('consoFromDate').value = '';
             if (document.getElementById('consoToDate')) document.getElementById('consoToDate').value = '';
             if (document.getElementById('consoSearch')) document.getElementById('consoSearch').value = '';
+            if (document.getElementById('consoIncludeHistorical')) document.getElementById('consoIncludeHistorical').checked = false;
+            if (document.getElementById('consoOnlyWithIn')) document.getElementById('consoOnlyWithIn').checked = true;
             setQuickFilter('consolidated', 'overall');
         }
 
@@ -2049,6 +2073,13 @@
             if (from)    url += `&from_date=${from}`;
             if (to)      url += `&to_date=${to}`;
             if (search)  url += `&search=${encodeURIComponent(search)}`;
+            if (document.getElementById('consoIncludeHistorical')?.checked) {
+                url += '&include_historical=true';
+            }
+            const onlyWithIn = document.getElementById('consoOnlyWithIn') ? document.getElementById('consoOnlyWithIn').checked : false;
+            if (onlyWithIn) {
+                url += '&only_with_in=true';
+            }
 
             try {
                 const r = await staffFetch(url);
@@ -2059,8 +2090,12 @@
                 const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
                 const loggedInEmpCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
                 const isMr10001 = loggedInEmpCode === 'MR10001';
+                const isSupremeViewer = isMr10001 || loggedInEmpCode === 'MR10016' || !!window._hasAccountsAccess || (window.staffAuth && window.staffAuth.isSupreme && window.staffAuth.isSupreme());
                 const rows = rawRows.filter(r => {
-                    if (isMr10001) return true;
+                    if (onlyWithIn && (Number(r.total_in || 0) <= 0 && Number(r.draft_in || 0) <= 0)) {
+                        return false;
+                    }
+                    if (isSupremeViewer) return true;
                     const rowCode = (r.emp_code || r.employee_code || '').trim().toUpperCase();
                     const rowId = Number(r.employee_id || r.id || 0);
                     const rowName = (r.full_name || '').toLowerCase();
@@ -2156,6 +2191,9 @@
                     acc.submitted_amount      += (r.submitted_amount || 0);
                     return acc;
                 }, {income_entries:0, bank_alloc_in:0, fund_transferred_in:0, total_in:0, ledger_exp:0, ext_exp:0, fund_transferred_out:0, total_out:0, net_balance:0, draft_in:0, draft_out:0, draft_balance:0, final_balance:0, total_expenses:0, draft_count:0, submitted_count:0, approved_count:0, rejected_count:0, paid_count:0, approved_amount:0, rejected_amount:0, paid_amount:0, draft_amount:0, submitted_amount:0});
+
+                window._lastNormalizedRows = normalizedRows;
+                window._lastConsoTotals = T;
 
                 // Stats bar
                 const statsEl = document.getElementById('consoStats');
@@ -2350,6 +2388,9 @@
                 if (ledgerFilter) params.append('ledger_filter', ledgerFilter);
                 if (externalFilter) params.append('external_filter', externalFilter);
                 if (status) params.append('status', status);
+                if (document.getElementById('consoIncludeHistorical')?.checked) {
+                    params.append('include_historical', 'true');
+                }
 
                 const res = await staffFetch(`${API_BASE}/expense-entries?${params.toString()}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2548,33 +2589,108 @@
         }
 
         function exportConsolidatedCSV() {
-            const table = document.getElementById('consoTable');
-            if (!table || table.style.display === 'none') {
+            const rows = window._lastNormalizedRows || [];
+            if (!rows || !rows.length) {
                 alert('Please load the data first before exporting.');
                 return;
             }
-            const rows = [];
-            const headerRow = table.querySelectorAll('thead tr')[1] || table.querySelector('thead tr');
-            const headers = Array.from(headerRow.querySelectorAll('th')).map(th => `"${th.textContent.trim()}"`);
-            rows.push(headers.join(','));
-            table.querySelectorAll('tbody tr').forEach(tr => {
-                if (tr.id && tr.id.startsWith('consoDetailRow_')) return; // skip expanded sub-rows
-                const cells = Array.from(tr.querySelectorAll('td')).map(td => {
-                    const t = td.textContent.trim().replace(/"/g, '""').replace(/,/g, '').replace(/₹/g, '');
-                    return `"${t}"`;
-                });
-                if (cells.length) rows.push(cells.join(','));
+            const headers = [
+                'S.No', 'Employee Code', 'Employee Name', 'Department', 'Role',
+                'Income Entries', 'Bank Ledgers', 'Fund Transfer IN', 'Total IN',
+                'Ledger Expense', 'External Expense', 'Fund Transfer OUT', 'Total OUT',
+                'Net Balance',
+                'Drafts IN', 'Drafts OUT', 'Drafts Balance', 'Final Balance',
+                'Draft Count', 'Submitted Count', 'Approved Count', 'Rejected Count', 'Paid Count',
+                'Draft Amount', 'Submitted Amount', 'Approved Amount', 'Rejected Amount', 'Paid Amount'
+            ];
+
+            const escapeCSV = (val) => {
+                if (val === null || val === undefined) return '""';
+                let str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+                return `"${str}"`;
+            };
+
+            const csvLines = [];
+            csvLines.push(headers.map(h => `"${h}"`).join(','));
+
+            rows.forEach((r, idx) => {
+                const line = [
+                    idx + 1,
+                    escapeCSV(r.emp_code || ''),
+                    escapeCSV(r.full_name || ''),
+                    escapeCSV(r.department || ''),
+                    escapeCSV(r.role || ''),
+                    Number(r.income_entries || 0).toFixed(2),
+                    Number(r.bank_alloc_in || 0).toFixed(2),
+                    Number(r.fund_transferred_in || 0).toFixed(2),
+                    Number(r.total_in || 0).toFixed(2),
+                    Number(r.ledger_exp || 0).toFixed(2),
+                    Number(r.ext_exp || 0).toFixed(2),
+                    Number(r.fund_transferred_out || 0).toFixed(2),
+                    Number(r.total_out || 0).toFixed(2),
+                    Number(r.net_balance || 0).toFixed(2),
+                    Number(r.draft_in || 0).toFixed(2),
+                    Number(r.draft_out || 0).toFixed(2),
+                    Number(r.draft_balance || 0).toFixed(2),
+                    Number(r.final_balance || 0).toFixed(2),
+                    Number(r.draft_count || 0),
+                    Number(r.submitted_count || 0),
+                    Number(r.approved_count || 0),
+                    Number(r.rejected_count || 0),
+                    Number(r.paid_count || 0),
+                    Number(r.draft_amount || 0).toFixed(2),
+                    Number(r.submitted_amount || 0).toFixed(2),
+                    Number(r.approved_amount || 0).toFixed(2),
+                    Number(r.rejected_amount || 0).toFixed(2),
+                    Number(r.paid_amount || 0).toFixed(2)
+                ];
+                csvLines.push(line.join(','));
             });
-            const tfoot = table.querySelector('tfoot tr');
-            if (tfoot) {
-                const cells = Array.from(tfoot.querySelectorAll('td')).map(td => `"${td.textContent.trim().replace(/"/g, '""').replace(/,/g,'').replace(/₹/g,'')}"`);
-                rows.push(cells.join(','));
+
+            // Add Totals Row
+            const T = window._lastConsoTotals;
+            if (T) {
+                const totalLine = [
+                    'TOTAL',
+                    '""',
+                    escapeCSV(`Total Staff: ${rows.length}`),
+                    '""',
+                    '""',
+                    Number(T.income_entries || 0).toFixed(2),
+                    Number(T.bank_alloc_in || 0).toFixed(2),
+                    Number(T.fund_transferred_in || 0).toFixed(2),
+                    Number(T.total_in || 0).toFixed(2),
+                    Number(T.ledger_exp || 0).toFixed(2),
+                    Number(T.ext_exp || 0).toFixed(2),
+                    Number(T.fund_transferred_out || 0).toFixed(2),
+                    Number(T.total_out || 0).toFixed(2),
+                    Number(T.net_balance || 0).toFixed(2),
+                    Number(T.draft_in || 0).toFixed(2),
+                    Number(T.draft_out || 0).toFixed(2),
+                    Number(T.draft_balance || 0).toFixed(2),
+                    Number(T.final_balance || 0).toFixed(2),
+                    Number(T.draft_count || 0),
+                    Number(T.submitted_count || 0),
+                    Number(T.approved_count || 0),
+                    Number(T.rejected_count || 0),
+                    Number(T.paid_count || 0),
+                    Number(T.draft_amount || 0).toFixed(2),
+                    Number(T.submitted_amount || 0).toFixed(2),
+                    Number(T.approved_amount || 0).toFixed(2),
+                    Number(T.rejected_amount || 0).toFixed(2),
+                    Number(T.paid_amount || 0).toFixed(2)
+                ];
+                csvLines.push(totalLine.join(','));
             }
-            const blob = new Blob([rows.join('\n')], {type: 'text/csv'});
+
+            // UTF-8 BOM \uFEFF ensures Excel properly renders Unicode and Indian Rupee / special characters
+            const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `expense_consolidated_${new Date().toISOString().slice(0,10)}.csv`;
+            a.download = `expense_consolidated_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
         }
         
         function openApproveModal(exp) {

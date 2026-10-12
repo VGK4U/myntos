@@ -8371,6 +8371,68 @@ def list_expense_entries(
     return entries, total, summary
 
 
+def get_payroll_and_incentive_voucher_identifiers(db: Session) -> tuple[set, set]:
+    """
+    Identifies all voucher IDs and voucher numbers linked to payroll, salary,
+    incentives, bonuses, commissions, and wages so they are NEVER mixed into operational expense passbooks.
+    """
+    from app.models.staff_accounts import JournalVoucher, ExpenseSubCategory, ExpenseMainCategory
+    from sqlalchemy import or_
+
+    cat_keywords = ['salary', 'payroll', 'incentive', 'bonus', 'remuneration', 'wages', 'stipend', 'commission']
+    payroll_cat_ids = set()
+    try:
+        subs = db.query(ExpenseSubCategory).all()
+        for s in subs:
+            main = db.query(ExpenseMainCategory).filter(ExpenseMainCategory.id == s.main_category_id).first()
+            m_name = (main.name or '').lower() if main else ''
+            s_name = (s.name or '').lower()
+            if any(k in m_name for k in cat_keywords) or any(k in s_name for k in cat_keywords):
+                payroll_cat_ids.add(s.id)
+    except Exception:
+        payroll_cat_ids = {3, 7, 39, 40, 41, 42, 43, 93, 94, 95, 96, 115}
+
+    try:
+        q = db.query(JournalVoucher.id, JournalVoucher.voucher_number).filter(
+            or_(
+                JournalVoucher.category_id.in_(payroll_cat_ids),
+                JournalVoucher.dr_account_name.ilike('%salary%'),
+                JournalVoucher.dr_account_name.ilike('%incentive%'),
+                JournalVoucher.dr_account_name.ilike('%bonus%'),
+                JournalVoucher.dr_account_name.ilike('%wages%'),
+                JournalVoucher.dr_account_name.ilike('%payroll%'),
+                JournalVoucher.cr_account_name.ilike('%salary%'),
+                JournalVoucher.cr_account_name.ilike('%incentive%'),
+                JournalVoucher.narration.ilike('%salary%'),
+                JournalVoucher.narration.ilike('%incentive%'),
+                JournalVoucher.narration.ilike('%bonus%'),
+                JournalVoucher.narration.ilike('%payroll%'),
+            )
+        )
+        jv_rows = q.all()
+        jv_ids = {r[0] for r in jv_rows}
+        voucher_numbers = {r[1] for r in jv_rows if r[1]}
+        return jv_ids, voucher_numbers
+    except Exception:
+        return set(), set()
+
+
+def is_payroll_or_incentive_voucher(pl, payroll_jv_ids: set, payroll_voucher_numbers: set) -> bool:
+    """
+    Returns True if a PartyLedger entry is for payroll, salary, incentive, bonus, or wages.
+    """
+    if pl.reference_type in ['SALARY', 'PAYROLL', 'INCENTIVE']:
+        return True
+    if pl.reference_type == 'JOURNAL' and (pl.reference_id in payroll_jv_ids or (pl.reference_number and pl.reference_number in payroll_voucher_numbers)):
+        return True
+    part_low = (pl.particulars or '').lower()
+    narr_low = (pl.narration or '').lower()
+    words = ['salary', 'incentive', 'bonus', 'payroll', 'wages', 'stipend', 'commission']
+    if any(w in part_low for w in words) or any(w in narr_low for w in words):
+        return True
+    return False
+
+
 def list_unified_employee_ledger(
     db: Session,
     employee: StaffEmployee,
@@ -8820,8 +8882,14 @@ def list_unified_employee_ledger(
         if comp_id:
             q_pl = q_pl.filter(PartyLedger.company_id == comp_id)
 
+        payroll_jv_ids, payroll_voucher_numbers = get_payroll_and_incentive_voucher_identifiers(db)
+
         for pl in q_pl.all():
             if (pl.reference_number and (pl.reference_number in fa_refs or pl.reference_number in exp_refs or pl.reference_number in ie_refs or pl.reference_number in ft_refs)) or (pl.reference_type in ['FUND_TRANSFER', 'FUND_ALLOCATION'] and pl.reference_id in fa_ids) or (pl.reference_type == 'EXPENSE_ENTRY' and pl.reference_id in exp_ids):
+                continue
+
+            # Skip payroll, salary, incentive, and bonus vouchers so they are never mixed into operational expense passbooks
+            if is_payroll_or_incentive_voucher(pl, payroll_jv_ids, payroll_voucher_numbers):
                 continue
 
             dr = float(pl.debit_amount or 0)
@@ -8971,8 +9039,9 @@ def list_unified_employee_ledger(
         except Exception:
             pass
 
-    # Exclude MR10001 (id=1 or emp_code='MR10001') from unified ledger when viewer is not MR10001
-    if getattr(employee, 'emp_code', None) != 'MR10001':
+    # Exclude MR10001 (id=1 or emp_code='MR10001') from unified ledger when viewer is not MR10001 or supreme user
+    _is_viewer_supreme = is_accounts_supreme_employee(employee) or getattr(employee, 'emp_code', None) in ['MR10001', 'MR10016']
+    if getattr(employee, 'emp_code', None) != 'MR10001' and not _is_viewer_supreme:
         all_entries = [
             e for e in all_entries 
             if str(e.get('emp_code', '')).strip().upper() != 'MR10001' and e.get('employee_id') != 1

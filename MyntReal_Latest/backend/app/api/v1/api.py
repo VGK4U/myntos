@@ -314,6 +314,10 @@ api_router.include_router(saas_crm_setup.router, prefix="/saas/crm-setup", tags=
 # Suryanz Solar Public Lead Capture & Knowledge API (Oct 2026)
 api_router.include_router(suryanz_public.router, prefix="/public/suryanz", tags=["Suryanz Solar Public API"])
 
+# Social Media Manager (Multi-Tenant)
+from app.api.v1.endpoints import social_media_api
+api_router.include_router(social_media_api.router)
+
 @api_router.get("/health")
 async def api_health():
     """API health check"""

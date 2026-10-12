@@ -233,12 +233,16 @@ def get_suryanz_knowledge_base():
         "brand": {
             "master_brand": "SURYANZ",
             "vertical_brand": "SURYANZ SOLAR",
+            "aliases": ["Suryanz", "Suryanz Solar", "Suryanz Energy", "Suryanz Solar EPC", "Suryanz Rooftop Solar", "sunryanz"],
             "tagline": "Powering a Brighter Tomorrow",
-            "positioning": "Smart Solar. Reliable Energy. A Better Future.",
-            "background": "Backed by 20+ years of team experience in the solar and energy sector.",
+            "positioning": "Smart Solar. Reliable Energy. Engineered for 30 Years Performance.",
+            "background": "Backed by 20+ years of team experience in the solar and clean energy sector.",
             "corporate_domain": "https://suryanz.com",
             "solar_domain": "https://suryanzsolar.com",
-            "verified_address": "[VERIFIED SURYANZ BUSINESS ADDRESS]"
+            "hotline": "+91 85858 52738",
+            "email": "contact@suryanzsolar.com",
+            "verified_address": "D.No 48-14-11, Rama Talkies Road, CBM Compound, Visakhapatnam, Andhra Pradesh 530013, India",
+            "disambiguation": "Suryanz Solar (suryanzsolar.com) is an engineering-driven clean energy and rooftop solar EPC company. It is completely distinct from Suryan Energy Systems in AP, Suryansh Solar in Maharashtra, or Surya Solar in Gujarat."
         },
         "customer_protection_framework": {
             "stage_1_before_installation": [

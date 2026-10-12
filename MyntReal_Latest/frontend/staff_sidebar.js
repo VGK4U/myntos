@@ -444,6 +444,8 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuPaths.add('/staff/configuration/catalog');
                             this.allowedMenuPaths.add('/staff/catalog-library');
                             this.allowedMenuPaths.add('/staff/catalog');
+                            this.allowedMenuPaths.add('/staff/configuration/social-media');
+                            this.allowedMenuPaths.add('/staff/social-media');
                             this.allowedMenuPaths.add('/staff/bank-wise-leads');
                             this.allowedMenuPaths.add('/staff/field-sales');
                             this.allowedMenuCodes.add('CRM_WA_INBOX');
@@ -461,6 +463,7 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuCodes.add('staff_bank_wise_leads');
                             this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
                             this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                            this.allowedMenuCodes.add('SOCIAL_MEDIA_MANAGER');
                         }
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
@@ -508,6 +511,8 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuPaths.add('/staff/configuration/catalog');
                             this.allowedMenuPaths.add('/staff/catalog-library');
                             this.allowedMenuPaths.add('/staff/catalog');
+                            this.allowedMenuPaths.add('/staff/configuration/social-media');
+                            this.allowedMenuPaths.add('/staff/social-media');
                             this.allowedMenuCodes.add('CRM_WA_INBOX');
                             this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
                             this.allowedMenuCodes.add('WHATSAPP_CONFIG');
@@ -521,6 +526,7 @@ window.StaffSidebar = window.StaffSidebar || {
                             this.allowedMenuCodes.add('staff_my_leads');
                             this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
                             this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
+                            this.allowedMenuCodes.add('SOCIAL_MEDIA_MANAGER');
                         }
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));

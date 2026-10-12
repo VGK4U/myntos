@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Manager | MintOS / ZynovaOS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=20260915_audiofix"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f8fafc; 
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+            background: #f8fafc;
+        }
+        @media (max-width: 992px) {
+            .main-content { margin-left: 0; }
+        }
+
+        .content-area { padding: 24px; max-width: 1440px; margin: 0 auto; }
+
+        /* Top Hero Banner */
+        .module-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #312e81 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
+            color: #fff;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .module-hero::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hero-badge {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #c7d2fe;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .channel-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e2e8f0;
+        }
+        .channel-pill.active {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+        .channel-pill .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+        .channel-pill.active .dot {
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        /* Nav Tabs */
+        .nav-tabs-custom {
+            border-bottom: 2px solid #e2e8f0;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .nav-tabs-custom .nav-link {
+            border: none;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: #64748b;
+            border-radius: 10px 10px 0 0;
+            background: transparent;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            color: #4f46e5;
+            background: rgba(99, 102, 241, 0.04);
+        }
+        .nav-tabs-custom .nav-link.active {
+            color: #4f46e5;
+            background: #fff;
+            border-bottom: 2px solid #4f46e5;
+        }
+
+        /* Stat Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.04);
+        }
+        .stat-card-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+        .stat-card-val {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .stat-card-icon {
+            position: absolute;
+            right: 18px;
+            top: 20px;
+            font-size: 24px;
+            opacity: 0.18;
+        }
+
+        /* Card panels */
+        .content-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .content-card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .content-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+        .content-card-body {
+            padding: 24px;
+        }
+
+        /* Buttons */
+        .btn-brand {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: #fff;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-brand:hover {
+            background: linear-gradient(135deg, #4338ca, #4f46e5);
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
+        .btn-success-brand {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-success-brand:hover {
+            color: #fff;
+            background: linear-gradient(135deg, #047857, #059669);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        /* 30-Day Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .calendar-day-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 190px;
+        }
+        .calendar-day-card:hover {
+            border-color: #818cf8;
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+        .calendar-day-card.status-draft { border-left: 4px solid #f59e0b; }
+        .calendar-day-card.status-scheduled { border-left: 4px solid #3b82f6; }
+        .calendar-day-card.status-published { border-left: 4px solid #10b981; }
+        .calendar-day-card.status-failed { border-left: 4px solid #ef4444; }
+
+        .day-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .day-date {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+        }
+        .status-badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.4px;
+        }
+        .status-badge.draft { background: #fef3c7; color: #b45309; }
+        .status-badge.scheduled { background: #e0f2fe; color: #0369a1; }
+        .status-badge.published { background: #d1fae5; color: #047857; }
+        .status-badge.failed { background: #fee2e2; color: #b91c1c; }
+
+        .card-post-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .card-post-caption {
+            font-size: 11.5px;
+            color: #64748b;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .card-post-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 8px;
+            border-top: 1px dashed #f1f5f9;
+        }
+        .channel-icons {
+            display: flex;
+            gap: 6px;
+            font-size: 13px;
+        }
+        .channel-icons .fa-facebook { color: #1877f2; }
+        .channel-icons .fa-instagram { color: #e4405f; }
+        .channel-icons .fa-linkedin { color: #0a66c2; }
+        .channel-icons .fa-x-twitter { color: #0f172a; }
+
+        /* Social Platform Cards */
+        .account-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+        .account-card:hover {
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        }
+        .account-brand-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .icon-facebook { background: linear-gradient(135deg, #1877f2, #0d6efd); }
+        .icon-instagram { background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af); }
+        .icon-linkedin { background: linear-gradient(135deg, #0a66c2, #0284c7); }
+        .icon-twitter { background: linear-gradient(135deg, #14171a, #334155); }
+
+        /* Post Editor Modal Custom Tabs */
+        .platform-subtabs .nav-link {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            color: #64748b;
+        }
+        .platform-subtabs .nav-link.active {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .media-preview-container {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            background: #f8fafc;
+            position: relative;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .media-preview-img {
+            max-width: 100%;
+            max-height: 240px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            object-fit: contain;
+        }
+
+        /* Loading Spinner Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Staff Portal Standard Dynamic Sidebar -->
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+        <!-- Global Header Container -->
+        <div id="headerContainer"></div>
+
+        <div class="content-area">
+            <!-- Module Top Banner -->
+            <div class="module-hero">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <span class="hero-badge">
+                                <i class="fas fa-bullhorn"></i> Configuration &bull; Social Media
+                            </span>
+                            <span class="hero-badge" id="companyBadge">
+                                <i class="fas fa-building"></i> <span class="active-tenant-name">Zynova Mobility</span>
+                            </span>
+                            <div class="d-inline-flex align-items-center gap-1 bg-white bg-opacity-10 px-2 py-1 rounded-pill border border-white border-opacity-25">
+                                <i class="fas fa-filter text-warning small ms-1"></i>
+                                <span class="small text-white-50 me-1" style="font-size: 11px;">Switch Tenant:</span>
+                                <select id="socialCompanySelect" class="form-select form-select-sm border-0 shadow-none fw-bold" style="background: rgba(255,255,255,0.92); color: #0f172a; width: auto; min-width: 150px; height: 26px; padding: 2px 24px 2px 8px; font-size: 11.5px; border-radius: 12px; cursor: pointer;" onchange="SocialMediaManager.switchCompany(this.value)">
+                                    <option value="2" selected>Zynova Mobility</option>
+                                    <option value="1">Mynt Real LLP</option>
+                                </select>
+                            </div>
+                            <span class="hero-badge" id="providerBadge" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7;">
+                                <i class="fas fa-plug-circle-check"></i> Zernio Sandbox Ready
+                            </span>
+                        </div>
+                        <h2 class="fw-bold mb-1" style="font-size: 26px;">Social Media Manager</h2>
+                        <p class="text-white-50 mb-3" style="font-size: 13.5px; max-width: 650px;">
+                            Autonomous 30-day AI calendar planning, multi-platform copy generation, scheduled publishing, and omnichannel engagement analytics for MintOS / ZynovaOS.
+                        </p>
+                        <!-- Active Platform Status Pills -->
+                        <div class="d-flex gap-2 flex-wrap" id="headerChannelPills">
+                            <span class="channel-pill" id="pillFacebook"><span class="dot"></span><i class="fab fa-facebook-f"></i> Facebook</span>
+                            <span class="channel-pill" id="pillInstagram"><span class="dot"></span><i class="fab fa-instagram"></i> Instagram</span>
+                            <span class="channel-pill" id="pillLinkedin"><span class="dot"></span><i class="fab fa-linkedin-in"></i> LinkedIn</span>
+                            <span class="channel-pill" id="pillTwitter"><span class="dot"></span><i class="fab fa-x-twitter"></i> X (Twitter)</span>
+                        </div>
+                    </div>
+
+                    <!-- Fast Action Buttons -->
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button class="btn btn-brand" onclick="SocialMediaManager.openAIGeneratorModal()">
+                            <i class="fas fa-wand-magic-sparkles"></i> AI 30-Day Calendar
+                        </button>
+                        <button class="btn btn-success-brand" onclick="SocialMediaManager.openPostEditor()">
+                            <i class="fas fa-plus"></i> New Post
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="SocialMediaManager.syncAnalyticsNow()" title="Sync Engagement Metrics">
+                            <i class="fas fa-arrows-rotate"></i> Sync Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Migration Alert Container -->
+            <div id="migrationNoticeContainer"></div>
+
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs nav-tabs-custom" id="socialTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-overview-btn" data-bs-toggle="tab" data-bs-target="#tabOverview" type="button" role="tab" aria-controls="tabOverview" aria-selected="true">
+                        <i class="fas fa-chart-pie me-1"></i> Overview
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-calendar-btn" data-bs-toggle="tab" data-bs-target="#tabCalendar" type="button" role="tab" aria-controls="tabCalendar" aria-selected="false">
+                        <i class="fas fa-calendar-days me-1"></i> Content Calendar
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-accounts-btn" data-bs-toggle="tab" data-bs-target="#tabAccounts" type="button" role="tab" aria-controls="tabAccounts" aria-selected="false">
+                        <i class="fas fa-share-nodes me-1"></i> Connected Channels
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-analytics-btn" data-bs-toggle="tab" data-bs-target="#tabAnalytics" type="button" role="tab" aria-controls="tabAnalytics" aria-selected="false">
+                        <i class="fas fa-chart-line me-1"></i> Analytics &amp; Reach
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-settings-btn" data-bs-toggle="tab" data-bs-target="#tabSettings" type="button" role="tab" aria-controls="tabSettings" aria-selected="false">
+                        <i class="fas fa-sliders me-1"></i> Preferences
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content Panes -->
+            <div class="tab-content" id="socialTabsContent">
+
+                <!-- 1. OVERVIEW TAB -->
+                <div class="tab-pane fade show active" id="tabOverview" role="tabpanel" aria-labelledby="tab-overview-btn">
+                    <!-- KPI Metric Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-title">Connected Channels</div>
+                            <div class="stat-card-val" id="statConnectedChannels">0 / 4</div>
+                            <i class="fas fa-network-wired stat-card-icon text-primary"></i>
+                            <div class="small text-muted mt-1"><span id="statActiveCount">0</span> active profiles</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Posts (This Month)</div>
+                            <div class="stat-card-val" id="statTotalPosts">0</div>
+                            <i class="fas fa-newspaper stat-card-icon text-info"></i>
+                            <div class="small text-muted mt-1">Calendar capacity: 15 bi-daily</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Scheduled Queue</div>
+                            <div class="stat-card-val text-primary" id="statScheduledPosts">0</div>
+                            <i class="fas fa-clock stat-card-icon text-primary"></i>
+                            <div class="small text-muted mt-1">Ready for background worker</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Published</div>
+                            <div class="stat-card-val text-success" id="statPublishedPosts">0</div>
+                            <i class="fas fa-circle-check stat-card-icon text-success"></i>
+                            <div class="small text-muted mt-1">Omnichannel dispatches</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Total Impressions</div>
+                            <div class="stat-card-val" id="statTotalImpressions">0</div>
+                            <i class="fas fa-eye stat-card-icon text-warning"></i>
+                            <div class="small text-muted mt-1">Across all verified channels</div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Posts & Quick Calendar Overview -->
+                    <div class="row g-4">
+                        <div class="col-lg-8">
+                            <div class="content-card">
+                                <div class="content-card-header">
+                                    <h5 class="content-card-title">
+                                        <i class="fas fa-calendar-check text-primary"></i> Upcoming Scheduled Posts
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="SocialMediaManager.switchToCalendarTab()">
+                                        View Full 30-Day Grid <i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
+                                </div>
+                                <div class="content-card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Schedule</th>
+                                                    <th>Post Concept &amp; Copy</th>
+                                                    <th>Channels</th>
+                                                    <th>Status</th>
+                                                    <th class="text-end">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="overviewUpcomingPostsBody">
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-4 text-muted">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i> Loading scheduled posts...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Side Quick Action & Integration Overview -->
+                        <div class="col-lg-4">
+                            <div class="content-card mb-4">
+                                <div class="content-card-header">
+                                    <h5 class="content-card-title">
+                                        <i class="fas fa-bolt text-warning"></i> Quick Actions
+                                    </h5>
+                                </div>
+                                <div class="content-card-body d-flex flex-column gap-2">
+                                    <button class="btn btn-outline-primary w-100 text-start py-2" onclick="SocialMediaManager.openAIGeneratorModal()">
+                                        <i class="fas fa-wand-magic-sparkles me-2 text-primary"></i> Generate 30-Day AI Calendar
+                                    </button>
+                                    <button class="btn btn-outline-success w-100 text-start py-2" onclick="SocialMediaManager.openPostEditor()">
+                                        <i class="fas fa-pen-to-square me-2 text-success"></i> Create Single Ad-hoc Post
+                                    </button>
+                                    <button class="btn btn-outline-secondary w-100 text-start py-2" onclick="SocialMediaManager.switchToAccountsTab()">
+                                        <i class="fas fa-plug me-2"></i> Connect New Social Channel
+                                    </button>
+                                    <button class="btn btn-outline-info w-100 text-start py-2" onclick="SocialMediaManager.syncAnalyticsNow()">
+                                        <i class="fas fa-arrows-rotate me-2 text-info"></i> Refresh Performance Data
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="content-card">
+                                <div class="content-card-header">
+                                    <h5 class="content-card-title">
+                                        <i class="fas fa-shield-halved text-success"></i> Engine Isolation
+                                    </h5>
+                                </div>
+                                <div class="content-card-body">
+                                    <p class="small text-muted mb-2">
+                                        Every post dispatch is scoped by tenant and company ID with cryptographic idempotency keys.
+                                    </p>
+                                    <div class="p-2 bg-light rounded small border">
+                                        <strong>Worker cadence:</strong> 60 seconds<br>
+                                        <strong>Analytics sync:</strong> 6 hours<br>
+                                        <strong>Mode:</strong> Resilient Local Mock Sandbox
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CONTENT CALENDAR TAB -->
+                <div class="tab-pane fade" id="tabCalendar" role="tabpanel" aria-labelledby="tab-calendar-btn">
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <h5 class="content-card-title">
+                                    <i class="fas fa-calendar-alt text-primary"></i> Content Calendar (30-Day Plan)
+                                </h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="form-select form-select-sm" id="calMonthSelect" style="width: 140px;" onchange="SocialMediaManager.loadCalendar()">
+                                        <!-- populated dynamically -->
+                                    </select>
+                                    <select class="form-select form-select-sm" id="calYearSelect" style="width: 100px;" onchange="SocialMediaManager.loadCalendar()">
+                                        <!-- populated dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Platform Filter -->
+                                <select class="form-select form-select-sm" id="calPlatformFilter" style="width: 130px;" onchange="SocialMediaManager.renderCalendarGrid()">
+                                    <option value="">All Platforms</option>
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="x">X (Twitter)</option>
+                                </select>
+                                <!-- Status Filter -->
+                                <select class="form-select form-select-sm" id="calStatusFilter" style="width: 130px;" onchange="SocialMediaManager.renderCalendarGrid()">
+                                    <option value="">All Statuses</option>
+                                    <option value="DRAFT">Draft</option>
+                                    <option value="SCHEDULED">Scheduled</option>
+                                    <option value="PUBLISHED">Published</option>
+                                    <option value="FAILED">Failed</option>
+                                </select>
+                                <button class="btn btn-sm btn-brand" onclick="SocialMediaManager.openAIGeneratorModal()">
+                                    <i class="fas fa-wand-magic-sparkles"></i> AI Generator
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="content-card-body">
+                            <!-- 30-Day Interactive Calendar Grid -->
+                            <div class="calendar-grid" id="calendarGridContainer">
+                                <div class="col-12 text-center py-5 text-muted">
+                                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                    <p>Loading 30-day content calendar...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CONNECTED CHANNELS TAB -->
+                <div class="tab-pane fade" id="tabAccounts" role="tabpanel" aria-labelledby="tab-accounts-btn">
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <h5 class="content-card-title mb-0">
+                                    <i class="fas fa-network-wired text-primary"></i> Social Channels &amp; Provider Status
+                                </h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 small">
+                                    <i class="fas fa-building me-1"></i> Tenant: <span class="active-tenant-name fw-bold">Zynova Mobility</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="SocialMediaManager.loadAccounts()">
+                                <i class="fas fa-rotate"></i> Refresh Channels
+                            </button>
+                        </div>
+                        <div class="content-card-body">
+                            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-3 mb-4">
+                                <i class="fas fa-info-circle fa-2x text-info"></i>
+                                <div>
+                                    <div class="fw-bold">Omnichannel Hub via Zernio Gateway</div>
+                                    <div class="small">
+                                        Connect each company channel to enable automatic background publication. In development sandbox mode, mock-connections can be instantiated instantly without live external API keys.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4" id="accountsGrid">
+                                <!-- Cards for Facebook, Instagram, LinkedIn, X rendered dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ANALYTICS & REACH TAB -->
+                <div class="tab-pane fade" id="tabAnalytics" role="tabpanel" aria-labelledby="tab-analytics-btn">
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <h5 class="content-card-title mb-0">
+                                    <i class="fas fa-chart-line text-primary"></i> Multi-Channel Performance Metrics
+                                </h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 small">
+                                    <i class="fas fa-building me-1"></i> Tenant: <span class="active-tenant-name fw-bold">Zynova Mobility</span>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" id="analyticsDaysFilter" style="width: 140px;" onchange="SocialMediaManager.loadAnalytics()">
+                                    <option value="7">Last 7 Days</option>
+                                    <option value="30" selected>Last 30 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                                <button class="btn btn-sm btn-brand" onclick="SocialMediaManager.syncAnalyticsNow()">
+                                    <i class="fas fa-arrows-rotate"></i> Sync Real-Time Data
+                                </button>
+                            </div>
+                        </div>
+                        <div class="content-card-body">
+                            <!-- High Level KPI Row -->
+                            <div class="stats-grid mb-4">
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Total Views</div>
+                                    <div class="stat-card-val text-primary" id="anTotalViews">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Impressions</div>
+                                    <div class="stat-card-val" id="anTotalImpressions">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Total Reach</div>
+                                    <div class="stat-card-val text-success" id="anTotalReach">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Likes &amp; Reactions</div>
+                                    <div class="stat-card-val text-danger" id="anTotalLikes">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Comments &amp; Replies</div>
+                                    <div class="stat-card-val text-info" id="anTotalComments">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-card-title">Avg Engagement</div>
+                                    <div class="stat-card-val text-warning" id="anAvgEngagement">0.0%</div>
+                                </div>
+                            </div>
+
+                            <!-- Post Level Breakdown -->
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Published Date</th>
+                                            <th>Post Title</th>
+                                            <th>Platforms</th>
+                                            <th>Views</th>
+                                            <th>Impressions</th>
+                                            <th>Reach</th>
+                                            <th>Likes</th>
+                                            <th>Comments</th>
+                                            <th>Engagement</th>
+                                            <th>Data Source</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analyticsTableBody">
+                                        <tr>
+                                            <td colspan="10" class="text-center py-4 text-muted">
+                                                <i class="fas fa-spinner fa-spin me-2"></i> Loading analytics snapshots...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. PREFERENCES TAB -->
+                <div class="tab-pane fade" id="tabSettings" role="tabpanel" aria-labelledby="tab-settings-btn">
+                    <div class="content-card" style="max-width: 850px;">
+                        <div class="content-card-header">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <h5 class="content-card-title mb-0">
+                                    <i class="fas fa-sliders text-primary"></i> Tenant Social Calendar Settings
+                                </h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 small">
+                                    <i class="fas fa-building me-1"></i> Tenant: <span class="active-tenant-name fw-bold">Zynova Mobility</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-brand" onclick="SocialMediaManager.saveSettings()">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                        </div>
+                        <div class="content-card-body">
+                            <div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center justify-content-between py-2 px-3 mb-4 rounded-3">
+                                <div class="small text-primary-emphasis">
+                                    <i class="fas fa-circle-info me-2"></i>
+                                    Customizing brand voice and posting schedule for: <strong class="active-tenant-name">Zynova Mobility</strong>
+                                </div>
+                                <span class="badge bg-primary text-white small">Isolated Scope</span>
+                            </div>
+
+                            <form id="settingsForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Default Time Slot 1</label>
+                                        <input type="time" class="form-control" id="prefTime1" value="10:00">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Default Time Slot 2</label>
+                                        <input type="time" class="form-control" id="prefTime2" value="15:30">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Default Time Slot 3</label>
+                                        <input type="time" class="form-control" id="prefTime3" value="19:00">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold">Posting Frequency</label>
+                                        <select class="form-select" id="prefFrequency">
+                                            <option value="bi-daily" selected>Bi-Daily (15 posts / month - Recommended)</option>
+                                            <option value="daily">Daily (30 posts / month)</option>
+                                            <option value="weekly">Weekly (4 posts / month)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Company Brand Voice &amp; Personality</label>
+                                        <textarea class="form-control" id="prefBrandVoice" rows="3" placeholder="e.g. Professional yet approachable, innovative EV mobility, customer-centric real estate developer."></textarea>
+                                        <div class="form-text small">Used by AI generation to personalize tone and style for this specific tenant.</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold">Default Hashtags</label>
+                                        <input type="text" class="form-control" id="prefDefaultHashtags" placeholder="#MintOS #ZynovaMobility #SmartLiving #Innovation">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check form-switch mt-2">
+                                            <input class="form-check-input" type="checkbox" id="prefAutoApprove">
+                                            <label class="form-check-label small fw-bold" for="prefAutoApprove">Auto-Approve AI Generated Posts</label>
+                                            <div class="form-text small">When disabled, generated posts remain in DRAFT status until manually approved by staff.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- API Gateway & Key Architecture Card -->
+                    <div class="content-card mt-4" style="max-width: 850px;">
+                        <div class="content-card-header">
+                            <h5 class="content-card-title">
+                                <i class="fas fa-plug text-primary"></i> API Gateway &amp; Account Integrations
+                            </h5>
+                        </div>
+                        <div class="content-card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <div class="fw-bold small text-dark mb-1">
+                                            <i class="fas fa-network-wired text-info me-1"></i> Social Media API Gateway
+                                        </div>
+                                        <div class="small text-muted">Provider: <strong>Zernio Omnichannel Gateway</strong></div>
+                                        <div class="small text-muted">Base URL: <code>https://api.zernio.com/v1</code></div>
+                                        <div class="small text-success mt-2"><i class="fas fa-check-circle me-1"></i> Sandbox Adapter Ready</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                        <div class="fw-bold small text-dark mb-1">
+                                            <i class="fas fa-robot text-primary me-1"></i> AI Content Generator
+                                        </div>
+                                        <div class="small text-muted">Model Engine: <strong>OpenAI / Gemini Multi-Tenant Planner</strong></div>
+                                        <div class="small text-muted">Plan: <strong>15 Bi-Daily Strategic Posts / 30 Days</strong></div>
+                                        <div class="small text-success mt-2"><i class="fas fa-check-circle me-1"></i> Prompt Pipeline Active</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-3 rounded-3 border bg-info-subtle border-info-subtle">
+                                        <div class="fw-bold small text-dark mb-1">
+                                            <i class="fas fa-shield-halved text-primary me-1"></i> Where to configure API Keys &amp; Secrets
+                                        </div>
+                                        <div class="small text-muted">
+                                            In accordance with <strong>Rule 7 (Zero API Key Exposure)</strong>, external secret keys (<code>ZERNIO_API_KEY</code>, <code>ZERNIO_WEBHOOK_SECRET</code>, <code>OPENAI_API_KEY</code>, <code>GEMINI_API_KEY</code>) are securely managed on the server via <code>backend/.env</code> and never exposed to the client browser.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL 1: POST EDITOR ── -->
+    <div class="modal fade" id="postEditorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="postEditorTitle">
+                        <i class="fas fa-edit text-primary me-2"></i> Edit Social Post
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body position-relative">
+                    <div id="postEditorLoading" class="loading-overlay" style="display: none;">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                        <span id="postEditorLoadingText" class="small fw-bold">Saving changes...</span>
+                    </div>
+
+                    <form id="postEditorForm">
+                        <input type="hidden" id="editPostId">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold">Post Title / Topic Focus</label>
+                                <input type="text" class="form-control" id="editTitle" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Status</label>
+                                <select class="form-select" id="editStatus">
+                                    <option value="DRAFT">Draft</option>
+                                    <option value="SCHEDULED">Scheduled</option>
+                                    <option value="PUBLISHED" disabled>Published</option>
+                                    <option value="FAILED" disabled>Failed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Scheduled Date &amp; Time</label>
+                                <input type="datetime-local" class="form-control" id="editScheduledAt" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Target Channels</label>
+                                <div class="d-flex gap-3 pt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editChanFB" value="facebook">
+                                        <label class="form-check-label small" for="editChanFB"><i class="fab fa-facebook text-primary"></i> FB</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editChanIG" value="instagram">
+                                        <label class="form-check-label small" for="editChanIG"><i class="fab fa-instagram text-danger"></i> IG</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editChanLI" value="linkedin">
+                                        <label class="form-check-label small" for="editChanLI"><i class="fab fa-linkedin text-info"></i> LI</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editChanX" value="x">
+                                        <label class="form-check-label small" for="editChanX"><i class="fab fa-x-twitter"></i> X</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Platform-Specific Copy Subtabs -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label small fw-bold mb-0">Platform-Tailored Copy</label>
+                                <button type="button" class="btn btn-xs btn-outline-primary" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.regeneratePostCaption()">
+                                    <i class="fas fa-wand-magic-sparkles"></i> AI Re-Write Copy
+                                </button>
+                            </div>
+
+                            <ul class="nav nav-pills platform-subtabs mb-2" id="platformCopyTabs" role="tablist">
+                                <li class="nav-item">
+                                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#copyBase" type="button">Base Copy</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyFB" type="button"><i class="fab fa-facebook me-1"></i> Facebook</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyIG" type="button"><i class="fab fa-instagram me-1"></i> Instagram</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyLI" type="button"><i class="fab fa-linkedin me-1"></i> LinkedIn</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyX" type="button"><i class="fab fa-x-twitter me-1"></i> X</button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="copyBase">
+                                    <textarea class="form-control" id="editCaptionBase" rows="4" placeholder="Master message across all channels..."></textarea>
+                                </div>
+                                <div class="tab-pane fade" id="copyFB">
+                                    <textarea class="form-control" id="editCaptionFB" rows="4" placeholder="Facebook copy with community hook & link preview..."></textarea>
+                                </div>
+                                <div class="tab-pane fade" id="copyIG">
+                                    <textarea class="form-control" id="editCaptionIG" rows="4" placeholder="Instagram copy with aesthetic hook & curated hashtags..."></textarea>
+                                </div>
+                                <div class="tab-pane fade" id="copyLI">
+                                    <textarea class="form-control" id="editCaptionLI" rows="4" placeholder="Professional LinkedIn copy with business value & industry hashtags..."></textarea>
+                                </div>
+                                <div class="tab-pane fade" id="copyX">
+                                    <textarea class="form-control" id="editCaptionX" rows="4" placeholder="Concise punchy copy (Max 280 characters)..." maxlength="280"></textarea>
+                                    <div class="small text-muted text-end mt-1"><span id="charCountX">0</span> / 280</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Media Preview & AI Image Generation -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label small fw-bold mb-0">Attached Media (Image)</label>
+                                <button type="button" class="btn btn-xs btn-outline-info" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.generatePostImage()">
+                                    <i class="fas fa-image"></i> Generate AI Image
+                                </button>
+                            </div>
+                            <div class="media-preview-container" id="mediaPreviewBox">
+                                <div id="mediaPlaceholderText" class="text-muted small">
+                                    <i class="fas fa-photo-film fa-2x mb-2 text-secondary"></i>
+                                    <div>No image attached yet. Generate with AI or enter a media URL below.</div>
+                                </div>
+                                <img id="editMediaImg" class="media-preview-img" style="display: none;" src="" alt="Post media">
+                            </div>
+                            <div class="input-group input-group-sm mt-2">
+                                <span class="input-group-text"><i class="fas fa-link"></i></span>
+                                <input type="text" class="form-control" id="editMediaUrl" placeholder="https://example.com/asset.jpg" oninput="SocialMediaManager.updateMediaPreviewFromInput()">
+                                <button class="btn btn-outline-danger" type="button" onclick="SocialMediaManager.removeMedia()">Remove</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btnDeletePost" onclick="SocialMediaManager.deletePost()">
+                        <i class="fas fa-trash"></i> Delete Post
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="SocialMediaManager.savePost(false)">
+                            <i class="fas fa-floppy-disk"></i> Save Draft
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="SocialMediaManager.approveAndSchedulePost()">
+                            <i class="fas fa-calendar-check"></i> Approve &amp; Schedule
+                        </button>
+                        <button type="button" class="btn btn-brand btn-sm" onclick="SocialMediaManager.publishPostNow()">
+                            <i class="fas fa-paper-plane"></i> Publish Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL 2: 30-DAY AI CALENDAR GENERATOR ── -->
+    <div class="modal fade" id="generateCalendarModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-wand-magic-sparkles text-primary me-2"></i> AI 30-Day Content Calendar
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body position-relative">
+                    <div id="aiGenLoading" class="loading-overlay" style="display: none;">
+                        <i class="fas fa-brain fa-spin fa-2x text-primary mb-2"></i>
+                        <span class="small fw-bold">Crafting verified 30-day business calendar...</span>
+                        <span class="small text-muted mt-1">Generating 15 bi-daily strategic posts</span>
+                    </div>
+
+                    <form id="aiCalendarForm">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Target Month</label>
+                                <select class="form-select" id="genMonth">
+                                    <option value="1">January</option><option value="2">February</option>
+                                    <option value="3">March</option><option value="4">April</option>
+                                    <option value="5">May</option><option value="6">June</option>
+                                    <option value="7">July</option><option value="8">August</option>
+                                    <option value="9">September</option><option value="10">October</option>
+                                    <option value="11">November</option><option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Target Year</label>
+                                <input type="number" class="form-control" id="genYear" value="2026">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Campaign Focus &amp; Key Highlights</label>
+                                <textarea class="form-control" id="genFocus" rows="2" placeholder="e.g. Festive discount offer on EV 2-wheelers, solar panel subsidies, luxury commercial villa launches."></textarea>
+                                <div class="form-text small">Leave blank to use verified company profile and segment defaults.</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Tone of Voice</label>
+                                <select class="form-select" id="genTone">
+                                    <option value="Professional & Authority">Professional &amp; Authoritative</option>
+                                    <option value="Engaging & Promotional" selected>Engaging &amp; Promotional</option>
+                                    <option value="Inspirational & Lifestyle">Inspirational &amp; Lifestyle</option>
+                                    <option value="Educational & Informative">Educational &amp; Informative</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Primary Call to Action</label>
+                                <input type="text" class="form-control" id="genCTA" placeholder="Book a site visit / Test drive today">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Target Channels</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genFB" checked>
+                                        <label class="form-check-label small" for="genFB">Facebook</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genIG" checked>
+                                        <label class="form-check-label small" for="genIG">Instagram</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genLI" checked>
+                                        <label class="form-check-label small" for="genLI">LinkedIn</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="genX" checked>
+                                        <label class="form-check-label small" for="genX">X</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-2 bg-light rounded small border text-muted">
+                                    <i class="fas fa-circle-check text-success me-1"></i> Generates 15 bi-daily strategic posts over 30 days tailored to your verified business profile.
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-brand btn-sm" onclick="SocialMediaManager.submitAIGenerateCalendar()">
+                        <i class="fas fa-wand-magic-sparkles"></i> Generate 30-Day Calendar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL 3: CONNECT CHANNEL / SANDBOX MOCK MODAL ── -->
+    <div class="modal fade" id="connectAccountModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="connectModalTitle">
+                        <i class="fas fa-plug text-primary me-2"></i> Connect Social Account
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="connectPlatform">
+                    <p class="small text-muted mb-3" id="connectModalDescription">
+                        Choose connection method. You can authenticate via live OAuth or instantiate a local sandbox connection for automated testing.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Account Name / Handle</label>
+                        <input type="text" class="form-control" id="mockAccountHandle" placeholder="@zynovamobility or Mynt Real Official">
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="SocialMediaManager.startOAuthConnect()">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Hosted OAuth
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="SocialMediaManager.submitMockConnect()">
+                            <i class="fas fa-flask"></i> Connect Sandbox
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Sidebar Script -->
+    <script src="/staff_sidebar.js"></script>
+
+    <!-- Social Media Module JS -->
+    <script src="/public/js/social-media.js"></script>
+
+    <!-- Page Lifecycle Bootstrapper -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 1. Initialize Staff Sidebar Navigation
+            if (typeof window.StaffSidebar !== 'undefined') {
+                try {
+                    await window.StaffSidebar.init();
+                } catch (e) {
+                    console.warn('[SOCIAL-SIDEBAR] Sidebar init warning:', e);
+                }
+            }
+
+            // 2. Initialize Social Media Module Engine
+            if (typeof window.SocialMediaManager !== 'undefined') {
+                await window.SocialMediaManager.init();
+            }
+        });
+    </script>
+</body>
+</html>

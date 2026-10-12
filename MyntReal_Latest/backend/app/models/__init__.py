@@ -554,3 +554,14 @@ from app.models.integration_framework import (
     IntegrationConnection,
     IntegrationAuditLog
 )
+
+
+# Social Media Manager (Multi-Tenant)
+from app.models.social_media import (
+    SocialAccountConnection,
+    SocialCalendarSetting,
+    SocialPost,
+    SocialPostDispatch,
+    SocialAnalyticsSnapshot,
+    SocialWebhookEvent
+)

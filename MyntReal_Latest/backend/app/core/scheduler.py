@@ -5075,6 +5075,60 @@ def init_scheduler():
     except Exception as _scratch_sched_e:
         logger.warning(f"   🎁 Recharge Scratch Card: Outbox worker schedule failed: {_scratch_sched_e}")
 
+    # Social Media Manager: Publication Worker (Every 60s)
+    try:
+        def run_social_publish_worker():
+            try:
+                from app.core.database import SessionLocal
+                from app.services.social_publish_service import process_scheduled_social_posts
+                db = SessionLocal()
+                try:
+                    process_scheduled_social_posts(db, batch_size=20, max_retries=3)
+                finally:
+                    db.close()
+            except Exception as _pub_err:
+                logger.warning(f"⚠️ [SOCIAL-PUBLISH-WORKER] Error in publication processing: {_pub_err}")
+
+        scheduler.add_job(
+            run_social_publish_worker,
+            trigger=CronTrigger(minute='*', timezone='Asia/Kolkata'),
+            id='social_media_publish_worker',
+            name='Social Media Manager: Publication Worker (Every 60s)',
+            replace_existing=True,
+            misfire_grace_time=60,
+            max_instances=1,
+        )
+        logger.info("   📱 Social Media Manager: Publication Worker scheduled (Every 60s)")
+    except Exception as _soc_sched_e:
+        logger.warning(f"   📱 Social Media Manager: Publication worker schedule failed: {_soc_sched_e}")
+
+    # Social Media Manager: Analytics Sync Worker (Every 6h)
+    try:
+        def run_social_analytics_worker():
+            try:
+                from app.core.database import SessionLocal
+                from app.services.social_publish_service import sync_social_analytics
+                db = SessionLocal()
+                try:
+                    sync_social_analytics(db, days_back=30)
+                finally:
+                    db.close()
+            except Exception as _ana_err:
+                logger.warning(f"⚠️ [SOCIAL-ANALYTICS-WORKER] Error in analytics sync: {_ana_err}")
+
+        scheduler.add_job(
+            run_social_analytics_worker,
+            trigger=CronTrigger(hour='*/6', minute='15', timezone='Asia/Kolkata'),
+            id='social_media_analytics_worker',
+            name='Social Media Manager: Analytics Sync Worker (Every 6h)',
+            replace_existing=True,
+            misfire_grace_time=300,
+            max_instances=1,
+        )
+        logger.info("   📈 Social Media Manager: Analytics Sync Worker scheduled (Every 6h)")
+    except Exception as _ana_sched_e:
+        logger.warning(f"   📈 Social Media Manager: Analytics worker schedule failed: {_ana_sched_e}")
+
     scheduler.start()
     logger.info("✅ APScheduler initialized with IST timezone - All jobs scheduled in Asia/Kolkata time")
     logger.info(f"   📅 Next midnight run: {scheduler.get_job('midnight_income_calculation').next_run_time}")

@@ -7423,10 +7423,11 @@ async def get_expense_behalf_employees(
     Reporting managers (non-privileged) → their direct reports only.
     Others → empty list.
     """
+    from app.api.v1.endpoints.staff_employees import get_valid_staff_filter
     if is_accounts_allowed_employee(current_user):
         employees = (
             db.query(StaffEmployee)
-            .filter(StaffEmployee.status == 'active')
+            .filter(StaffEmployee.status == 'active', get_valid_staff_filter())
             .order_by(StaffEmployee.full_name)
             .all()
         )
@@ -7435,7 +7436,8 @@ async def get_expense_behalf_employees(
             db.query(StaffEmployee)
             .filter(
                 StaffEmployee.reporting_manager_id == current_user.id,
-                StaffEmployee.status == 'active'
+                StaffEmployee.status == 'active',
+                get_valid_staff_filter()
             )
             .order_by(StaffEmployee.full_name)
             .all()
@@ -7465,6 +7467,7 @@ def get_expense_consolidated(
     to_date: Optional[date] = Query(None, description="Filter expense date to"),
     search: Optional[str] = Query(None, description="Search by employee name or emp_code"),
     include_historical: bool = Query(False, description="Include pre-reset historical data (prior to 2026-09-17)"),
+    only_with_in: bool = Query(False, description="Show only employees with IN transactions (funds received/allocated)"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -7479,17 +7482,23 @@ def get_expense_consolidated(
         from sqlalchemy import func as _func, case as _case, or_ as _or
         from sqlalchemy.orm import joinedload
 
+        from app.services.staff_accounts_service import (
+            is_accounts_allowed_employee, is_accounts_supreme_employee,
+            get_payroll_and_incentive_voucher_identifiers, is_payroll_or_incentive_voucher
+        )
+        from app.api.v1.endpoints.staff_employees import get_valid_staff_filter
         _is_privileged = is_accounts_allowed_employee(current_user)
+        _is_supreme = is_accounts_supreme_employee(current_user) or getattr(current_user, 'emp_code', None) in ['MR10001', 'MR10016']
 
         # Determine which employees are visible to this viewer
         from app.utils.staff_hierarchy import get_recursive_downline
         emp_q = db.query(StaffEmployee).options(
             joinedload(StaffEmployee.department),
             joinedload(StaffEmployee.role)
-        ).filter(StaffEmployee.status == 'active')
+        ).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
 
-        # Hide System Administrator (VGK4U Supreme, MR10001) from ALL staff EXCEPT when logged in as MR10001
-        if getattr(current_user, 'emp_code', None) != 'MR10001':
+        # Hide System Administrator (VGK4U Supreme, MR10001) from standard staff EXCEPT when logged in as MR10001 or supreme user (Yaswanth EA / Accounts Dept)
+        if getattr(current_user, 'emp_code', None) != 'MR10001' and not _is_supreme:
             emp_q = emp_q.filter(StaffEmployee.emp_code != 'MR10001', StaffEmployee.id != 1)
 
         if not _is_privileged:
@@ -7513,7 +7522,7 @@ def get_expense_consolidated(
             return {"success": True, "rows": [], "total": 0}
 
         from app.models.staff_accounts import (
-            IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer, EmployeeFundLedger
+            IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer, EmployeeFundLedger, PartyLedger
         )
 
         # System Reset Cutoff: On 2026-09-16, staff cash balances were formally reset/cleared to 0.00.
@@ -7552,6 +7561,38 @@ def get_expense_consolidated(
         if to_date:
             q_fa = q_fa.filter(FundAllocation.allocation_date <= to_date)
         fa_records = q_fa.all()
+
+        # 2b. Bank Advances & Payments via PartyLedger (excluding payroll/salary vouchers)
+        emp_name_map = {e.id: (e.full_name or '').strip().lower() for e in employees}
+        emp_names_lower = [nm for nm in emp_name_map.values() if nm]
+        fa_refs = {fa.allocation_number for fa in fa_records if fa.allocation_number}
+        fa_ids = {fa.id for fa in fa_records}
+
+        q_pl = db.query(PartyLedger).filter(
+            PartyLedger.party_type == 'EMPLOYEE',
+            _func.upper(PartyLedger.voucher_type) == 'PAYMENT',
+            _or(
+                PartyLedger.party_id.in_(emp_ids),
+                _func.lower(PartyLedger.party_name).in_(emp_names_lower)
+            )
+        )
+        if company_id:
+            q_pl = q_pl.filter(PartyLedger.company_id == company_id)
+        if effective_from:
+            q_pl = q_pl.filter(PartyLedger.transaction_date >= effective_from)
+        if to_date:
+            q_pl = q_pl.filter(PartyLedger.transaction_date <= to_date)
+        
+        payroll_jv_ids, payroll_voucher_numbers = get_payroll_and_incentive_voucher_identifiers(db)
+        pl_records = []
+        for pl in q_pl.all():
+            if pl.reference_number and pl.reference_number in fa_refs:
+                continue
+            if pl.reference_type in ['FUND_ALLOCATION', 'FUND_TRANSFER'] and pl.reference_id in fa_ids:
+                continue
+            if is_payroll_or_incentive_voucher(pl, payroll_jv_ids, payroll_voucher_numbers):
+                continue
+            pl_records.append(pl)
 
         # 3. Fund Transfers
         q_ft = db.query(EmployeeFundTransfer).filter(
@@ -7593,7 +7634,7 @@ def get_expense_consolidated(
             q_ob = q_ob.filter(EmployeeFundLedger.transaction_date <= to_date)
         ob_records = q_ob.all()
 
-        print(f"[CONSO-API-DEBUG] emp_ids={emp_ids} effective_from={effective_from} to_date={to_date} exp_records_count={len(exp_records)} ft_records_count={len(ft_records)} fa_records_count={len(fa_records)} ob_records_count={len(ob_records)}", flush=True)
+        print(f"[CONSO-API-DEBUG] emp_ids={emp_ids} effective_from={effective_from} to_date={to_date} exp_records_count={len(exp_records)} ft_records_count={len(ft_records)} fa_records_count={len(fa_records)} pl_records_count={len(pl_records)} ob_records_count={len(ob_records)}", flush=True)
 
         # Identify employees who have established accounts in EmployeeFundLedger
         efl_emp_ids = set(
@@ -7611,6 +7652,17 @@ def get_expense_consolidated(
         fa_by_emp = defaultdict(list)
         for r in fa_records:
             fa_by_emp[r.to_employee_id].append(r)
+
+        pl_by_emp = defaultdict(list)
+        for pl in pl_records:
+            pl_emp_id = pl.party_id if pl.party_id in emp_name_map else None
+            if not pl_emp_id:
+                for eid, nm in emp_name_map.items():
+                    if nm and (nm in (pl.party_name or '').lower() or (pl.party_name or '').lower() in nm):
+                        pl_emp_id = eid
+                        break
+            if pl_emp_id:
+                pl_by_emp[pl_emp_id].append(pl)
 
         ft_in_by_emp = defaultdict(list)
         ft_out_by_emp = defaultdict(list)
@@ -7632,22 +7684,25 @@ def get_expense_consolidated(
         for emp in employees:
             e_ies = ie_by_emp.get(emp.id, [])
             e_fas = fa_by_emp.get(emp.id, [])
+            e_pls = pl_by_emp.get(emp.id, [])
             e_ft_in = ft_in_by_emp.get(emp.id, [])
             e_ft_out = ft_out_by_emp.get(emp.id, [])
             e_exps = exp_by_emp.get(emp.id, [])
             e_obs = ob_by_emp.get(emp.id, [])
 
-            has_activity = bool(e_ies or e_fas or e_ft_in or e_ft_out or e_exps or e_obs)
+            has_activity = bool(e_ies or e_fas or e_pls or e_ft_in or e_ft_out or e_exps or e_obs)
             has_account = (emp.id in efl_emp_ids)
 
-            # Skip employees who have no activity in this period AND no established fund account (unless explicitly searched)
-            if not has_activity and not has_account and not search:
+            # Skip employees who have no activity in this period AND no established fund account (unless viewer is supreme or explicitly searched)
+            if not _is_supreme and not has_activity and not has_account and not search:
                 continue
 
             # SECTION 1: Confirmed Flow (Inflow)
             ie_amt = round(sum(float(x.amount or 0) for x in e_ies if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
             ie_cnt = sum(1 for x in e_ies if getattr(x, 'status', 'CONFIRMED') != 'DRAFT')
-            fa_amt = round(sum(float(x.amount or 0) for x in e_fas if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            fa_direct_amt = round(sum(float(x.amount or 0) for x in e_fas if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
+            pl_adv_amt = round(sum(float(x.debit_amount or x.credit_amount or 0) for x in e_pls), 2)
+            fa_amt = round(fa_direct_amt + pl_adv_amt, 2)
             ft_in_amt = round(sum(float(x.amount or 0) for x in e_ft_in if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
             adj_in_amt = round(sum(float(x.credit_amount or 0) for x in e_obs), 2)
             tot_in_conf = round(ie_amt + fa_amt + ft_in_amt + adj_in_amt, 2)
@@ -7667,6 +7722,10 @@ def get_expense_consolidated(
             draft_out_amt = round(sum(float(x.amount or 0) for x in draft_exps), 2)
             draft_bal = round(draft_in_amt - draft_out_amt, 2)
             final_bal = round(net_bal_conf + draft_bal, 2)
+
+            # Filter: If only_with_in is requested, skip employees with no IN transactions (unrelated to expenses)
+            if only_with_in and (tot_in_conf <= 0 and draft_in_amt <= 0):
+                continue
 
             # SECTION 3: Status Breakdown
             submitted_exps = [x for x in e_exps if x.status == 'SUBMITTED']
@@ -8088,6 +8147,7 @@ async def list_expense_entries_endpoint(
     view_mode: Optional[str] = Query(None, description="View mode: 'ledger' for unified statement with IN/OUT/balance columns"),
     ledger_filter: Optional[str] = Query(None, description="Filter by ledger posting: all, in_ledger, excluded"),
     external_filter: Optional[str] = Query(None, description="Filter by external flag: all, external, internal"),
+    include_historical: bool = Query(False, description="Include pre-reset historical data (prior to 2026-09-17)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -8117,6 +8177,7 @@ async def list_expense_entries_endpoint(
             'view_mode': view_mode,
             'ledger_filter': ledger_filter,
             'external_filter': external_filter,
+            'include_historical': include_historical,
             'page': page,
             'page_size': page_size
         }
