@@ -31,3 +31,8 @@ MyntReal_Latest/scratch/*
 /scratch_*.py
 /scratch_*.js
 
+
+*.env
+temp_check_zip/
+*.tmp*
+zip_files.txt

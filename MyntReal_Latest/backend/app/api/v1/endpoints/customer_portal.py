@@ -21,6 +21,8 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import SecurityManager
 from app.models.customer_profile import CustomerProfile
+from app.models.recharge import RechargeTransaction
+import razorpay
 from app.schemas.customer_portal import (
     CustomerProfileCreate,
     CustomerLoginRequest,
@@ -33,6 +35,15 @@ from app.schemas.customer_portal import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/customer", tags=["Customer Portal"])
+
+razorpay_client = None
+if getattr(settings, 'RAZORPAY_KEY_ID', None) and getattr(settings, 'RAZORPAY_KEY_SECRET', None):
+    try:
+        razorpay_client = razorpay.Client(
+            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+        )
+    except Exception as _rzp_err:
+        logger.warning(f"Customer portal Razorpay client init error: {_rzp_err}")
 
 CUSTOMER_JWT_SECRET = settings.SECRET_KEY
 CUSTOMER_JWT_ALGORITHM = "HS256"
@@ -139,7 +150,7 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "created_at": "2026-10-10T11:20:00",
                 "referral_code": "RAMESH75",
                 "expires_at": "2026-11-10T23:59:59",
-                "claim_url": "/scratch-card.html"
+                "claim_url": "/scratch-card.html?card_id=902001"
             },
             {
                 "id": 902002,
@@ -150,7 +161,7 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "created_at": "2026-10-05T14:11:00",
                 "referral_code": "DIWALI50",
                 "expires_at": "2026-11-05T23:59:59",
-                "claim_url": "/scratch-card.html"
+                "claim_url": "/scratch-card.html?card_id=902002"
             }
         ],
         "solar_projects": [
@@ -274,7 +285,7 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "created_at": "2026-10-08T09:15:00",
                 "referral_code": "LAKSHMI50",
                 "expires_at": "2026-11-08T23:59:59",
-                "claim_url": "/scratch-card.html"
+                "claim_url": "/scratch-card.html?card_id=902003"
             }
         ],
         "solar_projects": [
@@ -381,7 +392,7 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "created_at": "2026-10-11T18:20:00",
                 "referral_code": "STUDENT30",
                 "expires_at": "2026-11-11T23:59:59",
-                "claim_url": "/scratch-card.html"
+                "claim_url": "/scratch-card.html?card_id=902004"
             },
             {
                 "id": 902005,
@@ -392,7 +403,7 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "created_at": "2026-10-12T09:00:00",
                 "referral_code": "BONANZA100",
                 "expires_at": "2026-11-12T23:59:59",
-                "claim_url": "/scratch-card.html"
+                "claim_url": "/scratch-card.html?card_id=902005"
             }
         ],
         "solar_projects": [],
@@ -813,7 +824,7 @@ def get_customer_dashboard_data(
             "created_at": r[5].isoformat() if r[5] else None,
             "referral_code": r[6] or f"MYNT{r[0]:04d}",
             "expires_at": r[7].isoformat() if r[7] else None,
-            "claim_url": "/scratch-card.html"
+            "claim_url": f"/scratch-card.html?card_id={r[0]}"
         }
         for r in cards_rows
     ]
@@ -953,6 +964,8 @@ def prepare_quick_redo(
     Fetches the historical transaction, allows amount change or proceed as-is,
     and returns pre-filled payload ready for instant Razorpay checkout.
     """
+    eff_amount = payload.custom_amount if (payload.custom_amount and payload.custom_amount > 0) else payload.amount
+
     # Check Sandbox Intercept
     if current_customer.mobile_number in SANDBOX_PROFILES:
         s_data = SANDBOX_PROFILES[current_customer.mobile_number]
@@ -985,9 +998,17 @@ def prepare_quick_redo(
                     }
                     break
         if matching:
-            final_amount = float(payload.amount) if (payload.amount and payload.amount > 0) else float(matching["amount"])
+            final_amount = float(eff_amount) if (eff_amount and eff_amount > 0) else float(matching["amount"])
             return {
                 "success": True,
+                "is_sandbox": True,
+                "amount": final_amount,
+                "service_type": matching["service_type"],
+                "target_number": matching["mobile_number"],
+                "order_id": f"sandbox_order_{matching['id']}",
+                "razorpay_key_id": getattr(settings, 'RAZORPAY_KEY_ID', None) or "rzp_test_mock",
+                "transaction_id": matching["id"],
+                "message": "Sandbox demonstration order ready.",
                 "repeat_session": {
                     "original_tx_id": matching["id"],
                     "service_type": matching["service_type"],
@@ -1016,10 +1037,52 @@ def prepare_quick_redo(
             detail="Transaction not found or unauthorized"
         )
 
-    final_amount = float(payload.amount) if (payload.amount and payload.amount > 0) else float(tx[3])
+    final_amount = float(eff_amount) if (eff_amount and eff_amount > 0) else float(tx[3])
+
+    order_amount_paise = int(round(final_amount * 100))
+    razorpay_order_id = None
+    if razorpay_client:
+        try:
+            payment_order = razorpay_client.order.create(dict(
+                amount=order_amount_paise,
+                currency="INR",
+                payment_capture='1'
+            ))
+            razorpay_order_id = payment_order['id']
+        except Exception as e:
+            logger.error(f"Failed to create Razorpay order for quick redo: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to initiate payment gateway: {str(e)}")
+    else:
+        razorpay_order_id = f"ORDER_REDO_{tx[0]}_{int(datetime.utcnow().timestamp())}"
+
+    # Insert new pending recharge transaction so verify-payment can process it
+    new_tx = RechargeTransaction(
+        mobile_number=tx[5],
+        operator=tx[1] or "",
+        circle=tx[2] or "",
+        amount=final_amount,
+        guest_email=current_customer.email,
+        guest_name=current_customer.customer_name,
+        service_type=tx[4] or "mobile",
+        value1=tx[6] or "",
+        value2=tx[7] or current_customer.mobile_number,
+        razorpay_order_id=razorpay_order_id,
+        payment_status="Pending",
+        api_status="Pending"
+    )
+    db.add(new_tx)
+    db.commit()
+    db.refresh(new_tx)
 
     return {
         "success": True,
+        "is_sandbox": False,
+        "order_id": razorpay_order_id,
+        "amount": final_amount,
+        "razorpay_key_id": getattr(settings, 'RAZORPAY_KEY_ID', None) or "",
+        "service_type": tx[4] or "mobile",
+        "target_number": tx[5],
+        "transaction_id": new_tx.id,
         "repeat_session": {
             "original_tx_id": tx[0],
             "service_type": tx[4] or "mobile",

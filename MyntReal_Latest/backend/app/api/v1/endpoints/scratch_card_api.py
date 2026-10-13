@@ -38,7 +38,8 @@ def enforce_staff_admin_access(current_user):
 
 
 class ClaimScratchCardRequest(BaseModel):
-    token: str
+    token: Optional[str] = None
+    card_id: Optional[int] = None
     name: Optional[str] = None
     pincode: Optional[str] = None
     city: Optional[str] = None
@@ -95,7 +96,8 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
         "referral_code": card.referral_code or f"MYNT{card.id:04d}",
         "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
         "referral_bonus_pct": 50,
-        "max_referred_members": 5
+        "max_referred_members": 5,
+        "card_id": card.id
     }
 
     if card.status == "CLAIMED":
@@ -104,24 +106,143 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
     return response
 
 
+@router.get("/card-info/{card_id}")
+def get_scratch_card_by_id(card_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve scratch card info by card ID for Customer Portal users and Sandbox accounts.
+    """
+    from app.api.v1.endpoints.customer_portal import SANDBOX_PROFILES
+
+    # Check sandbox demo profiles first
+    for phone, s_prof in SANDBOX_PROFILES.items():
+        for s_c in s_prof.get("scratch_cards", []):
+            if s_c["id"] == card_id:
+                mob = phone
+                masked_mobile = f"{mob[:2]}****{mob[-4:]}"
+                is_cl = s_c.get("status") == "claimed"
+                amt = float(s_c.get("amount_rupees", 50.0))
+                return {
+                    "valid": True,
+                    "brand": s_c.get("brand", "Myntreal Rewards"),
+                    "masked_mobile": masked_mobile,
+                    "mobile_number": mob,
+                    "status": "CLAIMED" if is_cl else "ISSUED",
+                    "expires_at": s_c.get("expires_at", "2026-11-10T23:59:59"),
+                    "recharge_amount": 299.0,
+                    "reward_amount_rupees": amt,
+                    "revealed_amount_rupees": amt,
+                    "is_claimed": is_cl,
+                    "customer_name": s_prof.get("customer_name", "Sandbox User"),
+                    "pincode": s_prof.get("pincode", "500081"),
+                    "city": s_prof.get("city", "Hyderabad"),
+                    "state": s_prof.get("state", "Telangana"),
+                    "payout_method": "upi_mobile",
+                    "payout_upi_mobile": mob,
+                    "payout_status": "PROCESSED" if is_cl else "PENDING",
+                    "referral_code": s_c.get("referral_code", "SANDBOX50"),
+                    "referral_link": f"https://www.vgk4u.com/recharge?ref={s_c.get('referral_code', 'SANDBOX50')}",
+                    "referral_bonus_pct": 50,
+                    "max_referred_members": 5,
+                    "card_id": card_id
+                }
+
+    card = db.query(ScratchCard).filter(ScratchCard.id == card_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Scratch card not found.")
+
+    mob = card.mobile_number or ""
+    masked_mobile = f"{mob[:2]}****{mob[-4:]}" if len(mob) >= 8 else mob
+
+    now = get_indian_time()
+    if card.status == "ISSUED" and card.expires_at < now:
+        card.status = "EXPIRED"
+        db.commit()
+
+    response = {
+        "valid": True,
+        "brand": card.brand or "Myntreal",
+        "masked_mobile": masked_mobile,
+        "mobile_number": mob,
+        "status": card.status,
+        "expires_at": card.expires_at.isoformat() if card.expires_at else "",
+        "recharge_amount": card.recharge_transaction.amount if card.recharge_transaction else 0.0,
+        "reward_amount_rupees": card.allocated_amount_paise / 100.0,
+        "revealed_amount_rupees": card.allocated_amount_paise / 100.0 if card.status == "CLAIMED" else 0.0,
+        "is_claimed": card.status == "CLAIMED",
+        "customer_name": card.customer_name or "",
+        "pincode": card.pincode or "",
+        "city": card.city or "",
+        "state": card.state or "",
+        "payout_method": getattr(card, "payout_method", None) or "",
+        "payout_upi_mobile": getattr(card, "payout_upi_mobile", None) or "",
+        "payout_upi_id": getattr(card, "payout_upi_id", None) or "",
+        "payout_bank_account": getattr(card, "payout_bank_account", None) or "",
+        "payout_bank_ifsc": getattr(card, "payout_bank_ifsc", None) or "",
+        "payout_status": getattr(card, "payout_status", None) or "PENDING",
+        "referral_code": card.referral_code or f"MYNT{card.id:04d}",
+        "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
+        "referral_bonus_pct": 50,
+        "max_referred_members": 5,
+        "card_id": card.id
+    }
+    return response
+
+
 @router.post("/claim")
 def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_db)):
     """
     Phase 5: Atomic Claim Execution with Lead Details (Name, PIN, City, State), Wallet Credit & 50% Referral Bonus
+    Supports claiming by secret token or by card_id from verified Customer Portal session.
     """
-    if not req.token:
-        raise HTTPException(status_code=400, detail="Token is required.")
+    if not req.token and not req.card_id:
+        raise HTTPException(status_code=400, detail="Token or Card ID is required.")
 
-    token_hash = ScratchCard.hash_token(req.token)
+    # Check sandbox demo profiles first
+    if req.card_id:
+        from app.api.v1.endpoints.customer_portal import SANDBOX_PROFILES
+        for phone, s_prof in SANDBOX_PROFILES.items():
+            for s_c in s_prof.get("scratch_cards", []):
+                if s_c["id"] == req.card_id:
+                    s_c["status"] = "claimed"
+                    s_c["claimed_at"] = datetime.utcnow().isoformat()
+                    s_c["payout_status"] = "PROCESSED"
+                    amt = float(s_c.get("amount_rupees", 50.0))
+                    ref_code = s_c.get("referral_code", "SANDBOX50")
+                    return {
+                        "status": "success",
+                        "message": f"Congratulations {req.name or s_prof.get('customer_name', 'Customer')}! You claimed ₹{amt:.2f}! (Sandbox Demo)",
+                        "amount_rupees": amt,
+                        "amount_paise": int(amt * 100),
+                        "customer_name": req.name or s_prof.get("customer_name"),
+                        "claimed_at": datetime.utcnow().isoformat(),
+                        "mobile_number": req.mobile_number or phone,
+                        "pincode": req.pincode or s_prof.get("pincode"),
+                        "payout_method": req.payout_method or "upi_mobile",
+                        "payout_upi_mobile": req.payout_upi_mobile or phone,
+                        "payout_upi_id": req.payout_upi_id,
+                        "payout_bank_account": req.payout_bank_account,
+                        "payout_bank_ifsc": req.payout_bank_ifsc,
+                        "payout_status": "PROCESSED",
+                        "referral_code": ref_code,
+                        "referral_link": f"https://www.vgk4u.com/recharge?ref={ref_code}",
+                        "referral_bonus_pct": 50,
+                        "max_referred_members": 5
+                    }
 
     # Begin atomic row-locking operation
     try:
-        card = db.query(ScratchCard).filter(
-            ScratchCard.token_hash == token_hash
-        ).with_for_update().first()
+        if req.token:
+            token_hash = ScratchCard.hash_token(req.token)
+            card = db.query(ScratchCard).filter(
+                ScratchCard.token_hash == token_hash
+            ).with_for_update().first()
+        else:
+            card = db.query(ScratchCard).filter(
+                ScratchCard.id == req.card_id
+            ).with_for_update().first()
 
         if not card:
-            raise HTTPException(status_code=404, detail="Invalid scratch card token.")
+            raise HTTPException(status_code=404, detail="Invalid scratch card or token.")
 
         # Check if already claimed
         if card.status == "CLAIMED":

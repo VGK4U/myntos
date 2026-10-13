@@ -454,9 +454,9 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <a href="/scratch-card.html" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
+                    <button type="button" onclick="selectVerticalTab('cashback', document.querySelectorAll('.v-tab-btn')[2])" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-solid fa-gift me-1"></i> Scratch Cards
-                    </a>
+                    </button>
                     <a href="/recharge" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold" style="box-shadow: 0 4px 12px var(--emerald-glow);">
                         <i class="fa-solid fa-bolt me-1"></i> Quick Pay
                     </a>
@@ -718,11 +718,11 @@
                         <label class="form-label small fw-bold mb-1" style="color: #cbd5e1;">Enter New Amount (₹)</label>
                         <input type="number" id="customRedoAmount" class="form-control form-control-lg bg-dark text-white border-secondary fw-bold" placeholder="Enter amount">
                         <div class="quick-amount-chips">
-                            <span class="q-chip" onclick="setRedoAmount(199)">₹199</span>
-                            <span class="q-chip" onclick="setRedoAmount(299)">₹299</span>
-                            <span class="q-chip" onclick="setRedoAmount(349)">₹349</span>
-                            <span class="q-chip" onclick="setRedoAmount(719)">₹719</span>
-                            <span class="q-chip" onclick="setRedoAmount(999)">₹999</span>
+                            <span class="q-chip" onclick="setRedoAmount(199, event)">₹199</span>
+                            <span class="q-chip" onclick="setRedoAmount(299, event)">₹299</span>
+                            <span class="q-chip" onclick="setRedoAmount(349, event)">₹349</span>
+                            <span class="q-chip" onclick="setRedoAmount(719, event)">₹719</span>
+                            <span class="q-chip" onclick="setRedoAmount(999, event)">₹999</span>
                         </div>
                     </div>
 
@@ -874,18 +874,26 @@
                 return;
             }
 
-            grid.innerHTML = cards.map(c => `
-                <div class="card-promo-box">
-                    <span class="badge ${c.status === 'claimed' ? 'bg-success' : 'bg-warning text-dark'} mb-2 text-uppercase fw-bold">
-                        ${c.status === 'claimed' ? 'Claimed' : 'Ready to Scratch'}
-                    </span>
-                    <div class="h3 fw-bolder text-warning mb-1">₹${c.amount_rupees.toFixed(2)}</div>
-                    <div class="small mb-3" style="color: #94a3b8;">Ref: <span class="text-white fw-semibold">${c.referral_code}</span></div>
-                    <a href="/scratch-card.html" class="btn btn-sm btn-outline-warning w-100 rounded-pill fw-bold">
-                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${c.status === 'claimed' ? 'View Details' : 'Scratch Now'}
-                    </a>
-                </div>
-            `).join('');
+            if (cards && cards.length > 0 && cards[0].referral_code) {
+                const myRefEl = document.getElementById('myReferralCode');
+                if (myRefEl) myRefEl.innerText = cards[0].referral_code;
+            }
+
+            grid.innerHTML = cards.map(c => {
+                const cardUrl = c.claim_url || `/scratch-card.html?card_id=${c.id}`;
+                return `
+                    <div class="card-promo-box">
+                        <span class="badge ${c.status === 'claimed' ? 'bg-success' : 'bg-warning text-dark'} mb-2 text-uppercase fw-bold">
+                            ${c.status === 'claimed' ? 'Claimed' : 'Ready to Scratch'}
+                        </span>
+                        <div class="h3 fw-bolder text-warning mb-1">₹${c.amount_rupees.toFixed(2)}</div>
+                        <div class="small mb-3" style="color: #94a3b8;">Ref: <span class="text-white fw-semibold">${c.referral_code}</span></div>
+                        <a href="${cardUrl}" class="btn btn-sm btn-outline-warning w-100 rounded-pill fw-bold">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${c.status === 'claimed' ? 'View Details' : 'Scratch Now'}
+                        </a>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderSolar(list) {
@@ -1013,10 +1021,11 @@
             }
         }
 
-        function setRedoAmount(val) {
+        function setRedoAmount(val, evt) {
             document.getElementById('customRedoAmount').value = val;
             document.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
+            const targetEl = evt ? evt.target : (window.event ? window.event.target : null);
+            if (targetEl) targetEl.classList.add('active');
         }
 
         async function executeQuickRedo(isCustom) {
@@ -1054,6 +1063,7 @@
                     },
                     body: JSON.stringify({
                         transaction_id: activeRedoTransaction.id,
+                        amount: isCustom ? finalAmount : null,
                         custom_amount: isCustom ? finalAmount : null
                     })
                 });
@@ -1063,6 +1073,19 @@
 
                 if (!res.ok || !data.success) {
                     Swal.fire('Checkout Alert', data.detail || 'Could not initiate quick redo session.', 'error');
+                    return;
+                }
+
+                // Sandbox Demo Instant Success Handler
+                if (data.is_sandbox) {
+                    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+                    Swal.fire({
+                        title: '🎉 Payment Successful! (Sandbox Demo)',
+                        text: `Simulated repeat ${data.service_type || 'service'} payment of ₹${parseFloat(data.amount).toFixed(2)} for ${data.target_number || ''}.`,
+                        icon: 'success',
+                        confirmButtonText: 'Great!'
+                    });
+                    loadDashboardData(token);
                     return;
                 }
 

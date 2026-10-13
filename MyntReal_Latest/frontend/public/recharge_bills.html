@@ -598,6 +598,69 @@
             max-height: 480px;
             overflow-y: auto;
         }
+
+        /* ── Auto-Detect Operator Badge & R-Offer Styling ── */
+        .operator-detect-badge {
+            margin-top: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            animation: fadeInBadge 0.25s ease-in-out;
+        }
+        @keyframes fadeInBadge {
+            from { opacity: 0; transform: translateY(-3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .operator-detect-badge.loading {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+        }
+        .operator-detect-badge .circle-tag {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+        .cat-pill.roffer-pill {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.25));
+            border: 1px solid #f59e0b;
+            color: #fbbf24;
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+            animation: pulseOffer 2s infinite ease-in-out;
+        }
+        @keyframes pulseOffer {
+            0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.25); }
+            50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.45); }
+        }
+        .plan-card.plan-card-roffer {
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            background: linear-gradient(145deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.95) 100%);
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12);
+            position: relative;
+        }
+        .plan-card.plan-card-roffer::before {
+            content: "SPECIAL R-OFFER";
+            position: absolute;
+            top: -9px;
+            right: 12px;
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+            color: #000;
+            font-size: 0.58rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -711,7 +774,8 @@
                         <span id="targetAccountLabelText">Mobile Number</span>
                         <span class="sub-hint" id="targetAccountHint">10-digit numeric mobile</span>
                     </label>
-                    <input type="text" id="targetAccountNumber" required class="input-custom" placeholder="e.g. 9876543210" autocomplete="off">
+                    <input type="text" id="targetAccountNumber" required class="input-custom" placeholder="e.g. 9876543210" autocomplete="off" oninput="handleTargetAccountInput(this.value)">
+                    <div id="operatorDetectBadge" class="operator-detect-badge" style="display: none;"></div>
                 </div>
 
                 <!-- Operator Selector Area -->
@@ -763,6 +827,7 @@
                         </button>
                     </div>
                     <div class="plan-category-pills mb-2" id="inlineCategoryPills">
+                        <span class="cat-pill roffer-pill" id="pillRoffersInline" style="display: none;" onclick="filterPlanCategory('roffer', this, false)">🔥 Special R-Offers</span>
                         <span class="cat-pill active" onclick="filterPlanCategory('all', this, false)">All Plans</span>
                         <span class="cat-pill" onclick="filterPlanCategory('daily', this, false)">Daily Data</span>
                         <span class="cat-pill" onclick="filterPlanCategory('5g', this, false)">Unlimited 5G</span>
@@ -838,6 +903,7 @@
                         <input type="text" id="planSearchInput" class="input-custom" placeholder="Search ₹ amount, 5G, validity, data (e.g. 84, 1.5GB, 5G)..." onkeyup="filterPlansSearch(this.value)">
                     </div>
                     <div class="plan-category-pills mb-3" id="modalCategoryPills">
+                        <span class="cat-pill roffer-pill" id="pillRoffersModal" style="display: none;" onclick="filterPlanCategory('roffer', this, true)">🔥 Special R-Offers</span>
                         <span class="cat-pill active" onclick="filterPlanCategory('all', this, true)">All Plans</span>
                         <span class="cat-pill" onclick="filterPlanCategory('daily', this, true)">Daily Data</span>
                         <span class="cat-pill" onclick="filterPlanCategory('5g', this, true)">Unlimited 5G</span>
@@ -1201,13 +1267,133 @@
         }
 
         let activePlanCategory = 'all';
+        let currentDetectedCircle = '49';
+        let currentDetectedCircleName = 'Andhra Pradesh';
+        let targetAccountDebounceTimer = null;
+        let subscriberRoffers = [];
+
+        function handleTargetAccountInput(val) {
+            if (currentActiveService !== 'mobile') return;
+            const badgeEl = document.getElementById('operatorDetectBadge');
+            const clean = (val || '').replace(/\D/g, '');
+            const normalized = (clean.length === 12 && clean.startsWith('91')) ? clean.slice(2) : clean;
+
+            if (targetAccountDebounceTimer) {
+                clearTimeout(targetAccountDebounceTimer);
+                targetAccountDebounceTimer = null;
+            }
+
+            if (normalized.length === 10) {
+                if (badgeEl) {
+                    badgeEl.className = 'operator-detect-badge loading';
+                    badgeEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting operator & circle...';
+                    badgeEl.style.display = 'inline-flex';
+                }
+                targetAccountDebounceTimer = setTimeout(() => {
+                    detectOperatorAndCircle(normalized);
+                }, 350);
+            } else {
+                if (badgeEl) badgeEl.style.display = 'none';
+                const pillIn = document.getElementById('pillRoffersInline');
+                const pillMo = document.getElementById('pillRoffersModal');
+                if (pillIn) pillIn.style.display = 'none';
+                if (pillMo) pillMo.style.display = 'none';
+                subscriberRoffers = [];
+                if (activePlanCategory === 'roffer') {
+                    activePlanCategory = 'all';
+                    renderAllPlansLists();
+                }
+            }
+        }
+
+        async function detectOperatorAndCircle(mobile) {
+            const badgeEl = document.getElementById('operatorDetectBadge');
+            try {
+                const res = await fetch(`/api/v1/recharge/operator-circle-fetch?mobile=${encodeURIComponent(mobile)}`);
+                const data = await res.json();
+                if (data && data.success) {
+                    currentDetectedCircle = data.circle_code || '49';
+                    currentDetectedCircleName = data.circle || 'Andhra Pradesh';
+                    const detectedOp = data.ui_operator || 'Airtel';
+
+                    // Update operator chips
+                    document.querySelectorAll('.op-chip').forEach(c => {
+                        c.classList.toggle('selected', (c.getAttribute('data-code') || '').toLowerCase() === detectedOp.toLowerCase());
+                    });
+                    currentSelectedOperator = detectedOp;
+
+                    if (badgeEl) {
+                        badgeEl.className = 'operator-detect-badge';
+                        badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Auto-detected: <strong>${escapeHtml(detectedOp)}</strong> <span class="circle-tag"><i class="fa-solid fa-location-dot me-1"></i>${escapeHtml(currentDetectedCircleName)}</span>`;
+                        badgeEl.style.display = 'inline-flex';
+                    }
+
+                    // Load plans for this operator and circle
+                    await loadPlansForOperator(detectedOp, currentDetectedCircle);
+
+                    // Fetch subscriber-specific R-offers
+                    fetchSubscriberRoffers(mobile, data.operator_code || detectedOp);
+                } else {
+                    if (badgeEl) {
+                        badgeEl.className = 'operator-detect-badge';
+                        badgeEl.innerHTML = `<i class="fa-solid fa-circle-info"></i> Standard Operator Selection`;
+                        badgeEl.style.display = 'inline-flex';
+                    }
+                }
+            } catch (err) {
+                console.error("Operator fetch error:", err);
+                if (badgeEl) badgeEl.style.display = 'none';
+            }
+        }
+
+        async function fetchSubscriberRoffers(mobile, operatorCode) {
+            const pillInline = document.getElementById('pillRoffersInline');
+            const pillModal = document.getElementById('pillRoffersModal');
+            try {
+                const res = await fetch(`/api/v1/recharge/roffer-check?mobile=${encodeURIComponent(mobile)}&operator=${encodeURIComponent(operatorCode || '')}`);
+                const data = await res.json();
+                if (data && data.success && Array.isArray(data.offers) && data.offers.length > 0) {
+                    subscriberRoffers = data.offers;
+                    const label = `🔥 Special R-Offers (${subscriberRoffers.length})`;
+                    if (pillInline) {
+                        pillInline.innerText = label;
+                        pillInline.style.display = 'inline-block';
+                    }
+                    if (pillModal) {
+                        pillModal.innerText = label;
+                        pillModal.style.display = 'inline-block';
+                    }
+
+                    // Merge R-offers at front of loadedPlans
+                    const otherPlans = loadedPlans.filter(p => !p.is_roffer);
+                    loadedPlans = [...subscriberRoffers, ...otherPlans];
+
+                    // Switch to R-offers tab
+                    activePlanCategory = 'roffer';
+                    document.querySelectorAll('#inlineCategoryPills .cat-pill, #modalCategoryPills .cat-pill').forEach(p => {
+                        p.classList.toggle('active', p.id === 'pillRoffersInline' || p.id === 'pillRoffersModal');
+                    });
+                    renderAllPlansLists();
+                } else {
+                    subscriberRoffers = [];
+                    if (pillInline) pillInline.style.display = 'none';
+                    if (pillModal) pillModal.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("R-offer fetch error:", err);
+            }
+        }
 
         function selectOpChip(opCode, element) {
             document.querySelectorAll('.op-chip').forEach(c => c.classList.remove('selected'));
             element.classList.add('selected');
             currentSelectedOperator = opCode;
             if (currentActiveService === 'mobile') {
-                loadPlansForOperator(opCode);
+                loadPlansForOperator(opCode, currentDetectedCircle);
+                const mob = (document.getElementById('targetAccountNumber').value || '').replace(/\D/g, '');
+                if (mob.length === 10) {
+                    fetchSubscriberRoffers(mob, opCode);
+                }
             }
         }
 
@@ -1229,6 +1415,9 @@
 
         // Categorize a plan based on its genuine database attributes
         function categorizePlan(p) {
+            if (p.is_roffer || (p.category || '').toLowerCase().includes('roffer') || (p.category || '').toLowerCase().includes('exclusive')) {
+                return ['all', 'roffer'];
+            }
             const desc = (p.description || '').toLowerCase();
             const data = (p.data_benefit || '').toLowerCase();
             const val = (p.validity || '').toLowerCase();
@@ -1252,24 +1441,26 @@
 
         // Generate Plan Card HTML
         function renderPlanCard(p, isModal) {
-            const is5G = (p.description || '').toLowerCase().includes('5g') || (p.tags || '').toLowerCase().includes('5g');
+            const isRoffer = Boolean(p.is_roffer);
+            const is5G = !isRoffer && ((p.description || '').toLowerCase().includes('5g') || (p.tags || '').toLowerCase().includes('5g'));
             const currentAmt = parseFloat(document.getElementById('rechargeAmountInput').value);
             const isSelected = currentAmt === parseFloat(p.amount);
             
             return `
-                <div class="plan-card ${isSelected ? 'selected' : ''}" data-amount="${p.amount}" onclick="selectPlan(${p.amount}, this, ${isModal})">
+                <div class="plan-card ${isRoffer ? 'plan-card-roffer' : ''} ${isSelected ? 'selected' : ''}" data-amount="${p.amount}" onclick="selectPlan(${p.amount}, this, ${isModal})">
                     <div>
                         <div class="plan-card-header">
                             <span class="plan-card-price">₹${p.amount}</span>
-                            <span class="plan-card-validity"><i class="fa-solid fa-clock me-1"></i>${escapeHtml(p.validity || 'Standard')}</span>
+                            <span class="plan-card-validity">${isRoffer ? '<i class="fa-solid fa-wand-magic-sparkles me-1 text-warning"></i> Exclusive HLR Offer' : '<i class="fa-solid fa-clock me-1"></i>' + escapeHtml(p.validity || 'Standard')}</span>
                         </div>
                         <div class="plan-card-data">
-                            <i class="fa-solid fa-wifi"></i>
-                            <span>${escapeHtml(p.data_benefit || 'Voice & Data')}</span>
+                            <i class="fa-solid ${isRoffer ? 'fa-gift text-warning' : 'fa-wifi'}"></i>
+                            <span>${escapeHtml(p.data_benefit || (isRoffer ? 'Subscriber Special' : 'Voice & Data'))}</span>
                         </div>
-                        <div class="plan-card-desc" title="${escapeHtml(p.description || '')}">${escapeHtml(p.description || 'Unlimited calls & standard data pack.')}</div>
+                        <div class="plan-card-desc" title="${escapeHtml(p.description || '')}">${escapeHtml(p.description || 'Special tariff offer for your number.')}</div>
                     </div>
                     <div class="plan-card-tags mt-1">
+                        ${isRoffer ? '<span class="plan-tag" style="background: rgba(245, 158, 11, 0.25); color: #fbbf24;"><i class="fa-solid fa-star me-1"></i>My R-Offer</span>' : ''}
                         ${is5G ? '<span class="plan-tag plan-tag-5g"><i class="fa-solid fa-bolt me-1"></i>True 5G</span>' : ''}
                         ${p.tags ? `<span class="plan-tag">${escapeHtml(p.tags)}</span>` : ''}
                     </div>
@@ -1277,30 +1468,34 @@
             `;
         }
 
-        // Fetch genuine plans from database for operator
-        async function loadPlansForOperator(opName) {
+        // Fetch genuine/live plans from backend for operator & circle
+        async function loadPlansForOperator(opName, circleCode) {
             const inlineContainer = document.getElementById('rechargePlansContainer');
             const modalContainer = document.getElementById('plansListContainer');
             const opDisplay = opName || 'Airtel';
+            const cCode = circleCode || currentDetectedCircle || '49';
 
             document.getElementById('plansOperatorName').innerText = opDisplay;
             document.getElementById('modalOperatorTitle').innerText = opDisplay;
 
             if (inlineContainer) {
-                inlineContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading genuine plans for ' + opDisplay + '...</div>';
+                inlineContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading live plans for ' + escapeHtml(opDisplay) + '...</div>';
             }
             if (modalContainer) {
-                modalContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading genuine plans for ' + opDisplay + '...</div>';
+                modalContainer.innerHTML = '<div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading live plans for ' + escapeHtml(opDisplay) + '...</div>';
             }
 
             try {
-                const res = await fetch(`/api/v1/recharge/plans?operator=${encodeURIComponent(opDisplay)}`);
+                const res = await fetch(`/api/v1/recharge/plans?operator=${encodeURIComponent(opDisplay)}&circle=${encodeURIComponent(cCode)}`);
                 const plans = await res.json();
-                loadedPlans = Array.isArray(plans) ? plans : [];
+                const fetchedPlans = Array.isArray(plans) ? plans : [];
+
+                // Prepend active subscriber R-offers if any
+                loadedPlans = subscriberRoffers.length > 0 ? [...subscriberRoffers, ...fetchedPlans] : fetchedPlans;
 
                 document.getElementById('plansCountBadge').innerText = loadedPlans.length;
 
-                // Dynamically populate quick amount chips with top popular plans from DB
+                // Dynamically populate quick amount chips with top popular plans from DB/Live
                 const quickRow = document.getElementById('quickAmountChips');
                 if (quickRow && loadedPlans.length > 0) {
                     const topPicks = loadedPlans.filter(p => [189, 199, 239, 249, 299, 349, 409, 599, 649, 666, 859].includes(Math.round(p.amount))).slice(0, 5);
@@ -1312,7 +1507,6 @@
                     quickRow.innerHTML = qHtml;
                 }
 
-                activePlanCategory = 'all';
                 renderAllPlansLists();
 
             } catch (err) {
@@ -1356,7 +1550,11 @@
             activePlanCategory = cat;
             // Sync active pill state in both views
             document.querySelectorAll('#inlineCategoryPills .cat-pill, #modalCategoryPills .cat-pill').forEach(p => {
-                p.classList.toggle('active', p.innerText.toLowerCase().includes(cat) || (cat === 'all' && p.innerText.includes('All')));
+                if (cat === 'roffer') {
+                    p.classList.toggle('active', p.id === 'pillRoffersInline' || p.id === 'pillRoffersModal');
+                } else {
+                    p.classList.toggle('active', p.id !== 'pillRoffersInline' && p.id !== 'pillRoffersModal' && (p.innerText.toLowerCase().includes(cat) || (cat === 'all' && p.innerText.includes('All'))));
+                }
             });
             renderAllPlansLists();
         }
@@ -1589,7 +1787,11 @@
                                         <hr>
                                         <div class="p-3 rounded mb-3" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
                                             <div class="text-warning fw-bold"><i class="fa-solid fa-gift me-1"></i> Scratch Card Cashback Unlocked!</div>
-                                            <div class="small text-light mt-1">An exclusive scratch card link was sent to your registered mobile via WhatsApp.</div>
+                                            <div class="small text-light mt-1">An exclusive scratch card cash reward is ready for you!</div>
+                                            ${verifyData.scratch_card_url ? `
+                                            <a href="${verifyData.scratch_card_url}" class="btn btn-warning text-dark fw-bold w-100 mt-2 py-2 rounded-pill shadow-sm" style="font-size: 0.92rem;">
+                                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Scratch &amp; Claim Cashback Now!
+                                            </a>` : ''}
                                         </div>
                                         <div class="p-3 rounded text-start" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald);">
                                             <div class="text-success fw-bold"><i class="fa-solid fa-user-shield me-1"></i> Save Profile for 1-Click Repeat Payments</div>
@@ -1600,8 +1802,15 @@
                                         </div>
                                     `,
                                     icon: 'success',
-                                    confirmButtonText: 'Done',
-                                    confirmButtonColor: '#10b981'
+                                    showCancelButton: !!verifyData.scratch_card_url,
+                                    confirmButtonText: verifyData.scratch_card_url ? '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Scratch Cashback Now!' : 'Done',
+                                    cancelButtonText: 'Stay on Page',
+                                    confirmButtonColor: verifyData.scratch_card_url ? '#f59e0b' : '#10b981',
+                                    cancelButtonColor: '#475569'
+                                }).then((result) => {
+                                    if (result.isConfirmed && verifyData.scratch_card_url) {
+                                        window.location.href = verifyData.scratch_card_url;
+                                    }
                                 });
                                 document.getElementById('universalRechargeForm').reset();
                             } else {

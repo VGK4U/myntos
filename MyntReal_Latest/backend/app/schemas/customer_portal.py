@@ -106,4 +106,5 @@ class CustomerAuthResponse(BaseModel):
 class QuickRedoRequest(BaseModel):
     transaction_id: int
     amount: Optional[float] = None
+    custom_amount: Optional[float] = None
     service_type: Optional[str] = None

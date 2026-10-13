@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     A1TOPUP_USERNAME: Optional[str] = None
     A1TOPUP_PASSWORD: Optional[str] = None
     A1TOPUP_TEST_MODE: bool = True
+
+    # A1PlanAPI Configuration (https://a1planapi.com)
+    A1PLANAPI_USERNAME: Optional[str] = os.getenv("A1PLANAPI_USERNAME")
+    A1PLANAPI_PASSWORD: Optional[str] = os.getenv("A1PLANAPI_PASSWORD")
+    A1PLANAPI_BASE_URL: str = os.getenv("A1PLANAPI_BASE_URL", "https://a1planapi.com/planapi")
+    A1PLANAPI_CACHE_TTL_MINUTES: int = int(os.getenv("A1PLANAPI_CACHE_TTL_MINUTES", "120"))
     
     # Email Configuration (preserve ReplitMail integration)
     MAIL_SERVER: Optional[str] = None
@@ -173,7 +179,7 @@ class Settings(BaseSettings):
             )
             if "rds.amazonaws.com" in db_url and not is_prod:
                 if (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() != "1":
-                    print("[DC-DB-GUARD] 🛡️ Blocked silent local connection to production RDS! Defaulting to local PostgreSQL (port 5433). Set ALLOW_PROD_DB_ACCESS=1 to override.", flush=True)
+                    print("[DC-DB-GUARD] [BLOCKED] Blocked silent local connection to production RDS! Defaulting to local PostgreSQL (port 5433). Set ALLOW_PROD_DB_ACCESS=1 to override.", flush=True)
                     return "postgresql://postgres:postgres@localhost:5433/myntreal_dev"
             return db_url
             
@@ -193,7 +199,7 @@ class Settings(BaseSettings):
         if secret == "your-secret-key-here" or not secret:
             if is_prod:
                 raise ValueError("CRITICAL: SECRET_KEY is missing or insecure in PRODUCTION. App will not start.")
-            print("⚠️ WARNING: Using default secret key. Set SECRET_KEY environment variable for production!")
+            print("[WARNING] Using default secret key. Set SECRET_KEY environment variable for production!")
         return secret
     
     @validator("ALLOWED_HOSTS", pre=True)

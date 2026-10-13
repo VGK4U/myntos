@@ -8,6 +8,7 @@ from typing import Optional
 import razorpay
 import requests
 import random
+import re
 from datetime import datetime, timedelta
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 
@@ -57,15 +58,17 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are missing in the server's .env file.")
 
-    # 1. Strict Validation: Check if the amount is valid for this operator (Only for Mobile)
-    if req.service_type == "mobile":
-        valid_plan = db.query(RechargePlan).filter(
-            RechargePlan.operator.ilike(f"%{req.operator}%"),
-            RechargePlan.amount == req.amount
-        ).first()
-        
-        if not valid_plan:
-            raise HTTPException(status_code=400, detail="Invalid recharge amount for this operator. Please select a valid plan.")
+    # 1. Validation: Ensure positive valid amount and valid mobile number
+    if not req.amount or req.amount < 10:
+        raise HTTPException(status_code=400, detail="Recharge amount must be at least ₹10.")
+    if req.amount > 10000:
+        raise HTTPException(status_code=400, detail="Recharge amount cannot exceed ₹10,000.")
+
+    clean_mobile = re.sub(r"\D", "", req.mobile_number or "")
+    if len(clean_mobile) == 12 and clean_mobile.startswith("91"):
+        clean_mobile = clean_mobile[2:]
+    if (req.service_type or "mobile") == "mobile" and len(clean_mobile) != 10:
+        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number.")
 
     # 2. Create order in Razorpay (amount in paise)
     order_amount = int(req.amount * 100)
@@ -141,6 +144,9 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
     tx.payment_status = "Paid"
     db.commit()
     
+    allocated_scratch_url = None
+    allocated_scratch_id = None
+
     # A1Topup Trigger (Step 3)
     # CRITICAL FAILSAFE: If Razorpay is using test keys, we MUST mock A1Topup to prevent real money loss!
     is_test_mode = getattr(settings, "A1TOPUP_TEST_MODE", True)
@@ -161,6 +167,8 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
             recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
             if card and token_secret:
+                allocated_scratch_url = f"/scratch-card.html?token={token_secret}"
+                allocated_scratch_id = card.id
                 enqueue_recharge_scratch_notification(
                     db=db,
                     brand="Myntreal",
@@ -237,6 +245,8 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                             card, token_secret, is_new = allocate_scratch_card(db, tx, brand="Myntreal")
                             recipient_phone = tx.value2.strip() if (tx.value2 and len(tx.value2.strip()) == 10 and tx.value2.strip().isdigit()) else tx.mobile_number
                             if card and token_secret:
+                                allocated_scratch_url = f"/scratch-card.html?token={token_secret}"
+                                allocated_scratch_id = card.id
                                 enqueue_recharge_scratch_notification(
                                     db=db,
                                     brand="Myntreal",
@@ -305,24 +315,66 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             fail_msg_hard = f"⚠️ Recharge Failed. Your recharge of ₹{int(tx.amount)} failed, but our automatic refund system faced a delay. Please contact VGK support with TXN ID {tx.id} for manual refund processing."
             background_tasks.add_task(notify_user_bg, tx.mobile_number, fail_msg_hard)
     
-    return {
+    response_payload = {
         "status": "success", 
         "message": "Payment verified and recharge initiated", 
         "transaction_id": tx.id,
         "recharge_status": tx.api_status
     }
+    if allocated_scratch_url:
+        response_payload["scratch_card_url"] = allocated_scratch_url
+        response_payload["scratch_card_id"] = allocated_scratch_id
+    return response_payload
+
+
+@router.get("/operator-circle-fetch")
+def fetch_operator_and_circle(mobile: str):
+    """
+    Resolves a 10-digit mobile number to its current telecom operator and circle.
+    Uses A1PlanAPI live HLR data with fallback heuristic.
+    """
+    from app.services import a1plan_service
+    return a1plan_service.operator_circle_fetch(mobile)
+
+
+@router.get("/roffer-check")
+def check_subscriber_roffer(mobile: str, operator: Optional[str] = None):
+    """
+    Checks subscriber-specific special offers (R-Offers) for a mobile number against live HLR data.
+    """
+    from app.services import a1plan_service
+    return a1plan_service.roffer_check(mobile, operator)
+
+
+@router.get("/live-plans")
+def get_live_plans(operator: str, circle: str = "49"):
+    """
+    Returns live prepaid recharge plans for an operator and circle from A1PlanAPI.
+    Grouped into categories (Recommended, Data, Unlimited, Roaming) with caching.
+    """
+    from app.services import a1plan_service
+    return a1plan_service.plan_fetch(operator, circle)
 
 
 @router.get("/plans")
-def get_plans(operator: str = None, db: Session = Depends(get_db)):
+def get_plans(operator: str = None, circle: str = None, db: Session = Depends(get_db)):
     """
-    Fetch static recharge plans for a given operator.
+    Fetch recharge plans for a given operator.
+    Attempts live plans from A1PlanAPI first; falls back smoothly to database records.
     """
+    # 1. Try Live A1PlanAPI if operator provided
+    if operator:
+        try:
+            from app.services import a1plan_service
+            live_res = a1plan_service.plan_fetch(operator, circle or "49")
+            if live_res.get("success") and live_res.get("plans"):
+                return live_res["plans"]
+        except Exception as live_err:
+            print(f"Live plan fetch fallback to DB: {live_err}")
+
+    # 2. Database fallback
     query = db.query(RechargePlan)
     if operator:
-        # Match case-insensitively or exactly depending on frontend implementation
-        # A1Topup has specific codes, but we seeded with strings like 'Airtel', 'Vodafone', 'RELIANCE - JIO', 'BSNL - TOPUP'
-        # Frontend might just pass 'Airtel' etc.
         query = query.filter(RechargePlan.operator.ilike(f"%{operator}%"))
         
     plans = query.all()

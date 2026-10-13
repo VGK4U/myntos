@@ -843,7 +843,7 @@
 
     <!-- RECHARGE AGAIN -->
     <div class="text-center">
-        <a href="/recharge.html" class="btn-recharge">
+        <a href="/recharge" class="btn-recharge">
             <i class="fa-solid fa-mobile-screen-button"></i> Recharge Again / For a Friend
         </a>
     </div>
@@ -961,6 +961,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
+        const cardId = urlParams.get('card_id') || urlParams.get('id');
 
         const canvas = document.getElementById('scratchCanvas');
         const ctx = canvas.getContext('2d');
@@ -1025,15 +1026,20 @@
 
         // Load card information from backend
         async function loadCardInfo() {
-            if (!token) {
+            if (!token && !cardId) {
                 statusMsg.className = 'status-message text-danger fw-bold';
-                statusMsg.innerText = '❌ Invalid or missing scratch card token.';
+                statusMsg.innerText = '❌ Invalid or missing scratch card reference.';
                 fallbackBtn.style.display = 'none';
                 return;
             }
 
             try {
-                const res = await fetch(`/api/v1/scratch-card/info/${token}`);
+                const infoUrl = token 
+                    ? `/api/v1/scratch-card/info/${token}` 
+                    : `/api/v1/scratch-card/card-info/${cardId}`;
+                const custToken = localStorage.getItem('customer_access_token');
+                const headers = custToken ? { 'Authorization': `Bearer ${custToken}` } : {};
+                const res = await fetch(infoUrl, { headers });
                 const data = await res.json();
                 scratchCardData = data;
 
@@ -1079,14 +1085,14 @@
             if (data.customer_name) {
                 let payoutNotice = '';
                 if (data.payout_method === 'upi_mobile' && data.payout_upi_mobile) {
-                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-mobile-screen-button me-1"></i> Sent to UPI Mobile: <strong>${escapeHtml(data.payout_upi_mobile)}</strong></span>`;
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-mobile-screen-button me-1"></i> Destination: UPI Mobile <strong>${escapeHtml(data.payout_upi_mobile)}</strong></span>`;
                 } else if (data.payout_method === 'upi_id' && data.payout_upi_id) {
-                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-at me-1"></i> Sent to UPI ID: <strong>${escapeHtml(data.payout_upi_id)}</strong></span>`;
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-at me-1"></i> Destination: UPI ID <strong>${escapeHtml(data.payout_upi_id)}</strong></span>`;
                 } else if (data.payout_method === 'bank_account' && data.payout_bank_account) {
-                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-building-columns me-1"></i> Sent to Bank A/C: <strong>${escapeHtml(data.payout_bank_account)}</strong> (IFSC: ${escapeHtml(data.payout_bank_ifsc || '')})</span>`;
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-building-columns me-1"></i> Destination: Bank A/C <strong>${escapeHtml(data.payout_bank_account)}</strong> (IFSC: ${escapeHtml(data.payout_bank_ifsc || '')})</span>`;
                 }
                 const pinStr = data.pincode ? ` (Postal PIN: ${escapeHtml(data.pincode)})` : '';
-                claimedDetailsText.innerHTML = `Claimed by <strong>${escapeHtml(data.customer_name)}</strong>${pinStr}${payoutNotice}<br><small class="text-white-50 mt-1 d-inline-block">Reward payout registered for direct disbursement.</small>`;
+                claimedDetailsText.innerHTML = `Claimed by <strong>${escapeHtml(data.customer_name)}</strong>${pinStr}${payoutNotice}<br><small class="text-white-50 mt-1 d-inline-block"><i class="fa-solid fa-clock-rotate-left me-1"></i> Payout status: <strong>${data.payout_status || 'PENDING'}</strong> (Processing to your destination within 24-48 business hours)</small>`;
             }
             alreadyClaimedSection.style.display = 'block';
 
@@ -1115,8 +1121,12 @@
         function scratch(e) {
             if (isRevealed || isClaimed) return;
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
 
             if (clientX === undefined || clientY === undefined) return;
 
@@ -1127,7 +1137,7 @@
 
             ctx.globalCompositeOperation = 'destination-out';
             ctx.beginPath();
-            ctx.arc(x, y, 22, 0, Math.PI * 2, false);
+            ctx.arc(x, y, 24, 0, Math.PI * 2, false);
             ctx.fill();
 
             checkScratchPercent();
@@ -1334,6 +1344,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         token: token,
+                        card_id: cardId ? parseInt(cardId) : null,
                         name: name,
                         mobile_number: cleanMobile,
                         pincode: pincode,
@@ -1454,11 +1465,15 @@
         }
 
         // Event listeners
-        canvas.addEventListener('mousedown', () => isMouseDown = true);
+        canvas.addEventListener('mousedown', (e) => { isMouseDown = true; scratch(e); });
         window.addEventListener('mouseup', () => isMouseDown = false);
         canvas.addEventListener('mousemove', (e) => { if (isMouseDown) scratch(e); });
 
-        canvas.addEventListener('touchstart', (e) => { isMouseDown = true; scratch(e); }, { passive: false });
+        canvas.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            isMouseDown = true; 
+            scratch(e); 
+        }, { passive: false });
         window.addEventListener('touchend', () => isMouseDown = false);
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); }, { passive: false });
 

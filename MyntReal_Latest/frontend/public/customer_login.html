@@ -360,7 +360,10 @@
                 <a href="/recharge" class="nav-back-btn text-warning d-none d-md-inline-flex" style="border-color: rgba(245, 158, 11, 0.4);" title="Pay Bills &amp; Recharge">
                     <i class="fa-solid fa-bolt"></i> <span>Recharge</span>
                 </a>
-                <button type="button" id="headerLogoutBtn" onclick="handleCustomerLogout()" class="nav-back-btn text-danger" style="border-color: rgba(239, 68, 68, 0.4);" title="Logout of customer session">
+                <a href="/customer/dashboard" id="headerDashboardBtn" class="nav-back-btn text-success" style="display: none; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);" title="Open Customer Dashboard">
+                    <i class="fa-solid fa-gauge-high"></i> <span>Dashboard</span>
+                </a>
+                <button type="button" id="headerLogoutBtn" onclick="handleCustomerLogout()" class="nav-back-btn text-danger" style="display: none; border-color: rgba(239, 68, 68, 0.4);" title="Logout of customer session">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span>
                 </button>
                 <a href="/landing" onclick="sessionStorage.setItem('showLoginSelection', 'true');" class="nav-back-btn d-none d-sm-inline-flex">
@@ -381,6 +384,17 @@
                 <p class="portal-desc">
                     Access your Recharges, Utility Bills, Solar Projects, EV Scooters, and Student Training in one unified dashboard.
                 </p>
+            </div>
+
+            <!-- Active Session Alert Banner (Auto-revealed if token present) -->
+            <div id="activeSessionBanner" class="p-3 mb-3 rounded-3 text-start d-flex align-items-center justify-content-between" style="display: none !important; background: rgba(16, 185, 129, 0.12); border: 1px solid var(--emerald);">
+                <div>
+                    <div class="fw-bold text-success small"><i class="fa-solid fa-circle-check me-1"></i> Active Session Found</div>
+                    <div class="small text-white" id="activeSessionName">Logged in as Customer</div>
+                </div>
+                <a href="/customer/dashboard" class="btn btn-sm btn-success fw-bold rounded-pill px-3">
+                    Open Dashboard <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
             </div>
 
             <!-- Tab Switcher -->
@@ -648,6 +662,15 @@
                     const logoutBtn = document.getElementById('headerLogoutBtn');
                     if (logoutBtn) {
                         logoutBtn.title = `Signed in as ${prof.customer_name} (Click to Logout)`;
+                        logoutBtn.style.display = 'inline-flex';
+                    }
+                    const dashBtn = document.getElementById('headerDashboardBtn');
+                    if (dashBtn) dashBtn.style.display = 'inline-flex';
+                    const banner = document.getElementById('activeSessionBanner');
+                    const bannerName = document.getElementById('activeSessionName');
+                    if (banner && bannerName) {
+                        bannerName.innerText = `Signed in as ${prof.customer_name || 'Customer'} (+91 ${prof.mobile_number || ''})`;
+                        banner.style.setProperty('display', 'flex', 'important');
                     }
                 } catch(e) {}
             }
@@ -670,6 +693,14 @@
             const pinEl = document.getElementById('loginPin');
             if (phoneEl) phoneEl.value = '';
             if (pinEl) pinEl.value = '';
+
+            const logoutBtn = document.getElementById('headerLogoutBtn');
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            const dashBtn = document.getElementById('headerDashboardBtn');
+            if (dashBtn) dashBtn.style.display = 'none';
+            const banner = document.getElementById('activeSessionBanner');
+            if (banner) banner.style.setProperty('display', 'none', 'important');
+
             if (typeof showToast === 'function') {
                 showToast('Logged out of customer account.', 'info');
             } else {

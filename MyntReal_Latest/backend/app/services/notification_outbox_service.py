@@ -111,9 +111,13 @@ When someone recharges via your link, *you get 50% of their scratch card reward*
 
 
 TRUSTED_CANONICAL_DOMAINS = [
+    "https://vgk4u.com",
+    "https://www.vgk4u.com",
     "https://myntreal.com",
     "https://www.myntreal.com",
+    "http://localhost:5000",
     "http://localhost:8000",
+    "http://127.0.0.1:5000",
     "http://127.0.0.1:8000"
 ]
 
@@ -127,7 +131,7 @@ def resolve_canonical_origin(brand: str = "Myntreal", origin_url: Optional[str] 
         if clean_origin in TRUSTED_CANONICAL_DOMAINS:
             return clean_origin
 
-    return "https://www.myntreal.com"
+    return "https://www.vgk4u.com"
 
 
 def enqueue_recharge_scratch_notification(

@@ -17717,6 +17717,66 @@ async def serve_vgk4u_catalog_root():
             return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
     raise HTTPException(status_code=404, detail="VGK4U Catalog page not found")
 
+@app.get("/customer", include_in_schema=False)
+@app.get("/customer/", include_in_schema=False)
+@app.get("/customer/login", include_in_schema=False)
+@app.get("/customer-login", include_in_schema=False)
+@app.get("/customer_login.html", include_in_schema=False)
+@app.get("/customer-portal", include_in_schema=False)
+async def serve_customer_login_root():
+    """
+    Serve Universal Customer Portal - Authentication & PIN Setup UI.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "customer_login.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "customer_login.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "customer_login.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Customer login page not found")
+
+
+@app.get("/customer/dashboard", include_in_schema=False)
+@app.get("/customer/dashboard/", include_in_schema=False)
+@app.get("/customer-dashboard", include_in_schema=False)
+@app.get("/customer_dashboard.html", include_in_schema=False)
+async def serve_customer_dashboard_root():
+    """
+    Serve Universal Customer Portal - Executive Multi-Vertical Dashboard UI.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "customer_dashboard.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "customer_dashboard.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "customer_dashboard.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Customer dashboard page not found")
+
+
+@app.get("/recharge", include_in_schema=False)
+@app.get("/recharge/", include_in_schema=False)
+@app.get("/recharge.html", include_in_schema=False)
+@app.get("/recharge_bills.html", include_in_schema=False)
+@app.get("/recharge-bills", include_in_schema=False)
+@app.get("/bill-payments", include_in_schema=False)
+async def serve_recharge_bills_root():
+    """
+    Serve Mobile Recharge & BBPS Utility Bills Payment Portal UI.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "recharge_bills.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "recharge_bills.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "recharge_bills.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Recharge & Bills page not found")
+
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
