@@ -298,6 +298,19 @@ class VGKMemberCreate(BaseModel):
     registered_by_emp_code: Optional[str] = None
     # [DC-VGK-ASSIGN-002] Default or explicit staff assignment
     assigned_staff_id: Optional[int] = None
+    # [DC_VGK_KIT_INSURANCE_001] T-Shirt, Kit, and Insurance
+    t_shirt_size: Optional[str] = None
+    t_shirt_given: Optional[bool] = False
+    kit_given: Optional[bool] = False
+    insurance_given: Optional[bool] = False
+    insurance_policy_number: Optional[str] = None
+    insurance_provider: Optional[str] = None
+    insurance_amount: Optional[float] = None
+    insurance_valid_from: Optional[str] = None
+    insurance_valid_till: Optional[str] = None
+    insurance_nominee_name: Optional[str] = None
+    insurance_nominee_relation: Optional[str] = None
+    insurance_details: Optional[str] = None
 
 
 class VGKMemberUpdate(BaseModel):
@@ -316,6 +329,19 @@ class VGKMemberUpdate(BaseModel):
     # [DC-VGK-ASSIGN-001] Assigned staff & status notes
     assigned_staff_id: Optional[int] = None
     status_note: Optional[str] = None
+    # [DC_VGK_KIT_INSURANCE_001] T-Shirt, Kit, and Insurance
+    t_shirt_size: Optional[str] = None
+    t_shirt_given: Optional[bool] = None
+    kit_given: Optional[bool] = None
+    insurance_given: Optional[bool] = None
+    insurance_policy_number: Optional[str] = None
+    insurance_provider: Optional[str] = None
+    insurance_amount: Optional[float] = None
+    insurance_valid_from: Optional[str] = None
+    insurance_valid_till: Optional[str] = None
+    insurance_nominee_name: Optional[str] = None
+    insurance_nominee_relation: Optional[str] = None
+    insurance_details: Optional[str] = None
 
 
 class FreelancerCreate(BaseModel):
@@ -503,6 +529,12 @@ def list_vgk_members(
     eligibility_filter: Optional[str] = Query(None, description="Filter by business eligibility: installed_1plus|leads_1plus|team_1plus|earners_1plus|current_month_active"),
     hierarchy_type: Optional[str] = Query(None, description="sponsor|upliner"),
     hierarchy_member: Optional[str] = Query(None, description="Search term or partner code for Sponsor / Upliner"),
+    # [DC_VGK_KIT_INSURANCE_001] T-Shirt, Kit, Insurance, and Business Filters
+    t_shirt_given: Optional[str] = Query(None, description="Filter by T-shirt given: yes|no|all"),
+    t_shirt_size: Optional[str] = Query(None, description="Filter by T-shirt size: S|M|L|XL|XXL|3XL"),
+    kit_given: Optional[str] = Query(None, description="Filter by kit given: yes|no|all"),
+    insurance_given: Optional[str] = Query(None, description="Filter by insurance given: yes|no|all"),
+    business_filter: Optional[str] = Query(None, description="Filter by business payment files: with_payment|without_payment|all"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -724,6 +756,55 @@ def list_vgk_members(
             query = query.filter(OfficialPartner.registered_by_emp_code.in_(_matched_codes))
         else:
             query = query.filter(OfficialPartner.registered_by_emp_code == _rbq.upper())
+
+    # [DC_VGK_KIT_INSURANCE_001] T-Shirt, Kit, Insurance, and Business Filters
+    if isinstance(t_shirt_given, str) and t_shirt_given.strip():
+        _tg = t_shirt_given.strip().lower()
+        if _tg in ('yes', 'true', '1'):
+            query = query.filter(OfficialPartner.t_shirt_given == True)
+        elif _tg in ('no', 'false', '0'):
+            query = query.filter(or_(OfficialPartner.t_shirt_given == False, OfficialPartner.t_shirt_given.is_(None)))
+
+    if isinstance(t_shirt_size, str) and t_shirt_size.strip() and t_shirt_size.strip().lower() not in ('all', ''):
+        query = query.filter(func.upper(OfficialPartner.t_shirt_size) == t_shirt_size.strip().upper())
+
+    if isinstance(kit_given, str) and kit_given.strip():
+        _kg = kit_given.strip().lower()
+        if _kg in ('yes', 'true', '1'):
+            query = query.filter(OfficialPartner.kit_given == True)
+        elif _kg in ('no', 'false', '0'):
+            query = query.filter(or_(OfficialPartner.kit_given == False, OfficialPartner.kit_given.is_(None)))
+
+    if isinstance(insurance_given, str) and insurance_given.strip():
+        _ig = insurance_given.strip().lower()
+        if _ig in ('yes', 'true', '1'):
+            query = query.filter(OfficialPartner.insurance_given == True)
+        elif _ig in ('no', 'false', '0'):
+            query = query.filter(or_(OfficialPartner.insurance_given == False, OfficialPartner.insurance_given.is_(None)))
+
+    if isinstance(business_filter, str) and business_filter.strip():
+        _bf = business_filter.strip().lower()
+        from app.models.crm import CRMLead, CRMLeadTransaction
+        p1 = {r[0] for r in db.query(CRMLead.associated_partner_id).filter(
+            CRMLead.associated_partner_id.isnot(None),
+            or_(CRMLead.first_payment_received_date.isnot(None), CRMLead.deal_value_received > 0)
+        ).all() if r[0]}
+        p2 = {r[0] for r in db.query(CRMLead.associated_partner_id).join(
+            CRMLeadTransaction, CRMLeadTransaction.lead_id == CRMLead.id
+        ).filter(
+            CRMLead.associated_partner_id.isnot(None),
+            CRMLeadTransaction.validation_status.in_(['approved', 'validated', 'posted_to_ledger']),
+            CRMLeadTransaction.amount > 0
+        ).all() if r[0]}
+        _paid_partner_ids = list(p1 | p2)
+        if _bf in ('with_payment', 'yes', 'true', '1', 'has_business'):
+            if _paid_partner_ids:
+                query = query.filter(OfficialPartner.id.in_(_paid_partner_ids))
+            else:
+                query = query.filter(OfficialPartner.id == -1)
+        elif _bf in ('without_payment', 'no', 'false', '0'):
+            if _paid_partner_ids:
+                query = query.filter(OfficialPartner.id.notin_(_paid_partner_ids))
     # Date range filters on created_at (registration date)
     today = date.today()
     if isinstance(reg_period, str) and reg_period.strip():
@@ -776,6 +857,14 @@ def list_vgk_members(
         _sort_col = OfficialPartner.registered_by_emp_code
     elif _sb_str in ('last_contact_at', 'contacted', 'contacted_days'):
         _sort_col = OfficialPartner.last_contact_at
+    elif _sb_str in ('t_shirt', 't_shirt_given'):
+        _sort_col = OfficialPartner.t_shirt_given
+    elif _sb_str in ('t_shirt_size', 'size'):
+        _sort_col = OfficialPartner.t_shirt_size
+    elif _sb_str in ('kit', 'kit_given'):
+        _sort_col = OfficialPartner.kit_given
+    elif _sb_str in ('insurance', 'insurance_given'):
+        _sort_col = OfficialPartner.insurance_given
     _order = _sort_col.asc() if sort_dir == 'asc' else _sort_col.desc()
     total = query.count()
     if _needs_full_fetch:
@@ -2382,6 +2471,31 @@ def create_vgk_member(
     if _ln: member.last_name  = _ln
     if _t:  member.name_title = _t
     if payload.gender: member.gender = payload.gender.strip()
+    # [DC_VGK_KIT_INSURANCE_001] Set T-Shirt, Kit, and Insurance fields
+    if payload.t_shirt_size: member.t_shirt_size = payload.t_shirt_size.strip().upper()
+    if payload.t_shirt_given:
+        member.t_shirt_given = True
+        member.t_shirt_given_at = get_indian_time()
+        member.t_shirt_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+    if payload.kit_given:
+        member.kit_given = True
+        member.kit_given_at = get_indian_time()
+        member.kit_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+    if payload.insurance_given:
+        member.insurance_given = True
+        member.insurance_given_at = get_indian_time()
+    if payload.insurance_policy_number: member.insurance_policy_number = payload.insurance_policy_number.strip()
+    if payload.insurance_provider: member.insurance_provider = payload.insurance_provider.strip()
+    if payload.insurance_amount is not None: member.insurance_amount = payload.insurance_amount
+    if payload.insurance_valid_from:
+        try: member.insurance_valid_from = datetime.strptime(str(payload.insurance_valid_from)[:10], '%Y-%m-%d').date()
+        except Exception: pass
+    if payload.insurance_valid_till:
+        try: member.insurance_valid_till = datetime.strptime(str(payload.insurance_valid_till)[:10], '%Y-%m-%d').date()
+        except Exception: pass
+    if payload.insurance_nominee_name: member.insurance_nominee_name = payload.insurance_nominee_name.strip()
+    if payload.insurance_nominee_relation: member.insurance_nominee_relation = payload.insurance_nominee_relation.strip()
+    if payload.insurance_details: member.insurance_details = payload.insurance_details.strip()
     # [DC-VGK-STAFF-REG-001] Auto-fill registering staff emp_code (payload overrides, else use current_user, else default root)
     VGK_DEFAULT_ROOT = 'VGK07102207'
     _reg_emp = ((payload.registered_by_emp_code or '').strip().upper() or
@@ -2730,10 +2844,164 @@ def update_vgk_member(
             if not parent:
                 raise HTTPException(status_code=400, detail="Upline not found or not a VGK member")
             member.parent_partner_id = payload.parent_partner_id
+
+    # [DC_VGK_KIT_INSURANCE_001] T-Shirt, Kit, and Insurance
+    if payload.t_shirt_size is not None:
+        member.t_shirt_size = payload.t_shirt_size.strip().upper() if payload.t_shirt_size else None
+    if payload.t_shirt_given is not None:
+        if payload.t_shirt_given and not member.t_shirt_given:
+            member.t_shirt_given_at = get_indian_time()
+            member.t_shirt_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+        elif not payload.t_shirt_given:
+            member.t_shirt_given_at = None
+            member.t_shirt_given_by = None
+        member.t_shirt_given = payload.t_shirt_given
+    if payload.kit_given is not None:
+        if payload.kit_given and not member.kit_given:
+            member.kit_given_at = get_indian_time()
+            member.kit_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+        elif not payload.kit_given:
+            member.kit_given_at = None
+            member.kit_given_by = None
+        member.kit_given = payload.kit_given
+    if payload.insurance_given is not None:
+        if payload.insurance_given and not member.insurance_given:
+            member.insurance_given_at = get_indian_time()
+        elif not payload.insurance_given:
+            member.insurance_given_at = None
+        member.insurance_given = payload.insurance_given
+    if payload.insurance_policy_number is not None:
+        member.insurance_policy_number = payload.insurance_policy_number.strip() if payload.insurance_policy_number else None
+    if payload.insurance_provider is not None:
+        member.insurance_provider = payload.insurance_provider.strip() if payload.insurance_provider else None
+    if payload.insurance_amount is not None:
+        member.insurance_amount = payload.insurance_amount
+    if payload.insurance_valid_from is not None:
+        try:
+            member.insurance_valid_from = datetime.strptime(str(payload.insurance_valid_from)[:10], '%Y-%m-%d').date() if payload.insurance_valid_from else None
+        except Exception:
+            pass
+    if payload.insurance_valid_till is not None:
+        try:
+            member.insurance_valid_till = datetime.strptime(str(payload.insurance_valid_till)[:10], '%Y-%m-%d').date() if payload.insurance_valid_till else None
+        except Exception:
+            pass
+    if payload.insurance_nominee_name is not None:
+        member.insurance_nominee_name = payload.insurance_nominee_name.strip() if payload.insurance_nominee_name else None
+    if payload.insurance_nominee_relation is not None:
+        member.insurance_nominee_relation = payload.insurance_nominee_relation.strip() if payload.insurance_nominee_relation else None
+    if payload.insurance_details is not None:
+        member.insurance_details = payload.insurance_details.strip() if payload.insurance_details else None
+
     member.updated_at = get_indian_time()
     db.commit()
     db.refresh(member)
     return {"success": True, "message": "Member updated", "data": member.to_dict()}
+
+
+@router.patch("/members/{member_id}/kit-insurance")
+def update_vgk_member_kit_insurance(
+    member_id: int = Path(...),
+    payload: dict = Body(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    [DC_VGK_KIT_INSURANCE_001]
+    Update T-Shirt, Kit, and Insurance records.
+    Accessible to assigned staff, registering staff, or VGK admins.
+    """
+    member = db.query(OfficialPartner).filter(
+        OfficialPartner.id == member_id,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="VGK member not found")
+
+    can_edit = (
+        _has_full_vgk_visibility(current_user) or
+        member.assigned_staff_id == current_user.id or
+        member.registered_by_emp_code == getattr(current_user, 'emp_code', None)
+    )
+    if not can_edit:
+        raise HTTPException(status_code=403, detail="Forbidden: You are not assigned to or authorized to update this member.")
+
+    if 't_shirt_size' in payload:
+        sz = payload.get('t_shirt_size')
+        member.t_shirt_size = sz.strip().upper() if isinstance(sz, str) and sz.strip() else None
+
+    if 't_shirt_given' in payload:
+        tg = bool(payload.get('t_shirt_given'))
+        if tg and not member.t_shirt_given:
+            member.t_shirt_given_at = get_indian_time()
+            member.t_shirt_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+        elif not tg:
+            member.t_shirt_given_at = None
+            member.t_shirt_given_by = None
+        member.t_shirt_given = tg
+
+    if 'kit_given' in payload:
+        kg = bool(payload.get('kit_given'))
+        if kg and not member.kit_given:
+            member.kit_given_at = get_indian_time()
+            member.kit_given_by = getattr(current_user, 'emp_code', None) or getattr(current_user, 'full_name', None)
+        elif not kg:
+            member.kit_given_at = None
+            member.kit_given_by = None
+        member.kit_given = kg
+
+    if 'insurance_given' in payload:
+        ig = bool(payload.get('insurance_given'))
+        if ig and not member.insurance_given:
+            member.insurance_given_at = get_indian_time()
+        elif not ig:
+            member.insurance_given_at = None
+        member.insurance_given = ig
+
+    if 'insurance_policy_number' in payload:
+        pn = payload.get('insurance_policy_number')
+        member.insurance_policy_number = pn.strip() if isinstance(pn, str) and pn.strip() else None
+
+    if 'insurance_provider' in payload:
+        ip = payload.get('insurance_provider')
+        member.insurance_provider = ip.strip() if isinstance(ip, str) and ip.strip() else None
+
+    if 'insurance_amount' in payload:
+        try:
+            member.insurance_amount = float(payload.get('insurance_amount') or 0.0)
+        except Exception:
+            pass
+
+    if 'insurance_valid_from' in payload:
+        vf = payload.get('insurance_valid_from')
+        try:
+            member.insurance_valid_from = datetime.strptime(str(vf)[:10], '%Y-%m-%d').date() if vf else None
+        except Exception:
+            pass
+
+    if 'insurance_valid_till' in payload:
+        vt = payload.get('insurance_valid_till')
+        try:
+            member.insurance_valid_till = datetime.strptime(str(vt)[:10], '%Y-%m-%d').date() if vt else None
+        except Exception:
+            pass
+
+    if 'insurance_nominee_name' in payload:
+        nn = payload.get('insurance_nominee_name')
+        member.insurance_nominee_name = nn.strip() if isinstance(nn, str) and nn.strip() else None
+
+    if 'insurance_nominee_relation' in payload:
+        nr = payload.get('insurance_nominee_relation')
+        member.insurance_nominee_relation = nr.strip() if isinstance(nr, str) and nr.strip() else None
+
+    if 'insurance_details' in payload:
+        idet = payload.get('insurance_details')
+        member.insurance_details = idet.strip() if isinstance(idet, str) and idet.strip() else None
+
+    member.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(member)
+    return {"success": True, "message": "Merchandise & Insurance record updated successfully", "data": member.to_dict()}
 
 
 @router.get("/members/{member_id}/tree")

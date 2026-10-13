@@ -3151,6 +3151,25 @@ class OfficialPartner(BaseModel):
     is_blocked = Column(Boolean, default=False, nullable=False, index=True)
     member_status = Column(String(30), default='INACTIVE', nullable=True, index=True)
 
+    # [DC_VGK_KIT_INSURANCE_001] Oct 2026: T-Shirt, Kit, and Insurance tracking
+    t_shirt_size = Column(String(10), nullable=True, index=True)
+    t_shirt_given = Column(Boolean, default=False, nullable=False, index=True)
+    t_shirt_given_at = Column(DateTime, nullable=True)
+    t_shirt_given_by = Column(String(50), nullable=True)
+    kit_given = Column(Boolean, default=False, nullable=False, index=True)
+    kit_given_at = Column(DateTime, nullable=True)
+    kit_given_by = Column(String(50), nullable=True)
+    insurance_given = Column(Boolean, default=False, nullable=False, index=True)
+    insurance_given_at = Column(DateTime, nullable=True)
+    insurance_policy_number = Column(String(100), nullable=True)
+    insurance_provider = Column(String(100), nullable=True)
+    insurance_amount = Column(Numeric(12, 2), default=0.00, nullable=True)
+    insurance_valid_from = Column(Date, nullable=True)
+    insurance_valid_till = Column(Date, nullable=True)
+    insurance_nominee_name = Column(String(200), nullable=True)
+    insurance_nominee_relation = Column(String(50), nullable=True)
+    insurance_details = Column(Text, nullable=True)
+
     company_segments = relationship('PartnerCompanySegment', back_populates='partner', cascade='all, delete-orphan')
     pricing_profiles = relationship('PartnerPricingProfile', back_populates='partner', cascade='all, delete-orphan')
     orders = relationship('PartnerOrder', back_populates='partner')
@@ -3287,6 +3306,24 @@ class OfficialPartner(BaseModel):
             # [DC-VGK-BLOCKED-001] Sep 2026: Blocked status flag & canonical member_status
             'is_blocked': self.is_blocked if self.is_blocked is not None else False,
             'member_status': self.member_status or ('BLOCKED' if self.is_blocked else ('ACTIVE' if self.is_active else 'INACTIVE')),
+            # [DC_VGK_KIT_INSURANCE_001] Oct 2026: T-Shirt, Kit, and Insurance tracking
+            't_shirt_size': self.t_shirt_size,
+            't_shirt_given': bool(self.t_shirt_given) if self.t_shirt_given is not None else False,
+            't_shirt_given_at': self.t_shirt_given_at.isoformat() if self.t_shirt_given_at else None,
+            't_shirt_given_by': self.t_shirt_given_by,
+            'kit_given': bool(self.kit_given) if self.kit_given is not None else False,
+            'kit_given_at': self.kit_given_at.isoformat() if self.kit_given_at else None,
+            'kit_given_by': self.kit_given_by,
+            'insurance_given': bool(self.insurance_given) if self.insurance_given is not None else False,
+            'insurance_given_at': self.insurance_given_at.isoformat() if self.insurance_given_at else None,
+            'insurance_policy_number': self.insurance_policy_number,
+            'insurance_provider': self.insurance_provider,
+            'insurance_amount': float(self.insurance_amount) if self.insurance_amount is not None else 0.0,
+            'insurance_valid_from': self.insurance_valid_from.isoformat() if self.insurance_valid_from else None,
+            'insurance_valid_till': self.insurance_valid_till.isoformat() if self.insurance_valid_till else None,
+            'insurance_nominee_name': self.insurance_nominee_name,
+            'insurance_nominee_relation': self.insurance_nominee_relation,
+            'insurance_details': self.insurance_details,
             # Derived from company_segments for company-based filtering
             'applicable_companies': [cs.company_id for cs in self.company_segments if cs.is_active] if self.company_segments else [],
         }

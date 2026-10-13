@@ -4857,6 +4857,39 @@ def _startup_worker():
         except Exception as _e:
             print(f"[DC-VGK-BLOCKED-001] ⚠️ {_e}", flush=True)
 
+    # ── DC_VGK_KIT_INSURANCE_20261013_001: Add T-Shirt, Kit, and Insurance fields to official_partners ──
+    if "DC_VGK_KIT_INSURANCE_20261013_001" not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                for _sql in [
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS t_shirt_size VARCHAR(10)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS t_shirt_given BOOLEAN NOT NULL DEFAULT FALSE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS t_shirt_given_at TIMESTAMP WITH TIME ZONE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS t_shirt_given_by VARCHAR(50)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS kit_given BOOLEAN NOT NULL DEFAULT FALSE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS kit_given_at TIMESTAMP WITH TIME ZONE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS kit_given_by VARCHAR(50)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_given BOOLEAN NOT NULL DEFAULT FALSE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_given_at TIMESTAMP WITH TIME ZONE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_policy_number VARCHAR(100)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_provider VARCHAR(100)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_amount NUMERIC(12, 2) DEFAULT 0.00",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_valid_from DATE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_valid_till DATE",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_nominee_name VARCHAR(200)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_nominee_relation VARCHAR(50)",
+                    "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS insurance_details TEXT",
+                    "CREATE INDEX IF NOT EXISTS idx_op_t_shirt_given ON official_partners (t_shirt_given)",
+                    "CREATE INDEX IF NOT EXISTS idx_op_kit_given ON official_partners (kit_given)",
+                    "CREATE INDEX IF NOT EXISTS idx_op_insurance_given ON official_partners (insurance_given)",
+                    "CREATE INDEX IF NOT EXISTS idx_op_t_shirt_size ON official_partners (t_shirt_size)",
+                ]:
+                    _c.execute(_sa_text(_sql))
+            _mig_done("DC_VGK_KIT_INSURANCE_20261013_001")
+            print("[DC_VGK_KIT_INSURANCE_20261013_001] ✅ official_partners T-Shirt, Kit & Insurance columns ensured", flush=True)
+        except Exception as _e:
+            print(f"[DC_VGK_KIT_INSURANCE_20261013_001] ⚠️ {_e}", flush=True)
+
     # DC_CONSOLIDATED_EARLY_001: expense_main_category.is_direct_expense must exist
     if "DC_CONSOLIDATED_EARLY_001" not in _applied_keys:
         try:

@@ -1747,6 +1747,9 @@
                 <div class="text-white-50 small d-none d-sm-inline">
                     <i class="fas fa-lock text-warning me-1"></i> <span data-i18n="free_joining">100% Free Joining</span>
                 </div>
+                <a href="/customer" class="text-white-50 text-decoration-none small d-none d-md-inline hover-warning me-2" style="color: #10b981 !important;">
+                    <i class="fas fa-user-circle text-success me-1"></i> <span>Customer Login</span>
+                </a>
                 <a href="/vgk/login" class="text-white-50 text-decoration-none small d-none d-md-inline hover-warning">
                     <i class="fas fa-sign-in-alt text-warning me-1"></i> <span data-i18n="btn_member_signin">Member Sign In</span>
                 </a>
@@ -1794,6 +1797,9 @@
 
             <!-- Header Action CTAs (Guaranteed Flex-Shrink-0 & Complete Visibility) -->
             <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+                <a href="/customer" class="btn btn-sm btn-outline-success rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Customer Executive Dashboard">
+                    <i class="fas fa-user-circle"></i> <span class="d-none d-sm-inline">Customer Login</span>
+                </a>
                 <a href="/recharge" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Instant Recharge & Bill Payments">
                     <i class="fas fa-bolt"></i> <span class="d-none d-sm-inline">Recharge</span>
                 </a>
@@ -1848,6 +1854,7 @@
                 </div>
                 <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">Quick Actions</div>
                 <div class="d-flex flex-column gap-2 mt-2">
+                    <a href="/customer" class="btn btn-outline-success w-100 fw-bold py-2"><i class="fas fa-user-circle me-1"></i> Customer Login &amp; Dashboard</a>
                     <a href="/recharge" class="btn btn-outline-warning w-100 fw-bold py-2"><i class="fas fa-bolt me-1"></i> Recharge &amp; Bill Payments</a>
                     <a href="/vgk/login?tab=signup" class="btn-gold-glow w-100 justify-content-center py-2"><i class="fas fa-user-plus me-1"></i> Join Free Partner</a>
                     <button type="button" class="btn btn-wa-glow w-100 justify-content-center py-2" onclick="shareOnWhatsApp()"><i class="fab fa-whatsapp me-1"></i> Share on WhatsApp</button>
@@ -3489,6 +3496,13 @@
                         <span><i class="fas fa-phone-alt text-success me-1"></i> +91 85858 52738</span>
                         <span><i class="fas fa-map-marker-alt text-danger me-1"></i> <span data-i18n="footer_offices">Offices: Visakhapatnam &amp; Hyderabad</span></span>
                     </div>
+                    <div class="d-flex justify-content-center flex-wrap gap-3 my-3">
+                        <a href="/customer" class="text-decoration-none fw-bold small" style="color: #10b981;"><i class="fas fa-user-circle me-1"></i> Customer Login &amp; Hub</a>
+                        <span class="text-white-50 small">•</span>
+                        <a href="/recharge" class="text-warning text-decoration-none fw-bold small"><i class="fas fa-bolt me-1"></i> Recharge &amp; Bills</a>
+                        <span class="text-white-50 small">•</span>
+                        <a href="/vgk/login" class="text-white text-decoration-none fw-bold small"><i class="fas fa-sign-in-alt me-1"></i> Channel Partner Sign In</a>
+                    </div>
                     <div>
                         <span data-i18n="footer_rights">© 2026 VGK4U • Powered by MyntOS Single-Page Digital Catalog Platform. All Rights Reserved.</span>
                     </div>
@@ -3499,15 +3513,15 @@
 
     <!-- ── FLOATING MOBILE BAR ── -->
     <div class="mobile-quick-actions">
+        <a href="/customer" class="btn btn-outline-success flex-fill py-2 fw-bold text-nowrap" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4);">
+            <i class="fas fa-user-circle me-1"></i> <span>Customer</span>
+        </a>
         <a href="/recharge" class="btn btn-outline-warning flex-fill py-2 fw-bold text-warning d-flex align-items-center justify-content-center text-nowrap">
             <i class="fas fa-bolt me-1"></i> <span>Recharge</span>
         </a>
         <a href="/vgk/login" class="btn btn-outline-light flex-fill py-2 fw-bold text-nowrap">
             <i class="fas fa-sign-in-alt me-1"></i> <span data-i18n="mob_signin">Sign In</span>
         </a>
-        <button class="btn btn-success flex-fill py-2 fw-bold" onclick="shareOnWhatsApp()">
-            <i class="fab fa-whatsapp me-1"></i> <span data-i18n="mob_share">Share</span>
-        </button>
         <a href="/vgk/login?tab=signup" class="btn btn-warning flex-fill py-2 fw-black text-dark">
             <i class="fas fa-user-plus me-1"></i> <span data-i18n="mob_join">Join Free</span>
         </a>

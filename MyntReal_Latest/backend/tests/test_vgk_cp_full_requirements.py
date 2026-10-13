@@ -32,6 +32,7 @@ from app.api.v1.endpoints.vgk_team import (
     update_vgk_member_status,
     record_vgk_call_intent,
     get_vgk_communication_history,
+    update_vgk_member_kit_insurance,
     AssignMemberPayload,
     UpdateMemberStatusPayload,
     get_indian_time
@@ -430,8 +431,8 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
             agent_partner_ids = [m["id"] for m in res_agent["data"]]
             self.assertNotIn(self.test_partner.id, agent_partner_ids)
 
-    def test_09_verify_31_columns_in_frontend(self):
-        """Req 11, 12, 13: Verify exact 31-column ordering and sticky styles."""
+    def test_09_verify_35_columns_in_frontend(self):
+        """Req 11, 12, 13: Verify exact 35-column ordering and sticky styles."""
         html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend/staff_vgk_members.html'))
         self.assertTrue(os.path.exists(html_path))
         with open(html_path, 'r', encoding='utf-8') as f:
@@ -443,16 +444,105 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         self.assertIsNotNone(thead_match, "Could not find Channel Partners thead in staff_vgk_members.html")
         thead_html = thead_match.group(1)
         th_elements = re.findall(r'<th\b', thead_html)
-        self.assertEqual(len(th_elements), 31, f"Expected exactly 31 table headers, found {len(th_elements)}")
+        self.assertEqual(len(th_elements), 35, f"Expected exactly 35 table headers, found {len(th_elements)}")
 
-        # Verify colspan="31" is used for loading and error rows
-        self.assertIn('colspan="31"', content)
+        # Verify colspan="35" is used for loading and error rows
+        self.assertIn('colspan="35"', content)
 
         # Verify sticky headers and first 3 columns
         self.assertIn('mb-sticky-1', content)
         self.assertIn('mb-sticky-2', content)
         self.assertIn('mb-sticky-3', content)
         self.assertIn('.table-scroll-wrap thead th', content)
+
+    def test_10_kit_insurance_api_and_business_filter(self):
+        """Req: Kit, T-Shirt, Insurance, and Business query filters + PATCH kit-insurance endpoint."""
+        # 1. Test query filters on list_vgk_members
+        res_all = list_vgk_members(page=1, page_size=5, current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_all["success"])
+
+        # Test t_shirt_given filter
+        res_tg = list_vgk_members(page=1, page_size=5, t_shirt_given="no", current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_tg["success"])
+
+        # Test t_shirt_size filter
+        res_ts = list_vgk_members(page=1, page_size=5, t_shirt_size="XL", current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_ts["success"])
+
+        # Test kit_given filter
+        res_kg = list_vgk_members(page=1, page_size=5, kit_given="no", current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_kg["success"])
+
+        # Test insurance_given filter
+        res_ig = list_vgk_members(page=1, page_size=5, insurance_given="no", current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_ig["success"])
+
+        # Test business_filter
+        res_bf = list_vgk_members(page=1, page_size=5, business_filter="with_payment", current_user=self.admin_mr10001, db=self.db)
+        self.assertTrue(res_bf["success"])
+
+        # 2. Test PATCH kit-insurance endpoint
+        payload = {
+            "t_shirt_size": "XXL",
+            "t_shirt_given": True,
+            "kit_given": True,
+            "insurance_given": True,
+            "insurance_policy_number": "POL-AUTOTEST-777",
+            "insurance_provider": "Star Health",
+            "insurance_amount": 750000.0,
+            "insurance_valid_from": "2026-10-01",
+            "insurance_valid_till": "2027-10-01",
+            "insurance_nominee_name": "Test Nominee",
+            "insurance_nominee_relation": "Mother",
+            "insurance_details": "Automated verification test notes"
+        }
+        res_patch = update_vgk_member_kit_insurance(
+            member_id=self.test_partner.id,
+            payload=payload,
+            current_user=self.admin_mr10001,
+            db=self.db
+        )
+        self.assertTrue(res_patch["success"])
+        data = res_patch["data"]
+        self.assertEqual(data["t_shirt_size"], "XXL")
+        self.assertTrue(data["t_shirt_given"])
+        self.assertTrue(data["kit_given"])
+        self.assertTrue(data["insurance_given"])
+        self.assertEqual(data["insurance_policy_number"], "POL-AUTOTEST-777")
+        self.assertEqual(data["insurance_provider"], "Star Health")
+        self.assertEqual(data["insurance_amount"], 750000.0)
+
+        # 3. Test unauthorized modification
+        if self.regular_agent:
+            with self.assertRaises(HTTPException) as ctx:
+                update_vgk_member_kit_insurance(
+                    member_id=self.test_partner.id,
+                    payload={"kit_given": False},
+                    current_user=self.regular_agent,
+                    db=self.db
+                )
+            self.assertEqual(ctx.exception.status_code, 403)
+
+        # 4. Revert
+        update_vgk_member_kit_insurance(
+            member_id=self.test_partner.id,
+            payload={
+                "t_shirt_size": None,
+                "t_shirt_given": False,
+                "kit_given": False,
+                "insurance_given": False,
+                "insurance_policy_number": None,
+                "insurance_provider": None,
+                "insurance_amount": 0.0,
+                "insurance_valid_from": None,
+                "insurance_valid_till": None,
+                "insurance_nominee_name": None,
+                "insurance_nominee_relation": None,
+                "insurance_details": None
+            },
+            current_user=self.admin_mr10001,
+            db=self.db
+        )
 
 
 if __name__ == '__main__':

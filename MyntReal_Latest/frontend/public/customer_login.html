@@ -434,6 +434,30 @@
                 <button type="submit" id="btnSignIn" class="btn-submit">
                     <i class="fa-solid fa-gauge-high"></i> Sign In to Executive Dashboard
                 </button>
+
+                <!-- ── SANDBOX DEMO ACCOUNTS QUICK FILL ── -->
+                <div class="mt-3 p-2 rounded-3" style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.35);">
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <span class="small fw-bold text-success" style="font-size: 0.72rem;">
+                            <i class="fa-solid fa-flask me-1"></i> Sandbox Test Accounts (Zero DB Impact)
+                        </span>
+                        <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.65rem;">1-Click Fill</span>
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-light text-start py-1 px-2 d-flex justify-content-between align-items-center" style="font-size: 0.72rem; border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);" onclick="fillSandbox('9876543210', '1234')">
+                            <span><strong class="text-warning">👑 Ramesh Kumar</strong> <span class="text-muted ms-1">(9876543210)</span></span>
+                            <span class="badge bg-warning text-dark py-0" style="font-size: 0.65rem;">VIP Executive</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light text-start py-1 px-2 d-flex justify-content-between align-items-center" style="font-size: 0.72rem; border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);" onclick="fillSandbox('9848012345', '2026')">
+                            <span><strong class="text-info">☀️ Lakshmi Priya</strong> <span class="text-muted ms-1">(9848012345)</span></span>
+                            <span class="badge bg-info text-dark py-0" style="font-size: 0.65rem;">Solar &amp; Bills</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light text-start py-1 px-2 d-flex justify-content-between align-items-center" style="font-size: 0.72rem; border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.02);" onclick="fillSandbox('9123456780', '4321')">
+                            <span><strong class="text-success">⚡ Suresh Varma</strong> <span class="text-muted ms-1">(9123456780)</span></span>
+                            <span class="badge bg-success text-dark py-0" style="font-size: 0.65rem;">EV &amp; Student</span>
+                        </button>
+                    </div>
+                </div>
             </form>
 
             <!-- ══ TAB 2: CREATE PROFILE FORM ══ -->
@@ -633,6 +657,23 @@
                 regForm.style.display = 'block';
                 tabLoginBtn.classList.remove('active');
                 tabRegBtn.classList.add('active');
+            }
+        }
+
+        function fillSandbox(phone, pin) {
+            switchTab('login');
+            const phoneInput = document.getElementById('loginPhone');
+            const pinInput = document.getElementById('loginPin');
+            phoneInput.value = phone;
+            pinInput.value = pin;
+            phoneInput.classList.add('border-warning');
+            pinInput.classList.add('border-warning');
+            setTimeout(() => {
+                phoneInput.classList.remove('border-warning');
+                pinInput.classList.remove('border-warning');
+            }, 1500);
+            if (typeof showToast === 'function') {
+                showToast(`Filled sandbox account ${phone} (PIN: ${pin})`, 'info');
             }
         }
 
