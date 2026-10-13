@@ -32,6 +32,20 @@
             --indigo: #6366f1;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+
+            /* Override Bootstrap 5 theme variables for dark theme contrast */
+            --bs-body-color: #f8fafc;
+            --bs-body-bg: #080d16;
+            --bs-secondary-color: #94a3b8;
+        }
+
+        .text-muted,
+        .small.text-muted,
+        span.text-muted,
+        div.text-muted,
+        p.text-muted,
+        label.text-muted {
+            color: #94a3b8 !important;
         }
 
         * {
@@ -227,33 +241,46 @@
         }
 
         .table-custom {
+            --bs-table-color: #cbd5e1;
+            --bs-table-bg: transparent;
+            --bs-table-border-color: rgba(255, 255, 255, 0.08);
+            --bs-table-hover-color: #f8fafc;
+            --bs-table-hover-bg: rgba(255, 255, 255, 0.03);
             width: 100%;
             margin-bottom: 0;
-            color: #cbd5e1;
+            color: #cbd5e1 !important;
             vertical-align: middle;
         }
 
+        .table-custom > :not(caption) > * > * {
+            background-color: transparent !important;
+            color: #cbd5e1 !important;
+            box-shadow: none !important;
+        }
+
         .table-custom th {
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--card-border);
+            letter-spacing: 0.6px;
+            color: #94a3b8 !important;
+            border-bottom: 1px solid var(--card-border) !important;
             padding: 12px 14px;
-            background: transparent;
+            background: transparent !important;
         }
 
         .table-custom td {
             font-size: 0.88rem;
             font-weight: 500;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #cbd5e1 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
             padding: 14px;
-            background: transparent;
+            background: transparent !important;
         }
 
         .table-custom tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.02) !important;
+            color: #f8fafc !important;
         }
 
         /* ── Status Badges ── */
@@ -407,10 +434,10 @@
                             <h2 class="h4 fw-bold mb-0 text-white" id="customerDisplayName">Customer</h2>
                             <span class="badge bg-success" style="font-size: 0.65rem; font-weight: 700;">VERIFIED PROFILE</span>
                         </div>
-                        <div class="small text-muted mt-1 d-flex flex-wrap align-items-center gap-2">
-                            <span><i class="fa-solid fa-phone text-warning me-1"></i><span id="customerPhoneBadge">+91 ----------</span></span>
-                            <span>•</span>
-                            <span><i class="fa-solid fa-location-dot text-info me-1"></i>PIN: <span id="customerPincodeBadge">------</span></span>
+                        <div class="small mt-1 d-flex flex-wrap align-items-center gap-2" style="color: #cbd5e1;">
+                            <span class="d-inline-flex align-items-center"><i class="fa-solid fa-phone text-warning me-1"></i><span id="customerPhoneBadge" class="fw-semibold text-white">+91 ----------</span></span>
+                            <span style="color: #64748b;">•</span>
+                            <span class="d-inline-flex align-items-center"><i class="fa-solid fa-location-dot text-info me-1"></i><span style="color: #94a3b8;">PIN:</span>&nbsp;<span id="customerPincodeBadge" class="fw-semibold text-white">------</span></span>
                         </div>
                     </div>
                 </div>
@@ -571,7 +598,7 @@
                 <div class="p-3 mb-4 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
                     <div>
                         <div class="fw-bold text-warning mb-1"><i class="fa-solid fa-share-nodes me-1"></i> Share with Friends &amp; Earn 50% Cashback Share!</div>
-                        <div class="small text-muted">Whenever someone recharges using your referral code, you receive 50% matched promotional reward points.</div>
+                        <div class="small" style="color: #cbd5e1;">Whenever someone recharges using your referral code, you receive 50% matched promotional reward points.</div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <code class="px-3 py-2 bg-dark rounded border text-warning fw-bold" id="myReferralCode">MYNT----</code>
@@ -662,22 +689,22 @@
                     <!-- Transaction summary card -->
                     <div class="p-3 rounded-3 mb-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted small">Target Number / ID:</span>
+                            <span class="small" style="color: #94a3b8;">Target Number / ID:</span>
                             <span class="fw-bold text-white" id="redoTargetAccount">--------</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted small">Provider / Operator:</span>
+                            <span class="small" style="color: #94a3b8;">Provider / Operator:</span>
                             <span class="fw-bold text-info" id="redoOperator">------</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted small">Last Transaction Amount:</span>
+                            <span class="small" style="color: #94a3b8;">Last Transaction Amount:</span>
                             <span class="h5 mb-0 fw-bolder text-warning" id="redoLastAmount">₹0.00</span>
                         </div>
                     </div>
 
                     <!-- Change amount expandable section -->
                     <div id="changeAmountSection" style="display: none;" class="mb-3">
-                        <label class="form-label small fw-bold text-muted mb-1">Enter New Amount (₹)</label>
+                        <label class="form-label small fw-bold mb-1" style="color: #cbd5e1;">Enter New Amount (₹)</label>
                         <input type="number" id="customRedoAmount" class="form-control form-control-lg bg-dark text-white border-secondary fw-bold" placeholder="Enter amount">
                         <div class="quick-amount-chips">
                             <span class="q-chip" onclick="setRedoAmount(199)">₹199</span>
@@ -782,10 +809,10 @@
 
                 return `
                     <tr>
-                        <td>${dateStr}</td>
+                        <td style="color: #cbd5e1;"><i class="fa-regular fa-calendar me-1" style="color: #94a3b8; font-size: 0.8rem;"></i>${dateStr}</td>
                         <td class="fw-bold text-white">+91 ${item.target_number || '--'}</td>
-                        <td>${item.operator} <span class="text-muted small">(${item.circle})</span></td>
-                        <td class="fw-bold text-warning">₹${item.amount.toFixed(2)}</td>
+                        <td style="color: #f1f5f9;"><span class="fw-semibold">${item.operator}</span> <span class="small" style="color: #94a3b8;">(${item.circle})</span></td>
+                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${item.amount.toFixed(2)}</td>
                         <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
                         <td class="text-end">
                             <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
@@ -812,11 +839,11 @@
 
                 return `
                     <tr>
-                        <td>${dateStr}</td>
+                        <td style="color: #cbd5e1;"><i class="fa-regular fa-calendar me-1" style="color: #94a3b8; font-size: 0.8rem;"></i>${dateStr}</td>
                         <td class="text-uppercase fw-bold text-info">${item.service_type}</td>
                         <td class="fw-bold text-white">${item.account_identifier || '--'}</td>
-                        <td>${item.operator}</td>
-                        <td class="fw-bold text-warning">₹${item.amount.toFixed(2)}</td>
+                        <td style="color: #f1f5f9;" class="fw-semibold">${item.operator}</td>
+                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${item.amount.toFixed(2)}</td>
                         <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
                         <td class="text-end">
                             <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
@@ -842,7 +869,7 @@
                         ${c.status === 'claimed' ? 'Claimed' : 'Ready to Scratch'}
                     </span>
                     <div class="h3 fw-bolder text-warning mb-1">₹${c.amount_rupees.toFixed(2)}</div>
-                    <div class="small text-muted mb-3">Ref: ${c.referral_code}</div>
+                    <div class="small mb-3" style="color: #94a3b8;">Ref: <span class="text-white fw-semibold">${c.referral_code}</span></div>
                     <a href="/scratch-card.html" class="btn btn-sm btn-outline-warning w-100 rounded-pill fw-bold">
                         <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${c.status === 'claimed' ? 'View Details' : 'Scratch Now'}
                     </a>
@@ -862,11 +889,11 @@
                 <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
                     <div>
                         <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-solar-panel text-warning me-2"></i> ${s.project_name}</div>
-                        <div class="small text-muted">Capacity: <strong class="text-warning">${s.capacity}</strong> • Board: <strong>${s.discom}</strong></div>
+                        <div class="small" style="color: #94a3b8;">Capacity: <strong class="text-warning">${s.capacity}</strong> • Board: <strong class="text-light">${s.discom}</strong></div>
                     </div>
                     <div class="text-end">
                         <span class="badge bg-primary px-3 py-2 text-uppercase">${s.status}</span>
-                        <div class="small text-muted mt-1">Sanction Date: ${s.sanction_date ? new Date(s.sanction_date).toLocaleDateString('en-IN') : 'In Verification'}</div>
+                        <div class="small mt-1" style="color: #94a3b8;">Sanction Date: <span class="text-white">${s.sanction_date ? new Date(s.sanction_date).toLocaleDateString('en-IN') : 'In Verification'}</span></div>
                     </div>
                 </div>
             `).join('');
@@ -885,7 +912,7 @@
                     <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: var(--card-surface); border: 1px solid var(--card-border);">
                         <div>
                             <div class="fw-bold text-white"><i class="fa-solid fa-motorcycle text-success me-2"></i> ${v.model_name}</div>
-                            <div class="small text-muted">${v.details}</div>
+                            <div class="small" style="color: #cbd5e1;">${v.details}</div>
                         </div>
                         <span class="badge bg-success px-3 py-2">${v.status}</span>
                     </div>
@@ -899,7 +926,7 @@
                     <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: var(--card-surface); border: 1px solid var(--card-border);">
                         <div>
                             <div class="fw-bold text-white"><i class="fa-solid fa-ticket text-info me-2"></i> ${t.ticket_number} - ${t.title}</div>
-                            <div class="small text-muted">Priority: <strong class="text-warning">${t.priority}</strong> • Created: ${t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN') : '--'}</div>
+                            <div class="small" style="color: #94a3b8;">Priority: <strong class="text-warning">${t.priority}</strong> • Created: <span class="text-light">${t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN') : '--'}</span></div>
                         </div>
                         <span class="badge bg-info text-dark px-3 py-2">${t.status}</span>
                     </div>
@@ -919,7 +946,7 @@
                 <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
                     <div>
                         <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-award text-warning me-2"></i> ${tr.program_name}</div>
-                        <div class="small text-muted">${tr.details}</div>
+                        <div class="small" style="color: #cbd5e1;">${tr.details}</div>
                     </div>
                     <span class="badge bg-primary px-3 py-2">${tr.batch_status}</span>
                 </div>
