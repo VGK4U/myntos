@@ -950,7 +950,7 @@ def dispatch_scanned_lead_fallback(
     status_urls = ["http://127.0.0.1:5002/status", "http://localhost:5002/status"]
     for s_url in status_urls:
         try:
-            s_resp = requests.get(s_url, timeout=1.5)
+            s_resp = requests.get(s_url, timeout=3.5)
             if s_resp.status_code == 200:
                 gateway_online = True
                 s_data = s_resp.json()
@@ -972,7 +972,7 @@ def dispatch_scanned_lead_fallback(
                     "phone": clean_p,
                     "message": message,
                     "lead_id": lead_id,
-                    "job_id": "lead_welcome_fallback",
+                    "job_id": event_key or "lead_welcome_fallback",
                     "execution_id": exec_id,
                     "skip_backend_log": True
                 }

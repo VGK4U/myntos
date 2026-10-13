@@ -7634,15 +7634,24 @@ def poll_bot_queue(
     except Exception as rh_err:
         logger.warning(f"[BOT-QUEUE-POLL] Stale recovery note: {rh_err}")
 
-        # Auto-cancel any individual items in queue to protect scanned WhatsApp account from anti-spam bans
+    try:
+        # Anti-Ban Protection (DC Strict Protocol):
+        # Auto-cancel cold customer leads to strictly prevent scanned WhatsApp account from anti-spam bans.
+        # ONLY strictly whitelisted internal staff & leadership communications (e.g. 8875551666, internal_staff_alert) are permitted.
         try:
             db.execute(text("""
                 UPDATE whatsapp_bot_queue
                 SET status = 'cancelled',
-                    error_message = 'Cancelled to protect Scanned WA account from bans. Individual messages strictly require Meta Cloud API.'
+                    error_message = 'Cancelled to protect Scanned WA account from bans. Cold customer leads strictly require Meta Cloud API.'
                 WHERE status IN ('pending', 'processing')
                   AND target_type != 'group'
                   AND (target_jid IS NULL OR target_jid NOT LIKE '%@g.us')
+                  AND (
+                      target_jid NOT LIKE '%8875551666%'
+                      AND target_jid NOT LIKE '%8897797667%'
+                      AND target_jid NOT LIKE '%8019045667%'
+                      AND (job_id IS NULL OR job_id NOT IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned'))
+                  )
             """))
             db.commit()
         except Exception:
@@ -7653,7 +7662,14 @@ def poll_bot_queue(
                 SELECT id, target_type, target_jid, message, media_url, result_payload
                 FROM whatsapp_bot_queue
                 WHERE status = 'pending'
-                  AND (target_type = 'group' OR target_jid LIKE '%@g.us')
+                  AND (
+                      target_type = 'group'
+                      OR target_jid LIKE '%@g.us'
+                      OR target_jid LIKE '%8875551666%'
+                      OR target_jid LIKE '%8897797667%'
+                      OR target_jid LIKE '%8019045667%'
+                      OR job_id IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
+                  )
                 ORDER BY id ASC
                 LIMIT :limit
                 FOR UPDATE SKIP LOCKED
@@ -7667,7 +7683,7 @@ def poll_bot_queue(
 
         items = []
         now_iso = datetime.utcnow().isoformat()
-        worker_id = instance_id or "leader_worker"
+        worker_id = instance_id if (instance_id and isinstance(instance_id, str)) else "leader_worker"
 
         for r in rows:
             q_id = r[0]

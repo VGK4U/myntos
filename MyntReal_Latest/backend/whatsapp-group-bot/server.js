@@ -143,7 +143,7 @@ async function processOutboundQueue() {
         const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=5&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
         if (!resp.ok) return;
         const data = await resp.json();
-        const items = data.items || [];
+        const items = (data && data.items) || [];
         if (items.length === 0) return;
 
         console.log(`📬 [ANTI-BAN-PACING] Processing ${items.length} queued messages with staggered anti-ban time gaps...`);
