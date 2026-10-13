@@ -31,9 +31,43 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 24px 16px 50px 16px;
+            padding: 0 0 50px 0;
             margin: 0;
             background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
+        }
+
+        .top-navbar {
+            width: 100%;
+            background: rgba(9, 13, 22, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            margin-bottom: 24px;
+        }
+
+        .nav-back-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         .brand-header {
@@ -590,6 +624,34 @@
     </style>
 </head>
 <body>
+
+    <!-- TOP NAVBAR -->
+    <header class="top-navbar">
+        <div class="container d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" onclick="handleScratchBack()" class="nav-back-btn" title="Back to previous page">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <a href="/" class="nav-back-btn" title="Go to Home page">
+                    <i class="fa-solid fa-house"></i> <span>Home</span>
+                </a>
+                <a href="/customer" class="nav-back-btn text-success ms-1" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);" title="Customer Hub">
+                    <i class="fa-solid fa-user-circle"></i> <span class="d-none d-sm-inline">Customer Hub</span>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/recharge" class="nav-back-btn text-warning d-none d-sm-inline-flex" style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1);" title="Recharge &amp; Bill Payments">
+                    <i class="fa-solid fa-bolt"></i> <span>Recharge</span>
+                </a>
+                <button type="button" onclick="handleScratchLogout()" class="nav-back-btn text-danger" style="border-color: rgba(239, 68, 68, 0.4);" title="Logout of customer account">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span>
+                </button>
+                <a href="/landing" onclick="sessionStorage.setItem('showLoginSelection', 'true');" class="nav-back-btn d-none d-md-inline-flex" title="All Portals">
+                    <i class="fa-solid fa-th"></i> <span class="d-none d-lg-inline">All Logins</span>
+                </a>
+            </div>
+        </div>
+    </header>
 
     <!-- BRAND HEADER -->
     <div class="brand-header">
@@ -1408,6 +1470,24 @@
                 closeClaimModal();
             }
         });
+
+        function handleScratchBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/customer';
+            }
+        }
+
+        function handleScratchLogout() {
+            if (confirm('Are you sure you want to sign out of your customer account?')) {
+                localStorage.removeItem('customer_access_token');
+                localStorage.removeItem('customer_profile');
+                sessionStorage.removeItem('customer_access_token');
+                sessionStorage.removeItem('customer_profile');
+                window.location.href = '/customer';
+            }
+        }
     </script>
 </body>
 </html>

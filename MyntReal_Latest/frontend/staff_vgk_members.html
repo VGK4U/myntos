@@ -605,7 +605,8 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 <!-- ── Members Tab ── -->
 <div id="tabMembers" class="tab-panel active">
 <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-  <div style="display:flex;gap:10px;align-items:center">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button onclick="openGeneralMessageModal()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(2,132,199,0.3)"><i class="fas fa-bullhorn"></i> General Message</button>
     <button onclick="openBulkWAModal()" style="background:#128c7e;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fab fa-whatsapp"></i> Bulk WA Send</button>
     <button onclick="openAddMemberAdvanceModal()" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.3)"><i class="fas fa-hand-holding-usd"></i> + Add Member Advance</button>
     <button id="addMemberBtn" class="btn-banner white" onclick="openAddModal()" style="background:#7c3aed;color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fas fa-plus"></i> Add Channel Partner</button>
@@ -11039,6 +11040,655 @@ window.onPostExpiryChange = onPostExpiryChange;
 window.submitPostToPortal = submitPostToPortal;
 window.postPosterAnnouncement = openPostToPortalModal;
 
+// ═══════════════════════════════════════════════════════════════════
+// ── GENERAL BROADCAST MESSAGE MODAL CONTROLLER ──
+// ═══════════════════════════════════════════════════════════════════
+window._genMsgSelectedMembers = [];
+window._genMsgUploadedImage = null; // { dataUrl, blob, name }
+let _genMsgSearchTimer = null;
+
+function openGeneralMessageModal() {
+  const modal = document.getElementById('generalMessageModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  if (!window._genMsgSelectedMembers) window._genMsgSelectedMembers = [];
+  renderGenMsgSelectedMembers();
+  updateGenMsgCharCount();
+
+  setTimeout(() => {
+    const input = document.getElementById('genMsgMemberSearch');
+    if (input) input.focus();
+  }, 100);
+}
+window.openGeneralMessageModal = openGeneralMessageModal;
+
+function closeGeneralMessageModal() {
+  const modal = document.getElementById('generalMessageModal');
+  if (modal) modal.style.display = 'none';
+  const dropdown = document.getElementById('genMsgMemberDropdown');
+  if (dropdown) dropdown.style.display = 'none';
+}
+window.closeGeneralMessageModal = closeGeneralMessageModal;
+
+function debounceGenMsgMemberSearch(val) {
+  clearTimeout(_genMsgSearchTimer);
+  const q = (val || '').trim();
+  const dropdown = document.getElementById('genMsgMemberDropdown');
+  if (!dropdown) return;
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  if ((window._genMsgSelectedMembers || []).length >= 5) {
+    dropdown.innerHTML = '<div style="padding:10px;font-size:11.5px;color:#dc2626;text-align:center;font-weight:700">Maximum 5 members already selected. Remove one to select another.</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  _genMsgSearchTimer = setTimeout(async () => {
+    try {
+      const apiBase = (typeof API !== 'undefined') ? API : '/api/v1';
+      const res = await staffFetch(apiBase + '/vgk/members/search?active_only=false&q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const list = (data.success && data.data) ? data.data : [];
+      if (!list.length) {
+        dropdown.innerHTML = '<div style="padding:10px;font-size:12px;color:#9ca3af;text-align:center">No matching partners found</div>';
+      } else {
+        const selectedIds = new Set((window._genMsgSelectedMembers || []).map(m => String(m.id || m.partner_code)));
+        dropdown.innerHTML = list.map(m => {
+          const isSelected = selectedIds.has(String(m.id || m.partner_code));
+          const jsonStr = encodeURIComponent(JSON.stringify({
+            id: m.id || m.partner_code,
+            partner_name: m.partner_name || m.name || '',
+            partner_code: m.partner_code || '',
+            phone: m.phone || '',
+            designation: m.career_designation || m.designation || 'Channel Partner'
+          }));
+          return `
+            <div onclick="selectGenMsgMember('${jsonStr}')"
+                 style="padding:9px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:8px;background:${isSelected ? '#f0fdf4' : '#fff'}"
+                 onmouseover="this.style.background='${isSelected ? '#dcfce7' : '#f0f9ff'}'" onmouseout="this.style.background='${isSelected ? '#f0fdf4' : '#fff'}'">
+              <div style="min-width:0;flex:1">
+                <strong style="color:#0284c7">${esc(m.partner_code||'')}</strong> — <span style="font-weight:700;color:#1e293b">${esc(m.partner_name||'')}</span>
+                ${isSelected ? '<span style="font-size:10px;color:#059669;font-weight:800;margin-left:6px"><i class="fas fa-check"></i> Selected</span>' : ''}
+              </div>
+              <span style="font-size:11px;color:#64748b;font-family:monospace">${esc(m.phone || '')}</span>
+            </div>
+          `;
+        }).join('');
+      }
+      dropdown.style.display = 'block';
+    } catch(err) {
+      console.error('Error in genMsg member search:', err);
+    }
+  }, 250);
+}
+window.debounceGenMsgMemberSearch = debounceGenMsgMemberSearch;
+
+function selectGenMsgMember(jsonStr) {
+  try {
+    const partner = JSON.parse(decodeURIComponent(jsonStr));
+    if (!window._genMsgSelectedMembers) window._genMsgSelectedMembers = [];
+
+    if (window._genMsgSelectedMembers.length >= 5) {
+      alert('You can select a maximum of 5 members.');
+      return;
+    }
+
+    const exists = window._genMsgSelectedMembers.some(m => String(m.id) === String(partner.id) || String(m.partner_code) === String(partner.partner_code));
+    if (exists) {
+      alert(`${partner.partner_name} (${partner.partner_code}) is already selected.`);
+      return;
+    }
+
+    window._genMsgSelectedMembers.push(partner);
+    renderGenMsgSelectedMembers();
+
+    const input = document.getElementById('genMsgMemberSearch');
+    if (input) input.value = '';
+    const dropdown = document.getElementById('genMsgMemberDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  } catch(err) {
+    console.error('Error selecting genMsg member:', err);
+  }
+}
+window.selectGenMsgMember = selectGenMsgMember;
+
+function removeGenMsgMember(idOrCode) {
+  if (!window._genMsgSelectedMembers) return;
+  window._genMsgSelectedMembers = window._genMsgSelectedMembers.filter(m => String(m.id) !== String(idOrCode) && String(m.partner_code) !== String(idOrCode));
+  renderGenMsgSelectedMembers();
+}
+window.removeGenMsgMember = removeGenMsgMember;
+
+function renderGenMsgSelectedMembers() {
+  const container = document.getElementById('genMsgSelectedMembersList');
+  const badge = document.getElementById('genMsgCountBadge');
+  const members = window._genMsgSelectedMembers || [];
+
+  if (badge) {
+    badge.textContent = `${members.length} / 5 Selected`;
+    badge.style.background = members.length >= 5 ? '#fef2f2' : '#e0f2fe';
+    badge.style.color = members.length >= 5 ? '#dc2626' : '#0369a1';
+  }
+
+  if (!container) return;
+
+  if (!members.length) {
+    container.innerHTML = '<div style="font-size:11.5px;color:#94a3b8;font-style:italic;padding:8px 0;text-align:center">No members selected yet (search above to add)</div>';
+    return;
+  }
+
+  container.innerHTML = members.map((m, idx) => {
+    const cleanPhone = (m.phone || '').replace(/\D/g, '');
+    const phoneDisplay = cleanPhone ? `+91 ${cleanPhone.slice(-10)}` : 'No phone';
+    return `
+      <div style="background:#ffffff;border:1.5px solid #bae6fd;border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#0284c7,#0369a1);color:white;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${idx + 1}
+          </div>
+          <div style="min-width:0;flex:1">
+            <div style="font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${esc(m.partner_name || m.name || 'Member')}
+            </div>
+            <div style="font-size:10.5px;color:#64748b;display:flex;align-items:center;gap:6px">
+              <span style="font-weight:700;color:#0284c7">${esc(m.partner_code || '')}</span>
+              <span>•</span>
+              <span>${phoneDisplay}</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="removeGenMsgMember('${m.id || m.partner_code}')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;margin-left:6px;flex-shrink:0" title="Remove member">
+          &times;
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+window.renderGenMsgSelectedMembers = renderGenMsgSelectedMembers;
+
+function updateGenMsgCharCount() {
+  const el = document.getElementById('genMsgText');
+  const counter = document.getElementById('genMsgCharCount');
+  if (!el || !counter) return;
+  const len = el.value.length;
+  const words = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+  counter.textContent = `${len} chars | ${words} words`;
+}
+window.updateGenMsgCharCount = updateGenMsgCharCount;
+
+function handleGenMsgImageUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  if (!validTypes.includes(file.type.toLowerCase())) {
+    alert('Please select a valid image file (JPG, PNG, WebP).');
+    return;
+  }
+
+  const spinner = document.getElementById('genMsgSpinner');
+  if (spinner) spinner.style.display = 'flex';
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const tempImg = new Image();
+    tempImg.onload = function() {
+      const maxDim = 1200;
+      let w = tempImg.width;
+      let h = tempImg.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const cvs = document.createElement('canvas');
+      cvs.width = w;
+      cvs.height = h;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(tempImg, 0, 0, w, h);
+
+      const mimeType = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
+      const quality = (mimeType === 'image/jpeg') ? 0.90 : undefined;
+      const dataUrl = cvs.toDataURL(mimeType, quality);
+
+      cvs.toBlob(function(blob) {
+        if (spinner) spinner.style.display = 'none';
+        window._genMsgUploadedImage = { dataUrl, blob, name: file.name };
+
+        const card = document.getElementById('genMsgImgCard');
+        const placeholder = document.getElementById('genMsgEmptyPlaceholder');
+        const preview = document.getElementById('genMsgImgPreview');
+        const topBadge = document.getElementById('genMsgPreviewTopBadge');
+        const statusBadge = document.getElementById('genMsgUploadStatusBadge');
+
+        if (preview) preview.src = dataUrl;
+        if (card) card.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+
+        if (topBadge) {
+          topBadge.textContent = 'Ready for Broadcast';
+          topBadge.style.background = '#065f46';
+          topBadge.style.color = '#34d399';
+          topBadge.style.borderColor = '#059669';
+        }
+        if (statusBadge) {
+          statusBadge.textContent = 'Creative Attached ✅';
+          statusBadge.style.background = '#d1fae5';
+          statusBadge.style.color = '#065f46';
+        }
+      }, mimeType, quality);
+    };
+    tempImg.onerror = function() {
+      if (spinner) spinner.style.display = 'none';
+      alert('Could not decode image file.');
+    };
+    tempImg.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window.handleGenMsgImageUpload = handleGenMsgImageUpload;
+
+function clearGenMsgImage() {
+  window._genMsgUploadedImage = null;
+  const fileInput = document.getElementById('genMsgCreativeFileInput');
+  if (fileInput) fileInput.value = '';
+
+  const card = document.getElementById('genMsgImgCard');
+  const placeholder = document.getElementById('genMsgEmptyPlaceholder');
+  const preview = document.getElementById('genMsgImgPreview');
+  const topBadge = document.getElementById('genMsgPreviewTopBadge');
+  const statusBadge = document.getElementById('genMsgUploadStatusBadge');
+
+  if (preview) preview.src = '';
+  if (card) card.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'flex';
+
+  if (topBadge) {
+    topBadge.textContent = 'Optional Attachment';
+    topBadge.style.background = '#1e293b';
+    topBadge.style.color = '#94a3b8';
+    topBadge.style.borderColor = '#334155';
+  }
+  if (statusBadge) {
+    statusBadge.textContent = 'No Image Attached';
+    statusBadge.style.background = '#f1f5f9';
+    statusBadge.style.color = '#64748b';
+  }
+}
+window.clearGenMsgImage = clearGenMsgImage;
+
+async function testShareGenMsg() {
+  const text = (document.getElementById('genMsgText')?.value || '').trim();
+  const imgData = window._genMsgUploadedImage?.dataUrl || null;
+
+  if (!text && !imgData) {
+    alert('Please enter a message or upload an image before testing.');
+    return;
+  }
+
+  const savedPhone = localStorage.getItem('last_test_wa_phone') || '';
+  const phoneInput = prompt('📲 ENTER TEST WHATSAPP NUMBER:\n----------------------------------------\nEnter the WhatsApp mobile number to test message & flyer before broadcast:', savedPhone || '91');
+  if (!phoneInput) return;
+  let cleanPhone = phoneInput.replace(/\D/g, '');
+  if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+  if (cleanPhone.length < 10) {
+    alert('Please enter a valid 10-digit or 12-digit mobile number.');
+    return;
+  }
+  localStorage.setItem('last_test_wa_phone', cleanPhone);
+
+  const spinner = document.getElementById('genMsgSpinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Sending test WhatsApp message...';
+  }
+
+  try {
+    const res = await fetch('/api/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: cleanPhone, imageUrl: imgData, message: text })
+    });
+    const json = await res.json();
+    if (spinner) spinner.style.display = 'none';
+    if (json.success) {
+      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${imgData ? 'Flyer Image 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp to verify.`);
+    } else {
+      const errNotice = json.error || 'WhatsApp bot not connected';
+      const useFallback = confirm(`⚠️ Automated Bot Notice:\n${errNotice}\n\nWould you like to open directly via WhatsApp Web to +91 ${cleanPhone.slice(-10)} instead?`);
+      if (useFallback) {
+        window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(text)}`, '_blank');
+      }
+    }
+  } catch(err) {
+    if (spinner) spinner.style.display = 'none';
+    const useFallback = confirm(`⚠️ Background Bot Unavailable.\n\nOpen via WhatsApp Web instead?`);
+    if (useFallback) {
+      window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+  }
+}
+window.testShareGenMsg = testShareGenMsg;
+
+async function shareGenMsgWhatsAppWeb() {
+  const text = (document.getElementById('genMsgText')?.value || '').trim();
+  const imgData = window._genMsgUploadedImage?.dataUrl || null;
+  const imgBlob = window._genMsgUploadedImage?.blob || null;
+
+  if (!text && !imgData) {
+    alert('Please enter a message or upload an image before sharing.');
+    return;
+  }
+
+  if (imgData) {
+    try {
+      const link = document.createElement('a');
+      link.download = `General_Announcement_${Date.now()}.png`;
+      link.href = imgData;
+      link.click();
+    } catch(e) {}
+  }
+
+  if (imgBlob && navigator.clipboard && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ [imgBlob.type || 'image/png']: imgBlob })
+      ]);
+      alert('Flyer image downloaded and copied to clipboard! You can paste (Ctrl+V / Cmd+V) directly inside WhatsApp.');
+    } catch(e) {}
+  }
+
+  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+window.shareGenMsgWhatsAppWeb = shareGenMsgWhatsAppWeb;
+
+function shareGenMsgPoster() {
+  shareGenMsgWhatsAppWeb();
+}
+window.shareGenMsgPoster = shareGenMsgPoster;
+
+async function shareGenMsgDefaultChannel() {
+  const text = (document.getElementById('genMsgText')?.value || '').trim();
+  const imgData = window._genMsgUploadedImage?.dataUrl || null;
+  const imgBlob = window._genMsgUploadedImage?.blob || null;
+  const members = window._genMsgSelectedMembers || [];
+
+  if (!text && !imgData) {
+    alert('Please enter a broadcast message or attach an image before broadcasting.');
+    return;
+  }
+
+  // Construct target list for dispatch modal
+  const dispatchTargets = [];
+
+  // Selected Members (1 to 5)
+  if (members.length > 0) {
+    members.forEach((m, idx) => {
+      const cleanPhone = (m.phone || '').replace(/\D/g, '');
+      const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
+      dispatchTargets.push({
+        id: 'gen_member_' + (m.id || idx),
+        type: 'member',
+        label: `Member: ${m.partner_name || m.name || 'Partner'}`,
+        target: isBlocked ? 'Blocked Partner (Excluded)' : (cleanPhone ? `+91 ${cleanPhone.slice(-10)}` : 'No Phone'),
+        phone: cleanPhone,
+        status: isBlocked ? 'skipped' : (cleanPhone ? 'sending' : 'skipped'),
+        msg: isBlocked ? 'Suppressed (Blocked Partner)' : (cleanPhone ? 'Broadcasting...' : 'No Phone Number')
+      });
+    });
+  } else {
+    dispatchTargets.push({
+      id: 'gen_no_member',
+      type: 'member',
+      label: 'Selected Members (None)',
+      target: 'No specific members selected',
+      status: 'skipped',
+      msg: 'Broadcasting to groups only'
+    });
+  }
+
+  // WhatsApp Groups & Channels
+  dispatchTargets.push(
+    { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
+    { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'group_vgk_gen', type: 'group', label: 'VGK4U General', target: 'VGK4U General', groupName: 'VGK4U General', status: 'sending', msg: 'Broadcasting to group...' },
+    { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
+  );
+
+  // Show live dispatch modal immediately
+  if (typeof showLiveDispatchStatusModal === 'function') {
+    showLiveDispatchStatusModal(dispatchTargets, 'General Announcement');
+  }
+
+  const fetchWithTimeout = async (url, opts = {}, ms = 10000) => {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), ms);
+    try {
+      const r = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(tid);
+      return r;
+    } catch (e) {
+      clearTimeout(tid);
+      throw e;
+    }
+  };
+
+  const updateStatus = (id, st, msg) => {
+    if (typeof updateDispatchStatus === 'function') updateDispatchStatus(id, st, msg);
+  };
+
+  // 1. Submit Portal Shoutout
+  try {
+    const formData = new FormData();
+    const firstLine = text.split('\n')[0].replace(/[*_#]/g, '').trim();
+    formData.append('title', `📢 ${firstLine || 'General Announcement'}`);
+    formData.append('description', text);
+    formData.append('category_id', '1');
+    formData.append('submission_type', imgBlob ? 'photo' : 'announcement');
+    if (imgBlob) {
+      formData.append('files', imgBlob, `General_Announcement_${Date.now()}.png`);
+    }
+
+    const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+
+    const res = await fetch(`${apiBase}/feedback/submit-staff-announcement`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + tok },
+      body: formData
+    });
+    const d = await res.json();
+    if (d && d.duplicate) {
+      updateStatus('portal_shoutout', 'skipped', 'STOPPED ⏸️ Already Posted Today');
+    } else {
+      updateStatus('portal_shoutout', 'sent', 'Published on Login Page');
+    }
+  } catch(pErr) {
+    updateStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
+  }
+
+  // 2. Selected Members Direct Dispatch
+  for (const m of members) {
+    const tId = 'gen_member_' + (m.id || m.partner_code);
+    const cleanPhone = (m.phone || '').replace(/\D/g, '');
+    const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
+
+    if (isBlocked) {
+      updateStatus(tId, 'skipped', 'Suppressed (Blocked Member)');
+    } else if (cleanPhone) {
+      try {
+        const res = await fetchWithTimeout('/api/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, imageUrl: imgData, message: text })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateStatus(tId, 'sent', imgData ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
+        } else if (json.blocked) {
+          updateStatus(tId, 'skipped', 'Suppressed (Blocked Member)');
+        } else {
+          updateStatus(tId, 'error', json.error || 'Send Failed');
+        }
+      } catch(mErr) {
+        updateStatus(tId, 'error', 'WhatsApp Bot Offline');
+      }
+    } else {
+      updateStatus(tId, 'skipped', 'No Phone Number');
+    }
+  }
+
+  // 3. VGK4U Official Channel
+  try {
+    const res = await fetchWithTimeout('/api/send-group-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: imgData, message: text, inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      updateStatus('channel_official', 'sent', imgData ? 'Delivered with Image' : 'Delivered to Channel (Text Only)');
+    } else {
+      updateStatus('channel_official', 'error', json.error || 'Channel Send Failed');
+    }
+  } catch(cErr) {
+    updateStatus('channel_official', 'error', 'Bot Offline or Not Admin');
+  }
+
+  // 4. VGK Community Group
+  try {
+    const res = await fetchWithTimeout('/api/send-group-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: imgData, message: text, inviteCode: 'HNQQoKXFfCm5PQngGdrlcY' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      updateStatus('group_main', 'sent', imgData ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
+    } else {
+      updateStatus('group_main', 'error', json.error || 'Group Send Failed');
+    }
+  } catch(gErr) {
+    updateStatus('group_main', 'error', 'Bot Offline or Not in Group');
+  }
+
+  // 5. Executive Announcements
+  try {
+    const res = await fetchWithTimeout('/api/send-group-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: imgData, message: text, inviteCode: 'LfX8mGootXa7SpwNIz7P5C' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      updateStatus('group_exec', 'sent', imgData ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
+    } else {
+      updateStatus('group_exec', 'error', json.error || 'Group Send Failed');
+    }
+  } catch(gErr) {
+    updateStatus('group_exec', 'error', 'Bot Offline or Not in Group');
+  }
+
+  // 6. MNR General Group
+  try {
+    const res = await fetchWithTimeout('/api/send-group-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: imgData, message: text, groupId: '120363423048458227@g.us', groupName: 'MNR General Group' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      updateStatus('group_mnr_gen', 'sent', imgData ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
+    } else {
+      updateStatus('group_mnr_gen', 'error', json.error || 'Group Send Failed');
+    }
+  } catch(mErr) {
+    updateStatus('group_mnr_gen', 'error', 'Bot Offline or Not in Group');
+  }
+
+  // 7. VGK4U General Group
+  try {
+    const res = await fetchWithTimeout('/api/send-group-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: imgData, message: text, groupName: 'VGK4U General' })
+    });
+    const json = await res.json();
+    if (json.success) {
+      updateStatus('group_vgk_gen', 'sent', imgData ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
+    } else {
+      updateStatus('group_vgk_gen', 'error', json.error || 'Group Send Failed');
+    }
+  } catch(genErr) {
+    updateStatus('group_vgk_gen', 'error', 'Bot Offline or Not in Group');
+  }
+}
+window.shareGenMsgDefaultChannel = shareGenMsgDefaultChannel;
+
+function openGenMsgPostToPortal() {
+  const text = (document.getElementById('genMsgText')?.value || '').trim();
+  const imgData = window._genMsgUploadedImage?.dataUrl || null;
+  const imgBlob = window._genMsgUploadedImage?.blob || null;
+
+  window._currentPosterBlob = imgBlob;
+  window._currentPosterDataUrl = imgData;
+
+  const titleInput = document.getElementById('postPortalTitle');
+  const descInput = document.getElementById('postPortalDescription');
+  const memberSummary = document.getElementById('postPortalSummaryMember');
+  const infoSummary = document.getElementById('postPortalSummaryInfo');
+  const thumbImg = document.getElementById('postPortalThumbnail');
+  const thumbIcon = document.getElementById('postPortalThumbIcon');
+
+  const firstLine = text.split('\n')[0].replace(/[*_#]/g, '').trim();
+  if (titleInput) titleInput.value = firstLine ? `📢 ${firstLine}` : '📢 General Announcement';
+  if (descInput) descInput.value = text;
+  if (memberSummary) memberSummary.textContent = 'General Broadcast Announcement';
+  if (infoSummary) infoSummary.textContent = imgData ? 'Using uploaded creative flyer.' : 'Text-only announcement.';
+
+  if (thumbImg && thumbIcon) {
+    if (imgData) {
+      thumbImg.src = imgData;
+      thumbImg.style.display = 'block';
+      thumbIcon.style.display = 'none';
+    } else {
+      thumbImg.src = '';
+      thumbImg.style.display = 'none';
+      thumbIcon.style.display = 'block';
+    }
+  }
+
+  const modal = document.getElementById('postToPortalModal');
+  if (modal) modal.style.display = 'flex';
+}
+window.openGenMsgPostToPortal = openGenMsgPostToPortal;
+
+function downloadGenMsgImage() {
+  const imgData = window._genMsgUploadedImage?.dataUrl;
+  if (!imgData) {
+    alert('No flyer image uploaded to download.');
+    return;
+  }
+  const link = document.createElement('a');
+  link.download = `General_Announcement_Flyer_${Date.now()}.png`;
+  link.href = imgData;
+  link.click();
+}
+window.downloadGenMsgImage = downloadGenMsgImage;
+
 function showDirectWaShareDialog({ memberName, memberPhone, seniorName, seniorPhone, msgText }) {
   const old = document.getElementById('directWaShareModal');
   if (old) old.remove();
@@ -12249,6 +12899,171 @@ function _renderCommDetailTable(partnerId) {
       <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
       <button onclick="openPostToPortalModal()" id="btnPostToPortal" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
       <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── GENERAL MESSAGE BROADCAST MODAL ── -->
+<div id="generalMessageModal" onclick="if(event.target===this)closeGeneralMessageModal()" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box">
+  <div style="background:white;border-radius:16px;width:96vw;max-width:1440px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;height:92vh;max-height:92vh;overflow:hidden">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0284c7,#0369a1);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div style="color:white">
+        <div style="font-size:16px;font-weight:800"><i class="fas fa-bullhorn me-2"></i>Send General Broadcast Message</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">Broadcast announcement flyer and custom message to selected members and WhatsApp groups</div>
+      </div>
+      <button onclick="closeGeneralMessageModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:8px;color:white;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Body -->
+    <div style="display:flex;flex:1;overflow:hidden">
+      <!-- Left Pane: Controls -->
+      <div style="width:390px;background:#f9fafb;border-right:1px solid #e5e7eb;padding:20px;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+        
+        <!-- SECTION 1: TARGET MEMBERS (UP TO 5) -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <h5 style="font-size:12px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;margin:0">
+              <i class="fas fa-users me-1"></i>Select Members (Max 5)
+            </h5>
+            <span id="genMsgCountBadge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#e0f2fe;color:#0369a1">0 / 5 Selected</span>
+          </div>
+          <p style="font-size:11px;color:#64748b;margin:0 0 8px 0;line-height:1.35">
+            Type name, partner code, or mobile number to search and select up to 5 recipient members.
+          </p>
+          
+          <div style="position:relative">
+            <input type="text" id="genMsgMemberSearch" oninput="debounceGenMsgMemberSearch(this.value)" placeholder="Search partner name, code, phone…" style="width:100%;padding:8px 12px;font-size:12px;border:1.5px solid #cbd5e1;border-radius:8px;outline:none;background:#fff;box-sizing:border-box" autocomplete="off">
+            <div id="genMsgMemberDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1000;background:#fff;border:1.5px solid #0284c7;border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 10px 25px rgba(0,0,0,0.15);margin-top:4px"></div>
+          </div>
+          
+          <!-- Selected Members Chips Container -->
+          <div id="genMsgSelectedMembersList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:11.5px;color:#94a3b8;font-style:italic;padding:8px 0;text-align:center">No members selected yet (search above to add)</div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:0">
+
+        <!-- SECTION 2: BROADCAST MESSAGE TEXT -->
+        <div style="display:flex;flex-direction:column;flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="font-size:12px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;margin:0">
+              <i class="fas fa-comment-alt me-1"></i>Broadcast Message Text
+            </label>
+            <span id="genMsgCharCount" style="font-size:10px;font-weight:600;color:#64748b">0 chars</span>
+          </div>
+          <p style="font-size:11px;color:#64748b;margin:0 0 8px 0;line-height:1.35">
+            Whatever you type here is dispatched directly across selected members, WhatsApp groups &amp; channels.
+          </p>
+          <textarea id="genMsgText" rows="7" oninput="updateGenMsgCharCount()" style="width:100%;font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.45;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px;box-sizing:border-box;resize:vertical;background:#ffffff;color:#111827" placeholder="Type your announcement or broadcast message here..."></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span style="font-size:10px;color:#94a3b8">Tip: Use *bold*, _italics_ for WhatsApp formatting</span>
+            <button type="button" onclick="document.getElementById('genMsgText').value='';updateGenMsgCharCount()" style="background:none;border:none;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;padding:0">Clear</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:0">
+
+        <!-- SECTION 3: ATTACH CUSTOM CREATIVE / FLYER (UPLOAD ONLY REQUIRED) -->
+        <div style="background:#ffffff;border:1.5px dashed #0284c7;border-radius:10px;padding:12px;box-sizing:border-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="font-size:11.5px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:0.3px;margin:0">
+              <i class="fas fa-file-image me-1"></i>Creative / Flyer
+            </label>
+            <span id="genMsgUploadStatusBadge" style="font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f1f5f9;color:#64748b">
+              No Image Attached
+            </span>
+          </div>
+          
+          <p style="font-size:10.5px;color:#475569;margin:0 0 8px 0;line-height:1.35">
+            Upload your designed flyer or banner (PNG, JPG, WebP). It will be dispatched alongside your message.
+          </p>
+
+          <input type="file" id="genMsgCreativeFileInput" accept="image/*" onchange="handleGenMsgImageUpload(event)" style="display:none">
+          <div style="display:flex;gap:6px">
+            <button type="button" onclick="document.getElementById('genMsgCreativeFileInput').click()" style="flex:2;background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:6px;padding:7px 10px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px">
+              <i class="fas fa-cloud-upload-alt"></i> Select Image File
+            </button>
+            <button type="button" onclick="clearGenMsgImage()" id="btnClearGenMsgCreative" style="flex:1;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:7px 8px;font-size:11px;font-weight:700;cursor:pointer" title="Remove attached image">
+              <i class="fas fa-trash-alt me-1"></i>Remove
+            </button>
+          </div>
+          <div id="genMsgUploadNotice" style="font-size:10px;color:#0284c7;margin-top:6px;line-height:1.3">
+            ℹ️ If no image is attached, message will be sent as clean text-only broadcast.
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- Right Pane: Live Creative Preview (Center Preview Area) -->
+      <div style="flex:1;background:#0b1329;display:flex;align-items:center;justify-content:center;padding:24px;overflow-x:auto;overflow-y:auto;position:relative">
+        <div id="genMsgSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:10;align-items:center;justify-content:center;color:white;font-size:14px">
+          <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2" style="color:#38bdf8"></i><div>Processing image...</div></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;max-width:680px;width:100%">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:10px;padding:0 4px">
+            <span style="font-size:12px;font-weight:800;color:#38bdf8;letter-spacing:0.5px;text-transform:uppercase">
+              <i class="fas fa-image me-1"></i>Flyer / Creative Preview
+            </span>
+            <span id="genMsgPreviewTopBadge" style="font-size:10.5px;font-weight:800;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:10px;border:1px solid #334155">
+              Optional Attachment
+            </span>
+          </div>
+
+          <!-- Displayed when image IS uploaded -->
+          <div id="genMsgImgCard" style="display:none;width:100%;background:#0f172a;border:3px solid #0284c7;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(2,132,199,0.25);position:relative">
+            <div style="background:#1e293b;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155">
+              <span style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px">
+                <i class="fas fa-check-circle text-success"></i>Attached for Broadcast
+              </span>
+              <div style="display:flex;gap:8px">
+                <button type="button" onclick="document.getElementById('genMsgCreativeFileInput').click()" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-sync-alt me-1"></i>Replace
+                </button>
+                <button type="button" onclick="clearGenMsgImage()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-trash-alt me-1"></i>Remove
+                </button>
+              </div>
+            </div>
+            <div style="padding:14px;display:flex;justify-content:center;align-items:center;background:#020617;max-height:600px;overflow:auto">
+              <img id="genMsgImgPreview" src="" alt="Uploaded Creative" style="max-width:100%;max-height:560px;object-fit:contain;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.6)">
+            </div>
+            <div style="background:linear-gradient(135deg,#0369a1,#0284c7);color:#ffffff;padding:9px 14px;font-size:11px;font-weight:700;text-align:center;letter-spacing:0.3px">
+              <i class="fab fa-whatsapp me-1"></i>This flyer will be dispatched with message to selected members &amp; WhatsApp groups
+            </div>
+          </div>
+
+          <!-- Displayed when NO image is uploaded yet -->
+          <div id="genMsgEmptyPlaceholder" onclick="document.getElementById('genMsgCreativeFileInput').click()" style="width:100%;min-height:500px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
+            <div style="width:76px;height:76px;border-radius:50%;background:#1e293b;color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;box-shadow:0 8px 20px rgba(0,0,0,0.4)">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h4 style="color:#f8fafc;font-size:16px;font-weight:800;margin:0 0 8px 0">Upload Custom Creative / Poster</h4>
+            <p style="color:#94a3b8;font-size:12px;line-height:1.5;max-width:320px;margin:0 0 18px 0">
+              Have a flyer, banner, circular, or announcement graphic? Click here to upload.
+            </p>
+            <button type="button" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(2,132,199,0.4)">
+              <i class="fas fa-plus"></i> Select Image File
+            </button>
+            <div style="color:#38bdf8;font-size:11px;margin-top:16px;max-width:320px;line-height:1.4">
+              ℹ️ Image is optional. You can also send pure text-only broadcast without uploading an image.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer actions (Identical layout to existing poster modal) -->
+    <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
+      <button onclick="closeGeneralMessageModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareGenMsg()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
+      <button onclick="shareGenMsgWhatsAppWeb()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
+      <button onclick="shareGenMsgPoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Message</button>
+      <button onclick="shareGenMsgDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="openGenMsgPostToPortal()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
+      <button onclick="downloadGenMsgImage()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
 </div>

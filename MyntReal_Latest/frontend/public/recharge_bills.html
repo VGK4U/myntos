@@ -605,25 +605,36 @@
     <!-- TOP NAVBAR -->
     <header class="top-navbar">
         <div class="container d-flex align-items-center justify-content-between">
-            <a href="/" class="brand-logo-wrap">
-                <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
-                <div>
-                    <div class="brand-name">MyntReal • VGK4U</div>
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Secure Utility & Bill Payments</div>
-                </div>
-            </a>
             <div class="d-flex align-items-center gap-2">
-                <a href="/customer" class="nav-back-btn text-success" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);">
-                    <i class="fa-solid fa-user-circle"></i> Customer Login
+                <button type="button" onclick="handleRechargeBack()" class="nav-back-btn" title="Back to previous page">
+                    <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
+                </button>
+                <a href="/" class="nav-back-btn" title="Go to Home page">
+                    <i class="fa-solid fa-house"></i> <span>Home</span>
                 </a>
-                <a href="tel:+918585852738" class="nav-back-btn d-none d-sm-inline-flex">
+                <a href="/" class="brand-logo-wrap ms-1">
+                    <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
+                    <div>
+                        <div class="brand-name">MyntReal • VGK4U</div>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Secure Utility & Bill Payments</div>
+                    </div>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/customer" id="navCustomerLink" class="nav-back-btn text-success" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);">
+                    <i class="fa-solid fa-user-circle"></i> <span id="navCustomerText">Customer Login</span>
+                </a>
+                <button type="button" id="rechargeLogoutBtn" onclick="handleRechargeLogout()" class="nav-back-btn text-danger" style="display:none; border-color: rgba(239, 68, 68, 0.4);" title="Logout of customer account">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span>
+                </button>
+                <a href="/catalog/vgk4u" class="nav-back-btn text-warning d-none d-md-inline-flex" style="border-color: rgba(245, 158, 11, 0.4);">
+                    <i class="fa-solid fa-book-open"></i> <span>Catalog</span>
+                </a>
+                <a href="tel:+918585852738" class="nav-back-btn d-none d-lg-inline-flex">
                     <i class="fa-solid fa-phone me-1 text-warning"></i> +91 85858 52738
                 </a>
-                <a href="/catalog/vgk4u" class="nav-back-btn text-warning" style="border-color: rgba(245, 158, 11, 0.4);">
-                    <i class="fa-solid fa-book-open"></i> Catalog
-                </a>
-                <a href="/" class="nav-back-btn">
-                    <i class="fa-solid fa-house"></i> Home
+                <a href="/landing" onclick="sessionStorage.setItem('showLoginSelection', 'true');" class="nav-back-btn d-none d-md-inline-flex" title="All Portals">
+                    <i class="fa-solid fa-th"></i> <span class="d-none d-lg-inline">All Logins</span>
                 </a>
             </div>
         </div>
@@ -1734,7 +1745,25 @@
             return d.innerHTML;
         }
 
-        // On Load: Auto-select service from URL query params (e.g. ?service=dth)
+        function handleRechargeBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        function handleRechargeLogout() {
+            if (confirm('Are you sure you want to sign out of your customer account?')) {
+                localStorage.removeItem('customer_access_token');
+                localStorage.removeItem('customer_profile');
+                sessionStorage.removeItem('customer_access_token');
+                sessionStorage.removeItem('customer_profile');
+                window.location.reload();
+            }
+        }
+
+        // On Load: Auto-select service from URL query params (e.g. ?service=dth) & check customer session
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const reqService = (params.get('service') || '').toLowerCase();
@@ -1743,6 +1772,28 @@
             } else {
                 switchService('mobile');
             }
+
+            // Sync Customer Session in Header
+            try {
+                const token = localStorage.getItem('customer_access_token') || sessionStorage.getItem('customer_access_token');
+                const profileStr = localStorage.getItem('customer_profile') || sessionStorage.getItem('customer_profile');
+                if (token && profileStr) {
+                    const profile = JSON.parse(profileStr);
+                    const navCustomerLink = document.getElementById('navCustomerLink');
+                    const navCustomerText = document.getElementById('navCustomerText');
+                    const rechargeLogoutBtn = document.getElementById('rechargeLogoutBtn');
+                    if (navCustomerLink) {
+                        navCustomerLink.href = '/customer/dashboard';
+                        navCustomerLink.title = 'Go to your Executive Dashboard';
+                    }
+                    if (navCustomerText) {
+                        navCustomerText.innerText = profile.customer_name ? profile.customer_name.split(' ')[0] + ' (Hub)' : 'My Dashboard';
+                    }
+                    if (rechargeLogoutBtn) {
+                        rechargeLogoutBtn.style.display = 'inline-flex';
+                    }
+                }
+            } catch (e) {}
         });
     </script>
 </body>
