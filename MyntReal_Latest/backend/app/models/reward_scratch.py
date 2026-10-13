@@ -70,6 +70,15 @@ class ScratchCard(BaseModel):
     city = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)
 
+    # Reward Payout Disbursement Details (UPI Mobile, UPI ID, or Bank Account)
+    payout_method = Column(String(50), nullable=True) # upi_mobile, upi_id, bank_account
+    payout_upi_mobile = Column(String(20), nullable=True)
+    payout_upi_id = Column(String(100), nullable=True)
+    payout_bank_account = Column(String(50), nullable=True)
+    payout_bank_ifsc = Column(String(20), nullable=True)
+    payout_bank_name = Column(String(100), nullable=True)
+    payout_status = Column(String(30), default="PENDING", nullable=True) # PENDING, PROCESSED, FAILED
+
     referral_code = Column(String(50), nullable=True, index=True)
     referred_by_card_id = Column(Integer, nullable=True, index=True)
     referral_bonus_paid = Column(Boolean, default=False, nullable=False)

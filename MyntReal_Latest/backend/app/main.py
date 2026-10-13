@@ -4890,6 +4890,25 @@ def _startup_worker():
         except Exception as _e:
             print(f"[DC_VGK_KIT_INSURANCE_20261013_001] ⚠️ {_e}", flush=True)
 
+    # ── DC_SCRATCH_PAYOUT_FIELDS_20261013: Add Payout Destination fields to scratch_cards ──
+    if "DC_SCRATCH_PAYOUT_FIELDS_20261013" not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                for _sql in [
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_method VARCHAR(50)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_upi_mobile VARCHAR(20)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_upi_id VARCHAR(100)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_bank_account VARCHAR(50)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_bank_ifsc VARCHAR(20)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_bank_name VARCHAR(100)",
+                    "ALTER TABLE scratch_cards ADD COLUMN IF NOT EXISTS payout_status VARCHAR(30) DEFAULT 'PENDING'",
+                ]:
+                    _c.execute(_sa_text(_sql))
+            _mig_done("DC_SCRATCH_PAYOUT_FIELDS_20261013")
+            print("[DC_SCRATCH_PAYOUT_FIELDS_20261013] ✅ scratch_cards payout destination columns ensured", flush=True)
+        except Exception as _e:
+            print(f"[DC_SCRATCH_PAYOUT_FIELDS_20261013] ⚠️ {_e}", flush=True)
+
     # DC_CONSOLIDATED_EARLY_001: expense_main_category.is_direct_expense must exist
     if "DC_CONSOLIDATED_EARLY_001" not in _applied_keys:
         try:

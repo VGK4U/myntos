@@ -44,6 +44,12 @@ class ClaimScratchCardRequest(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     mobile_number: Optional[str] = None
+    payout_method: Optional[str] = "upi_mobile"  # upi_mobile, upi_id, bank_account
+    payout_upi_mobile: Optional[str] = None
+    payout_upi_id: Optional[str] = None
+    payout_bank_account: Optional[str] = None
+    payout_bank_ifsc: Optional[str] = None
+    payout_bank_name: Optional[str] = None
 
 
 @router.get("/info/{token}")
@@ -70,6 +76,7 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
         "valid": True,
         "brand": "Myntreal",
         "masked_mobile": masked_mobile,
+        "mobile_number": mob,
         "status": card.status,
         "expires_at": card.expires_at.isoformat(),
         "recharge_amount": card.recharge_transaction.amount if card.recharge_transaction else 0.0,
@@ -79,6 +86,12 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
         "pincode": card.pincode or "",
         "city": card.city or "",
         "state": card.state or "",
+        "payout_method": getattr(card, "payout_method", None) or "",
+        "payout_upi_mobile": getattr(card, "payout_upi_mobile", None) or "",
+        "payout_upi_id": getattr(card, "payout_upi_id", None) or "",
+        "payout_bank_account": getattr(card, "payout_bank_account", None) or "",
+        "payout_bank_ifsc": getattr(card, "payout_bank_ifsc", None) or "",
+        "payout_status": getattr(card, "payout_status", None) or "PENDING",
         "referral_code": card.referral_code or f"MYNT{card.id:04d}",
         "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
         "referral_bonus_pct": 50,
@@ -138,12 +151,29 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
         # Save Customer Details from Claim Form
         if req.name and req.name.strip():
             card.customer_name = req.name.strip()[:100]
+        if req.mobile_number and req.mobile_number.strip():
+            card.mobile_number = req.mobile_number.strip()[:20]
         if req.pincode and req.pincode.strip():
             card.pincode = req.pincode.strip()[:10]
         if req.city and req.city.strip():
             card.city = req.city.strip()[:100]
         if req.state and req.state.strip():
             card.state = req.state.strip()[:100]
+
+        # Save Payout details for disbursement (UPI Mobile, UPI ID, or Bank Account)
+        if req.payout_method:
+            card.payout_method = req.payout_method.strip()[:50]
+        if req.payout_upi_mobile:
+            card.payout_upi_mobile = req.payout_upi_mobile.strip()[:20]
+        if req.payout_upi_id:
+            card.payout_upi_id = req.payout_upi_id.strip()[:100]
+        if req.payout_bank_account:
+            card.payout_bank_account = req.payout_bank_account.strip()[:50]
+        if req.payout_bank_ifsc:
+            card.payout_bank_ifsc = req.payout_bank_ifsc.strip()[:20].upper()
+        if req.payout_bank_name:
+            card.payout_bank_name = req.payout_bank_name.strip()[:100]
+        card.payout_status = "PENDING"
 
         if card.recharge_transaction and card.customer_name:
             card.recharge_transaction.guest_name = card.customer_name
@@ -281,6 +311,13 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
             "customer_name": card.customer_name,
             "claimed_at": card.claimed_at.isoformat() if card.claimed_at else now.isoformat(),
             "mobile_number": card.mobile_number,
+            "pincode": card.pincode,
+            "payout_method": card.payout_method,
+            "payout_upi_mobile": card.payout_upi_mobile,
+            "payout_upi_id": card.payout_upi_id,
+            "payout_bank_account": card.payout_bank_account,
+            "payout_bank_ifsc": card.payout_bank_ifsc,
+            "payout_status": card.payout_status,
             "referral_code": ref_code,
             "referral_link": f"https://www.vgk4u.com/recharge?ref={ref_code}",
             "referral_bonus_pct": 50,

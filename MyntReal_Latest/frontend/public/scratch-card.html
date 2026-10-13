@@ -495,11 +495,33 @@
             border: 1px solid rgba(245, 158, 11, 0.4);
             border-radius: 24px;
             width: 100%;
-            max-width: 420px;
+            max-width: 470px;
+            max-height: 92vh;
+            overflow-y: auto;
             padding: 26px 24px;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(245, 158, 11, 0.15);
             position: relative;
             animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .payout-tab-btn {
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 7px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .payout-tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .payout-tab-btn.active {
+            background: #10b981;
+            color: #042f2e;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
         }
 
         @keyframes slideUp {
@@ -776,38 +798,99 @@
                     <i class="fa-solid fa-circle-dollar-to-slot"></i>
                 </div>
                 <h5 class="fw-bold text-light mb-1">Claim Your Reward</h5>
-                <p class="text-muted small mb-0">Enter your details to credit <strong class="text-warning" id="modalRewardAmount">₹0.00</strong> to your wallet.</p>
+                <p class="text-muted small mb-0">Enter your details to receive <strong class="text-warning" id="modalRewardAmount">₹0.00</strong> payout directly.</p>
             </div>
 
             <form id="claimForm" onsubmit="handleClaimSubmit(event)">
+                <!-- 1. Full Name -->
                 <div class="form-floating-custom">
                     <label for="claimName"><i class="fa-solid fa-user me-1"></i> Full Name *</label>
                     <input type="text" id="claimName" class="custom-input" placeholder="e.g. Ramesh Kumar" required autocomplete="name">
                 </div>
 
+                <!-- 2. Mobile Number -->
                 <div class="form-floating-custom">
-                    <label for="claimPincode"><i class="fa-solid fa-location-dot me-1"></i> 6-Digit PIN Code *</label>
-                    <input type="tel" id="claimPincode" class="custom-input" placeholder="e.g. 560001" maxlength="6" pattern="[0-9]{6}" required oninput="handlePincodeLookup(this.value)">
+                    <label for="claimMobile"><i class="fa-solid fa-phone me-1"></i> Mobile Number *</label>
+                    <div class="d-flex align-items-center">
+                        <span class="px-3 py-2 text-warning fw-bold" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-right: none; border-radius: 12px 0 0 12px; font-size: 0.9rem; line-height: 1.5;">+91</span>
+                        <input type="tel" id="claimMobile" class="custom-input" style="border-radius: 0 12px 12px 0;" placeholder="10-digit mobile number" maxlength="10" pattern="[0-9]{10}" required autocomplete="tel" oninput="autoSyncUpiMobile(this.value)">
+                    </div>
+                </div>
+
+                <!-- 3. Postal PIN Code (State & City removed per user instruction) -->
+                <div class="form-floating-custom">
+                    <label for="claimPincode"><i class="fa-solid fa-location-dot me-1"></i> Postal PIN Code *</label>
+                    <input type="tel" id="claimPincode" class="custom-input" placeholder="e.g. 500081" maxlength="6" pattern="[0-9]{6}" required oninput="handlePincodeLookup(this.value)">
                     <div class="pin-lookup-status" id="pinLookupStatus"></div>
                 </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <div class="form-floating-custom mb-0">
-                            <label for="claimCity">City / District</label>
-                            <input type="text" id="claimCity" class="custom-input" placeholder="e.g. Bengaluru">
+                <!-- 4. Payout / Payment Destination Selection -->
+                <div class="mt-3 mb-3 p-3 rounded-3" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(16, 185, 129, 0.35);">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="small fw-bold text-success d-flex align-items-center gap-1" style="font-size: 0.78rem;">
+                            <i class="fa-solid fa-money-bill-transfer"></i> Receive Payment via *
+                        </span>
+                        <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.65rem;">Direct Payment</span>
+                    </div>
+
+                    <!-- Payout Tabs -->
+                    <div class="d-flex gap-1 mb-3 p-1 rounded-2" style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);">
+                        <button type="button" class="btn btn-sm flex-fill payout-tab-btn active" id="payoutTabUpiMobile" onclick="switchPayoutMethod('upi_mobile')">
+                            <i class="fa-solid fa-mobile-screen-button me-1"></i> UPI Mobile
+                        </button>
+                        <button type="button" class="btn btn-sm flex-fill payout-tab-btn" id="payoutTabUpiId" onclick="switchPayoutMethod('upi_id')">
+                            <i class="fa-solid fa-at me-1"></i> UPI ID
+                        </button>
+                        <button type="button" class="btn btn-sm flex-fill payout-tab-btn" id="payoutTabBank" onclick="switchPayoutMethod('bank_account')">
+                            <i class="fa-solid fa-building-columns me-1"></i> Bank A/C
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: UPI Mobile -->
+                    <div id="payoutSectionUpiMobile">
+                        <div class="form-floating-custom mb-1">
+                            <label for="claimUpiMobile" style="font-size: 0.74rem;"><i class="fa-brands fa-google-pay text-warning me-1"></i> UPI Mobile Number (GPay / PhonePe / Paytm) *</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="tel" id="claimUpiMobile" class="custom-input" placeholder="Enter 10-digit UPI number" maxlength="10" pattern="[0-9]{10}">
+                                <button type="button" class="btn btn-sm btn-outline-warning text-nowrap py-2 px-3 fw-bold" onclick="copyContactToUpiMobile()" title="Use same contact number">
+                                    Same
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-white-50 mt-1" style="font-size: 0.7rem;">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Payment dispatched directly to your UPI-linked mobile number.
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="form-floating-custom mb-0">
-                            <label for="claimState">State</label>
-                            <input type="text" id="claimState" class="custom-input" placeholder="e.g. Karnataka">
+
+                    <!-- Tab 2: UPI ID -->
+                    <div id="payoutSectionUpiId" style="display: none;">
+                        <div class="form-floating-custom mb-1">
+                            <label for="claimUpiId" style="font-size: 0.74rem;"><i class="fa-solid fa-qrcode text-warning me-1"></i> UPI ID / VPA *</label>
+                            <input type="text" id="claimUpiId" class="custom-input" placeholder="e.g. 9876543210@paytm or name@okhdfcbank">
+                        </div>
+                        <div class="text-white-50 mt-1" style="font-size: 0.7rem;">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Direct bank credit to your Virtual Payment Address (VPA).
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Bank Account -->
+                    <div id="payoutSectionBank" style="display: none;">
+                        <div class="form-floating-custom mb-2">
+                            <label for="claimBankAcc" style="font-size: 0.74rem;"><i class="fa-solid fa-hashtag text-warning me-1"></i> Bank Account Number *</label>
+                            <input type="text" id="claimBankAcc" class="custom-input" placeholder="Enter full bank account number" autocomplete="off">
+                        </div>
+                        <div class="form-floating-custom mb-1">
+                            <label for="claimBankIfsc" style="font-size: 0.74rem;"><i class="fa-solid fa-landmark text-warning me-1"></i> Bank IFSC Code *</label>
+                            <input type="text" id="claimBankIfsc" class="custom-input text-uppercase" placeholder="e.g. SBIN0001234" maxlength="11" oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <div class="text-white-50 mt-1" style="font-size: 0.7rem;">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Direct IMPS / NEFT transfer into your bank account.
                         </div>
                     </div>
                 </div>
 
                 <button type="submit" id="submitClaimBtn" class="btn-claim-action" style="margin-top: 10px;">
-                    <i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward
+                    <i class="fa-solid fa-bolt me-1"></i> Confirm &amp; Claim Reward
                 </button>
             </form>
         </div>
@@ -932,8 +1015,16 @@
             statusMsg.innerText = `🎉 ₹${parseFloat(amt).toFixed(2)} Cashback Reward Claimed!`;
 
             if (data.customer_name) {
-                const loc = [data.city, data.state].filter(Boolean).join(', ');
-                claimedDetailsText.innerHTML = `Claimed by <strong>${escapeHtml(data.customer_name)}</strong> ${loc ? `(${escapeHtml(loc)})` : ''}<br>Credited to your Myntreal Reward Ledger.`;
+                let payoutNotice = '';
+                if (data.payout_method === 'upi_mobile' && data.payout_upi_mobile) {
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-mobile-screen-button me-1"></i> Sent to UPI Mobile: <strong>${escapeHtml(data.payout_upi_mobile)}</strong></span>`;
+                } else if (data.payout_method === 'upi_id' && data.payout_upi_id) {
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-at me-1"></i> Sent to UPI ID: <strong>${escapeHtml(data.payout_upi_id)}</strong></span>`;
+                } else if (data.payout_method === 'bank_account' && data.payout_bank_account) {
+                    payoutNotice = `<br><span class="badge bg-success bg-opacity-25 text-success mt-1 px-2 py-1"><i class="fa-solid fa-building-columns me-1"></i> Sent to Bank A/C: <strong>${escapeHtml(data.payout_bank_account)}</strong> (IFSC: ${escapeHtml(data.payout_bank_ifsc || '')})</span>`;
+                }
+                const pinStr = data.pincode ? ` (Postal PIN: ${escapeHtml(data.pincode)})` : '';
+                claimedDetailsText.innerHTML = `Claimed by <strong>${escapeHtml(data.customer_name)}</strong>${pinStr}${payoutNotice}<br><small class="text-white-50 mt-1 d-inline-block">Reward payout registered for direct disbursement.</small>`;
             }
             alreadyClaimedSection.style.display = 'block';
 
@@ -1014,12 +1105,84 @@
             triggerConfetti();
         }
 
+        // ── Payout Method Switcher ───────────────────────────────────────
+        let activePayoutMethod = 'upi_mobile';
+
+        function switchPayoutMethod(method) {
+            activePayoutMethod = method;
+            document.querySelectorAll('.payout-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const secUpiMobile = document.getElementById('payoutSectionUpiMobile');
+            const secUpiId = document.getElementById('payoutSectionUpiId');
+            const secBank = document.getElementById('payoutSectionBank');
+
+            if (secUpiMobile) secUpiMobile.style.display = 'none';
+            if (secUpiId) secUpiId.style.display = 'none';
+            if (secBank) secBank.style.display = 'none';
+
+            if (method === 'upi_mobile') {
+                document.getElementById('payoutTabUpiMobile')?.classList.add('active');
+                if (secUpiMobile) secUpiMobile.style.display = 'block';
+                document.getElementById('claimUpiMobile')?.focus();
+            } else if (method === 'upi_id') {
+                document.getElementById('payoutTabUpiId')?.classList.add('active');
+                if (secUpiId) secUpiId.style.display = 'block';
+                document.getElementById('claimUpiId')?.focus();
+            } else if (method === 'bank_account') {
+                document.getElementById('payoutTabBank')?.classList.add('active');
+                if (secBank) secBank.style.display = 'block';
+                document.getElementById('claimBankAcc')?.focus();
+            }
+        }
+
+        function copyContactToUpiMobile() {
+            const contactPhone = document.getElementById('claimMobile')?.value?.trim();
+            if (contactPhone) {
+                const upiInput = document.getElementById('claimUpiMobile');
+                if (upiInput) upiInput.value = contactPhone;
+            }
+        }
+
+        function autoSyncUpiMobile(val) {
+            const clean = (val || '').replace(/\D/g, '').slice(-10);
+            const upiInput = document.getElementById('claimUpiMobile');
+            if (upiInput && !upiInput.value) {
+                upiInput.value = clean;
+            }
+        }
+
         // Modal Handlers
         function openClaimModal() {
             if (isClaimed) return;
+
+            // Auto fill available details from scratchCardData or URL
+            const urlPhone = urlParams.get('mobile') || urlParams.get('phone');
+            const cardPhone = scratchCardData?.mobile_number || urlPhone || '';
+            const cleanPhone = cardPhone.replace(/\D/g, '').slice(-10);
+
+            const mobileInput = document.getElementById('claimMobile');
+            const upiMobileInput = document.getElementById('claimUpiMobile');
+            if (cleanPhone) {
+                if (mobileInput && !mobileInput.value) mobileInput.value = cleanPhone;
+                if (upiMobileInput && !upiMobileInput.value) upiMobileInput.value = cleanPhone;
+            }
+
+            if (scratchCardData?.customer_name) {
+                const nameInput = document.getElementById('claimName');
+                if (nameInput && !nameInput.value) nameInput.value = scratchCardData.customer_name;
+            }
+            if (scratchCardData?.pincode) {
+                const pinInput = document.getElementById('claimPincode');
+                if (pinInput && !pinInput.value) pinInput.value = scratchCardData.pincode;
+            }
+
             claimModal.classList.add('active');
             setTimeout(() => {
-                document.getElementById('claimName')?.focus();
+                const nameInput = document.getElementById('claimName');
+                if (nameInput && !nameInput.value) {
+                    nameInput.focus();
+                } else if (mobileInput && !mobileInput.value) {
+                    mobileInput.focus();
+                }
             }, 150);
         }
 
@@ -1027,39 +1190,17 @@
             claimModal.classList.remove('active');
         }
 
-        // Pincode auto-lookup for City & State
-        let pinTimer = null;
+        // Postal PIN Code verification (State & City removed per user instruction)
         function handlePincodeLookup(val) {
             const pin = (val || '').trim();
-            clearTimeout(pinTimer);
-
             if (pin.length < 6) {
                 pinLookupStatus.innerText = '';
                 return;
             }
-
             if (pin.length === 6 && /^\d{6}$/.test(pin)) {
-                pinLookupStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Detecting city and state...`;
-                pinTimer = setTimeout(async () => {
-                    try {
-                        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
-                        const data = await res.json();
-                        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
-                            const po = data[0].PostOffice[0];
-                            const city = po.District || po.Block || po.Circle || '';
-                            const state = po.State || '';
-                            if (city) document.getElementById('claimCity').value = city;
-                            if (state) document.getElementById('claimState').value = state;
-                            pinLookupStatus.innerHTML = `<span class="text-success"><i class="fa-solid fa-check me-1"></i> ${city}, ${state}</span>`;
-                        } else {
-                            pinLookupStatus.innerHTML = `<span class="text-muted">City/State not auto-found, you can enter manually</span>`;
-                        }
-                    } catch (e) {
-                        pinLookupStatus.innerHTML = `<span class="text-muted">Enter city/state manually</span>`;
-                    }
-                }, 300);
+                pinLookupStatus.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Valid 6-Digit Postal PIN Code</span>`;
             } else {
-                pinLookupStatus.innerText = 'Please enter a valid 6-digit numeric PIN';
+                pinLookupStatus.innerHTML = `<span class="text-danger">PIN code must be exactly 6 numeric digits</span>`;
             }
         }
 
@@ -1069,22 +1210,61 @@
             if (isClaimed) return;
 
             const name = document.getElementById('claimName').value.trim();
+            const rawMobile = document.getElementById('claimMobile').value.trim();
+            const cleanMobile = rawMobile.replace(/\D/g, '').slice(-10);
             const pincode = document.getElementById('claimPincode').value.trim();
-            const city = document.getElementById('claimCity').value.trim();
-            const state = document.getElementById('claimState').value.trim();
             const submitBtn = document.getElementById('submitClaimBtn');
 
             if (!name) {
                 alert('Please enter your full name.');
                 return;
             }
+            if (!cleanMobile || cleanMobile.length !== 10 || !/^\d{10}$/.test(cleanMobile)) {
+                alert('Please enter a valid 10-digit mobile number.');
+                return;
+            }
             if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
-                alert('Please enter a valid 6-digit PIN code.');
+                alert('Please enter a valid 6-digit postal PIN code.');
                 return;
             }
 
+            let upiMobileVal = null;
+            let upiIdVal = null;
+            let bankAccVal = null;
+            let bankIfscVal = null;
+
+            if (activePayoutMethod === 'upi_mobile') {
+                const rawUpi = document.getElementById('claimUpiMobile').value.trim();
+                upiMobileVal = rawUpi.replace(/\D/g, '').slice(-10);
+                if (!upiMobileVal || upiMobileVal.length !== 10 || !/^\d{10}$/.test(upiMobileVal)) {
+                    alert('Please enter a valid 10-digit UPI mobile number (GPay/PhonePe/Paytm).');
+                    document.getElementById('claimUpiMobile')?.focus();
+                    return;
+                }
+            } else if (activePayoutMethod === 'upi_id') {
+                upiIdVal = document.getElementById('claimUpiId').value.trim();
+                if (!upiIdVal || !upiIdVal.includes('@') || upiIdVal.length < 4) {
+                    alert('Please enter a valid UPI ID (e.g. mobile@upi or name@bank).');
+                    document.getElementById('claimUpiId')?.focus();
+                    return;
+                }
+            } else if (activePayoutMethod === 'bank_account') {
+                bankAccVal = document.getElementById('claimBankAcc').value.trim();
+                bankIfscVal = document.getElementById('claimBankIfsc').value.trim().toUpperCase();
+                if (!bankAccVal || bankAccVal.length < 6) {
+                    alert('Please enter a valid bank account number.');
+                    document.getElementById('claimBankAcc')?.focus();
+                    return;
+                }
+                if (!bankIfscVal || bankIfscVal.length !== 11) {
+                    alert('Please enter a valid 11-character bank IFSC code (e.g. SBIN0001234).');
+                    document.getElementById('claimBankIfsc')?.focus();
+                    return;
+                }
+            }
+
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Crediting Reward...`;
+            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Submitting Reward Payout...`;
 
             try {
                 const res = await fetch('/api/v1/scratch-card/claim', {
@@ -1093,23 +1273,32 @@
                     body: JSON.stringify({
                         token: token,
                         name: name,
+                        mobile_number: cleanMobile,
                         pincode: pincode,
-                        city: city,
-                        state: state
+                        payout_method: activePayoutMethod,
+                        payout_upi_mobile: upiMobileVal,
+                        payout_upi_id: upiIdVal,
+                        payout_bank_account: bankAccVal,
+                        payout_bank_ifsc: bankIfscVal
                     })
                 });
 
                 const data = await res.json();
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward`;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt me-1"></i> Confirm &amp; Claim Reward`;
 
                 if (res.ok && (data.status === 'success' || data.status === 'already_claimed')) {
                     closeClaimModal();
                     revealAlreadyClaimed({
                         revealed_amount_rupees: data.amount_rupees || rewardRupees,
                         customer_name: name,
-                        city: city,
-                        state: state,
+                        mobile_number: cleanMobile,
+                        pincode: pincode,
+                        payout_method: activePayoutMethod,
+                        payout_upi_mobile: upiMobileVal,
+                        payout_upi_id: upiIdVal,
+                        payout_bank_account: bankAccVal,
+                        payout_bank_ifsc: bankIfscVal,
                         referral_code: data.referral_code,
                         referral_link: data.referral_link
                     });
@@ -1119,7 +1308,7 @@
                 }
             } catch (err) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<i class="fa-solid fa-check-circle"></i> Confirm & Claim Reward`;
+                submitBtn.innerHTML = `<i class="fa-solid fa-bolt me-1"></i> Confirm &amp; Claim Reward`;
                 alert('Network error while claiming reward. Please check your connection and try again.');
             }
         }
