@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Customer Executive Dashboard | MyntReal Universal Services</title>
+    <!-- Bootstrap 5 CSS & JS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <style>
+        :root {
+            --primary-dark: #080d16;
+            --card-dark: #101826;
+            --card-surface: #141f32;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --gold: #f59e0b;
+            --gold-glow: rgba(245, 158, 11, 0.25);
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.25);
+            --cyan: #38bdf8;
+            --indigo: #6366f1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--primary-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.07) 0%, transparent 40%),
+                radial-gradient(circle at 15% 70%, rgba(56, 189, 248, 0.07) 0%, transparent 40%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Top Navigation Bar ── */
+        .top-navbar {
+            background: rgba(8, 13, 22, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-logo-wrap img {
+            height: 38px;
+            border-radius: 8px;
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-pill-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-pill-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        /* ── Executive Profile Bar ── */
+        .exec-header-bar {
+            background: linear-gradient(180deg, rgba(20, 31, 50, 0.8) 0%, rgba(16, 24, 38, 0.5) 100%);
+            border-bottom: 1px solid var(--card-border);
+            padding: 24px 0 20px;
+        }
+
+        .user-avatar-circle {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 8px 20px var(--emerald-glow);
+        }
+
+        /* ── KPI Cards ── */
+        .kpi-card {
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .kpi-card .kpi-icon-wrap {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-bottom: 12px;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.55rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        /* ── Tab Bar Navigation ── */
+        .vertical-tabs-nav {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 16px 0 8px;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+        }
+
+        .vertical-tabs-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .v-tab-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .v-tab-btn:hover {
+            background: rgba(255, 255, 255, 0.09);
+            color: #fff;
+        }
+
+        .v-tab-btn.active {
+            background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+            color: #090e17;
+            border-color: var(--gold);
+            font-weight: 800;
+            box-shadow: 0 4px 16px var(--gold-glow);
+        }
+
+        /* ── Table & Cards List ── */
+        .list-card-wrapper {
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            margin-bottom: 30px;
+        }
+
+        .table-custom {
+            width: 100%;
+            margin-bottom: 0;
+            color: #cbd5e1;
+            vertical-align: middle;
+        }
+
+        .table-custom th {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--card-border);
+            padding: 12px 14px;
+            background: transparent;
+        }
+
+        .table-custom td {
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 14px;
+            background: transparent;
+        }
+
+        .table-custom tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* ── Status Badges ── */
+        .status-badge {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            text-transform: capitalize;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--gold);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* ── Quick Redo Action Button ── */
+        .btn-quick-redo {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25));
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-quick-redo:hover {
+            background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+            color: #090e17;
+            box-shadow: 0 4px 14px var(--gold-glow);
+            transform: scale(1.02);
+        }
+
+        /* ── Scratch Cards Grid ── */
+        .scratch-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .card-promo-box {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px dashed var(--gold);
+            border-radius: 18px;
+            padding: 18px;
+            position: relative;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .card-promo-box:hover {
+            transform: translateY(-2px);
+            border-color: #fde047;
+            box-shadow: 0 10px 24px rgba(245, 158, 11, 0.2);
+        }
+
+        /* ── Quick Amount Chips in Modal ── */
+        .quick-amount-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .q-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .q-chip:hover, .q-chip.active {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--emerald);
+            color: #fff;
+        }
+
+        /* Empty state placeholder */
+        .empty-state-box {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state-box i {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <header class="top-navbar">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a href="/" class="brand-logo-wrap">
+                <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
+                <div>
+                    <div class="brand-name">MyntReal • Customer Hub</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Executive Dashboard</div>
+                </div>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/recharge" class="nav-pill-btn text-warning" style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1);">
+                    <i class="fa-solid fa-plus-circle"></i> New Recharge / Bill
+                </a>
+                <button type="button" onclick="handleLogout()" class="nav-pill-btn text-danger" style="border-color: rgba(239, 68, 68, 0.3);">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- EXECUTIVE PROFILE HEADER -->
+    <section class="exec-header-bar">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="user-avatar-circle" id="userAvatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h2 class="h4 fw-bold mb-0 text-white" id="customerDisplayName">Customer</h2>
+                            <span class="badge bg-success" style="font-size: 0.65rem; font-weight: 700;">VERIFIED PROFILE</span>
+                        </div>
+                        <div class="small text-muted mt-1 d-flex flex-wrap align-items-center gap-2">
+                            <span><i class="fa-solid fa-phone text-warning me-1"></i><span id="customerPhoneBadge">+91 ----------</span></span>
+                            <span>•</span>
+                            <span><i class="fa-solid fa-location-dot text-info me-1"></i>PIN: <span id="customerPincodeBadge">------</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/scratch-card.html" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
+                        <i class="fa-solid fa-gift me-1"></i> Scratch Cards
+                    </a>
+                    <a href="/recharge" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold" style="box-shadow: 0 4px 12px var(--emerald-glow);">
+                        <i class="fa-solid fa-bolt me-1"></i> Quick Pay
+                    </a>
+                </div>
+            </div>
+
+            <!-- EXECUTIVE KPI CARDS -->
+            <div class="row g-3 mt-3">
+                <div class="col-6 col-md-3">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan);">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="kpi-label">Total Spend</div>
+                        <div class="kpi-value" id="kpiTotalSpend">₹0.00</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: var(--gold);">
+                            <i class="fa-solid fa-gift"></i>
+                        </div>
+                        <div class="kpi-label">Cashback Won</div>
+                        <div class="kpi-value text-warning" id="kpiCashback">₹0.00</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <div class="kpi-label">Total Transactions</div>
+                        <div class="kpi-value text-success" id="kpiTransactions">0</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap" style="background: rgba(99, 102, 241, 0.15); color: var(--indigo);">
+                            <i class="fa-solid fa-cubes"></i>
+                        </div>
+                        <div class="kpi-label">Active Services</div>
+                        <div class="kpi-value text-info" id="kpiActiveServices">1</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="container my-4 flex-grow-1">
+
+        <!-- HORIZONTAL TABS SELECTOR -->
+        <div class="vertical-tabs-nav">
+            <button class="v-tab-btn active" onclick="selectVerticalTab('recharges', this)">
+                <i class="fa-solid fa-mobile-screen"></i> Recharges (<span id="countRecharges">0</span>)
+            </button>
+            <button class="v-tab-btn" onclick="selectVerticalTab('bills', this)">
+                <i class="fa-solid fa-lightbulb"></i> Utility Bills (<span id="countBills">0</span>)
+            </button>
+            <button class="v-tab-btn" onclick="selectVerticalTab('cashback', this)">
+                <i class="fa-solid fa-gift"></i> Cashback &amp; Rewards (<span id="countCards">0</span>)
+            </button>
+            <button class="v-tab-btn" onclick="selectVerticalTab('solar', this)">
+                <i class="fa-solid fa-sun"></i> Solar Projects (<span id="countSolar">0</span>)
+            </button>
+            <button class="v-tab-btn" onclick="selectVerticalTab('ev', this)">
+                <i class="fa-solid fa-motorcycle"></i> EV &amp; Support (<span id="countEv">0</span>)
+            </button>
+            <button class="v-tab-btn" onclick="selectVerticalTab('training', this)">
+                <i class="fa-solid fa-graduation-cap"></i> Student Training (<span id="countTraining">0</span>)
+            </button>
+        </div>
+
+        <!-- ══ TAB 1: RECHARGES (Prepaid & Postpaid) ══ -->
+        <section id="tab-recharges" class="dashboard-tab-pane">
+            <div class="list-card-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h5 fw-bold mb-0 text-white">
+                        <i class="fa-solid fa-mobile-screen text-warning me-2"></i> Mobile Recharges
+                    </h3>
+                    <a href="/recharge?service=mobile" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                        <i class="fa-solid fa-plus me-1"></i> New Recharge
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Mobile Number</th>
+                                <th>Operator &amp; Circle</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rechargesTableBody">
+                            <tr><td colspan="6" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading recharges...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ TAB 2: UTILITY BILLS (Electricity, Gas, DTH, FASTag, etc.) ══ -->
+        <section id="tab-bills" class="dashboard-tab-pane" style="display: none;">
+            <div class="list-card-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h5 fw-bold mb-0 text-white">
+                        <i class="fa-solid fa-lightbulb text-info me-2"></i> Utility &amp; Bill Payments
+                    </h3>
+                    <a href="/recharge?service=electricity" class="btn btn-sm btn-outline-info rounded-pill px-3">
+                        <i class="fa-solid fa-plus me-1"></i> Pay Bill
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Service Category</th>
+                                <th>Consumer / Acc ID</th>
+                                <th>Operator / Board</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billsTableBody">
+                            <tr><td colspan="7" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading bills...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ TAB 3: CASHBACK & SCRATCH CARDS GALLERY ══ -->
+        <section id="tab-cashback" class="dashboard-tab-pane" style="display: none;">
+            <div class="list-card-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h5 fw-bold mb-0 text-white">
+                        <i class="fa-solid fa-gift text-warning me-2"></i> Cashback &amp; Scratch Cards
+                    </h3>
+                    <span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="font-size: 0.78rem;">
+                        50% Referral Cashback Bonus Program
+                    </span>
+                </div>
+
+                <!-- Referral Promotion Bar -->
+                <div class="p-3 mb-4 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
+                    <div>
+                        <div class="fw-bold text-warning mb-1"><i class="fa-solid fa-share-nodes me-1"></i> Share with Friends &amp; Earn 50% Cashback Share!</div>
+                        <div class="small text-muted">Whenever someone recharges using your referral code, you receive 50% matched promotional reward points.</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <code class="px-3 py-2 bg-dark rounded border text-warning fw-bold" id="myReferralCode">MYNT----</code>
+                        <button class="btn btn-sm btn-warning fw-bold rounded-pill" onclick="copyReferralCode()">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                        <button class="btn btn-sm btn-success fw-bold rounded-pill" onclick="shareReferralWhatsApp()">
+                            <i class="fa-brands fa-whatsapp"></i> Share
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scratch Cards Gallery -->
+                <div class="scratch-cards-grid" id="scratchCardsGrid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ TAB 4: SOLAR PROJECTS HUB ══ -->
+        <section id="tab-solar" class="dashboard-tab-pane" style="display: none;">
+            <div class="list-card-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h5 fw-bold mb-0 text-white">
+                        <i class="fa-solid fa-sun text-warning me-2"></i> Rooftop &amp; Commercial Solar Projects
+                    </h3>
+                    <a href="/catalog/solar/commercial-residential-solar" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                        <i class="fa-solid fa-solar-panel me-1"></i> Solar Portal
+                    </a>
+                </div>
+                <div id="solarProjectsContainer">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ TAB 5: EV VEHICLES & SERVICE TICKETS HUB ══ -->
+        <section id="tab-ev" class="dashboard-tab-pane" style="display: none;">
+            <div class="list-card-wrapper mb-4">
+                <h3 class="h5 fw-bold mb-3 text-white">
+                    <i class="fa-solid fa-motorcycle text-success me-2"></i> Booked EV Scooters &amp; Battery Orders
+                </h3>
+                <div id="evVehiclesContainer">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="list-card-wrapper">
+                <h3 class="h5 fw-bold mb-3 text-white">
+                    <i class="fa-solid fa-headset text-info me-2"></i> Service &amp; Support Tickets
+                </h3>
+                <div id="evTicketsContainer">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ TAB 6: STUDENT TRAINING HUB (EVolution ETC Labs) ══ -->
+        <section id="tab-training" class="dashboard-tab-pane" style="display: none;">
+            <div class="list-card-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h3 class="h5 fw-bold mb-0 text-white">
+                        <i class="fa-solid fa-graduation-cap text-primary me-2"></i> Technical Training &amp; Workshops (EVolution ETC)
+                    </h3>
+                    <a href="/hub/etc" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        <i class="fa-solid fa-book me-1"></i> View Courses
+                    </a>
+                </div>
+                <div id="trainingContainer">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ══ SMART "QUICK REDO" MODAL (Proceed Same vs Change Amount) ══ -->
+    <div class="modal fade" id="quickRedoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--card-dark); border: 1px solid var(--card-border); border-radius: 24px; color: #fff;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-bolt text-warning me-2"></i> Instant Quick Redo
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Transaction summary card -->
+                    <div class="p-3 rounded-3 mb-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Target Number / ID:</span>
+                            <span class="fw-bold text-white" id="redoTargetAccount">--------</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Provider / Operator:</span>
+                            <span class="fw-bold text-info" id="redoOperator">------</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Last Transaction Amount:</span>
+                            <span class="h5 mb-0 fw-bolder text-warning" id="redoLastAmount">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Change amount expandable section -->
+                    <div id="changeAmountSection" style="display: none;" class="mb-3">
+                        <label class="form-label small fw-bold text-muted mb-1">Enter New Amount (₹)</label>
+                        <input type="number" id="customRedoAmount" class="form-control form-control-lg bg-dark text-white border-secondary fw-bold" placeholder="Enter amount">
+                        <div class="quick-amount-chips">
+                            <span class="q-chip" onclick="setRedoAmount(199)">₹199</span>
+                            <span class="q-chip" onclick="setRedoAmount(299)">₹299</span>
+                            <span class="q-chip" onclick="setRedoAmount(349)">₹349</span>
+                            <span class="q-chip" onclick="setRedoAmount(719)">₹719</span>
+                            <span class="q-chip" onclick="setRedoAmount(999)">₹999</span>
+                        </div>
+                    </div>
+
+                    <!-- Dual Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="button" id="btnProceedSame" class="btn btn-warning py-3 fw-bold rounded-pill" onclick="executeQuickRedo(false)">
+                            <i class="fa-solid fa-play me-1"></i> Proceed with Same Amount (<span id="btnSameAmountText">₹0</span>)
+                        </button>
+                        <button type="button" id="btnToggleChange" class="btn btn-outline-light py-2 fw-semibold rounded-pill" onclick="toggleChangeAmount()">
+                            <i class="fa-solid fa-pen-to-square me-1"></i> Change Amount and Proceed
+                        </button>
+                        <button type="button" id="btnProceedCustom" class="btn btn-success py-3 fw-bold rounded-pill" style="display: none;" onclick="executeQuickRedo(true)">
+                            <i class="fa-solid fa-shield-check me-1"></i> Proceed to Pay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCustomer = null;
+        let activeRedoTransaction = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('customer_access_token');
+            if (!token) {
+                window.location.href = '/customer';
+                return;
+            }
+            loadDashboardData(token);
+        });
+
+        async function loadDashboardData(token) {
+            try {
+                const res = await fetch('/api/v1/customer/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401) {
+                    localStorage.removeItem('customer_access_token');
+                    window.location.href = '/customer';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    currentCustomer = data.profile;
+                    renderProfile(data.profile);
+                    renderKPIs(data.kpi);
+                    renderRecharges(data.recharges);
+                    renderUtilityBills(data.utility_bills);
+                    renderCashback(data.scratch_cards);
+                    renderSolar(data.solar_projects);
+                    renderEV(data.ev_hub);
+                    renderTraining(data.training_programs);
+                } else {
+                    Swal.fire('Error', data.detail || 'Could not load customer dashboard.', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to load customer dashboard:', err);
+                Swal.fire('Error', 'Connection error loading executive dashboard.', 'error');
+            }
+        }
+
+        function renderProfile(p) {
+            document.getElementById('customerDisplayName').innerText = p.customer_name || 'Customer';
+            document.getElementById('customerPhoneBadge').innerText = '+91 ' + p.mobile_number;
+            document.getElementById('customerPincodeBadge').innerText = p.pincode || 'India';
+            
+            const initials = p.customer_name ? p.customer_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'C';
+            document.getElementById('userAvatar').innerText = initials;
+            document.getElementById('myReferralCode').innerText = `MNR${p.mobile_number.slice(-4)}`;
+        }
+
+        function renderKPIs(k) {
+            document.getElementById('kpiTotalSpend').innerText = `₹${(k.total_spend || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpiCashback').innerText = `₹${(k.cashback_claimed || 0).toFixed(2)}`;
+            document.getElementById('kpiTransactions').innerText = k.total_transactions || 0;
+            document.getElementById('kpiActiveServices').innerText = k.active_services_count || 1;
+        }
+
+        function renderRecharges(list) {
+            document.getElementById('countRecharges').innerText = list.length;
+            const tbody = document.getElementById('rechargesTableBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state-box"><i class="fa-solid fa-mobile-screen"></i><p>No mobile recharges found for this account.</p><a href="/recharge?service=mobile" class="btn btn-sm btn-warning rounded-pill">Make First Recharge</a></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(item => {
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}) : '--';
+                const st = (item.payment_status || 'Pending').toLowerCase();
+                const badgeClass = st === 'completed' || st === 'success' ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
+
+                return `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td class="fw-bold text-white">+91 ${item.target_number || '--'}</td>
+                        <td>${item.operator} <span class="text-muted small">(${item.circle})</span></td>
+                        <td class="fw-bold text-warning">₹${item.amount.toFixed(2)}</td>
+                        <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
+                        <td class="text-end">
+                            <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
+                                <i class="fa-solid fa-bolt"></i> Quick Redo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderUtilityBills(list) {
+            document.getElementById('countBills').innerText = list.length;
+            const tbody = document.getElementById('billsTableBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state-box"><i class="fa-solid fa-lightbulb"></i><p>No utility bills paid yet.</p><a href="/recharge?service=electricity" class="btn btn-sm btn-info rounded-pill">Pay Electricity or Gas Bill</a></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(item => {
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}) : '--';
+                const st = (item.payment_status || 'Pending').toLowerCase();
+                const badgeClass = st === 'completed' || st === 'success' ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
+
+                return `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td class="text-uppercase fw-bold text-info">${item.service_type}</td>
+                        <td class="fw-bold text-white">${item.account_identifier || '--'}</td>
+                        <td>${item.operator}</td>
+                        <td class="fw-bold text-warning">₹${item.amount.toFixed(2)}</td>
+                        <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
+                        <td class="text-end">
+                            <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
+                                <i class="fa-solid fa-bolt"></i> Quick Redo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCashback(cards) {
+            document.getElementById('countCards').innerText = cards.length;
+            const grid = document.getElementById('scratchCardsGrid');
+            if (!cards || cards.length === 0) {
+                grid.innerHTML = `<div class="col-12 empty-state-box"><i class="fa-solid fa-gift"></i><p>No scratch cards available right now. Pay any recharge or utility bill to unlock cashback cards!</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = cards.map(c => `
+                <div class="card-promo-box">
+                    <span class="badge ${c.status === 'claimed' ? 'bg-success' : 'bg-warning text-dark'} mb-2 text-uppercase fw-bold">
+                        ${c.status === 'claimed' ? 'Claimed' : 'Ready to Scratch'}
+                    </span>
+                    <div class="h3 fw-bolder text-warning mb-1">₹${c.amount_rupees.toFixed(2)}</div>
+                    <div class="small text-muted mb-3">Ref: ${c.referral_code}</div>
+                    <a href="/scratch-card.html" class="btn btn-sm btn-outline-warning w-100 rounded-pill fw-bold">
+                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${c.status === 'claimed' ? 'View Details' : 'Scratch Now'}
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function renderSolar(list) {
+            document.getElementById('countSolar').innerText = list.length;
+            const cont = document.getElementById('solarProjectsContainer');
+            if (!list || list.length === 0) {
+                cont.innerHTML = `<div class="empty-state-box"><i class="fa-solid fa-sun"></i><p>No active solar projects associated with your phone.</p><a href="/catalog/solar/commercial-residential-solar" class="btn btn-sm btn-warning rounded-pill">Explore Rooftop Solar Subsidy</a></div>`;
+                return;
+            }
+
+            cont.innerHTML = list.map(s => `
+                <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                    <div>
+                        <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-solar-panel text-warning me-2"></i> ${s.project_name}</div>
+                        <div class="small text-muted">Capacity: <strong class="text-warning">${s.capacity}</strong> • Board: <strong>${s.discom}</strong></div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-primary px-3 py-2 text-uppercase">${s.status}</span>
+                        <div class="small text-muted mt-1">Sanction Date: ${s.sanction_date ? new Date(s.sanction_date).toLocaleDateString('en-IN') : 'In Verification'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderEV(hub) {
+            const vCont = document.getElementById('evVehiclesContainer');
+            const tCont = document.getElementById('evTicketsContainer');
+            const totalCount = (hub.vehicles ? hub.vehicles.length : 0) + (hub.service_tickets ? hub.service_tickets.length : 0);
+            document.getElementById('countEv').innerText = totalCount;
+
+            if (!hub.vehicles || hub.vehicles.length === 0) {
+                vCont.innerHTML = `<div class="empty-state-box py-3"><i class="fa-solid fa-motorcycle"></i><p>No vehicle bookings found.</p></div>`;
+            } else {
+                vCont.innerHTML = hub.vehicles.map(v => `
+                    <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                        <div>
+                            <div class="fw-bold text-white"><i class="fa-solid fa-motorcycle text-success me-2"></i> ${v.model_name}</div>
+                            <div class="small text-muted">${v.details}</div>
+                        </div>
+                        <span class="badge bg-success px-3 py-2">${v.status}</span>
+                    </div>
+                `).join('');
+            }
+
+            if (!hub.service_tickets || hub.service_tickets.length === 0) {
+                tCont.innerHTML = `<div class="empty-state-box py-3"><i class="fa-solid fa-headset"></i><p>No open service tickets.</p></div>`;
+            } else {
+                tCont.innerHTML = hub.service_tickets.map(t => `
+                    <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                        <div>
+                            <div class="fw-bold text-white"><i class="fa-solid fa-ticket text-info me-2"></i> ${t.ticket_number} - ${t.title}</div>
+                            <div class="small text-muted">Priority: <strong class="text-warning">${t.priority}</strong> • Created: ${t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN') : '--'}</div>
+                        </div>
+                        <span class="badge bg-info text-dark px-3 py-2">${t.status}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderTraining(list) {
+            document.getElementById('countTraining').innerText = list.length;
+            const cont = document.getElementById('trainingContainer');
+            if (!list || list.length === 0) {
+                cont.innerHTML = `<div class="empty-state-box"><i class="fa-solid fa-graduation-cap"></i><p>No enrolled training programs.</p><a href="/hub/etc" class="btn btn-sm btn-primary rounded-pill">Explore EV &amp; Solar Courses</a></div>`;
+                return;
+            }
+
+            cont.innerHTML = list.map(tr => `
+                <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                    <div>
+                        <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-award text-warning me-2"></i> ${tr.program_name}</div>
+                        <div class="small text-muted">${tr.details}</div>
+                    </div>
+                    <span class="badge bg-primary px-3 py-2">${tr.batch_status}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectVerticalTab(tabName, btn) {
+            document.querySelectorAll('.v-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.dashboard-tab-pane').forEach(p => p.style.display = 'none');
+
+            btn.classList.add('active');
+            const target = document.getElementById(`tab-${tabName}`);
+            if (target) target.style.display = 'block';
+        }
+
+        /* ── QUICK REDO MODAL & PAYMENTS ── */
+        function openQuickRedoModal(item) {
+            activeRedoTransaction = item;
+            const targetAcc = item.target_number || item.account_identifier || '--';
+            document.getElementById('redoTargetAccount').innerText = targetAcc;
+            document.getElementById('redoOperator').innerText = `${item.operator} (${item.service_type || 'Mobile'})`;
+            document.getElementById('redoLastAmount').innerText = `₹${item.amount.toFixed(2)}`;
+            document.getElementById('btnSameAmountText').innerText = `₹${item.amount.toFixed(2)}`;
+            
+            // Reset custom amount state
+            document.getElementById('changeAmountSection').style.display = 'none';
+            document.getElementById('btnProceedSame').style.display = 'block';
+            document.getElementById('btnProceedCustom').style.display = 'none';
+            document.getElementById('btnToggleChange').innerText = 'Change Amount and Proceed';
+            document.getElementById('customRedoAmount').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('quickRedoModal'));
+            modal.show();
+        }
+
+        function toggleChangeAmount() {
+            const sec = document.getElementById('changeAmountSection');
+            const btnSame = document.getElementById('btnProceedSame');
+            const btnCust = document.getElementById('btnProceedCustom');
+            const btnToggle = document.getElementById('btnToggleChange');
+
+            if (sec.style.display === 'none') {
+                sec.style.display = 'block';
+                btnSame.style.display = 'none';
+                btnCust.style.display = 'block';
+                btnToggle.innerText = 'Keep Original Amount';
+                document.getElementById('customRedoAmount').focus();
+            } else {
+                sec.style.display = 'none';
+                btnSame.style.display = 'block';
+                btnCust.style.display = 'none';
+                btnToggle.innerText = 'Change Amount and Proceed';
+            }
+        }
+
+        function setRedoAmount(val) {
+            document.getElementById('customRedoAmount').value = val;
+            document.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function executeQuickRedo(isCustom) {
+            if (!activeRedoTransaction) return;
+
+            let finalAmount = activeRedoTransaction.amount;
+            if (isCustom) {
+                const customVal = parseFloat(document.getElementById('customRedoAmount').value);
+                if (!customVal || customVal <= 0) {
+                    Swal.fire('Invalid Amount', 'Please enter a valid amount to proceed.', 'warning');
+                    return;
+                }
+                finalAmount = customVal;
+            }
+
+            const token = localStorage.getItem('customer_access_token');
+            const modalEl = document.getElementById('quickRedoModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+
+            Swal.fire({
+                title: 'Preparing Instant Payment...',
+                html: '<i class="fa-solid fa-spinner fa-spin fa-2x text-warning mb-2"></i><br>Securing gateway session...',
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            try {
+                // Call Quick Redo Endpoint
+                const res = await fetch('/api/v1/customer/quick-redo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        transaction_id: activeRedoTransaction.id,
+                        custom_amount: isCustom ? finalAmount : null
+                    })
+                });
+
+                const data = await res.json();
+                Swal.close();
+
+                if (!res.ok || !data.success) {
+                    Swal.fire('Checkout Alert', data.detail || 'Could not initiate quick redo session.', 'error');
+                    return;
+                }
+
+                // Launch Razorpay
+                const rzpOptions = {
+                    key: data.razorpay_key_id,
+                    amount: Math.round(data.amount * 100),
+                    currency: 'INR',
+                    name: 'VGK4U Quick Redo',
+                    description: `${data.service_type} for ${data.target_number}`,
+                    order_id: data.order_id,
+                    handler: async function (paymentResponse) {
+                        Swal.fire({
+                            title: 'Confirming Service Payment...',
+                            html: '<i class="fa-solid fa-spinner fa-spin fa-2x text-warning mb-2"></i><br>Connecting with operator gateway. Please wait...',
+                            allowOutsideClick: false,
+                            showConfirmButton: false
+                        });
+
+                        try {
+                            const verifyRes = await fetch('/api/v1/recharge/verify-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            const verifyData = await verifyRes.json();
+
+                            if (verifyRes.ok) {
+                                confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+                                Swal.fire({
+                                    title: '🎉 Payment Successful!',
+                                    text: 'Your repeat transaction was processed instantly.',
+                                    icon: 'success',
+                                    confirmButtonText: 'Great!'
+                                });
+                                // Refresh dashboard data
+                                loadDashboardData(token);
+                            } else {
+                                Swal.fire('Verification Status', verifyData.detail || 'Payment processed. Operator status updating.', 'info');
+                            }
+                        } catch (err) {
+                            Swal.fire('Error', 'Network error during verification. Reference: ' + paymentResponse.razorpay_payment_id, 'error');
+                        }
+                    },
+                    prefill: {
+                        name: currentCustomer ? currentCustomer.customer_name : '',
+                        contact: currentCustomer ? currentCustomer.mobile_number : ''
+                    },
+                    theme: { color: '#f59e0b' }
+                };
+
+                const rzp = new Razorpay(rzpOptions);
+                rzp.open();
+
+            } catch (err) {
+                Swal.fire('Connection Error', 'Failed to reach payment gateway.', 'error');
+            }
+        }
+
+        function copyReferralCode() {
+            const code = document.getElementById('myReferralCode').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                Swal.fire({ title: 'Copied!', text: `Referral code ${code} copied to clipboard.`, icon: 'success', timer: 1200, showConfirmButton: false });
+            });
+        }
+
+        function shareReferralWhatsApp() {
+            const code = document.getElementById('myReferralCode').innerText;
+            const text = encodeURIComponent(`Pay your mobile recharges & electricity bills on MyntReal & get instant cashback! Use my referral code ${code} at https://www.myntreal.com/recharge`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        function handleLogout() {
+            Swal.fire({
+                title: 'Sign Out?',
+                text: 'Are you sure you want to log out of your executive customer account?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Sign Out',
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Cancel'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    localStorage.removeItem('customer_access_token');
+                    localStorage.removeItem('customer_profile');
+                    window.location.href = '/customer';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

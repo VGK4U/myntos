@@ -613,6 +613,9 @@
                 </div>
             </a>
             <div class="d-flex align-items-center gap-2">
+                <a href="/customer" class="nav-back-btn text-success" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1);">
+                    <i class="fa-solid fa-user-circle"></i> Customer Login
+                </a>
                 <a href="tel:+918585852738" class="nav-back-btn d-none d-sm-inline-flex">
                     <i class="fa-solid fa-phone me-1 text-warning"></i> +91 85858 52738
                 </a>
@@ -833,6 +836,52 @@
                     <div id="plansListContainer" class="plans-grid" style="max-height: 440px;">
                         <div class="text-center py-4 text-muted w-100" style="grid-column: 1 / -1;"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading plans...</div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POST-RECHARGE CUSTOMER PROFILE CREATION MODAL -->
+    <div class="modal fade" id="postRechargeProfileModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(8px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--card-dark); border: 1px solid var(--card-border); border-radius: 20px; color: #fff;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-user-shield text-success me-2"></i> Save Profile &amp; Repeat Payments
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Set up your Customer Profile to save this transaction for 1-click repeated redo payments, cashback tracking, and multi-vertical records.
+                    </p>
+                    <form id="postRechargeProfileForm" onsubmit="submitPostRechargeProfile(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Full Name</label>
+                            <input type="text" id="postProfileName" class="form-control bg-dark text-white border-secondary" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted mb-1">10-Digit Mobile Number</label>
+                            <input type="tel" id="postProfilePhone" class="form-control bg-dark text-white border-secondary" placeholder="10-digit number" maxlength="10" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Postal PIN Code</label>
+                            <input type="text" id="postProfilePincode" class="form-control bg-dark text-white border-secondary" placeholder="6-digit PIN code" maxlength="6" pattern="[0-9]{6}" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted mb-1">Set 4-Digit PIN</label>
+                                <input type="password" id="postProfilePin" class="form-control bg-dark text-white border-secondary" placeholder="4 digits" maxlength="4" pattern="[0-9]{4}" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted mb-1">Confirm PIN</label>
+                                <input type="password" id="postProfileConfirmPin" class="form-control bg-dark text-white border-secondary" placeholder="Confirm" maxlength="4" pattern="[0-9]{4}" required>
+                            </div>
+                        </div>
+                        <button type="submit" id="btnPostProfileSubmit" class="btn btn-success w-100 py-3 fw-bold rounded-pill" style="box-shadow: 0 4px 14px var(--emerald-glow);">
+                            <i class="fa-solid fa-check-circle me-1"></i> Create Customer Profile &amp; Go to Dashboard
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1527,9 +1576,16 @@
                                         <p class="text-success fw-bold mb-2">${verifyData.message || 'Service payment initiated successfully!'}</p>
                                         <p class="text-muted small">Transaction ID: <strong>#${verifyData.transaction_id}</strong></p>
                                         <hr>
-                                        <div class="p-3 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
+                                        <div class="p-3 rounded mb-3" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--gold);">
                                             <div class="text-warning fw-bold"><i class="fa-solid fa-gift me-1"></i> Scratch Card Cashback Unlocked!</div>
                                             <div class="small text-light mt-1">An exclusive scratch card link was sent to your registered mobile via WhatsApp.</div>
+                                        </div>
+                                        <div class="p-3 rounded text-start" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald);">
+                                            <div class="text-success fw-bold"><i class="fa-solid fa-user-shield me-1"></i> Save Profile for 1-Click Repeat Payments</div>
+                                            <div class="small text-muted mt-1">Create your profile with your postal PIN code &amp; 4-digit PIN to repeat payments in 1 click and view your unified Executive Dashboard!</div>
+                                            <button type="button" class="btn btn-sm btn-success w-100 mt-2 fw-bold" onclick="openPostPaymentProfileModal('${targetAccount}', '${guestName || ''}')">
+                                                <i class="fa-solid fa-user-plus me-1"></i> Create Customer Profile &amp; Save
+                                            </button>
                                         </div>
                                     `,
                                     icon: 'success',
@@ -1575,6 +1631,100 @@
         function triggerCelebration() {
             if (window.confetti) {
                 confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+
+        function openPostPaymentProfileModal(phone, name) {
+            Swal.close();
+            const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+            if (cleanPhone) {
+                document.getElementById('postProfilePhone').value = cleanPhone;
+            }
+            if (name) {
+                document.getElementById('postProfileName').value = name;
+            }
+            const modalEl = document.getElementById('postRechargeProfileModal');
+            if (window.bootstrap && bootstrap.Modal) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else {
+                modalEl.style.display = 'block';
+                modalEl.classList.add('show');
+            }
+        }
+
+        async function submitPostRechargeProfile(e) {
+            e.preventDefault();
+            const name = document.getElementById('postProfileName').value.trim();
+            const phone = document.getElementById('postProfilePhone').value.trim();
+            const pincode = document.getElementById('postProfilePincode').value.trim();
+            const pin = document.getElementById('postProfilePin').value.trim();
+            const confirmPin = document.getElementById('postProfileConfirmPin').value.trim();
+            const submitBtn = document.getElementById('btnPostProfileSubmit');
+
+            if (phone.length !== 10) {
+                alert('Please enter a valid 10-digit mobile number.');
+                return;
+            }
+            if (pincode.length !== 6) {
+                alert('Please enter a valid 6-digit postal PIN code.');
+                return;
+            }
+            if (pin.length !== 4) {
+                alert('Security PIN must be exactly 4 digits.');
+                return;
+            }
+            if (pin !== confirmPin) {
+                alert('Security PIN and Confirm PIN do not match.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Creating Profile...';
+
+            try {
+                const res = await fetch('/api/v1/customer/create-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: name,
+                        mobile_number: phone,
+                        pincode: pincode,
+                        security_pin: pin
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.setItem('customer_access_token', data.token);
+                    localStorage.setItem('customer_profile', JSON.stringify(data.customer));
+                    
+                    const modalEl = document.getElementById('postRechargeProfileModal');
+                    if (window.bootstrap && bootstrap.Modal) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    } else {
+                        modalEl.style.display = 'none';
+                    }
+
+                    Swal.fire({
+                        title: '🎉 Profile Saved Successfully!',
+                        text: 'Your transactions are now linked. Redirecting to your Executive Customer Dashboard...',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    setTimeout(() => {
+                        window.location.href = '/customer/dashboard';
+                    }, 1800);
+                } else {
+                    alert(data.detail || 'Could not create profile. Please try again.');
+                }
+            } catch (err) {
+                alert('Connection error. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i> Create Customer Profile &amp; Go to Dashboard';
             }
         }
 

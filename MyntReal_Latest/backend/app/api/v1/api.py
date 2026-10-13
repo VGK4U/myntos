@@ -185,10 +185,11 @@ api_router.include_router(staff_tasks.router, prefix="/staff/tasks", tags=["Staf
 # from app.api.v1.endpoints import platform_b2b_billing
 # api_router.include_router(platform_b2b_billing.router, prefix="/platform-b2b/billing", tags=["Platform B2B Billing (Phase 4)"])
 
-# Recharge & Bill Payment (A1Topup + Razorpay)
-from app.api.v1.endpoints import recharge, scratch_card_api
+# Recharge & Bill Payment (A1Topup + Razorpay) & Customer Portal
+from app.api.v1.endpoints import recharge, scratch_card_api, customer_portal
 api_router.include_router(recharge.router, prefix="/recharge", tags=["Mobile Recharge"])
 api_router.include_router(scratch_card_api.router, prefix="/scratch-card", tags=["Scratch Card Rewards"])
+api_router.include_router(customer_portal.router, tags=["Customer Portal"])
 api_router.include_router(staff_day_plans.router, prefix="/staff/day-plans", tags=["Staff Day Planner"])
 api_router.include_router(staff_time_tracker.router, prefix="/staff/attendance", tags=["Staff Time Tracker & Attendance"])
 api_router.include_router(staff_kra.router, prefix="/staff/kra", tags=["Staff KRA Performance Management"])

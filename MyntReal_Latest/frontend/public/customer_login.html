@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Customer Login & Profile | MyntReal Universal Services</title>
+    <!-- Bootstrap 5 CSS & JS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --primary-dark: #080d16;
+            --card-dark: #101826;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --gold: #f59e0b;
+            --gold-glow: rgba(245, 158, 11, 0.25);
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.25);
+            --cyan: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--primary-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 90% 40%, rgba(245, 158, 11, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.08) 0%, transparent 40%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Top Navigation Bar ── */
+        .top-navbar {
+            background: rgba(8, 13, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 14px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-logo-wrap img {
+            height: 38px;
+            border-radius: 8px;
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-back-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-back-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            transform: translateX(-2px);
+        }
+
+        /* ── Main Container ── */
+        .portal-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 16px;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 32px 28px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--emerald), var(--gold), var(--cyan));
+        }
+
+        .portal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .portal-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            color: #fff;
+        }
+
+        .portal-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        /* ── Tab Switcher ── */
+        .tab-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 9px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--emerald-glow);
+        }
+
+        /* ── Form Controls ── */
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-control-custom {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .form-control-custom:focus {
+            outline: none;
+            border-color: var(--emerald);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 0 3px var(--emerald-glow);
+        }
+
+        .form-control-custom::placeholder {
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .input-group-custom {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group-custom .prefix {
+            position: absolute;
+            left: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            pointer-events: none;
+        }
+
+        .input-group-custom input.with-prefix {
+            padding-left: 52px;
+        }
+
+        .pin-toggle-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .pin-toggle-btn:hover {
+            color: #fff;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 0.98rem;
+            font-weight: 800;
+            border: none;
+            color: #090e17;
+            background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+            box-shadow: 0 10px 24px var(--gold-glow);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(245, 158, 11, 0.4);
+            color: #000;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ── Verticals Badges ── */
+        .verticals-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--card-border);
+            justify-content: center;
+        }
+
+        .v-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .switch-portal-box {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .switch-portal-box a {
+            color: var(--cyan);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .switch-portal-box a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <header class="top-navbar">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a href="/" class="brand-logo-wrap">
+                <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
+                <div>
+                    <div class="brand-name">MyntReal • Customer Hub</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Executive Customer Portal</div>
+                </div>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/recharge" class="nav-back-btn text-warning" style="border-color: rgba(245, 158, 11, 0.4);">
+                    <i class="fa-solid fa-bolt"></i> Pay Bills / Recharge
+                </a>
+                <a href="/landing" onclick="sessionStorage.setItem('showLoginSelection', 'true');" class="nav-back-btn">
+                    <i class="fa-solid fa-th"></i> All Logins
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN PORTAL -->
+    <div class="portal-wrapper">
+        <div class="login-box">
+            <div class="text-center">
+                <span class="portal-badge">
+                    <i class="fa-solid fa-shield-halved"></i> Verified Customer Access
+                </span>
+                <h1 class="portal-title">Customer Portal</h1>
+                <p class="portal-desc">
+                    Access your Recharges, Utility Bills, Solar Projects, EV Scooters, and Student Training in one unified dashboard.
+                </p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tabLoginBtn" onclick="switchTab('login')">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+                </button>
+                <button class="tab-btn" id="tabRegisterBtn" onclick="switchTab('register')">
+                    <i class="fa-solid fa-user-plus"></i> Create Profile
+                </button>
+            </div>
+
+            <!-- ══ TAB 1: LOGIN FORM ══ -->
+            <form id="customerLoginForm" onsubmit="handleCustomerLogin(event)">
+                <div class="mb-3">
+                    <label class="form-label">
+                        <span>10-Digit Mobile Number</span>
+                        <span class="text-muted" style="font-size: 0.72rem;">Registered phone</span>
+                    </label>
+                    <div class="input-group-custom">
+                        <span class="prefix">+91</span>
+                        <input 
+                            type="tel" 
+                            id="loginPhone" 
+                            class="form-control-custom with-prefix" 
+                            placeholder="Enter 10-digit number" 
+                            maxlength="10" 
+                            pattern="[0-9]{10}" 
+                            required 
+                            autocomplete="tel"
+                        >
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <span>4-Digit Security PIN</span>
+                        <a href="javascript:void(0)" onclick="openResetPinModal()" class="text-warning" style="font-size: 0.75rem; text-decoration: none;">
+                            Forgot PIN?
+                        </a>
+                    </label>
+                    <div class="input-group-custom">
+                        <input 
+                            type="password" 
+                            id="loginPin" 
+                            class="form-control-custom" 
+                            placeholder="Enter 4-digit PIN" 
+                            maxlength="4" 
+                            pattern="[0-9]{4}" 
+                            inputmode="numeric" 
+                            required 
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="pin-toggle-btn" onclick="togglePinVisibility('loginPin', this)">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSignIn" class="btn-submit">
+                    <i class="fa-solid fa-gauge-high"></i> Sign In to Executive Dashboard
+                </button>
+            </form>
+
+            <!-- ══ TAB 2: CREATE PROFILE FORM ══ -->
+            <form id="customerRegisterForm" style="display: none;" onsubmit="handleCustomerRegister(event)">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="regName" 
+                        class="form-control-custom" 
+                        placeholder="e.g. Ramesh Kumar" 
+                        required 
+                        autocomplete="name"
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">10-Digit Mobile Number</label>
+                    <div class="input-group-custom">
+                        <span class="prefix">+91</span>
+                        <input 
+                            type="tel" 
+                            id="regPhone" 
+                            class="form-control-custom with-prefix" 
+                            placeholder="Enter 10-digit number" 
+                            maxlength="10" 
+                            pattern="[0-9]{10}" 
+                            required 
+                            autocomplete="tel"
+                        >
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label">Postal PIN Code</label>
+                        <input 
+                            type="text" 
+                            id="regPincode" 
+                            class="form-control-custom" 
+                            placeholder="6-digit PIN" 
+                            maxlength="6" 
+                            pattern="[0-9]{6}" 
+                            required 
+                            inputmode="numeric"
+                        >
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label">City</label>
+                        <input 
+                            type="text" 
+                            id="regCity" 
+                            class="form-control-custom" 
+                            placeholder="City" 
+                            autocomplete="address-level2"
+                        >
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <span>Set 4-Digit Security PIN</span>
+                        <span class="text-muted" style="font-size: 0.72rem;">For repeat 1-click access</span>
+                    </label>
+                    <div class="input-group-custom">
+                        <input 
+                            type="password" 
+                            id="regPin" 
+                            class="form-control-custom" 
+                            placeholder="Choose 4 digits" 
+                            maxlength="4" 
+                            pattern="[0-9]{4}" 
+                            inputmode="numeric" 
+                            required
+                        >
+                        <button type="button" class="pin-toggle-btn" onclick="togglePinVisibility('regPin', this)">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Confirm 4-Digit PIN</label>
+                    <div class="input-group-custom">
+                        <input 
+                            type="password" 
+                            id="regConfirmPin" 
+                            class="form-control-custom" 
+                            placeholder="Confirm 4 digits" 
+                            maxlength="4" 
+                            pattern="[0-9]{4}" 
+                            inputmode="numeric" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" id="btnRegister" class="btn-submit" style="background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%); color: #fff; box-shadow: 0 10px 24px var(--emerald-glow);">
+                    <i class="fa-solid fa-user-check"></i> Create Profile &amp; Save Repeat Access
+                </button>
+            </form>
+
+            <!-- Supported Verticals Strip -->
+            <div class="verticals-strip">
+                <span class="v-tag"><i class="fa-solid fa-mobile-screen text-warning"></i> Recharges</span>
+                <span class="v-tag"><i class="fa-solid fa-lightbulb text-info"></i> Electricity &amp; Gas</span>
+                <span class="v-tag"><i class="fa-solid fa-sun text-warning"></i> Solar Projects</span>
+                <span class="v-tag"><i class="fa-solid fa-motorcycle text-success"></i> EV Scooters</span>
+                <span class="v-tag"><i class="fa-solid fa-graduation-cap text-primary"></i> Students</span>
+            </div>
+
+            <!-- Switch Portal / Staff & Partner links -->
+            <div class="switch-portal-box">
+                Are you an employee or partner? <a href="/staff/login">Staff Login</a> or <a href="/partner/login">Partner Portal</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN RESET MODAL (SweetAlert2 Triggered or Dedicated Bootstrap Modal) -->
+    <div class="modal fade" id="resetPinModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--card-dark); border: 1px solid var(--card-border); border-radius: 20px; color: #fff;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-key text-warning me-2"></i> Reset 4-Digit Security PIN
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Enter your registered mobile number and postal PIN code to verify identity and set a new 4-digit security PIN.
+                    </p>
+                    <form id="resetPinForm" onsubmit="handleResetPin(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Registered Mobile Number</label>
+                            <input type="tel" id="resetPhone" class="form-control-custom" placeholder="10-digit number" maxlength="10" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Registered Postal PIN Code</label>
+                            <input type="text" id="resetPincode" class="form-control-custom" placeholder="6-digit pincode" maxlength="6" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New 4-Digit Security PIN</label>
+                            <input type="password" id="resetNewPin" class="form-control-custom" placeholder="4 digits" maxlength="4" pattern="[0-9]{4}" required>
+                        </div>
+                        <button type="submit" id="btnResetPin" class="btn-submit" style="background: var(--gold);">
+                            Update Security PIN
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if query params pre-fill mobile or tab
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const phoneParam = params.get('mobile') || params.get('phone');
+            const tabParam = params.get('tab');
+
+            if (phoneParam) {
+                const clean = phoneParam.replace(/\D/g, '').slice(-10);
+                document.getElementById('loginPhone').value = clean;
+                document.getElementById('regPhone').value = clean;
+            }
+
+            if (tabParam === 'register' || tabParam === 'create') {
+                switchTab('register');
+            }
+
+            // Auto-detect existing login
+            const existingToken = localStorage.getItem('customer_access_token');
+            const existingProfile = localStorage.getItem('customer_profile');
+            if (existingToken && existingProfile) {
+                try {
+                    const prof = JSON.parse(existingProfile);
+                    // Don't auto-redirect without user choice if they navigated here explicitly, but show welcome back banner
+                    console.log('Active session detected for:', prof.customer_name);
+                } catch(e) {}
+            }
+        });
+
+        function switchTab(tab) {
+            const loginForm = document.getElementById('customerLoginForm');
+            const regForm = document.getElementById('customerRegisterForm');
+            const tabLoginBtn = document.getElementById('tabLoginBtn');
+            const tabRegBtn = document.getElementById('tabRegisterBtn');
+
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                regForm.style.display = 'none';
+                tabLoginBtn.classList.add('active');
+                tabRegBtn.classList.remove('active');
+            } else {
+                loginForm.style.display = 'none';
+                regForm.style.display = 'block';
+                tabLoginBtn.classList.remove('active');
+                tabRegBtn.classList.add('active');
+            }
+        }
+
+        function togglePinVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-regular fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-regular fa-eye';
+            }
+        }
+
+        async function handleCustomerLogin(e) {
+            e.preventDefault();
+            const phone = document.getElementById('loginPhone').value.trim();
+            const pin = document.getElementById('loginPin').value.trim();
+            const btn = document.getElementById('btnSignIn');
+
+            if (phone.length !== 10) {
+                Swal.fire('Invalid Number', 'Please enter a valid 10-digit mobile number.', 'warning');
+                return;
+            }
+            if (pin.length !== 4) {
+                Swal.fire('Invalid PIN', 'Please enter your 4-digit Security PIN.', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+
+            try {
+                const res = await fetch('/api/v1/customer/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile_number: phone, security_pin: pin })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.setItem('customer_access_token', data.token);
+                    localStorage.setItem('customer_profile', JSON.stringify(data.customer));
+                    
+                    Swal.fire({
+                        title: 'Welcome Back!',
+                        text: data.message || 'Login successful.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    setTimeout(() => {
+                        window.location.href = '/customer/dashboard';
+                    }, 1200);
+                } else {
+                    Swal.fire({
+                        title: 'Access Denied',
+                        text: data.detail || 'Incorrect Mobile Number or PIN.',
+                        icon: 'error',
+                        confirmButtonText: 'Try Again'
+                    });
+                }
+            } catch (err) {
+                Swal.fire('Connection Error', 'Unable to connect to service. Please check your network.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Sign In to Executive Dashboard';
+            }
+        }
+
+        async function handleCustomerRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const pincode = document.getElementById('regPincode').value.trim();
+            const city = document.getElementById('regCity').value.trim();
+            const pin = document.getElementById('regPin').value.trim();
+            const confirmPin = document.getElementById('regConfirmPin').value.trim();
+            const btn = document.getElementById('btnRegister');
+
+            if (!name) {
+                Swal.fire('Required', 'Please enter your full name.', 'warning');
+                return;
+            }
+            if (phone.length !== 10) {
+                Swal.fire('Invalid Number', 'Please enter a valid 10-digit mobile number.', 'warning');
+                return;
+            }
+            if (pincode.length !== 6) {
+                Swal.fire('Invalid PIN Code', 'Please enter your 6-digit postal PIN code.', 'warning');
+                return;
+            }
+            if (pin.length !== 4) {
+                Swal.fire('Invalid PIN', 'Security PIN must be exactly 4 digits.', 'warning');
+                return;
+            }
+            if (pin !== confirmPin) {
+                Swal.fire('Mismatch', 'Security PIN and confirmation do not match.', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Profile...';
+
+            try {
+                const res = await fetch('/api/v1/customer/create-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: name,
+                        mobile_number: phone,
+                        pincode: pincode,
+                        city: city,
+                        security_pin: pin
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.setItem('customer_access_token', data.token);
+                    localStorage.setItem('customer_profile', JSON.stringify(data.customer));
+
+                    Swal.fire({
+                        title: '🎉 Profile Created!',
+                        text: 'Welcome! Your repeated transactions and vertical services are now linked.',
+                        icon: 'success',
+                        confirmButtonText: 'Go to Executive Dashboard',
+                        confirmButtonColor: '#10b981'
+                    }).then(() => {
+                        window.location.href = '/customer/dashboard';
+                    });
+                } else {
+                    Swal.fire('Registration Alert', data.detail || 'Could not create profile.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'Network connection issue. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-user-check"></i> Create Profile &amp; Save Repeat Access';
+            }
+        }
+
+        function openResetPinModal() {
+            const loginPhone = document.getElementById('loginPhone').value.trim();
+            if (loginPhone) {
+                document.getElementById('resetPhone').value = loginPhone;
+            }
+            const modal = new bootstrap.Modal(document.getElementById('resetPinModal'));
+            modal.show();
+        }
+
+        async function handleResetPin(e) {
+            e.preventDefault();
+            const phone = document.getElementById('resetPhone').value.trim();
+            const pincode = document.getElementById('resetPincode').value.trim();
+            const newPin = document.getElementById('resetNewPin').value.trim();
+            const btn = document.getElementById('btnResetPin');
+
+            if (phone.length !== 10 || pincode.length !== 6 || newPin.length !== 4) {
+                Swal.fire('Validation Error', 'Please fill all fields accurately (10-digit phone, 6-digit postal pincode, 4-digit PIN).', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+            try {
+                const res = await fetch('/api/v1/customer/reset-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mobile_number: phone,
+                        pincode: pincode,
+                        new_security_pin: newPin
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('resetPinModal')).hide();
+                    Swal.fire('PIN Updated!', data.message || 'You can now sign in with your new 4-digit PIN.', 'success');
+                    document.getElementById('loginPhone').value = phone;
+                    document.getElementById('loginPin').value = newPin;
+                } else {
+                    Swal.fire('Verification Failed', data.detail || 'Postal PIN code did not match registered profile.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'Failed to reach reset service.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Update Security PIN';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1041,6 +1041,14 @@
             </div>
 
             <div class="login-cards-container">
+                <div class="login-card green" onclick="navigateToLogin('customer')" style="border: 2px solid rgba(16, 185, 129, 0.4); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);">
+                    <div class="login-card-icon-wrap" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-user-circle"></i></div>
+                    <div class="loyalty-tag" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">⚡ Universal Access</div>
+                    <div class="login-card-title">Customer</div>
+                    <div class="login-card-desc">Recharges, Bills, Solar,<br>EV &amp; Students Portal</div>
+                    <button class="login-card-btn" style="background: linear-gradient(135deg, #10b981, #059669);">Customer Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
                 <div class="login-card blue" onclick="navigateToLogin('staff')">
                     <div class="login-card-icon-wrap"><i class="fas fa-user-tie"></i></div>
                     <div class="login-card-title">Staff</div>
@@ -1230,7 +1238,7 @@
         }
 
         function navigateToLogin(type) {
-            const loginUrls = { 'staff': '/staff/login', 'partner': '/partner/login', 'mnr': '/login', 'vgk': '/vgk/login', 'vendor': '/vendor/login' };
+            const loginUrls = { 'customer': '/customer', 'staff': '/staff/login', 'partner': '/partner/login', 'mnr': '/login', 'vgk': '/vgk/login', 'vendor': '/vendor/login' };
             const url = loginUrls[type];
             if (type === 'vgk') {
                 localStorage.removeItem('vgk_token');

@@ -3017,6 +3017,38 @@ def bootstrap_central_integration_framework():
         _db.close()
 
 
+def bootstrap_customer_profiles_table():
+    """DC Protocol Oct 2026: Bootstrap universal customer profiles table."""
+    from app.core.database import SessionLocal
+    _db = SessionLocal()
+    try:
+        _db.execute(text("""
+            CREATE TABLE IF NOT EXISTS customer_profiles (
+                id SERIAL PRIMARY KEY,
+                mobile_number VARCHAR(15) UNIQUE NOT NULL,
+                customer_name VARCHAR(128) NOT NULL,
+                pincode VARCHAR(10) NOT NULL,
+                security_pin_hash VARCHAR(255) NOT NULL,
+                email VARCHAR(128),
+                city VARCHAR(64),
+                state VARCHAR(64),
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                profile_metadata TEXT,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_customer_profile_mobile ON customer_profiles(mobile_number);
+        """))
+        _db.commit()
+        logger.info("[SCHEMA BOOTSTRAP] ✅ Customer profiles table bootstrapped successfully")
+    except Exception as e:
+        _db.rollback()
+        logger.error(f"[SCHEMA BOOTSTRAP] ❌ Error bootstrapping customer profiles table: {e}")
+        raise
+    finally:
+        _db.close()
+
+
 
 # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
 # Automatically guard every bootstrap/migration function in this module so no runtime caller

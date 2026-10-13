@@ -7808,7 +7808,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
-    const RESERVED_PREFIXES = new Set(['public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator', 'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal', 'sitemap.xml', 'robots.txt']);
+    const RESERVED_PREFIXES = new Set(['customer', 'recharge', 'scratch-card', 'public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator', 'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal', 'sitemap.xml', 'robots.txt']);
     const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
     
     if (shortCodeMatch) {
@@ -24421,14 +24421,17 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
             </button>
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
-            <a href="/landing" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #2ECC71; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
+            <a href="/customer" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1rem; width: 100%; box-sizing: border-box; background: #059669; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 700; font-size: 0.875rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: background 0.2s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Customer Portal Login (Recharge, Solar, EV)
+            </a>
+            <a href="/landing" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; width: 100%; box-sizing: border-box; background: #2ECC71; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
                 <i class="fas fa-home"></i> Go to Main Page
             </a>
-            <a href="/mnrcatalog" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #FFA500; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
+            <a href="/mnrcatalog" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; width: 100%; box-sizing: border-box; background: #FFA500; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
                 <i class="fas fa-book-open"></i> View Catalog
             </a>
-            <a href="/landing" onclick="event.preventDefault(); sessionStorage.setItem('showLoginSelection', 'true'); window.location.href='/landing';" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #5D6D7E; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"/></svg> Go to Main Login Page
+            <a href="/landing" onclick="event.preventDefault(); sessionStorage.setItem('showLoginSelection', 'true'); window.location.href='/landing';" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; width: 100%; box-sizing: border-box; background: #5D6D7E; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: background 0.2s;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"/></svg> All Logins Portal Selection
             </a>
         </div>
     </div>
@@ -31169,6 +31172,32 @@ async function processAction(id, action){
     const scratchPath = path.join(__dirname, 'public', 'scratch-card.html');
     fs.readFile(scratchPath, 'utf8', (err, data) => {
       if (err) { res.writeHead(404); res.end('Scratch card portal not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/customer/dashboard') || url.startsWith('/customer-dashboard')) {
+    // Dedicated Customer Executive Multi-Vertical Dashboard
+    const custDashPath = path.join(__dirname, 'public', 'customer_dashboard.html');
+    fs.readFile(custDashPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Customer Dashboard not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url === '/customer' || url.startsWith('/customer/') || url.startsWith('/customer?') || url.startsWith('/customer-login')) {
+    // Dedicated Universal Customer Login & Profile Portal (https://www.myntreal.com/customer)
+    const custLoginPath = path.join(__dirname, 'public', 'customer_login.html');
+    fs.readFile(custLoginPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Customer Login portal not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
