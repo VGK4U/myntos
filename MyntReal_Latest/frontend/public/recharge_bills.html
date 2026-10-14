@@ -1305,6 +1305,7 @@
                     detectOperatorAndCircle(normalized);
                 }, 350);
             } else {
+                userManuallySelectedOperator = false;
                 if (badgeEl) badgeEl.style.display = 'none';
                 const pillIn = document.getElementById('pillRoffersInline');
                 const pillMo = document.getElementById('pillRoffersModal');
@@ -1318,6 +1319,8 @@
             }
         }
 
+        let userManuallySelectedOperator = false;
+
         async function detectOperatorAndCircle(mobile) {
             const badgeEl = document.getElementById('operatorDetectBadge');
             try {
@@ -1326,25 +1329,27 @@
                 if (data && data.success) {
                     currentDetectedCircle = data.circle_code || '49';
                     currentDetectedCircleName = data.circle || 'Andhra Pradesh';
-                    const detectedOp = data.ui_operator || 'Airtel';
+                    const detectedOp = data.ui_operator || 'Jio';
 
-                    // Update operator chips
-                    document.querySelectorAll('.op-chip').forEach(c => {
-                        c.classList.toggle('selected', (c.getAttribute('data-code') || '').toLowerCase() === detectedOp.toLowerCase());
-                    });
-                    currentSelectedOperator = detectedOp;
+                    // Update operator chips if user hasn't manually picked another operator
+                    if (!userManuallySelectedOperator) {
+                        document.querySelectorAll('.op-chip').forEach(c => {
+                            c.classList.toggle('selected', (c.getAttribute('data-code') || '').toLowerCase() === detectedOp.toLowerCase());
+                        });
+                        currentSelectedOperator = detectedOp;
 
-                    if (badgeEl) {
-                        badgeEl.className = 'operator-detect-badge';
-                        badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Auto-detected: <strong>${escapeHtml(detectedOp)}</strong> <span class="circle-tag"><i class="fa-solid fa-location-dot me-1"></i>${escapeHtml(currentDetectedCircleName)}</span>`;
-                        badgeEl.style.display = 'inline-flex';
+                        if (badgeEl) {
+                            badgeEl.className = 'operator-detect-badge';
+                            badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Auto-detected: <strong>${escapeHtml(detectedOp)}</strong> <span class="circle-tag"><i class="fa-solid fa-location-dot me-1"></i>${escapeHtml(currentDetectedCircleName)}</span>`;
+                            badgeEl.style.display = 'inline-flex';
+                        }
+
+                        // Load plans for this operator and circle
+                        await loadPlansForOperator(detectedOp, currentDetectedCircle);
                     }
 
-                    // Load plans for this operator and circle
-                    await loadPlansForOperator(detectedOp, currentDetectedCircle);
-
                     // Fetch subscriber-specific R-offers
-                    fetchSubscriberRoffers(mobile, data.operator_code || detectedOp);
+                    fetchSubscriberRoffers(mobile, data.operator_code || currentSelectedOperator);
                 } else {
                     if (badgeEl) {
                         badgeEl.className = 'operator-detect-badge';
@@ -1400,6 +1405,15 @@
             document.querySelectorAll('.op-chip').forEach(c => c.classList.remove('selected'));
             element.classList.add('selected');
             currentSelectedOperator = opCode;
+            userManuallySelectedOperator = true;
+
+            const badgeEl = document.getElementById('operatorDetectBadge');
+            if (badgeEl) {
+                badgeEl.className = 'operator-detect-badge';
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Selected: <strong>${escapeHtml(opCode)}</strong> <span class="circle-tag"><i class="fa-solid fa-location-dot me-1"></i>${escapeHtml(currentDetectedCircleName)}</span>`;
+                badgeEl.style.display = 'inline-flex';
+            }
+
             if (currentActiveService === 'mobile') {
                 loadPlansForOperator(opCode, currentDetectedCircle);
                 const mob = (document.getElementById('targetAccountNumber').value || '').replace(/\D/g, '');

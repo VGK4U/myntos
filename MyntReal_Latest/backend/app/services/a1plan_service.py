@@ -168,20 +168,12 @@ def operator_circle_fetch(mobile: str) -> Dict[str, Any]:
 
 def _fallback_operator_circle(clean_mobile: str) -> Dict[str, Any]:
     """Smart prefix-based fallback when external API is unreachable or auth is pending."""
-    first_two = clean_mobile[:2]
-    # General Indian mobile allocation heuristic:
-    if first_two in ["98", "99", "97", "96", "81", "88", "85"]:
-        op_ui = "Airtel"
-        op_code = "A"
-    elif first_two in ["70", "79", "62", "63", "89", "78"]:
-        op_ui = "Jio"
-        op_code = "RC"
-    elif first_two in ["90", "91", "92", "93", "94"]:
-        op_ui = "BSNL"
-        op_code = "BT"
-    else:
-        op_ui = "VI"
-        op_code = "V"
+    try:
+        from app.services.indian_telecom_prefixes import resolve_indian_prefix
+        op_ui, op_code, cir_name, cir_code = resolve_indian_prefix(clean_mobile)
+    except Exception as e:
+        logger.warning(f"resolve_indian_prefix error: {e}")
+        op_ui, op_code, cir_name, cir_code = "Jio", "RC", DEFAULT_CIRCLE_NAME, DEFAULT_CIRCLE_CODE
 
     return {
         "success": True,
@@ -190,9 +182,9 @@ def _fallback_operator_circle(clean_mobile: str) -> Dict[str, Any]:
         "operator": op_ui.upper(),
         "ui_operator": op_ui,
         "operator_code": op_code,
-        "circle": DEFAULT_CIRCLE_NAME,
-        "circle_code": DEFAULT_CIRCLE_CODE,
-        "message": "Auto-detected"
+        "circle": cir_name or DEFAULT_CIRCLE_NAME,
+        "circle_code": cir_code or DEFAULT_CIRCLE_CODE,
+        "message": f"Auto-detected: {op_ui}"
     }
 
 
