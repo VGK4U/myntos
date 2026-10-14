@@ -521,14 +521,26 @@
         }
 
         .plan-card-desc {
-            font-size: 0.74rem;
+            font-size: 0.76rem;
             color: #94a3b8;
-            line-height: 1.35;
+            line-height: 1.45;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        #plansModal .plan-card-desc {
+            -webkit-line-clamp: 8;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: #cbd5e1;
+        }
+
+        .plan-card:hover .plan-card-desc {
+            color: #f8fafc;
         }
 
         .plan-card-tags {

@@ -375,9 +375,19 @@ def get_plans(operator: str = None, circle: str = None, db: Session = Depends(ge
     # 2. Database fallback
     query = db.query(RechargePlan)
     if operator:
-        query = query.filter(RechargePlan.operator.ilike(f"%{operator}%"))
+        op_clean = operator.strip().lower()
+        if "jio" in op_clean or "reliance" in op_clean:
+            query = query.filter(RechargePlan.operator == "Jio")
+        elif "airtel" in op_clean:
+            query = query.filter(RechargePlan.operator == "Airtel")
+        elif "vi" in op_clean or "vodafone" in op_clean or "idea" in op_clean:
+            query = query.filter(RechargePlan.operator == "Vi")
+        elif "bsnl" in op_clean:
+            query = query.filter(RechargePlan.operator == "BSNL")
+        else:
+            query = query.filter(RechargePlan.operator.ilike(f"%{operator}%"))
         
-    plans = query.all()
+    plans = query.order_by(RechargePlan.amount.asc()).all()
     
     return [
         {

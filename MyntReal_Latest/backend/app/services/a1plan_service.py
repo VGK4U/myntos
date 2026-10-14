@@ -246,7 +246,7 @@ def roffer_check(mobile: str, operator_code: Optional[str] = None) -> Dict[str, 
     }
 
     try:
-        resp = requests.get(req_url, params=params, timeout=12)
+        resp = requests.get(req_url, params=params, timeout=3)
         data = resp.json()
         logger.info(f"rofferCheck for {clean_mobile} ({operator_code}): {data}")
 
@@ -283,19 +283,23 @@ def roffer_check(mobile: str, operator_code: Optional[str] = None) -> Dict[str, 
             _roffer_cache[cache_key] = (now, res)
             return res
         else:
-            return {
+            err_res = {
                 "success": False,
                 "error": data.get("MESSAGE") or "No special offers found for this number.",
                 "offers": []
             }
+            _roffer_cache[cache_key] = (now, err_res)
+            return err_res
 
     except Exception as e:
         logger.error(f"rofferCheck exception: {e}")
-        return {
+        err_res = {
             "success": False,
             "error": f"Error reaching R-Offer gateway: {str(e)}",
             "offers": []
         }
+        _roffer_cache[cache_key] = (now, err_res)
+        return err_res
 
 
 # ── 3. LIVE PLAN FETCH ────────────────────────────────────────────────
@@ -337,7 +341,7 @@ def plan_fetch(operator_code: str, circle_code: str = DEFAULT_CIRCLE_CODE) -> Di
     }
 
     try:
-        resp = requests.get(req_url, params=params, timeout=15)
+        resp = requests.get(req_url, params=params, timeout=4)
         data = resp.json()
         logger.info(f"planFetch for {op_code} circle {c_code}: Status={resp.status_code}")
 
@@ -387,18 +391,23 @@ def plan_fetch(operator_code: str, circle_code: str = DEFAULT_CIRCLE_CODE) -> Di
             _plans_cache[cache_key] = (now, res)
             return res
         else:
-            return {
+            err_res = {
                 "success": False,
                 "error": data.get("MESSAGE") or "Failed to fetch operator plans.",
                 "categories": {},
                 "plans": []
             }
+            # Cache failure for 10 minutes to avoid UI lag and gateway thrashing
+            _plans_cache[cache_key] = (now, err_res)
+            return err_res
 
     except Exception as e:
         logger.error(f"planFetch exception: {e}")
-        return {
+        err_res = {
             "success": False,
             "error": f"Error reaching plan gateway: {str(e)}",
             "categories": {},
             "plans": []
         }
+        _plans_cache[cache_key] = (now, err_res)
+        return err_res
