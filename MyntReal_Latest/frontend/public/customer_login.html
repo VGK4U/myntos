@@ -655,6 +655,7 @@
             // Auto-detect existing login
             const existingToken = localStorage.getItem('customer_access_token');
             const existingProfile = localStorage.getItem('customer_profile');
+            const redirectParam = params.get('redirect') || params.get('return_to');
             if (existingToken && existingProfile) {
                 try {
                     const prof = JSON.parse(existingProfile);
@@ -671,6 +672,11 @@
                     if (banner && bannerName) {
                         bannerName.innerText = `Signed in as ${prof.customer_name || 'Customer'} (+91 ${prof.mobile_number || ''})`;
                         banner.style.setProperty('display', 'flex', 'important');
+                        const bannerLink = banner.querySelector('a');
+                        if (bannerLink && redirectParam) {
+                            bannerLink.href = redirectParam;
+                            bannerLink.innerHTML = 'Continue to Service <i class="fa-solid fa-arrow-right ms-1"></i>';
+                        }
                     }
                 } catch(e) {}
             }
@@ -794,7 +800,8 @@
                         showConfirmButton: false
                     });
                     setTimeout(() => {
-                        window.location.href = '/customer/dashboard';
+                        const redirectTarget = new URLSearchParams(window.location.search).get('redirect') || '/customer/dashboard';
+                        window.location.href = redirectTarget;
                     }, 1200);
                 } else {
                     Swal.fire({
@@ -871,7 +878,8 @@
                         confirmButtonText: 'Go to Executive Dashboard',
                         confirmButtonColor: '#10b981'
                     }).then(() => {
-                        window.location.href = '/customer/dashboard';
+                        const redirectTarget = new URLSearchParams(window.location.search).get('redirect') || '/customer/dashboard';
+                        window.location.href = redirectTarget;
                     });
                 } else {
                     Swal.fire('Registration Alert', data.detail || 'Could not create profile.', 'error');

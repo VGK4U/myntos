@@ -480,13 +480,30 @@ def get_current_customer(
         )
 
 
+def serialize_customer(obj: Any) -> CustomerProfileOut:
+    """Safely serialize customer model to Pydantic schema across v1/v2."""
+    if hasattr(CustomerProfileOut, "model_validate"):
+        return CustomerProfileOut.model_validate(obj)
+    return CustomerProfileOut.from_orm(obj)
+
+
+def normalize_phone_10(phone: str) -> str:
+    """Normalize Indian phone number to clean 10 digits."""
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
 @router.post("/create-profile", response_model=CustomerAuthResponse)
 def create_customer_profile(payload: CustomerProfileCreate, db: Session = Depends(get_db)):
     """
     Post-recharge / Direct customer profile registration.
     Saves Customer Name, Postal PIN code, and 4-digit Security PIN.
     """
-    clean_phone = payload.mobile_number
+    clean_phone = normalize_phone_10(payload.mobile_number)
 
     # Sandbox intercept
     if clean_phone in SANDBOX_PROFILES:
@@ -514,7 +531,7 @@ def create_customer_profile(payload: CustomerProfileCreate, db: Session = Depend
             success=True,
             message="Profile registered successfully (Sandbox Mode)!",
             token=jwt_token,
-            customer=CustomerProfileOut.from_orm(sandbox_obj)
+            customer=serialize_customer(sandbox_obj)
         )
 
     hashed_pin = SecurityManager.get_password_hash(payload.security_pin)
@@ -560,7 +577,7 @@ def create_customer_profile(payload: CustomerProfileCreate, db: Session = Depend
         success=True,
         message="Profile created successfully. Welcome to your Executive Customer Hub!",
         token=jwt_token,
-        customer=CustomerProfileOut.from_orm(customer)
+        customer=serialize_customer(customer)
     )
 
 
@@ -569,7 +586,7 @@ def customer_login(payload: CustomerLoginRequest, db: Session = Depends(get_db))
     """
     Authenticate customer via 10-digit Mobile Number + 4-digit Security PIN.
     """
-    clean_phone = payload.mobile_number
+    clean_phone = normalize_phone_10(payload.mobile_number)
 
     # Sandbox intercept (Zero DB access)
     if clean_phone in SANDBOX_PROFILES:
@@ -592,7 +609,7 @@ def customer_login(payload: CustomerLoginRequest, db: Session = Depends(get_db))
             success=True,
             message=f"Welcome back (Sandbox Demo), {sandbox_obj.customer_name}!",
             token=jwt_token,
-            customer=CustomerProfileOut.from_orm(sandbox_obj)
+            customer=serialize_customer(sandbox_obj)
         )
 
     customer = db.query(CustomerProfile).filter_by(mobile_number=clean_phone, is_active=True).first()
@@ -621,7 +638,7 @@ def customer_login(payload: CustomerLoginRequest, db: Session = Depends(get_db))
         success=True,
         message=f"Welcome back, {customer.customer_name}!",
         token=jwt_token,
-        customer=CustomerProfileOut.from_orm(customer)
+        customer=serialize_customer(customer)
     )
 
 
@@ -630,7 +647,7 @@ def reset_customer_pin(payload: ResetPinRequest, db: Session = Depends(get_db)):
     """
     Reset customer 4-digit Security PIN using registered Postal PIN code as secondary challenge.
     """
-    clean_phone = payload.mobile_number
+    clean_phone = normalize_phone_10(payload.mobile_number)
 
     # Sandbox intercept
     if clean_phone in SANDBOX_PROFILES:
@@ -654,7 +671,7 @@ def reset_customer_pin(payload: ResetPinRequest, db: Session = Depends(get_db)):
             success=True,
             message="4-digit Security PIN updated successfully (Sandbox Mode)!",
             token=jwt_token,
-            customer=CustomerProfileOut.from_orm(sandbox_obj)
+            customer=serialize_customer(sandbox_obj)
         )
 
     customer = db.query(CustomerProfile).filter_by(mobile_number=clean_phone, is_active=True).first()
@@ -688,7 +705,7 @@ def reset_customer_pin(payload: ResetPinRequest, db: Session = Depends(get_db)):
         success=True,
         message="4-digit Security PIN updated successfully!",
         token=jwt_token,
-        customer=CustomerProfileOut.from_orm(customer)
+        customer=serialize_customer(customer)
     )
 
 
@@ -697,7 +714,7 @@ def get_customer_profile_info(current_customer: Any = Depends(get_current_custom
     """Return verified customer profile info."""
     return {
         "success": True,
-        "customer": CustomerProfileOut.from_orm(current_customer)
+        "customer": serialize_customer(current_customer)
     }
 
 
@@ -717,14 +734,18 @@ def get_customer_dashboard_data(
     6. EV Customer Hub (Bookings, Battery warranty, Service tickets)
     7. Students & ETC Training Hub (Course enrollments & status)
     """
-    phone = current_customer.mobile_number
+    raw_phone = current_customer.mobile_number
+    phone_10 = normalize_phone_10(raw_phone)
+    phone_91 = f"91{phone_10}"
+    phone_plus91 = f"+91{phone_10}"
+    phone_like = f"%{phone_10}%"
 
     # Sandbox Intercept: Return high-fidelity sandbox data with zero RDS queries
-    if phone in SANDBOX_PROFILES:
-        s_data = SANDBOX_PROFILES[phone]
+    if phone_10 in SANDBOX_PROFILES or raw_phone in SANDBOX_PROFILES:
+        s_data = SANDBOX_PROFILES.get(phone_10) or SANDBOX_PROFILES.get(raw_phone)
         return {
             "success": True,
-            "profile": CustomerProfileOut.from_orm(current_customer),
+            "profile": serialize_customer(current_customer),
             "kpi": s_data.get("kpi", {}),
             "recharges": s_data.get("recharges", []),
             "utility_bills": s_data.get("utility_bills", []),
@@ -734,25 +755,25 @@ def get_customer_dashboard_data(
             "training_programs": s_data.get("training_programs", [])
         }
 
-    # 1. Total Spend Calculation
+    # 1. Total Spend Calculation (includes 'Paid' and 'Success' statuses)
     spend_row = db.execute(text("""
         SELECT COALESCE(SUM(amount), 0), COUNT(id)
         FROM recharge_transactions
-        WHERE (mobile_number = :phone OR value2 = :phone)
-          AND (payment_status = 'Success' OR payment_status ILIKE '%success%')
-    """), {"phone": phone}).fetchone()
+        WHERE (mobile_number IN (:p10, :p91, :pplus91) OR value2 IN (:p10, :p91, :pplus91))
+          AND (payment_status IN ('Paid', 'Success') OR payment_status ILIKE '%paid%' OR payment_status ILIKE '%success%')
+    """), {"p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchone()
     total_spend = float(spend_row[0]) if spend_row else 0.0
     total_tx_count = int(spend_row[1]) if spend_row else 0
 
-    # 2. Total Cashback Won & Claimed
+    # 2. Total Cashback Won & Claimed (case-insensitive status check)
     cashback_row = db.execute(text("""
         SELECT 
-            COALESCE(SUM(CASE WHEN status = 'claimed' THEN allocated_amount_paise ELSE 0 END), 0) / 100.0 AS claimed_amt,
-            COALESCE(SUM(CASE WHEN status = 'active' THEN allocated_amount_paise ELSE 0 END), 0) / 100.0 AS pending_amt,
+            COALESCE(SUM(CASE WHEN LOWER(status) = 'claimed' THEN allocated_amount_paise ELSE 0 END), 0) / 100.0 AS claimed_amt,
+            COALESCE(SUM(CASE WHEN LOWER(status) IN ('active', 'issued') THEN allocated_amount_paise ELSE 0 END), 0) / 100.0 AS pending_amt,
             COUNT(id) AS total_cards
         FROM scratch_cards
-        WHERE mobile_number = :phone
-    """), {"phone": phone}).fetchone()
+        WHERE mobile_number IN (:p10, :p91, :pplus91)
+    """), {"p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchone()
     cashback_claimed = float(cashback_row[0]) if cashback_row else 0.0
     cashback_pending = float(cashback_row[1]) if cashback_row else 0.0
     total_scratch_cards = int(cashback_row[2]) if cashback_row else 0
@@ -761,11 +782,11 @@ def get_customer_dashboard_data(
     recharges_rows = db.execute(text("""
         SELECT id, operator, circle, amount, payment_status, api_status, created_at, mobile_number, service_type
         FROM recharge_transactions
-        WHERE (mobile_number = :phone OR value2 = :phone)
-          AND (service_type IN ('mobile', 'postpaid') OR service_type IS NULL)
+        WHERE (mobile_number IN (:p10, :p91, :pplus91) OR value2 IN (:p10, :p91, :pplus91))
+          AND (LOWER(COALESCE(service_type, 'mobile')) IN ('mobile', 'postpaid'))
         ORDER BY created_at DESC
         LIMIT 50
-    """), {"phone": phone}).fetchall()
+    """), {"p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchall()
     recharges = [
         {
             "id": r[0],
@@ -785,11 +806,11 @@ def get_customer_dashboard_data(
     bills_rows = db.execute(text("""
         SELECT id, service_type, operator, circle, amount, payment_status, api_status, created_at, mobile_number, value1, value2
         FROM recharge_transactions
-        WHERE (mobile_number = :phone OR value2 = :phone)
-          AND service_type NOT IN ('mobile', 'postpaid')
+        WHERE (mobile_number IN (:p10, :p91, :pplus91) OR value2 IN (:p10, :p91, :pplus91))
+          AND (LOWER(COALESCE(service_type, 'mobile')) NOT IN ('mobile', 'postpaid'))
         ORDER BY created_at DESC
         LIMIT 50
-    """), {"phone": phone}).fetchall()
+    """), {"p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchall()
     utility_bills = [
         {
             "id": r[0],
@@ -801,30 +822,33 @@ def get_customer_dashboard_data(
             "api_status": r[6] or "Pending",
             "created_at": r[7].isoformat() if r[7] else None,
             "account_identifier": r[8] or r[9],
-            "customer_phone": r[10] or phone
+            "customer_phone": r[10] or phone_10
         }
         for r in bills_rows
     ]
 
     # 5. Cashback & Scratch Cards Gallery
     cards_rows = db.execute(text("""
-        SELECT id, brand, allocated_amount_paise, status, claimed_at, created_at, referral_code, expires_at
+        SELECT id, brand, allocated_amount_paise, status, claimed_at, created_at, referral_code, expires_at, payout_status, payout_tx_id, payout_method
         FROM scratch_cards
-        WHERE mobile_number = :phone
+        WHERE mobile_number IN (:p10, :p91, :pplus91)
         ORDER BY created_at DESC
         LIMIT 50
-    """), {"phone": phone}).fetchall()
+    """), {"p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchall()
     scratch_cards_list = [
         {
             "id": r[0],
             "brand": r[1] or "MyntReal",
             "amount_rupees": float(r[2] or 0) / 100.0,
-            "status": r[3] or "active",
+            "status": (r[3] or "active").lower(),
             "claimed_at": r[4].isoformat() if r[4] else None,
             "created_at": r[5].isoformat() if r[5] else None,
             "referral_code": r[6] or f"MYNT{r[0]:04d}",
             "expires_at": r[7].isoformat() if r[7] else None,
-            "claim_url": f"/scratch-card.html?card_id={r[0]}"
+            "claim_url": f"/scratch-card.html?card_id={r[0]}",
+            "payout_status": r[8] or "PENDING",
+            "payout_tx_id": r[9],
+            "payout_method": r[10]
         }
         for r in cards_rows
     ]
@@ -837,13 +861,13 @@ def get_customer_dashboard_data(
           AND (
               kw_size IS NOT NULL
               OR solar_pipeline_status IS NOT NULL
-              OR LOWER(looking_for) LIKE '%solar%'
-              OR LOWER(description) LIKE '%solar%'
-              OR LOWER(requirements) LIKE '%solar%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%solar%'
+              OR LOWER(COALESCE(description, '')) LIKE '%solar%'
+              OR LOWER(COALESCE(requirements, '')) LIKE '%solar%'
           )
         ORDER BY created_at DESC
         LIMIT 10
-    """), {"phone_like": f"%{phone}%"}).fetchall()
+    """), {"phone_like": phone_like}).fetchall()
     solar_projects = [
         {
             "id": r[0],
@@ -864,15 +888,15 @@ def get_customer_dashboard_data(
         WHERE phone LIKE :phone_like
           AND (
               ev_b2b_stage IS NOT NULL
-              OR LOWER(looking_for) LIKE '%ev%'
-              OR LOWER(looking_for) LIKE '%manthra%'
-              OR LOWER(looking_for) LIKE '%scooter%'
-              OR LOWER(description) LIKE '%ev%'
-              OR LOWER(description) LIKE '%battery%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%ev%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%manthra%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%scooter%'
+              OR LOWER(COALESCE(description, '')) LIKE '%ev%'
+              OR LOWER(COALESCE(description, '')) LIKE '%battery%'
           )
         ORDER BY created_at DESC
         LIMIT 10
-    """), {"phone_like": f"%{phone}%"}).fetchall()
+    """), {"phone_like": phone_like}).fetchall()
     
     tickets_rows = db.execute(text("""
         SELECT id, ticket_id, issue_category, status, priority, created_date
@@ -880,7 +904,7 @@ def get_customer_dashboard_data(
         WHERE customer_phone LIKE :phone_like
         ORDER BY created_date DESC
         LIMIT 10
-    """), {"phone_like": f"%{phone}%"}).fetchall()
+    """), {"phone_like": phone_like}).fetchall()
 
     ev_hub = {
         "vehicles": [
@@ -912,15 +936,15 @@ def get_customer_dashboard_data(
         FROM crm_leads
         WHERE phone LIKE :phone_like
           AND (
-              LOWER(looking_for) LIKE '%training%'
-              OR LOWER(looking_for) LIKE '%evolution%'
-              OR LOWER(looking_for) LIKE '%etc%'
-              OR LOWER(description) LIKE '%training%'
-              OR LOWER(requirements) LIKE '%training%'
+              LOWER(COALESCE(looking_for, '')) LIKE '%training%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%evolution%'
+              OR LOWER(COALESCE(looking_for, '')) LIKE '%etc%'
+              OR LOWER(COALESCE(description, '')) LIKE '%training%'
+              OR LOWER(COALESCE(requirements, '')) LIKE '%training%'
           )
         ORDER BY created_at DESC
         LIMIT 10
-    """), {"phone_like": f"%{phone}%"}).fetchall()
+    """), {"phone_like": phone_like}).fetchall()
     training_programs = [
         {
             "id": r[0],
@@ -934,7 +958,7 @@ def get_customer_dashboard_data(
 
     return {
         "success": True,
-        "profile": CustomerProfileOut.from_orm(current_customer),
+        "profile": serialize_customer(current_customer),
         "kpi": {
             "total_spend": total_spend,
             "total_transactions": total_tx_count,
@@ -942,7 +966,7 @@ def get_customer_dashboard_data(
             "cashback_pending": cashback_pending,
             "scratch_cards_count": total_scratch_cards,
             "referral_bonus_pct": 50,
-            "active_services_count": (1 if recharges else 0) + (1 if utility_bills else 0) + (1 if solar_projects else 0) + (1 if ev_rows else 0) + (1 if training_programs else 0)
+            "active_services_count": (1 if recharges else 0) + (1 if utility_bills else 0) + (1 if solar_projects else 0) + (1 if (ev_rows or tickets_rows) else 0) + (1 if training_programs else 0)
         },
         "recharges": recharges,
         "utility_bills": utility_bills,
@@ -967,8 +991,13 @@ def prepare_quick_redo(
     eff_amount = payload.custom_amount if (payload.custom_amount and payload.custom_amount > 0) else payload.amount
 
     # Check Sandbox Intercept
-    if current_customer.mobile_number in SANDBOX_PROFILES:
-        s_data = SANDBOX_PROFILES[current_customer.mobile_number]
+    raw_phone = current_customer.mobile_number
+    phone_10 = normalize_phone_10(raw_phone)
+    phone_91 = f"91{phone_10}"
+    phone_plus91 = f"+91{phone_10}"
+
+    if phone_10 in SANDBOX_PROFILES or raw_phone in SANDBOX_PROFILES:
+        s_data = SANDBOX_PROFILES.get(phone_10) or SANDBOX_PROFILES.get(raw_phone)
         matching = None
         for r in s_data.get("recharges", []):
             if r["id"] == payload.transaction_id:
@@ -1025,11 +1054,14 @@ def prepare_quick_redo(
             }
 
     tx = db.execute(text("""
-        SELECT id, operator, circle, amount, service_type, mobile_number, value1, value2
+        SELECT id, operator, circle, amount, service_type, mobile_number, value1, value2, referral_code, referred_by
         FROM recharge_transactions
         WHERE id = :txid
-          AND (mobile_number = :phone OR value2 = :phone)
-    """), {"txid": payload.transaction_id, "phone": current_customer.mobile_number}).fetchone()
+          AND (
+              mobile_number IN (:p10, :p91, :pplus91)
+              OR value2 IN (:p10, :p91, :pplus91)
+          )
+    """), {"txid": payload.transaction_id, "p10": phone_10, "p91": phone_91, "pplus91": phone_plus91}).fetchone()
 
     if not tx:
         raise HTTPException(
@@ -1066,6 +1098,8 @@ def prepare_quick_redo(
         service_type=tx[4] or "mobile",
         value1=tx[6] or "",
         value2=tx[7] or current_customer.mobile_number,
+        referral_code=tx[8] if len(tx) > 8 else None,
+        referred_by=tx[9] if len(tx) > 9 else None,
         razorpay_order_id=razorpay_order_id,
         payment_status="Pending",
         api_status="Pending"

@@ -77,7 +77,9 @@ class ScratchCard(BaseModel):
     payout_bank_account = Column(String(50), nullable=True)
     payout_bank_ifsc = Column(String(20), nullable=True)
     payout_bank_name = Column(String(100), nullable=True)
-    payout_status = Column(String(30), default="PENDING", nullable=True) # PENDING, PROCESSED, FAILED
+    payout_status = Column(String(50), default="PENDING", nullable=True) # PENDING, PROCESSING, PROCESSED, FAILED, PENDING_ACCOUNT_CONFIG
+    payout_tx_id = Column(String(100), nullable=True)
+    payout_notes = Column(Text, nullable=True)
 
     referral_code = Column(String(50), nullable=True, index=True)
     referred_by_card_id = Column(Integer, nullable=True, index=True)

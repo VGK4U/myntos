@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
     RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
+
+    # RazorpayX Payout Configuration
+    RAZORPAYX_KEY_ID: Optional[str] = os.getenv("RAZORPAYX_KEY_ID")
+    RAZORPAYX_KEY_SECRET: Optional[str] = os.getenv("RAZORPAYX_KEY_SECRET")
+    RAZORPAYX_ACCOUNT_NUMBER: Optional[str] = os.getenv("RAZORPAYX_ACCOUNT_NUMBER")
     
     # A1Topup Configuration
     A1TOPUP_USERNAME: Optional[str] = None

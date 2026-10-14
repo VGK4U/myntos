@@ -454,7 +454,7 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" onclick="selectVerticalTab('cashback', document.querySelectorAll('.v-tab-btn')[2])" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
+                    <button type="button" onclick="selectVerticalTab('cashback')" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-solid fa-gift me-1"></i> Scratch Cards
                     </button>
                     <a href="/recharge" class="btn btn-sm btn-success rounded-pill px-3 py-2 fw-bold" style="box-shadow: 0 4px 12px var(--emerald-glow);">
@@ -510,22 +510,22 @@
 
         <!-- HORIZONTAL TABS SELECTOR -->
         <div class="vertical-tabs-nav">
-            <button class="v-tab-btn active" onclick="selectVerticalTab('recharges', this)">
+            <button class="v-tab-btn active" id="tabBtn-recharges" onclick="selectVerticalTab('recharges', this)">
                 <i class="fa-solid fa-mobile-screen"></i> Recharges (<span id="countRecharges">0</span>)
             </button>
-            <button class="v-tab-btn" onclick="selectVerticalTab('bills', this)">
+            <button class="v-tab-btn" id="tabBtn-bills" onclick="selectVerticalTab('bills', this)">
                 <i class="fa-solid fa-lightbulb"></i> Utility Bills (<span id="countBills">0</span>)
             </button>
-            <button class="v-tab-btn" onclick="selectVerticalTab('cashback', this)">
+            <button class="v-tab-btn" id="tabBtn-cashback" onclick="selectVerticalTab('cashback', this)">
                 <i class="fa-solid fa-gift"></i> Cashback &amp; Rewards (<span id="countCards">0</span>)
             </button>
-            <button class="v-tab-btn" onclick="selectVerticalTab('solar', this)">
+            <button class="v-tab-btn" id="tabBtn-solar" onclick="selectVerticalTab('solar', this)">
                 <i class="fa-solid fa-sun"></i> Solar Projects (<span id="countSolar">0</span>)
             </button>
-            <button class="v-tab-btn" onclick="selectVerticalTab('ev', this)">
+            <button class="v-tab-btn" id="tabBtn-ev" onclick="selectVerticalTab('ev', this)">
                 <i class="fa-solid fa-motorcycle"></i> EV &amp; Support (<span id="countEv">0</span>)
             </button>
-            <button class="v-tab-btn" onclick="selectVerticalTab('training', this)">
+            <button class="v-tab-btn" id="tabBtn-training" onclick="selectVerticalTab('training', this)">
                 <i class="fa-solid fa-graduation-cap"></i> Student Training (<span id="countTraining">0</span>)
             </button>
         </div>
@@ -816,14 +816,14 @@
             tbody.innerHTML = list.map(item => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}) : '--';
                 const st = (item.payment_status || 'Pending').toLowerCase();
-                const badgeClass = st === 'completed' || st === 'success' ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
+                const badgeClass = (st === 'completed' || st === 'success' || st === 'paid') ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
 
                 return `
                     <tr>
                         <td style="color: #cbd5e1;"><i class="fa-regular fa-calendar me-1" style="color: #94a3b8; font-size: 0.8rem;"></i>${dateStr}</td>
                         <td class="fw-bold text-white">+91 ${item.target_number || '--'}</td>
                         <td style="color: #f1f5f9;"><span class="fw-semibold">${item.operator}</span> <span class="small" style="color: #94a3b8;">(${item.circle})</span></td>
-                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${item.amount.toFixed(2)}</td>
+                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${parseFloat(item.amount || 0).toFixed(2)}</td>
                         <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
                         <td class="text-end">
                             <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
@@ -846,7 +846,7 @@
             tbody.innerHTML = list.map(item => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'}) : '--';
                 const st = (item.payment_status || 'Pending').toLowerCase();
-                const badgeClass = st === 'completed' || st === 'success' ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
+                const badgeClass = (st === 'completed' || st === 'success' || st === 'paid') ? 'status-success' : (st === 'failed' ? 'status-failed' : 'status-pending');
 
                 return `
                     <tr>
@@ -854,7 +854,7 @@
                         <td class="text-uppercase fw-bold text-info">${item.service_type}</td>
                         <td class="fw-bold text-white">${item.account_identifier || '--'}</td>
                         <td style="color: #f1f5f9;" class="fw-semibold">${item.operator}</td>
-                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${item.amount.toFixed(2)}</td>
+                        <td class="fw-bold text-warning" style="font-size: 0.95rem;">₹${parseFloat(item.amount || 0).toFixed(2)}</td>
                         <td><span class="status-badge ${badgeClass}">${item.payment_status}</span></td>
                         <td class="text-end">
                             <button class="btn-quick-redo" onclick='openQuickRedoModal(${JSON.stringify(item)})'>
@@ -881,15 +881,19 @@
 
             grid.innerHTML = cards.map(c => {
                 const cardUrl = c.claim_url || `/scratch-card.html?card_id=${c.id}`;
+                const isClaimed = (c.status || '').toLowerCase() === 'claimed';
+                const pStatus = (c.payout_status || 'PENDING').toUpperCase();
+                const pBadgeClass = pStatus === 'PROCESSED' ? 'bg-success bg-opacity-25 text-success' : (pStatus === 'FAILED' ? 'bg-danger bg-opacity-25 text-danger' : 'bg-info bg-opacity-25 text-info');
                 return `
                     <div class="card-promo-box">
-                        <span class="badge ${c.status === 'claimed' ? 'bg-success' : 'bg-warning text-dark'} mb-2 text-uppercase fw-bold">
-                            ${c.status === 'claimed' ? 'Claimed' : 'Ready to Scratch'}
+                        <span class="badge ${isClaimed ? 'bg-success' : 'bg-warning text-dark'} mb-2 text-uppercase fw-bold">
+                            ${isClaimed ? 'Claimed' : 'Ready to Scratch'}
                         </span>
-                        <div class="h3 fw-bolder text-warning mb-1">₹${c.amount_rupees.toFixed(2)}</div>
-                        <div class="small mb-3" style="color: #94a3b8;">Ref: <span class="text-white fw-semibold">${c.referral_code}</span></div>
+                        <div class="h3 fw-bolder text-warning mb-1">₹${parseFloat(c.amount_rupees || 0).toFixed(2)}</div>
+                        <div class="small mb-2" style="color: #94a3b8;">Ref: <span class="text-white fw-semibold">${c.referral_code}</span></div>
+                        ${isClaimed ? `<div class="mb-2"><span class="badge ${pBadgeClass}" style="font-size: 0.68rem;"><i class="fa-solid fa-money-bill-transfer me-1"></i> Payout: ${pStatus}</span></div>` : ''}
                         <a href="${cardUrl}" class="btn btn-sm btn-outline-warning w-100 rounded-pill fw-bold">
-                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${c.status === 'claimed' ? 'View Details' : 'Scratch Now'}
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> ${isClaimed ? 'View Details' : 'Scratch Now'}
                         </a>
                     </div>
                 `;
@@ -976,7 +980,8 @@
             document.querySelectorAll('.v-tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.dashboard-tab-pane').forEach(p => p.style.display = 'none');
 
-            btn.classList.add('active');
+            const tabBtn = btn || document.getElementById(`tabBtn-${tabName}`);
+            if (tabBtn) tabBtn.classList.add('active');
             const target = document.getElementById(`tab-${tabName}`);
             if (target) target.style.display = 'block';
         }
@@ -987,8 +992,8 @@
             const targetAcc = item.target_number || item.account_identifier || '--';
             document.getElementById('redoTargetAccount').innerText = targetAcc;
             document.getElementById('redoOperator').innerText = `${item.operator} (${item.service_type || 'Mobile'})`;
-            document.getElementById('redoLastAmount').innerText = `₹${item.amount.toFixed(2)}`;
-            document.getElementById('btnSameAmountText').innerText = `₹${item.amount.toFixed(2)}`;
+            document.getElementById('redoLastAmount').innerText = `₹${parseFloat(item.amount || 0).toFixed(2)}`;
+            document.getElementById('btnSameAmountText').innerText = `₹${parseFloat(item.amount || 0).toFixed(2)}`;
             
             // Reset custom amount state
             document.getElementById('changeAmountSection').style.display = 'none';
@@ -1119,14 +1124,32 @@
 
                             if (verifyRes.ok) {
                                 confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-                                Swal.fire({
-                                    title: '🎉 Payment Successful!',
-                                    text: 'Your repeat transaction was processed instantly.',
-                                    icon: 'success',
-                                    confirmButtonText: 'Great!'
-                                });
-                                // Refresh dashboard data
-                                loadDashboardData(token);
+                                if (verifyData.scratch_card_url) {
+                                    Swal.fire({
+                                        title: '🎉 Payment Successful!',
+                                        html: 'Your repeat transaction was processed instantly.<br><br><span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="font-size: 0.9rem;">🎁 You unlocked an exclusive Cashback Scratch Card!</span>',
+                                        icon: 'success',
+                                        showCancelButton: true,
+                                        confirmButtonText: '<i class="fa-solid fa-gift me-1"></i> Scratch Cashback Now!',
+                                        confirmButtonColor: '#f59e0b',
+                                        cancelButtonText: 'Stay on Dashboard',
+                                        cancelButtonColor: '#10b981'
+                                    }).then((r) => {
+                                        if (r.isConfirmed) {
+                                            window.location.href = verifyData.scratch_card_url;
+                                        } else {
+                                            loadDashboardData(token);
+                                        }
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: '🎉 Payment Successful!',
+                                        text: 'Your repeat transaction was processed instantly.',
+                                        icon: 'success',
+                                        confirmButtonText: 'Great!'
+                                    });
+                                    loadDashboardData(token);
+                                }
                             } else {
                                 Swal.fire('Verification Status', verifyData.detail || 'Payment processed. Operator status updating.', 'info');
                             }

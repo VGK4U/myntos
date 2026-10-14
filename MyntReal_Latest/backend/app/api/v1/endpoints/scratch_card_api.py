@@ -93,6 +93,8 @@ def get_scratch_card_info(token: str, db: Session = Depends(get_db)):
         "payout_bank_account": getattr(card, "payout_bank_account", None) or "",
         "payout_bank_ifsc": getattr(card, "payout_bank_ifsc", None) or "",
         "payout_status": getattr(card, "payout_status", None) or "PENDING",
+        "payout_tx_id": getattr(card, "payout_tx_id", None) or "",
+        "payout_notes": getattr(card, "payout_notes", None) or "",
         "referral_code": card.referral_code or f"MYNT{card.id:04d}",
         "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
         "referral_bonus_pct": 50,
@@ -179,6 +181,8 @@ def get_scratch_card_by_id(card_id: int, db: Session = Depends(get_db)):
         "payout_bank_account": getattr(card, "payout_bank_account", None) or "",
         "payout_bank_ifsc": getattr(card, "payout_bank_ifsc", None) or "",
         "payout_status": getattr(card, "payout_status", None) or "PENDING",
+        "payout_tx_id": getattr(card, "payout_tx_id", None) or "",
+        "payout_notes": getattr(card, "payout_notes", None) or "",
         "referral_code": card.referral_code or f"MYNT{card.id:04d}",
         "referral_link": f"https://www.vgk4u.com/recharge?ref={card.referral_code or f'MYNT{card.id:04d}'}",
         "referral_bonus_pct": 50,
@@ -409,6 +413,16 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
 
         amount_in_rs = card.allocated_amount_paise / 100.0
 
+        # ── Automated RazorpayX Payout Execution ───────────────────
+        try:
+            from app.services.razorpayx_service import disburse_scratch_payout
+            disburse_scratch_payout(card=card, db=db)
+        except Exception as payout_err:
+            print(f"[SCRATCH-PAYOUT] RazorpayX disbursement exception: {payout_err}")
+            card.payout_status = "FAILED"
+            card.payout_notes = f"Execution error: {str(payout_err)}"
+            db.commit()
+
         # Dispatch WhatsApp claim acknowledgment message
         try:
             from app.services.notification_outbox_service import enqueue_scratch_claim_ack_notification
@@ -439,6 +453,8 @@ def claim_scratch_card(req: ClaimScratchCardRequest, db: Session = Depends(get_d
             "payout_bank_account": card.payout_bank_account,
             "payout_bank_ifsc": card.payout_bank_ifsc,
             "payout_status": card.payout_status,
+            "payout_tx_id": getattr(card, "payout_tx_id", None),
+            "payout_notes": getattr(card, "payout_notes", None),
             "referral_code": ref_code,
             "referral_link": f"https://www.vgk4u.com/recharge?ref={ref_code}",
             "referral_bonus_pct": 50,
@@ -535,6 +551,31 @@ def register_scratch_interest(req: ScratchInterestRequest, db: Session = Depends
         "status": "success",
         "message": f"Thank you! Our {cat} specialist will connect with you on {phone_10} with exclusive discounts.",
         "lead_id": lead.id
+    }
+
+
+@router.post("/retry-payout/{card_id}")
+def retry_scratch_payout(card_id: int, db: Session = Depends(get_db)):
+    """
+    Triggers or retries automated RazorpayX payout for a claimed scratch card.
+    Useful for testing or recovering from temporary payment gateway errors.
+    """
+    card = db.query(ScratchCard).filter(ScratchCard.id == card_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Scratch card not found.")
+    if card.status != "CLAIMED":
+        raise HTTPException(status_code=400, detail="Scratch card has not been claimed yet.")
+
+    from app.services.razorpayx_service import disburse_scratch_payout
+    result = disburse_scratch_payout(card=card, db=db)
+    return {
+        "status": "success" if result.get("success") else "failed",
+        "card_id": card.id,
+        "amount_rupees": card.allocated_amount_paise / 100.0,
+        "payout_status": card.payout_status,
+        "payout_tx_id": card.payout_tx_id,
+        "payout_notes": card.payout_notes,
+        "details": result
     }
 
 
