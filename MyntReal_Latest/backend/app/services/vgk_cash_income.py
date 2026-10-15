@@ -195,13 +195,10 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
 
     # Execute Waterfall Engine
     is_e2e = bool(support_id)
-    is_staff_involved = bool(
-        getattr(lead, 'support_staff_id', None) or
-        getattr(lead, 'technical_staff1_id', None) or
-        getattr(lead, 'technical_id', None) or
-        getattr(lead, 'mnr_handler_id', None) or
-        (tagged_visits_count > 0)
-    )
+    comp_supp = getattr(lead, 'company_supported', True)
+    if comp_supp is None:
+        comp_supp = True
+    is_staff_involved = bool(comp_supp)
     result = VGK4UWaterfallEngine.calculate_commission_structure(
         db=db,
         producer_partner_id=lead.associated_partner_id,
@@ -932,16 +929,19 @@ def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
             logger.info(f'[VGK-CI] Lead {lead.id} L{level} entry already exists (kind={exists.kind}, status={exists.status}) — skipping')
             continue
 
-        commission = _level_comm_overrides.get(level) or _calc_comm(commission_base, pct, 'PCT', Decimal('0'))
-
-        # DC-DELAYED-BANK-L5-001: Delayed Bank Stage L5 50% Pool Reduction & Multi-Visit Incentive
+        # DC-COMPANY-SUPPORTED-L5-001: Company Supported Checkbox
+        # If checked (True, default): 50% L5 support pool.
+        # If unchecked (False): 100% L5 support pool.
         tagged_visits_count = 0
         if level == 5:
-            at_bank_date = getattr(lead, 'at_bank_date', None) or getattr(lead, 'stage_updated_at', None)
-            days_at_bank = 0
-            if (getattr(lead, 'stage', '') or '').upper() in ('AT_BANK', 'BANK_SUBMISSION', 'WAITING_FOR_BANK_LOAN') and at_bank_date:
-                now_dt = _get_ist()
-                days_at_bank = (now_dt.date() - (at_bank_date.date() if hasattr(at_bank_date, 'date') else at_bank_date)).days
+            comp_supp = getattr(lead, 'company_supported', True)
+            if comp_supp is None:
+                comp_supp = True
+            if comp_supp:
+                commission = (commission * Decimal('0.50')).quantize(Decimal('0.01'))
+                logger.info(f'[VGK-CI] Lead {lead.id} company_supported=True -> L5 Support reduced to 50% (₹{commission})')
+            else:
+                logger.info(f'[VGK-CI] Lead {lead.id} company_supported=False -> L5 Support full 100% (₹{commission})')
 
             try:
                 tagged_visits_count = db.execute(text("""
@@ -959,11 +959,6 @@ def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
                 }).scalar() or 0
             except Exception as _tve:
                 logger.warning(f'[VGK-CI] Journey visit count check failed: {_tve}')
-
-            first_payment_received = getattr(lead, 'first_payment_received', False) or (getattr(lead, 'deal_value_received', 0) or 0) > 0
-            if days_at_bank > 10 and not first_payment_received and tagged_visits_count >= 1:
-                commission = (commission * Decimal('0.50')).quantize(Decimal('0.01'))
-                logger.info(f'[VGK-CI] Lead {lead.id} L5 pool reduced to 50% (₹{commission}) — days_at_bank={days_at_bank}, visits={tagged_visits_count}')
 
             # DC-MULTI-VISIT-BONUS-001: Staff who logged >= 2 journey visits gets ONLY ₹250 flat extra incentive
             if tagged_visits_count >= 2 and partner:
@@ -1479,11 +1474,27 @@ def release_cash_income(
     entry.advance_adjusted_amount = _cut
     taxable_base = max(Decimal('0'), gross - _cut)
 
-    admin   = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
-    payable = max(Decimal('0'), taxable_base - admin)
-    # DC-FIX-2605-007: TDS must be on payable (=taxable_base−admin), matching post_jv_paid.
-    tds     = (payable * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'))
-    net     = max(Decimal('0'), payable - tds)
+    # Check Dhamaka waiver
+    is_dhamaka_waived = False
+    if entry.kind == 'EXTRA_COMMISSION' and entry.bonanza_id:
+        is_dhamaka_waived = bool(db.execute(text("SELECT waive_tds_and_admin FROM bonanza WHERE id = :bid"), {'bid': entry.bonanza_id}).scalar())
+    elif entry.source_lead_id:
+        from app.services.vgk_dhamaka_service import find_active_dhamaka_bonanza
+        _lead_rel = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': entry.source_lead_id}).fetchone()
+        _dh_bz_rel = find_active_dhamaka_bonanza(db, _lead_rel) if _lead_rel else None
+        is_dhamaka_waived = bool(_dh_bz_rel and getattr(_dh_bz_rel, 'waive_tds_and_admin', False))
+
+    if is_dhamaka_waived:
+        admin   = Decimal('0.00')
+        payable = taxable_base
+        tds     = Decimal('0.00')
+        net     = taxable_base
+    else:
+        admin   = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
+        payable = max(Decimal('0'), taxable_base - admin)
+        # DC-FIX-2605-007: TDS must be on payable (=taxable_base−admin), matching post_jv_paid.
+        tds     = (payable * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'))
+        net     = max(Decimal('0'), payable - tds)
     deductions = admin + tds + _cut
 
     # DC-VGK-FLOW-002: Points debit DEFERRED to mark_paid_cash_income (PAID stage).
@@ -3152,9 +3163,18 @@ def record_dvr_advance_as_income_row(
     )
 
     taxable_base = max(Decimal('0'), advance_base - _adj_amt)
-    admin_charges = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    tds_amount = ((taxable_base - admin_charges) * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    net_payout = max(Decimal('0'), taxable_base - admin_charges - tds_amount)
+    from app.services.vgk_dhamaka_service import find_active_dhamaka_bonanza
+    _lead_obj = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': _lead_id}).fetchone() if _lead_id else None
+    _dh_bz = find_active_dhamaka_bonanza(db, _lead_obj) if _lead_obj else None
+    if _dh_bz and getattr(_dh_bz, 'waive_tds_and_admin', False):
+        admin_charges = Decimal('0.00')
+        tds_amount    = Decimal('0.00')
+        net_payout    = taxable_base
+        _notes += ' [Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]'
+    else:
+        admin_charges = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        tds_amount = ((taxable_base - admin_charges) * TDS_PCT / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        net_payout = max(Decimal('0'), taxable_base - admin_charges - tds_amount)
 
     entry = VGKCashIncomeEntry(
         company_id              = company_id,

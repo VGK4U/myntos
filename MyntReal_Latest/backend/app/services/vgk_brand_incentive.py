@@ -313,12 +313,24 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
     Returns number of entries created.
     """
     try:
-        # DC-VGK-BRAND-INCENTIVE-002: Brand commissions are generated ONLY at final completion stages
-        COMPLETION_STAGES = {'subsidy_pending', 'completed', 'balance_received'}
+        # DC-VGK-BRAND-INCENTIVE-002 / DC-STRICT-COMM-GATE-2026:
+        # Brand commissions are generated ONLY when lead reaches subsidy_pending or completed stages.
+        COMPLETION_STAGES = {'subsidy_pending', 'completed', 'completed_paid', 'subsidy_received'}
         pipeline = (getattr(lead, 'solar_pipeline_status', None) or '').strip().lower()
         status = (getattr(lead, 'status', None) or '').strip().lower()
-        if pipeline not in COMPLETION_STAGES and status != 'completed':
-            logger.debug(f'[VGK-BRAND-COMM] Lead {lead.id} stage {pipeline!r} / status {status!r} not in completion stages; skipping brand commission generation.')
+        is_solar = bool(pipeline) or getattr(lead, 'category_id', None) == 6 or bool(getattr(lead, 'solar_brand_id', None))
+        if is_solar:
+            if pipeline not in COMPLETION_STAGES:
+                logger.debug(f'[VGK-BRAND-COMM] Solar Lead {lead.id} stage {pipeline!r} not in {COMPLETION_STAGES}; skipping brand commission generation.')
+                return 0
+        else:
+            if status not in ('completed',):
+                logger.debug(f'[VGK-BRAND-COMM] Non-solar Lead {lead.id} status {status!r} != completed; skipping brand commission generation.')
+                return 0
+
+        from app.services.vgk_cash_income import is_payment_confirmed
+        if not is_payment_confirmed(db, lead):
+            logger.debug(f'[VGK-BRAND-COMM] Lead {lead.id} payment not yet confirmed; skipping brand commission generation.')
             return 0
 
         solar_brand_id = getattr(lead, 'solar_brand_id', None)
@@ -366,6 +378,7 @@ def generate_brand_commission_entries(db: Session, lead) -> int:
                 SELECT id FROM vgk_cash_income_entries
                 WHERE partner_id = :pid AND source_lead_id = :lid
                   AND kind = 'BRAND_COMMISSION' AND level = :lv
+                  AND status != 'CANCELLED'
                 LIMIT 1
             """), {'pid': partner_id, 'lid': lead.id, 'lv': vci_level}).fetchone()
 

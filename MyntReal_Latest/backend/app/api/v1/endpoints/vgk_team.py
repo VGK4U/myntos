@@ -4083,8 +4083,11 @@ def retrigger_income_drafts(
     ).first()
     if not lead:
         raise HTTPException(status_code=404, detail='Lead not found')
-    if lead.status != 'completed':
-        raise HTTPException(status_code=400, detail=f'Lead status is {lead.status!r} — income only generates for completed leads')
+    _is_solar = getattr(lead, 'business_model', None) == 'solar' or getattr(lead, 'solar_pipeline_status', None) is not None
+    _sps = (getattr(lead, 'solar_pipeline_status', None) or '').strip().lower()
+    _solar_done = _is_solar and _sps in ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
+    if not (lead.status == 'completed' or _solar_done):
+        raise HTTPException(status_code=400, detail=f'Lead status is {lead.status!r} (pipeline: {_sps!r}) — income only generates for completed or subsidy pending leads')
     if not lead.associated_partner_id:
         raise HTTPException(status_code=400, detail='Lead has no associated VGK partner set')
     n = generate_vgk_cash_income_drafts(db, lead)
@@ -7669,6 +7672,8 @@ def lead_earnings_dashboard(
     try:
         _sp = {"ids": lead_ids}
         _sw = "e.source_lead_id = ANY(:ids) AND op.category = 'VGK_TEAM'"
+        if hide_vgk_support:
+            _sw += " AND op.partner_code != 'VGK07102207' AND op.id != 31 AND op.partner_name NOT ILIKE '%VGK Support%'"
         if date_from: _sw += " AND e.created_at::date >= :df"; _sp['df'] = date_from
         if date_to:   _sw += " AND e.created_at::date <= :dt"; _sp['dt'] = date_to
         s_rows = db.execute(text(
@@ -7889,10 +7894,11 @@ def lead_income_members_detail(
         bv = float(r.base_value)
         amt = float(r.commission_amount)
         pct = float(r.raw_commission_pct)
-        if (pct <= 0) and bv > 0 and amt > 0:
-            pct = round(amt / bv * 100.0, 2)
-
         _kind_upper = (r.kind or 'COMMISSION').upper()
+        if (pct <= 0) and bv > 0 and amt > 0:
+            if not (_kind_upper in ('BRAND_COMMISSION', 'EXTRA_COMMISSION', 'SLAB_BONUS') or (r.level or 0) >= 11):
+                pct = round(amt / bv * 100.0, 2)
+
         _seq = dvr_seq_map_lead.get(int(r.id), 1)
         disp_kind = format_lead_kind_label(_kind_upper, _seq)
 

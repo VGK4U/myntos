@@ -529,6 +529,7 @@ export class SideDrawer {
   private isOpen = false;
   private expandedSections: Set<string> = new Set();
   private allowedPaths: Set<string> | '*' = '*';
+  private rawMenus: any[] = [];
   private isSupremeStaff: boolean = false;
   private isStaffMenuLoaded = false;
 
@@ -548,6 +549,13 @@ export class SideDrawer {
             this.isStaffMenuLoaded = true;
           }
         }
+        const cachedRawMenus = localStorage.getItem('mnr_staff_raw_menus_cache');
+        if (cachedRawMenus) {
+          const parsedMenus = JSON.parse(cachedRawMenus);
+          if (Array.isArray(parsedMenus)) {
+            this.rawMenus = parsedMenus;
+          }
+        }
       }
     } catch (e) {}
 
@@ -556,10 +564,12 @@ export class SideDrawer {
     
     window.addEventListener('logout', () => {
       this.allowedPaths = '*';
+      this.rawMenus = [];
       this.isSupremeStaff = false;
       this.isStaffMenuLoaded = false;
       try {
         localStorage.removeItem('mnr_staff_allowed_paths_cache');
+        localStorage.removeItem('mnr_staff_raw_menus_cache');
         localStorage.removeItem('mnr_staff_is_supreme_cache');
         localStorage.removeItem('mnr_staff_menu_tree_cache');
       } catch (e) {}
@@ -865,6 +875,7 @@ export class SideDrawer {
       const response = await apiService.get<any>('/staff/menu-settings/my-menus?unified=true');
       if (response.success && response.data) {
         const menus: any[] = response.data.menus || [];
+        this.rawMenus = menus;
         const paths = new Set<string>(menus.map(m => m.route_path).filter(p => Boolean(p)));
         // Default permitted system/communication routes (Internal staff only)
         if (!response.data.is_saas_tenant) {
@@ -918,6 +929,7 @@ export class SideDrawer {
         try {
           localStorage.setItem('mnr_staff_is_supreme_cache', 'false');
           localStorage.setItem('mnr_staff_allowed_paths_cache', JSON.stringify(Array.from(paths)));
+          localStorage.setItem('mnr_staff_raw_menus_cache', JSON.stringify(menus));
         } catch (e) {}
         this.updateUI();
       }
@@ -1113,19 +1125,32 @@ export class SideDrawer {
     };
 
     const sections: MenuSection[] = [];
+    const staffDashSection = CANONICAL_MENU_MASTER.find(s => s.section_code === 'STAFF_DASHBOARD' || s.section_label === 'STAFF DASHBOARD');
+    const expenseInDashboard = !isSaaSTenant && Boolean(staffDashSection && Array.isArray(staffDashSection.items) && staffDashSection.items.some(i => i.route === '/staff/accounts/expense-entries'));
 
     for (const section of CANONICAL_MENU_MASTER) {
       const sCode = (section.section_code || '').toUpperCase();
       const sTitle = (section.section_label || '').toUpperCase();
-      const isSaasSection = sCode === 'VGK_SAAS' || sCode === 'MYNTOS_SAAS' || sTitle.includes('MYNTOS SAAS');
-      const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE';
+      const isSaasSection = sCode === 'VGK_SAAS' || sCode === 'MYNTOS_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('ZYNOVA OS');
+      const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE' || sTitle === 'ZS CORE WORKSPACE';
+      const isWorkflowSection = sCode === 'SOLAR_EV' || sCode === 'WORKFLOWS' || sTitle === 'WORKFLOWS' || sTitle === 'ZS WORKFLOWS';
+
+      // Hide duplicate tenant-only Workflows section (SOLAR_EV) for internal staff (who use MYNT_REAL -> WORKFLOWS)
+      if (!isSaaSTenant && sCode === 'SOLAR_EV') {
+        continue;
+      }
+
+      // Hide tenant-only Core Workspace for non-admin internal staff
+      if (!isSaaSTenant && isCoreWorkspace && !isPlatformAdmin) {
+        continue;
+      }
 
       // For SaaS tenants, completely exclude internal platform and group company sections
       if (isSaaSTenant) {
         if (!isCoreWorkspace) {
           const hasHrmsEntitlement = Array.isArray(user.entitled_modules) && (user.entitled_modules.includes('STAFF_HRMS') || user.entitled_modules.includes('STAFF_HR'));
           const hasHrmsAccess = hasHrmsEntitlement || Boolean(this.allowedPaths !== '*' && this.allowedPaths instanceof Set && (this.allowedPaths.has('/staff/attendance-sheet') || this.allowedPaths.has('/staff/my-attendance') || this.allowedPaths.has('/staff/employees')));
-          const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
+          const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT'];
           const saasRestricted = [
             'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
             'PARTNER', 'INTERNAL', 'VGK_SAAS', 'PROGRESS', 'STAFF_DASHBOARD',
@@ -1148,7 +1173,7 @@ export class SideDrawer {
       // Global Directive: Remove META ADS, CONFIGURATION, SAAS, INTERNAL for general staff unless granted or SaaS admin
       if (!isPlatformAdmin) {
         if (isSaaSTenant) {
-          if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS')) {
+          if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('ZYNOVA OS')) {
             continue;
           }
         } else {
@@ -1205,6 +1230,27 @@ export class SideDrawer {
         }
       }
 
+      // Inject dynamic won-category workflow tabs for SaaS tenants
+      if (isWorkflowSection && this.rawMenus && Array.isArray(this.rawMenus)) {
+        const rawWorkflows = this.rawMenus.filter(m =>
+          (m.menu_category === 'WORKFLOWS' || m.menu_category === 'ZS WORKFLOWS' || (m.menu_code && m.menu_code.startsWith('WORKFLOW_'))) &&
+          (this.allowedPaths === '*' || this.allowedPaths.has(m.route_path))
+        );
+        for (const rw of rawWorkflows) {
+          if (!sectionItems.some(i => i.route === rw.route_path || i.menu_code === rw.menu_code)) {
+            const formattedDynamic = formatItem({
+              menu_code: rw.menu_code,
+              label: rw.menu_name || rw.label,
+              route: rw.route_path,
+              icon: rw.icon || rw.menu_icon || 'fas fa-layer-group'
+            });
+            if (formattedDynamic) {
+              sectionItems.push(formattedDynamic);
+            }
+          }
+        }
+      }
+
       // Guarantee Softphone, Auto Dialer, Digital Catalog in CRM (Internal only)
       if (sCode === 'CRM_LEADS' && !isSaaSTenant) {
         if (!sectionItems.some(i => i.route === 'auto-dialer' || i.route === '/staff/dialer')) {
@@ -1233,8 +1279,15 @@ export class SideDrawer {
       // Process subSections
       if (section.subSections) {
         for (const sub of section.subSections) {
+          // Hide tenant-only HR_EMPLOYEES subsection for internal staff (who have Employees in STAFF_DASHBOARD)
+          if (!isSaaSTenant && sub.sub_section_code === 'HR_EMPLOYEES') {
+            continue;
+          }
           const subItems: MenuItem[] = [];
           for (const item of sub.items) {
+            if (expenseInDashboard && (item.route === '/staff/accounts/expense-entries' || item.route === '/staff/accounts/expense-entries/')) {
+              continue;
+            }
             const formatted = formatItem(item);
             if (formatted) {
               subItems.push(formatted);
@@ -1251,7 +1304,20 @@ export class SideDrawer {
       }
 
       if (sectionItems.length > 0 || sectionSubSections.length > 0) {
-        const displayLabel = (isSaaSTenant && (section.section_code === 'SOLAR_EV' || (section.section_label || '').toUpperCase().includes('SOLAR'))) ? 'WORKFLOWS' : (isSaaSTenant && (section.section_code === 'SERVICE_TICKETS' || (section.section_label || '').toUpperCase().includes('SERVICE')) ? 'SERVICE' : (isSaaSTenant && section.section_code === 'ACCOUNTS' ? 'ACCOUNTS & GST' : (isSaaSTenant && section.section_code === 'HR' ? 'HRMS' : section.section_label)));
+        let displayLabel = section.section_label;
+        if (isSaaSTenant) {
+          if (section.section_code === 'SOLAR_EV' || (displayLabel || '').toUpperCase().includes('SOLAR') || (displayLabel || '').toUpperCase().includes('WORKFLOW')) {
+            displayLabel = 'ZS WORKFLOWS';
+          } else if (section.section_code === 'SERVICE_TICKETS' || (displayLabel || '').toUpperCase().includes('SERVICE')) {
+            displayLabel = 'ZS SERVICE';
+          } else if (section.section_code === 'ACCOUNTS') {
+            displayLabel = 'ZS ACCOUNTS & GST';
+          } else if (section.section_code === 'HR') {
+            displayLabel = 'ZS HRMS';
+          } else if (displayLabel && !displayLabel.toUpperCase().startsWith('ZS ')) {
+            displayLabel = 'ZS ' + displayLabel;
+          }
+        }
         sections.push({
           section_code: section.section_code,
           section_label: displayLabel,

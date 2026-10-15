@@ -125,6 +125,10 @@ class BonanzaUpdate(BaseModel):
     # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
     qualification_event: Optional[str] = None
     completion_criteria: Optional[str] = None
+    # Dhamaka Bonanza configuration
+    is_dhamaka_bonanza: Optional[bool] = None
+    dhamaka_l1_100pct_first_payment: Optional[bool] = None
+    waive_tds_and_admin: Optional[bool] = None
 
 
 class BonanzaCreate(BaseModel):
@@ -196,6 +200,10 @@ class BonanzaCreate(BaseModel):
     # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
     qualification_event: Optional[str] = 'first_payment'
     completion_criteria: Optional[str] = 'balance_received_plus'
+    # Dhamaka Bonanza configuration
+    is_dhamaka_bonanza: Optional[bool] = False
+    dhamaka_l1_100pct_first_payment: Optional[bool] = False
+    waive_tds_and_admin: Optional[bool] = False
 
 
 class BonanzaApprove(BaseModel):
@@ -417,6 +425,11 @@ async def create_bonanza(
         # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
         qualification_event=data.qualification_event or 'first_payment',
         completion_criteria=data.completion_criteria or 'balance_received_plus',
+
+        # Dhamaka Bonanza configuration
+        is_dhamaka_bonanza=bool(data.is_dhamaka_bonanza),
+        dhamaka_l1_100pct_first_payment=bool(data.dhamaka_l1_100pct_first_payment),
+        waive_tds_and_admin=bool(data.waive_tds_and_admin),
     )
     
     db.add(bonanza)
@@ -564,6 +577,11 @@ async def list_bonanzas(
                 "ec_l3_trigger":  b.ec_l3_trigger,
                 "ec_l4_trigger":  b.ec_l4_trigger,
                 "ec_l5_trigger":  b.ec_l5_trigger,
+
+                # Dhamaka Bonanza configuration
+                "is_dhamaka_bonanza": bool(b.is_dhamaka_bonanza),
+                "dhamaka_l1_100pct_first_payment": bool(b.dhamaka_l1_100pct_first_payment),
+                "waive_tds_and_admin": bool(b.waive_tds_and_admin),
 
                 # Max winners tracking
                 "max_winners": b.max_winners or 50,
@@ -1202,7 +1220,12 @@ async def get_user_bonanzas(
             "max_winners": bonanza.max_winners,
             "current_winners": bonanza.current_winners,
             "slots_remaining": slots_remaining,
-            "slots_full": slots_full
+            "slots_full": slots_full,
+
+            # Dhamaka Bonanza configuration
+            "is_dhamaka_bonanza": bool(bonanza.is_dhamaka_bonanza),
+            "dhamaka_l1_100pct_first_payment": bool(bonanza.dhamaka_l1_100pct_first_payment),
+            "waive_tds_and_admin": bool(bonanza.waive_tds_and_admin)
         })
     
     # Smart sorting: Active first → Recent (by end_date desc) → Upcoming
@@ -2806,6 +2829,13 @@ async def edit_bonanza(
         bonanza.qualification_event = data.qualification_event or 'first_payment'
     if data.completion_criteria is not None:
         bonanza.completion_criteria = data.completion_criteria or 'balance_received_plus'
+    # Dhamaka Bonanza configuration
+    if data.is_dhamaka_bonanza is not None:
+        bonanza.is_dhamaka_bonanza = bool(data.is_dhamaka_bonanza)
+    if data.dhamaka_l1_100pct_first_payment is not None:
+        bonanza.dhamaka_l1_100pct_first_payment = bool(data.dhamaka_l1_100pct_first_payment)
+    if data.waive_tds_and_admin is not None:
+        bonanza.waive_tds_and_admin = bool(data.waive_tds_and_admin)
     if data.category_filter_ids is not None and bonanza.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus'):
         db.execute(
             text("DELETE FROM bonanza_category_filters WHERE bonanza_id = :bid"),
@@ -4683,6 +4713,7 @@ def update_vgk_claim_status(
 def list_vgk_bonanzas_public(db: Session = Depends(get_db)):
     """DC Protocol: Public endpoint — active VGK bonanzas for the /voffers page. No auth required."""
     from datetime import datetime as _dt
+    from app.models.base import get_indian_time
     now = get_indian_time()
     bonanzas = db.query(Bonanza).filter(
         Bonanza.portal == 'VGK',
@@ -4719,6 +4750,9 @@ def list_vgk_bonanzas_public(db: Session = Depends(get_db)):
             "max_winners": b.max_winners,
             "registered_target_bonus": b.registered_target_bonus,
             "image_url": b.image_url,
+            "is_dhamaka_bonanza": bool(b.is_dhamaka_bonanza),
+            "dhamaka_l1_100pct_first_payment": bool(b.dhamaka_l1_100pct_first_payment),
+            "waive_tds_and_admin": bool(b.waive_tds_and_admin),
         })
     return {"success": True, "count": len(result), "bonanzas": result}
 
@@ -4903,6 +4937,11 @@ def list_vgk_bonanzas_staff(
             "ec_l5_trigger": b.ec_l5_trigger,
             "trigger_event": b.trigger_event,
             "advance_count_basis": b.advance_count_basis,
+            "qualification_event": b.qualification_event or 'first_payment',
+            "completion_criteria": b.completion_criteria or 'balance_received_plus',
+            "is_dhamaka_bonanza": bool(b.is_dhamaka_bonanza),
+            "dhamaka_l1_100pct_first_payment": bool(b.dhamaka_l1_100pct_first_payment),
+            "waive_tds_and_admin": bool(b.waive_tds_and_admin),
             "claims_summary": cc,
             "total_claims": sum(cc.values()),
             "eligible_partners_count": eligible_partners_map.get(b.id, 0),

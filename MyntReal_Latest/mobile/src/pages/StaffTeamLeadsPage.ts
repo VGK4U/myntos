@@ -57,6 +57,7 @@ interface Lead {
   deal_value_balance: number;
   days_since_created: number;
   role_type?: string;
+  company_supported?: boolean | null;
   address?: string | null;
   area?: string | null;
   city?: string | null;

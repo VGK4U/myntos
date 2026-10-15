@@ -10833,6 +10833,9 @@ def _startup_worker():
 
                 ALTER TABLE bonanza ADD COLUMN IF NOT EXISTS qualification_event VARCHAR(50) DEFAULT 'first_payment';
                 ALTER TABLE bonanza ADD COLUMN IF NOT EXISTS completion_criteria VARCHAR(50) DEFAULT 'balance_received_plus';
+                ALTER TABLE bonanza ADD COLUMN IF NOT EXISTS is_dhamaka_bonanza BOOLEAN DEFAULT FALSE;
+                ALTER TABLE bonanza ADD COLUMN IF NOT EXISTS dhamaka_l1_100pct_first_payment BOOLEAN DEFAULT FALSE;
+                ALTER TABLE bonanza ADD COLUMN IF NOT EXISTS waive_tds_and_admin BOOLEAN DEFAULT FALSE;
 
                 ALTER TABLE bonanza_progress ADD COLUMN IF NOT EXISTS slab_id INTEGER;
                 ALTER TABLE bonanza_progress ADD COLUMN IF NOT EXISTS quantity_earned INTEGER DEFAULT 1;

@@ -39,6 +39,9 @@ interface BonanzaItem {
   award_name?: string;
   reward_text?: string;
   criteria_type?: string;
+  is_dhamaka_bonanza?: boolean;
+  dhamaka_l1_100pct_first_payment?: boolean;
+  waive_tds_and_admin?: boolean;
 }
 
 type FilterKey = 'all' | 'active' | 'claim' | 'won' | 'claimed_proc' | 'upcoming' | 'missed' | 'inactive';
@@ -321,7 +324,16 @@ export class VGKBonanzaRewardsPage {
           <div class="bnz-rov">${this.rewardBadge(b)}</div>
         </div>
         <div class="bnz-body">
-          <div class="bnz-name">${esc(b.name)}</div>
+          <div class="bnz-name">
+            ${b.is_dhamaka_bonanza ? `<span style="background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;margin-right:6px;vertical-align:middle"><i class="fas fa-fire me-1"></i>DHAMAKA</span>` : ''}
+            ${esc(b.name)}
+          </div>
+          ${b.is_dhamaka_bonanza ? `
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">
+              <span style="font-size:10px;background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);color:#fca5a5;padding:1px 6px;border-radius:4px;font-weight:700"><i class="fas fa-bolt me-1"></i>100% L1 1st Pay</span>
+              <span style="font-size:10px;background:rgba(5,150,105,.2);border:1px solid rgba(5,150,105,.4);color:#6ee7b7;padding:1px 6px;border-radius:4px;font-weight:700"><i class="fas fa-shield-alt me-1"></i>0% TDS &amp; Admin</span>
+            </div>
+          ` : ''}
           <div class="bnz-meta">
             ${b.segment_name?`<span class="bnz-seg"><i class="fas fa-tag me-1"></i>${esc(b.segment_name)}</span>`:''}
             <span><i class="fas fa-calendar me-1"></i>${fmtDate(b.start_date)} → ${fmtDate(b.end_date)}</span>

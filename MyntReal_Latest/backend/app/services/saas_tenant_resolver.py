@@ -328,8 +328,8 @@ def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tupl
         allowed_routes.add('/staff/crm/followups')
         allowed_routes.add('/staff/whatsapp-center')
 
-    # 3. WORKFLOWS (Product Display: WORKFLOWS, module code: SOLAR_EV or CRM)
-    if ctx.has_module('SOLAR_EV') or ctx.has_module('CRM_LEADS'):
+    # 3. WORKFLOWS (Product Display: ZS WORKFLOWS, module code: SOLAR_EV)
+    if ctx.has_module('SOLAR_EV'):
         workflow_items = [
             {
                 'id': 99201,
@@ -397,8 +397,6 @@ def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tupl
                 pass
 
         won_cat_slugs = { (r[0] or '').lower().strip().replace('_', '-'): r[1] for r in won_cat_rows if r[0] }
-        if 'solar' not in won_cat_slugs:
-            won_cat_slugs['solar'] = 'Solar'
 
         display_idx = 3
         for slug, cat_name in won_cat_slugs.items():

@@ -56,17 +56,8 @@ def apply_extra_commission_if_active(
     applied = 0
     skipped = 0
 
-    # DC-BONANZA-PERMANENT-FREEZE-20260921:
-    # Bonanza Extra Commission is permanently disabled from 21-Sep-2026 00:00 IST onwards.
     now_ist = _get_ist().replace(tzinfo=None)
     BONANZA_EXTRA_COMMISSION_CUTOFF = datetime(2026, 9, 21, 0, 0, 0)
-    if now_ist >= BONANZA_EXTRA_COMMISSION_CUTOFF:
-        logger.info(
-            f"[BONANZA-CUTOFF] Bonanza Extra Commission is permanently disabled effective "
-            f"{BONANZA_EXTRA_COMMISSION_CUTOFF.strftime('%Y-%m-%d %H:%M:%S')} IST. "
-            f"Skipping trigger '{trigger_event}' for lead {getattr(lead, 'id', '?')}."
-        )
-        return {'applied': 0, 'skipped': 0, 'reason': 'Bonanza Extra Commission permanently disabled as of 21-Sep-2026 00:00 IST'}
 
     try:
         lead_id     = lead.id
@@ -95,7 +86,9 @@ def apply_extra_commission_if_active(
                    b.ec_l1_trigger, b.ec_l2_trigger, b.ec_l3_trigger,
                    b.ec_l4_trigger, b.ec_l5_trigger,
                    b.ec_l1_amount,  b.ec_l2_amount,  b.ec_l3_amount,
-                   b.ec_l4_amount,  b.ec_l5_amount
+                   b.ec_l4_amount,  b.ec_l5_amount,
+                   COALESCE(b.is_dhamaka_bonanza, FALSE) AS is_dhamaka_bonanza,
+                   COALESCE(b.waive_tds_and_admin, FALSE) AS waive_tds_and_admin
             FROM   bonanza b
             WHERE  b.reward_type IN ('extra_commission', 'brand_wise_commission')
               AND  b.status      = 'Approved'
@@ -103,6 +96,13 @@ def apply_extra_commission_if_active(
         """)).fetchall()
 
         for _bz in _active:
+            # DC-BONANZA-PERMANENT-FREEZE-20260921:
+            # Old legacy bonanzas (start_date < 21-Sep-2026 and not Dhamaka) remain strictly frozen
+            bz_is_dhamaka = bool(getattr(_bz, 'is_dhamaka_bonanza', False))
+            if not bz_is_dhamaka and _bz.start_date < BONANZA_EXTRA_COMMISSION_CUTOFF and now_ist >= BONANZA_EXTRA_COMMISSION_CUTOFF:
+                logger.info(f"[BONANZA-CUTOFF] Skipping legacy pre-cutoff bonanza {_bz.id} ({_bz.name})")
+                continue
+
             grace = int(getattr(_bz, 'grace_days', 0) or 0)
             bz_start = _bz.start_date.date() if hasattr(_bz.start_date, 'date') else _bz.start_date
             bz_end = _bz.end_date.date() if hasattr(_bz.end_date, 'date') else _bz.end_date
@@ -123,7 +123,7 @@ def apply_extra_commission_if_active(
                     return False
                 if hasattr(check_dt, 'date'):
                     check_dt = check_dt.date()
-                if check_dt >= datetime(2026, 9, 21).date():
+                if not bz_is_dhamaka and bz_start < BONANZA_EXTRA_COMMISSION_CUTOFF.date() and check_dt >= datetime(2026, 9, 21).date():
                     return False
                 return bz_start <= check_dt <= bz_end_with_grace
 
@@ -213,9 +213,17 @@ def apply_extra_commission_if_active(
                         skipped += 1
                         continue
 
-                    admin  = (amount * ADMIN_CHARGE_PCT / 100).quantize(Decimal('0.01'))
-                    tds    = (amount * TDS_PCT           / 100).quantize(Decimal('0.01'))
-                    net    = amount - admin - tds
+                    if getattr(_bz, 'waive_tds_and_admin', False):
+                        admin = Decimal('0.00')
+                        tds   = Decimal('0.00')
+                        net   = amount
+                        waiver_note = ' [Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]'
+                    else:
+                        admin = (amount * ADMIN_CHARGE_PCT / 100).quantize(Decimal('0.01'))
+                        tds   = (amount * TDS_PCT           / 100).quantize(Decimal('0.01'))
+                        net   = amount - admin - tds
+                        waiver_note = ''
+
                     _sp = db.begin_nested()
                     try:
                         entry_no = _next_entry_number(db, company_id)
@@ -244,7 +252,7 @@ def apply_extra_commission_if_active(
                             'np':       float(net),
                             'lv':       lv,
                             'notes':    (
-                                f'Special Bonanza: {_bz.name} | '
+                                f'Special Bonanza: {_bz.name}{waiver_note} | '
                                 f'Trigger: {trigger_event} | L{lv} Extra Commission'
                             ),
                             'inc_date': _inc_date,

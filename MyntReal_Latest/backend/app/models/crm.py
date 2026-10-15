@@ -307,6 +307,7 @@ class CRMLead(BaseModel):
     field_support_supported      = Column(Boolean, nullable=True)   # Non-VGK Field Support person confirmed
     support_staff_supported      = Column(Boolean, nullable=True)   # Support Staff confirmed
     technical_staff1_supported   = Column(Boolean, nullable=True)   # Technical Staff 1 confirmed
+    company_supported            = Column(Boolean, nullable=False, default=True, server_default="true")  # DC-COMPANY-SUPPORTED-L5-001: Checked(True)=50% L5 Support (0.75%), Unchecked(False)=100% L5 Support (1.50%)
 
     # DC-SHOWROOM-COMMISSION-001 (May 2026): VGK partner ID of the showroom that supported this deal.
     # When set + showroom_pct > 0 in commission config → showroom partner earns level-5 commission.

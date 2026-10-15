@@ -390,14 +390,14 @@ class VGK4UWaterfallEngine:
             sup_info = career_status_map[support_partner_id]
             is_self_support = (support_partner_id == producer_partner_id)
 
-            # Base support (+0.75%)
-            support_pct = Decimal(str(cfg.support_journey_pct))
-
-            # Full support (+0.75%) only when is_end_to_end_support and NOT is_staff_involved
-            if is_end_to_end_support and not is_staff_involved:
-                full_support_pct = Decimal(str(cfg.support_end_to_end_pct)) - support_pct
+            # DC-COMPANY-SUPPORTED-L5-001 (Option B):
+            # When company supported (is_staff_involved=True): 50% = support_journey_pct (0.75%)
+            # When NOT company supported (is_staff_involved=False): 100% = support_end_to_end_pct (1.50%)
+            if is_staff_involved:
+                support_pct = Decimal(str(cfg.support_journey_pct))
             else:
-                full_support_pct = Decimal('0.00')
+                support_pct = Decimal(str(cfg.support_end_to_end_pct))
+            full_support_pct = Decimal('0.00')
 
             if support_pct > Decimal('0.00'):
                 sup_gross = (deal_val * (support_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)

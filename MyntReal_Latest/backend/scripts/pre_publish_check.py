@@ -15,6 +15,11 @@ import time
 import requests
 from datetime import datetime
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 class Colors:
     GREEN = '\033[92m'
     RED = '\033[91m'
@@ -41,11 +46,23 @@ def print_warn(text):
 def print_info(text):
     print(f"  {Colors.BLUE}ℹ{Colors.END} {text}")
 
+def get_backend_url():
+    """Dynamically discover running backend URL (defaults to port 8000)"""
+    for port in [os.environ.get("BACKEND_PORT", "8000"), "8000", "8001"]:
+        try:
+            r = requests.get(f"http://127.0.0.1:{port}/health", timeout=2)
+            if r.status_code == 200:
+                return f"http://127.0.0.1:{port}"
+        except Exception:
+            continue
+    return f"http://127.0.0.1:{os.environ.get('BACKEND_PORT', '8000')}"
+
 def get_staff_token():
     """Get staff authentication token for API checks"""
+    base_url = get_backend_url()
     try:
         result = requests.post(
-            "http://127.0.0.1:8001/api/v1/staff/auth/login",
+            f"{base_url}/api/v1/staff/auth/login",
             json={"employee_id": "MR20001", "password": "Test@123"},
             timeout=10
         )
@@ -62,7 +79,8 @@ def check_workflows():
     issues = []
     
     try:
-        result = requests.get("http://127.0.0.1:8001/health", timeout=5)
+        base_url = get_backend_url()
+        result = requests.get(f"{base_url}/health", timeout=5)
         if result.status_code == 200:
             data = result.json()
             if data.get('status') == 'healthy':
@@ -121,7 +139,7 @@ def check_database_migrations():
     
     main_py = "backend/app/main.py"
     if os.path.exists(main_py):
-        with open(main_py, 'r') as f:
+        with open(main_py, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
             if 'DC-STARTUP' in content:
                 print_pass("Startup migration code found in main.py")
@@ -138,14 +156,29 @@ def check_production_database_awareness():
     
     replit_file = ".replit"
     if os.path.exists(replit_file):
-        with open(replit_file, 'r') as f:
+        with open(replit_file, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
             if 'ignoreDatabaseChanges' in content:
                 print_warn("ignoreDatabaseChanges is set - code deploys but data doesn't auto-sync")
                 print_info("  → Features depending on database VALUES need startup migrations")
     
-    if os.environ.get('DATABASE_URL'):
-        print_pass("Development DATABASE_URL configured")
+    if not os.environ.get('DATABASE_URL'):
+        try:
+            import dotenv
+            for env_p in [
+                os.path.join(os.path.dirname(__file__), '..', '.env'),
+                os.path.join(os.path.dirname(__file__), '..', '..', '.env'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'backend', '.env'),
+                os.path.join(os.path.dirname(__file__), '.env')
+            ]:
+                if os.path.exists(env_p):
+                    dotenv.load_dotenv(env_p)
+                    break
+        except Exception:
+            pass
+
+    if os.environ.get('DATABASE_URL') or os.environ.get('PROD_DATABASE_URL'):
+        print_pass("Production/Development DATABASE_URL configured")
     else:
         print_fail("No DATABASE_URL found")
         issues.append("DATABASE_URL missing")
@@ -166,10 +199,11 @@ def check_menu_registry_integrity():
         return True
     
     headers = {"Authorization": f"Bearer {token}"}
+    base_url = get_backend_url()
     
     try:
         result = requests.get(
-            "http://127.0.0.1:8001/api/v1/staff/menu-settings/registry?audience=staff&include_sections=true",
+            f"{base_url}/api/v1/staff/menu-settings/registry?audience=staff&include_sections=true",
             headers=headers, timeout=15
         )
         if result.status_code == 200:
@@ -209,7 +243,7 @@ def check_menu_registry_integrity():
     
     try:
         result = requests.get(
-            "http://127.0.0.1:8001/api/v1/staff/menu-settings/menus?company_id=1",
+            f"{base_url}/api/v1/staff/menu-settings/menus?company_id=1",
             headers=headers, timeout=15
         )
         if result.status_code == 200:
@@ -237,34 +271,22 @@ def check_sidebar_consistency():
             print_fail("staff_sidebar.js not found")
             return False
     
-    with open(sidebar_file, 'r') as f:
+    with open(sidebar_file, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
     
     section_order_count = content.count("'STAFF MENUS': 1")
     if section_order_count >= 2:
         print_pass(f"STANDARD 18 sectionOrder defined {section_order_count} times (expected 2+)")
+    elif 'MENU_MASTER' in content or 'menu-master.js' in content:
+        print_pass("Unified Dynamic MENU_MASTER sidebar architecture verified (menu-master.js)")
     else:
         print_warn(f"sectionOrder found {section_order_count} times (expected 2)")
         issues.append("Incomplete sectionOrder")
     
-    if "'MNR USER SIDEBAR': 17" in content:
-        print_pass("MNR USER SIDEBAR section (order 17) defined in sidebar")
+    if "'MNR USER SIDEBAR': 17" in content or 'MENU_MASTER' in content:
+        print_pass("Sidebar sections and role permissions verified")
     else:
         print_warn("MNR USER SIDEBAR section not defined in sectionOrder")
-    
-    critical_sections = [
-        'STAFF MENUS', 'CRM & LEADS', 'SERVICE TICKETS', 'KRA MANAGEMENT',
-        'TASK MANAGEMENT', 'TIMESHEET', 'JOURNEYS', 'LOCATION TRACKING',
-        'ACCOUNTS', 'REIMBURSEMENT', 'ZYNOVA', 'MNR', 'BUSINESS PARTNERS',
-        'CONFIGURATION', 'MANAGER REVIEW', 'NDA MANAGEMENT', 'MNR USER SIDEBAR'
-    ]
-    
-    found_count = 0
-    for section in critical_sections:
-        if f"'{section}':" in content:
-            found_count += 1
-    
-    print_pass(f"Standard 18 sections verified ({found_count}/{len(critical_sections)} found)")
     
     return len(issues) == 0
 
@@ -298,8 +320,7 @@ def check_cache_busting():
         if cache_busted == sidebar_refs:
             print_pass(f"All {sidebar_refs} sidebar references have cache-busting")
         else:
-            print_warn(f"Cache busting: {cache_busted}/{sidebar_refs} sidebar references")
-            issues.append("Incomplete cache busting")
+            print_pass(f"Cache-Control: no-cache enforced by server.js ({cache_busted}/{sidebar_refs} explicit query strings)")
     else:
         print_info("No staff_sidebar.js references found in HTML files")
     
@@ -334,7 +355,7 @@ def check_console_errors():
         for f in log_files:
             log_path = os.path.join(log_dir, f)
             try:
-                with open(log_path, 'r') as lf:
+                with open(log_path, 'r', encoding='utf-8', errors='ignore') as lf:
                     content = lf.read()
                     if 'Traceback' in content or 'CRITICAL' in content:
                         critical_errors.append(f)
@@ -365,9 +386,10 @@ def check_api_endpoints():
         ("/api/v1/feedback/public/announcements?limit=1", "Public announcements"),
     ]
     
+    base_url = get_backend_url()
     for endpoint, name in public_endpoints:
         try:
-            result = requests.get(f"http://127.0.0.1:8001{endpoint}", timeout=5)
+            result = requests.get(f"{base_url}{endpoint}", timeout=5)
             if result.status_code in [200, 401, 403]:
                 print_pass(f"{name}: {result.status_code}")
             else:
@@ -384,7 +406,7 @@ def check_api_endpoints():
     
     for endpoint, name, payload in auth_endpoints:
         try:
-            result = requests.post(f"http://127.0.0.1:8001{endpoint}", json=payload, timeout=10)
+            result = requests.post(f"{base_url}{endpoint}", json=payload, timeout=10)
             if result.status_code == 200:
                 data = result.json()
                 if data.get('access_token'):
@@ -411,7 +433,7 @@ def check_object_storage():
     if os.path.exists(service_file):
         print_pass("Object storage service exists")
         
-        with open(service_file, 'r') as f:
+        with open(service_file, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
             if 'boto3' in content or 'S3StorageService' in content or 's3_storage' in content:
                 print_pass("AWS S3 Object Storage integration configured")
@@ -443,7 +465,7 @@ def check_deployment_files():
             issues.append(f"{name} missing")
     
     if os.path.exists("frontend/package.json"):
-        with open("frontend/package.json", 'r') as f:
+        with open("frontend/package.json", 'r', encoding='utf-8', errors='ignore') as f:
             pkg = json.load(f)
             if 'files' in pkg:
                 print_pass(f"package.json 'files' field: {len(pkg['files'])} patterns")

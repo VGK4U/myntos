@@ -1129,6 +1129,12 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <input type="hidden" id="ef_fs_type"><input type="hidden" id="ef_fs_id"><input type="hidden" id="ef_fs_name">
             <div id="ef_fs_results" class="list-group mt-1" style="max-height:140px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:100%;top:100%;left:0"></div>
             <div id="ef_fs_selected" class="mt-1"></div>
+            <div class="form-check form-switch mt-1">
+              <input class="form-check-input" type="checkbox" id="ef_company_supported" checked>
+              <label class="form-check-label small" for="ef_company_supported" title="Checked = Company Supported (50% L5 Support). Unchecked = Non-supported (100% L5 Support)">
+                Company Supported <span class="badge bg-secondary" style="font-size:0.7em;">50% L5</span>
+              </label>
+            </div>
           </div>
           <div class="form-group" style="position:relative">
             <label>Community Member <span class="text-muted">(Search)</span></label>
@@ -1801,6 +1807,7 @@ const SDOC_GROUPS = {
       {type:'bank_book',label:'Bank Book'},
       {type:'bank_statement',label:'Bank Statement'},
       {type:'bank_submission_letter',label:'Bank Submission Letter',is_cdoc:true},
+      {type:'payment_receipt',label:'Payment Receipt',generatable:true},
       {type:'cibil_report',label:'CIBIL Credit Report'},
       {type:'house_tax',label:'House Tax Receipt'},
       {type:'bank_loan_application',label:'Bank Loan Application'},
@@ -3870,6 +3877,8 @@ function openEdit(leadId){
   if(_netSrcActive && !_seniorId && !_seniorName){efFetchGuru(_mnrVgkSrcId,true);}
   sv('ef_fs_type',l.field_support_ref_type||'');sv('ef_fs_id',l.field_support_ref_id||l.adi_guru_id||'');sv('ef_fs_name',l.field_support_ref_name||l.adi_guru_name||'');
   sv('ef_fs_search','');efRenderSelected('fs',l.field_support_ref_type||'',l.field_support_ref_id||l.adi_guru_id||'',l.field_support_ref_name||l.adi_guru_name||'');
+  const compSupp = l.company_supported !== false;
+  if (document.getElementById('ef_company_supported')) document.getElementById('ef_company_supported').checked = compSupp;
   sv('ef_community_id', l.community_id||''); sv('ef_community_search', '');
   if (l.community_id) {
     document.getElementById('ef_community_selected').innerHTML = `<span class="badge bg-danger p-2"><i class="fas fa-users me-1"></i>${l.community_name || 'Community ID: ' + l.community_id}</span>`;
@@ -4393,6 +4402,7 @@ async function saveLead(){
     description:gv('ef_description')||null,requirements:gv('ef_requirements')||null,recent_comments:gv('ef_recent_comments')||null,tags:gv('ef_tags')||null,
     source_ref_type:gv('ef_src_type')||null,source_ref_id:gv('ef_src_id')||null,source_ref_name:gv('ef_src_name')||null,
     field_support_ref_type:gv('ef_fs_type')||null,field_support_ref_id:gv('ef_fs_id')||null,field_support_ref_name:gv('ef_fs_name')||null,
+    company_supported: document.getElementById('ef_company_supported') ? document.getElementById('ef_company_supported').checked : true,
     telecaller_id:gv('ef_tele_id')?parseInt(gv('ef_tele_id')):null,
     // DC-SHOWROOM-TYPE-001: field_staff_id only when showroom is explicitly 'staff' type.
     // 'vgk_partner' and 'partner' both route to associated_partner_id, never to field_staff_id.
@@ -5788,6 +5798,7 @@ const SDOC_BUNDLE={
     {type:'quotation',label:'Quotation'},
     {type:'feasibility_letter',label:'Feasibility Letter'},
     {type:'invoice',label:'Invoice'},
+    {type:'payment_receipt',label:'Payment Receipt'},
     {type:'vendor_gst',label:'Solar Vendor GST (Visionera)'},
     {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
   ]},
@@ -6447,6 +6458,9 @@ async function startGenerateDoc(docType,docLabel){
   }else if(docType==='invoice'){
     await loadSolarVendors();
     await openInvoiceModal();
+  }else if(docType==='payment_receipt'){
+    await loadSolarVendors();
+    await openPaymentReceiptModal();
   }else if(docType==='commissioning_test_report'){
     await loadSolarVendors();
     if(!_sdocVendorId&&_solarVendors.length)_sdocVendorId=_solarVendors[0].id;
@@ -6866,6 +6880,124 @@ async function submitQuoteGenerate(){
   if(!quoteVal){showToast('Please enter quote value','error');return;}
   closeQuoteModal();
   await doGenerateDoc({doc_type:_genDocType,vendor_id:vendorId,kw_size:kwSize,quote_value:quoteVal,discount:discount,final_amount:finalAmt,subsidy:subsidy,quote_ref_no:refNo,panel_brand:panelBrand});
+}
+
+// ── Payment Receipt Generate Modal ─────────────────────────────────────────
+function indianNumberToWordsJS(num){
+  const n = Math.floor(Math.abs(parseFloat(num)||0));
+  if(!n) return '';
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+    'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function twoDigit(v){
+    if(v < 20) return ones[v];
+    return tens[Math.floor(v/10)] + (v%10 ? ' ' + ones[v%10] : '');
+  }
+  function threeDigit(v){
+    const h = Math.floor(v/100), rem = v%100;
+    let res = h ? ones[h] + ' Hundred' : '';
+    if(rem) res += (res ? ' ' : '') + twoDigit(rem);
+    return res;
+  }
+  let rem = n;
+  const parts = [];
+  const crore = Math.floor(rem / 10000000);
+  rem %= 10000000;
+  const lakh = Math.floor(rem / 100000);
+  rem %= 100000;
+  const thousand = Math.floor(rem / 1000);
+  rem %= 1000;
+  if(crore) parts.push(threeDigit(crore) + ' Crore');
+  if(lakh) parts.push(twoDigit(lakh) + ' Lakh');
+  if(thousand) parts.push(twoDigit(thousand) + ' Thousand');
+  if(rem) parts.push(threeDigit(rem));
+  return parts.join(' ') + ' rupees only';
+}
+
+function updateReceiptAmountWords(){
+  const raw = (document.getElementById('prmAmount')?.value || '').replace(/,/g, '').trim();
+  const num = parseFloat(raw);
+  const wordsEl = document.getElementById('prmWords');
+  if(!wordsEl) return;
+  if(!isNaN(num) && num > 0){
+    wordsEl.value = indianNumberToWordsJS(num);
+  } else if(!raw){
+    wordsEl.value = '';
+  }
+}
+
+function onReceiptVendorChange(){
+  const vid = document.getElementById('prmVendorSel')?.value;
+  if(vid) _sdocVendorId = parseInt(vid) || null;
+}
+
+async function openPaymentReceiptModal(){
+  const sel = document.getElementById('prmVendorSel');
+  if(sel){
+    sel.innerHTML = '<option value="">-- Select Solar Vendor / Company Entity --</option>' +
+      _solarVendors.map(v=>`<option value="${v.id}">${esc(v.vendor_name)} ${v.gst_number ? `— GST: ${esc(v.gst_number)}` : `(${esc(v.vendor_code||'')})`}</option>`).join('');
+    if(_sdocVendorId) sel.value = String(_sdocVendorId);
+    else if(_solarVendors.length){
+      sel.value = String(_solarVendors[0].id);
+      _sdocVendorId = _solarVendors[0].id;
+    }
+  }
+  const tableLead = (typeof _leadsCache!=='undefined' && Array.isArray(_leadsCache))
+    ? (_leadsCache.find(x=>x.id==_sdocLeadId) || {})
+    : {};
+  const custName = tableLead.name || tableLead.customer_name || document.getElementById('sdocModalTitle')?.textContent?.replace(/\s*\(#\d+\)\s*$/,'') || '';
+  const today = new Date().toISOString().slice(0,10);
+
+  if(document.getElementById('prmReceiptNo')) document.getElementById('prmReceiptNo').value = 'Loading...';
+  if(document.getElementById('prmDate')) document.getElementById('prmDate').value = today;
+  if(document.getElementById('prmReceivedFrom')) document.getElementById('prmReceivedFrom').value = custName;
+  if(document.getElementById('prmAmount')) document.getElementById('prmAmount').value = '';
+  if(document.getElementById('prmWords')) document.getElementById('prmWords').value = '';
+  if(document.getElementById('prmMode')) document.getElementById('prmMode').value = 'Cash';
+  document.getElementById('paymentReceiptModal')?.classList.add('open');
+
+  try{
+    const r = await staffFetch('/api/v1/crm/leads/' + _sdocLeadId + '/next-receipt-no');
+    const d = r && r.ok ? await r.json() : (r || {});
+    if(document.getElementById('prmReceiptNo')){
+      document.getElementById('prmReceiptNo').value = d.receipt_no || String(56585 + (parseInt(_sdocLeadId)||1));
+    }
+  }catch(e){
+    if(document.getElementById('prmReceiptNo')){
+      document.getElementById('prmReceiptNo').value = String(56585 + (parseInt(_sdocLeadId)||1));
+    }
+  }
+}
+
+function closePaymentReceiptModal(){
+  document.getElementById('paymentReceiptModal')?.classList.remove('open');
+}
+
+async function submitPaymentReceiptGenerate(){
+  const vendorId = parseInt(document.getElementById('prmVendorSel')?.value) || _sdocVendorId || (_solarVendors[0]?.id || 0);
+  const receiptNo = (document.getElementById('prmReceiptNo')?.value || '').trim();
+  const receiptDate = (document.getElementById('prmDate')?.value || '').trim();
+  const receivedFrom = (document.getElementById('prmReceivedFrom')?.value || '').trim();
+  const rawAmt = (document.getElementById('prmAmount')?.value || '').replace(/,/g, '').replace(/\/-\s*$/, '').trim();
+  const amountVal = parseFloat(rawAmt) || 0;
+  let wordsVal = (document.getElementById('prmWords')?.value || '').trim();
+  const modeVal = (document.getElementById('prmMode')?.value || 'Cash').trim() || 'Cash';
+
+  if(!vendorId){ showToast('Please select a vendor for letterhead','error'); return; }
+  if(!amountVal || amountVal <= 0){ showToast('Please enter a valid Amount (₹)','error'); return; }
+  if(!wordsVal){ wordsVal = indianNumberToWordsJS(amountVal); }
+
+  closePaymentReceiptModal();
+  await doGenerateDoc({
+    doc_type: 'payment_receipt',
+    vendor_id: vendorId,
+    receipt_no: receiptNo,
+    receipt_date: receiptDate,
+    received_from: receivedFrom,
+    receipt_amount: amountVal,
+    amount_in_words: wordsVal,
+    payment_mode: modeVal
+  });
 }
 
 // ── Invoice Generate Modal ─────────────────────────────────────────────────
@@ -7847,6 +7979,63 @@ async function saveCompleteDate(lid, val) {
   </div>
 </div>
 
+<!-- Payment Receipt Generate Modal -->
+<div id="paymentReceiptModal" class="sdoc-modal-overlay" style="z-index:9220" onclick="if(event.target===this)closePaymentReceiptModal()">
+  <div class="sdoc-modal" style="max-width:520px">
+    <div class="sdoc-modal-header" style="background:linear-gradient(135deg,#0f766e,#0d9488)">
+      <div><h4><i class="fas fa-receipt" style="margin-right:6px"></i>Generate Payment Receipt (Cash Receipt)</h4>
+      <p>Uses Quotation Header &bull; Enter custom amount &amp; auto-converts to words</p></div>
+      <button class="sdoc-close-btn" onclick="closePaymentReceiptModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sdoc-body" style="max-height:72vh;overflow-y:auto;padding:16px">
+      <div style="margin-bottom:12px">
+        <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Solar Vendor (Quotation Header Letterhead) <span style="color:#ef4444">*</span></label>
+        <select id="prmVendorSel" onchange="onReceiptVendorChange()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+          <option value="">-- Select Solar Vendor / Company Entity --</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Receipt No</label>
+          <input id="prmReceiptNo" type="text" placeholder="e.g. 56586" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Date</label>
+          <input id="prmDate" type="date" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Received From (Customer Name) <span style="color:#ef4444">*</span></label>
+        <input id="prmReceivedFrom" type="text" placeholder="Customer Full Name" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Amount (₹) <span style="color:#ef4444">*</span></label>
+          <input id="prmAmount" type="number" min="1" step="1" placeholder="e.g. 22000" oninput="updateReceiptAmountWords()" style="width:100%;padding:8px 10px;border:1px solid #0d9488;border-radius:6px;font-size:14px;font-weight:700;color:#0f766e"/>
+        </div>
+        <div>
+          <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Payment Mode</label>
+          <input id="prmMode" type="text" list="prmModeList" value="Cash" placeholder="Cash / UPI / NEFT" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
+          <datalist id="prmModeList">
+            <option value="Cash"></option>
+            <option value="UPI"></option>
+            <option value="Bank Transfer / NEFT"></option>
+            <option value="Cheque"></option>
+          </datalist>
+        </div>
+      </div>
+      <div style="margin-bottom:6px">
+        <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Amount in Words <span style="font-size:10.5px;font-weight:400;color:#0d9488">(Auto-filled &bull; Editable)</span></label>
+        <input id="prmWords" type="text" placeholder="e.g. Twenty Two Thousand rupees only" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#f0fdfa"/>
+      </div>
+    </div>
+    <div class="sdoc-footer" style="justify-content:flex-end;gap:8px">
+      <button onclick="closePaymentReceiptModal()" style="padding:7px 16px;border:1px solid #d1d5db;border-radius:6px;background:white;font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="submitPaymentReceiptGenerate()" style="padding:7px 18px;border:none;border-radius:6px;background:#0f766e;color:white;font-size:13px;font-weight:600;cursor:pointer"><i class="fas fa-magic"></i> Generate Receipt PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- Invoice Generate Modal -->
 <div id="imOverlay" class="sdoc-modal-overlay" style="z-index:9250" onclick="if(event.target===this)closeInvoiceModal()">
   <div class="sdoc-modal" style="max-width:560px">
@@ -7960,6 +8149,7 @@ const _SLK_GROUPS = [
   {group:'Financial', docs:[
     {type:'bank_book',label:'Bank Book'},{type:'bank_statement',label:'Bank Statement'},
     {type:'bank_submission_letter',label:'Bank Submission Letter'},
+    {type:'payment_receipt',label:'Payment Receipt'},
     {type:'cibil_report',label:'CIBIL Credit Report'},
     {type:'house_tax',label:'House Tax Receipt'},
     {type:'bank_loan_application',label:'Bank Loan Application'},

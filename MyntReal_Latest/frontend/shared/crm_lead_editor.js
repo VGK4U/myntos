@@ -238,6 +238,12 @@ class CRMLeadEditor {
                                 <input type="hidden" id="ule_fieldSupportRefName">
                                 <div id="ule_fieldSupportRefResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1060;width:calc(100% - 24px);"></div>
                                 <div id="ule_fieldSupportRefSelected" class="mt-1"></div>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="ule_companySupported" checked>
+                                    <label class="form-check-label small" for="ule_companySupported" title="Checked = Company Supported (50% L5 Support). Unchecked = Non-supported (100% L5 Support)">
+                                        Company Supported <span class="badge bg-secondary" style="font-size:0.7em;">50% L5</span>
+                                    </label>
+                                </div>
                             </div>
                             <!-- Community Member -->
                             <div class="col-md-4" style="position:relative;">
@@ -1376,6 +1382,11 @@ class CRMLeadEditor {
             if (selEl) selEl.innerHTML = `<span class="badge ${tc} p-2"><i class="fas fa-user me-1"></i>${_fsId} — ${_fsName}</span>`;
         }
 
+        const compSuppEl = document.getElementById('ule_companySupported');
+        if (compSuppEl) {
+            compSuppEl.checked = lead.company_supported !== false;
+        }
+
         // Technical
         if (lead.technical_id) {
             const techIdEl = document.getElementById('ule_technicalId');
@@ -1474,6 +1485,8 @@ class CRMLeadEditor {
         });
         
         document.getElementById('ule_status').value = 'new';
+        const compSuppEl = document.getElementById('ule_companySupported');
+        if (compSuppEl) compSuppEl.checked = true;
         document.getElementById('ule_revenueSection').style.display = 'none';
         document.getElementById('ule_taskSection').style.display = 'none';
         document.getElementById('ule_callHistorySection').style.display = 'none';
@@ -1875,7 +1888,8 @@ class CRMLeadEditor {
             telecaller_id: document.getElementById('ule_telecallerId').value ? parseInt(document.getElementById('ule_telecallerId').value) : null,
             field_staff_id: document.getElementById('ule_fieldStaffId').value ? parseInt(document.getElementById('ule_fieldStaffId').value) : null,
             associated_partner_id: document.getElementById('ule_partnerId').value ? parseInt(document.getElementById('ule_partnerId').value) : null,
-            community_id: document.getElementById('ule_communityId')?.value ? parseInt(document.getElementById('ule_communityId').value) : null
+            community_id: document.getElementById('ule_communityId')?.value ? parseInt(document.getElementById('ule_communityId').value) : null,
+            company_supported: document.getElementById('ule_companySupported') ? document.getElementById('ule_companySupported').checked : true
         };
         
         if (status === 'won') {
