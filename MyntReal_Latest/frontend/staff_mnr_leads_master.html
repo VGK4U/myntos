@@ -2339,7 +2339,12 @@ function buildQS() {
   return p.toString();
 }
 
+let _loadDataAbortCtrl = null;
 async function loadData() {
+  if (_loadDataAbortCtrl) {
+    try { _loadDataAbortCtrl.abort(); } catch(_) {}
+  }
+  _loadDataAbortCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   const _mySeq = ++_loadDataSeq;
   const _myTab = activeTab;
   const cols = activeTab==='solar' ? 43 : 17;
@@ -2348,7 +2353,8 @@ async function loadData() {
   resetStats();
   if (expandedRow) { expandedRow.remove(); expandedRow = null; }
   try {
-    const resp = await staffFetch(`${API_CRM}/master-leads?${buildQS()}`);
+    const fetchOpts = _loadDataAbortCtrl ? { signal: _loadDataAbortCtrl.signal } : {};
+    const resp = await staffFetch(`${API_CRM}/master-leads?${buildQS()}`, fetchOpts);
     if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
     if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${resp.status}`); }
     const data = await resp.json();
@@ -2366,7 +2372,9 @@ async function loadData() {
     renderLeadsTable(leads);
     renderPagination(pg);
     computeStats(leads, totalCount, pg);
-    loadStats();
+    if (!document.getElementById('quickSearch')?.value?.trim()) {
+      loadStats();
+    }
     if (tabCounts[_myTab] === null && !statFilterVal && !hasActiveFilters()) {
       tabCounts[_myTab] = totalCount;
       updateTabCount(_myTab);
@@ -2382,6 +2390,7 @@ async function loadData() {
       }
     }
   } catch(e) {
+    if (e && (e.name === 'AbortError' || (e.message && e.message.includes('aborted')))) return;
     if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
     console.error('[MNR-ML]',e);
     const cols = activeTab==='solar'?37:17;
@@ -3216,7 +3225,7 @@ function resetFilters() {
 
 function scheduleSearch() {
   clearTimeout(_searchTimer);
-  _searchTimer = setTimeout(()=>{ currentPage=1; loadData(); }, 400);
+  _searchTimer = setTimeout(()=>{ currentPage=1; loadData(); }, 550);
 }
 
 // ── View mode (Leads / Dashboard) ─────────────────────────────────────────

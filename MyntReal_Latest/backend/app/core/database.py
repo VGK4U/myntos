@@ -154,9 +154,9 @@ else:
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=8,              # 8 connections per worker
-            max_overflow=4,           # 4 burst overflow
-            pool_timeout=10,          # 10s timeout to prevent thread pile-up
+            pool_size=15,             # 15 connections per worker
+            max_overflow=10,          # 10 burst overflow (total 25)
+            pool_timeout=20,          # 20s timeout to allow bursts without queue timeouts
             pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
             pool_use_lifo=True,
             pool_reset_on_return='rollback',

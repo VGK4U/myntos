@@ -26,7 +26,8 @@ from app.schemas.ticket import (
 )
 from app.services.ticket_service import TicketService
 from typing import List, Optional, Any, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
+from app.models.base import get_indian_time
 
 router = APIRouter(prefix="/tickets", tags=["Support Tickets"])
 

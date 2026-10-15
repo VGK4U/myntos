@@ -484,36 +484,46 @@ def enrich_alerts_with_service_tickets(db: Session, alert_dicts: List[Dict[str, 
     return alert_dicts
 
 
+_SVC_COUNTS_CACHE: Dict[str, Any] = {"timestamp": 0.0, "data": None}
+
+
 def get_service_module_counts(db: Session) -> Dict[str, int]:
-    """Query live Service Module (ServiceTicket) counts to display on the 1st tab of /staff/progress."""
+    """Query live Service Module (ServiceTicket) counts with 30s in-memory cache and single-pass aggregation."""
+    import time
+    now_ts = time.time()
+    if _SVC_COUNTS_CACHE.get("data") and (now_ts - _SVC_COUNTS_CACHE["timestamp"]) < 30.0:
+        return dict(_SVC_COUNTS_CACHE["data"])
+
     try:
         from app.models.ticket import ServiceTicket
-        total_t = db.query(ServiceTicket).count()
-        open_t = db.query(ServiceTicket).filter(ServiceTicket.status == "Open").count()
-        in_prog_t = db.query(ServiceTicket).filter(ServiceTicket.status.in_(["Assigned", "In Progress"])).count()
-        resolved_t = db.query(ServiceTicket).filter(ServiceTicket.status.in_(["Resolved", "Closed"])).count()
-        partner_t = db.query(ServiceTicket).filter(
-            or_(
-                ServiceTicket.partner_id.isnot(None),
-                ServiceTicket.source_channel == "partner_portal"
-            )
-        ).count()
-        return {
-            "total_tickets": total_t,
-            "open_tickets": open_t,
-            "in_progress_tickets": in_prog_t,
-            "resolved_tickets": resolved_t,
-            "partner_support_tickets": partner_t
+        from sqlalchemy import func, case, or_
+        row = db.query(
+            func.count(ServiceTicket.id),
+            func.count(case([(ServiceTicket.status == "Open", 1)])),
+            func.count(case([(ServiceTicket.status.in_(["Assigned", "In Progress"]), 1)])),
+            func.count(case([(ServiceTicket.status.in_(["Resolved", "Closed"]), 1)])),
+            func.count(case([(or_(ServiceTicket.partner_id.isnot(None), ServiceTicket.source_channel == "partner_portal"), 1)]))
+        ).first()
+
+        res = {
+            "total_tickets": int(row[0] or 0) if row else 0,
+            "open_tickets": int(row[1] or 0) if row else 0,
+            "in_progress_tickets": int(row[2] or 0) if row else 0,
+            "resolved_tickets": int(row[3] or 0) if row else 0,
+            "partner_support_tickets": int(row[4] or 0) if row else 0
         }
+        _SVC_COUNTS_CACHE["timestamp"] = now_ts
+        _SVC_COUNTS_CACHE["data"] = res
+        return res
     except Exception as e:
         logger.warning(f"[VGK-ALERT] Service module count query note: {e}")
-        return {
+        return dict(_SVC_COUNTS_CACHE.get("data") or {
             "total_tickets": 0,
             "open_tickets": 0,
             "in_progress_tickets": 0,
             "resolved_tickets": 0,
             "partner_support_tickets": 0
-        }
+        })
 
 
 # ─── Member Endpoints ─────────────────────────────────────────────────────────

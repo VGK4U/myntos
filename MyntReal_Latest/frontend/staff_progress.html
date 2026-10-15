@@ -9037,12 +9037,13 @@
         }
         if (!_maPollInterval) {
             _maPollInterval = setInterval(() => {
+                if (typeof document !== 'undefined' && document.hidden) return;
                 if (currentTab === 'member_applications') {
                     loadMemberApplicationsDashboard();
                 } else if (window._userCanAccessMemberApps) {
                     loadMemberApplicationsDashboard(true);
                 }
-            }, 30000);
+            }, 60000);
         }
     }
 </script>
