@@ -4232,6 +4232,11 @@ async function loadIncomeDash(pg=1){
     _iedRenderKpis(d.data, d.total);
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
+    // Re-fetch expanded rows so they don't stay stuck on "Loading entries…"
+    for (const pid of Array.from(_iedExpanded)) {
+      _iedExpanded.delete(pid);
+      if ((d.data || []).some(m => m.id === pid)) toggleIedRow(pid);
+    }
   } catch(e){
     document.getElementById('iedBody').innerHTML = `<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${e.message}<br><button onclick="loadIncomeDash(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }
@@ -5049,7 +5054,7 @@ function _renderMePagination(total, pg, pageSize){
 let _lvPage = 1, _lvTotal = 0, _lvLoaded = false;
 const _lvExpanded  = new Set();
 const _lvDetailCache = {};
-const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom'};
+const _lvLvlLabel  = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom',11:'L1 Brand',12:'L2 Brand',15:'L5 Brand'};
 const _ME_KIND_LABELS = {
   'ADVANCE': 'Stage 1 Advance',
   'STAGE1_ADVANCE': 'Stage 1 Advance',
@@ -5244,10 +5249,15 @@ async function loadLeadView(pg){
   _lvRenderTable(rows);
   _lvRenderPagination(_lvPage, _lvTotal);
 
-  // Re-open previously expanded rows
-  _lvExpanded.forEach(lid=>{
-    if(_lvDetailCache[lid]) _lvRenderDetail(lid, _lvDetailCache[lid]);
-  });
+  // Re-open previously expanded rows by freshly fetching their breakdown
+  for (const lid of Array.from(_lvExpanded)) {
+    if (_lvDetailCache[lid]) {
+      _lvRenderDetail(lid, _lvDetailCache[lid]);
+    } else {
+      _lvExpanded.delete(lid);
+      if (rows.some(r => r.lead_id === lid)) toggleLvRow(lid);
+    }
+  }
 }
 
 function _lvRenderTable(rows){
@@ -5373,7 +5383,7 @@ function _lvDetailRowHtml(lid, entries){
     return isAsc ? -cmp : cmp;
   });
 
-  const lvlColors = {0:'#6b7280',1:'#6366f1',2:'#0891b2',3:'#059669',4:'#d97706',5:'#db2777',6:'#6366f1'};
+  const lvlColors = {0:'#6b7280',1:'#6366f1',2:'#0891b2',3:'#059669',4:'#d97706',5:'#db2777',6:'#6366f1',11:'#059669',12:'#10b981',15:'#34d399'};
 
   const fmtDate = (ds) => {
     if(!ds) return '—';
@@ -5392,10 +5402,12 @@ function _lvDetailRowHtml(lid, entries){
     const kindBadge= _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level, e.display_kind || e.entry_kind_label);
     const commBadgeHtml = e.community_id ? `<span style="font-size:9.5px;padding:2px 6px;border-radius:6px;background:#0ea5e9;color:#fff;margin-left:3px;font-weight:600">Comm ID: ${e.community_id}</span>` : '';
     
+    const _k          = String(e.kind || 'COMMISSION').toUpperCase();
+    const isBrand     = _k.includes('BRAND') || lvl >= 11;
     let calcBase = e.base_value || e.deal_value_total || e.solar_value || e.confirmed_final_value || 0;
     let calcPct  = (e.commission_pct && e.commission_pct > 0) ? e.commission_pct : 0;
 
-    if (!calcBase || calcBase <= 0) {
+    if (!isBrand && (!calcBase || calcBase <= 0)) {
       if (calcPct > 0 && e.commission_amount > 0) {
         calcBase = Math.round(e.commission_amount / (calcPct / 100));
       } else if (lvl === 1 && e.commission_amount > 0) {
@@ -5411,7 +5423,7 @@ function _lvDetailRowHtml(lid, entries){
       }
     }
 
-    if (!calcPct || calcPct <= 0) {
+    if (!isBrand && (!calcPct || calcPct <= 0)) {
       if (calcBase > 0 && e.commission_amount > 0) {
         calcPct = parseFloat((e.commission_amount / calcBase * 100).toFixed(2));
       } else if (lvl === 1) {
@@ -5427,7 +5439,6 @@ function _lvDetailRowHtml(lid, entries){
       }
     }
 
-    const _k          = String(e.kind || 'COMMISSION').toUpperCase();
     const isComm      = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
     const isDvr       = (_k === 'DVR_ADVANCE');
     const dealVal     = parseFloat(e.deal_value || e.base_value || 0);
@@ -5451,7 +5462,7 @@ function _lvDetailRowHtml(lid, entries){
       : Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
 
     const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
-    const commPctHtml  = commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—';
+    const commPctHtml  = isBrand ? '<span style="color:#9ca3af;font-size:10px">Flat</span>' : (commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—');
     const stg1Html     = (isComm || isDvr) ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const stg2Html     = isComm ? (stg2Adv > 0 ? _meInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const lostDedHtml  = lostLeadDed > 0 ? `-${_meInr(lostLeadDed)}` : '—';
@@ -11941,6 +11952,11 @@ async function loadCommServicesTab(pg = 1) {
     _commRenderKpis(d.data, d.total);
     _commRenderTable(d.data);
     _commRenderPagination(d.total, pg, 50);
+    // Re-fetch expanded rows so they don't stay stuck on "Loading entries…"
+    for (const pid of Array.from(_commExpanded)) {
+      _commExpanded.delete(pid);
+      if ((d.data || []).some(m => m.id === pid)) toggleCommRow(pid);
+    }
   } catch (e) {
     document.getElementById('commBody').innerHTML = `<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${e.message}<br><button onclick="loadCommServicesTab(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }

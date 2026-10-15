@@ -433,6 +433,11 @@ class Bonanza(BaseModel):
     qualification_event = Column(String(50), default='first_payment', nullable=True)
     completion_criteria = Column(String(50), default='balance_received_plus', nullable=True)
 
+    # Dhamaka Bonanza special logic flags
+    is_dhamaka_bonanza = Column(Boolean, default=False, nullable=True)
+    dhamaka_l1_100pct_first_payment = Column(Boolean, default=False, nullable=True)
+    waive_tds_and_admin = Column(Boolean, default=False, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)

@@ -2472,6 +2472,7 @@ def run_schema_bootstrap():
     bootstrap_community_idol_photo()
     bootstrap_central_integration_framework()
     bootstrap_vgk_stage2_payment_advances()
+    bootstrap_crm_leads_company_supported_column()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:
@@ -3045,6 +3046,24 @@ def bootstrap_customer_profiles_table():
         _db.rollback()
         logger.error(f"[SCHEMA BOOTSTRAP] ❌ Error bootstrapping customer profiles table: {e}")
         raise
+    finally:
+        _db.close()
+
+
+def bootstrap_crm_leads_company_supported_column():
+    """DC-COMPANY-SUPPORTED-L5-001 (Oct 2026): Add company_supported boolean column (default TRUE) to crm_leads."""
+    from app.core.database import SessionLocal
+    _db = SessionLocal()
+    try:
+        _db.execute(text("""
+            ALTER TABLE crm_leads
+            ADD COLUMN IF NOT EXISTS company_supported BOOLEAN NOT NULL DEFAULT TRUE;
+        """))
+        _db.commit()
+        logger.info("[SCHEMA BOOTSTRAP] ✅ crm_leads.company_supported column bootstrapped successfully")
+    except Exception as e:
+        _db.rollback()
+        logger.warning(f"[SCHEMA BOOTSTRAP] Could not bootstrap crm_leads.company_supported column: {e}")
     finally:
         _db.close()
 

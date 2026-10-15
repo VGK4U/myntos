@@ -868,6 +868,7 @@ class LeadCreate(BaseModel):
     # DC Protocol: Primary owner assignment for staff-created leads
     primary_owner_id: Optional[int] = None
     primary_owner_type: Optional[str] = None
+    company_supported: Optional[bool] = True
 
     @validator('gender', pre=True)
     def validate_gender(cls, v):
@@ -1003,6 +1004,7 @@ class LeadUpdate(BaseModel):
     field_support_supported: Optional[bool] = None
     support_staff_supported: Optional[bool] = None
     technical_staff1_supported: Optional[bool] = None
+    company_supported: Optional[bool] = None
     # DC-TEAM-ASSIGN-001 (Jun 2026): OfficialPartner override IDs for L2/L3/L4 upline slots
     team_senior_partner_id: Optional[int] = None
     team_extended_partner_id: Optional[int] = None
@@ -12214,6 +12216,7 @@ def update_lead(
         'field_support_supported': 'confirmation',
         'telecaller_supported':    'confirmation',
         'technical_supported':     'confirmation',
+        'company_supported':       'confirmation',
     }
     _audit_snapshot = {}
     for _af in _AUDIT_FIELD_MAP:
@@ -12573,10 +12576,64 @@ def update_lead(
     }
     _retrigger_hit = _RETRIGGER_FIELDS & set(update_data.keys())
     _sps_now = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
-    _income_eligible = (
-        lead.status in ('won', 'completed')
-        or _sps_now in {'balance_received', 'subsidy_pending', 'completed'}
-    )
+    _is_solar_lead = bool(_sps_now) or getattr(lead, 'category_id', None) == 6 or bool(getattr(lead, 'solar_brand_id', None))
+    if _is_solar_lead:
+        _income_eligible = _sps_now in {'subsidy_pending', 'completed', 'completed_paid', 'subsidy_received'}
+    else:
+        _income_eligible = lead.status in ('completed',)
+
+    # DC-STAGE-ROLLBACK-GUARD-001 (Oct 2026):
+    # If a solar lead is NOT in completion stages (e.g. moved back to balance_pending/installation_pending),
+    # cancel unpaid DRAFT BRAND_COMMISSION entries and unlock confirmed_final_value if balance is unpaid.
+    if _is_solar_lead and not _income_eligible:
+        try:
+            db.execute(text("""
+                DELETE FROM vgk_cash_income_entries
+                WHERE source_lead_id = :lid AND kind = 'BRAND_COMMISSION' AND status = 'DRAFT'
+            """), {'lid': lead_id})
+            if float(getattr(lead, 'deal_value_balance', 0) or 0) > 0 and getattr(lead, 'confirmed_final_value', None) is not None:
+                db.execute(text("""
+                    UPDATE crm_leads SET confirmed_final_value = NULL
+                    WHERE id = :lid AND confirmed_final_value IS NOT NULL
+                """), {'lid': lead_id})
+                db.commit()
+                db.refresh(lead)
+        except Exception as _rb_err:
+            logger.warning(f'[STAGE-ROLLBACK-GUARD] Rollback cleanup failed for lead {lead_id}: {_rb_err}')
+
+    # DC-COMPANY-SUPPORTED-RECALC-001 (Oct 2026):
+    # If company_supported was toggled, recalculate any unpaid (DRAFT/PENDING) L5 Support entries (Option B: 0.75% vs 1.50%)
+    if 'company_supported' in update_data:
+        try:
+            _new_cs = bool(update_data['company_supported'])
+            _unpaid_l5 = db.execute(text("""
+                SELECT id, commission_pct, commission_amount, deal_value_total, confirmed_final_value, earning_basis_amount
+                FROM vgk_cash_income_entries
+                WHERE source_lead_id = :lid AND level = 5 AND kind = 'COMMISSION' AND status IN ('DRAFT', 'PENDING')
+            """), {'lid': lead_id}).fetchall()
+            for _l5_row in _unpaid_l5:
+                _base = Decimal(str(_l5_row.earning_basis_amount or _l5_row.confirmed_final_value or _l5_row.deal_value_total or 0))
+                if _base > Decimal('0.00'):
+                    _new_pct = Decimal('0.75') if _new_cs else Decimal('1.50')
+                    _new_amt = (_base * (_new_pct / Decimal('100'))).quantize(Decimal('0.01'))
+                    _new_adm = (_new_amt * Decimal('0.08')).quantize(Decimal('0.01'))
+                    _new_tds = ((_new_amt - _new_adm) * Decimal('0.02')).quantize(Decimal('0.01'))
+                    _new_net = _new_amt - _new_adm - _new_tds
+                    db.execute(text("""
+                        UPDATE vgk_cash_income_entries
+                        SET commission_pct = :pct, commission_amount = :amt,
+                            admin_charges = :adm, tds_amount = :tds, net_payout = :net,
+                            notes = 'Field Support Fee (' || :pct || '% outside network pool) [company_supported=' || :cs || ']'
+                        WHERE id = :eid
+                    """), {
+                        'pct': float(_new_pct), 'amt': float(_new_amt),
+                        'adm': float(_new_adm), 'tds': float(_new_tds), 'net': float(_new_net),
+                        'cs': str(_new_cs), 'eid': _l5_row.id
+                    })
+            db.commit()
+        except Exception as _cs_err:
+            logger.warning(f'[COMPANY-SUPPORTED-RECALC] Failed for lead {lead_id}: {_cs_err}')
+
     if (
         _income_eligible
         and lead.associated_partner_id
@@ -12661,22 +12718,22 @@ def update_lead(
         except Exception as _dvr2_e:
             logger.warning(f'[DVR-ADV] Secondary hook failed for lead {lead_id}: {_dvr2_e}')
 
-    # DC_CFV_001: confirmed_final_value lock + payout trigger on balance_received/subsidy_pending stage (non-blocking)
-    # Fires when: solar stage hits balance_received OR subsidy_pending (money confirmed received from customer)
-    # Locks confirmed_final_value = solar_value (or deal_value_received fallback) at that moment (immutable payout base).
-    # DC-BRP-001 (Jun 2026): extended from {balance_received} to also cover subsidy_pending — balance is in hand.
-    _CFV_SOLAR_FINALS = {'balance_received', 'subsidy_pending'}
+    # DC_CFV_001: confirmed_final_value lock + payout trigger on subsidy_pending stage (non-blocking)
+    # DC-STRICT-COMM-GATE-2026: Exclude balance_received! Locks only on subsidy_pending/completed AND when payment confirmed.
+    _CFV_SOLAR_FINALS = {'subsidy_pending', 'completed'}
     _new_sps     = update_data.get('solar_pipeline_status', '')  or ''
     _new_status  = update_data.get('status', '')                 or ''
     _cfv_trigger = (_new_sps in _CFV_SOLAR_FINALS)
     if _cfv_trigger:
         try:
             _dvr_now = lead.deal_value_received or 0
+            _bal_now = float(getattr(lead, 'deal_value_balance', 0) or 0)
             _cfv_now = getattr(lead, 'confirmed_final_value', None)
             # DC-SOLAR-VALUE-001: Use solar_value as the commission base if set; fallback to deal_value_received
             _sv_now = getattr(lead, 'solar_value', None)
             _cfv_base = float(_sv_now) if (_sv_now is not None and _sv_now > 0) else float(_dvr_now)
-            if _cfv_now is None and _cfv_base > 0:
+            # Only lock confirmed_final_value when full payment is confirmed (deal_value_balance <= 0)
+            if _cfv_now is None and _cfv_base > 0 and _bal_now <= 0:
                 # Lock confirmed_final_value — first completion wins, immutable afterwards
                 db.execute(
                     text("UPDATE crm_leads SET confirmed_final_value = :cfv WHERE id = :lid AND confirmed_final_value IS NULL"),
@@ -18238,6 +18295,7 @@ async def update_lead_full(
     deal_value_total: Optional[float] = Body(None),
     deal_value_received: Optional[float] = Body(None),
     deal_value_balance: Optional[float] = Body(None),
+    company_supported: Optional[bool] = Body(None),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_hybrid)
 ):
@@ -18270,6 +18328,7 @@ async def update_lead_full(
     recent_comments = _clean_body_param(recent_comments)
     city = _clean_body_param(city)
     area = _clean_body_param(area)
+    company_supported = _clean_body_param(company_supported)
     state = _clean_body_param(state)
     pincode = _clean_body_param(pincode)
     budget_min = _clean_body_param(budget_min)
@@ -18611,6 +18670,8 @@ async def update_lead_full(
         lead.deal_value_received = deal_value_received
     if deal_value_balance is not None:
         lead.deal_value_balance = deal_value_balance
+    if company_supported is not None:
+        lead.company_supported = bool(company_supported)
     
     lead.updated_at = get_indian_time()
     db.flush()
@@ -18671,14 +18732,14 @@ async def update_lead_full(
         except Exception as _full_hci_e:
             logger.warning(f'[DC-HCI-001] full-update correction failed lead#{lead_id}: {_full_hci_e}')
 
-    # DC-BRP-RETRIGGER-001 (Jul 2026): Extend trigger to solar-completion stages.
-    # Solar leads stay at status='won' while solar_pipeline_status reaches balance_received/
-    # subsidy_pending, so checking status=='completed' alone misses all solar income triggers.
+    # DC-BRP-RETRIGGER-001 (Jul 2026) / DC-STRICT-COMM-GATE-2026:
+    # Solar leads trigger ONLY on subsidy_pending or completed stages (balance_received excluded).
     _sps_hook = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
-    _income_hook_eligible = (
-        (status == 'completed' and _old_lead_status != 'completed')
-        or _sps_hook in {'balance_received', 'subsidy_pending', 'completed'}
-    )
+    _is_solar_hook = bool(_sps_hook) or getattr(lead, 'category_id', None) == 6 or bool(getattr(lead, 'solar_brand_id', None))
+    if _is_solar_hook:
+        _income_hook_eligible = _sps_hook in {'subsidy_pending', 'completed', 'completed_paid', 'subsidy_received'}
+    else:
+        _income_hook_eligible = (status == 'completed' and _old_lead_status != 'completed')
     if _income_hook_eligible and lead.associated_partner_id:
         try:
             from app.services.vgk_cash_income import generate_vgk_cash_income_drafts
@@ -19183,6 +19244,8 @@ SOLAR_DOC_TYPES = {
     # Insurance documents (Oct 2026)
     'installation_photo':            'Installation Photo',
     'insurance_policy':              'Insurance Policy Document',
+    # Financial / Receipt documents (Oct 2026)
+    'payment_receipt':               'Payment Receipt',
 }
 
 # Doc types that support auto-generation (map to solar_doc_generator functions)
@@ -19190,6 +19253,7 @@ GENERATABLE_DOC_TYPES = {
     'quotation':                    'quotation',
     'co_applicant_quotation':       'co_applicant_quotation',
     'invoice':                      'invoice',
+    'payment_receipt':              'payment_receipt',
     'annexure_a':                   'annexure_a',
     'annexure_c':                   'annexure_c_completion',
     'annexure_c_technical':         'annexure_c_technical',
@@ -19907,13 +19971,14 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 # Public token endpoint: /share/{token}/bundle
 # Uses PyMuPDF / pypdf + PIL to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
-_BANK_DOC_TYPES      = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst','vendor_customer_agreement_annexure_2']
+_BANK_DOC_TYPES      = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','payment_receipt','vendor_gst','vendor_customer_agreement_annexure_2']
 _DISCOM_DOC_TYPES    = ['annexure_a','net_meter_payment','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
 _INSURANCE_DOC_TYPES = ['invoice','adhar','pan','installation_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
     'bank_book':'Bank Book','house_tax':'House Tax Receipt',
     'quotation':'Quotation','feasibility_letter':'Feasibility Letter','invoice':'Invoice',
+    'payment_receipt':'Payment Receipt',
     'vendor_gst':'Solar Vendor GST Certificate (Visionera)',
     'vendor_customer_agreement_annexure_2':'PM Surya Ghar Annexure-2 Agreement',
     'annexure_a':'Annexure-A','net_meter_payment':'Net Meter Payment Receipt',
@@ -21551,6 +21616,37 @@ def get_next_quote_ref(
     return {"ref_no": ref_no, "vendor_code": vendor.vendor_code}
 
 
+def _get_next_payment_receipt_no(db: Session) -> str:
+    """
+    Compute the next sequential Payment Receipt number across crm_lead_solar_documents.
+    Always increments by +1 from the highest numeric receipt number on record (starting at 56586).
+    """
+    try:
+        row = db.execute(text("""
+            SELECT MAX(CAST(NULLIF(REGEXP_REPLACE(COALESCE(doc_number, ''), '[^0-9]', '', 'g'), '') AS BIGINT)) AS max_no,
+                   COUNT(*) AS cnt
+            FROM crm_lead_solar_documents
+            WHERE doc_type = 'payment_receipt'
+        """)).fetchone()
+        max_no = int(row.max_no or 0) if row and row.max_no is not None else 0
+        cnt = int(row.cnt or 0) if row and row.cnt is not None else 0
+        base = max(max_no, 56585 + cnt)
+        return str(base + 1)
+    except Exception:
+        return "56586"
+
+
+@router.get("/leads/{lead_id}/next-receipt-no")
+def get_next_receipt_no(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Return the next auto-incrementing Payment Receipt number."""
+    get_authorized_lead(db, lead_id, current_employee)
+    return {"receipt_no": _get_next_payment_receipt_no(db)}
+
+
 @router.get("/leads/{lead_id}/solar-tech")
 def get_solar_tech(
     lead_id: int,
@@ -21968,6 +22064,17 @@ async def generate_solar_doc(
             vendor_id = tech.last_quote_vendor_id
             logger.info("[DC-SOLAR-VENDOR-AUTO] Auto-loaded vendor_id=%s for lead #%s doc=%s", vendor_id, lead_id, doc_type)
 
+    if vendor is None and generator_key == "payment_receipt":
+        _auto_v = db.execute(text("""
+            SELECT * FROM vendor_master WHERE vendor_type = 'SOLAR' AND is_active = true ORDER BY id LIMIT 1
+        """)).fetchone()
+        if not _auto_v:
+            from app.models.staff_accounts import AssociatedCompany
+            _auto_v = db.query(AssociatedCompany).order_by(AssociatedCompany.id).first()
+        if _auto_v:
+            vendor = _auto_v
+            vendor_id = getattr(_auto_v, "id", None)
+
     if generator_key in ("quotation", "invoice") and not vendor:
         raise HTTPException(status_code=400, detail="vendor_id is required for quotation/invoice generation")
 
@@ -22015,12 +22122,14 @@ async def generate_solar_doc(
     if not tech_dict.get("installation_date") and lead_dict.get("installation_date"):
         tech_dict["installation_date"] = lead_dict["installation_date"]
 
-    # Override with any inline payload values (for quotation / invoice)
+    # Override with any inline payload values (for quotation / invoice / payment_receipt)
     override_fields = [
         "kw_size", "quote_value", "discount", "final_amount", "subsidy",
         "quote_ref_no", "remaining_loan_amount",
         "invoice_number", "invoice_date", "application_charge", "net_meters_cost",
         "discom_reg_date", "panel_brand",
+        "receipt_no", "receipt_date", "received_from", "receipt_amount",
+        "amount_in_words", "payment_mode",
     ]
     extra = {k: payload.get(k) for k in override_fields if payload.get(k) is not None}
 
@@ -22029,6 +22138,10 @@ async def generate_solar_doc(
         _ref = tech_dict.get("last_quote_ref_no") if tech_dict else None
         if _ref:
             extra["invoice_number"] = f"INV-{_ref}"
+
+    # ── Auto-derive sequential payment receipt number if not supplied ─────────
+    if generator_key == "payment_receipt" and not str(extra.get("receipt_no") or "").strip():
+        extra["receipt_no"] = _get_next_payment_receipt_no(db)
 
     ctx = {
         "lead": lead_dict,
@@ -22228,6 +22341,18 @@ async def generate_solar_doc(
                 panel_performance_warranty_years=str(ctx.get("panel_performance_warranty_years") or tech_d.get("panel_performance_warranty_years") or "25"),
                 inverter_warranty_years=str(ctx.get("inverter_warranty_years") or tech_d.get("inverter_warranty_years") or "8"),
             )
+        elif generator_key == "payment_receipt":
+            pdf_bytes = generator_fn(
+                lead=lead_d,
+                vendor=vendor_d,
+                tech=tech_d,
+                receipt_no=str(ctx.get("receipt_no") or ""),
+                receipt_date=ctx.get("receipt_date") or None,
+                received_from=str(ctx.get("received_from") or ""),
+                receipt_amount=ctx.get("receipt_amount") or 0,
+                amount_in_words=str(ctx.get("amount_in_words") or ""),
+                payment_mode=str(ctx.get("payment_mode") or "Cash"),
+            )
         elif generator_key == "synchronisation_certificate":
             pdf_bytes = generator_fn(
                 lead=lead_d,
@@ -22288,6 +22413,8 @@ async def generate_solar_doc(
     doc_label = SOLAR_DOC_TYPES.get(doc_type, doc_type.replace("_", " ").title())
     if generator_key == "invoice":
         doc_number = extra.get("invoice_number", "") or ""
+    elif generator_key == "payment_receipt":
+        doc_number = str(extra.get("receipt_no") or "")
     else:
         doc_number = extra.get("quote_ref_no", "") or ""
     emp_name = getattr(current_employee, "full_name", None) or getattr(current_employee, "emp_code", "Staff")

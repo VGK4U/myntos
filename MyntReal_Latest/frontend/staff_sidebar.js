@@ -60,7 +60,7 @@ window._menuMasterReady = window._menuMasterReady || (function loadMenuMaster() 
             return resolve();
         }
         var script = document.createElement("script");
-        script.src = "/public/js/menu-master.js?v=20260904_unified";
+        script.src = "/public/js/menu-master.js?v=20261015_zs_unified";
         script.onload = function() {
             const loadedMaster = window.MENU_MASTER || (typeof MENU_MASTER !== "undefined" ? MENU_MASTER : null);
             if (loadedMaster && loadedMaster.length > 0) {
@@ -891,13 +891,23 @@ window.StaffSidebar = window.StaffSidebar || {
         for (const section of menuMaster) {
             const sCode = (section.section_code || '').toUpperCase();
             const sTitle = (section.section_label || section.title || section.id || '').toUpperCase();
-            const isSaasSection = sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS');
-            const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE';
+            const isSaasSection = sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('ZYNOVA OS');
+            const isCoreWorkspace = sCode === 'CORE_WORKSPACE' || sTitle === 'CORE WORKSPACE' || sTitle === 'ZS CORE WORKSPACE';
             
+            // Hide duplicate tenant-only Workflows section (SOLAR_EV) for internal staff (who use MYNT_REAL -> WORKFLOWS)
+            if (!isSaaSTenant && sCode === 'SOLAR_EV') {
+                continue;
+            }
+
+            // Hide tenant-only Core Workspace for non-admin internal staff
+            if (!isSaaSTenant && isCoreWorkspace && !isPlatformAdmin) {
+                continue;
+            }
+
             // For SaaS tenants, completely exclude internal corporate and group company sections
             if (isSaaSTenant) {
                 if (!isCoreWorkspace) {
-                    const hasHrmsAccess = Boolean(hasRouteAccess && (this.hasPathAccess(allowedPaths, '/staff/attendance-sheet') || this.hasPathAccess(allowedPaths, '/staff/my-attendance')));
+                    const hasHrmsAccess = Boolean(hasRouteAccess && (this.hasPathAccess(allowedPaths, '/staff/attendance-sheet') || this.hasPathAccess(allowedPaths, '/staff/my-attendance') || this.hasPathAccess(allowedPaths, '/staff/employees')));
                     const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT'];
                     const saasRestricted = [
                         'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',
@@ -917,7 +927,7 @@ window.StaffSidebar = window.StaffSidebar || {
             // MYNTOS SAAS is preserved for platform administrators (MR10018, MR10001, MR10025, SAAS_SEGMENT_ADMIN, etc.)
             if (!isPlatformAdmin) {
                 if (isSaaSTenant) {
-                    if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS')) {
+                    if (sCode === 'VGK_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('ZYNOVA OS')) {
                         continue;
                     }
                 } else {
@@ -950,7 +960,7 @@ window.StaffSidebar = window.StaffSidebar || {
             const sectionSubSections = [];
             const isStaffDashboardSection = (section.section_code === 'STAFF_DASHBOARD' || section.section_label === 'STAFF DASHBOARD');
             const isCrmSection = (section.section_code === 'CRM_LEADS' || section.section_code === 'CRM' || section.section_label === 'CRM & LEADS');
-            const isWorkflowSection = (section.section_code === 'SOLAR_EV' || section.section_code === 'WORKFLOWS' || sTitle === 'WORKFLOWS');
+            const isWorkflowSection = (section.section_code === 'SOLAR_EV' || section.section_code === 'WORKFLOWS' || sTitle === 'WORKFLOWS' || sTitle === 'ZS WORKFLOWS');
             
             // Process regular items
             if (section.items) {
@@ -958,11 +968,15 @@ window.StaffSidebar = window.StaffSidebar || {
                     // DC Protocol: Match by route_path (reliable) instead of menu_code (format mismatch)
                     let shouldInclude = (!isSaaSTenant && isStaffDashboardSection) || (!isSaaSTenant && !hasRouteAccess) || this.hasPathAccess(allowedPaths, item.route);
                     if (isCoreWorkspace) {
-                        if (item.route === '/staff/my-tenant') {
-                            shouldInclude = true;
-                        } else if (item.route === '/staff/tenant-users') {
-                            const isTenantAdmin = roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || isPlatformAdmin;
-                            shouldInclude = isTenantAdmin;
+                        if (isSaaSTenant) {
+                            if (item.route === '/staff/my-tenant') {
+                                shouldInclude = true;
+                            } else if (item.route === '/staff/tenant-users') {
+                                const isTenantAdmin = roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || isPlatformAdmin;
+                                shouldInclude = isTenantAdmin;
+                            }
+                        } else {
+                            shouldInclude = isPlatformAdmin && (!hasRouteAccess || this.hasPathAccess(allowedPaths, item.route));
                         }
                     }
                     
@@ -1023,7 +1037,7 @@ window.StaffSidebar = window.StaffSidebar || {
                 }
                 if (isWorkflowSection && this.rawMenus && Array.isArray(this.rawMenus)) {
                     const rawWorkflows = this.rawMenus.filter(m => 
-                        (m.menu_category === 'WORKFLOWS' || (m.menu_code && m.menu_code.startsWith('WORKFLOW_'))) &&
+                        (m.menu_category === 'WORKFLOWS' || m.menu_category === 'ZS WORKFLOWS' || (m.menu_code && m.menu_code.startsWith('WORKFLOW_'))) &&
                         this.hasPathAccess(allowedPaths, m.route_path)
                     );
                     for (const rw of rawWorkflows) {
@@ -1042,6 +1056,10 @@ window.StaffSidebar = window.StaffSidebar || {
             // Process subSections (for ACCOUNTS, ZYNOVA, MNR, MNR USER SIDEBAR)
             if (section.subSections) {
                 for (const subSection of section.subSections) {
+                    // Hide tenant-only HR_EMPLOYEES subsection for internal staff (who have Employees in STAFF_DASHBOARD)
+                    if (!isSaaSTenant && subSection.sub_section_code === 'HR_EMPLOYEES') {
+                        continue;
+                    }
                     const subItems = [];
                     
                     for (const item of subSection.items || []) {
@@ -1084,9 +1102,23 @@ window.StaffSidebar = window.StaffSidebar || {
             // Only include section if it has visible items
             const hasItems = sectionItems.length > 0 || sectionSubSections.length > 0;
             if (hasItems) {
+                let resolvedTitle = section.section_label;
+                if (isSaaSTenant) {
+                    if (section.section_code === 'SOLAR_EV' || (resolvedTitle || '').toUpperCase().includes('SOLAR') || (resolvedTitle || '').toUpperCase().includes('WORKFLOW')) {
+                        resolvedTitle = 'ZS WORKFLOWS';
+                    } else if (section.section_code === 'SERVICE_TICKETS' || (resolvedTitle || '').toUpperCase().includes('SERVICE')) {
+                        resolvedTitle = 'ZS SERVICE';
+                    } else if (section.section_code === 'ACCOUNTS') {
+                        resolvedTitle = 'ZS ACCOUNTS & GST';
+                    } else if (section.section_code === 'HR') {
+                        resolvedTitle = 'ZS HRMS';
+                    } else if (resolvedTitle && !resolvedTitle.toUpperCase().startsWith('ZS ')) {
+                        resolvedTitle = 'ZS ' + resolvedTitle;
+                    }
+                }
                 sections.push({
                     id: section.section_code.toLowerCase().replace(/_/g, '-'),
-                    title: (isSaaSTenant && (section.section_code === 'SOLAR_EV' || (section.section_label || '').toUpperCase().includes('SOLAR'))) ? 'WORKFLOWS' : (isSaaSTenant && (section.section_code === 'SERVICE_TICKETS' || (section.section_label || '').toUpperCase().includes('SERVICE')) ? 'SERVICE' : (isSaaSTenant && section.section_code === 'ACCOUNTS' ? 'ACCOUNTS & GST' : (isSaaSTenant && section.section_code === 'HR' ? 'HRMS' : section.section_label))),
+                    title: resolvedTitle,
                     order: section.order,
                     items: sectionItems,
                     subSections: sectionSubSections

@@ -8263,8 +8263,8 @@
                 return map[String(s).toUpperCase()] || '#6b7280';
             };
 
-            const _lvlColor = {0:'#6b7280',1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#db2777',6:'#c026d3'};
-            const _lvLvlLabel = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom'};
+            const _lvlColor = {0:'#6b7280',1:'#7c3aed',2:'#1d4ed8',3:'#0d9488',4:'#d97706',5:'#db2777',6:'#c026d3',11:'#059669',12:'#10b981',15:'#34d399'};
+            const _lvLvlLabel = {0:'L0 Bonus',1:'L1 Source',2:'L2 Senior',3:'L3 Extended',4:'L4 Core',5:'L5 Support',6:'L6 Showroom',11:'L1 Brand',12:'L2 Brand',15:'L5 Brand'};
 
             // Group rows by lead / customer to match Staff Portal subtotaling
             const leadGroupMap = {};
@@ -8344,7 +8344,8 @@
                     }
 
                     const dealValHtml = dealVal > 0 ? _fmtInr(dealVal) : '—';
-                    const commPctHtml = commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/, '') + '%') : '—';
+                    const isBrand = _k.includes('BRAND') || (e.level || 0) >= 11;
+                    const commPctHtml = isBrand ? '<span style="color:#9ca3af;font-size:10px">Flat</span>' : (commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/, '') + '%') : '—');
                     const stg1Html = isComm ? (stg1Adv > 0 ? _fmtInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
                     const stg2Html = isComm ? (stg2Adv > 0 ? _fmtInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
                     const lostDedHtml = (lostDedAmt > 0 ? `<span style="color:#dc2626;font-weight:700">-${_fmtInr(lostDedAmt)}</span>` : '—');

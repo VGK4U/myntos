@@ -2216,11 +2216,285 @@ def generate_annexure_2_agreement(lead: dict, vendor: dict, tech: dict = None, *
     return buf.getvalue()
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  9. PAYMENT / CASH RECEIPT (Uses Quotation's Header + Manual Amount + Words)
+# ══════════════════════════════════════════════════════════════════════════════
+def _format_indian_number(val) -> str:
+    """Format a number using Indian numbering system (e.g. 22000 -> 22,000; 150000 -> 1,50,000)."""
+    try:
+        num = float(str(val).replace(',', '').replace('/-', '').replace('₹', '').strip())
+    except Exception:
+        return str(val or '0')
+    is_int = (num == int(num))
+    int_part = int(round(num)) if is_int else int(num)
+    dec_part = "" if is_int else f".{int(round((num - int_part) * 100)):02d}"
+    s = str(abs(int_part))
+    if len(s) > 3:
+        last3 = s[-3:]
+        rest = s[:-3]
+        parts = []
+        while len(rest) > 2:
+            parts.insert(0, rest[-2:])
+            rest = rest[:-2]
+        if rest:
+            parts.insert(0, rest)
+        s = ",".join(parts) + "," + last3
+    prefix = "-" if num < 0 else ""
+    return f"{prefix}{s}{dec_part}"
+
+
+def _amount_to_indian_words(amount) -> str:
+    """Convert numeric amount into Indian English words (e.g. 22000 -> 'Twenty Two Thousand rupees only')."""
+    try:
+        num = float(str(amount).replace(',', '').replace('/-', '').replace('₹', '').strip())
+    except Exception:
+        return ""
+    if num <= 0:
+        return "Zero rupees only"
+
+    ones = [
+        "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+        "Seventeen", "Eighteen", "Nineteen"
+    ]
+    tens = [
+        "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+    ]
+
+    def _two_digits(n: int) -> str:
+        if n == 0:
+            return ""
+        if n < 20:
+            return ones[n]
+        t = tens[n // 10]
+        o = ones[n % 10]
+        return f"{t} {o}".strip()
+
+    def _convert_int(n: int) -> str:
+        if n == 0:
+            return "Zero"
+        parts = []
+        crore = n // 10000000
+        n %= 10000000
+        lakh = n // 100000
+        n %= 100000
+        thousand = n // 1000
+        n %= 1000
+        hundred = n // 100
+        rem = n % 100
+
+        if crore:
+            parts.append(f"{_convert_int(crore)} Crore")
+        if lakh:
+            parts.append(f"{_two_digits(lakh)} Lakh")
+        if thousand:
+            parts.append(f"{_two_digits(thousand)} Thousand")
+        if hundred:
+            parts.append(f"{ones[hundred]} Hundred")
+        if rem:
+            parts.append(_two_digits(rem))
+        return " ".join(parts).strip()
+
+    rupees = int(num)
+    paise = int(round((num - rupees) * 100))
+    words = f"{_convert_int(rupees)} rupees"
+    if paise > 0:
+        words += f" and {_two_digits(paise)} paise"
+    return f"{words} only"
+
+
+def _fetch_raw_url_bytes(url: str):
+    """Fetch raw image bytes from /storage/<key> or https:// URL."""
+    if not url or not str(url).strip():
+        return None
+    url = str(url).strip()
+    try:
+        if url.startswith('/storage/'):
+            storage_key = url[len('/storage/'):]
+            from app.services.object_storage import storage_service
+            _data = storage_service.download_file(storage_key)
+            if not _data:
+                from pathlib import Path as _Path
+                _local = _Path(__file__).parent.parent.parent.parent / "frontend" / "storage" / storage_key
+                if _local.exists():
+                    _data = _local.read_bytes()
+            return _data
+        import urllib.request as _urlreq
+        _req = _urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with _urlreq.urlopen(_req, timeout=8) as _resp:
+            return _resp.read()
+    except Exception:
+        return None
+
+
+def _fetch_composite_stamp_sig(vendor: dict, width=42*mm, height=26.5*mm):
+    """
+    Composite the vendor's round stamp (_get_vendor_stamp_url) and authorised signature (_get_vendor_sig_url)
+    into a single combined Stamp-with-Signature image (matching the reference Cash Receipt layout).
+    Falls back to whichever single image is available.
+    """
+    stamp_url = _get_vendor_stamp_url(vendor)
+    sig_url = _get_vendor_sig_url(vendor)
+    stamp_bytes = _fetch_raw_url_bytes(stamp_url) if stamp_url else None
+    sig_bytes = _fetch_raw_url_bytes(sig_url) if sig_url else None
+
+    if stamp_bytes and sig_bytes:
+        try:
+            from PIL import Image as _PILImage
+            W, H = 480, 300
+            canvas = _PILImage.new('RGBA', (W, H), (255, 255, 255, 255))
+            stamp_im = _PILImage.open(BytesIO(stamp_bytes)).convert('RGBA').resize((300, 300), _PILImage.Resampling.LANCZOS)
+            canvas.paste(stamp_im, (88, 0), stamp_im)
+
+            sig_im = _PILImage.open(BytesIO(sig_bytes)).convert('RGBA').resize((480, 211), _PILImage.Resampling.LANCZOS)
+            # Make near-white background pixels of signature transparent so round stamp shows through cleanly
+            new_pixels = [
+                (255, 255, 255, 0) if (r > 220 and g > 220 and b > 220) else (r, g, b, a)
+                for (r, g, b, a) in sig_im.getdata()
+            ]
+            sig_im.putdata(new_pixels)
+            canvas.paste(sig_im, (0, 44), sig_im)
+
+            out_buf = BytesIO()
+            canvas.convert('RGB').save(out_buf, format='JPEG', quality=90)
+            return RLImage(BytesIO(out_buf.getvalue()), width=width, height=height)
+        except Exception as _e:
+            logger.warning("[DC-SOLAR] Could not composite stamp+sig: %s", _e)
+
+    if stamp_url:
+        return _fetch_url_image(stamp_url, width=28*mm, height=28*mm)
+    if sig_url:
+        return _fetch_url_image(sig_url, width=38*mm, height=18*mm)
+    return None
+
+
+def generate_payment_receipt(
+    lead: dict,
+    vendor: dict,
+    tech: dict = None,
+    receipt_no: str = '',
+    receipt_date=None,
+    received_from: str = '',
+    receipt_amount=0,
+    amount_in_words: str = '',
+    payment_mode: str = 'Cash',
+) -> bytes:
+    """
+    Generates a Payment / Cash Receipt PDF using the Quotation's Header (_vendor_letterhead),
+    customized manual amount, amount in words, receipt number, date, received from, and payment mode.
+    """
+    buf = BytesIO()
+    doc = _doc(buf, top=14*mm, bottom=14*mm, left=15*mm, right=15*mm)
+    ss = _styles()
+    story = []
+
+    # 1. Quotation's Header (Vendor Letterhead)
+    story.append(_vendor_letterhead(vendor, ss))
+    story.append(Spacer(1, 6*mm))
+
+    # 2. Title: CASH RECEIPT (matches reference document)
+    title_style = ParagraphStyle(
+        name='ReceiptTitle',
+        fontName='Helvetica-Bold',
+        fontSize=15,
+        textColor=NAVY,
+        alignment=TA_CENTER,
+        spaceAfter=6*mm,
+    )
+    story.append(Paragraph('CASH RECEIPT', title_style))
+
+    # 3. Prepare fields
+    lead_id = lead.get('id') or 1000
+    rec_no_str = str(receipt_no or '').strip() or f"{56585 + int(lead_id)}"
+
+    r_date = receipt_date or date.today()
+    if hasattr(r_date, 'strftime'):
+        date_str = r_date.strftime('%d-%m-%Y')
+    else:
+        raw_d = str(r_date).strip()
+        date_str = raw_d
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+            try:
+                date_str = datetime.strptime(raw_d[:10], fmt).strftime('%d-%m-%Y')
+                break
+            except ValueError:
+                continue
+
+    cust_name = (received_from or lead.get('customer_name') or lead.get('name') or 'Customer').strip()
+    amt_formatted = f"{_format_indian_number(receipt_amount)}/-"
+    words_str = (amount_in_words or '').strip() or _amount_to_indian_words(receipt_amount)
+    mode_str = (payment_mode or 'Cash').strip() or 'Cash'
+
+    # 4. Field / Value Receipt Table (matching reference layout)
+    th_style = ParagraphStyle('RecTH', fontName='Helvetica-Bold', fontSize=10.5, textColor=BLACK, leading=14)
+    td_lbl_style = ParagraphStyle('RecTDL', fontName='Helvetica-Bold', fontSize=10, textColor=BLACK, leading=14)
+    td_val_style = ParagraphStyle('RecTDV', fontName='Helvetica', fontSize=10, textColor=BLACK, leading=14)
+
+    table_rows = [
+        [Paragraph('<b>Field</b>', th_style), Paragraph('<b>Value</b>', th_style)],
+        [Paragraph('Receipt No', td_lbl_style), Paragraph(rec_no_str, td_val_style)],
+        [Paragraph('Date', td_lbl_style), Paragraph(date_str, td_val_style)],
+        [Paragraph('Received From', td_lbl_style), Paragraph(cust_name, td_val_style)],
+        [Paragraph('Amount (Rs.)', td_lbl_style), Paragraph(f'<b>{amt_formatted}</b>', td_val_style)],
+        [Paragraph('Amount in Words', td_lbl_style), Paragraph(words_str, td_val_style)],
+        [Paragraph('Payment Mode', td_lbl_style), Paragraph(mode_str, td_val_style)],
+    ]
+
+    rec_table = Table(table_rows, colWidths=[58*mm, 122*mm])
+    rec_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.75, BLACK),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#eef4fb')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(rec_table)
+    story.append(Spacer(1, 8*mm))
+
+    # 5. Thank you & System generated note + Vendor Signature with Stamp
+    thanks_style = ParagraphStyle('RecThanks', fontName='Helvetica-Bold', fontSize=10.5, textColor=NAVY, spaceAfter=2*mm)
+    sys_note_style = ParagraphStyle('RecSysNote', fontName='Helvetica-Oblique', fontSize=9, textColor=colors.HexColor('#475569'), spaceAfter=4*mm)
+
+    left_footer = [
+        Paragraph('Thank you for your business!', thanks_style),
+        Paragraph('<i>This is a system generated receipt. No signature required.</i>', sys_note_style),
+    ]
+    _stamp_sig_img = _fetch_composite_stamp_sig(vendor, width=42*mm, height=26.5*mm)
+    right_stamp = [_stamp_sig_img] if _stamp_sig_img else [Spacer(42*mm, 26.5*mm)]
+
+    footer_tbl = Table([[left_footer, right_stamp]], colWidths=[125*mm, 55*mm])
+    footer_tbl.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(footer_tbl)
+    story.append(Spacer(1, 6*mm))
+
+    # 6. Partner Logos Footer (same as Quotation)
+    is_saas = (
+        vendor.get('is_saas_tenant') or
+        (isinstance(vendor, dict) and vendor.get('company_id', 1) not in (1, 2, 3, 4, 88)) or
+        (isinstance(lead, dict) and lead.get('company_id', 1) not in (1, 2, 3, 4, 88))
+    )
+    if not is_saas:
+        story.append(Paragraph('Authorised Partners', ss['FooterTiny']))
+        story.append(Spacer(1, 1*mm))
+        story.append(_partner_logos_footer(10*mm, vendor=vendor, lead=lead))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
 # ── Dispatch map ──────────────────────────────────────────────────────────────
 DOC_GENERATORS = {
     'quotation': generate_quotation,
     'co_applicant_quotation': generate_co_applicant_quotation,
     'invoice': generate_invoice,
+    'payment_receipt': generate_payment_receipt,
     'annexure_a': generate_annexure_a,
     'annexure_c_completion': generate_annexure_c_completion,
     'annexure_c_technical': generate_annexure_c_technical,
@@ -2250,6 +2524,12 @@ REQUIRED_FIELDS = {
         'tech': [],
         'vendor': ['vendor_name', 'gst_number', 'address', 'phone'],
         'params': ['kw_size', 'quote_value', 'final_amount'],
+    },
+    'payment_receipt': {
+        'lead': [],
+        'tech': [],
+        'vendor': ['vendor_name'],
+        'params': ['receipt_amount'],
     },
     'annexure_a': {
         'lead': ['kw_size', 'mnre_app_ref', 'sanction_date', 'discom'],
@@ -2371,6 +2651,7 @@ FIELD_LABELS = {
     'subsidy': 'MNRE Subsidy Amount (₹)',
     'remaining_loan_amount': 'Remaining Loan Amount (₹)',
     'discom_reg_date': 'DISCOM Registration Date (DD-MM-YYYY)',
+    'receipt_amount': 'Receipt Amount (₹)',
 }
 
 

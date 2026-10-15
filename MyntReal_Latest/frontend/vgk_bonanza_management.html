@@ -314,6 +314,9 @@ tbody tr { background: #ffffff !important; }
                     <button type="button" class="btn btn-sm btn-outline-info" onclick="applyTemplateB()" style="font-size:11px;font-weight:700;border-radius:6px;padding:4px 10px">
                         <i class="fas fa-trophy me-1"></i> 🏆 Solar Festival Milestones
                     </button>
+                    <button type="button" class="btn btn-sm" onclick="applyTemplateDhamaka()" style="font-size:11px;font-weight:700;border-radius:6px;padding:4px 10px;background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff;border:none;box-shadow:0 2px 8px rgba(220,38,38,0.4)">
+                        <i class="fas fa-fire me-1"></i> 🔥 Dussehra Dhamaka
+                    </button>
                 </div>
             </div>
 
@@ -360,6 +363,33 @@ tbody tr { background: #ffffff !important; }
                         <label>Brand Filters (Select one or more, Optional)</label>
                         <select class="form-select" id="mBrand" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:75px" onchange="onBrandChange()">
                         </select>
+                    </div>
+
+                    <!-- Dhamaka Bonanza Configuration Card -->
+                    <div class="form-group" style="grid-column:span 2;background:linear-gradient(135deg,#fff1f2,#fff7ed);border:1.5px solid #fb7185;border-radius:10px;padding:12px 16px;margin-top:4px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                            <label style="font-size:13px;font-weight:800;color:#9f1239;display:flex;align-items:center;gap:8px;margin:0;cursor:pointer">
+                                <input type="checkbox" id="mIsDhamaka" onchange="onDhamakaChange()" style="accent-color:#e11d48;width:18px;height:18px;cursor:pointer">
+                                <span>🔥 Dhamaka Bonanza Mode <span style="font-size:11px;font-weight:500;color:#e11d48">(Special Festive Campaign Logic)</span></span>
+                            </label>
+                            <span class="badge" style="background:#ffe4e6;color:#be123c;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #fecdd3"><i class="fas fa-bolt me-1"></i>DHAMAKA LOGIC</span>
+                        </div>
+                        <div id="dhamakaOptionsWrap" style="display:none;padding-top:10px;border-top:1px dashed #fda4af;flex-direction:column;gap:10px">
+                            <label style="font-size:12px;color:#881337;display:flex;align-items:flex-start;gap:8px;margin:0;cursor:pointer">
+                                <input type="checkbox" id="mDhamakaL1" style="accent-color:#e11d48;width:16px;height:16px;cursor:pointer;margin-top:2px">
+                                <div>
+                                    <strong>⚡ 100% L1 Source Commission on 1st Payment:</strong>
+                                    <div style="font-size:11px;color:#9f1239;margin-top:2px">Releases 100% of L1 Source Commission immediately upon any validated 1st payment received (&gt; ₹0, based on full solar deal value). Support &amp; Brand incentives remain scheduled after Net Meter.</div>
+                                </div>
+                            </label>
+                            <label style="font-size:12px;color:#881337;display:flex;align-items:flex-start;gap:8px;margin:0;cursor:pointer">
+                                <input type="checkbox" id="mWaiveTdsAdmin" style="accent-color:#e11d48;width:16px;height:16px;cursor:pointer;margin-top:2px">
+                                <div>
+                                    <strong>🛡️ 0% TDS &amp; 0% Admin Charges Waiver:</strong>
+                                    <div style="font-size:11px;color:#9f1239;margin-top:2px">Company absorbs all TDS &amp; Administrative deductions. Qualifying members receive 100% gross payout for earnings under this campaign.</div>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1009,9 +1039,17 @@ async function loadBonanzas() {
                 currStatusBadge = `<span class="badge" style="background:#4b5563;color:#fff;padding:3px 8px;border-radius:4px">${escH(currStatus)}</span>`;
             }
 
+            const dhamakaBadges = b.is_dhamaka_bonanza
+                ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+                    <span class="badge" style="background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:4px"><i class="fas fa-fire me-1"></i>DHAMAKA</span>
+                    ${b.dhamaka_l1_100pct_first_payment ? '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecdd3;font-size:9px;padding:2px 5px;border-radius:4px">100% L1 1st Pay</span>' : ''}
+                    ${b.waive_tds_and_admin ? '<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:9px;padding:2px 5px;border-radius:4px">0% TDS & Admin</span>' : ''}
+                   </div>`
+                : '';
+
             return `<tr>
                 <td><span style="font-family:monospace;font-weight:700;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:6px;font-size:11.5px">${escH(b.bonanza_number || '—')}</span></td>
-                <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div></td>
+                <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div>${dhamakaBadges}</td>
                 <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span><div style="font-size:10px;color:#4b5563;margin-top:4px"><i class="fas fa-tag me-1" style="font-size:9px"></i>${escH(b.brand_names || (isBrandWise ? 'Brand Specific' : 'All Brands'))}</div></td>
                 <td style="font-size:12px;white-space:nowrap">${period}</td>
                 <td>
@@ -1260,6 +1298,69 @@ function prevStep() {
     goToStep(_currentWizardStep - 1);
 }
 
+function onDhamakaChange() {
+    const isDh = document.getElementById('mIsDhamaka')?.checked || false;
+    const wrap = document.getElementById('dhamakaOptionsWrap');
+    if (wrap) wrap.style.display = isDh ? 'flex' : 'none';
+    if (isDh) {
+        const l1 = document.getElementById('mDhamakaL1');
+        const w = document.getElementById('mWaiveTdsAdmin');
+        if (l1 && !l1.checked) l1.checked = true;
+        if (w && !w.checked) w.checked = true;
+    }
+}
+
+function applyTemplateDhamaka() {
+    document.getElementById('mName').value = '🔥 Dussehra Dhamaka - Special Solar Offer';
+    document.getElementById('mStartDate').value = '2026-10-15';
+    document.getElementById('mEndDate').value = '2026-10-21';
+    document.getElementById('mGrace').value = '0';
+    document.getElementById('mSegment').value = '6'; // Solar
+    document.getElementById('mQualEvent').value = 'first_payment';
+    document.getElementById('mCompCriteria').value = 'none'; // Immediate on first payment
+    document.getElementById('mRewardType').value = 'extra_commission';
+
+    // Enable Dhamaka switches
+    const isDh = document.getElementById('mIsDhamaka');
+    if (isDh) {
+        isDh.checked = true;
+        onDhamakaChange();
+    }
+    const l1Cb = document.getElementById('mDhamakaL1');
+    if (l1Cb) l1Cb.checked = true;
+    const wCb = document.getElementById('mWaiveTdsAdmin');
+    if (wCb) wCb.checked = true;
+
+    toggleRewardFields();
+
+    // Extra Commission defaults: L1 ₹5,000 on first_payment (fully user-configurable)
+    document.getElementById('pltL1Trigger').value = 'first_payment';
+    document.getElementById('pltL1Amt').value = '5000';
+    [2, 3, 4, 5].forEach(lv => {
+        const trg = document.getElementById('pltL' + lv + 'Trigger');
+        const amt = document.getElementById('pltL' + lv + 'Amt');
+        if (trg) trg.value = '';
+        if (amt) amt.value = '';
+    });
+
+    _inlineSlabs = [];
+    renderInlineSlabs();
+    updateReviewSummary();
+
+    // Stay on Step 1 so admin can review and customize Name, Dates, Brands, and Extra Commission
+    goToStep(1);
+
+    const errEl = document.getElementById('modalError');
+    if (errEl) {
+        errEl.className = '';
+        errEl.style.display = 'block';
+        errEl.style.background = '#fff1f2';
+        errEl.style.color = '#9f1239';
+        errEl.style.border = '1px solid #fecdd3';
+        errEl.innerHTML = '<i class="fas fa-fire me-1"></i> <strong>Dhamaka Bonanza Template Applied!</strong> Name, dates, brand filters, and extra commission amounts are fully configurable. Review settings and navigate through steps to save.';
+    }
+}
+
 function applyTemplateA() {
     document.getElementById('mName').value = '⚡ 1st Stage Solar Advance Bonanza';
     const now = new Date();
@@ -1449,6 +1550,20 @@ function updateReviewSummary() {
         const awName = document.getElementById('mAwardName').value;
         rewardsListEl.innerHTML = `<div>Reward: <strong>${escH(awName || (rewAmt ? '₹' + rewAmt : '—'))}</strong> (${rt})</div>`;
     }
+
+    const isDh = document.getElementById('mIsDhamaka')?.checked;
+    if (isDh) {
+        let dhSummary = '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #fca5a5;color:#991b1b;font-size:12px">';
+        dhSummary += '<div style="font-weight:700;margin-bottom:4px"><i class="fas fa-fire me-1" style="color:#e11d48"></i>🔥 Dhamaka Bonanza Rules Active:</div>';
+        if (document.getElementById('mDhamakaL1')?.checked) {
+            dhSummary += '<div>• <strong>100% L1 Source Commission</strong> released on 1st validated payment (calculated on full deal value). Support & Brand incentives follow completion/Net Meter.</div>';
+        }
+        if (document.getElementById('mWaiveTdsAdmin')?.checked) {
+            dhSummary += '<div>• <strong>0% TDS & 0% Admin Charges Waiver:</strong> Company absorbs deductions for 100% gross payout.</div>';
+        }
+        dhSummary += '</div>';
+        rewardsListEl.innerHTML += dhSummary;
+    }
 }
 
 async function recalculateBonanza(id, name) {
@@ -1505,6 +1620,15 @@ function openCreateModal() {
     const pltCatEl = document.getElementById('pltCategoryFilter');
     if (pltCatEl) Array.from(pltCatEl.options).forEach(o => o.selected = false);
     Array.from(document.getElementById('mBrand').options).forEach(o => o.selected = false);
+    // Reset Dhamaka options
+    const isDhEl = document.getElementById('mIsDhamaka');
+    if (isDhEl) isDhEl.checked = false;
+    const dhL1El = document.getElementById('mDhamakaL1');
+    if (dhL1El) dhL1El.checked = false;
+    const dhWEl = document.getElementById('mWaiveTdsAdmin');
+    if (dhWEl) dhWEl.checked = false;
+    const dhWrap = document.getElementById('dhamakaOptionsWrap');
+    if (dhWrap) dhWrap.style.display = 'none';
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
     _resetImageField();
@@ -1581,6 +1705,17 @@ function openEditModal(id) {
             o.selected = _oIds.some(id => _savedCatIds.has(id));
         });
     }
+    // DC-DHAMAKA-BONANZA-001: Populate Dhamaka options
+    const isDh = !!b.is_dhamaka_bonanza;
+    const isDhEl = document.getElementById('mIsDhamaka');
+    if (isDhEl) isDhEl.checked = isDh;
+    const dhL1El = document.getElementById('mDhamakaL1');
+    if (dhL1El) dhL1El.checked = !!b.dhamaka_l1_100pct_first_payment;
+    const dhWEl = document.getElementById('mWaiveTdsAdmin');
+    if (dhWEl) dhWEl.checked = !!b.waive_tds_and_admin;
+    const dhWrap = document.getElementById('dhamakaOptionsWrap');
+    if (dhWrap) dhWrap.style.display = isDh ? 'flex' : 'none';
+
     document.getElementById('modalError').style.display = 'none';
     window._pendingBonanzaImageFile = null;
     _setBonanzaImage(b.image_url || '');
@@ -1646,6 +1781,10 @@ async function saveBonanza() {
         // DC-BONANZA-ENTITLEMENT-001: Qualification & Gating
         qualification_event: document.getElementById('mQualEvent')?.value || 'first_payment',
         completion_criteria: document.getElementById('mCompCriteria')?.value || 'balance_received_plus',
+        // DC-DHAMAKA-BONANZA-001: Dhamaka Bonanza configuration
+        is_dhamaka_bonanza: document.getElementById('mIsDhamaka')?.checked || false,
+        dhamaka_l1_100pct_first_payment: document.getElementById('mDhamakaL1')?.checked || false,
+        waive_tds_and_admin: document.getElementById('mWaiveTdsAdmin')?.checked || false,
     };
     // DC-EC-PER-LEVEL-TRIGGER-001: unified per-level trigger payload for all non-slab types
     if (!isSlabWise && !isBrandWiseComm) {

@@ -29,7 +29,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.52-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.53-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -125,7 +125,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.52: Solar leads net meter payment receipt upload & DISCOM bundle token/dispatch integration'[:190],
+    Description='MyntOS v2.4.53: DB pool sizing, tickets NameError fix, dashboard speedup, full 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")

@@ -2648,9 +2648,19 @@ function _buildBnzCard(b) {
     const urgentStyle = (days !== null && days <= 7) ? 'color:#f87171;font-weight:800' : 'color:rgba(255,255,255,.65)';
     const urgentText  = days === null ? '' : (days <= 0 ? 'Ending today!' : days === 1 ? '1 day left' : days + ' days left');
     const seg = b.segment_name && b.segment_name !== 'All Segments' ? b.segment_name : 'All Channel Partners';
-    return `<div class="bnz-card">
-        <div class="bnz-header">
-            <span class="bnz-badge"><i class="fas fa-fire" style="margin-right:4px;color:var(--amber)"></i> ACTIVE BONANZA</span>
+    const isDh = !!b.is_dhamaka_bonanza;
+    const bnzBadge = isDh
+        ? `<span class="bnz-badge" style="background:linear-gradient(135deg,rgba(225,29,72,.35),rgba(249,115,22,.35));color:#fb7185;border:1px solid rgba(244,63,94,.6)"><i class="fas fa-fire" style="margin-right:4px;color:#f43f5e"></i> DHAMAKA BONANZA</span>`
+        : `<span class="bnz-badge"><i class="fas fa-fire" style="margin-right:4px;color:var(--amber)"></i> ACTIVE BONANZA</span>`;
+    const dhFeatures = isDh
+        ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            <span style="font-size:11px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:2px 8px;border-radius:6px;font-weight:700"><i class="fas fa-bolt me-1"></i>100% L1 on 1st Payment</span>
+            <span style="font-size:11px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:2px 8px;border-radius:6px;font-weight:700"><i class="fas fa-shield-alt me-1"></i>0% TDS & 0% Admin Waiver</span>
+           </div>`
+        : '';
+    return `<div class="bnz-card" ${isDh ? 'style="border-color:rgba(244,63,94,.45);box-shadow:0 8px 30px rgba(225,29,72,.15)"' : ''}>
+        <div class="bnz-header" ${isDh ? 'style="background:rgba(225,29,72,.12);border-color:rgba(225,29,72,.2)"' : ''}>
+            ${bnzBadge}
             <span class="bnz-name">${escHtml(b.name || 'Untitled Bonanza')}</span>
             ${urgentText ? `<span style="${urgentStyle};font-size:12px;flex-shrink:0"><i class="fas fa-clock" style="margin-right:4px"></i>${escHtml(urgentText)}</span>` : ''}
         </div>
@@ -2661,7 +2671,8 @@ function _buildBnzCard(b) {
                 <span><i class="fas fa-users" style="color:#93c5fd"></i> ${escHtml(seg)}</span>
                 ${b.end_date ? `<span><i class="fas fa-calendar-alt" style="color:#a78bfa"></i> Ends ${escHtml(_fmtDateShort(b.end_date))}</span>` : ''}
             </div>
-            ${b.reward_text && b.award_name ? `<div class="bnz-desc">${escHtml(b.reward_text)}</div>` : ''}
+            ${dhFeatures}
+            ${b.reward_text && b.award_name ? `<div class="bnz-desc" style="margin-top:8px">${escHtml(b.reward_text)}</div>` : ''}
         </div>
     </div>`;
 }

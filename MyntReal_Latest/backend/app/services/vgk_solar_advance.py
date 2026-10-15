@@ -305,8 +305,13 @@ def _legacy_check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
         tiers = [(1, l1_partner_id, DVR_L1_AMOUNT)]
         if l2_partner_id:
             tiers.append((2, l2_partner_id, DVR_L2_AMOUNT))
-        if lead.vgk_field_support_id:
-            tiers.append((5, lead.vgk_field_support_id, DVR_L5_AMOUNT))
+        _leg_sps = (getattr(lead, 'solar_pipeline_status', None) or '').strip().lower()
+        if lead.vgk_field_support_id and _leg_sps in ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received'):
+            _leg_comp_supp = getattr(lead, 'company_supported', True)
+            if _leg_comp_supp is None:
+                _leg_comp_supp = True
+            _leg_l5_amt = (DVR_L5_AMOUNT * Decimal('0.50')).quantize(Decimal('0.01')) if _leg_comp_supp else DVR_L5_AMOUNT
+            tiers.append((5, lead.vgk_field_support_id, _leg_l5_amt))
 
         created_numbers = []
 
@@ -400,8 +405,8 @@ def process_payment_stage2_advance(
     VGK4U Stage 2 Advance Engine (Payment-Event Based, Effective 24 September 2026).
     
     1. Effective Date Guard: Payments prior to 2026-09-24 follow legacy DVR process.
-    2. Dynamic 5 Commission Layers (L1 Producer, L2 Manager/Sponsor, L3 GM, L4 RM, L5 Field Support).
-       Rates dynamically resolved from active canonical commission configuration.
+    2. Dynamic Commission Layers: L1..L4 triggered on payment validation; L5 Field Support
+       strictly gated to subsidy_pending / completed stages only (DC-STRICT-COMM-GATE-2026).
     3. Option C (Pro-Rata Stage 1 Advance Recovery):
        Proposed = (Original L1 Stage 1 * (Payment Amount / Deal Value Total)).
        Actual = min(Proposed, Remaining Stage 1 Balance, L1 Stage 2 Gross).
@@ -473,7 +478,8 @@ def process_payment_stage2_advance(
                    team_senior_partner_id, team_extended_partner_id, team_core_partner_id,
                    vgk_field_support_id, deal_value_total, deal_value_received,
                    deal_value_balance, solar_value, deal_value, remaining_stage1_advance,
-                   solar_pipeline_status, first_dvr_confirmed_at
+                   solar_pipeline_status, first_dvr_confirmed_at,
+                   COALESCE(company_supported, TRUE) AS company_supported
             FROM crm_leads WHERE id = :lid
         """), {'lid': lead_id}).fetchone()
 
@@ -501,7 +507,14 @@ def process_payment_stage2_advance(
             ), {'fda': now_ist, 'lid': lead_id})
             db.commit()
 
-        # 5. Resolve 5 Canonical Layers using Waterfall Engine (Universal 9% Network Model)
+        # DC-STRICT-COMM-GATE-2026: Support (L5) income is ONLY triggered at subsidy_pending or completed stages
+        _sps_stage2 = (getattr(lead, 'solar_pipeline_status', None) or '').strip().lower()
+        _support_stage_eligible = _sps_stage2 in ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
+        _comp_supp = getattr(lead, 'company_supported', True)
+        if _comp_supp is None:
+            _comp_supp = True
+
+        # 5. Resolve Canonical Layers using Waterfall Engine (Universal 9% Network Model)
         wf_allocations = []
         try:
             wf_res = VGK4UWaterfallEngine.calculate_commission_structure(
@@ -510,8 +523,9 @@ def process_payment_stage2_advance(
                 deal_value=amt,
                 category_slug=category_slug,
                 direct_sponsor_id=lead.team_senior_partner_id,
-                support_partner_id=lead.vgk_field_support_id,
-                is_end_to_end_support=bool(lead.vgk_field_support_id),
+                support_partner_id=lead.vgk_field_support_id if _support_stage_eligible else None,
+                is_end_to_end_support=bool(lead.vgk_field_support_id and _support_stage_eligible),
+                is_staff_involved=bool(_comp_supp),
                 showroom_partner_id=None,
             )
             if isinstance(wf_res, dict) and wf_res.get('allocations'):
@@ -519,7 +533,7 @@ def process_payment_stage2_advance(
         except Exception as _wf_err:
             logger.warning(f"[STAGE2-ADV] Waterfall engine error for lead {lead_id}: {_wf_err}")
 
-        # Map allocations into canonical 5 layers keyed by (target_lvl, pid)
+        # Map allocations into canonical layers keyed by (target_lvl, pid)
         layer_map = {}
         for alloc in wf_allocations:
             lvl = alloc.get('level')
@@ -539,6 +553,8 @@ def process_payment_stage2_advance(
             elif role == 'RM_DIFFERENTIAL' or lvl == 4:
                 target_lvl = 4
             elif role in ('FIELD_SUPPORT', 'FULL_SUPPORT') or lvl in (5, 7):
+                if not _support_stage_eligible:
+                    continue
                 target_lvl = 5
             else:
                 continue
@@ -577,12 +593,37 @@ def process_payment_stage2_advance(
             }
             l1_entries = [layer_map[target_key]]
 
+        # DHAMAKA BONANZA: 100% Source (L1) Commission on 1st Payment
+        from app.services.vgk_dhamaka_service import (
+            find_active_dhamaka_bonanza,
+            is_first_validated_payment,
+            calculate_dhamaka_l1_commission
+        )
+        dhamaka_bz = find_active_dhamaka_bonanza(db, lead, check_date=transaction_date or now_ist)
+        is_first_pmt = is_first_validated_payment(db, lead_id, transaction_id)
+        is_dhamaka_100pct_l1 = False
+        if dhamaka_bz and getattr(dhamaka_bz, 'dhamaka_l1_100pct_first_payment', False) and is_first_pmt and lead.associated_partner_id:
+            l1_pct = Decimal(str(cfg.producer_base_pct if cfg else '5.00'))
+            l1_full_amt = calculate_dhamaka_l1_commission(db, lead, dhamaka_bz, producer_base_pct=l1_pct)
+            if l1_full_amt > Decimal('0.00'):
+                target_key = (1, lead.associated_partner_id)
+                layer_map[target_key] = {
+                    'level': 1, 'partner_id': lead.associated_partner_id, 'role': 'PRODUCER',
+                    'commission_pct': l1_pct, 'commission_amount': l1_full_amt
+                }
+                l1_entries = [layer_map[target_key]]
+                is_dhamaka_100pct_l1 = True
+                logger.info(
+                    f"[STAGE2-ADV][DHAMAKA] Lead {lead_id} L1 100% upfront commission: "
+                    f"₹{float(l1_full_amt)} on full deal value (₹{float(underlying_val)}) under Dhamaka #{dhamaka_bz.id} ({dhamaka_bz.name})"
+                )
+
         # Resolve unilevel uplines
         l1_pid = lead.associated_partner_id
         l2_pid = lead.team_senior_partner_id or _get_parent(l1_pid)
         l3_pid = _get_parent(l2_pid) if l2_pid else None
         l4_pid = _get_parent(l3_pid) if l3_pid else None
-        l5_pid = lead.vgk_field_support_id or ROOT_APEX_PARTNER_ID
+        l5_pid = lead.vgk_field_support_id if _support_stage_eligible else None
 
         # Guarantee L2 Senior (1.50%)
         l2_entries = [alloc for k, alloc in layer_map.items() if k[0] == 2]
@@ -618,10 +659,13 @@ def process_payment_stage2_advance(
                 'commission_pct': l4_pct, 'commission_amount': l4_amt
             }
 
-        # Guarantee L5 Support (1.50%)
+        # Guarantee L5 Support ONLY when lead has reached subsidy_pending or completed stages
+        # Option B: company_supported=True -> 0.75% (50%), company_supported=False -> 1.50% (100%)
         l5_entries = [alloc for k, alloc in layer_map.items() if k[0] == 5]
-        if not l5_entries and l5_pid:
-            l5_pct = Decimal(str(cfg.support_end_to_end_pct if cfg else '1.50'))
+        if not l5_entries and l5_pid and _support_stage_eligible:
+            _full_sup_pct = Decimal(str(cfg.support_end_to_end_pct if cfg else '1.50'))
+            _half_sup_pct = Decimal(str(cfg.support_journey_pct if cfg and Decimal(str(cfg.support_journey_pct or 0)) > 0 else (_full_sup_pct * Decimal('0.50'))))
+            l5_pct = _half_sup_pct if _comp_supp else _full_sup_pct
             if l5_pct > Decimal('0.00'):
                 l5_amt = (amt * l5_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 target_key = (5, l5_pid)
@@ -809,10 +853,16 @@ def process_payment_stage2_advance(
                 layer_adj = Decimal('0.00')
 
             entry_number = _next_advance_number(db)
-            adv_notes = notes or (
-                f"Stage 2 Advance ({comm_pct}%) on Txn #{transaction_id} (₹{float(amt):.2f}) [{earning_basis_type}]"
-                + (f" [Stage 1 Adj: ₹{float(layer_adj):.2f}]" if layer_adj > 0 else "")
-            )
+            if lvl == 1 and is_dhamaka_100pct_l1:
+                adv_notes = notes or (
+                    f"Stage 2 Dhamaka 100% Advance ({comm_pct}%) on Txn #{transaction_id} (Full Deal Value: ₹{float(underlying_val):.2f}) [{earning_basis_type}]"
+                    + (f" [Stage 1 Adj: ₹{float(layer_adj):.2f}]" if layer_adj > 0 else "")
+                )
+            else:
+                adv_notes = notes or (
+                    f"Stage 2 Advance ({comm_pct}%) on Txn #{transaction_id} (₹{float(amt):.2f}) [{earning_basis_type}]"
+                    + (f" [Stage 1 Adj: ₹{float(layer_adj):.2f}]" if layer_adj > 0 else "")
+                )
 
             db.execute(text("""
                 INSERT INTO vgk_solar_cibil_advances
@@ -1219,21 +1269,33 @@ def release_dvr_advance(
             staff_id=released_by_id,
         )
 
-        _adv_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
-        _adv_tds   = (amount * Decimal('0.02')).quantize(Decimal('0.01'))
-        _adv_ded   = _adv_admin + _adv_tds
-        _adv_net   = amount - _adv_ded
+        _lead_target = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': adv.lead_id if hasattr(adv, 'lead_id') else lead_id}).fetchone()
+        from app.services.vgk_dhamaka_service import find_active_dhamaka_bonanza
+        _dh_bz = find_active_dhamaka_bonanza(db, _lead_target, check_date=now)
+        if _dh_bz and getattr(_dh_bz, 'waive_tds_and_admin', False):
+            _adv_admin = Decimal('0.00')
+            _adv_tds   = Decimal('0.00')
+            _adv_ded   = Decimal('0.00')
+            _adv_net   = amount
+            _ded_desc  = f'0% Admin & 0% TDS (Company-borne under Dhamaka Offer) — {adv.entry_number}'
+        else:
+            _adv_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
+            _adv_tds   = (amount * Decimal('0.02')).quantize(Decimal('0.01'))
+            _adv_ded   = _adv_admin + _adv_tds
+            _adv_net   = amount - _adv_ded
+            _ded_desc  = f'Admin 8% + TDS 2% on DVR advance — {adv.entry_number}'
 
         _wb_ded = wallet_after
         partner.vgk_cash_wallet = _wb_ded - _adv_ded
-        _log_wallet_txn(
-            db, partner_id=partner.id, company_id=_txn_company_id,
-            txn_type='INCOME_DEDUCTION', direction='DR', amount=_adv_ded,
-            wallet_before=_wb_ded, wallet_after=partner.vgk_cash_wallet,
-            ref_type='VGK_DVR_ADV', ref_id=adv.id,
-            description=f'Admin 8% + TDS 2% on DVR advance — {adv.entry_number}',
-            staff_id=released_by_id,
-        )
+        if _adv_ded > Decimal('0.00'):
+            _log_wallet_txn(
+                db, partner_id=partner.id, company_id=_txn_company_id,
+                txn_type='INCOME_DEDUCTION', direction='DR', amount=_adv_ded,
+                wallet_before=_wb_ded, wallet_after=partner.vgk_cash_wallet,
+                ref_type='VGK_DVR_ADV', ref_id=adv.id,
+                description=_ded_desc,
+                staff_id=released_by_id,
+            )
 
         try:
             deduct_pts = _adv_net
@@ -1710,21 +1772,33 @@ def release_advance(db: Session, lead_id: int, released_by_id: int, notes: str =
         )
 
         # DC-ADV-NET: 8% admin + 2% TDS deducted immediately (advance already disbursed)
-        _adv_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
-        _adv_tds   = (amount * Decimal('0.02')).quantize(Decimal('0.01'))
-        _adv_ded   = _adv_admin + _adv_tds
-        _adv_net   = amount - _adv_ded
+        _lead_target_s1 = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': lead_id}).fetchone()
+        from app.services.vgk_dhamaka_service import find_active_dhamaka_bonanza
+        _dh_bz_s1 = find_active_dhamaka_bonanza(db, _lead_target_s1, check_date=now)
+        if _dh_bz_s1 and getattr(_dh_bz_s1, 'waive_tds_and_admin', False):
+            _adv_admin = Decimal('0.00')
+            _adv_tds   = Decimal('0.00')
+            _adv_ded   = Decimal('0.00')
+            _adv_net   = amount
+            _ded_desc_s1 = f'0% Admin & 0% TDS (Company-borne under Dhamaka Offer) — {adv.entry_number}'
+        else:
+            _adv_admin = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
+            _adv_tds   = (amount * Decimal('0.02')).quantize(Decimal('0.01'))
+            _adv_ded   = _adv_admin + _adv_tds
+            _adv_net   = amount - _adv_ded
+            _ded_desc_s1 = f'Admin 8% + TDS 2% on advance — {adv.entry_number}'
 
         _wb_ded = wallet_after
         partner.vgk_cash_wallet = _wb_ded - _adv_ded
-        _log_wallet_txn(
-            db, partner_id=partner.id, company_id=_txn_company_id,
-            txn_type='INCOME_DEDUCTION', direction='DR', amount=_adv_ded,
-            wallet_before=_wb_ded, wallet_after=partner.vgk_cash_wallet,
-            ref_type='VGK_SOLAR_ADV', ref_id=adv.id,
-            description=f'Admin 8% + TDS 2% on advance — {adv.entry_number}',
-            staff_id=released_by_id,
-        )
+        if _adv_ded > Decimal('0.00'):
+            _log_wallet_txn(
+                db, partner_id=partner.id, company_id=_txn_company_id,
+                txn_type='INCOME_DEDUCTION', direction='DR', amount=_adv_ded,
+                wallet_before=_wb_ded, wallet_after=partner.vgk_cash_wallet,
+                ref_type='VGK_SOLAR_ADV', ref_id=adv.id,
+                description=_ded_desc_s1,
+                staff_id=released_by_id,
+            )
 
         # Fix C — DC_VGK_POINTS_AT_PAID_001: PAYOUT DR (wallet zeroing) happens at RELEASE.
         # Points debit (vgk_points_balance) is deferred to mark_paid_cash_income so that

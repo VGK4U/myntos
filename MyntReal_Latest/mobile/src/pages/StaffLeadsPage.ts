@@ -73,6 +73,7 @@ interface Lead {
   first_payment_received_date?: string | null;
   electricity_bill_change?: boolean | string | null;
   solar_pipeline_status?: string | null;
+  company_supported?: boolean | null;
   solar_brand_id?: number | null;
   solar_brand_name?: string | null;
   confirmed_final_value?: number | null;
@@ -1024,6 +1025,10 @@ export class StaffLeadsPage {
                   <button id="leadNetworkClearBtn" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 20px; line-height: 1; padding: 0 4px;">×</button>
                 </div>
                 <div id="leadGuruRow" style="display: none; color: #a8c0d8; font-size: 12px; margin-top: 4px;">Senior: <span id="leadGuruName" style="color: #93c5fd;"></span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">
+                <input type="checkbox" id="leadCompanySupported" checked style="width:20px;height:20px;accent-color:#10b981;cursor:pointer;">
+                <label for="leadCompanySupported" style="color:#e6f1ff;font-size:13px;font-weight:600;cursor:pointer;">Company Supported <span style="font-size:11px;color:#10b981;background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:4px;margin-left:4px;">50% L5</span></label>
               </div>
             </div>
           </div>
@@ -2583,6 +2588,8 @@ export class StaffLeadsPage {
     if (nsSearch) nsSearch.value = '';
     if (nsSelected) nsSelected.style.display = 'none';
     if (nsGuruRow) nsGuruRow.style.display = 'none';
+    const compSuppEl = document.getElementById('leadCompanySupported') as HTMLInputElement;
+    if (compSuppEl) compSuppEl.checked = true;
     this.showModal('leadFormModal');
     this.attachPincodeLookup();
     this.setupNetworkAssignment();
@@ -2753,6 +2760,8 @@ export class StaffLeadsPage {
       nsSelected.style.display = 'none';
       if (nsGuruRow) nsGuruRow.style.display = 'none';
     }
+    const compSuppEl = document.getElementById('leadCompanySupported') as HTMLInputElement;
+    if (compSuppEl) compSuppEl.checked = lead.company_supported !== false;
     this.hideModal('detailModal');
     this.showModal('leadFormModal');
     this.attachPincodeLookup();
@@ -2881,6 +2890,7 @@ export class StaffLeadsPage {
         company_id: companyId,
         mnr_handler_id: (document.getElementById('leadMnrHandlerId') as HTMLInputElement)?.value || null,
         guru_id: (document.getElementById('leadGuruId') as HTMLInputElement)?.value || null,
+        company_supported: (document.getElementById('leadCompanySupported') as HTMLInputElement)?.checked ?? true,
         solar_brand_id: (() => { const v = (document.getElementById('leadSolarBrandId') as HTMLSelectElement)?.value; return v ? parseInt(v) || null : null; })()
       };
 

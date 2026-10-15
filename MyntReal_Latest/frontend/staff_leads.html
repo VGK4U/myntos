@@ -737,6 +737,12 @@
                                 <input type="hidden" id="leadAdiGuruId">
                                 <input type="hidden" id="leadAdiGuruType">
                                 <div id="leadAdiGuruSelected"></div>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadCompanySupported" checked>
+                                    <label class="form-check-label small" for="leadCompanySupported" title="Checked = Company Supported (50% L5 Support). Unchecked = Non-supported (100% L5 Support)">
+                                        Company Supported <span class="badge bg-secondary" style="font-size:0.7em;">50% L5</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Community Member / Leader</label>
@@ -3239,7 +3245,7 @@
                         } else {
                             primaryOwnerSearch.clearSelection();
                         }
-                    }    
+                        
                         // RBAC: Disable if user cannot change owner
                         const canChangeOwner = lead.can_change_owner || false;
                         primaryOwnerSearch.setDisabled(!canChangeOwner);
@@ -3346,6 +3352,9 @@
 
                     CRMHandlerConfirm.open('handlerConfirmSection', 'handlerConfirmRows', lead, HC_CONFIG_STAFF_UPGRADED);
                     CRMHandlerConfirm.loadAuditLog(lead.id, 'leadAuditLogRows');
+
+                    const compSuppEl = document.getElementById('leadCompanySupported');
+                    if (compSuppEl) compSuppEl.checked = lead.company_supported !== false;
 
                     // VGK Program Attribution
                     const isVgk = !!lead.is_vgk_program;
@@ -4109,6 +4118,7 @@
                 field_support_ref_type: document.getElementById('leadAdiGuruType').value || null,
                 field_support_ref_id: document.getElementById('leadAdiGuruId').value || null,
                 field_support_ref_name: (document.getElementById('leadAdiGuruSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\[.*?\]\s*$/, '').replace(/\s*\(.*\)\s*$/, '').trim()) || null,
+                company_supported: document.getElementById('leadCompanySupported') ? document.getElementById('leadCompanySupported').checked : true,
                 is_vgk_program: document.getElementById('leadIsVgkProgram').checked,
                 vgk_field_support_id: document.getElementById('leadVgkFieldSupportId').value || null,
                 community_id: document.getElementById('leadCommunityId').value ? parseInt(document.getElementById('leadCommunityId').value) || null : null,

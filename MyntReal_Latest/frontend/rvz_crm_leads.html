@@ -565,6 +565,12 @@
                                 </div>
                                 <input type="hidden" id="leadAdiGuruId">
                                 <div id="leadAdiGuruSelected"></div>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadCompanySupported" checked>
+                                    <label class="form-check-label small" for="leadCompanySupported" title="Checked = Company Supported (50% L5 Support). Unchecked = Non-supported (100% L5 Support)">
+                                        Company Supported <span class="badge bg-secondary" style="font-size:0.7em;">50% L5</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="col-md-3" style="position:relative;">
                                 <label class="form-label">Community Member <span class="text-muted" style="font-size:11px">(Search)</span></label>
@@ -2509,6 +2515,9 @@
                         document.getElementById('leadAdiGuruSelected').innerHTML = '';
                     }
 
+                    const compSuppEl = document.getElementById('leadCompanySupported');
+                    if (compSuppEl) compSuppEl.checked = lead.company_supported !== false;
+
                     if (lead.community_id) {
                         document.getElementById('leadCommunityId').value = lead.community_id;
                         document.getElementById('leadCommunitySelected').innerHTML =
@@ -3209,7 +3218,6 @@
                 }
             }
             
-            const isNewLead = !leadId;
             const pInput = document.getElementById('leadPhone');
             let pVal = pInput ? pInput.value.trim() : null;
             let shouldIncludePhone = true;
@@ -3273,6 +3281,7 @@
                 field_support_ref_type: document.getElementById('leadAdiGuruType')?.value || null,
                 field_support_ref_id: document.getElementById('leadAdiGuruId').value || null,
                 field_support_ref_name: (document.getElementById('leadAdiGuruSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\[.*?\]\s*$/,'').replace(/\s*\(.*\)\s*$/, '').trim()) || null,
+                company_supported: document.getElementById('leadCompanySupported') ? document.getElementById('leadCompanySupported').checked : true,
                 associated_partner_id: (typeof partnerSearch !== 'undefined' && partnerSearch) ? partnerSearch.getValue() : null,
                 vendor_id: parseInt(document.getElementById('leadVendorId').value) || null,
                 is_vgk_program: document.getElementById('leadIsVgkProgram').checked || false,

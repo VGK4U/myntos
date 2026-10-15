@@ -17,7 +17,7 @@ var _win = typeof window !== 'undefined' ? window : {};
 var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
   {
     section_code: "CORE_WORKSPACE",
-    section_label: "CORE WORKSPACE",
+    section_label: "ZS CORE WORKSPACE",
     order: 0.5,
     items: [
       { menu_code: "TENANT_COMPANY_PROFILE", label: "Company Profile", route: "/staff/my-tenant", icon: "fas fa-building", audience: ["STAFF", "SAAS"] },
@@ -44,10 +44,10 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
     subSections: [
       {
         sub_section_code: "HR_EMPLOYEES",
-        sub_section_label: "Employee Management",
+        sub_section_label: "ZS Employee Management",
         items: [
-          { menu_code: "HRMS_EMPLOYEES", label: "Employees", route: "/staff/employees", icon: "fas fa-users", audience: ["STAFF", "SAAS"] },
-          { menu_code: "HRMS_EMPLOYEE_PROFILE", label: "Employee Profile", route: "/staff/employees?view=profile", icon: "fas fa-id-card", audience: ["STAFF", "SAAS"] }
+          { menu_code: "HRMS_EMPLOYEES", label: "Employees", route: "/staff/employees", icon: "fas fa-users", audience: ["SAAS"] },
+          { menu_code: "HRMS_EMPLOYEE_PROFILE", label: "Employee Profile", route: "/staff/employees?view=profile", icon: "fas fa-id-card", audience: ["SAAS"] }
         ]
       },
       {
@@ -113,16 +113,11 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
   },
   {
     section_code: "SOLAR_EV",
-    section_label: "WORKFLOWS",
+    section_label: "ZS WORKFLOWS",
     order: 4.5,
     items: [
-      { menu_code: "WORKFLOW_EXEC_DASHBOARD", label: "Executive Dashboard", route: "/staff/executive-dashboard", icon: "fas fa-chart-pie", audience: ["STAFF", "SAAS"] },
-      { menu_code: "WORKFLOW_CATEGORY_LEADS", label: "Category-wise Leads", route: "/staff/mnr-leads", icon: "fas fa-layer-group", audience: ["STAFF", "SAAS"] },
-      { menu_code: "SOLAR_VENDORS", label: "Vendors & Partners", route: "/staff/solar-vendors", icon: "fas fa-hard-hat", audience: ["STAFF"] },
-      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "/staff/solar-leads", icon: "fas fa-solar-panel", audience: ["STAFF"] },
-      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "/staff/ev-b2b-leads", icon: "fas fa-truck", audience: ["STAFF"] },
-      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "/staff/ev-b2c-leads", icon: "fas fa-car", audience: ["STAFF"] },
-      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "/staff/ev-spares-leads", icon: "fas fa-cogs", audience: ["STAFF"] }
+      { menu_code: "WORKFLOW_EXEC_DASHBOARD", label: "Executive Dashboard", route: "/staff/executive-dashboard", icon: "fas fa-chart-pie", audience: ["SAAS"] },
+      { menu_code: "WORKFLOW_CATEGORY_LEADS", label: "Category-wise Leads", route: "/staff/mnr-leads", icon: "fas fa-layer-group", audience: ["SAAS"] }
     ]
   },
   {
@@ -296,7 +291,6 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "CENTRAL_INTEGRATIONS", label: "Integrations", route: "/staff/configuration/integrations", icon: "fas fa-plug", audience: ["STAFF", "VGK4U"] },
       { menu_code: "CALL_FLOW_STUDIO", label: "Call Flow Studio", route: "/staff/call-flow-studio", icon: "fas fa-diagram-project", audience: ["STAFF", "VGK4U"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
-      { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },
       { menu_code: "DIGITAL_CATALOG_MANAGEMENT", label: "Catalog", route: "/staff/configuration/catalog", icon: "fas fa-book-open", audience: ["STAFF", "VGK4U"] },
       { menu_code: "PORTAL_AUDIENCE_SCOPE", label: "Portal & Audience Scope", route: "/staff/configuration/scope", icon: "fas fa-layer-group", audience: ["STAFF", "VGK4U"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
@@ -530,7 +524,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
         sub_section_label: "ZY Property Workings (16.1)",
         items: [
           { menu_code: "PROPERTY_MARKETPLACE", label: "Property Marketplace", route: "/staff/mnr/real-dreams/marketplace", audience: ["STAFF"] },
-          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/staff/mnr/real-dreams", audience: ["STAFF"] },
+          { menu_code: "PROPERTY_AMENITIES", label: "Property Amenities", route: "/staff/mnr/real-dreams#amenities", audience: ["STAFF"] },
           { menu_code: "PARTNER_PROFILES", label: "Partner Profiles", route: "/staff/mnr/real-dreams/partners", audience: ["STAFF"] },
           { menu_code: "PROPERTY_HANDLER", label: "Property Handler", route: "/staff/mnr/real-dreams/properties", audience: ["STAFF"] },
           { menu_code: "REAL_DREAMS_DASHBOARD", label: "Real Dreams Dashboard", route: "/staff/mnr/real-dreams", audience: ["STAFF"] }
