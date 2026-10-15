@@ -7808,7 +7808,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
-    const RESERVED_PREFIXES = new Set(['customer', 'recharge', 'scratch-card', 'public', 'assets', 'api', 'staff', 'health', 'scan', 'qr', 'whatsapp', 'user', 'rvz', 'admin', 'favicon.ico', 'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator', 'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal', 'sitemap.xml', 'robots.txt']);
+    const RESERVED_PREFIXES = new Set([
+      'customer', 'recharge', 'scratch-card', 'public', 'assets', 'api', 'staff', 'health', 'healthz', 'ping',
+      'scan', 'qr', 'whatsapp', 'whatsapp-qr', 'qr-data', 'user', 'user-home', 'rvz', 'admin', 'favicon.ico',
+      'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator',
+      'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal',
+      'sitemap.xml', 'robots.txt', 'hub', 'catalog', 'vgk4u', 'mnrcatalog', 'zynovaos', 'dashboard', 'status',
+      'marketplace', 'reclaim', 'reconnect', 'login', 'logout', 'ecom', 'ads', 'ach', 'arch', 'architecture',
+      'audio', 'css', 'js', 'images', 'storage', 'data', 'seo', 'layouts', 'vendor', 'partner', 'terms', 'privacy'
+    ]);
     const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
     
     if (shortCodeMatch) {

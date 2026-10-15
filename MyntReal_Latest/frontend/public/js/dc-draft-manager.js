@@ -271,7 +271,8 @@
     // DC-DRAFT-USER-SCOPE-001: always suffix the key with the current user's id
     // so two different staff members on the same browser never share a draft.
     var userId = this._getUserId();
-    var scopedKey = key + '_u' + userId;
+    var userSuffix = '_u' + userId;
+    var scopedKey = (key && key.indexOf(userSuffix) !== -1) ? key : (key + userSuffix);
     if (this._initialized && this._key === scopedKey) return;
     if (this._shouldSkip()) return;
 

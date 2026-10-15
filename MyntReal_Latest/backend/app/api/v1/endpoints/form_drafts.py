@@ -86,7 +86,7 @@ async def get_draft(
         FormDraft.expires_at > datetime.datetime.now(),
     ).first()
     if not draft:
-        raise HTTPException(status_code=404, detail="No draft found")
+        return {"success": True, "draft": None, "draft_data": None, "exists": False}
     return draft.to_dict()
 
 

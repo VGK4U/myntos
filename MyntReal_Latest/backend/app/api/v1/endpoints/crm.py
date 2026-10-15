@@ -19179,6 +19179,7 @@ SOLAR_DOC_TYPES = {
     'passport_photo':                'Passport Photo',
     'signature':                     'Signature Document',
     'net_meter_application':         'Net Meter Application',
+    'net_meter_payment':             'Net Meter Payment Receipt',
     # Insurance documents (Oct 2026)
     'installation_photo':            'Installation Photo',
     'insurance_policy':              'Insurance Policy Document',
@@ -19907,7 +19908,7 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 # Uses PyMuPDF / pypdf + PIL to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
 _BANK_DOC_TYPES      = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst','vendor_customer_agreement_annexure_2']
-_DISCOM_DOC_TYPES    = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
+_DISCOM_DOC_TYPES    = ['annexure_a','net_meter_payment','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
 _INSURANCE_DOC_TYPES = ['invoice','adhar','pan','installation_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
@@ -19915,7 +19916,8 @@ _BUNDLE_DOC_LABELS = {
     'quotation':'Quotation','feasibility_letter':'Feasibility Letter','invoice':'Invoice',
     'vendor_gst':'Solar Vendor GST Certificate (Visionera)',
     'vendor_customer_agreement_annexure_2':'PM Surya Ghar Annexure-2 Agreement',
-    'annexure_a':'Annexure-A','annexure_c':'Annexure-C (Project Completion)',
+    'annexure_a':'Annexure-A','net_meter_payment':'Net Meter Payment Receipt',
+    'annexure_c':'Annexure-C (Project Completion)',
     'annexure_c_technical':'Annexure-C (Technical Details)',
     'synchronisation_certificate':'Synchronisation Certificate',
     'dcr_certificate':'DCR Certificate','geotagging_photo':'Geo Tagging Photo',

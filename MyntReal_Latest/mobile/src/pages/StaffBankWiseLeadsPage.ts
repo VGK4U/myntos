@@ -139,6 +139,7 @@ export class StaffBankWiseLeadsPage {
       label: 'DISCOM Documents',
       docs: [
         { type: 'annexure_a', label: 'Annexure-A' },
+        { type: 'net_meter_payment', label: 'Net Meter Payment Receipt' },
         { type: 'annexure_c', label: 'Annexure-C (Project Completion)' },
         { type: 'annexure_c_technical', label: 'Annexure-C (Technical Details)' },
         { type: 'synchronisation_certificate', label: 'Synchronisation Certificate' },

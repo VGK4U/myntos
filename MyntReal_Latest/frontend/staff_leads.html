@@ -6272,8 +6272,10 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
-            StaffHeader.inject('Leads', 'fas fa-address-book');
-            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffHeader !== 'undefined' && StaffHeader.inject) {
+                StaffHeader.inject('Leads', 'fas fa-address-book');
+                if (typeof StaffHeader.init === 'function') StaffHeader.init();
+            }
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             updateHeaderUserInfo();
 
