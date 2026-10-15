@@ -31180,7 +31180,7 @@ async function processAction(id, action){
       res.end(data);
     });
 
-  } else if (url.startsWith('/customer/dashboard') || url.startsWith('/customer-dashboard')) {
+  } else if (url.startsWith('/customer/dashboard') || url.startsWith('/customer-dashboard') || url.startsWith('/customer_dashboard')) {
     // Dedicated Customer Executive Multi-Vertical Dashboard
     const custDashPath = path.join(__dirname, 'public', 'customer_dashboard.html');
     fs.readFile(custDashPath, 'utf8', (err, data) => {
@@ -31193,7 +31193,7 @@ async function processAction(id, action){
       res.end(data);
     });
 
-  } else if (url === '/customer' || url.startsWith('/customer/') || url.startsWith('/customer?') || url.startsWith('/customer-login')) {
+  } else if (url === '/customer' || url.startsWith('/customer/') || url.startsWith('/customer?') || url.startsWith('/customer-login') || url.startsWith('/customer_login') || url.startsWith('/customer-portal') || url.startsWith('/customer_portal')) {
     // Dedicated Universal Customer Login & Profile Portal (https://www.myntreal.com/customer)
     const custLoginPath = path.join(__dirname, 'public', 'customer_login.html');
     fs.readFile(custLoginPath, 'utf8', (err, data) => {
