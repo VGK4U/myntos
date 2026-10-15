@@ -3,6 +3,7 @@ Password Reset Endpoints - Forgot/Reset Password Flow
 Allows users to recover their accounts via WhatsApp OTP
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, validator
@@ -70,7 +71,7 @@ async def forgot_password(
             # Generate 6-digit OTP
             reset_code = str(random.randint(100000, 999999))
             user.reset_code = reset_code
-            user.reset_code_expires = datetime.utcnow() + timedelta(minutes=15)
+            user.reset_code_expires = get_indian_time() + timedelta(minutes=15)
             
             db.commit()
             
@@ -135,7 +136,7 @@ async def verify_reset_code(
     if user.reset_code != request.reset_code:
         raise HTTPException(status_code=400, detail="Invalid reset code")
     
-    if datetime.utcnow() > user.reset_code_expires:
+    if get_indian_time() > user.reset_code_expires:
         raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
     
     return {
@@ -164,7 +165,7 @@ async def reset_password(
     if user.reset_code != request.reset_code:
         raise HTTPException(status_code=400, detail="Invalid reset code")
     
-    if datetime.utcnow() > user.reset_code_expires:
+    if get_indian_time() > user.reset_code_expires:
         raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
     
     # Reset password
@@ -345,7 +346,7 @@ async def portal_forgot_password(
 
     if record and phone:
         otp = str(random.randint(100000, 999999))
-        expires = datetime.utcnow() + timedelta(minutes=10)
+        expires = get_indian_time() + timedelta(minutes=10)
         try:
             db.execute(_t(
                 f"UPDATE {table} SET reset_code=:otp, reset_code_expires=:exp WHERE id=:rid"
@@ -414,7 +415,7 @@ async def portal_verify_otp(
         raise HTTPException(status_code=400, detail="No active OTP found. Please request a new one.")
     if row[0] != request.otp_code.strip():
         raise HTTPException(status_code=400, detail="Invalid OTP code.")
-    if row[1] and datetime.utcnow() > row[1]:
+    if row[1] and get_indian_time() > row[1]:
         raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
 
     return {"success": True, "valid": True, "message": "OTP verified successfully."}
@@ -442,7 +443,7 @@ async def portal_reset_password(
         raise HTTPException(status_code=400, detail="No active OTP found.")
     if row[0] != request.otp_code.strip():
         raise HTTPException(status_code=400, detail="Invalid OTP code.")
-    if row[1] and datetime.utcnow() > row[1]:
+    if row[1] and get_indian_time() > row[1]:
         raise HTTPException(status_code=400, detail="OTP expired.")
 
     new_hash = SecurityManager.get_password_hash(request.new_password)

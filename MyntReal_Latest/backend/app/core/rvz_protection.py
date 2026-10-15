@@ -3,6 +3,7 @@ RVZ-Only Protection System
 Secondary password verification + audit logging for all critical deletions
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -114,7 +115,7 @@ def create_deletion_audit_log(
             "entity_id": str(entity_id),
             "details": details_text,
             "ip_address": ip_address,
-            "created_at": datetime.utcnow(),
+            "created_at": get_indian_time(),
             "severity": "critical"  # FIXED: Changed from "HIGH" to valid value "critical"
         }
     )
@@ -165,7 +166,7 @@ def create_restore_audit_log(
             "entity_id": str(entity_id),
             "details": details_text,
             "ip_address": ip_address,
-            "created_at": datetime.utcnow(),
+            "created_at": get_indian_time(),
             "severity": "warning"  # FIXED: Changed from "MEDIUM" to valid value "warning"
         }
     )

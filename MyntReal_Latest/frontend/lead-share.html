@@ -119,7 +119,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;min-height:1
 <div class="watermark">Myntreal CRM &mdash; Confidential</div>
 
 <script>
-const JPEG_DL_TYPES = new Set(['adhar','passport_photo','bank_book']);
+const JPEG_DL_TYPES = new Set(['adhar','passport_photo','bank_book','installation_photo','geotagging_photo']);
 const SDOC_GROUPS = {
   consumer: [
     {group:'Identity & Ownership', docs:[
@@ -127,6 +127,7 @@ const SDOC_GROUPS = {
       {type:'passport_photo',label:'Passport Photo'},
       {type:'pan',label:'PAN Card'},
       {type:'powerbill',label:'Electricity Bill (Powerbill)'},
+      {type:'house_tax',label:'House Tax Receipt'},
     ]},
     {group:'Financial', docs:[
       {type:'bank_book',label:'Bank Book'},
@@ -136,6 +137,7 @@ const SDOC_GROUPS = {
     {group:'Site & Technical', docs:[
       {type:'roof_top_photo',label:'Roof Top Photo'},
       {type:'geotagging_photo',label:'Geo Solar Photo'},
+      {type:'installation_photo',label:'Installation Photo'},
       {type:'geo_location_photo',label:'Geo Location Photo'},
       {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
       {type:'technical_installation_details',label:'Technical Installation Details'},
@@ -148,15 +150,18 @@ const SDOC_GROUPS = {
       {type:'net_meter_agreement',label:'Net Meter Agreement'},
       {type:'net_meter_application',label:'Net Meter Application'},
     ]},
-    {group:'Certificates & Completion', docs:[
+    {group:'Certificates, Insurance & Completion', docs:[
       {type:'dcr_certificate',label:'DCR Certificate'},
       {type:'invoice',label:'Invoice'},
+      {type:'vendor_gst',label:'Solar Vendor GST (Visionera)'},
       {type:'installation_certificate',label:'Installation Certificate'},
       {type:'annexure_a',label:'Annexure-A'},
-      {type:'annexure_c',label:'Annexure-C'},
+      {type:'annexure_c',label:'Annexure-C (Project Completion)'},
+      {type:'annexure_c_technical',label:'Annexure-C (Technical Details)'},
       {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
       {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW'},
       {type:'vendor_customer_agreement_annexure_2',label:'PM Surya Ghar Annexure-2 Agreement'},
+      {type:'insurance_policy',label:'Insurance Policy Document'},
     ]},
   ],
   co_applicant: [
@@ -274,11 +279,9 @@ function renderPage(data) {
   const coAppHTML    = buildDocGroupsHTML(SDOC_GROUPS.co_applicant);
 
   const totalDocs = docs.length;
-  const totalPossible = 24; // 21 consumer + 3 co-applicant
-
-  // Compute filtered doc counts
   const totalConsumerSlots = SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.length,0);
   const totalCoAppSlots    = SDOC_GROUPS.co_applicant.reduce((s,g)=>s+g.docs.length,0);
+  const totalPossible      = totalConsumerSlots + totalCoAppSlots;
   const visibleConsumerSlots = includedDocTypes
     ? SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.filter(d=>includedDocTypes.includes(d.type)).length,0)
     : totalConsumerSlots;
@@ -291,7 +294,7 @@ function renderPage(data) {
         <i class="fas fa-filter alert-icon"></i>
         <div class="alert-text">
           <h3>Selected Documents Only</h3>
-          <p>This link was generated with a custom document selection — <b>${includedDocTypes.length} of 24</b> document types are included. Other document types are not shared in this link.</p>
+          <p>This link was generated with a custom document selection — <b>${includedDocTypes.length} of ${totalPossible}</b> document types are included. Other document types are not shared in this link.</p>
         </div>
       </div>`
     : '';
@@ -368,6 +371,13 @@ function renderPage(data) {
           ${field('Loan Bank', l.loan_bank)}
         </div>
 
+        <div class="section-divider"><i class="fas fa-shield-alt"></i> Solar Insurance Details</div>
+        <div class="field-grid">
+          ${field('Insurance Status', l.insurance_status ? l.insurance_status.toUpperCase() : 'INELIGIBLE')}
+          ${field('Insurance Company', l.insurance_company)}
+          ${field('Policy Number', l.insurance_policy_no, true)}
+        </div>
+
         ${l.co_applicant_name ? `
         <div class="section-divider"><i class="fas fa-users"></i> Co-Applicant Details</div>
         <div class="field-grid">
@@ -402,7 +412,7 @@ function renderPage(data) {
       <div class="summary-bar">
         <i class="fas fa-check-circle" style="color:#22c55e"></i>
         Consumer: <b>${SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.filter(d=>(includedDocTypes?includedDocTypes.includes(d.type):true)&&docMap[d.type]).length,0)}</b> of <b>${visibleConsumerSlots}</b> included slots uploaded
-        ${includedDocTypes ? `<span style="margin-left:8px;font-size:9px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:10px">${visibleConsumerSlots} of 21 types shared</span>` : ''}
+        ${includedDocTypes ? `<span style="margin-left:8px;font-size:9px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:10px">${visibleConsumerSlots} of ${totalConsumerSlots} types shared</span>` : ''}
       </div>
     </div>
 

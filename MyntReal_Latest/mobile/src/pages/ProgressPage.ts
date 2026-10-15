@@ -8,6 +8,7 @@ import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { callController } from '../services/call-controller';
+import { authService } from '../services/auth.service';
 
 interface DayPlannerData {
   planned: number;
@@ -109,10 +110,18 @@ export class ProgressPage {
   private loading: boolean = true;
   private loadingDateRange: boolean = false;
   private loadingDayProgress: boolean = false;
-  private selectedDate: string = new Date().toISOString().split('T')[0];
+  private selectedDate: string = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   private selectedEmployeeId: number | null = null;
   private canViewTeam: boolean = false;
-  private activeTab: 'today' | 'date-range' | 'day-progress' | 'extensions' = 'today';
+  private activeTab: 'member-apps' | 'today' | 'date-range' | 'day-progress' | 'extensions' = 'today';
+  private userManuallySwitchedTab: boolean = false;
+  private memberAppsEligible: boolean = false;
+  private memberAppsLoading: boolean = false;
+  private memberAppsData: any = null;
+  private memberAppsStatusFilter: string = 'ALL';
+  private memberAppsTypeFilter: string = 'ALL';
+  private memberAppsDateRange: string = '30d';
+  private memberAppsSearch: string = '';
   private dateRangeFrom: string = '';
   private dateRangeTo: string = '';
   private pendingTimers: ReturnType<typeof setTimeout>[] = [];
@@ -144,7 +153,10 @@ export class ProgressPage {
 
   async init(): Promise<void> {
     this.render();
-    await this.loadProgress();
+    await Promise.all([
+      this.loadMemberAppsDashboard(true),
+      this.loadProgress()
+    ]);
   }
 
   private async loadProgress(): Promise<void> {
@@ -200,11 +212,26 @@ export class ProgressPage {
     this.updateContent();
   }
 
+  private isSaaSTenantUser(): boolean {
+    const authState = authService.getAuthState();
+    const user = (authState.user || {}) as any;
+    const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+    const staffType = (user.staff_type || '').toString().toUpperCase().trim();
+    return (
+      roleCode === 'tenant_admin' ||
+      staffType === 'TENANT_ADMIN' ||
+      staffType === 'SAAS_CLIENT' ||
+      staffType === 'SAAS_TENANT' ||
+      user?.company_segment === 'SEGMENT_B_SAAS' ||
+      (user?.tenant_id && Number(user.tenant_id) > 1)
+    );
+  }
+
   private render(): void {
-    const today = new Date();
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const monthStart = this.selectedDate.slice(0, 7) + '-01';
     if (!this.dateRangeFrom) this.dateRangeFrom = monthStart;
     if (!this.dateRangeTo) this.dateRangeTo = this.selectedDate;
+    const isSaaS = this.isSaaSTenantUser();
 
     this.container.innerHTML = `
       <div class="page-container progress-page">
@@ -236,12 +263,20 @@ export class ProgressPage {
         
         <!-- Tabs -->
         <div class="progress-tabs">
+          ${isSaaS ? '' : `
+            <button id="mobMemberAppsTabBtn" class="progress-tab ${this.activeTab === 'member-apps' ? 'active' : ''}" data-tab="member-apps" style="display: ${this.memberAppsEligible ? 'inline-flex' : 'none'}; align-items: center; gap: 4px;">
+              ⚡ Applications &amp; Support
+              <span id="mobMemberAppsBadge" style="display: none; background: #dc2626; color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 800;">0</span>
+            </button>
+          `}
           <button class="progress-tab ${this.activeTab === 'today' ? 'active' : ''}" data-tab="today">
             📋 Progress
           </button>
-          <button class="progress-tab ${this.activeTab === 'extensions' ? 'active' : ''}" data-tab="extensions">
-            📞 Extensions
-          </button>
+          ${isSaaS ? '' : `
+            <button class="progress-tab ${this.activeTab === 'extensions' ? 'active' : ''}" data-tab="extensions">
+              📞 Extensions
+            </button>
+          `}
           <button class="progress-tab ${this.activeTab === 'day-progress' ? 'active' : ''}" data-tab="day-progress">
             👥 Day Progress
           </button>
@@ -273,7 +308,11 @@ export class ProgressPage {
     });
 
     document.getElementById('refreshBtn')?.addEventListener('click', () => {
-      this.loadProgress();
+      if (this.activeTab === 'member-apps') {
+        this.loadMemberAppsDashboard(false);
+      } else {
+        this.loadProgress();
+      }
     });
 
     document.getElementById('exportBtn')?.addEventListener('click', () => {
@@ -282,11 +321,14 @@ export class ProgressPage {
 
     document.querySelectorAll('.progress-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        const tabId = (tab as HTMLElement).dataset.tab as 'today' | 'date-range' | 'day-progress' | 'extensions';
+        const tabId = (tab as HTMLElement).dataset.tab as 'member-apps' | 'today' | 'date-range' | 'day-progress' | 'extensions';
+        this.userManuallySwitchedTab = true;
         this.activeTab = tabId;
         document.querySelectorAll('.progress-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        if (tabId === 'day-progress' && !this.dayProgressData) {
+        if (tabId === 'member-apps') {
+          this.loadMemberAppsDashboard(false);
+        } else if (tabId === 'day-progress' && !this.dayProgressData) {
           this.loadDayProgress();
         } else if (tabId === 'extensions' && !this.extensionsData) {
           this.loadExtensionsDirectory();
@@ -337,6 +379,12 @@ export class ProgressPage {
   private updateContent(): void {
     const content = document.getElementById('pageContent');
     if (!content) return;
+
+    if (this.activeTab === 'member-apps') {
+      content.innerHTML = this.renderMemberAppsDashboard();
+      this.attachMemberAppsListeners();
+      return;
+    }
 
     if (this.loading) {
       content.innerHTML = '<div class="loading-state">Loading progress data...</div>';
@@ -1214,6 +1262,12 @@ export class ProgressPage {
   }
 
   private async loadExtensionsDirectory(force = false): Promise<void> {
+    if (this.isSaaSTenantUser()) {
+      this.extensionsLoading = false;
+      this.updateContent();
+      return;
+    }
+
     if (this.extensionsData && !force) {
       this.updateContent();
       return;
@@ -1493,6 +1547,317 @@ export class ProgressPage {
       phoneNumber: `+91${destPhone}`,
       name: name,
       entityType: 'staff'
+    });
+  }
+
+  private formatMaSecs(secs: any): string {
+    if (secs === null || secs === undefined || isNaN(Number(secs))) return '—';
+    const s = Math.max(0, Math.floor(Number(secs)));
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    if (mins > 0) return `${mins}m ${s % 60}s`;
+    return `${s}s`;
+  }
+
+  private async loadMemberAppsDashboard(initialCheck: boolean = false): Promise<void> {
+    if (this.isSaaSTenantUser()) {
+      this.memberAppsEligible = false;
+      this.memberAppsLoading = false;
+      const tabBtn = document.getElementById('mobMemberAppsTabBtn');
+      if (tabBtn) tabBtn.style.display = 'none';
+      return;
+    }
+
+    if (!initialCheck) {
+      this.memberAppsLoading = true;
+      this.updateContent();
+    }
+
+    try {
+      const qs = new URLSearchParams({
+        status_filter: this.memberAppsStatusFilter,
+        alert_type: this.memberAppsTypeFilter,
+        date_range: this.memberAppsDateRange
+      });
+      if (this.memberAppsSearch.trim()) {
+        qs.set('search', this.memberAppsSearch.trim());
+      }
+
+      const response = await apiService.get<any>(`/vgk/quick-alerts/staff-dashboard?${qs.toString()}`);
+      const payload = (response as any).data || response;
+
+      if (payload && payload.success) {
+        this.memberAppsData = payload;
+        this.memberAppsEligible = Boolean(payload.is_eligible);
+
+        const tabBtn = document.getElementById('mobMemberAppsTabBtn');
+        if (tabBtn) {
+          tabBtn.style.display = this.memberAppsEligible ? 'inline-flex' : 'none';
+        }
+
+        const summary = payload.summary || {};
+        const urgentCount = (summary.pending_unclaimed || 0) + (summary.reclaimable_over_3h || 0);
+        const badgeEl = document.getElementById('mobMemberAppsBadge');
+        if (badgeEl) {
+          if (urgentCount > 0) {
+            badgeEl.textContent = String(urgentCount);
+            badgeEl.style.display = 'inline-block';
+          } else {
+            badgeEl.style.display = 'none';
+          }
+        }
+
+        if (initialCheck && this.memberAppsEligible && !this.userManuallySwitchedTab) {
+          this.activeTab = 'member-apps';
+          document.querySelectorAll('.progress-tab').forEach(t => t.classList.remove('active'));
+          if (tabBtn) tabBtn.classList.add('active');
+        }
+      }
+    } catch (e) {
+      console.warn('[ProgressPage] Member apps load note:', e);
+    }
+
+    this.memberAppsLoading = false;
+    this.updateContent();
+  }
+
+  private renderMemberAppsDashboard(): string {
+    if (this.memberAppsLoading && !this.memberAppsData) {
+      return '<div class="loading-state">Loading Member Applications &amp; Support...</div>';
+    }
+
+    const summary = this.memberAppsData?.summary || {};
+    const svcMod = summary.service_module || {};
+    const alerts: any[] = this.memberAppsData?.alerts || [];
+    const currentStaffId = this.memberAppsData?.current_staff?.id || null;
+
+    const cardsHtml = alerts.length === 0
+      ? `<div class="empty-state" style="padding: 28px 16px; text-align: center; color: #64748b;">No Member Applications or Support requests found for this filter.</div>`
+      : alerts.map(a => {
+          const isApp = a.alert_type === 'APPLICATION';
+          const badgeStyle = isApp
+            ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;'
+            : 'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;';
+          const typeLabel = isApp ? '⚡ Application' : '🆘 Support';
+          const cleanPhone = String(a.partner_phone || '').replace(/\D/g, '').slice(-10);
+          const isMyClaim = currentStaffId && Number(a.claimed_by_staff_id) === Number(currentStaffId);
+          const canManage = isMyClaim || this.canViewTeam || a.status === 'PENDING';
+
+          const pendingDisplay = a.status === 'PROCESSED'
+            ? `Resolved (${this.formatMaSecs(a.total_turnaround_seconds)})`
+            : (a.status === 'CANCELLED' ? 'Cancelled' : `${this.formatMaSecs(a.pending_since_seconds)} ago`);
+
+          const claimedByDisplay = a.claimed_by_staff_name
+            ? `${a.claimed_by_staff_name}${a.claimed_by_emp_code ? ' (' + a.claimed_by_emp_code + ')' : ''}`
+            : 'Unclaimed';
+
+          const handlingDisplay = a.status === 'PROCESSED'
+            ? `${this.formatMaSecs(a.handling_seconds)} (Completed)`
+            : (a.status === 'CANCELLED' ? 'Cancelled' : (a.claimed_at ? `${this.formatMaSecs(a.handling_seconds)} (Running)` : 'Waiting for pickup'));
+
+          let actionHtml = '';
+          if (a.status === 'PENDING') {
+            actionHtml += `<button class="mob-ma-claim-btn" data-token="${a.claim_token}" data-code="${a.alert_code}" data-reclaim="0" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12px;">⚡ Claim Now</button>`;
+          } else if (a.status !== 'PROCESSED' && a.status !== 'CANCELLED' && a.is_reclaimable_3h && !isMyClaim) {
+            actionHtml += `<button class="mob-ma-claim-btn" data-token="${a.claim_token}" data-code="${a.alert_code}" data-reclaim="1" style="background:#ea580c;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12px;">🔄 Re-Claim (&gt;3h)</button>`;
+          }
+
+          if (a.status !== 'PROCESSED' && a.status !== 'CANCELLED' && a.status !== 'PENDING' && (isMyClaim || this.canViewTeam)) {
+            if (a.status === 'CLAIMED') {
+              actionHtml += `<button class="mob-ma-status-btn" data-token="${a.claim_token}" data-code="${a.alert_code}" data-status="IN_PROGRESS" style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px;">▶ Running</button>`;
+            }
+            actionHtml += `<button class="mob-ma-status-btn" data-token="${a.claim_token}" data-code="${a.alert_code}" data-status="PROCESSED" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px;">✅ Complete</button>`;
+          }
+
+          if (a.status !== 'CANCELLED' && canManage) {
+            actionHtml += `<button class="mob-ma-status-btn" data-token="${a.claim_token}" data-code="${a.alert_code}" data-status="CANCELLED" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px;">❌ Cancel</button>`;
+          }
+
+          if (cleanPhone) {
+            actionHtml += `<button class="mob-ma-call-btn" data-phone="${cleanPhone}" data-name="${a.partner_name || 'Partner'}" style="background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px;">📞 Call</button>`;
+            actionHtml += `<a href="https://wa.me/91${cleanPhone}" target="_blank" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12px;text-decoration:none;">💬 WA</a>`;
+          }
+
+          const attachmentsHtml = (a.attachments && a.attachments.length)
+            ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+                ${a.attachments.map((att: any, idx: number) => `
+                  <a href="${att.file_url}" target="_blank" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;text-decoration:none;">📷 Photo ${idx + 1}</a>
+                `).join('')}
+               </div>`
+            : '';
+
+          return `
+            <div style="background:${a.is_reclaimable_3h && a.status !== 'PROCESSED' && a.status !== 'CANCELLED' ? '#fffaf5' : '#fff'};border:1px solid ${a.is_reclaimable_3h && a.status !== 'PROCESSED' && a.status !== 'CANCELLED' ? '#fdba74' : '#e2e8f0'};border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <span style="${badgeStyle}padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;">${typeLabel}</span>
+                  <span style="font-family:monospace;font-size:12px;font-weight:700;color:#475569;">${a.alert_code}</span>
+                  ${a.linked_ticket_code ? `<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:800;">🎫 ${a.linked_ticket_code}</span>` : ''}
+                  ${a.issue_category ? `<span style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;">${a.issue_category}</span>` : ''}
+                </div>
+                <span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;background:${a.status === 'CANCELLED' ? '#fef2f2' : '#f1f5f9'};color:${a.status === 'CANCELLED' ? '#dc2626' : '#0f172a'};">${a.status}</span>
+              </div>
+
+              <div style="font-weight:800;font-size:14px;color:#0f172a;">${a.partner_name || 'Channel Partner'} <span style="font-weight:600;color:#64748b;font-size:12px;">(${a.partner_code || '—'})</span></div>
+              <div style="font-size:12px;color:#475569;margin-top:2px;">📞 ${cleanPhone ? '+91 ' + cleanPhone : 'No phone'}</div>
+              ${a.created_at_ist ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">🕒 Submitted: ${a.created_at_ist}</div>` : ''}
+              ${a.notes ? `<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:8px;margin-top:8px;font-size:12px;color:#334155;white-space:pre-line;">${a.notes}</div>` : ''}
+              ${attachmentsHtml}
+
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;background:#f8fafc;padding:8px;border-radius:8px;font-size:11px;">
+                <div>
+                  <div style="color:#64748b;font-weight:700;">Pending Since</div>
+                  <div style="color:${(a.pending_since_seconds || 0) >= 10800 && a.status !== 'PROCESSED' && a.status !== 'CANCELLED' ? '#dc2626' : '#0f172a'};font-weight:800;">${pendingDisplay}</div>
+                </div>
+                <div>
+                  <div style="color:#64748b;font-weight:700;">Claimed By</div>
+                  <div style="color:#0f172a;font-weight:800;">${claimedByDisplay}</div>
+                  ${a.claimed_at_ist ? `<div style="font-size:10px;color:#64748b;">${a.claimed_at_ist}</div>` : ''}
+                </div>
+                <div>
+                  <div style="color:#64748b;font-weight:700;">Time / Running</div>
+                  <div style="color:#4f46e5;font-weight:800;">${handlingDisplay}</div>
+                </div>
+              </div>
+
+              ${a.is_reclaimable_3h && a.status !== 'PROCESSED' && a.status !== 'CANCELLED' ? `<div style="margin-top:6px;font-size:11px;font-weight:800;color:#c2410c;">🔄 Pending &gt;3 Hours — Open for Re-Claim by any Sales/Leadership staff</div>` : ''}
+
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+                ${actionHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+    const totalSvcTickets = svcMod.partner_support_tickets || summary.support_count || 0;
+
+    return `
+      <div style="padding: 8px 0;">
+        <div style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:12px;">
+          <div style="font-weight:800;font-size:14px;">⚡ Member Applications &amp; Support</div>
+          <div style="font-size:11.5px;color:#cbd5e1;margin-top:3px;">3-Hour SLA: Any request pending or running &gt;3h without completion can be claimed/re-claimed by anyone in department.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+          <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:10px;padding:10px;">
+            <div style="font-size:10.5px;color:#b45309;font-weight:700;text-transform:uppercase;">Pending Unclaimed</div>
+            <div style="font-size:20px;font-weight:900;color:#d97706;">${summary.pending_unclaimed || 0}</div>
+          </div>
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #ea580c;border-radius:10px;padding:10px;">
+            <div style="font-size:10.5px;color:#c2410c;font-weight:800;text-transform:uppercase;">🔄 Re-Claim (&gt;3h)</div>
+            <div style="font-size:20px;font-weight:900;color:#ea580c;">${summary.reclaimable_over_3h || 0}</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #6366f1;border-radius:10px;padding:10px;">
+            <div style="font-size:10.5px;color:#4338ca;font-weight:700;text-transform:uppercase;">Running / Claimed</div>
+            <div style="font-size:20px;font-weight:900;color:#4f46e5;">${summary.running_in_progress || 0}</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:10px;padding:10px;">
+            <div style="font-size:10.5px;color:#047857;font-weight:700;text-transform:uppercase;">Completed</div>
+            <div style="font-size:20px;font-weight:900;color:#059669;">${summary.completed_processed || 0}</div>
+          </div>
+        </div>
+
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <div>
+            <div style="font-size:10.5px;font-weight:800;color:#b91c1c;text-transform:uppercase;">🎫 Service Module Support Tickets</div>
+            <div style="font-size:12px;color:#7f1d1d;font-weight:700;margin-top:2px;">
+              ${totalSvcTickets} Partner Tickets (${svcMod.total_tickets || 0} Total) · ${summary.support_open || svcMod.open_tickets || 0} Open · ${summary.support_running || svcMod.in_progress_tickets || 0} Running · ${summary.support_resolved || svcMod.resolved_tickets || 0} Resolved
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+          <select id="mobMaStatusFilter" class="form-select" style="flex:1;min-width:120px;font-size:12px;">
+            <option value="ALL" ${this.memberAppsStatusFilter === 'ALL' ? 'selected' : ''}>All Statuses</option>
+            <option value="PENDING" ${this.memberAppsStatusFilter === 'PENDING' ? 'selected' : ''}>Pending</option>
+            <option value="RECLAIMABLE" ${this.memberAppsStatusFilter === 'RECLAIMABLE' ? 'selected' : ''}>🔄 &gt;3h Re-Claim</option>
+            <option value="RUNNING" ${this.memberAppsStatusFilter === 'RUNNING' ? 'selected' : ''}>Running</option>
+            <option value="PROCESSED" ${this.memberAppsStatusFilter === 'PROCESSED' ? 'selected' : ''}>Completed</option>
+            <option value="CANCELLED" ${this.memberAppsStatusFilter === 'CANCELLED' ? 'selected' : ''}>❌ Cancelled</option>
+          </select>
+          <select id="mobMaTypeFilter" class="form-select" style="flex:1;min-width:110px;font-size:12px;">
+            <option value="ALL" ${this.memberAppsTypeFilter === 'ALL' ? 'selected' : ''}>All Types</option>
+            <option value="APPLICATION" ${this.memberAppsTypeFilter === 'APPLICATION' ? 'selected' : ''}>⚡ Application</option>
+            <option value="SUPPORT" ${this.memberAppsTypeFilter === 'SUPPORT' ? 'selected' : ''}>🆘 Support</option>
+          </select>
+        </div>
+
+        <div>${cardsHtml}</div>
+      </div>
+    `;
+  }
+
+  private attachMemberAppsListeners(): void {
+    document.getElementById('mobMaStatusFilter')?.addEventListener('change', (e) => {
+      this.memberAppsStatusFilter = (e.target as HTMLSelectElement).value;
+      this.loadMemberAppsDashboard(false);
+    });
+
+    document.getElementById('mobMaTypeFilter')?.addEventListener('change', (e) => {
+      this.memberAppsTypeFilter = (e.target as HTMLSelectElement).value;
+      this.loadMemberAppsDashboard(false);
+    });
+
+    document.querySelectorAll('.mob-ma-claim-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const token = el.dataset.token || '';
+        const code = el.dataset.code || '';
+        const isReclaim = el.dataset.reclaim === '1';
+        if (!confirm(isReclaim ? `Re-Claim ${code} (>3h SLA)?` : `Claim ${code} now?`)) return;
+        try {
+          const res = await apiService.post<any>('/vgk/quick-alerts/claim', { token });
+          const payload = (res as any).data || res;
+          if (payload && payload.success) {
+            this.showToast(payload.message || `Claimed ${code}`);
+            this.loadMemberAppsDashboard(false);
+          } else {
+            alert(payload?.message || payload?.detail || 'Could not claim request');
+            this.loadMemberAppsDashboard(false);
+          }
+        } catch (err: any) {
+          alert(err.message || 'Failed to claim request');
+        }
+      });
+    });
+
+    document.querySelectorAll('.mob-ma-status-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const token = el.dataset.token || '';
+        const code = el.dataset.code || '';
+        const status = el.dataset.status || 'PROCESSED';
+        const promptLabel = status === 'CANCELLED'
+          ? `Enter reason for cancelling ${code}:`
+          : `Enter notes for ${code}:`;
+        const defaultNote = status === 'PROCESSED'
+          ? 'Completed member request'
+          : (status === 'CANCELLED' ? 'Cancelled as requested' : 'Contacted member; working on request');
+        const notes = prompt(promptLabel, defaultNote);
+        if (notes === null) return;
+        try {
+          const res = await apiService.post<any>('/vgk/quick-alerts/update-status', { token, status, notes });
+          const payload = (res as any).data || res;
+          if (payload && payload.success) {
+            this.showToast(`Updated ${code} to ${status}`);
+            this.loadMemberAppsDashboard(false);
+          } else {
+            alert(payload?.detail || 'Failed to update status');
+          }
+        } catch (err: any) {
+          alert(err.message || 'Failed to update status');
+        }
+      });
+    });
+
+    document.querySelectorAll('.mob-ma-call-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const phone = el.dataset.phone || '';
+        const name = el.dataset.name || 'Partner';
+        this.callStaff(phone, name, '');
+      });
     });
   }
 

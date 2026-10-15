@@ -61,10 +61,14 @@ interface TrendItem {
   pipeline?: number;
   pipeline_val?: number;
   pipeline_value?: number;
+  eb_cust?: number;
+  eb_staff?: number;
   eb_change?: number;
   at_bank?: number;
   first_pmt_recd?: number;
   inst_pending?: number;
+  dcr_pending?: number;
+  discom_pending?: number;
   net_meter_pending?: number;
   bal_pending?: number;
   subsidy_pending?: number;
@@ -156,7 +160,10 @@ const SOLAR_SW_COLS = [
   { key: 'sp_loan_rejected', label: 'Loan Rejected', color: '#dc2626' },
   { key: 'sp_docs_issue', label: 'Docs Issue', color: '#b45309' },
   { key: 'sp_load_extension', label: 'Load Extension', color: '#7c3aed' },
-  { key: 'sp_electricity_bill_change', label: 'Elec Bill Chg', color: '#0891b2' },
+  { key: 'sp_eb_cust', label: 'EB Cust.', color: '#0891b2' },
+  { key: 'sp_eb_staff', label: 'EB Staff', color: '#0e7490' },
+  { key: 'sp_dcr_pending', label: 'DCR Pending', color: '#0284c7' },
+  { key: 'sp_discom_pending', label: 'Discom Pending', color: '#6d28d9' },
   { key: 'sp_net_meter_pending', label: 'Net Meter', color: '#9333ea' },
   { key: 'sp_balance_pending', label: 'Bal Pending', color: '#c2410c' },
   { key: 'sp_balance_received', label: 'Bal Received', color: '#065f46' },
@@ -226,6 +233,30 @@ export class ExecutiveDashboardPage {
   private drilldownCallsOpen: boolean = false;
   private drilldownNewNote: string = '';
   private isFullscreenDrilldown: boolean = false;
+
+  // Har Ghar Support Report Trigger Modal State (Full Parity with Web)
+  private isHgsModalOpen: boolean = false;
+  private hgsLoading: boolean = false;
+  private hgsSending: boolean = false;
+  private hgsMetrics: Record<string, any> = {};
+  private hgsSelectedPeople: string[] = [];
+  private hgsSelectedCustomers: string[] = [];
+  private hgsPeopleList: Array<{ id?: any; name: string; code?: string; type?: string }> = [];
+  private hgsCustomersList: Array<{ id?: any; name: string; phone?: string; bank?: string; stage?: string; status?: string }> = [];
+  private hgsPeopleQuery: string = '';
+  private hgsCustomerQuery: string = '';
+  private hgsIncludeManual: boolean = true;
+  private hgsStatusMsg: string = '';
+  private hgsStatusSuccess: boolean = false;
+
+  // Har Ghar Support Parameter Drilldown Modal State (Full Parity with Web)
+  private isHgsDrilldownOpen: boolean = false;
+  private hgsDrilldownLoading: boolean = false;
+  private hgsDrilldownParam: string = '';
+  private hgsDrilldownTitle: string = '';
+  private hgsDrilldownRecordType: string = 'lead';
+  private hgsDrilldownRecords: any[] = [];
+  private hgsDrilldownFilter: string = '';
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -404,7 +435,10 @@ export class ExecutiveDashboardPage {
       sp_loan_rejected: r.sp_loan_rejected || 0, dv_sp_loan_rejected: r.dv_sp_loan_rejected || 0,
       sp_docs_issue: r.sp_docs_issue || 0, dv_sp_docs_issue: r.dv_sp_docs_issue || 0,
       sp_load_extension: r.sp_load_extension || 0, dv_sp_load_extension: r.dv_sp_load_extension || 0,
-      sp_electricity_bill_change: r.sp_electricity_bill_change || 0, dv_sp_electricity_bill_change: r.dv_sp_electricity_bill_change || 0,
+      sp_eb_cust: r.sp_eb_cust || r.sp_electricity_bill_change || 0, dv_sp_eb_cust: r.dv_sp_eb_cust || r.dv_sp_electricity_bill_change || 0,
+      sp_eb_staff: r.sp_eb_staff || 0, dv_sp_eb_staff: r.dv_sp_eb_staff || 0,
+      sp_dcr_pending: r.sp_dcr_pending || 0, dv_sp_dcr_pending: r.dv_sp_dcr_pending || 0,
+      sp_discom_pending: r.sp_discom_pending || 0, dv_sp_discom_pending: r.dv_sp_discom_pending || 0,
       sp_net_meter_pending: r.sp_net_meter_pending || 0, dv_sp_net_meter_pending: r.dv_sp_net_meter_pending || 0,
       sp_balance_pending: r.sp_balance_pending || 0, dv_sp_balance_pending: r.dv_sp_balance_pending || 0,
       sp_balance_received: r.sp_balance_received || 0, dv_sp_balance_received: r.dv_sp_balance_received || 0,
@@ -668,6 +702,19 @@ export class ExecutiveDashboardPage {
             <button class="preset-btn ${this.activePreset === 'this_fy' ? 'active' : ''}" data-preset="this_fy" style="${this.getPresetStyle(this.activePreset === 'this_fy')}">This FY</button>
           </div>
 
+          <!-- Har Ghar Support WhatsApp Group Report Trigger Banner (Full Parity with Web) -->
+          <div style="background:linear-gradient(135deg,#064e3b,#065f46); border:1px solid #10b981; border-radius:10px; padding:10px 12px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <div>
+              <div style="font-size:12px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                <i class="fab fa-whatsapp" style="color:#4ade80; font-size:14px;"></i> Har Ghar Support WA Report
+              </div>
+              <div style="font-size:10px; color:#a7f3d0; margin-top:1px;">Auto: 9:00 AM &amp; 8:00 PM IST · Group: Har ghar support</div>
+            </div>
+            <button id="openHgsTriggerModalBtn" style="background:#16a34a; color:#ffffff; border:1px solid #4ade80; border-radius:8px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <i class="fab fa-whatsapp"></i> Trigger WA Report
+            </button>
+          </div>
+
           <!-- Date Range & Segment Filter Collapsible -->
           <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -817,6 +864,12 @@ export class ExecutiveDashboardPage {
 
         <!-- Executive Drilldown Modal (Full Parity) -->
         ${this.renderExecutiveDrilldownModal()}
+
+        <!-- Har Ghar Support WhatsApp Trigger Modal (Full Parity) -->
+        ${this.renderHarGharTriggerModal()}
+
+        <!-- Har Ghar Support Parameter Drilldown Modal (Full Parity) -->
+        ${this.renderHarGharDrilldownModal()}
       </div>
     `;
 
@@ -1038,10 +1091,13 @@ export class ExecutiveDashboardPage {
     const trSubVal = rows.reduce((s, r) => s + (r.submitted_val || r.submitted_value || 0), 0);
     const trPipe = rows.reduce((s, r) => s + (r.pipeline || 0), 0);
     const trPipeVal = rows.reduce((s, r) => s + (r.pipeline_val || r.pipeline_value || 0), 0);
-    const trEbChange = rows.reduce((s, r) => s + (r.eb_change || 0), 0);
+    const trEbCust = rows.reduce((s, r) => s + ((r.eb_cust !== undefined ? r.eb_cust : r.eb_change) || 0), 0);
+    const trEbStaff = rows.reduce((s, r) => s + (r.eb_staff || 0), 0);
     const trAtBank = rows.reduce((s, r) => s + (r.at_bank || 0), 0);
     const trFirstPmtRecd = rows.reduce((s, r) => s + (r.first_pmt_recd || 0), 0);
     const trInstPend = rows.reduce((s, r) => s + (r.inst_pending || 0), 0);
+    const trDcrPend = rows.reduce((s, r) => s + (r.dcr_pending || 0), 0);
+    const trDiscomPend = rows.reduce((s, r) => s + (r.discom_pending || 0), 0);
     const trNetMeterPend = rows.reduce((s, r) => s + (r.net_meter_pending || 0), 0);
     const trBalPend = rows.reduce((s, r) => s + (r.bal_pending || 0), 0);
     const trSubPend = rows.reduce((s, r) => s + (r.subsidy_pending || 0), 0);
@@ -1063,7 +1119,7 @@ export class ExecutiveDashboardPage {
             <div style="font-size:13px; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:6px;">
               <i class="fas fa-chart-line" style="color:#38bdf8;"></i> ${title}
             </div>
-            <div style="font-size:10px; color:#64748b; margin-top:2px;">Complete 22-column pipeline velocity &amp; conversion matrix</div>
+            <div style="font-size:10px; color:#64748b; margin-top:2px;">Complete 25-column pipeline velocity &amp; conversion matrix</div>
           </div>
           <div style="display:flex; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:2px;">
             <button id="trendMonthlyBtn" style="background:${this.activeTrendView === 'monthly' ? '#2563eb' : 'transparent'}; color:${this.activeTrendView === 'monthly' ? 'white' : '#94a3b8'}; border:none; border-radius:4px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer;">
@@ -1076,22 +1132,22 @@ export class ExecutiveDashboardPage {
         </div>
 
         <div style="font-size:10px; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:4px;">
-          <i class="fas fa-hand-point-right"></i> Touch &amp; scroll horizontally to view all 22 columns. Tap any cell to view leads drilldown.
+          <i class="fas fa-hand-point-right"></i> Touch &amp; scroll horizontally to view all 25 columns. Tap any cell to view leads drilldown.
         </div>
 
         ${rows.length === 0 ? `
           <div style="text-align:center; color:#64748b; padding:24px; font-size:12px;">No trend data available</div>
         ` : `
           <div style="overflow-x:auto; width:100%; -webkit-overflow-scrolling:touch; border:1px solid #334155; border-radius:8px;">
-            <table style="width:100%; border-collapse:collapse; font-size:10.5px; background:#0f172a; min-width:1200px;">
+            <table style="width:100%; border-collapse:collapse; font-size:10.5px; background:#0f172a; min-width:1320px;">
               <thead>
                 <!-- Group Headers -->
                 <tr style="background:#131d33; color:#94a3b8;">
                   <th rowspan="2" style="position:sticky; left:0; z-index:10; background:#131d33; padding:8px 10px; text-align:left; border:1px solid #334155; font-weight:700; min-width:110px;">PERIOD</th>
                   <th rowspan="2" style="padding:6px; text-align:center; border:1px solid #334155; font-weight:700;">OVERALL<br>LEADS</th>
                   <th colspan="5" style="text-align:center; background:rgba(16,185,129,0.15); color:#6ee7b7; font-weight:800; border:1px solid #334155; letter-spacing:0.5px; padding:5px;">WON VS SUBMITTED</th>
-                  <th colspan="6" style="text-align:center; background:rgba(59,130,246,0.15); color:#93c5fd; font-weight:800; border:1px solid #334155; letter-spacing:0.5px; padding:5px;">PIPELINE</th>
-                  <th colspan="10" style="text-align:center; background:rgba(99,102,241,0.15); color:#c7d2fe; font-weight:800; border:1px solid #334155; letter-spacing:0.5px; padding:5px;">PROGRESS</th>
+                  <th colspan="7" style="text-align:center; background:rgba(59,130,246,0.15); color:#93c5fd; font-weight:800; border:1px solid #334155; letter-spacing:0.5px; padding:5px;">PIPELINE</th>
+                  <th colspan="12" style="text-align:center; background:rgba(99,102,241,0.15); color:#c7d2fe; font-weight:800; border:1px solid #334155; letter-spacing:0.5px; padding:5px;">PROGRESS</th>
                 </tr>
                 <!-- Subheader Columns -->
                 <tr style="background:#1e293b; color:#cbd5e1; font-size:9px;">
@@ -1107,12 +1163,15 @@ export class ExecutiveDashboardPage {
                   <th style="padding:5px 4px; border:1px solid #334155; color:#c084fc;">PIPE/SUB<br>%</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#60a5fa;">PIPE<br>VALUE</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#38bdf8;">VS<br>PREV</th>
-                  <th style="padding:5px 4px; border:1px solid #334155; color:#93c5fd;">EB<br>CHANGE</th>
+                  <th style="padding:5px 4px; border:1px solid #334155; color:#93c5fd;">EB<br>CUST.</th>
+                  <th style="padding:5px 4px; border:1px solid #334155; color:#67e8f9;">EB<br>STAFF</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#93c5fd;">AT<br>BANK</th>
 
                   <!-- PROGRESS -->
                   <th style="padding:5px 4px; border:1px solid #334155; color:#34d399;">1ST PMT<br>RECD</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#fb923c;">INST.<br>PENDING</th>
+                  <th style="padding:5px 4px; border:1px solid #334155; color:#38bdf8;">DCR<br>PENDING</th>
+                  <th style="padding:5px 4px; border:1px solid #334155; color:#a78bfa;">DISCOM<br>PENDING</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#818cf8;">NET METER<br>PENDING</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#f87171;">BAL.<br>PENDING</th>
                   <th style="padding:5px 4px; border:1px solid #334155; color:#c084fc;">SUBSIDY<br>PENDING</th>
@@ -1141,12 +1200,15 @@ export class ExecutiveDashboardPage {
                   <td style="padding:5px 6px; text-align:center; background:#1e3a8a; color:#bfdbfe; border:1px solid #334155;">${trPipeSubPct}%</td>
                   <td ${cellClickAttr('pipeline', 'Pipeline Value', 'TOTAL')} style="background:#1e3a8a; color:#bfdbfe;">${this.fmtVal(trPipeVal)}</td>
                   <td style="padding:5px 6px; text-align:center; background:#1e3a8a; color:#bfdbfe; border:1px solid #334155;">—</td>
-                  <td ${cellClickAttr('eb_change', 'EB Change', 'TOTAL')} style="background:#1e3a8a; color:#bfdbfe;">${this.fmtNum(trEbChange)}</td>
+                  <td ${cellClickAttr('eb_cust', 'EB Cust.', 'TOTAL')} style="background:#1e3a8a; color:#bfdbfe;">${this.fmtNum(trEbCust)}</td>
+                  <td ${cellClickAttr('eb_staff', 'EB Staff', 'TOTAL')} style="background:#1e3a8a; color:#bfdbfe;">${this.fmtNum(trEbStaff)}</td>
                   <td ${cellClickAttr('at_bank', 'At Bank', 'TOTAL')} style="background:#1e3a8a; color:#bfdbfe;">${this.fmtNum(trAtBank)}</td>
 
                   <!-- Progress Totals -->
                   <td ${cellClickAttr('first_pmt_recd', '1st Payment Received', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trFirstPmtRecd)}</td>
                   <td ${cellClickAttr('inst_pending', 'Installation Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trInstPend)}</td>
+                  <td ${cellClickAttr('dcr_pending', 'DCR Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trDcrPend)}</td>
+                  <td ${cellClickAttr('discom_pending', 'Discom Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trDiscomPend)}</td>
                   <td ${cellClickAttr('net_meter_pending', 'Net Meter Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trNetMeterPend)}</td>
                   <td ${cellClickAttr('bal_pending', 'Balance Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trBalPend)}</td>
                   <td ${cellClickAttr('subsidy_pending', 'Subsidy Pending', 'TOTAL')} style="background:#3b0764; color:#f5d0fe;">${this.fmtNum(trSubPend)}</td>
@@ -1165,10 +1227,13 @@ export class ExecutiveDashboardPage {
                   const subVal = r.submitted_val || r.submitted_value || 0;
                   const pipe = r.pipeline || 0;
                   const pipeVal = r.pipeline_val || r.pipeline_value || 0;
-                  const ebChange = r.eb_change || 0;
+                  const ebCust = (r.eb_cust !== undefined ? r.eb_cust : r.eb_change) || 0;
+                  const ebStaff = r.eb_staff || 0;
                   const atBank = r.at_bank || 0;
                   const firstPmtRecd = r.first_pmt_recd || 0;
                   const instPend = r.inst_pending || 0;
+                  const dcrPend = r.dcr_pending || 0;
+                  const discomPend = r.discom_pending || 0;
                   const netMeterPend = r.net_meter_pending || 0;
                   const balPend = r.bal_pending || 0;
                   const subPend = r.subsidy_pending || 0;
@@ -1204,12 +1269,15 @@ export class ExecutiveDashboardPage {
                       <td style="padding:5px 6px; text-align:center; color:#c084fc; font-weight:600; border:1px solid #334155;">${pipeSubPct !== '—' ? pipeSubPct + '%' : '—'}</td>
                       <td ${cellClickAttr('pipeline', 'Pipeline Value', label)} style="color:#60a5fa;">${this.fmtVal(pipeVal)}</td>
                       <td style="padding:5px 6px; text-align:center; border:1px solid #334155;">${pipeVsPrev}</td>
-                      <td ${cellClickAttr('eb_change', 'EB Change', label)} style="color:#93c5fd;">${this.fmtNum(ebChange)}</td>
+                      <td ${cellClickAttr('eb_cust', 'EB Cust.', label)} style="color:#93c5fd;">${this.fmtNum(ebCust)}</td>
+                      <td ${cellClickAttr('eb_staff', 'EB Staff', label)} style="color:#67e8f9;">${this.fmtNum(ebStaff)}</td>
                       <td ${cellClickAttr('at_bank', 'At Bank', label)} style="color:#93c5fd;">${this.fmtNum(atBank)}</td>
 
                       <!-- Progress -->
                       <td ${cellClickAttr('first_pmt_recd', '1st Payment Received', label)} style="color:#34d399; font-weight:700;">${this.fmtNum(firstPmtRecd)}</td>
                       <td ${cellClickAttr('inst_pending', 'Installation Pending', label)} style="color:#fb923c;">${this.fmtNum(instPend)}</td>
+                      <td ${cellClickAttr('dcr_pending', 'DCR Pending', label)} style="color:#38bdf8;">${this.fmtNum(dcrPend)}</td>
+                      <td ${cellClickAttr('discom_pending', 'Discom Pending', label)} style="color:#a78bfa;">${this.fmtNum(discomPend)}</td>
                       <td ${cellClickAttr('net_meter_pending', 'Net Meter Pending', label)} style="color:#818cf8; font-weight:700;">${this.fmtNum(netMeterPend)}</td>
                       <td ${cellClickAttr('bal_pending', 'Balance Pending', label)} style="color:#f87171;">${this.fmtNum(balPend)}</td>
                       <td ${cellClickAttr('subsidy_pending', 'Subsidy Pending', label)} style="color:#c084fc;">${this.fmtNum(subPend)}</td>
@@ -2509,5 +2577,606 @@ export class ExecutiveDashboardPage {
         }
       });
     });
+
+    /* ── Har Ghar Support WhatsApp Trigger Modal Event Handlers ── */
+    document.getElementById('openHgsTriggerModalBtn')?.addEventListener('click', () => {
+      this.openHarGharModal();
+    });
+
+    document.getElementById('closeHgsTriggerModalBtn')?.addEventListener('click', () => {
+      this.isHgsModalOpen = false;
+      this.render();
+    });
+
+    const hgsIncEl = document.getElementById('hgsMobileIncludeManual') as HTMLInputElement;
+    if (hgsIncEl) {
+      hgsIncEl.addEventListener('change', () => {
+        this.hgsIncludeManual = hgsIncEl.checked;
+        this.render();
+      });
+    }
+
+    const hgsPeopleInput = document.getElementById('hgsMobilePeopleSearch') as HTMLInputElement;
+    if (hgsPeopleInput) {
+      hgsPeopleInput.addEventListener('input', () => {
+        this.hgsPeopleQuery = hgsPeopleInput.value;
+        this.searchHgsPeople(this.hgsPeopleQuery);
+      });
+    }
+
+    const hgsCustInput = document.getElementById('hgsMobileCustomerSearch') as HTMLInputElement;
+    if (hgsCustInput) {
+      hgsCustInput.addEventListener('input', () => {
+        this.hgsCustomerQuery = hgsCustInput.value;
+        this.searchHgsCustomers(this.hgsCustomerQuery);
+      });
+    }
+
+    this.container.querySelectorAll('.hgs-add-person-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = ((e.currentTarget as HTMLElement).dataset.name || '').trim();
+        if (name && !this.hgsSelectedPeople.includes(name)) {
+          this.hgsSelectedPeople.push(name);
+          this.render();
+        }
+      });
+    });
+
+    this.container.querySelectorAll('.hgs-remove-person-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = Number((e.currentTarget as HTMLElement).dataset.idx);
+        if (!isNaN(idx)) {
+          this.hgsSelectedPeople.splice(idx, 1);
+          this.render();
+        }
+      });
+    });
+
+    this.container.querySelectorAll('.hgs-add-customer-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = ((e.currentTarget as HTMLElement).dataset.name || '').trim();
+        if (name && !this.hgsSelectedCustomers.includes(name)) {
+          this.hgsSelectedCustomers.push(name);
+          this.render();
+        }
+      });
+    });
+
+    this.container.querySelectorAll('.hgs-remove-customer-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = Number((e.currentTarget as HTMLElement).dataset.idx);
+        if (!isNaN(idx)) {
+          this.hgsSelectedCustomers.splice(idx, 1);
+          this.render();
+        }
+      });
+    });
+
+    document.getElementById('hgsMobileSendBtn')?.addEventListener('click', () => {
+      this.submitHgsTrigger();
+    });
+
+    // Har Ghar Support Parameter Drilldown Listeners
+    this.container.querySelectorAll('.hgs-open-drilldown-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const param = (e.currentTarget as HTMLElement).dataset.param;
+        if (param) this.openHgsDrilldown(param);
+      });
+    });
+
+    document.getElementById('closeHgsMobileDrilldownBtn')?.addEventListener('click', () => {
+      this.closeHgsDrilldown();
+    });
+
+    document.getElementById('closeHgsMobileDrilldownFooterBtn')?.addEventListener('click', () => {
+      this.closeHgsDrilldown();
+    });
+
+    const hgsDrillSearchInput = document.getElementById('hgsMobileDrilldownSearch') as HTMLInputElement;
+    if (hgsDrillSearchInput) {
+      hgsDrillSearchInput.addEventListener('input', () => {
+        const q = hgsDrillSearchInput.value.toLowerCase().trim();
+        const items = this.container.querySelectorAll('.hgs-drilldown-item') as NodeListOf<HTMLElement>;
+        let visibleCount = 0;
+        items.forEach(item => {
+          const hay = (item.dataset.searchText || '').toLowerCase();
+          const matches = !q || hay.includes(q);
+          item.style.display = matches ? 'block' : 'none';
+          if (matches) visibleCount++;
+        });
+        const cntBadge = document.getElementById('hgsMobileDrilldownCount');
+        if (cntBadge) cntBadge.textContent = String(visibleCount);
+      });
+    }
+
+    this.container.querySelectorAll('.hgs-drill-dial-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const phone = target.dataset.phone;
+        const name = target.dataset.name;
+        if (phone) {
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: name || 'Contact'
+          });
+        }
+      });
+    });
+  }
+
+  private async openHarGharModal(): Promise<void> {
+    this.isHgsModalOpen = true;
+    this.hgsLoading = true;
+    this.hgsStatusMsg = '';
+    this.render();
+
+    try {
+      const resp = await apiService.get<any>('/crm/har-ghar-support-report/preview?include_manual=true');
+      if (resp && resp.success !== false) {
+        this.hgsMetrics = resp.metrics || {};
+        this.hgsPeopleList = resp.initial_people || [];
+        this.hgsCustomersList = resp.initial_customers || [];
+      }
+    } catch (e) {
+      console.error('[ExecutiveDashboardPage] Failed to load Har Ghar Support preview:', e);
+    } finally {
+      this.hgsLoading = false;
+      this.render();
+    }
+  }
+
+  private async searchHgsPeople(q: string): Promise<void> {
+    try {
+      const resp = await apiService.get<any>(`/crm/har-ghar-support-report/search-people?q=${encodeURIComponent(q.trim())}&limit=25`);
+      if (resp && resp.people) {
+        this.hgsPeopleList = resp.people;
+        this.render();
+        const el = document.getElementById('hgsMobilePeopleSearch') as HTMLInputElement;
+        if (el) {
+          el.focus();
+          el.selectionStart = el.selectionEnd = el.value.length;
+        }
+      }
+    } catch (e) {}
+  }
+
+  private async searchHgsCustomers(q: string): Promise<void> {
+    try {
+      const resp = await apiService.get<any>(`/crm/har-ghar-support-report/search-customers?q=${encodeURIComponent(q.trim())}&limit=25`);
+      if (resp && resp.customers) {
+        this.hgsCustomersList = resp.customers;
+        this.render();
+        const el = document.getElementById('hgsMobileCustomerSearch') as HTMLInputElement;
+        if (el) {
+          el.focus();
+          el.selectionStart = el.selectionEnd = el.value.length;
+        }
+      }
+    } catch (e) {}
+  }
+
+  private formatHgsMessage(): string {
+    const m = this.hgsMetrics || {};
+    const d = new Date();
+    let dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    let timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (m.timestamp_ist && m.timestamp_ist.includes(',')) {
+      const parts = m.timestamp_ist.split(',');
+      dateStr = parts[0].trim();
+      timeStr = parts[1].trim();
+    }
+
+    const lines: string[] = [
+      '☀️ *HAR GHAR SOLAR — STATUS REPORT*',
+      `📅 *${dateStr}* | ⏰ *${timeStr} IST*`,
+      '━━━━━━━━━━━━━━━━━━━━━━━━',
+      `1. No. of Leads At Bank - *${m.leads_at_bank ?? 0}*`,
+      `2. New VGK Members (Current Month) - *${m.new_vgk_members_current_month ?? 0}*`,
+    ];
+    const revLabel = m.month_label ? ` (${m.month_label})` : '';
+    lines.push(`3. Revenue${revLabel} - *${m.revenue_current_month_formatted || '₹0'}*`);
+    lines.push(`4. Files From VGK members - *${m.files_from_vgk ?? 0}*`);
+    lines.push(`5. Files from the Company - *${m.files_from_company ?? 0}*`);
+    lines.push(`6. Files from Staff - *${m.files_from_staff ?? 0}*`);
+    lines.push(`7. Overall Completed Installations - *${m.overall_completed_installations ?? 0}*`);
+    lines.push(`8. This Month Installations - *${m.this_month_installations ?? 0}*`);
+    lines.push(`9. Pending for Installations - *${m.pending_for_installations ?? 0}*`);
+    lines.push(`10. 2nd payment pending - *${m.second_payment_pending ?? 0}*`);
+    lines.push(`11. Discom Pending - *${m.discom_pending ?? 0}*`);
+    lines.push(`12. DCR Pending - *${m.dcr_pending ?? 0}*`);
+    lines.push(`13. EB Cust. - *${m.eb_cust ?? 0}*`);
+    lines.push(`14. EB Staff - *${m.eb_staff ?? 0}*`);
+
+    if (this.hgsIncludeManual || this.hgsSelectedPeople.length > 0 || this.hgsSelectedCustomers.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('👥 *FIELD & BANK OPERATIONS:*');
+      const pCount = this.hgsSelectedPeople.length;
+      const pNames = this.hgsSelectedPeople.join(', ');
+      lines.push(pNames ? `• People On Ground - *${pCount}* (${pNames})` : `• People On Ground - *${pCount}*`);
+
+      const cCount = this.hgsSelectedCustomers.length;
+      const cNames = this.hgsSelectedCustomers.join(', ');
+      lines.push(cNames ? `• Expected Payments From Bank - *${cCount}* (${cNames})` : `• Expected Payments From Bank - *${cCount}*`);
+    }
+
+    const noInt3d = m.members_no_interaction_3d_count ?? 0;
+    const lowTt24h = m.members_low_talktime_24h_count ?? 0;
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('📞 *MEMBER INTERACTIONS (With Active Files):*');
+    lines.push(`• Members Without Interaction (Last 3 Days) - *${noInt3d}*`);
+    lines.push(`• Members With <5 Mins Talktime (Last 24 Hours) - *${lowTt24h}*`);
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    return lines.join('\n');
+  }
+
+  private async submitHgsTrigger(): Promise<void> {
+    if (this.hgsSending) return;
+    const previewEl = document.getElementById('hgsMobilePreviewText') as HTMLTextAreaElement;
+    const customMessage = previewEl ? previewEl.value.trim() : this.formatHgsMessage();
+
+    this.hgsSending = true;
+    this.hgsStatusMsg = '';
+    this.render();
+
+    try {
+      const resp = await apiService.post<any>('/crm/har-ghar-support-report/trigger', {
+        people_on_ground: this.hgsSelectedPeople,
+        expected_bank_customers: this.hgsSelectedCustomers,
+        include_manual: this.hgsIncludeManual,
+        custom_message: customMessage || null,
+        group_name: 'Har ghar support'
+      });
+      this.hgsStatusSuccess = !!(resp && resp.success);
+      this.hgsStatusMsg = this.hgsStatusSuccess
+        ? 'Report sent to "Har ghar support" WhatsApp group!'
+        : (resp?.dispatch_result?.error || resp?.error || 'Queued for Scanned WhatsApp delivery');
+    } catch (e: any) {
+      this.hgsStatusSuccess = false;
+      this.hgsStatusMsg = 'Failed to trigger report: ' + (e.message || 'Error');
+    } finally {
+      this.hgsSending = false;
+      this.render();
+    }
+  }
+
+  private renderHarGharTriggerModal(): string {
+    if (!this.isHgsModalOpen) return '';
+    const msgPreview = this.formatHgsMessage();
+
+    return `
+      <div style="position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:9999; display:flex; align-items:flex-end; justify-content:center;">
+        <div style="background:#0f172a; width:100%; max-width:640px; height:92vh; border-radius:16px 16px 0 0; display:flex; flex-direction:column; overflow:hidden; border:1px solid #334155;">
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg,#065f46,#047857); padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="color:#ffffff; font-weight:800; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                <i class="fab fa-whatsapp" style="color:#4ade80;"></i> Trigger Har Ghar Support Report
+              </div>
+              <div style="font-size:10px; color:#a7f3d0; margin-top:2px;">
+                Group: Har ghar support · Auto Daily 9:00 AM &amp; 8:00 PM IST
+              </div>
+            </div>
+            <button id="closeHgsTriggerModalBtn" style="background:rgba(255,255,255,0.15); border:none; color:#ffffff; width:28px; height:28px; border-radius:6px; font-size:15px; cursor:pointer;">✕</button>
+          </div>
+
+          <!-- Body -->
+          <div style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch;">
+            <!-- Include Manual Toggle -->
+            <div style="background:#064e3b; border:1px solid #059669; border-radius:8px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:11.5px; font-weight:700; color:#ecfdf5;">Include Field &amp; Bank Operations</div>
+                <div style="font-size:9.5px; color:#a7f3d0;">Uncheck to send 9 AM / 8 PM auto format</div>
+              </div>
+              <input type="checkbox" id="hgsMobileIncludeManual" ${this.hgsIncludeManual ? 'checked' : ''} style="width:18px; height:18px; accent-color:#16a34a;">
+            </div>
+
+            <!-- Member Interaction SLAs Card (Live Tracking: Members with Active Files) -->
+            <div style="background:#1e293b; border:1px solid #f59e0b; border-radius:10px; padding:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-size:11.5px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:6px;">
+                  <i class="fas fa-phone-volume"></i> Member Interaction SLAs
+                </div>
+                <span style="background:#0f172a; color:#fbbf24; border:1px solid #d97706; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:700;">
+                  ${this.hgsMetrics?.members_with_files_total ?? 0} Active Files
+                </span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                <div style="background:#0f172a; border:1px solid #ef4444; border-radius:6px; padding:6px; display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                    <div style="font-size:10px; color:#f87171; font-weight:700;">No Calls (3 Days)</div>
+                    <div style="font-size:16px; font-weight:900; color:#ef4444;">${this.hgsMetrics?.members_no_interaction_3d_count ?? 0}</div>
+                    <div style="font-size:8.5px; color:#64748b;">0 calls logged</div>
+                  </div>
+                  <button type="button" class="hgs-open-drilldown-btn" data-param="no_interaction_3d" style="background:#dc2626; color:#ffffff; border:none; border-radius:5px; font-size:10px; font-weight:700; padding:4px 6px; margin-top:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <i class="fas fa-eye"></i> View Members
+                  </button>
+                </div>
+                <div style="background:#0f172a; border:1px solid #f59e0b; border-radius:6px; padding:6px; display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                    <div style="font-size:10px; color:#fbbf24; font-weight:700;">&lt;5 Mins Talk (24h)</div>
+                    <div style="font-size:16px; font-weight:900; color:#f59e0b;">${this.hgsMetrics?.members_low_talktime_24h_count ?? 0}</div>
+                    <div style="font-size:8.5px; color:#64748b;">&lt;300s duration</div>
+                  </div>
+                  <button type="button" class="hgs-open-drilldown-btn" data-param="low_talktime_24h" style="background:#d97706; color:#ffffff; border:none; border-radius:5px; font-size:10px; font-weight:700; padding:4px 6px; margin-top:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <i class="fas fa-eye"></i> View Members
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- All Report Parameters Live Drilldown (Full Parity) -->
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px;">
+              <div style="font-size:11.5px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="fas fa-search-plus"></i> All Parameters Drilldown</span>
+                <span style="font-size:9.5px; color:#94a3b8; font-weight:500;">Tap View to inspect live records</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr; gap:5px; max-height:160px; overflow-y:auto; padding-right:2px;">
+                ${[
+                  { key: 'leads_at_bank', label: '1. Leads At Bank', val: this.hgsMetrics?.leads_at_bank_count ?? 0, color: '#0284c7' },
+                  { key: 'new_vgk_members', label: '2. New VGK Members (Month)', val: this.hgsMetrics?.new_vgk_members_count ?? 0, color: '#16a34a' },
+                  { key: 'files_from_vgk', label: '3. Files From VGK (Month)', val: this.hgsMetrics?.files_from_vgk_count ?? 0, color: '#2563eb' },
+                  { key: 'files_from_company', label: '4. Files From Company (Month)', val: this.hgsMetrics?.files_from_company_count ?? 0, color: '#7c3aed' },
+                  { key: 'files_from_staff', label: '5. Files From Staff (Month)', val: this.hgsMetrics?.files_from_staff_count ?? 0, color: '#0d9488' },
+                  { key: 'overall_completed_installations', label: '6. Overall Completed Inst.', val: this.hgsMetrics?.overall_completed_installations_count ?? 0, color: '#059669' },
+                  { key: 'this_month_installations', label: '7. Month Completed Inst.', val: this.hgsMetrics?.this_month_installations_count ?? 0, color: '#10b981' },
+                  { key: 'pending_for_installations', label: '8. Pending Installations', val: this.hgsMetrics?.pending_for_installations_count ?? 0, color: '#ea580c' },
+                  { key: 'second_payment_pending', label: '9. 2nd Payment Pending', val: this.hgsMetrics?.second_payment_pending_count ?? 0, color: '#dc2626' },
+                  { key: 'discom_pending', label: '10. Discom Approval Pending', val: this.hgsMetrics?.discom_pending_count ?? 0, color: '#d97706' },
+                  { key: 'dcr_pending', label: '11. DCR Entry Pending', val: this.hgsMetrics?.dcr_pending_count ?? 0, color: '#ca8a04' },
+                  { key: 'eb_cust', label: '12. EB Cust. Leads', val: this.hgsMetrics?.eb_cust_leads_count ?? 0, color: '#0284c7' },
+                  { key: 'eb_staff', label: '13. EB Staff Leads', val: this.hgsMetrics?.eb_staff_leads_count ?? 0, color: '#4f46e5' }
+                ].map(p => `
+                  <div style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:11px; font-weight:700; color:#f1f5f9;">${p.label}</span>
+                      <span style="font-size:12px; font-weight:900; color:${p.color};">${p.val}</span>
+                    </div>
+                    <button type="button" class="hgs-open-drilldown-btn" data-param="${p.key}" style="background:#1e293b; border:1px solid #475569; border-radius:5px; font-size:10px; font-weight:700; color:#38bdf8; padding:2px 7px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
+                      <i class="fas fa-eye"></i> View
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- 📍 People On Ground -->
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; opacity:${this.hgsIncludeManual ? '1' : '0.45'};">
+              <div style="font-size:11.5px; font-weight:800; color:#f1f5f9; margin-bottom:6px;">
+                📍 People On Ground <span style="background:#2563eb; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px;">${this.hgsSelectedPeople.length}</span>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
+                ${this.hgsSelectedPeople.map((p, idx) => `
+                  <span style="background:#1e3a8a; color:#93c5fd; border:1px solid #3b82f6; padding:2px 8px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                    ${p}
+                    <button class="hgs-remove-person-btn" data-idx="${idx}" style="background:none; border:none; color:#93c5fd; font-size:11px; cursor:pointer; padding:0;">✕</button>
+                  </span>
+                `).join('')}
+              </div>
+              <input type="text" id="hgsMobilePeopleSearch" value="${this.hgsPeopleQuery}" placeholder="Search active member / staff..." style="width:100%; background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:6px 10px; font-size:11.5px; margin-bottom:6px;">
+              <div style="max-height:110px; overflow-y:auto; background:#0f172a; border:1px solid #334155; border-radius:6px;">
+                ${this.hgsPeopleList.slice(0, 20).map(p => `
+                  <div class="hgs-add-person-btn" data-name="${p.name}" style="padding:6px 10px; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#f1f5f9; cursor:pointer;">
+                    <span>${p.name} <small style="color:#64748b;">${p.code || ''}</small></span>
+                    <span style="font-size:9.5px; color:#38bdf8;">${p.type || 'Member'}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- 🏦 Expected Payments From Bank -->
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; opacity:${this.hgsIncludeManual ? '1' : '0.45'};">
+              <div style="font-size:11.5px; font-weight:800; color:#f1f5f9; margin-bottom:6px;">
+                🏦 Expected Payments From Bank <span style="background:#059669; color:#fff; padding:1px 6px; border-radius:8px; font-size:10px;">${this.hgsSelectedCustomers.length}</span>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
+                ${this.hgsSelectedCustomers.map((c, idx) => `
+                  <span style="background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:2px 8px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                    ${c}
+                    <button class="hgs-remove-customer-btn" data-idx="${idx}" style="background:none; border:none; color:#6ee7b7; font-size:11px; cursor:pointer; padding:0;">✕</button>
+                  </span>
+                `).join('')}
+              </div>
+              <input type="text" id="hgsMobileCustomerSearch" value="${this.hgsCustomerQuery}" placeholder="Search customer name..." style="width:100%; background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:6px 10px; font-size:11.5px; margin-bottom:6px;">
+              <div style="max-height:110px; overflow-y:auto; background:#0f172a; border:1px solid #334155; border-radius:6px;">
+                ${this.hgsCustomersList.slice(0, 20).map(c => `
+                  <div class="hgs-add-customer-btn" data-name="${c.name}" style="padding:6px 10px; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#f1f5f9; cursor:pointer;">
+                    <span>${c.name} ${c.bank ? `<small style="color:#34d399;">(${c.bank})</small>` : ''}</span>
+                    <span style="font-size:9.5px; color:#fbbf24;">${(c.stage || c.status || '').replace(/_/g, ' ')}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Message Preview -->
+            <div>
+              <div style="font-size:11px; font-weight:700; color:#86efac; margin-bottom:4px;">WhatsApp Message Preview:</div>
+              <textarea id="hgsMobilePreviewText" rows="12" style="width:100%; background:#064e3b; border:1px solid #10b981; color:#ecfdf5; border-radius:8px; padding:8px; font-family:monospace; font-size:11px; line-height:1.45;">${msgPreview}</textarea>
+            </div>
+
+            ${this.hgsStatusMsg ? `
+              <div style="padding:8px 10px; border-radius:8px; font-size:11px; font-weight:700; background:${this.hgsStatusSuccess ? '#064e3b' : '#7f1d1d'}; color:${this.hgsStatusSuccess ? '#6ee7b7' : '#fca5a5'}; border:1px solid ${this.hgsStatusSuccess ? '#10b981' : '#ef4444'};">
+                ${this.hgsStatusMsg}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Footer -->
+          <div style="padding:10px 14px; background:#1e293b; border-top:1px solid #334155; display:flex; justify-content:flex-end; gap:8px;">
+            <button id="hgsMobileSendBtn" ${this.hgsSending ? 'disabled' : ''} style="width:100%; background:#16a34a; color:#ffffff; border:none; border-radius:8px; padding:10px; font-size:12.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <i class="fab fa-whatsapp"></i> ${this.hgsSending ? 'Sending to Har ghar support...' : 'Send to "Har ghar support" Group'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private async openHgsDrilldown(paramKey: string): Promise<void> {
+    this.isHgsDrilldownOpen = true;
+    this.hgsDrilldownLoading = true;
+    this.hgsDrilldownParam = paramKey;
+    this.hgsDrilldownFilter = '';
+    this.hgsDrilldownRecords = [];
+    this.render();
+
+    try {
+      const resp = await apiService.get<any>(`/crm/har-ghar-support-report/drilldown?parameter=${encodeURIComponent(paramKey)}&limit=100`);
+      if (resp && resp.success) {
+        this.hgsDrilldownTitle = resp.title || 'Parameter Records';
+        this.hgsDrilldownRecordType = resp.record_type || 'lead';
+        this.hgsDrilldownRecords = resp.records || [];
+      } else {
+        this.hgsDrilldownTitle = 'Error Loading Records';
+        this.hgsDrilldownRecords = [];
+      }
+    } catch (e) {
+      console.error('[ExecutiveDashboardPage] Failed to fetch HGS drilldown:', e);
+      this.hgsDrilldownTitle = 'Failed to Load Records';
+      this.hgsDrilldownRecords = [];
+    } finally {
+      this.hgsDrilldownLoading = false;
+      this.render();
+    }
+  }
+
+  private closeHgsDrilldown(): void {
+    this.isHgsDrilldownOpen = false;
+    this.hgsDrilldownRecords = [];
+    this.hgsDrilldownFilter = '';
+    this.render();
+  }
+
+  private renderHarGharDrilldownModal(): string {
+    if (!this.isHgsDrilldownOpen) return '';
+
+    const records = this.hgsDrilldownRecords || [];
+
+    return `
+      <div id="hgsMobileDrilldownOverlay" style="position:fixed; inset:0; background:rgba(15,23,42,0.85); z-index:10050; display:flex; flex-direction:column; justify-content:flex-end;">
+        <div style="background:#0f172a; border-top:2px solid #38bdf8; border-radius:18px 18px 0 0; height:88vh; display:flex; flex-direction:column; overflow:hidden;">
+          <!-- Header -->
+          <div style="padding:14px 16px; background:#1e293b; border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+            <div>
+              <div style="font-size:13.5px; font-weight:800; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-list-alt" style="color:#38bdf8;"></i>
+                <span>${this.hgsDrilldownTitle || 'Parameter Records'}</span>
+                <span id="hgsMobileDrilldownCount" style="background:#0284c7; color:#fff; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700;">
+                  ${records.length}
+                </span>
+              </div>
+              <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Live records from PostgreSQL database</div>
+            </div>
+            <button id="closeHgsMobileDrilldownBtn" style="background:#334155; border:none; color:#f1f5f9; width:28px; height:28px; border-radius:50%; font-size:13px; cursor:pointer;">✕</button>
+          </div>
+
+          <!-- Search Filter -->
+          <div style="padding:8px 14px; background:#0f172a; border-bottom:1px solid #1e293b; flex-shrink:0;">
+            <input type="text" id="hgsMobileDrilldownSearch" placeholder="Search name, phone, bank, code, leads..." style="width:100%; background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:8px; padding:6px 12px; font-size:12px;">
+          </div>
+
+          <!-- Record List -->
+          <div id="hgsMobileDrilldownList" style="padding:10px 14px; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;">
+            ${this.hgsDrilldownLoading ? `
+              <div style="text-align:center; padding:35px 0; color:#94a3b8; font-size:12px;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color:#38bdf8; margin-bottom:8px;"></i>
+                <div>Loading live records from database...</div>
+              </div>
+            ` : records.length === 0 ? `
+              <div style="text-align:center; padding:35px 0; color:#64748b; font-size:12px;">
+                <i class="fas fa-folder-open fa-2x" style="opacity:0.4; margin-bottom:8px;"></i>
+                <div>No records found for this parameter.</div>
+              </div>
+            ` : `
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                ${records.map((r, idx) => {
+                  const searchHay = `${r.name || ''} ${r.phone || ''} ${r.code || ''} ${r.bank_name || ''} ${r.location || ''} ${r.active_leads || ''}`.toLowerCase();
+                  if (this.hgsDrilldownRecordType === 'member') {
+                    return `
+                      <div class="hgs-drilldown-item" data-search-text="${searchHay}" style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; font-size:11.5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                          <div>
+                            <span style="font-weight:800; color:#f8fafc;">${idx + 1}. ${r.name || 'Unknown Member'}</span>
+                            ${r.code ? `<span style="font-size:10px; color:#38bdf8; margin-left:4px;">(${r.code})</span>` : ''}
+                          </div>
+                          <span style="background:${r.calls_3d === 0 ? '#7f1d1d' : '#78350f'}; color:${r.calls_3d === 0 ? '#fca5a5' : '#fcd34d'}; padding:2px 6px; border-radius:6px; font-size:9.5px; font-weight:700;">
+                            ${r.sla_badge || (r.calls_3d === 0 ? '0 Calls (3d)' : `${r.talktime_24h_sec || 0}s (24h)`)}
+                          </span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                          <div style="color:#94a3b8; font-size:10.5px; display:flex; align-items:center; gap:6px;">
+                            ${r.phone ? `
+                              <button type="button" class="hgs-drill-dial-btn" data-phone="${r.phone}" data-name="${r.name}" style="background:#065f46; color:#6ee7b7; border:1px solid #10b981; border-radius:5px; padding:2px 7px; font-size:10.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                <i class="fas fa-phone-alt"></i> ${r.phone}
+                              </button>
+                            ` : '<span>No phone</span>'}
+                            ${r.location ? `<span style="color:#64748b;">📍 ${r.location}</span>` : ''}
+                          </div>
+                          <div style="font-size:10px; color:#cbd5e1; font-weight:600;">
+                            📁 ${r.active_files_count || 0} Files
+                          </div>
+                        </div>
+                        ${r.active_leads ? `
+                          <div style="margin-top:6px; font-size:10px; color:#94a3b8; background:#0f172a; padding:4px 8px; border-radius:6px;">
+                            <strong style="color:#cbd5e1;">Active Files:</strong> ${r.active_leads}
+                          </div>
+                        ` : ''}
+                        ${r.last_call_at ? `
+                          <div style="margin-top:3px; font-size:9.5px; color:#64748b;">
+                            Last Call: ${new Date(r.last_call_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                          </div>
+                        ` : ''}
+                      </div>
+                    `;
+                  } else {
+                    return `
+                      <div class="hgs-drilldown-item" data-search-text="${searchHay}" style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; font-size:11.5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                          <div>
+                            <span style="font-weight:800; color:#f8fafc;">${idx + 1}. ${r.name || 'Customer'}</span>
+                            ${r.lead_id ? `<span style="font-size:10px; color:#64748b; margin-left:4px;">#${r.lead_id}</span>` : ''}
+                          </div>
+                          <span style="background:#1e3a8a; color:#93c5fd; padding:2px 6px; border-radius:6px; font-size:9.5px; font-weight:700;">
+                            ${(r.solar_stage || r.stage || '').replace(/_/g, ' ') || 'Active'}
+                          </span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                          <div style="color:#94a3b8; font-size:10.5px; display:flex; align-items:center; gap:6px;">
+                            ${r.phone ? `
+                              <button type="button" class="hgs-drill-dial-btn" data-phone="${r.phone}" data-name="${r.name}" style="background:#065f46; color:#6ee7b7; border:1px solid #10b981; border-radius:5px; padding:2px 7px; font-size:10.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                <i class="fas fa-phone-alt"></i> ${r.phone}
+                              </button>
+                            ` : '<span>No phone</span>'}
+                            ${r.bank_name ? `<span style="color:#34d399;">🏦 ${r.bank_name}</span>` : ''}
+                          </div>
+                          ${r.deal_value ? `
+                            <div style="font-size:11px; color:#10b981; font-weight:800;">
+                              ₹${Number(r.deal_value).toLocaleString('en-IN')}
+                            </div>
+                          ` : ''}
+                        </div>
+                        ${r.date ? `
+                          <div style="margin-top:3px; font-size:9.5px; color:#64748b;">
+                            Date: ${r.date}
+                          </div>
+                        ` : ''}
+                      </div>
+                    `;
+                  }
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Footer -->
+          <div style="padding:10px 16px; background:#1e293b; border-top:1px solid #334155; display:flex; justify-content:flex-end; flex-shrink:0;">
+            <button id="closeHgsMobileDrilldownFooterBtn" style="padding:6px 16px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#f1f5f9; font-size:12px; font-weight:700; cursor:pointer;">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }
+

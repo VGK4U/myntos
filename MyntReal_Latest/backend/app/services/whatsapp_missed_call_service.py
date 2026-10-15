@@ -230,7 +230,7 @@ def handle_missed_call_whatsapp_ack(
     start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # ── Guard 2: 24-Hour Deduplication Window ──────────────────────────────────
-    twenty_four_hours_ago_utc = datetime.utcnow() - timedelta(hours=24)
+    twenty_four_hours_ago_utc = get_indian_time() - timedelta(hours=24)
     recent_ack = db.query(MessageLog).filter(
         or_(
             MessageLog.mobile_number == phone_formatted,

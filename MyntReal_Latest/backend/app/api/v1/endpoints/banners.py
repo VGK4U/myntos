@@ -3,6 +3,7 @@ Banner and Communication System API Endpoints
 Handles TOP Performers, Custom Banners, Image Banners, Popups, Terms & Conditions
 """
 
+from app.core.timezone import get_indian_time
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Query
@@ -256,7 +257,7 @@ async def update_custom_banner(
     for key, value in banner_update.dict(exclude_unset=True).items():
         setattr(banner, key, value)
     
-    banner.updated_at = datetime.utcnow()
+    banner.updated_at = get_indian_time()
     banner.updated_by = current_user.id
     
     db.commit()
@@ -277,7 +278,7 @@ async def toggle_custom_banner(
         raise HTTPException(status_code=404, detail="Banner not found")
     
     banner.is_active = not banner.is_active
-    banner.updated_at = datetime.utcnow()
+    banner.updated_at = get_indian_time()
     banner.updated_by = current_user.id
     
     db.commit()
@@ -392,7 +393,7 @@ async def approve_image_banner(
     
     banner.status = "Active" if approval.status == "Approved" else "Rejected"
     banner.approved_by = approval.approved_by
-    banner.approved_date = datetime.utcnow()
+    banner.approved_date = get_indian_time()
     
     db.commit()
     
@@ -548,7 +549,7 @@ async def approve_popup(
     
     popup.status = approval.status
     popup.approved_by = approval.approved_by
-    popup.approved_date = datetime.utcnow()
+    popup.approved_date = get_indian_time()
     
     if approval.status == "Approved":
         popup.is_active = True
@@ -1148,7 +1149,7 @@ async def update_birthday_message(
         message.display_order = data.display_order
     
     message.updated_by = current_user.id
-    message.updated_at = datetime.utcnow()
+    message.updated_at = get_indian_time()
     
     db.commit()
     
@@ -1251,7 +1252,7 @@ async def reactivate_user_for_birthday_banner(
     
     # Deactivate skip record
     skip_record.is_active = False
-    skip_record.reactivated_at = datetime.utcnow()
+    skip_record.reactivated_at = get_indian_time()
     skip_record.reactivated_by = current_user.id
     
     db.commit()
@@ -1314,7 +1315,7 @@ async def approve_custom_banner(
     
     banner.status = "Active" if approval.status == "Approved" else "Rejected"
     banner.approved_by = approval.approved_by
-    banner.approved_date = datetime.utcnow()
+    banner.approved_date = get_indian_time()
     banner.is_active = approval.status == "Approved"
     
     db.commit()
@@ -1336,7 +1337,7 @@ async def reject_custom_banner(
     
     banner.status = "Rejected"
     banner.approved_by = current_user.id
-    banner.approved_date = datetime.utcnow()
+    banner.approved_date = get_indian_time()
     banner.is_active = False
     
     db.commit()
@@ -1356,7 +1357,7 @@ async def pause_custom_banner(
         raise HTTPException(status_code=404, detail="Banner not found")
     
     banner.status = "Paused"
-    banner.updated_at = datetime.utcnow()
+    banner.updated_at = get_indian_time()
     banner.updated_by = current_user.id
     
     db.commit()
@@ -1376,7 +1377,7 @@ async def resume_custom_banner(
         raise HTTPException(status_code=404, detail="Banner not found")
     
     banner.status = "Active"
-    banner.updated_at = datetime.utcnow()
+    banner.updated_at = get_indian_time()
     banner.updated_by = current_user.id
     
     db.commit()
@@ -1396,7 +1397,7 @@ async def stop_custom_banner(
         raise HTTPException(status_code=404, detail="Banner not found")
     
     banner.status = "Stopped"
-    banner.updated_at = datetime.utcnow()
+    banner.updated_at = get_indian_time()
     banner.updated_by = current_user.id
     banner.is_active = False
     
@@ -1421,7 +1422,7 @@ async def reject_image_banner(
     
     banner.status = "Rejected"
     banner.approved_by = current_user.id
-    banner.approved_date = datetime.utcnow()
+    banner.approved_date = get_indian_time()
     
     db.commit()
     
@@ -1498,7 +1499,7 @@ async def reject_popup(
     
     popup.status = "Rejected"
     popup.approved_by = current_user.id
-    popup.approved_date = datetime.utcnow()
+    popup.approved_date = get_indian_time()
     popup.is_active = False
     
     db.commit()
@@ -1669,7 +1670,7 @@ async def track_banner_event(
         if banner:
             if event == "view":
                 banner.total_views += 1
-                banner.last_viewed_at = datetime.utcnow()
+                banner.last_viewed_at = get_indian_time()
             elif event == "click":
                 banner.total_clicks += 1
         

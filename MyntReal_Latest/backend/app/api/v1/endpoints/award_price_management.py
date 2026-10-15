@@ -3,6 +3,7 @@ Award Price Management System - Admin requests, Finance Admin approves
 Complete price change workflow with approval and history tracking
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
@@ -176,15 +177,15 @@ async def approve_price_change(
     
     # Update award tier price
     award_tier.actual_price = price_request.new_price
-    award_tier.price_last_updated_at = datetime.utcnow()
+    award_tier.price_last_updated_at = get_indian_time()
     award_tier.price_last_updated_by = _resolve_actor_id(current_user)
     award_tier.last_updated_by = _resolve_actor_id(current_user)
-    award_tier.last_updated_at = datetime.utcnow()
+    award_tier.last_updated_at = get_indian_time()
     
     # Update price change request
     price_request.status = 'approved'
     price_request.approved_by_id = _resolve_actor_id(current_user)
-    price_request.approved_at = datetime.utcnow()
+    price_request.approved_at = get_indian_time()
     price_request.approval_notes = data.approval_notes
     
     db.commit()
@@ -223,7 +224,7 @@ async def reject_price_change(
     # Update price change request
     price_request.status = 'rejected'
     price_request.approved_by_id = _resolve_actor_id(current_user)
-    price_request.approved_at = datetime.utcnow()
+    price_request.approved_at = get_indian_time()
     price_request.approval_notes = data.approval_notes or "Rejected by Finance Admin"
     
     db.commit()

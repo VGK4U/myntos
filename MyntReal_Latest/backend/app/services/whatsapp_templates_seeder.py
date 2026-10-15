@@ -5,6 +5,7 @@ Submits to Meta API in a background thread (15s delay, non-blocking).
 Idempotent: slug conflict → skip; event_key conflict → only wire if template_id is NULL.
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import re
 import time
@@ -636,7 +637,7 @@ def _submit_one(db, template_id: int):
             tpl.meta_template_id = meta_id
             tpl.meta_approval_status = meta_status
             tpl.is_meta_approved = (meta_status == "APPROVED")
-            tpl.meta_submitted_at = datetime.utcnow()
+            tpl.meta_submitted_at = get_indian_time()
             db.commit()
             logger.info(f"[DC_WA_SEED] ✅ Submitted to Meta: {name} → {meta_status}")
         else:

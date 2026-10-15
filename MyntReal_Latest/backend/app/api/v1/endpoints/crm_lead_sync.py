@@ -2,6 +2,7 @@
 DC Protocol: CRM Google Sheets Lead Sync API
 Endpoints: configs CRUD, run sync, preview, history
 """
+from app.core.timezone import get_indian_time
 import csv
 import io
 import logging
@@ -576,7 +577,7 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
                 investment_capacity = _inv_cap,
                 planning_to_start   = _plan_str,
                 full_time_business  = _ft_biz,
-                created_at          = datetime.utcnow(),
+                created_at          = get_indian_time(),
             )
             new_leads.append(lead)
 
@@ -633,7 +634,7 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
 
         # Update config stats
         config.total_imported = (config.total_imported or 0) + len(new_leads)
-        config.last_synced_at = datetime.utcnow()
+        config.last_synced_at = get_indian_time()
         db.add(config)
 
         # Log run

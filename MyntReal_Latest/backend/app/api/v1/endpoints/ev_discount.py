@@ -3,6 +3,7 @@ EV Discount Coupon API Endpoints
 Handles EV purchase coupon redemption and management
 """
 
+from app.core.timezone import get_indian_time
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -158,7 +159,7 @@ async def redeem_ev_coupon(
     """Redeem coupon for EV purchase or training"""
     
     # Generate unique request ID
-    request_id = f"EVRED-{datetime.utcnow().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    request_id = f"EVRED-{get_indian_time().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
     
     # Validate coupon exists and belongs to user (placeholder - needs EnhancedCoupon integration)
     # For now, create redemption request
@@ -176,7 +177,7 @@ async def redeem_ev_coupon(
         training_benefit_amount=redemption.course_fee * Decimal('0.2') if redemption.course_fee else None,
         status='Pending',
         admin_claim_status='pending',
-        request_date=datetime.utcnow()
+        request_date=get_indian_time()
     )
     
     db.add(new_redemption)
@@ -335,7 +336,7 @@ async def process_redemption(
                     coupon_code=redemption.coupon_code,
                     status='Approved',
                     verified_by_admin_id=current_user.id,
-                    verification_date=datetime.utcnow()
+                    verification_date=get_indian_time()
                 )
                 db.add(purchase)
         
@@ -347,7 +348,7 @@ async def process_redemption(
         message = "Redemption rejected"
     
     redemption.processed_by_admin_id = current_user.id
-    redemption.processed_date = datetime.utcnow()
+    redemption.processed_date = get_indian_time()
     redemption.admin_notes = approval.admin_notes
     
     db.commit()
@@ -392,7 +393,7 @@ async def update_ev_model(
     for key, value in ev_data.dict().items():
         setattr(ev, key, value)
     
-    ev.updated_at = datetime.utcnow()
+    ev.updated_at = get_indian_time()
     db.commit()
     db.refresh(ev)
     
@@ -747,7 +748,7 @@ async def approve_referral_income(
     
     income.status = 'Approved'
     income.approved_by = current_user.id
-    income.approved_date = datetime.utcnow()
+    income.approved_date = get_indian_time()
     
     db.commit()
     
@@ -816,7 +817,7 @@ async def approve_franchise_purchase(
         raise HTTPException(status_code=400, detail=f"Cannot approve purchase with status: {franchise.status}")
     
     franchise.status = 'Approved'
-    franchise.approval_date = datetime.utcnow()
+    franchise.approval_date = get_indian_time()
     
     db.commit()
     

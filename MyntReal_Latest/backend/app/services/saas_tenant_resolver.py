@@ -396,7 +396,7 @@ def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tupl
             except Exception as e:
                 pass
 
-        won_cat_slugs = { (r[0] or '').lower().strip(): r[1] for r in won_cat_rows if r[0] }
+        won_cat_slugs = { (r[0] or '').lower().strip().replace('_', '-'): r[1] for r in won_cat_rows if r[0] }
         if 'solar' not in won_cat_slugs:
             won_cat_slugs['solar'] = 'Solar'
 

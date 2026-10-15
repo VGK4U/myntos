@@ -1656,7 +1656,7 @@ async def update_employee(
                 dept_name = assignment.department.name if assignment.department else str(assignment.department_id)
                 dept_changes["removed"].append(dept_name)
     
-    employee.updated_at = datetime.utcnow()
+    employee.updated_at = get_indian_time()
     
     log_staff_audit(
         db, current_user.id, "UPDATE", "employee",
@@ -1782,9 +1782,9 @@ async def reset_employee_password(
             )
         
         employee.password_hash = new_password_hash
-        employee.last_password_change = datetime.utcnow()
+        employee.last_password_change = get_indian_time()
         employee.password_last_reset_by = current_user.id
-        employee.password_last_reset_at = datetime.utcnow()
+        employee.password_last_reset_at = get_indian_time()
         employee.requires_password_change = True
         employee.failed_login_attempts = 0
         employee.locked_until = None
@@ -2022,7 +2022,7 @@ async def update_department(
     if data.is_active is not None:
         department.is_active = data.is_active
     
-    department.updated_at = datetime.utcnow()
+    department.updated_at = get_indian_time()
     
     log_staff_audit(
         db, current_user.id, "UPDATE", "department",
@@ -2232,7 +2232,7 @@ async def update_setting(
     
     old_data = setting.to_dict()
     setting.setting_value = str(new_value)
-    setting.updated_at = datetime.utcnow()
+    setting.updated_at = get_indian_time()
     
     log_staff_audit(
         db, current_user.id, "UPDATE", "setting",
@@ -2463,7 +2463,7 @@ async def submit_my_kyc(
     
     # Reset status to 'submitted' for approval (resubmit flow)
     kyc.status = 'submitted'
-    kyc.submitted_at = datetime.utcnow()
+    kyc.submitted_at = get_indian_time()
     kyc.rejection_reason = None  # Clear previous rejection
     
     # Clear previous approval info on resubmission
@@ -2682,7 +2682,7 @@ async def approve_kyc(
     old_status = kyc.status
     kyc.status = 'approved'
     kyc.reviewed_by = current_user.id
-    kyc.reviewed_at = datetime.utcnow()
+    kyc.reviewed_at = get_indian_time()
     kyc.rejection_reason = None
     
     # Update employee's kyc_status
@@ -2747,7 +2747,7 @@ async def reject_kyc(
     old_status = kyc.status
     kyc.status = 'rejected'
     kyc.reviewed_by = current_user.id
-    kyc.reviewed_at = datetime.utcnow()
+    kyc.reviewed_at = get_indian_time()
     kyc.rejection_reason = reason
     
     # Update employee's kyc_status
@@ -2906,7 +2906,7 @@ async def upload_kyc_document(
             'original_name': file.filename,
             'file_size': actual_file_size,
             'file_format': ext,
-            'uploaded_at': datetime.utcnow().isoformat()
+            'uploaded_at': get_indian_time().isoformat()
         }
         
         # DC PROTOCOL: Generate semantic download filename (NEW - Nov 29, 2025)
@@ -2986,7 +2986,7 @@ async def upload_kyc_document(
     resubmission_message = ""
     if is_approved_edit:
         kyc.status = 'submitted'
-        kyc.submitted_at = datetime.utcnow()
+        kyc.submitted_at = get_indian_time()
         kyc.reviewed_by = None
         kyc.reviewed_at = None
         kyc.rejection_reason = None
@@ -3145,7 +3145,7 @@ async def delete_kyc_document(
     resubmission_message = ""
     if is_approved_edit:
         kyc.status = 'submitted'
-        kyc.submitted_at = datetime.utcnow()
+        kyc.submitted_at = get_indian_time()
         kyc.reviewed_by = None
         kyc.reviewed_at = None
         kyc.rejection_reason = None

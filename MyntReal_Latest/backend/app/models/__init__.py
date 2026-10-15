@@ -565,3 +565,6 @@ from app.models.social_media import (
     SocialAnalyticsSnapshot,
     SocialWebhookEvent
 )
+
+# VGK Member Quick Alerts (One-Click Application & Immediate Support)
+from app.models.vgk_quick_alert import VGKMemberQuickAlert

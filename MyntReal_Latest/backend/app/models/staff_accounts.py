@@ -1618,8 +1618,8 @@ class AccountLedgerMaster(BaseModel):
     ifsc_code      = Column(String(20),  nullable=True)
     created_by_id = Column(Integer, ForeignKey('staff_employees.id'))
     updated_by_id = Column(Integer, ForeignKey('staff_employees.id'))
-    created_at   = Column(DateTime, default=datetime.utcnow)
-    updated_at   = Column(DateTime, default=datetime.utcnow)
+    created_at   = Column(DateTime, default=get_indian_time)
+    updated_at   = Column(DateTime, default=get_indian_time)
 
     __table_args__ = (
         UniqueConstraint('company_id', 'account_type', 'account_name', name='uq_ledger_master_co_type_name'),

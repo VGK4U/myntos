@@ -99,18 +99,20 @@ export class StaffBankWiseLeadsPage {
   private revealedPhones: Set<string> = new Set(); // Stores phone keys that have been unmasked by the user
   private showFilterModal: boolean = false;
 
-  // Document Sharing State (Parity with Web Document Bundles & WhatsApp Attachments)
+  // Document Sharing State (Parity with Web Document Bundles, WhatsApp & Email Attachments)
   private showDocModal: boolean = false;
   private activeDocLead: BankLead | null = null;
-  private activeDocGroup: 'bank' | 'discom' = 'bank';
+  private activeDocGroup: 'bank' | 'discom' | 'insurance' = 'bank';
   private docModalLoading: boolean = false;
   private leadUploadedDocs: any[] = [];
   private selectedRecipientPhone: string = '';
+  private selectedRecipientEmail: string = '';
   private selectedRecipientName: string = '';
   private selectedRecipientRole: string = 'Customer';
   private selectedDocTypes: Set<string> = new Set();
   private docModalNotes: string = '';
   private isDispatching: boolean = false;
+  private isSendingEmail: boolean = false;
   private isGeneratingLink: boolean = false;
   private isDownloadingPdf: boolean = false;
   private shareLinkUrl: string = '';
@@ -143,6 +145,16 @@ export class StaffBankWiseLeadsPage {
         { type: 'dcr_certificate', label: 'DCR Certificate' },
         { type: 'geotagging_photo', label: 'Geo Tagging Photo' }
       ]
+    },
+    insurance: {
+      key: 'insurance_link',
+      label: 'Insurance Documents',
+      docs: [
+        { type: 'invoice', label: 'Invoice' },
+        { type: 'adhar', label: 'Customer Aadhaar Card' },
+        { type: 'pan', label: 'PAN Card' },
+        { type: 'installation_photo', label: 'Installation Photo' }
+      ]
     }
   };
 
@@ -172,7 +184,7 @@ export class StaffBankWiseLeadsPage {
 
   private isElectricityBillChangeLead(l: BankLead): boolean {
     const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || l.status || '').toLowerCase();
-    return stage === 'electricity_bill_change' || stage === 'electricity_bill' || stage === 'eb_name_change' || stage.includes('electricity') || stage.includes('eb_name') || stage.includes('bill_change');
+    return stage === 'eb_cust' || stage === 'eb_staff' || stage === 'electricity_bill_change' || stage === 'electricity_bill' || stage === 'eb_name_change' || stage.includes('electricity') || stage.includes('eb_name') || stage.includes('bill_change') || stage.includes('eb_cust') || stage.includes('eb_staff');
   }
 
   private isBankNotInterestedLead(l: BankLead): boolean {
@@ -687,6 +699,9 @@ export class StaffBankWiseLeadsPage {
             <button class="bl-doc-btn bank open-doc-action" data-lead-id="${lead.id}" data-type="bank" title="Open Bank Docs">
               <i class="fas fa-university me-1"></i> Bank
             </button>
+            <button class="bl-doc-btn open-doc-action" data-lead-id="${lead.id}" data-type="insurance" title="Open Insurance Docs" style="background:rgba(37,99,235,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.4);">
+              <i class="fas fa-shield-alt me-1"></i> Insurance
+            </button>
             ${lead.google_maps_url ? `
               <a href="${lead.google_maps_url}" target="_blank" class="bl-doc-btn map" title="Google Maps Location">
                 <i class="fas fa-map-marker-alt me-1"></i> Map
@@ -963,7 +978,7 @@ export class StaffBankWiseLeadsPage {
     `;
   }
 
-  private async openDocModal(lead: BankLead, group: 'bank' | 'discom'): Promise<void> {
+  private async openDocModal(lead: BankLead, group: 'bank' | 'discom' | 'insurance'): Promise<void> {
     this.activeDocLead = lead;
     this.activeDocGroup = group;
     this.showDocModal = true;
@@ -973,12 +988,14 @@ export class StaffBankWiseLeadsPage {
     this.shareLinkUrl = '';
     this.docModalNotes = '';
     this.isDispatching = false;
+    this.isSendingEmail = false;
     this.isGeneratingLink = false;
     this.isDownloadingPdf = false;
 
     // Default recipient to Customer
     const custPhone = (lead.phone_number || lead.phone || lead.customer_phone || '').replace(/\D/g, '').slice(-10);
     this.selectedRecipientPhone = custPhone;
+    this.selectedRecipientEmail = (lead as any).email || '';
     this.selectedRecipientName = lead.customer_name || lead.name || 'Customer';
     this.selectedRecipientRole = 'Customer';
 
@@ -1075,7 +1092,7 @@ export class StaffBankWiseLeadsPage {
     this.isGeneratingLink = true;
     this.render();
     try {
-      const group = this.activeDocGroup === 'discom' ? 'discom_link' : 'bank_link';
+      const group = this.activeDocGroup === 'discom' ? 'discom_link' : this.activeDocGroup === 'insurance' ? 'insurance_link' : 'bank_link';
       const bundle = this.BUNDLE_DEFINITIONS[this.activeDocGroup];
       const docTypes = bundle.docs.map(d => d.type);
       const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/share-link`, {
@@ -1119,7 +1136,7 @@ export class StaffBankWiseLeadsPage {
         recipient_phone: phone,
         recipient_name: this.selectedRecipientName || 'Recipient',
         recipient_role: this.selectedRecipientRole || 'Recipient',
-        doc_group: this.activeDocGroup === 'discom' ? 'discom' : 'bank',
+        doc_group: this.activeDocGroup,
         selected_doc_types: Array.from(this.selectedDocTypes),
         custom_notes: this.docModalNotes,
         dispatch_mode: this.selectedDispatchMode
@@ -1147,6 +1164,49 @@ export class StaffBankWiseLeadsPage {
       alert(`Dispatch failed: ${err?.message || 'Server error'}`);
     } finally {
       this.isDispatching = false;
+      this.render();
+    }
+  }
+
+  private async dispatchDocsEmail(): Promise<void> {
+    if (!this.activeDocLead) return;
+    const email = (this.selectedRecipientEmail || '').trim();
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid recipient email address');
+      return;
+    }
+    if (this.selectedDocTypes.size === 0) {
+      alert('Please select at least one document to email');
+      return;
+    }
+
+    this.isSendingEmail = true;
+    this.render();
+
+    try {
+      const payload = {
+        recipient_email: email,
+        recipient_name: this.selectedRecipientName || 'Recipient',
+        recipient_role: this.selectedRecipientRole || 'Recipient',
+        doc_group: this.activeDocGroup,
+        selected_doc_types: Array.from(this.selectedDocTypes),
+        custom_notes: this.docModalNotes
+      };
+      const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/solar-docs/share-email`, payload);
+      if (res && (res.success || (res.data && res.data.success))) {
+        const dataObj = res.data || res;
+        alert(dataObj.message || `Consolidated PDF sent to ${email}!`);
+        this.showDocModal = false;
+        this.render();
+      } else {
+        const errMsg = res?.detail || res?.message || (res?.data && (res.data.detail || res.data.message)) || 'Failed to send email';
+        alert(`Email Error: ${errMsg}`);
+      }
+    } catch (err: any) {
+      console.error('[StaffBankWiseLeadsPage] Email dispatch failed:', err);
+      alert(`Email failed: ${err?.message || 'Server error'}`);
+    } finally {
+      this.isSendingEmail = false;
       this.render();
     }
   }
@@ -1328,8 +1388,26 @@ export class StaffBankWiseLeadsPage {
               <!-- Notes Input -->
               <div class="bl-form-group" style="margin-bottom: 12px;">
                 <label style="font-size: 11px; color: #94a3b8;">Additional Note (Optional)</label>
-                <textarea id="mobileDocNotesInput" class="bl-input" rows="2" placeholder="e.g. Please find loan documents attached for approval..."
+                <textarea id="mobileDocNotesInput" class="bl-input" rows="2" placeholder="e.g. Please find documents attached..."
                   style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 12px; outline: none; resize: none;">${this.escapeHtml(this.docModalNotes)}</textarea>
+              </div>
+
+              <!-- Recipient Email Input for Email Send -->
+              <div class="bl-form-group" style="margin-bottom: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label style="font-size: 11px; color: #93c5fd;"><i class="fas fa-envelope me-1"></i>Recipient Email ID (for Email Send)</label>
+                  <span style="font-size: 10px; color: #60a5fa; font-weight: 600;">CC: contact@myntreal.com</span>
+                </div>
+                <div style="display: flex; gap: 6px; margin-top: 4px;">
+                  <input type="email" id="mobileDocEmailInput" class="bl-input" placeholder="Enter email (e.g. insurance@company.com)"
+                    value="${this.escapeHtml(this.selectedRecipientEmail)}"
+                    style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 9px 10px; color: #fff; font-size: 12px; outline: none;">
+                  <button type="button" class="bl-btn" id="btnDispatchEmailDocs"
+                    ${this.isSendingEmail || selectedCount === 0 ? 'disabled' : ''}
+                    style="padding: 9px 12px; background: #2563eb; color: #fff; font-weight: 700; font-size: 11.5px; border-radius: 8px; white-space: nowrap; opacity: ${this.isSendingEmail || selectedCount === 0 ? '0.6' : '1'};">
+                    ${this.isSendingEmail ? '<i class="fas fa-spinner fa-spin"></i>' : '<i class="fas fa-paper-plane me-1"></i> Email Send'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1490,13 +1568,13 @@ export class StaffBankWiseLeadsPage {
       });
     });
 
-    // Open Doc actions (DISCOM & Bank) -> Unified Document & WhatsApp Share Modal
+    // Open Doc actions (DISCOM, Bank, Insurance) -> Unified Document & WhatsApp/Email Share Modal
     this.container.querySelectorAll('.open-doc-action').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         const leadId = (btn as HTMLElement).dataset.leadId;
-        const docType = ((btn as HTMLElement).dataset.type || 'bank') as ('bank' | 'discom');
+        const docType = ((btn as HTMLElement).dataset.type || 'bank') as ('bank' | 'discom' | 'insurance');
         if (leadId) {
           const lead = this.leads.find(l => String(l.id) === String(leadId));
           if (lead) {
@@ -1570,6 +1648,12 @@ export class StaffBankWiseLeadsPage {
         this.selectedRecipientPhone = phoneInput.value.trim();
       });
 
+      // Recipient Email Input
+      const emailInput = document.getElementById('mobileDocEmailInput') as HTMLInputElement;
+      emailInput?.addEventListener('input', () => {
+        this.selectedRecipientEmail = emailInput.value.trim();
+      });
+
       // Document Selection Checkboxes
       this.container.querySelectorAll('.doc-chk-box').forEach(chk => {
         chk.addEventListener('change', () => {
@@ -1583,6 +1667,11 @@ export class StaffBankWiseLeadsPage {
           if (sendBtn) {
             sendBtn.disabled = this.selectedDocTypes.size === 0;
             sendBtn.style.opacity = this.selectedDocTypes.size === 0 ? '0.6' : '1';
+          }
+          const emailBtn = document.getElementById('btnDispatchEmailDocs') as HTMLButtonElement;
+          if (emailBtn) {
+            emailBtn.disabled = this.selectedDocTypes.size === 0;
+            emailBtn.style.opacity = this.selectedDocTypes.size === 0 ? '0.6' : '1';
           }
         });
       });
@@ -1599,6 +1688,11 @@ export class StaffBankWiseLeadsPage {
           sendBtn.disabled = this.selectedDocTypes.size === 0;
           sendBtn.style.opacity = '1';
         }
+        const emailBtn = document.getElementById('btnDispatchEmailDocs') as HTMLButtonElement;
+        if (emailBtn) {
+          emailBtn.disabled = this.selectedDocTypes.size === 0;
+          emailBtn.style.opacity = '1';
+        }
       });
 
       // Clear All Docs
@@ -1611,6 +1705,11 @@ export class StaffBankWiseLeadsPage {
         if (sendBtn) {
           sendBtn.disabled = true;
           sendBtn.style.opacity = '0.6';
+        }
+        const emailBtn = document.getElementById('btnDispatchEmailDocs') as HTMLButtonElement;
+        if (emailBtn) {
+          emailBtn.disabled = true;
+          emailBtn.style.opacity = '0.6';
         }
       });
 
@@ -1630,6 +1729,11 @@ export class StaffBankWiseLeadsPage {
       // WhatsApp Dispatch Button
       document.getElementById('btnDispatchWaDocs')?.addEventListener('click', () => {
         this.dispatchShareDocumentsViaWa();
+      });
+
+      // Email Dispatch Button
+      document.getElementById('btnDispatchEmailDocs')?.addEventListener('click', () => {
+        this.dispatchDocsEmail();
       });
     }
 

@@ -4,6 +4,7 @@ Stores approved company facts across Products, Prices, Offers, Specs, FAQs, Loca
 Strict rule: AI must ONLY draw business facts from approved, active knowledge base records.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, UniqueConstraint, Index
 from datetime import datetime
 from app.models.base import Base
@@ -22,7 +23,7 @@ class AIKnowledgeCategory(Base):
     category_code = Column(String(50), nullable=False)  # PRODUCTS, PRICES, OFFERS, etc.
     display_name = Column(String(100), nullable=False)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
 
 class AIKnowledgeItem(Base):
@@ -44,8 +45,8 @@ class AIKnowledgeItem(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     version = Column(String(20), nullable=False, default='v1.0')
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<AIKnowledgeItem id={self.id} title={self.title} approved={self.is_approved}>'

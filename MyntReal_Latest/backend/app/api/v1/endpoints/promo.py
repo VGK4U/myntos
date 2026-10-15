@@ -1198,7 +1198,7 @@ class _CrossAuthRedeemRequest(BaseModel):
 def _issue_cross_token(db: Session, influencer_id: Optional[int], vgk_partner_code: Optional[str], direction: str) -> str:
     from datetime import datetime as _dt
     tok = secrets.token_urlsafe(48)
-    expires = _dt.utcnow() + timedelta(minutes=2)
+    expires = get_indian_time() + timedelta(minutes=2)
     db.execute(text("""
         INSERT INTO promo_cross_auth_tokens (token, influencer_id, vgk_partner_code, direction, expires_at)
         VALUES (:tok, :iid, :code, :dir, :exp)
@@ -1338,7 +1338,7 @@ def cross_auth_redeem_to_vgk(body: _CrossAuthRedeemRequest, db: Session = Depend
         raise HTTPException(status_code=404, detail="Invalid cross-auth token")
     if row[3] is not None:
         raise HTTPException(status_code=410, detail="Token already used")
-    if row[2] < _dt.utcnow():
+    if row[2] < get_indian_time():
         raise HTTPException(status_code=410, detail="Token expired")
     partner_code = row[1]
     partner = db.execute(text("""
@@ -1425,7 +1425,7 @@ def cross_auth_redeem_to_promo(body: _CrossAuthRedeemRequest, db: Session = Depe
         raise HTTPException(status_code=404, detail="Invalid cross-auth token")
     if row[3] is not None:
         raise HTTPException(status_code=410, detail="Token already used")
-    if row[2] < _dt.utcnow():
+    if row[2] < get_indian_time():
         raise HTTPException(status_code=410, detail="Token expired")
     inf_id = row[1]
     inf = db.execute(text("""
@@ -1506,7 +1506,7 @@ def cross_auth_redeem_to_partner(body: _CrossAuthRedeemRequest, db: Session = De
         raise HTTPException(status_code=404, detail="Invalid cross-auth token")
     if row[3] is not None:
         raise HTTPException(status_code=410, detail="Token already used")
-    if row[2] < _dt.utcnow():
+    if row[2] < get_indian_time():
         raise HTTPException(status_code=410, detail="Token expired")
     partner_code = row[1]
     partner = db.execute(text("""

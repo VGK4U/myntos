@@ -3,6 +3,7 @@ AI Lead Intelligence Models (Release 1A Engine)
 Stores lead feature matrices, historical outcome labels for future ML, and versioned lead score audit logs.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, JSON, ForeignKey, Index, Text
 from datetime import datetime
 from app.models.base import Base
@@ -36,8 +37,8 @@ class LeadFeatureMatrix(Base):
     site_visit_completed = Column(Boolean, nullable=False, default=False)
     
     raw_features = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
 
 class LeadOutcomeLabel(Base):
@@ -56,7 +57,7 @@ class LeadOutcomeLabel(Base):
     realized_cash_revenue = Column(Float, nullable=False, default=0.0)
     
     outcome_stage = Column(String(50), nullable=False, default='NEW')
-    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    recorded_at = Column(DateTime, default=get_indian_time, nullable=False)
 
 
 class LeadScoreHistory(Base):
@@ -81,4 +82,4 @@ class LeadScoreHistory(Base):
     negative_factors = Column(JSON, nullable=False, default=list)
     explanation = Column(Text, nullable=True)
     
-    calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    calculated_at = Column(DateTime, default=get_indian_time, nullable=False)

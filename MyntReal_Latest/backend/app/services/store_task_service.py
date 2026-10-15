@@ -12,6 +12,7 @@ WVV: All operations isolated in try/except — PO/PR creation NEVER fails due to
 DC:  company_id propagated; advisory lock not needed (append-only phases, no conflict risk).
 """
 
+from app.core.timezone import get_indian_time
 import logging
 from datetime import datetime
 
@@ -249,7 +250,7 @@ def add_pr_phase(db, proc, company_id):
                     f'{proc.product_name}'
                 )
                 existing_phase.phase_description = (existing_phase.phase_description or '') + suffix
-                existing_phase.updated_at = datetime.utcnow()
+                existing_phase.updated_at = get_indian_time()
                 db.flush()
                 logger.info(
                     f'[StoreTask] PR {proc.procurement_number} clubbed into '
@@ -314,8 +315,8 @@ def sync_po_phase_status(db, po_id, new_po_status, company_id):
         if phase and phase.phase_status != phase_status:
             phase.phase_status = phase_status
             if phase_status == 'completed':
-                phase.completed_at = datetime.utcnow()
-            phase.updated_at = datetime.utcnow()
+                phase.completed_at = get_indian_time()
+            phase.updated_at = get_indian_time()
             db.flush()
             logger.info(f'[StoreTask] PO phase status synced to {phase_status} for po_id={po_id}')
 
@@ -373,8 +374,8 @@ def sync_pr_phase_status(db, proc_id, category_name, new_pr_status, company_id):
         if phase and phase.phase_status != phase_status:
             phase.phase_status = phase_status
             if phase_status == 'completed':
-                phase.completed_at = datetime.utcnow()
-            phase.updated_at = datetime.utcnow()
+                phase.completed_at = get_indian_time()
+            phase.updated_at = get_indian_time()
             db.flush()
             logger.info(
                 f'[StoreTask] PR phase status synced to {phase_status} '

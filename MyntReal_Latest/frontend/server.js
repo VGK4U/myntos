@@ -8171,8 +8171,8 @@ const server = http.createServer(async (req, res) => {
     const contentType = req.headers['content-type'] || '';
     const isMultipart = contentType.includes('multipart/form-data');
     const isLoginCall = url.endsWith('/auth/login') || url.includes('/auth/login?');
-    // DC Protocol: Telephony state mutations (dialer, calls, webhooks) must NEVER be auto-retried to avoid duplicate concurrent calls
-    const isTelephonyCall = url.includes('/telephony/') || url.includes('/crm/dialer/') || url.includes('/voip/');
+    // DC Protocol: Telephony & outbound dispatch mutations (dialer, calls, webhooks, email/WA doc share) must NEVER be auto-retried to avoid duplicate dispatches
+    const isTelephonyCall = url.includes('/telephony/') || url.includes('/crm/dialer/') || url.includes('/voip/') || url.includes('/solar-docs/share-email') || url.includes('/solar-docs/share-whatsapp');
     const isStateMutation = req.method !== 'GET' && req.method !== 'HEAD';
     const isTelephonyMutation = isTelephonyCall && isStateMutation;
     const maxRetries = (isMultipart || isTelephonyMutation) ? 0 : (isLoginCall ? 1 : 2);
@@ -8290,6 +8290,7 @@ const server = http.createServer(async (req, res) => {
       }
       const backendUrl = `http://${BACKEND_HOSTS[hostIndex]}${proxyUrl}`;
       const isLongRunning = isMultipart ||
+        proxyUrl.includes('/solar-docs/') ||
         proxyUrl.includes('/brochure-extract') ||
         proxyUrl.includes('/knowledge-chat') ||
         proxyUrl.includes('/meta-ads-pro/chat') ||
@@ -19835,6 +19836,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('VGK Members page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+  } else if (url.startsWith('/staff/claim-alert') || url.startsWith('/staff_claim_alert.html')) {
+    const filePath = path.join(__dirname, 'staff_claim_alert.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Claim Alert page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });

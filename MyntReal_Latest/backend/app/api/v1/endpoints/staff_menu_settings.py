@@ -6,6 +6,7 @@ Created: Dec 08, 2025
 Updated: Jan 12, 2026 - Added cascade selection logic and 18-section structure
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
@@ -3061,7 +3062,7 @@ async def update_employee_menu_settings(
                         existing.set_by_id = current_user.id
                         existing.set_by_code = current_user.emp_code
                         existing.set_by_name = current_user.full_name
-                        existing.updated_at = datetime.utcnow()
+                        existing.updated_at = get_indian_time()
                         
                         if target_menu.company_id != company_id:
                             propagated_count += 1
@@ -3258,7 +3259,7 @@ async def update_partner_menu_settings(
                     existing.set_by_id = current_user.id
                     existing.set_by_code = current_user.emp_code
                     existing.set_by_name = current_user.full_name
-                    existing.updated_at = datetime.utcnow()
+                    existing.updated_at = get_indian_time()
                     
                     if old_view != setting.can_view or old_edit != setting.can_edit:
                         changes_made.append({
@@ -4636,7 +4637,7 @@ async def reset_all_menu_settings(
             StaffEmployeeMenuSettings.set_by_id: current_user.id,
             StaffEmployeeMenuSettings.set_by_code: current_user.emp_code,
             StaffEmployeeMenuSettings.set_by_name: current_user.full_name,
-            StaffEmployeeMenuSettings.updated_at: datetime.utcnow()
+            StaffEmployeeMenuSettings.updated_at: get_indian_time()
         }, synchronize_session=False)
         
         # Reset partner settings: set can_view=False and can_edit=False (soft reset)
@@ -4648,7 +4649,7 @@ async def reset_all_menu_settings(
             PartnerMenuSettings.set_by_id: current_user.id,
             PartnerMenuSettings.set_by_code: current_user.emp_code,
             PartnerMenuSettings.set_by_name: current_user.full_name,
-            PartnerMenuSettings.updated_at: datetime.utcnow()
+            PartnerMenuSettings.updated_at: get_indian_time()
         }, synchronize_session=False)
         
         # Audit log for the reset action
@@ -4887,7 +4888,7 @@ async def get_menu_registry(
             "audience": audience,
             "menus": menu_list,
             "sections": sorted_sections,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": get_indian_time().isoformat()
         }
         
     except Exception as e:

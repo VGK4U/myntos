@@ -1585,8 +1585,8 @@ async def submit_announcement_for_user(
             description=description or "",
             status=SubmissionStatus.APPROVED,
             is_visible=True,
-            submitted_at=datetime.utcnow(),
-            approved_at=datetime.utcnow(),
+            submitted_at=get_indian_time(),
+            approved_at=get_indian_time(),
             approved_by=None,
             approved_media_count=media_count,
             visible_to=_visible_to

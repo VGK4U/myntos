@@ -4,6 +4,7 @@ Handles automatic WhatsApp sends triggered by system events (CRM, PO, ZXtickets
 All sends are non-blocking BackgroundTasks and respect VGK pause controls.
 """
 
+from app.core.timezone import get_indian_time
 import os
 import re
 import requests
@@ -413,7 +414,7 @@ def _send_meta(phone: str, message: str, template=None, db=None,
             try:
                 from app.models.whatsapp import WAInbox
                 from datetime import datetime, timedelta
-                cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+                cutoff_24h = get_indian_time() - timedelta(hours=24)
                 clean_10 = phone[-10:] if len(phone) >= 10 else phone
                 inbound_msg = db.query(WAInbox).filter(
                     WAInbox.from_phone.like(f"%{clean_10}%"),
@@ -524,7 +525,7 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
         wamid = result.get("wamid")
         is_succ = bool(result.get("success") and wamid)
 
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
         clean_phone = phone[-10:] if len(phone) >= 10 else phone
         fallback_id = f"failed_{event_key}_{int(now_utc.timestamp())}_{clean_phone}"
 
@@ -612,7 +613,7 @@ def _log_to_crm_note(db: Session, lead_id: int, message: str, event_key: str,
             note=note_text,
             created_by_type=created_by_type,
             created_by_id=created_by_id,
-            created_at=datetime.utcnow(),
+            created_at=get_indian_time(),
         )
         db.add(note)
         db.commit()
@@ -626,14 +627,14 @@ def _dedup_key(event_key: str, identifier: str) -> str:
 
 def _is_duplicate(key: str) -> bool:
     """Return True if this event was sent recently (within dedup window)."""
-    now = datetime.utcnow()
+    now = get_indian_time()
     _recent_sends.update({k: v for k, v in _recent_sends.items()
                            if now - v < timedelta(minutes=_DEDUP_WINDOW_MINUTES)})
     return key in _recent_sends
 
 
 def _mark_sent(key: str):
-    _recent_sends[key] = datetime.utcnow()
+    _recent_sends[key] = get_indian_time()
 
 
 # ── Main public function ───────────────────────────────────────────────────────
@@ -805,7 +806,7 @@ def send_direct_whatsapp(
             if log:
                 log.status = "sent"
                 log.wamid = result.get("wamid")
-                log.sent_at = datetime.utcnow()
+                log.sent_at = get_indian_time()
                 db.commit()
         except Exception as e:
             logger.error("[WA-DIRECT] Campaign log update error: %s", str(e))
@@ -838,7 +839,7 @@ def send_staff_morning_reminder(db: Session, staff_employee, portal_base_url: st
         logger.warning("[WA-MORNING] Skipping invalid phone %s for %s", phone, name)
         return {"success": False, "reason": "invalid_phone_number"}
 
-    today_ist = datetime.utcnow()
+    today_ist = get_indian_time()
     today_str = today_ist.strftime('%A, %d %B %Y')
 
     try:
@@ -927,7 +928,7 @@ def dispatch_scanned_lead_fallback(
     clean_10 = clean_digits[-10:]
     clean_p = "91" + clean_10
     target_jid = f"{clean_p}@s.whatsapp.net"
-    now_ts = int(datetime.utcnow().timestamp())
+    now_ts = int(get_indian_time().timestamp())
     exec_id = f"lead_fb_{clean_10}_{now_ts}"
 
     logger.info(
@@ -993,7 +994,7 @@ def dispatch_scanned_lead_fallback(
     else:
         last_err = "Scanned WhatsApp bot offline / disconnected / standby mode"
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     from app.models.whatsapp import MessageLog
 
     if dispatched and wamid:
@@ -1167,7 +1168,7 @@ def send_lead_welcome(
         import re as _re
 
         clean_phone_10 = _re.sub(r'\D', '', str(phone or ''))[-10:]
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = get_indian_time() - timedelta(days=7)
 
         # 1. In-memory check first
         dedup = _dedup_key(event_key, str(lead_id or clean_phone_10))
@@ -1227,7 +1228,7 @@ def send_lead_welcome(
             return {"success": False, "reason": "template_not_found"}
 
         safe_lead_name = (lead_name or "there").strip()
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        now_ist = get_indian_time()
         context = {
             "1": safe_lead_name,
             "2": catalog_url,
@@ -1247,7 +1248,7 @@ def send_lead_welcome(
         _log_message(db, phone, message, result, event_key, lead_id=lead_id, staff_id=staff_id, template_id=template.id)
 
         if result.get("success"):
-            _sent_cache[dedup] = datetime.utcnow()
+            _sent_cache[dedup] = get_indian_time()
             logger.info("[WA-WELCOME] %s → %s: OK", event_key, phone)
             return result
         else:
@@ -1265,7 +1266,7 @@ def send_lead_welcome(
                 reason=result.get("reason")
             )
             if fb_res.get("success"):
-                _sent_cache[dedup] = datetime.utcnow()
+                _sent_cache[dedup] = get_indian_time()
             return fb_res
     except Exception as e:
         logger.error("[WA-WELCOME] Exception for %s: %s", phone, str(e))
@@ -1287,7 +1288,7 @@ def send_ticket_created_wa(db: Session, ticket) -> Dict[str, Any]:
         name = getattr(ticket, 'customer_name', None) or 'Customer'
         ticket_id = getattr(ticket, 'ticket_id', None) or str(getattr(ticket, 'id', ''))
         issue = getattr(ticket, 'issue_category', '') or ''
-        today_str = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%d %b %Y')
+        today_str = get_indian_time().strftime('%d %b %Y')
         return send_auto_whatsapp(
             db=db,
             event_key='ticket_created_customer',
@@ -1311,7 +1312,7 @@ def send_ticket_closed_wa(db: Session, ticket) -> Dict[str, Any]:
         name = getattr(ticket, 'customer_name', None) or 'Customer'
         ticket_id = getattr(ticket, 'ticket_id', None) or str(getattr(ticket, 'id', ''))
         issue = getattr(ticket, 'issue_category', '') or ''
-        today_str = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%d %b %Y')
+        today_str = get_indian_time().strftime('%d %b %Y')
         return send_auto_whatsapp(
             db=db,
             event_key='ticket_closed_customer',
@@ -1341,7 +1342,7 @@ def send_lead_assigned_staff_wa(
         lead_name = getattr(lead, 'name', '') or 'Unknown'
         lead_phone = getattr(lead, 'phone', '') or '—'
         source = getattr(lead, 'source', '') or 'General'
-        today_str = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%d %b %Y')
+        today_str = get_indian_time().strftime('%d %b %Y')
         return send_auto_whatsapp(
             db=db,
             event_key='lead_assigned_staff',
@@ -1534,7 +1535,7 @@ def send_staff_morning_leadership(
 
     try:
         from sqlalchemy import text as _text
-        today_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        today_ist = get_indian_time()
         today_date = today_ist.date()
         today_str = today_ist.strftime('%a, %d %b %Y')
         today_midnight_utc = (today_ist.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1563,7 +1564,7 @@ def send_staff_morning_leadership(
                 (SELECT COUNT(*) FROM crm_leads WHERE LOWER(status) = 'lost' AND COALESCE(lost_at, updated_at) >= :yesterday_start AND COALESCE(lost_at, updated_at) < :today_start) AS yesterday_lost_leads
         """), {
             'today': today_date,
-            'now_utc': datetime.utcnow(),
+            'now_utc': get_indian_time(),
             'today_midnight': today_midnight_utc,
             'yesterday_start': yesterday_start_utc,
             'today_start': today_start_utc,

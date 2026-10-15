@@ -52,7 +52,7 @@ def send_group_bot_message(
         try:
             from sqlalchemy import text
             import json
-            target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
+            target_jid = group_id or clean_code or invite_code or group_name or "120363410784518818@g.us"
             rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id}
             clean_rp = {k: v for k, v in rp.items() if v is not None}
             res = db.execute(text("""
@@ -77,8 +77,9 @@ def send_group_bot_message(
 
     payload = {
         "message": message_text,
-        "inviteCode": clean_code or invite_code
     }
+    if clean_code or invite_code:
+        payload["inviteCode"] = clean_code or invite_code
     if group_name:
         payload["groupName"] = group_name
     if group_id:
@@ -127,7 +128,7 @@ def send_group_bot_message(
         try:
             from sqlalchemy import text
             import json
-            target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
+            target_jid = group_id or clean_code or invite_code or group_name or "120363410784518818@g.us"
             rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id, "last_gateway_error": str(last_exc)}
             clean_rp = {k: v for k, v in rp.items() if v is not None}
             res = db.execute(text("""

@@ -6,6 +6,7 @@ Manages:
 2. Daily 7:30 PM Service SLA & Ticket Summary Report.
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import requests
 import datetime
@@ -88,7 +89,7 @@ def send_instant_service_ticket_alert(db: Session, ticket_db_id: int) -> Dict[st
         if tech:
             assigned_tech = getattr(tech, 'name', '') or getattr(tech, 'full_name', '') or assigned_tech
 
-    ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+    ist_now = get_indian_time()
     time_str = ist_now.strftime("%I:%M %p")
 
     msg = (
@@ -132,7 +133,7 @@ def send_daily_service_summary_report(
         company_id=1
     )
 
-    ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+    ist_now = get_indian_time()
     start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=5, minutes=30))
 
     new_today = db.query(func.count(ServiceTicket.id)).filter(
@@ -191,7 +192,7 @@ def send_daily_service_summary_report(
                     message_body=msg[:500],
                     initial_status="sent",
                     current_status="sent",
-                    sent_at=datetime.datetime.utcnow(),
+                    sent_at=get_indian_time(),
                     job_id="service_summary",
                     execution_id=exec_rec.id
                 )

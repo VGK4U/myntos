@@ -873,7 +873,7 @@ def _get_vgk_member_bonanzas(partner, db: Session) -> dict:
     partner_is_activated = bool(partner.is_active)
 
     result = []
-    now = datetime.utcnow()
+    now = get_indian_time()
     for bonanza in bonanzas:
         # DC-BONANZA-FIRST-DVR-001 (Jul 2026): FIRST_DVR basis counts first-payment
         # COMMISSION income entries (transaction date = created_at on the entry).
@@ -1583,7 +1583,7 @@ async def claim_bonanza(
         raise HTTPException(status_code=404, detail="Bonanza not found or not approved")
     
     # Check if bonanza period has expired
-    now = datetime.utcnow()
+    now = get_indian_time()
     if bonanza.end_date and bonanza.end_date < now:
         raise HTTPException(status_code=400, detail="Bonanza period has ended. You missed the opportunity to claim this reward.")
     
@@ -1763,7 +1763,7 @@ async def claim_bonanza(
             award_image=bonanza.reward_file,  # Store reward image path
             is_monetary=bonanza.is_monetary,
             actual_cost_incurred=0,  # Cost to be updated during procurement by Finance Admin
-            claimed_at=datetime.utcnow(),
+            claimed_at=get_indian_time(),
             processed_status=AwardStatus.PENDING_APPROVAL,  # DC Protocol: Standardized starting status
             rvz_approval_status='Pending RVZ Approval',  # Legacy field (for backward compatibility)
             procurement_status=None,  # Will be set after RVZ approval
@@ -1957,7 +1957,7 @@ async def approve_bonanza(
     # DC Protocol: Update approval fields
     bonanza.status = 'Approved'
     bonanza.approved_by = _resolve_actor_id(current_user)
-    bonanza.approved_date = datetime.utcnow()
+    bonanza.approved_date = get_indian_time()
     
     # DC Protocol: Store approval comments if provided
     if data.approval_comments:
@@ -2025,8 +2025,8 @@ async def user_bonanza_progress(
     """
     active_bonanzas = db.query(Bonanza).filter(
         Bonanza.status == 'Approved',
-        Bonanza.start_date <= datetime.utcnow(),
-        Bonanza.end_date >= datetime.utcnow(),
+        Bonanza.start_date <= get_indian_time(),
+        Bonanza.end_date >= get_indian_time(),
         Bonanza.is_deleted == False  # Exclude soft-deleted
     ).all()
     
@@ -2134,8 +2134,8 @@ async def get_eligible_bonanzas(
     # Get all active approved bonanzas
     active_bonanzas = db.query(Bonanza).filter(
         Bonanza.status == 'Approved',
-        Bonanza.start_date <= datetime.utcnow(),
-        Bonanza.end_date >= datetime.utcnow(),
+        Bonanza.start_date <= get_indian_time(),
+        Bonanza.end_date >= get_indian_time(),
         Bonanza.is_deleted == False  # Exclude soft-deleted
     ).all()
     
@@ -2220,8 +2220,8 @@ async def select_bonanza(
     bonanza = db.query(Bonanza).filter(
         Bonanza.id == data.bonanza_id,
         Bonanza.status == 'Approved',
-        Bonanza.start_date <= datetime.utcnow(),
-        Bonanza.end_date >= datetime.utcnow()
+        Bonanza.start_date <= get_indian_time(),
+        Bonanza.end_date >= get_indian_time()
     ).first()
     
     if not bonanza:
@@ -2243,7 +2243,7 @@ async def select_bonanza(
         
         # Update selection
         progress.user_selected_bonanza_id = bonanza.id
-        progress.selected_at = datetime.utcnow()
+        progress.selected_at = get_indian_time()
     else:
         # DC Protocol: Bonanza selection is now handled through claim workflow
         # User must claim a bonanza to track it (DynamicBonanzaHistory)
@@ -2304,11 +2304,11 @@ async def process_bonanza_reward(
         # Lock selection to prevent changes
         progress.selection_locked = True
         progress.processed_status = 'Processed'
-        progress.processed_date = datetime.utcnow()
+        progress.processed_date = get_indian_time()
         progress.processed_by = _resolve_actor_id(current_user)
         progress.admin_notes = data.admin_notes
         progress.reward_given = True
-        progress.reward_given_date = datetime.utcnow()
+        progress.reward_given_date = get_indian_time()
         
         # Create history record
         history = DynamicBonanzaHistory(
@@ -2320,8 +2320,8 @@ async def process_bonanza_reward(
             award_name=progress.award_name,
             award_image=progress.award_image,
             is_monetary=progress.is_monetary,
-            claimed_at=datetime.utcnow(),
-            processed_at=datetime.utcnow(),
+            claimed_at=get_indian_time(),
+            processed_at=get_indian_time(),
             processed_by=_resolve_actor_id(current_user)
         )
         
@@ -2612,7 +2612,7 @@ async def cancel_bonanza(
     
     # Cancel the bonanza (soft delete)
     bonanza.status = 'Cancelled'
-    bonanza.updated_at = datetime.utcnow()
+    bonanza.updated_at = get_indian_time()
     
     db.commit()
     
@@ -2642,7 +2642,7 @@ async def pause_bonanza(
         raise HTTPException(status_code=400, detail=f"Only Approved bonanzas can be paused (current status: {bonanza.status})")
 
     bonanza.status = 'Paused'
-    bonanza.updated_at = datetime.utcnow()
+    bonanza.updated_at = get_indian_time()
     db.commit()
 
     return {
@@ -2671,7 +2671,7 @@ async def activate_bonanza(
         raise HTTPException(status_code=400, detail=f"Only Cancelled or Paused bonanzas can be re-activated (current status: {bonanza.status})")
 
     bonanza.status = 'Approved'
-    bonanza.updated_at = datetime.utcnow()
+    bonanza.updated_at = get_indian_time()
     db.commit()
 
     return {
@@ -2861,7 +2861,7 @@ async def edit_bonanza(
                 {"bid": bonanza.id, "brid": _brand_id}
             )
 
-    bonanza.updated_at = datetime.utcnow()
+    bonanza.updated_at = get_indian_time()
     db.commit()
     db.refresh(bonanza)
     # DC-EC-PER-LEVEL-TRIGGER-001 (Jul 2026): Retroactive Evaluation
@@ -3022,7 +3022,7 @@ async def delete_bonanza(
     
     # SOFT DELETE - Mark as deleted (preserves data)
     bonanza.is_deleted = True
-    bonanza.deleted_at = datetime.utcnow()
+    bonanza.deleted_at = get_indian_time()
     bonanza.deleted_by = _resolve_actor_id(current_user)
     bonanza.deletion_reason = deletion_request.deletion_reason
     
@@ -3407,7 +3407,7 @@ async def claim_bonanza_on_behalf(
         raise HTTPException(status_code=404, detail="Bonanza not found or not approved")
     
     # Check if bonanza period has expired (same validation as self-claim)
-    now = datetime.utcnow()
+    now = get_indian_time()
     if bonanza.end_date and bonanza.end_date < now:
         raise HTTPException(status_code=400, detail="Bonanza period has ended. Cannot claim after end date.")
     
@@ -3552,7 +3552,7 @@ async def claim_bonanza_on_behalf(
             award_image=bonanza.reward_file,
             is_monetary=bonanza.is_monetary,
             actual_cost_incurred=0,
-            claimed_at=datetime.utcnow(),
+            claimed_at=get_indian_time(),
             processed_status=AwardStatus.PENDING_APPROVAL,  # DC Protocol: Start at Pending Approval
             rvz_approval_status='Pending RVZ Approval',
             procurement_status=None,
@@ -3779,7 +3779,7 @@ async def get_all_user_bonanza_eligibility(
                     delivery_status = 'N/A'
                     already_claimed = False
                 from datetime import datetime as _dt
-                now2 = _dt.utcnow()
+                now2 = get_indian_time()
                 is_expired2 = bonanza.end_date and bonanza.end_date < now2
                 slab_payout = (float(bonanza.slab_extra_amount) * deal_count) if bonanza.slab_extra_amount and deal_count else None
                 eligibility_data.append({
@@ -3886,7 +3886,7 @@ async def get_all_user_bonanza_eligibility(
                 delivery_status = 'N/A'
             
             # Check if bonanza has expired
-            now = datetime.utcnow()
+            now = get_indian_time()
             is_expired = bonanza.end_date and bonanza.end_date < now
             
             user_elig_data = None
@@ -4683,7 +4683,7 @@ def update_vgk_claim_status(
 def list_vgk_bonanzas_public(db: Session = Depends(get_db)):
     """DC Protocol: Public endpoint — active VGK bonanzas for the /voffers page. No auth required."""
     from datetime import datetime as _dt
-    now = _dt.utcnow()
+    now = get_indian_time()
     bonanzas = db.query(Bonanza).filter(
         Bonanza.portal == 'VGK',
         Bonanza.is_deleted == False,
@@ -5279,7 +5279,7 @@ def admin_backfill_slab_bonus(
 
                     target = bonanza.target_requirement or 1
                     achieved = deal_count >= target
-                    now_ist = datetime.utcnow()
+                    now_ist = get_indian_time()
 
                     db.execute(text("""
                         INSERT INTO bonanza_progress

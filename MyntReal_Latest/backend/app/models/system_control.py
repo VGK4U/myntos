@@ -3,6 +3,7 @@ System Control models for RVZ ID functionality
 Preserves Flask SystemControl and AppSettings models
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, String, Boolean, DateTime, Text, Integer, Float, Index
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
@@ -38,8 +39,8 @@ class SystemControl(BaseModel):
     notes = Column(Text, nullable=True)
     
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     
     @classmethod
     def get_feature_status(cls, db: Session, feature_name: str) -> bool:
@@ -83,10 +84,10 @@ class SystemControl(BaseModel):
             # Pause the feature
             feature.is_paused = True  # True = paused
             feature.controlled_by_user_id = paused_by
-            feature.paused_at = datetime.utcnow()
+            feature.paused_at = get_indian_time()
             feature.pause_reason = reason or f"Paused by RVZ ID {paused_by}"
             feature.last_action = "paused"
-            feature.updated_at = datetime.utcnow()
+            feature.updated_at = get_indian_time()
             
             db.commit()
             return True
@@ -116,10 +117,10 @@ class SystemControl(BaseModel):
             # Resume the feature
             feature.is_paused = False  # False = active
             feature.controlled_by_user_id = resumed_by
-            feature.resumed_at = datetime.utcnow()
+            feature.resumed_at = get_indian_time()
             feature.pause_reason = reason or f"Resumed by RVZ ID {resumed_by}"
             feature.last_action = "resumed"
-            feature.updated_at = datetime.utcnow()
+            feature.updated_at = get_indian_time()
             
             db.commit()
             return True
@@ -384,7 +385,7 @@ class AppSettings(BaseModel):
             
             # Update tracking fields (using fields that actually exist)
             settings.popup_config_updated_by = modified_by
-            settings.popup_config_updated_at = datetime.utcnow()
+            settings.popup_config_updated_at = get_indian_time()
             
             db.commit()
             return True
@@ -606,9 +607,9 @@ class CustomRole(BaseModel):
     
     # Tracking
     created_by = Column(String(12), nullable=False)  # RVZ ID who created it
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_by = Column(String(12), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     
     # Status
     is_active = Column(Boolean, default=True, nullable=False)
@@ -633,7 +634,7 @@ class TermsAndConditionsVersion(BaseModel):
     
     # Creation tracking
     created_by = Column(String(12), nullable=False)  # RVZ user_id who created this version
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Activation tracking
     activated_at = Column(DateTime, nullable=True)  # When this version was set as active
@@ -700,7 +701,7 @@ class TermsAndConditionsVersion(BaseModel):
             ).update({'is_active': False})
 
             target_version.is_active = True
-            target_version.activated_at = datetime.utcnow()
+            target_version.activated_at = get_indian_time()
             target_version.activated_by = activated_by
 
             db.commit()
@@ -746,7 +747,7 @@ class TermsAndConditionsVersion(BaseModel):
                 content=content,
                 created_by=created_by,
                 is_active=True,
-                activated_at=datetime.utcnow(),
+                activated_at=get_indian_time(),
                 activated_by=created_by,
                 notes="Migrated from app_settings table"
             )

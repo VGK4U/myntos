@@ -3,6 +3,7 @@ Immutable Meta Attribution Model (Release 1A Attribution Layer)
 Stores original, unalterable acquisition source parameters for Meta Lead Ads.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index, Boolean
 from datetime import datetime
 from app.models.base import Base
@@ -35,7 +36,7 @@ class MetaLeadsAttribution(Base):
     utm_campaign = Column(String(100), nullable=True)
     utm_content = Column(String(100), nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<MetaLeadsAttribution lead_id={self.lead_id} fb_lead_id={self.meta_lead_id} campaign={self.meta_campaign_id}>'
@@ -60,8 +61,8 @@ class MetaLeadFormMapping(Base):
     looking_for = Column(String(200), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<MetaLeadFormMapping form_id={self.form_id} company_id={self.company_id} segment={self.crm_segment}>'

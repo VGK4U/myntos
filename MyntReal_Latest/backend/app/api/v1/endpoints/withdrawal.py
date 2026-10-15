@@ -851,7 +851,7 @@ def process_batch(
     
     if data.action == 'submit':
         batch.status = 'Submitted'
-        batch.submitted_at = datetime.utcnow()
+        batch.submitted_at = get_indian_time()
         if data.notes:
             batch.admin_notes = data.notes
         message = f'Batch {batch.batch_name} submitted for approval'
@@ -864,7 +864,7 @@ def process_batch(
         #         detail='Super Admin access required to approve batches'
         #     )
         batch.status = 'Approved'
-        batch.approved_at = datetime.utcnow()
+        batch.approved_at = get_indian_time()
         if data.notes:
             batch.approval_notes = data.notes
         
@@ -933,7 +933,7 @@ def process_batch(
         #         detail='Super Admin or Finance Admin access required to complete batches'
         #     )
         batch.status = 'Completed'
-        batch.completed_at = datetime.utcnow()
+        batch.completed_at = get_indian_time()
         
         # DC Protocol Phase 1.7: Batch completion - send to bank AND deduct wallets atomically
         from sqlalchemy import text

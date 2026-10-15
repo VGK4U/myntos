@@ -249,10 +249,11 @@ function priBadge(p) {
     return `<span class="badge ${m[p]||'bg-secondary'}">${p||'Normal'}</span>`;
 }
 
-const _PIPE={documents_pending:'Docs Pending',application_submitted:'App Submitted',pending_with_bank:'With Bank',
+const _PIPE={first_payment_received:'1st Payment',documents_pending:'Docs Pending',application_submitted:'App Submitted',pending_with_bank:'With Bank',
     loan_rejected:'Loan Rejected',documents_issue:'Docs Issue',load_extension:'Load Ext',
-    electricity_bill_change:'Bill Change',installation_pending:'Install Pending',
-    net_meter_pending:'Net Meter',subsidy_pending:'Subsidy',completed:'Completed',
+    eb_cust:'EB Cust.',eb_staff:'EB Staff',electricity_bill_change:'EB Cust.',installation_pending:'Install Pending',
+    installed:'Installed',dcr_pending:'DCR Pending',discom_pending:'Discom Pending',
+    net_meter_pending:'Net Meter',balance_pending:'Bal. Pending',balance_received:'Bal. Received',subsidy_pending:'Subsidy',completed:'Completed',
     not_interested:'Not Interested',cancelled:'Cancelled',different_vendor:'Diff. Vendor'};
 const _B2B={application_pending:'App Pending',agreement_pending:'Agreement Pending',gst_pending:'GST Pending',
     training_pending:'Training Pending',branding_pending:'Branding Pending',payment_pending:'Payment Pending',

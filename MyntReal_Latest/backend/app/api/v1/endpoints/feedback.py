@@ -2,6 +2,7 @@
 User Feedback & Announcements API
 DC Protocol: Approved submissions ARE announcements - single source of truth
 """
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -717,7 +718,7 @@ async def submit_staff_announcement(
         description=description,
         status=initial_status,
         is_visible=True,  # Immediately visible on Login Page / Dashboard
-        approved_at=datetime.utcnow(),
+        approved_at=get_indian_time(),
         approved_by=str(current_user.id),
         target_destination=clean_dest,
         expires_at=parsed_expires_at,
@@ -2627,7 +2628,7 @@ async def soft_delete_announcement(
         
         # Perform soft delete
         from datetime import datetime
-        now = datetime.utcnow()
+        now = get_indian_time()
         submission.is_deleted = True
         submission.deleted_at = now
         submission.deleted_by = actor_id

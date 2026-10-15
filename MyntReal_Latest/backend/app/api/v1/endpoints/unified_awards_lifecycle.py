@@ -12,6 +12,7 @@ Author: MNR Development Team
 Date: Nov 11, 2025
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_, and_, func, desc, exists, select
@@ -701,7 +702,7 @@ async def finance_approve_award(
     # Update status
     award.processed_status = AwardStatus.ADMIN_APPROVED
     award.admin_approved_by = _resolve_actor_id(current_user)
-    award.admin_approved_at = datetime.utcnow()
+    award.admin_approved_at = get_indian_time()
     if data.notes:
         award.admin_notes = data.notes
     
@@ -741,7 +742,7 @@ async def rvz_direct_approve_award(
     # RVZ direct approval: skip Finance, go straight to RVZ Approved (Procurement Pending)
     award.processed_status = AwardStatus.PROCUREMENT_PENDING
     award.rvz_action_by = _resolve_actor_id(current_user)
-    award.rvz_action_at = datetime.utcnow()
+    award.rvz_action_at = get_indian_time()
     award.rvz_action_type = 'direct_approve'
     award.rvz_notes = data.notes or 'RVZ Supreme Authority - Direct Approval (Finance step bypassed)'
     
@@ -781,7 +782,7 @@ async def rvz_approve_award(
     # Update status
     award.processed_status = AwardStatus.PROCUREMENT_PENDING
     award.rvz_action_by = _resolve_actor_id(current_user)
-    award.rvz_action_at = datetime.utcnow()
+    award.rvz_action_at = get_indian_time()
     award.rvz_action_type = 'approve'
     award.rvz_notes = data.notes
     
@@ -1046,7 +1047,7 @@ async def mark_delivered(
     # Update delivery fields
     award.received_date = data.received_date
     award.delivered_by = _resolve_actor_id(current_user)
-    award.delivered_at = datetime.utcnow()
+    award.delivered_at = get_indian_time()
     award.delivery_proof_path = data.delivery_proof_path
     
     if data.delivery_notes:
@@ -1139,7 +1140,7 @@ async def approve_award(
     user_id = current_user.id
     if isinstance(user_id, int):
         award.rvz_action_by = user_id
-    award.rvz_action_at = datetime.utcnow()
+    award.rvz_action_at = get_indian_time()
     award.rvz_action_type = 'staff_approve'
     award.rvz_notes = data.notes or 'Staff Portal - Award approved for procurement'
     
@@ -1282,7 +1283,7 @@ async def simplified_status_update(
             )
         award.processed_status = AwardStatus.PENDING_APPROVAL
         if not award.achievement_date:
-            award.achievement_date = datetime.utcnow()
+            award.achievement_date = get_indian_time()
         approve_audit = AwardAuditLog(
             entity_type=f'{data.award_type}_award',
             entity_id=data.award_id,
@@ -1361,14 +1362,14 @@ async def simplified_status_update(
     actor_id_str = getattr(current_user, 'emp_code', None) or str(current_user.id)
 
     if data.new_status == 'Approved':
-        award.admin_approved_at = datetime.utcnow()
+        award.admin_approved_at = get_indian_time()
         award.admin_approved_by = actor_id_str
         if data.comment:
             award.admin_notes = data.comment
 
     if data.new_status == 'Completed':
         award.received_date = date.today()
-        award.delivered_at = datetime.utcnow()
+        award.delivered_at = get_indian_time()
         award.delivered_by = _resolve_actor_id(current_user)
 
     if data.new_status == 'Rejected' and data.award_type != 'bonanza':

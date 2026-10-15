@@ -4272,7 +4272,7 @@ def run_overdue_wa_alerts():
             lock = db.execute(text("SELECT pg_try_advisory_lock(88890050)")).scalar()
             if not lock:
                 return
-            today_ist = __import__('datetime').datetime.utcnow() + __import__('datetime').timedelta(hours=5, minutes=30)
+            today_ist = get_indian_time()
             today = today_ist.date()
             today_str = today_ist.strftime('%d %b %Y')
 
@@ -4496,7 +4496,7 @@ def run_lead_followup_reminders():
             if not lock:
                 return
             from app.services.whatsapp_auto_service import send_auto_whatsapp
-            today_ist = __import__('datetime').datetime.utcnow() + __import__('datetime').timedelta(hours=5, minutes=30)
+            today_ist = get_indian_time()
             today_start = today_ist.replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = today_ist.replace(hour=23, minute=59, second=59)
             # Convert IST to UTC for DB comparison
@@ -5128,7 +5128,174 @@ def init_scheduler():
     except Exception as _ana_sched_e:
         logger.warning(f"   📈 Social Media Manager: Analytics worker schedule failed: {_ana_sched_e}")
 
+    # VGK Member Quick Alerts: 24/7 Hourly Escalation Worker & >12h Critical Highlight
+    try:
+        def run_vgk_quick_alerts_escalation_worker():
+            try:
+                from datetime import datetime
+                from app.core.database import SessionLocal
+                from app.models.vgk_quick_alert import VGKMemberQuickAlert
+                from app.api.v1.endpoints.vgk_quick_alerts import dispatch_quick_alert_to_whatsapp_groups
+                from app.core.timezone import get_indian_time
+
+                db = SessionLocal()
+                try:
+                    active_alerts = db.query(VGKMemberQuickAlert).filter(
+                        VGKMemberQuickAlert.status.in_(['PENDING', 'CLAIMED', 'IN_PROGRESS'])
+                    ).order_by(VGKMemberQuickAlert.created_at.asc()).all()
+
+                    if not active_alerts:
+                        return
+
+                    now_ist = get_indian_time()
+                    standard_pending = []
+                    reclaimable_3h = []
+                    critical_12h = []
+
+                    for alert in active_alerts:
+                        created_dt = (alert.created_at.replace(tzinfo=None) if alert.created_at and alert.created_at.tzinfo else alert.created_at) or now_ist
+                        elapsed_seconds = max(0, (now_ist - created_dt).total_seconds())
+                        elapsed_hours = elapsed_seconds / 3600.0
+
+                        if alert.status == 'PENDING':
+                            if elapsed_hours >= 12.0:
+                                critical_12h.append((alert, elapsed_hours))
+                            elif elapsed_hours >= 3.0:
+                                reclaimable_3h.append((alert, elapsed_hours, "Unclaimed >3h"))
+                            else:
+                                standard_pending.append((alert, elapsed_hours))
+                        else:
+                            # CLAIMED or IN_PROGRESS
+                            ref_claim = (alert.claimed_at.replace(tzinfo=None) if alert.claimed_at and alert.claimed_at.tzinfo else alert.claimed_at) or created_dt
+                            claim_hours = max(0, (now_ist - ref_claim).total_seconds()) / 3600.0
+                            if claim_hours >= 3.0:
+                                reclaimable_3h.append((alert, claim_hours, "Claimed but pending >3h"))
+
+                    # 1. Critical >12h SLA Breach Alerts
+                    for alert, hours in critical_12h:
+                        claim_url = f"https://www.vgk4u.com/staff/claim-alert?token={alert.claim_token}"
+                        hours_int = int(hours)
+                        mins_int = int((hours - hours_int) * 60)
+                        time_str = f"{hours_int}h {mins_int}m"
+                        req_type_lbl = "APPLICATION" if alert.alert_type == "APPLICATION" else "SUPPORT"
+
+                        crit_lines = [
+                            "🚨🚨 *CRITICAL SLA BREACH (>12 HOURS UNCLAIMED)* 🚨🚨",
+                            "━━━━━━━━━━━━━━━━━━━━━━━━",
+                            "⚠️ *URGENT ESCALATION TO MANAGEMENT & SALES DESK*:",
+                            f"👤 *Member*: {alert.partner_name} ({alert.partner_code})",
+                            f"📱 *Mobile*: +91 {alert.partner_phone.replace('+91', '').strip()}",
+                            f"📋 *Request Type*: {req_type_lbl}",
+                            f"⏳ *Time Waiting*: *{time_str}* (OVER 12 HOURS) ⚠️",
+                            f"💬 *Notes*: {alert.notes or 'No notes provided'}",
+                            "Status: *STILL UNCLAIMED — ZERO STAFF RESPONSE!*",
+                            "━━━━━━━━━━━━━━━━━━━━━━━━",
+                            "Immediate manager & telecaller intervention is required!",
+                            "👉 *CLAIM IMMEDIATELY*:",
+                            f"🔗 {claim_url}"
+                        ]
+                        crit_text = "\n".join(crit_lines)
+                        dispatch_quick_alert_to_whatsapp_groups(
+                            db=db,
+                            message_text=crit_text,
+                            job_id="vgk_critical_12h_sla_alert",
+                            job_name="VGK4U Critical >12h SLA Breach Alert",
+                            trigger_type="critical_sla_12h",
+                            idempotency_prefix=f"qa_12h_{alert.alert_code}_{int(now_ist.timestamp() // 3600)}"
+                        )
+                        alert.is_escalated_12h = True
+                        alert.escalated_12h_at = now_ist
+                        alert.reminder_count += 1
+                        alert.last_reminder_at = now_ist
+                        db.commit()
+
+                    # 2. Hourly Standard Pending & >3h Re-Claimable Digest
+                    if standard_pending or reclaimable_3h:
+                        digest_lines = [
+                            "⚠️ *HOURLY REMINDER: VGK4U APPLICATIONS & SUPPORT* ⚠️",
+                            "━━━━━━━━━━━━━━━━━━━━━━━━",
+                        ]
+                        if reclaimable_3h:
+                            digest_lines.append("🔄 *OPEN FOR RE-CLAIM (>3 HOURS PENDING)*:")
+                            digest_lines.append("_(Any Sales/Leadership staff can now claim/re-claim these)_")
+                            for alert, hours, reason in reclaimable_3h:
+                                hours_int = int(hours)
+                                mins_int = int((hours - hours_int) * 60)
+                                time_str = f"{hours_int}h {mins_int}m"
+                                claim_url = f"https://www.vgk4u.com/staff/claim-alert?token={alert.claim_token}"
+                                req_type_lbl = "APPLICATION" if alert.alert_type == "APPLICATION" else "SUPPORT"
+                                icon = "⚡" if req_type_lbl == "APPLICATION" else "🆘"
+                                digest_lines.append(f"• {icon} *[{req_type_lbl}]* {alert.partner_name} ({alert.partner_code}) — *{reason} ({time_str})*")
+                                if alert.notes:
+                                    digest_lines.append(f"  💬 _{alert.notes[:80]}_")
+                                digest_lines.append(f"  👉 Re-Claim Now: {claim_url}\n")
+                                alert.reminder_count += 1
+                                alert.last_reminder_at = now_ist
+
+                        if standard_pending:
+                            digest_lines.append("⏳ *AWAITING STAFF PICKUP (<3 HOURS)*:")
+                            for alert, hours in standard_pending:
+                                hours_int = int(hours)
+                                mins_int = int((hours - hours_int) * 60)
+                                time_str = f"{hours_int}h {mins_int}m" if hours_int > 0 else f"{mins_int}m"
+                                claim_url = f"https://www.vgk4u.com/staff/claim-alert?token={alert.claim_token}"
+                                req_type_lbl = "APPLICATION" if alert.alert_type == "APPLICATION" else "SUPPORT"
+                                icon = "⚡" if req_type_lbl == "APPLICATION" else "🆘"
+                                digest_lines.append(f"• {icon} *[{req_type_lbl}]* {alert.partner_name} ({alert.partner_code}) — Waiting *{time_str}*")
+                                if alert.notes:
+                                    digest_lines.append(f"  💬 _{alert.notes[:80]}_")
+                                digest_lines.append(f"  👉 Claim: {claim_url}\n")
+                                alert.reminder_count += 1
+                                alert.last_reminder_at = now_ist
+
+                        digest_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━")
+                        digest_lines.append("📊 Dashboard: https://www.myntreal.com/staff/progress")
+                        digest_text = "\n".join(digest_lines)
+
+                        dispatch_quick_alert_to_whatsapp_groups(
+                            db=db,
+                            message_text=digest_text,
+                            job_id="vgk_hourly_pending_alerts_digest",
+                            job_name="VGK4U Hourly Pending & Re-Claimable Digest",
+                            trigger_type="hourly_pending_digest",
+                            idempotency_prefix=f"qa_digest_{int(now_utc.timestamp() // 3600)}"
+                        )
+                        db.commit()
+                finally:
+                    db.close()
+            except Exception as _qa_err:
+                logger.warning(f"⚠️ [VGK-QUICK-ALERT-WORKER] Error in escalation worker: {_qa_err}")
+
+        scheduler.add_job(
+            run_vgk_quick_alerts_escalation_worker,
+            trigger=CronTrigger(minute=0, timezone='Asia/Kolkata'),
+            id='vgk_quick_alerts_hourly_escalation_worker',
+            name='VGK Quick Alerts: Hourly Escalation Worker (Every 1h, 24/7)',
+            replace_existing=True,
+            misfire_grace_time=300,
+            max_instances=1,
+        )
+        logger.info("   ⚡ VGK Quick Alerts: Hourly Escalation Worker scheduled (Every 1h, 24/7)")
+    except Exception as _qa_sched_e:
+        logger.warning(f"   ⚡ VGK Quick Alerts: Escalation worker schedule failed: {_qa_sched_e}")
+
+    # Har Ghar Support Daily 9:00 AM & 8:00 PM IST WhatsApp Group Status Report
+    try:
+        scheduler.add_job(
+            job_daily_har_ghar_support_report,
+            trigger=CronTrigger(hour='9,20', minute='0', timezone='Asia/Kolkata'),
+            id='har_ghar_support_report',
+            name='Har Ghar Support Daily Status Report (9:00 AM & 8:00 PM IST)',
+            replace_existing=True,
+            misfire_grace_time=600,
+            max_instances=1,
+        )
+        logger.info("   ☀️ Har Ghar Support: Daily Status Report scheduled (9:00 AM & 8:00 PM IST)")
+    except Exception as _hgs_sched_e:
+        logger.warning(f"   ☀️ Har Ghar Support: Status Report schedule failed: {_hgs_sched_e}")
+
     scheduler.start()
+
     logger.info("✅ APScheduler initialized with IST timezone - All jobs scheduled in Asia/Kolkata time")
     logger.info(f"   📅 Next midnight run: {scheduler.get_job('midnight_income_calculation').next_run_time}")
     
@@ -5333,4 +5500,42 @@ def job_daily_service_summary_report():
         db.close()
 
 
+# DC-HAR-GHAR-SUPPORT-001: Daily 9:00 AM & 8:00 PM IST Har Ghar Support WhatsApp Group Report
+def job_daily_har_ghar_support_report():
+    """
+    DC-HAR-GHAR-SUPPORT-001: Sends the automated Har Ghar Solar Status Report (without manual entry fields)
+    to the "Har ghar support" WhatsApp group at 9:00 AM and 8:00 PM IST daily via Scanned WhatsApp.
+    """
+    from app.core.database import SessionLocal
+    from app.services.har_ghar_support_report_service import dispatch_har_ghar_support_report
+    from datetime import datetime, timezone, timedelta
 
+    logger.info("☀️ DC-HAR-GHAR-SUPPORT-001: Triggering scheduled Har Ghar Support WhatsApp Group report...")
+    db = SessionLocal()
+    try:
+        from sqlalchemy import text
+        lock = db.execute(text("SELECT pg_try_advisory_lock(88890099)")).scalar()
+        if not lock:
+            logger.info("⏸️ [DC-HAR-GHAR-SUPPORT-001] Another worker holds the advisory lock (88890099). Skipping duplicate execution.")
+            return
+
+        try:
+            ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+            slot_label = "Morning 9:00 AM Report" if ist_now.hour < 15 else "Evening 8:00 PM Report"
+            res = dispatch_har_ghar_support_report(
+                db=db,
+                people_on_ground=[],
+                expected_bank_customers=[],
+                include_manual=False,
+                slot_label=slot_label,
+            )
+            logger.info(f"✅ DC-HAR-GHAR-SUPPORT-001: Scheduled Har Ghar Support report result: {res}")
+        finally:
+            try:
+                db.execute(text("SELECT pg_advisory_unlock(88890099)"))
+            except Exception:
+                pass
+    except Exception as exc:
+        logger.error(f"❌ DC-HAR-GHAR-SUPPORT-001: Failed to send Har Ghar Support report: {exc}")
+    finally:
+        db.close()

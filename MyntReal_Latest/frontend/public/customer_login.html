@@ -653,22 +653,52 @@
             }
 
             // Auto-detect existing login
-            const existingToken = localStorage.getItem('customer_access_token');
-            const existingProfile = localStorage.getItem('customer_profile');
+            updateCustomerSessionUI();
+        });
+
+        function showToast(message, icon = 'info') {
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    background: '#101826',
+                    color: '#f8fafc',
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer);
+                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+                    }
+                });
+                Toast.fire({
+                    icon: icon,
+                    title: message
+                });
+            } else {
+                console.log(`[Toast] ${message}`);
+            }
+        }
+
+        function updateCustomerSessionUI() {
+            const existingToken = localStorage.getItem('customer_access_token') || sessionStorage.getItem('customer_access_token');
+            const existingProfile = localStorage.getItem('customer_profile') || sessionStorage.getItem('customer_profile');
+            const logoutBtn = document.getElementById('headerLogoutBtn');
+            const dashBtn = document.getElementById('headerDashboardBtn');
+            const banner = document.getElementById('activeSessionBanner');
+            const bannerName = document.getElementById('activeSessionName');
+            const params = new URLSearchParams(window.location.search);
             const redirectParam = params.get('redirect') || params.get('return_to');
             if (existingToken && existingProfile) {
                 try {
                     const prof = JSON.parse(existingProfile);
-                    console.log('Active session detected for:', prof.customer_name);
-                    const logoutBtn = document.getElementById('headerLogoutBtn');
                     if (logoutBtn) {
-                        logoutBtn.title = `Signed in as ${prof.customer_name} (Click to Logout)`;
                         logoutBtn.style.display = 'inline-flex';
+                        logoutBtn.title = `Signed in as ${prof.customer_name || 'Customer'} (Click to Logout)`;
                     }
-                    const dashBtn = document.getElementById('headerDashboardBtn');
-                    if (dashBtn) dashBtn.style.display = 'inline-flex';
-                    const banner = document.getElementById('activeSessionBanner');
-                    const bannerName = document.getElementById('activeSessionName');
+                    if (dashBtn) {
+                        dashBtn.style.display = 'inline-flex';
+                    }
                     if (banner && bannerName) {
                         bannerName.innerText = `Signed in as ${prof.customer_name || 'Customer'} (+91 ${prof.mobile_number || ''})`;
                         banner.style.setProperty('display', 'flex', 'important');
@@ -678,9 +708,17 @@
                             bannerLink.innerHTML = 'Continue to Service <i class="fa-solid fa-arrow-right ms-1"></i>';
                         }
                     }
-                } catch(e) {}
+                } catch(e) {
+                    if (logoutBtn) logoutBtn.style.display = 'none';
+                    if (dashBtn) dashBtn.style.display = 'none';
+                    if (banner) banner.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                if (logoutBtn) logoutBtn.style.display = 'none';
+                if (dashBtn) dashBtn.style.display = 'none';
+                if (banner) banner.style.setProperty('display', 'none', 'important');
             }
-        });
+        }
 
         function handleHeaderBack() {
             if (window.history.length > 1) {
@@ -699,19 +737,8 @@
             const pinEl = document.getElementById('loginPin');
             if (phoneEl) phoneEl.value = '';
             if (pinEl) pinEl.value = '';
-
-            const logoutBtn = document.getElementById('headerLogoutBtn');
-            if (logoutBtn) logoutBtn.style.display = 'none';
-            const dashBtn = document.getElementById('headerDashboardBtn');
-            if (dashBtn) dashBtn.style.display = 'none';
-            const banner = document.getElementById('activeSessionBanner');
-            if (banner) banner.style.setProperty('display', 'none', 'important');
-
-            if (typeof showToast === 'function') {
-                showToast('Logged out of customer account.', 'info');
-            } else {
-                alert('Logged out of customer account.');
-            }
+            updateCustomerSessionUI();
+            showToast('Logged out of customer account.', 'info');
         }
 
         function switchTab(tab) {

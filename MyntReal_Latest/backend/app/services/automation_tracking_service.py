@@ -13,13 +13,14 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.automation import AutomationExecution, AutomationDispatch, AutomationTargetConfig
+from app.core.timezone import get_indian_time
 
 logger = logging.getLogger(__name__)
 
 
 def generate_execution_id(job_id: str) -> str:
-    utc_now = datetime.now(timezone.utc)
-    ts = utc_now.strftime("%Y%m%d_%H%M%S")
+    ist_now = get_indian_time()
+    ts = ist_now.strftime("%Y%m%d_%H%M%S")
     rnd = uuid.uuid4().hex[:6]
     return f"{job_id}_{ts}_{rnd}"
 
@@ -36,7 +37,7 @@ def create_execution(
     metadata: Optional[Dict[str, Any]] = None
 ) -> AutomationExecution:
     eid = generate_execution_id(job_id)
-    now_utc = datetime.utcnow()
+    now_ist = get_indian_time()
     execution = AutomationExecution(
         id=eid,
         job_id=job_id,
@@ -52,7 +53,7 @@ def create_execution(
         uncertain_count=0,
         failed_count=0,
         skipped_count=0,
-        started_at=now_utc,
+        started_at=now_ist,
         is_legacy=False,
         execution_metadata=metadata or {}
     )
@@ -88,7 +89,7 @@ def record_dispatch(
     if clean_status not in ("PENDING", "QUEUED", "PROCESSING", "SENT", "UNCERTAIN", "FAILED", "SKIPPED"):
         clean_status = "SENT" if clean_status in ("SUCCESS", "COMPLETED") else "FAILED"
 
-    now_utc = datetime.utcnow()
+    now_ist = get_indian_time()
     dispatch = AutomationDispatch(
         execution_id=exec_id_str,
         job_id=job_id,
@@ -102,8 +103,8 @@ def record_dispatch(
         provider=provider,
         provider_message_id=provider_message_id,
         status=clean_status,
-        sent_at=sent_at or (now_utc if clean_status == "SENT" else None),
-        failed_at=now_utc if clean_status == "FAILED" else None,
+        sent_at=sent_at or (now_ist if clean_status == "SENT" else None),
+        failed_at=now_ist if clean_status == "FAILED" else None,
         error_code=error_code,
         error_message=error_message,
         payload_snapshot=payload_snapshot
@@ -154,7 +155,7 @@ def finalize_execution(
     execution.failed_count = failed_cnt
     execution.skipped_count = skipped_cnt
     execution.status = eff_status
-    execution.completed_at = datetime.utcnow()
+    execution.completed_at = get_indian_time()
     if overall_error:
         execution.error_message = overall_error
     elif failed_cnt > 0 or uncertain_cnt > 0:
@@ -313,7 +314,7 @@ def update_job_target(
     if is_active is not None:
         row.is_active = is_active
 
-    row.updated_at = datetime.utcnow()
+    row.updated_at = get_indian_time()
     db.commit()
     db.refresh(row)
     return row

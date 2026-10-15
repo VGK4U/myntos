@@ -364,7 +364,7 @@ class MobileCallNotifier:
         if platform == "android" and fcm_key and os.path.exists(fcm_key):
             res = cls._send_fcm_v1(token, payload, fcm_key)
             record = {
-                "dispatched_at": datetime.utcnow().isoformat(),
+                "dispatched_at": get_indian_time().isoformat(),
                 "platform": token_obj.platform,
                 "token_type": token_obj.token_type,
                 "token_suffix": token_obj.push_token[-8:] if token_obj.push_token else "",
@@ -378,7 +378,7 @@ class MobileCallNotifier:
         elif platform == "ios" and apns_key and os.path.exists(apns_key):
             res = cls._send_apns_voip(token, payload, apns_key)
             record = {
-                "dispatched_at": datetime.utcnow().isoformat(),
+                "dispatched_at": get_indian_time().isoformat(),
                 "platform": token_obj.platform,
                 "token_type": token_obj.token_type,
                 "token_suffix": token_obj.push_token[-8:] if token_obj.push_token else "",
@@ -401,7 +401,7 @@ class MobileCallNotifier:
     ) -> Dict[str, Any]:
         """Mock/Diagnostic delivery recording dispatch telemetry."""
         record = {
-            "dispatched_at": datetime.utcnow().isoformat(),
+            "dispatched_at": get_indian_time().isoformat(),
             "platform": token_obj.platform,
             "token_type": token_obj.token_type,
             "token_suffix": token_obj.push_token[-8:] if token_obj.push_token else "",

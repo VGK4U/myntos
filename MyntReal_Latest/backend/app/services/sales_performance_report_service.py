@@ -3,6 +3,7 @@ DC_SALES_PERF_REPORT_001 — Bi-Hourly Sales Performance Report & Leaderboard Ge
 Generates bi-hourly updates (9:30 AM - 7:30 PM IST) with comparison against previous updates.
 """
 
+from app.core.timezone import get_indian_time
 import os
 import re
 import json
@@ -617,7 +618,7 @@ def dispatch_bi_hourly_sales_performance_report(
             message_body=f"Sales Performance Report ({slot_name} by {triggered_by})",
             initial_status="sent" if finalized_exec.sent_count > 0 else "failed",
             current_status="sent" if finalized_exec.sent_count > 0 else "failed",
-            sent_at=datetime.utcnow(),
+            sent_at=get_indian_time(),
             job_id="wa_bihourly_sales_perf_report",
             execution_id=execution.id
         )

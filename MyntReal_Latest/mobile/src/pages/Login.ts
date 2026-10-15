@@ -62,10 +62,15 @@ export class LoginPage {
 
   async init(): Promise<void> {
     await portalService.init();
-    this.selectedPortal = portalService.getPortal();
-    if (this.selectedPortal === 'mnr') {
+    if (this.isZynovaOrSaaSDomain()) {
       this.selectedPortal = 'staff';
       await portalService.setPortal('staff');
+    } else {
+      this.selectedPortal = portalService.getPortal();
+      if (this.selectedPortal === 'mnr') {
+        this.selectedPortal = 'staff';
+        await portalService.setPortal('staff');
+      }
     }
     
     const biometric = await authService.checkBiometricAvailability();
@@ -77,7 +82,9 @@ export class LoginPage {
     this.render();
     this.attachEventListeners();
     
-    this.loadAnnouncements();
+    if (!this.isZynovaOrSaaSDomain()) {
+      this.loadAnnouncements();
+    }
   }
 
   private injectStyles(): void {
@@ -685,6 +692,21 @@ export class LoginPage {
     }
   }
 
+  private isZynovaOrSaaSDomain(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = (window.location.hostname || APP_CONFIG.DOMAIN || '').toLowerCase();
+    const search = (window.location.search || '').toLowerCase();
+    return (
+      host.includes('zynovaos.com') ||
+      host.includes('zynova.com') ||
+      host.includes('zynova') ||
+      search.includes('domain=zynova') ||
+      search.includes('tenant=zynova') ||
+      search.includes('saas=true') ||
+      localStorage.getItem('mnr_domain_type') === 'zynova'
+    );
+  }
+
   private getPortalConfig() {
     return portalService.portals[this.selectedPortal];
   }
@@ -700,6 +722,9 @@ export class LoginPage {
   }
 
   private getHeaderLogo(): string {
+    if (this.isZynovaOrSaaSDomain()) {
+      return `<img src="assets/zynova-os-logo.png" onerror="this.onerror=null;this.src='zynova-os-logo.png';" alt="ZYNOVA OS" class="header-logo" style="max-width: 200px; height: 50px; object-fit: contain;">`;
+    }
     if (this.activeTab === 'announcements' || this.selectedPortal === 'mnr') {
       return `<img src="assets/mnr-logo.png" alt="MNR" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;
     }
@@ -710,6 +735,9 @@ export class LoginPage {
   }
 
   private getHeaderTitle(): string {
+    if (this.isZynovaOrSaaSDomain()) {
+      return 'ZYNOVA OS';
+    }
     if (this.activeTab === 'announcements') {
       return 'MNR Announcements';
     }
@@ -724,6 +752,7 @@ export class LoginPage {
 
   private render(): void {
     const config = this.getPortalConfig();
+    const isZynova = this.isZynovaOrSaaSDomain();
     
     this.container.innerHTML = `
       <div class="login-container">
@@ -732,27 +761,29 @@ export class LoginPage {
             ${this.getHeaderLogo()}
           </div>
           <h1 class="app-title">${this.getHeaderTitle()}</h1>
-          <p class="app-subtitle">${this.activeTab === 'login' ? 'Select Portal' : 'Recent Updates'}</p>
+          <p class="app-subtitle">${isZynova ? 'Business Management System' : (this.activeTab === 'login' ? 'Select Portal' : 'Recent Updates')}</p>
         </div>
 
-        <div class="main-tabs">
-          <button class="main-tab ${this.activeTab === 'login' ? 'active' : ''}" data-main-tab="login">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-            <span>Login</span>
-          </button>
-          <button class="main-tab ${this.activeTab === 'announcements' ? 'active' : ''}" data-main-tab="announcements">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <span>Announcements</span>
-          </button>
-        </div>
+        ${isZynova ? '' : `
+          <div class="main-tabs">
+            <button class="main-tab ${this.activeTab === 'login' ? 'active' : ''}" data-main-tab="login">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              <span>Login</span>
+            </button>
+            <button class="main-tab ${this.activeTab === 'announcements' ? 'active' : ''}" data-main-tab="announcements">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span>Announcements</span>
+            </button>
+          </div>
+        `}
 
-        ${this.activeTab === 'login' ? this.renderLoginContent(config) : this.renderAnnouncementsTab()}
+        ${(!isZynova && this.activeTab === 'announcements') ? this.renderAnnouncementsTab() : this.renderLoginContent(config)}
 
         <div class="login-footer">
           <p class="version" id="versionTap">${APP_CONFIG.getVersionString()}</p>
@@ -764,30 +795,48 @@ export class LoginPage {
   }
 
   private renderLoginContent(config: any): string {
+    const isZynova = this.isZynovaOrSaaSDomain();
+    const idLabel = isZynova ? 'Employee ID / Email' : config.idLabel;
+    const idPlaceholder = isZynova ? 'Enter Employee ID or Email' : config.idPlaceholder;
+
     return `
-      <div class="portal-tabs">
-        <button class="portal-tab ${this.selectedPortal === 'staff' ? 'active' : ''}" data-portal="staff">
-          ${this.getPortalLogo('staff')}
-          <span>MyntReal</span>
-        </button>
-        <button class="portal-tab ${this.selectedPortal === 'vgk' ? 'active' : ''}" data-portal="vgk">
-          ${this.getPortalLogo('vgk')}
-          <span>VGK4U</span>
-        </button>
-        <button class="portal-tab ${this.selectedPortal === 'partner' ? 'active' : ''}" data-portal="partner">
-          ${this.getPortalLogo('partner')}
-          <span>Partner</span>
-        </button>
-      </div>
+      ${isZynova ? `
+        <div class="saas-portal-badge" style="display: flex; justify-content: center; align-items: center; margin-bottom: 16px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+            <i class="fas fa-building"></i> Zynova Business Portal
+          </span>
+        </div>
+      ` : `
+        <div class="portal-tabs">
+          <button class="portal-tab ${this.selectedPortal === 'staff' ? 'active' : ''}" data-portal="staff">
+            ${this.getPortalLogo('staff')}
+            <span>MyntReal</span>
+          </button>
+          <button class="portal-tab ${this.selectedPortal === 'vgk' ? 'active' : ''}" data-portal="vgk">
+            ${this.getPortalLogo('vgk')}
+            <span>VGK4U</span>
+          </button>
+          <button class="portal-tab ${this.selectedPortal === 'partner' ? 'active' : ''}" data-portal="partner">
+            ${this.getPortalLogo('partner')}
+            <span>Partner</span>
+          </button>
+        </div>
+      `}
 
       <div class="login-form card">
         <div class="input-group">
-          <label class="input-label">${config.idLabel}</label>
+          <label class="input-label">${idLabel}</label>
           <input 
             type="text" 
             id="userId" 
             class="input" 
-            placeholder="${config.idPlaceholder}"
+            placeholder="${idPlaceholder}"
+            autocapitalize="${isZynova ? 'none' : 'characters'}"
+            autocomplete="username"
+            spellcheck="false"
+            required
+          />
+        </div>
             autocapitalize="characters"
             autocomplete="username"
           />
@@ -1468,11 +1517,13 @@ export class LoginPage {
     const loginBtn = document.getElementById('loginBtn') as HTMLButtonElement;
     const enableBiometric = document.getElementById('enableBiometric') as HTMLInputElement;
 
-    const userId = userIdInput?.value.trim().toUpperCase();
+    const rawVal = userIdInput?.value.trim() || '';
+    const userId = rawVal.includes('@') ? rawVal : rawVal.toUpperCase();
     const password = passwordInput?.value;
 
+    const idDesc = this.isZynovaOrSaaSDomain() ? 'Employee ID or Email' : this.getPortalConfig().idLabel;
     if (!userId || !password) {
-      this.showError(`Please enter ${this.getPortalConfig().idLabel} and Password`);
+      this.showError(`Please enter ${idDesc} and Password`);
       return;
     }
 
@@ -1559,13 +1610,15 @@ export class LoginPage {
     } else {
       button.disabled = false;
       const config = this.getPortalConfig();
+      const isZynova = this.isZynovaOrSaaSDomain();
+      const btnTitle = isZynova ? 'Sign in to Zynova OS' : `Login to ${config.name}`;
       button.innerHTML = `
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
           <polyline points="10 17 15 12 10 7"/>
           <line x1="15" y1="12" x2="3" y2="12"/>
         </svg>
-        Login to ${config.name}
+        ${btnTitle}
       `;
     }
   }

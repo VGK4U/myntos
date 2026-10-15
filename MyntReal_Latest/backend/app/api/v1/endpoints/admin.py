@@ -2647,7 +2647,7 @@ async def generate_temp_password(
         
         temp_pwd = "Mnr@123"
         user.temp_password = SecurityManager.get_password_hash(temp_pwd)
-        user.temp_password_expires_at = datetime.utcnow() + timedelta(hours=1)
+        user.temp_password_expires_at = get_indian_time() + timedelta(hours=1)
         
         db.commit()
         

@@ -3,6 +3,7 @@ RVZ Data Recovery Center
 View and restore all soft-deleted data across the system with timestamp-based recovery
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends, Request, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -229,7 +230,7 @@ async def restore_deleted_data(
         "message": f"✅ Successfully restored {len(restored_items)} item(s)",
         "restored_items": restored_items,
         "restored_by": current_user.id,
-        "restored_at": datetime.utcnow().isoformat()
+        "restored_at": get_indian_time().isoformat()
     }
 
 

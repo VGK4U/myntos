@@ -7,6 +7,7 @@ Per-employee KPI targets: month=0/year=0 = global default for that employee.
 March 2026
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, case, text
@@ -170,7 +171,7 @@ def save_performance_config(
             detail=f"Enabled KPI weightages must total 100%. Current total: {round(enabled_weight, 2)}%"
         )
 
-    now = datetime.utcnow()
+    now = get_indian_time()
     for item in items:
         kpi_code = item.get('kpi_code', '').strip()
         if not kpi_code:
@@ -403,7 +404,7 @@ def save_employee_targets(
     if not rows:
         raise HTTPException(status_code=400, detail="targets list is required")
 
-    now = datetime.utcnow()
+    now = get_indian_time()
     saved = 0
     for row in rows:
         emp_id = row.get('employee_id')

@@ -484,7 +484,7 @@ def reset_partner_password(
         new_password_hash = SecurityManager.get_password_hash(new_password)
         
         partner.password_hash = new_password_hash
-        partner.password_changed_at = datetime.utcnow()
+        partner.password_changed_at = get_indian_time()
         partner.failed_login_attempts = 0
         partner.login_status = 'active'
         

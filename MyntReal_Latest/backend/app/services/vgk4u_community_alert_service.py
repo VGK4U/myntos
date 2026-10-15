@@ -9,6 +9,7 @@ Features:
 - Partner Payout / Commission Disbursal Congratulatory Alerts.
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import random
 import requests
@@ -47,7 +48,7 @@ def extract_invite_code(url_or_code: str) -> str:
 
 def get_dynamic_time_wish_quote() -> str:
     """Generates a dynamic greeting quote matching the current IST time of day (Morning/Afternoon/Evening)."""
-    now_utc = datetime.datetime.utcnow()
+    now_utc = get_indian_time()
     now_ist = now_utc + datetime.timedelta(hours=5, minutes=30)
     hour = now_ist.hour
 
@@ -178,7 +179,7 @@ def dispatch_daily_vgk4u_morning_wish(
                     message_body=quote[:500],
                     initial_status="sent",
                     current_status="sent",
-                    sent_at=datetime.datetime.utcnow(),
+                    sent_at=get_indian_time(),
                     job_id="vgk4u_morning_wish",
                     execution_id=exec_rec.id
                 )
@@ -247,7 +248,7 @@ def dispatch_daily_vgk4u_morning_wish(
                     message_body=quote[:500],
                     initial_status="sent",
                     current_status="sent",
-                    sent_at=datetime.datetime.utcnow(),
+                    sent_at=get_indian_time(),
                     job_id="vgk4u_morning_wish",
                     execution_id=exec_rec.id
                 )

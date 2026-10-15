@@ -4,6 +4,7 @@ Implements 1:N session history relationship (ONE CRM Lead -> MANY Sessions -> MA
 Decouples permanent customer conversation history from operational 24h Meta service windows.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Index, text
 from datetime import datetime, timedelta
 from app.models.base import Base
@@ -39,10 +40,10 @@ class WAConversation(Base):
     last_outbound_at = Column(DateTime, nullable=True)
     last_inbound_wamid = Column(String(250), nullable=True)
     
-    session_started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    session_started_at = Column(DateTime, default=get_indian_time, nullable=False)
     session_closed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<WAConversation session={self.session_uuid} lead={self.lead_id} phone={self.phone}>'
@@ -69,7 +70,7 @@ class WAMessage(Base):
     body_text = Column(Text, nullable=True)
     delivery_status = Column(String(20), nullable=False, default='QUEUED')  # QUEUED, SENT, DELIVERED, READ, FAILED
     
-    sent_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    sent_at = Column(DateTime, default=get_indian_time, nullable=False)
     delivered_at = Column(DateTime, nullable=True)
     read_at = Column(DateTime, nullable=True)
 

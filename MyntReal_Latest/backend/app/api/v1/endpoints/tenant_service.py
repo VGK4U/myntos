@@ -6,6 +6,7 @@ SaaS Tenant Multi-Company Service Management:
 - Service Queue, Ticket Intake, Spares/Procurement workflow, and Executive Service Dashboard
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import uuid
 from typing import Optional, List, Dict, Any
@@ -143,7 +144,7 @@ def create_tenant_service_ticket(
         issue_category = "General Service"
 
     ticket_code = _generate_ticket_code(db)
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     sla_deadline = now_utc + timedelta(hours=int(payload.get('tat_base_hours') or 24))
 
     raw_phone = (payload.get('customer_phone') or '').strip()
@@ -236,7 +237,7 @@ def list_tenant_service_tickets(
     tickets = query.order_by(desc(ServiceTicket.created_date)).offset((page - 1) * page_size).limit(page_size).all()
 
     items = []
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     for t in tickets:
         is_sla_breached = t.sla_deadline and t.status not in ('Closed', 'Resolved') and t.sla_deadline < now_utc
         items.append({
@@ -286,7 +287,7 @@ def update_tenant_service_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Service ticket not found or access denied.")
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
 
     if 'status' in payload and payload['status']:
         raw_st = payload['status'].strip()
@@ -359,7 +360,7 @@ def get_tenant_service_dashboard(
     spares_awaiting = db.query(func.count(ServiceTicket.id)).filter(ServiceTicket.company_id == company_id, ServiceTicket.sub_status == 'awaiting_spares').scalar() or 0
     completed = db.query(func.count(ServiceTicket.id)).filter(ServiceTicket.company_id == company_id, ServiceTicket.status.in_(['Resolved', 'Closed'])).scalar() or 0
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     sla_breaches = db.query(func.count(ServiceTicket.id)).filter(
         ServiceTicket.company_id == company_id,
         ServiceTicket.status.notin_(['Closed', 'Resolved']),

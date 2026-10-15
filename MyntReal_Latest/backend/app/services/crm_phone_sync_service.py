@@ -19,6 +19,7 @@ Responsibilities:
 6. Atomicity: Operates strictly within caller's transaction; no premature commits.
 """
 
+from app.core.timezone import get_indian_time
 import re
 import logging
 from datetime import datetime
@@ -89,7 +90,7 @@ def sync_lead_phone_identities(
     ).all()
     existing_by_norm: Dict[str, CRMLeadPhone] = {a.phone_norm: a for a in existing_assocs}
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     primary_assoc: Optional[CRMLeadPhone] = None
     alternate_assoc: Optional[CRMLeadPhone] = None
 

@@ -3,6 +3,7 @@ Financial Reports System - Comprehensive Revenue, TDS, and Company Earnings
 Super Admin/Finance Admin analytics and reporting endpoints
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
@@ -47,7 +48,7 @@ async def revenue_dashboard(
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
     else:
-        end = datetime.utcnow()
+        end = get_indian_time()
         start = end - timedelta(days=days)
     
     # Get pending incomes for revenue calculation
@@ -182,7 +183,7 @@ async def mark_tds_paid(
         raise HTTPException(status_code=404, detail="TDS record not found")
     
     tds.payment_status = 'Paid'
-    tds.payment_date = datetime.utcnow()
+    tds.payment_date = get_indian_time()
     tds.payment_reference = payment_reference
     
     db.commit()
@@ -209,7 +210,7 @@ async def cost_calculations_report(
     #     raise HTTPException(status_code=403, detail="Admin access required")
     _require_staff(current_user)
     
-    end_date = datetime.utcnow()
+    end_date = get_indian_time()
     start_date = end_date - timedelta(days=days)
     
     calculations = db.query(DailyCostCalculation).filter(
@@ -275,7 +276,7 @@ async def company_earnings_report(
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
     else:
-        end = datetime.utcnow()
+        end = get_indian_time()
         start = end - timedelta(days=days)
     
     earnings = db.query(CompanyEarnings).filter(
@@ -342,7 +343,7 @@ async def consolidated_income_report(
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
     else:
-        end = datetime.utcnow()
+        end = get_indian_time()
         start = end - timedelta(days=days)
     
     query = db.query(PendingIncome).filter(

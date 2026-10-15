@@ -5,6 +5,7 @@ Supports: English, Hindi, Telugu
 Portals: Staff, Partner
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
@@ -1810,7 +1811,7 @@ def _rb_query_today_leads(db: Session) -> Dict:
         from app.models.crm import CRMLead
         from sqlalchemy import or_
         today_date = today_ist()
-        start_of_today_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30)
+        start_of_today_utc = get_indian_time().replace(hour=0, minute=0, second=0, microsecond=0)
 
         leads = db.query(CRMLead).filter(
             or_(

@@ -363,7 +363,7 @@ def dispatch_daily_morning_wishes(
     # ── 3-Day (72-Hour) Deduplication Window ──────────────────────────────────
     # User Rule: Everyday wishes are not required. Each contact should receive wishes
     # at most once every 3 days (72 hours).
-    three_days_ago_utc = datetime.utcnow() - timedelta(days=3)
+    three_days_ago_utc = get_indian_time() - timedelta(days=3)
 
     msg_log_numbers = set(
         ''.join(c for c in (r[0] or '') if c.isdigit())[-10:]

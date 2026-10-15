@@ -3423,7 +3423,7 @@ async def cancel_partner_invoice(
         raise HTTPException(status_code=404, detail="Invoice not found or not cancellable")
     inv.status = "CANCELLED"
     inv.cancellation_reason = body.get("reason", "Cancelled by partner")
-    inv.cancelled_at = datetime.utcnow()
+    inv.cancelled_at = get_indian_time()
     db.commit()
     return {"success": True, "message": "Invoice cancelled"}
 
@@ -3492,7 +3492,7 @@ async def validate_partner_coupon(
     from datetime import datetime as dt
     coupon_code = code.strip().upper()
     today = date.today()
-    now = dt.utcnow()
+    now = get_indian_time()
 
     # 1. Check sales_coupon_master (admin-created promo codes)
     sc = db.query(SalesCouponMaster).filter(
@@ -3600,7 +3600,7 @@ async def apply_partner_coupon(
     from datetime import datetime as dt
     coupon_code = body.get("coupon_code", "").strip().upper()
     today = date.today()
-    now = dt.utcnow()
+    now = get_indian_time()
 
     coupon_pct = None
     resolved_code = coupon_code

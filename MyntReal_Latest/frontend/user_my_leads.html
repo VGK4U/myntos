@@ -695,11 +695,13 @@ body { overflow-x: visible !important; }
 
     // DC Protocol (Apr 2026): Read-only stage badge — shows pipeline/B2B stage set by staff.
     const _PIPELINE_LABELS = {
+        first_payment_received:'1st Payment',
         documents_pending:'Docs Pending', application_submitted:'App Submitted',
         pending_with_bank:'With Bank', loan_rejected:'Loan Rejected',
         documents_issue:'Docs Issue', load_extension:'Load Ext',
-        electricity_bill_change:'Bill Change', installation_pending:'Install Pending',
-        net_meter_pending:'Net Meter', subsidy_pending:'Subsidy Pending',
+        eb_cust:'EB Cust.', eb_staff:'EB Staff', electricity_bill_change:'EB Cust.', installation_pending:'Install Pending',
+        installed:'Installed', dcr_pending:'DCR Pending', discom_pending:'Discom Pending',
+        net_meter_pending:'Net Meter', balance_pending:'Bal. Pending', balance_received:'Bal. Received', subsidy_pending:'Subsidy Pending',
         completed:'Completed', not_interested:'Not Interested', cancelled:'Cancelled',
         different_vendor:'Diff. Vendor'
     };

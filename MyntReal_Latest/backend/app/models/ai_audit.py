@@ -3,6 +3,7 @@ AI Action Audit & Cost Control Models (Release 1A Engine)
 Provides audit logs for every AI recommendation/action and token/cost telemetry per company/vertical.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Text, Float, JSON, DateTime, ForeignKey, Index, Boolean
 from datetime import datetime
 from app.models.base import Base
@@ -32,7 +33,7 @@ class AIActionLog(Base):
     human_override = Column(Boolean, nullable=False, default=False)
     
     correlation_id = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
 
 class AIUsageLog(Base):
@@ -55,4 +56,4 @@ class AIUsageLog(Base):
     estimated_cost_usd = Column(Float, nullable=False, default=0.000000)
     latency_ms = Column(Integer, nullable=False, default=0)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)

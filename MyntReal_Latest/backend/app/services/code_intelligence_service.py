@@ -6,6 +6,7 @@ pure-python code search fallback, 16-point multi-platform impact evaluation, git
 secret redaction, patch diff generation, and 1-click rollback.
 """
 
+from app.core.timezone import get_indian_time
 import os, re, json, ast, subprocess, logging, hashlib
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -289,7 +290,7 @@ class CodeIntelligenceService:
             raise ValueError(f"Target content snippet not found in {rel_path}")
 
         modified_code = original_code.replace(target_content, replacement_content, 1)
-        proposal_id = f"prop_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{hashlib.md5(target_content.encode()).hexdigest()[:6]}"
+        proposal_id = f"prop_{get_indian_time().strftime('%Y%m%d%H%M%S')}_{hashlib.md5(target_content.encode()).hexdigest()[:6]}"
         impact = CodeIntelligenceService.evaluate_16point_impact(reason, [rel_path])
 
         diff_lines = [
@@ -315,7 +316,7 @@ class CodeIntelligenceService:
             "modified_code_snapshot": modified_code,
             "impact_report": impact,
             "risk_level": impact["regression_risk"],
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": get_indian_time().isoformat()
         }
 
     @staticmethod
@@ -344,7 +345,7 @@ class CodeIntelligenceService:
             "proposal_id": proposal["proposal_id"],
             "target_file": rel_path,
             "backup_file": backup_file,
-            "applied_at": datetime.utcnow().isoformat()
+            "applied_at": get_indian_time().isoformat()
         }
 
     @staticmethod
@@ -368,7 +369,7 @@ class CodeIntelligenceService:
             "success": True,
             "proposal_id": proposal_id,
             "target_file": target_file,
-            "restored_at": datetime.utcnow().isoformat()
+            "restored_at": get_indian_time().isoformat()
         }
 
     @staticmethod
@@ -386,7 +387,7 @@ class CodeIntelligenceService:
                 "exit_code": res.returncode,
                 "stdout": redact_secrets(res.stdout[:2000]),
                 "stderr": redact_secrets(res.stderr[:1000]),
-                "executed_at": datetime.utcnow().isoformat()
+                "executed_at": get_indian_time().isoformat()
             }
         except Exception as e:
             return {
@@ -413,5 +414,5 @@ class CodeIntelligenceService:
         return {
             "overall_status": "PASS" if all_pass else "PASS_WITH_WARNINGS",
             "checklist": checks,
-            "evaluated_at": datetime.utcnow().isoformat()
+            "evaluated_at": get_indian_time().isoformat()
         }

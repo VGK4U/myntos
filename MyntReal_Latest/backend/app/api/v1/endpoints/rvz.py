@@ -2589,7 +2589,7 @@ async def update_terms_and_conditions(
             settings.tc_version = request_data.version
         if request_data.max_displays is not None:
             settings.tc_max_displays = request_data.max_displays
-        settings.tc_last_updated = datetime.utcnow()
+        settings.tc_last_updated = get_indian_time()
         settings.tc_updated_by = current_user.id
         
         db.commit()
@@ -2826,7 +2826,7 @@ async def reset_production_earnings(
             resource_type='SystemWide',
             resource_id='production_reset',
             details={
-                "reset_timestamp": datetime.utcnow().isoformat(),
+                "reset_timestamp": get_indian_time().isoformat(),
                 "reset_by": current_user.id,
                 "reason": request_data.reason,
                 "method": "Date-based filtering",
@@ -2840,7 +2840,7 @@ async def reset_production_earnings(
             "success": True,
             "message": "Income Reset Applied Successfully - All endpoints now use Oct 11 date filter",
             "data": {
-                "reset_timestamp": datetime.utcnow().isoformat(),
+                "reset_timestamp": get_indian_time().isoformat(),
                 "reset_by": current_user.name,
                 "tables_reset": reset_results
             }
@@ -4969,7 +4969,7 @@ async def activate_tc_version(
             details={
                 "new_active_version": version,
                 "old_active_version": old_active_version,
-                "activated_at": datetime.utcnow().isoformat()
+                "activated_at": get_indian_time().isoformat()
             },
             ip_address=None
         )
@@ -4980,7 +4980,7 @@ async def activate_tc_version(
             "data": {
                 "active_version": version,
                 "previous_version": old_active_version,
-                "activated_at": datetime.utcnow().isoformat(),
+                "activated_at": get_indian_time().isoformat(),
                 "activated_by": current_user.id
             }
         }
@@ -5390,13 +5390,13 @@ async def rvz_approve_banner(
         if action == "approve":
             banner.status = "Active" if banner_type == "image" else "Approved"
             banner.approved_by = current_user.id
-            banner.approved_date = datetime.utcnow()
+            banner.approved_date = get_indian_time()
             if banner_type == "popup":
                 banner.is_active = True
         else:
             banner.status = "Rejected"
             banner.approved_by = current_user.id
-            banner.approved_date = datetime.utcnow()
+            banner.approved_date = get_indian_time()
             if banner_type == "popup":
                 banner.rejection_reason = notes
         
@@ -5465,13 +5465,13 @@ async def rvz_pause_banner(
             # CustomBanner model: Only has is_active field (no status)
             banner.is_active = False
             # Set end date to prevent rendering
-            banner.show_end_date = datetime.utcnow()
+            banner.show_end_date = get_indian_time()
         elif banner_type == "popup":
             # PopupMessage model: Has BOTH status and is_active
             banner.status = "Paused"
             banner.is_active = False
             # Set end date to prevent rendering
-            banner.show_end_date = datetime.utcnow()
+            banner.show_end_date = get_indian_time()
         
         db.commit()
         
@@ -5537,13 +5537,13 @@ async def rvz_stop_banner(
             # CustomBanner model: Only has is_active field (no status)
             banner.is_active = False
             # Set end date to prevent rendering
-            banner.show_end_date = datetime.utcnow()
+            banner.show_end_date = get_indian_time()
         elif banner_type == "popup":
             # PopupMessage model: Has BOTH status and is_active
             banner.status = "Stopped"
             banner.is_active = False
             # Set end date to prevent rendering
-            banner.show_end_date = datetime.utcnow()
+            banner.show_end_date = get_indian_time()
         
         db.commit()
         
@@ -5606,22 +5606,22 @@ async def rvz_resume_banner(
             banner.status = "Active"
             # Extend end date by 30 days or clear if paused (critical for visibility)
             if hasattr(banner, 'show_end_date'):
-                if banner.show_end_date and banner.show_end_date < datetime.utcnow():
-                    banner.show_end_date = datetime.utcnow() + timedelta(days=30)
+                if banner.show_end_date and banner.show_end_date < get_indian_time():
+                    banner.show_end_date = get_indian_time() + timedelta(days=30)
                 elif not banner.show_end_date:
                     # If no end date, set far future to ensure visibility
-                    banner.show_end_date = datetime.utcnow() + timedelta(days=365)
+                    banner.show_end_date = get_indian_time() + timedelta(days=365)
         elif banner_type == "custom":
             banner.is_active = True
             # Extend end date by 30 days or set to far future if not set
-            if banner.show_end_date and banner.show_end_date < datetime.utcnow():
-                banner.show_end_date = datetime.utcnow() + timedelta(days=30)
+            if banner.show_end_date and banner.show_end_date < get_indian_time():
+                banner.show_end_date = get_indian_time() + timedelta(days=30)
         elif banner_type == "popup":
             banner.status = "Active"
             banner.is_active = True
             # Extend end date by 30 days or set to far future if not set
-            if banner.show_end_date and banner.show_end_date < datetime.utcnow():
-                banner.show_end_date = datetime.utcnow() + timedelta(days=30)
+            if banner.show_end_date and banner.show_end_date < get_indian_time():
+                banner.show_end_date = get_indian_time() + timedelta(days=30)
         
         db.commit()
         

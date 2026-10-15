@@ -397,14 +397,15 @@ class CRMAssigneeSearch {
             return;
         }
         
-        this.selectedValue = { id, name, code };
+        const displayName = name || code || `ID: ${id}`;
+        this.selectedValue = { id, name: displayName, code: code || '' };
         
         const selectedDiv = document.getElementById(this.selectedId);
         const inputWrapper = document.getElementById(this.inputId + '_wrapper');
         const hiddenInput = document.getElementById(this.hiddenId);
         
         if (selectedDiv) {
-            selectedDiv.querySelector('.selected-name').textContent = name;
+            selectedDiv.querySelector('.selected-name').textContent = displayName;
             selectedDiv.querySelector('.selected-code').textContent = code ? `(${code})` : '';
             selectedDiv.classList.remove('d-none');
         }

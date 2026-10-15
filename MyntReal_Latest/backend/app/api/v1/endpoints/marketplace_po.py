@@ -185,7 +185,7 @@ class POCouponUpdate(BaseModel):
 
 def _generate_po_number(db: Session, company_id: int) -> tuple[str, int]:
     """Generate unique ZYPO-YYYYMM-NNNN number. Returns (po_number, count)."""
-    ym = datetime.utcnow().strftime('%Y%m')
+    ym = get_indian_time().strftime('%Y%m')
     prefix = f'ZYPO-{ym}-'
     db.execute(text("SET LOCAL statement_timeout = '60s'"))  # DC: override any shorter global timeout
     count_row = db.execute(text(
@@ -202,7 +202,7 @@ def _generate_po_number(db: Session, company_id: int) -> tuple[str, int]:
 
 def _generate_proc_number(db: Session, company_id: int) -> str:
     """Generate unique ZYPR-YYYYMM-NNNN procurement number."""
-    ym = datetime.utcnow().strftime('%Y%m')
+    ym = get_indian_time().strftime('%Y%m')
     prefix = f'ZYPR-{ym}-'
     db.execute(text("SET LOCAL statement_timeout = '60s'"))  # DC: override any shorter global timeout
     count_row = db.execute(text(
@@ -582,7 +582,7 @@ def create_purchase_order(request: Request, payload: CreatePORequest = Body(...)
             discount_name=payload.discount_name,
             discount_coupon_id=payload.discount_coupon_id,
             coupon_entered_by_staff_id=payload.coupon_entered_by_staff_id,
-            coupon_entered_at=datetime.utcnow() if payload.discount_coupon_id else None,
+            coupon_entered_at=get_indian_time() if payload.discount_coupon_id else None,
             total_items=total_items,
             total_ordered_qty=total_ordered_qty,
             total_value=total_value,
@@ -1265,7 +1265,7 @@ def update_dispatch(
     elif any_dispatched:
         po.status = 'partial_dispatch'
 
-    po.updated_at = datetime.utcnow()
+    po.updated_at = get_indian_time()
     db.commit()
 
     summary = _get_dispatch_summary(db, po_id)
@@ -1406,8 +1406,8 @@ def update_procurement(
     if payload.procurement_notes:
         rec.procurement_notes = payload.procurement_notes
     rec.actioned_by = actor_id
-    rec.actioned_at = datetime.utcnow()
-    rec.updated_at = datetime.utcnow()
+    rec.actioned_at = get_indian_time()
+    rec.updated_at = get_indian_time()
 
     if payload.received_qty is not None and payload.received_qty >= 0:
         rec.received_qty = payload.received_qty
@@ -1452,7 +1452,7 @@ def update_po_status(
         raise HTTPException(status_code=404, detail='PO not found')
 
     actor_id = current_user.id if hasattr(current_user, 'id') else None
-    now = datetime.utcnow()
+    now = get_indian_time()
 
     po.status = payload.status
     if payload.notes:
@@ -1550,7 +1550,7 @@ def update_po_addresses(
         if payload.ship_address is not None:
             po.ship_address = payload.ship_address
 
-    po.updated_at = datetime.utcnow()
+    po.updated_at = get_indian_time()
     db.commit()
     return {'success': True, 'po_id': po_id, 'po_number': po.po_number}
 
@@ -1616,7 +1616,7 @@ def update_po_coupon(
 
     po.discount_coupon_id         = payload.discount_coupon_id
     po.coupon_entered_by_staff_id = staff_id if not removing else None
-    po.coupon_entered_at          = datetime.utcnow() if not removing else None
+    po.coupon_entered_at          = get_indian_time() if not removing else None
 
     if removing:
         po.discount_mode = None
@@ -1651,7 +1651,7 @@ def update_po_coupon(
     # Recalculate all item prices and get new PO total
     new_total = _recalc_po_items(db, po_id, discount_pct)
     po.total_value = new_total
-    po.updated_at  = datetime.utcnow()
+    po.updated_at  = get_indian_time()
     db.commit()
 
     staff_name = None
@@ -1834,7 +1834,7 @@ def add_po_item(
         # ────────────────────────────────────────────────────────────────
 
     _refresh_po_totals(db, po)
-    po.updated_at = datetime.utcnow()
+    po.updated_at = get_indian_time()
     db.commit()
 
     return {'success': True, 'item': po_item.to_dict(), 'procurement_required': procurement_required}
@@ -1883,7 +1883,7 @@ def update_po_item(
     item.procurement_required = stock_available < item.ordered_qty
 
     _refresh_po_totals(db, po)
-    po.updated_at = datetime.utcnow()
+    po.updated_at = get_indian_time()
     db.commit()
 
     return {'success': True, 'item': item.to_dict()}
@@ -1912,7 +1912,7 @@ def delete_po_item(
     db.flush()
 
     _refresh_po_totals(db, po)
-    po.updated_at = datetime.utcnow()
+    po.updated_at = get_indian_time()
     db.commit()
 
     return {'success': True, 'deleted_item_id': item_id}
@@ -1935,8 +1935,8 @@ def assign_po_manager(
     if not emp:
         raise HTTPException(status_code=404, detail='Staff member not found')
     po.store_manager_id = payload.store_manager_id
-    po.store_manager_assigned_at = datetime.utcnow()
-    po.updated_at = datetime.utcnow()
+    po.store_manager_assigned_at = get_indian_time()
+    po.updated_at = get_indian_time()
     db.commit()
     return {'success': True, 'po_id': po_id, 'store_manager_id': po.store_manager_id,
             'store_manager_name': emp.full_name}
@@ -1959,7 +1959,7 @@ def assign_procurement_manager(
     if not emp:
         raise HTTPException(status_code=404, detail='Staff member not found')
     rec.store_manager_id = payload.store_manager_id
-    rec.updated_at = datetime.utcnow()
+    rec.updated_at = get_indian_time()
     db.commit()
     return {'success': True, 'id': req_id, 'store_manager_id': rec.store_manager_id,
             'store_manager_name': emp.full_name}
@@ -2045,7 +2045,7 @@ def record_po_payment(
     if mode not in valid_modes:
         raise HTTPException(status_code=400, detail=f'Invalid payment_mode. Must be one of: {sorted(valid_modes)}')
 
-    now = datetime.utcnow()
+    now = get_indian_time()
     try:
         txn_date = datetime.fromisoformat(payload.transaction_date) if payload.transaction_date else now
     except ValueError:
@@ -2071,7 +2071,7 @@ def record_po_payment(
     income_entry_id = None
     ie_number = None
     if income_source:
-        year_prefix = f"IE-{datetime.utcnow().year}-"
+        year_prefix = f"IE-{get_indian_time().year}-"
         row = db.execute(_text("SELECT COUNT(*) FROM income_entries WHERE entry_number LIKE :pfx"),
                          {'pfx': year_prefix + '%'}).fetchone()
         ie_number = f"{year_prefix}{(int(row[0]) if row else 0) + 1:05d}"
@@ -2278,7 +2278,7 @@ def update_product_stock(
 
     # WRITE
     item.available_qty = payload.available_qty
-    item.updated_at    = datetime.utcnow()
+    item.updated_at    = get_indian_time()
     db.commit()
 
     staff_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user)
@@ -2452,7 +2452,7 @@ def generate_product_image(
         # Store as data URL in image_data
         data_url = f'data:image/png;base64,{image_b64}'
         item.image_data = [{'url': data_url, 'thumb': data_url, 'source': 'gemini_ai'}]
-        item.updated_at = datetime.utcnow()
+        item.updated_at = get_indian_time()
         db.commit()
 
         return {

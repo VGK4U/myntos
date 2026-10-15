@@ -3,6 +3,7 @@ Award Management API Endpoints for FastAPI
 Handles Direct Awards, Matching Awards, and Bonanza campaign management
 """
 
+from app.core.timezone import get_indian_time
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -543,9 +544,9 @@ async def create_direct_award_tier(
         price_range_to=data.price_range_to,
         actual_price=data.actual_price,
         cumulative_required=data.cumulative_required,
-        created_at=datetime.utcnow(),
+        created_at=get_indian_time(),
         last_updated_by=_resolve_actor_id(current_user),
-        last_updated_at=datetime.utcnow()
+        last_updated_at=get_indian_time()
     )
     
     db.add(new_tier)
@@ -603,13 +604,13 @@ async def update_direct_award_tier(
         tier.price_range_to = data.price_range_to
     if data.actual_price is not None:
         tier.actual_price = data.actual_price
-        tier.price_last_updated_at = datetime.utcnow()
+        tier.price_last_updated_at = get_indian_time()
         tier.price_last_updated_by = _resolve_actor_id(current_user)
     if data.cumulative_required is not None:
         tier.cumulative_required = data.cumulative_required
     
     tier.last_updated_by = _resolve_actor_id(current_user)
-    tier.last_updated_at = datetime.utcnow()
+    tier.last_updated_at = get_indian_time()
     
     db.commit()
     db.refresh(tier)
@@ -683,9 +684,9 @@ async def create_matching_award_tier(
         price_range_to=data.price_range_to,
         actual_price=data.actual_price,
         cumulative_required=data.cumulative_required,
-        created_at=datetime.utcnow(),
+        created_at=get_indian_time(),
         last_updated_by=_resolve_actor_id(current_user),
-        last_updated_at=datetime.utcnow()
+        last_updated_at=get_indian_time()
     )
     
     db.add(new_tier)
@@ -743,13 +744,13 @@ async def update_matching_award_tier(
         tier.price_range_to = data.price_range_to
     if data.actual_price is not None:
         tier.actual_price = data.actual_price
-        tier.price_last_updated_at = datetime.utcnow()
+        tier.price_last_updated_at = get_indian_time()
         tier.price_last_updated_by = _resolve_actor_id(current_user)
     if data.cumulative_required is not None:
         tier.cumulative_required = data.cumulative_required
     
     tier.last_updated_by = _resolve_actor_id(current_user)
-    tier.last_updated_at = datetime.utcnow()
+    tier.last_updated_at = get_indian_time()
     
     db.commit()
     db.refresh(tier)

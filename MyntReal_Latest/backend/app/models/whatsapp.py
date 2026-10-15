@@ -3,6 +3,7 @@ WhatsApp Messaging Models
 Models for WhatsApp messaging control, message logging, and app settings
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, JSON, Numeric, text
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -68,11 +69,11 @@ class MessageLog(Base):
     status_source = Column(String(50), default='SYSTEM')  # 'SYSTEM', 'META_WEBHOOK', 'SYNTHETIC_TEST'
     
     # Timestamps
-    sent_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, default=get_indian_time)
     delivered_at = Column(DateTime)
     read_at = Column(DateTime, nullable=True)
     failed_at = Column(DateTime)
-    last_status_update = Column(DateTime, default=datetime.utcnow)
+    last_status_update = Column(DateTime, default=get_indian_time)
     
     # Error tracking
     error_code = Column(String(50))
@@ -161,8 +162,8 @@ class WhatsAppTemplate(Base):
     # Audit
     created_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     updated_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
     # Relationships
     created_by = relationship('StaffEmployee', foreign_keys=[created_by_staff_id])
@@ -233,7 +234,7 @@ class WhatsAppAutoTrigger(Base):
 
     # Audit
     updated_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
     template = relationship('WhatsAppTemplate', back_populates='auto_triggers')
     updated_by = relationship('StaffEmployee', foreign_keys=[updated_by_staff_id])
@@ -301,8 +302,8 @@ class WhatsAppCampaign(Base):
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
     paused_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
     template = relationship('WhatsAppTemplate')
     created_by = relationship('StaffEmployee', foreign_keys=[created_by_staff_id])
@@ -351,7 +352,7 @@ class WhatsAppCampaignLog(Base):
     retry_count = Column(Integer, default=0)
 
     # Timestamps
-    queued_at = Column(DateTime, default=datetime.utcnow)
+    queued_at = Column(DateTime, default=get_indian_time)
     sent_at = Column(DateTime)
     delivered_at = Column(DateTime)
     read_at = Column(DateTime)
@@ -385,7 +386,7 @@ class WAInbox(Base):
     replied         = Column(Boolean, nullable=False, default=False)
     replied_at      = Column(DateTime, nullable=True)
     replied_by_id   = Column(Integer, nullable=True)
-    received_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
+    received_at     = Column(DateTime, default=get_indian_time, nullable=False)
     raw_payload     = Column(Text, nullable=True)
 
     company_id          = Column(Integer, nullable=True, index=True)

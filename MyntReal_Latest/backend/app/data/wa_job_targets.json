@@ -64,5 +64,13 @@
       "name": "Service & Maintenance Team",
       "identifier": "https://chat.whatsapp.com/EyuAwaVoF6E6nQqC0QfiBe"
     }
+  ],
+  "har_ghar_support_report": [
+    {
+      "id": "t_har_ghar_support",
+      "type": "group",
+      "name": "Har ghar support",
+      "identifier": "Har ghar support"
+    }
   ]
 }

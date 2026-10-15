@@ -56,10 +56,12 @@ export class CategoryLeadsMasterPage {
   private currentTab: string = 'solar';
   private searchQuery: string = '';
   private selectedStatus: string = 'ALL';
+  private selectedInsurance: string = 'ALL';
   private currentPage: number = 1;
   private totalPages: number = 1;
   private totalCount: number = 0;
   private revealedPhones: Set<string> = new Set();
+  private loadSeq: number = 0;
 
   private tabs: CategoryTab[] = [
     { key: 'solar', label: 'Solar', category: 'Solar', icon: 'fa-solar-panel', badgeColor: '#f59e0b' },
@@ -81,7 +83,9 @@ export class CategoryLeadsMasterPage {
   private init(): void {
     const params = routerService.getRouteParams();
     if (params && params.tab) {
-      const matched = this.tabs.find(t => t.key.toLowerCase() === params.tab.toLowerCase());
+      const rawTab = String(params.tab).trim().toLowerCase().replace(/_/g, '-');
+      const normTab = rawTab === 'etc-training' ? 'etc' : rawTab;
+      const matched = this.tabs.find(t => t.key.toLowerCase() === normTab || t.category.toLowerCase() === String(params.tab).trim().toLowerCase());
       if (matched) {
         this.currentTab = matched.key;
       }
@@ -131,6 +135,8 @@ export class CategoryLeadsMasterPage {
   }
 
   private async loadLeads(): Promise<void> {
+    const mySeq = ++this.loadSeq;
+    const myTab = this.currentTab;
     this.loading = true;
     this.render();
 
@@ -146,10 +152,14 @@ export class CategoryLeadsMasterPage {
       if (this.selectedStatus && this.selectedStatus !== 'ALL') {
         p.set('status', this.selectedStatus);
       }
+      if (this.currentTab === 'solar' && this.selectedInsurance && this.selectedInsurance !== 'ALL') {
+        p.set('insurance_status', this.selectedInsurance);
+      }
       p.set('page', String(this.currentPage));
       p.set('per_page', '20');
 
       const resp = await apiService.get<any>(`/crm/master-leads?${p.toString()}`);
+      if (mySeq !== this.loadSeq || myTab !== this.currentTab) return;
       if (resp && resp.success !== false) {
         const d = resp.data || resp;
         this.leads = Array.isArray(d.data) ? d.data : Array.isArray(d) ? d : [];
@@ -162,11 +172,14 @@ export class CategoryLeadsMasterPage {
         this.totalPages = 1;
       }
     } catch (e) {
+      if (mySeq !== this.loadSeq || myTab !== this.currentTab) return;
       console.error('[CategoryLeadsMasterPage] Error loading leads:', e);
       this.leads = [];
     } finally {
-      this.loading = false;
-      this.render();
+      if (mySeq === this.loadSeq && myTab === this.currentTab) {
+        this.loading = false;
+        this.render();
+      }
     }
   }
 
@@ -222,6 +235,26 @@ export class CategoryLeadsMasterPage {
                 `;
               }).join('')}
             </div>
+
+            ${this.currentTab === 'solar' ? `
+              <!-- Solar Insurance Filter Row -->
+              <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; align-items:center; -webkit-overflow-scrolling:touch;">
+                <span style="font-size:10px; font-weight:700; color:#94a3b8; white-space:nowrap;"><i class="fas fa-shield-alt"></i> Insurance:</span>
+                ${[
+                  { k: 'ALL', l: 'All' },
+                  { k: 'ineligible', l: 'Ineligible' },
+                  { k: 'eligible', l: 'Eligible' },
+                  { k: 'completed', l: 'Completed' }
+                ].map(ins => {
+                  const active = this.selectedInsurance === ins.k;
+                  return `
+                    <button class="insurance-chip ${active ? 'active' : ''}" data-insurance="${ins.k}" style="background:${active ? '#2563eb' : '#0f172a'}; color:${active ? '#ffffff' : '#94a3b8'}; border:1px solid ${active ? '#3b82f6' : '#334155'}; border-radius:14px; padding:2px 9px; font-size:10.5px; font-weight:600; white-space:nowrap; cursor:pointer;">
+                      ${ins.l}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
           </div>
 
           <!-- Leads Count & Meta Line -->
@@ -289,6 +322,12 @@ export class CategoryLeadsMasterPage {
     const dealVal = lead.deal_value ? this.fmtVal(lead.deal_value) : '';
     const handler = lead.telecaller_name || lead.field_staff_name || lead.ground_source_name || '';
 
+    const rawIns = String(lead.insurance_status || '').toLowerCase();
+    const isCompletedLead = (lead.solar_pipeline_status === 'completed' || (lead.status || '').toLowerCase() === 'completed');
+    const effIns = rawIns === 'completed' ? 'completed' : (isCompletedLead || rawIns === 'eligible' ? 'eligible' : 'ineligible');
+    const insLabel = effIns === 'completed' ? 'Completed' : effIns === 'eligible' ? 'Eligible' : 'Ineligible';
+    const insColor = effIns === 'completed' ? '#34d399' : effIns === 'eligible' ? '#60a5fa' : '#94a3b8';
+
     const statusBg = status === 'WON' ? '#064e3b' : status === 'LOST' ? '#7f1d1d' : '#1e3a8a';
     const statusColor = status === 'WON' ? '#34d399' : status === 'LOST' ? '#f87171' : '#60a5fa';
 
@@ -323,10 +362,13 @@ export class CategoryLeadsMasterPage {
           ` : ''}
         </div>
 
-        <!-- Meta Details: Stage, Handlers -->
+        <!-- Meta Details: Stage, Insurance, Handlers -->
         <div style="font-size:11px; color:#94a3b8; margin-bottom:10px; display:flex; flex-direction:column; gap:2px;">
           ${formattedStage ? `
             <div><strong style="color:#cbd5e1;">Stage:</strong> <span style="color:#fbbf24; font-weight:600;">${formattedStage}</span></div>
+          ` : ''}
+          ${this.currentTab === 'solar' ? `
+            <div><strong style="color:#cbd5e1;">Insurance:</strong> <span style="color:${insColor}; font-weight:700;">${insLabel}</span>${lead.insurance_policy_no ? ` <span style="font-family:monospace; color:#cbd5e1;">(${lead.insurance_policy_no})</span>` : ''}</div>
           ` : ''}
           ${handler ? `
             <div><strong style="color:#cbd5e1;">Handler:</strong> <span style="color:#e2e8f0;">${handler}</span></div>
@@ -387,6 +429,17 @@ export class CategoryLeadsMasterPage {
         const target = e.currentTarget as HTMLElement;
         const status = target.dataset.status || 'ALL';
         this.selectedStatus = status;
+        this.currentPage = 1;
+        this.loadLeads();
+      });
+    });
+
+    // Insurance filter chips
+    this.container.querySelectorAll('.insurance-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const ins = target.dataset.insurance || 'ALL';
+        this.selectedInsurance = ins;
         this.currentPage = 1;
         this.loadLeads();
       });

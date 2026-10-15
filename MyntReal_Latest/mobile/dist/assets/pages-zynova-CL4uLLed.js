@@ -1,4 +1,4 @@
-import{b as n,u as o}from"./services-D9x5g3hf.js";import{P as a}from"./components-CoVoejYO.js";class g{container;data=null;loading=!0;constructor(e){this.container=e}async init(){this.render(),await this.loadData()}async loadData(){this.loading=!0,this.updateContent();try{const e=await n.get("/users/zynova/real-estate");e.success&&e.data&&(this.data=e.data)}catch(e){console.error("[ZynovaRealEstate] Failed to load:",e)}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
+import{b as n,u as o}from"./services-RRhe311r.js";import{P as a}from"./components-DAwRL6hz.js";class g{container;data=null;loading=!0;constructor(e){this.container=e}async init(){this.render(),await this.loadData()}async loadData(){this.loading=!0,this.updateContent();try{const e=await n.get("/users/zynova/real-estate");e.success&&e.data&&(this.data=e.data)}catch(e){console.error("[ZynovaRealEstate] Failed to load:",e)}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
       <style>
         .zynova-realestate-page {
           background: #0d1b2a;

@@ -3,6 +3,7 @@ Security module for FastAPI Backend
 JWT Authentication replacing Flask-Login while preserving User ID system
 """
 
+from app.core.timezone import get_indian_time
 import os
 import logging
 from datetime import datetime, timedelta
@@ -333,7 +334,7 @@ class SecurityManager:
             temp_password_hash = getattr(user, 'temp_password', None)
             temp_expires = getattr(user, 'temp_password_expires_at', None)
             if temp_password_hash and temp_expires:
-                if datetime.utcnow() <= temp_expires:
+                if get_indian_time() <= temp_expires:
                     password_valid = SecurityManager.verify_password(password, str(temp_password_hash))
                 else:
                     user.temp_password = None
@@ -342,7 +343,7 @@ class SecurityManager:
         if not password_valid:
             return None
         from datetime import datetime
-        setattr(user, 'last_login', datetime.utcnow())
+        setattr(user, 'last_login', get_indian_time())
         db.commit()
         
         return user

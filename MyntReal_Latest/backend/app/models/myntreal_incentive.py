@@ -653,8 +653,8 @@ class ZynovaRealEstateProfile(BaseModel):
     tier = Column(String(50), nullable=True)
     properties_count = Column(Integer, default=0)
     total_commission = Column(Numeric(15, 2), default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
 
 class ZynovaInsuranceProfile(BaseModel):
@@ -670,8 +670,8 @@ class ZynovaInsuranceProfile(BaseModel):
     tier = Column(String(50), nullable=True)
     policies_count = Column(Integer, default=0)
     total_commission = Column(Numeric(15, 2), default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
 
 class MNRAccidentalInsurance(BaseModel):

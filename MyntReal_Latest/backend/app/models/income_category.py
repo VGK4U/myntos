@@ -5,6 +5,7 @@ DC Protocol: Mirrors expense_category structure for consistency
 Created: May 2026
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -27,8 +28,8 @@ class IncomeMainCategory(BaseModel):
 
     is_active = Column(Boolean, default=True, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     sub_categories = relationship("IncomeSubCategory", back_populates="main_category", cascade="all, delete-orphan")
 
@@ -53,8 +54,8 @@ class IncomeSubCategory(BaseModel):
 
     is_active = Column(Boolean, default=True, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     main_category = relationship("IncomeMainCategory", back_populates="sub_categories")
 

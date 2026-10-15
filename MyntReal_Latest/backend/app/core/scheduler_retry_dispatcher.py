@@ -9,6 +9,7 @@ Purpose:
 - Updates scheduler_status to 'scheduled' on success
 - Provides guaranteed eventual consistency for DC Protocol compliance
 """
+from app.core.timezone import get_indian_time
 from app.core.database import SessionLocal
 from app.models.background_jobs import BackgroundJob
 from app.core.scheduler import enqueue_background_job
@@ -40,7 +41,7 @@ def retry_failed_scheduler_jobs():
     try:
         # DC: Find all jobs that failed to enqueue in APScheduler
         # Only retry jobs created in last 24 hours (prevent infinite retry of old jobs)
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        cutoff_time = get_indian_time() - timedelta(hours=24)
         
         failed_jobs = db.query(BackgroundJob).filter(
             BackgroundJob.scheduler_status == 'failed',
@@ -72,7 +73,7 @@ def retry_failed_scheduler_jobs():
                 job_func = getattr(module, job.job_handler_function)
                 
                 # DC: Generate new scheduler job ID for this retry attempt
-                scheduler_job_id = f'retry_{job.job_type}_{job.id}_{int(datetime.utcnow().timestamp())}'
+                scheduler_job_id = f'retry_{job.job_type}_{job.id}_{int(get_indian_time().timestamp())}'
                 
                 # DC: Retry APScheduler enqueue
                 enqueue_background_job(
@@ -85,7 +86,7 @@ def retry_failed_scheduler_jobs():
                 job.scheduler_status = 'scheduled'
                 job.error_message = None  # Clear error message on success
                 job.scheduler_job_id = scheduler_job_id  # Audit trail
-                job.last_scheduler_attempt = datetime.utcnow()  # Retry timestamp
+                job.last_scheduler_attempt = get_indian_time()  # Retry timestamp
                 db.commit()
                 
                 retry_success_count += 1
@@ -98,8 +99,8 @@ def retry_failed_scheduler_jobs():
                 
                 try:
                     # DC: Update error message + retry attempt metadata
-                    job.error_message = f"Scheduler retry failed: {str(e)} (last attempt: {datetime.utcnow().isoformat()})"
-                    job.last_scheduler_attempt = datetime.utcnow()  # Track failed attempt
+                    job.error_message = f"Scheduler retry failed: {str(e)} (last attempt: {get_indian_time().isoformat()})"
+                    job.last_scheduler_attempt = get_indian_time()  # Track failed attempt
                     db.commit()
                 except Exception as persist_error:
                     logger.error(f"[RETRY-DISPATCHER] Failed to persist retry failure for job {job.id}: {persist_error}")

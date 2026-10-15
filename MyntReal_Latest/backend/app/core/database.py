@@ -84,7 +84,10 @@ else:
     _allow_prod = (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1"
     try:
         _conn_timeout = 15 if _allow_prod else 5
-        _test_eng = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": _conn_timeout, "sslmode": "require"})
+        _test_connect_args = {"connect_timeout": _conn_timeout, "sslmode": "require"}
+        if sys.platform == "win32" and "myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com" in str(settings.DATABASE_URL):
+            _test_connect_args["hostaddr"] = "16.112.74.247"
+        _test_eng = create_engine(settings.DATABASE_URL, connect_args=_test_connect_args)
         _test_conn = _test_eng.connect()
         _test_conn.close()
         _test_eng.dispose()
@@ -136,6 +139,18 @@ else:
         # RDS PostgreSQL — Bound pool sized for EB auto-scale instances (max 4 instances * 12 = 48 <= 76)
         print("[DC-DB-INIT] Creating PostgreSQL engine (Bounded Pool mode - Max 12 conns/worker)...", flush=True)
 
+        _rds_connect_args = {
+            "connect_timeout": 10,
+            "sslmode": "require",
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 3,
+            "options": "-c idle_in_transaction_session_timeout=5000 -c statement_timeout=30000",
+        }
+        if sys.platform == "win32" and "myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com" in str(settings.DATABASE_URL):
+            _rds_connect_args["hostaddr"] = "16.112.74.247"
+
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
@@ -145,15 +160,7 @@ else:
             pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
-            connect_args={
-                "connect_timeout": 10,
-                "sslmode": "require",
-                "keepalives": 1,
-                "keepalives_idle": 30,
-                "keepalives_interval": 10,
-                "keepalives_count": 3,
-                "options": "-c idle_in_transaction_session_timeout=5000 -c statement_timeout=30000",
-            },
+            connect_args=_rds_connect_args,
             echo=False
         )
 

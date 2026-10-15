@@ -4,6 +4,7 @@ Stores synchronized campaign hierarchy, ad sets, ads, creatives, and API permiss
 READ-ONLY tables. Zero write operations to Meta Ads Manager permitted.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, ForeignKey, UniqueConstraint, Index
 from datetime import datetime
 from app.models.base import Base
@@ -30,8 +31,8 @@ class MetaCampaign(Base):
     start_time = Column(DateTime, nullable=True)
     stop_time = Column(DateTime, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
 
 class MetaAdSet(Base):
@@ -54,8 +55,8 @@ class MetaAdSet(Base):
     billing_event = Column(String(50), nullable=True)
     daily_budget = Column(Float, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
 
 class MetaAd(Base):
@@ -78,8 +79,8 @@ class MetaAd(Base):
     ad_fingerprint = Column(String(100), nullable=True, index=True)
     fingerprint_version = Column(Integer, nullable=False, default=1)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
 
 class MetaCreative(Base):
@@ -99,7 +100,7 @@ class MetaCreative(Base):
     call_to_action_type = Column(String(50), nullable=True)
     image_url_ref = Column(Text, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
 
 class MetaPermission(Base):
@@ -115,4 +116,4 @@ class MetaPermission(Base):
     verification_status = Column(String(100), nullable=False, default='VERIFIED')
     notes = Column(Text, nullable=True)
     
-    checked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    checked_at = Column(DateTime, default=get_indian_time, nullable=False)

@@ -404,7 +404,7 @@ class StaffEmployee(Base):
     
     def is_locked(self):
         """Check if account is currently locked"""
-        if self.locked_until and self.locked_until > datetime.utcnow():
+        if self.locked_until and self.locked_until > get_indian_time():
             return True
         return False
     

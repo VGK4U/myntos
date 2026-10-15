@@ -16,6 +16,7 @@ DC Protocol: company_id on all tables for data segregation
 WVV Protocol: Role-based visibility (Employee own, HR/Accounts all)
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
@@ -1430,7 +1431,7 @@ async def update_payroll_cycle(
         if cycle.period_end and cycle.period_start and cycle.period_end < cycle.period_start:
             raise HTTPException(status_code=400, detail="Period end date cannot be before period start date")
         
-        cycle.updated_at = datetime.utcnow()
+        cycle.updated_at = get_indian_time()
         db.commit()
         
         return {
@@ -1549,10 +1550,10 @@ async def process_payroll_cycle(
         cycle.total_gross_salary = total_gross
         cycle.total_deductions = total_deductions
         cycle.total_net_salary = total_net
-        cycle.generated_at = datetime.utcnow()
+        cycle.generated_at = get_indian_time()
         cycle.generated_by = user_id
         cycle.status = 'GENERATED'
-        cycle.updated_at = datetime.utcnow()
+        cycle.updated_at = get_indian_time()
         
         db.commit()
         
@@ -1609,9 +1610,9 @@ async def lock_payroll_cycle(
             raise HTTPException(status_code=400, detail="Cannot lock cycle without any payroll runs. Generate runs first.")
         
         cycle.status = 'LOCKED'
-        cycle.attendance_locked_at = datetime.utcnow()
+        cycle.attendance_locked_at = get_indian_time()
         cycle.attendance_locked_by = get_user_attr(current_user, 'employee_id')
-        cycle.updated_at = datetime.utcnow()
+        cycle.updated_at = get_indian_time()
         
         db.commit()
         
@@ -1830,7 +1831,7 @@ async def cancel_payroll_cycle(
         db.query(StaffPayrollRun).filter(StaffPayrollRun.cycle_id == cycle.id).update({'status': 'CANCELLED'})
         
         cycle.status = 'CANCELLED'
-        cycle.updated_at = datetime.utcnow()
+        cycle.updated_at = get_indian_time()
         
         db.commit()
         
@@ -2231,7 +2232,7 @@ async def update_payroll_run(
         if run_data.notes is not None:
             run.notes = run_data.notes
         
-        run.updated_at = datetime.utcnow()
+        run.updated_at = get_indian_time()
         db.commit()
         
         return {
@@ -2346,7 +2347,7 @@ async def recalculate_payroll_run(
         run.total_deductions = calc['deductions']['total_employee'] + other_ded_total
         run.net_salary = round(calc['earnings']['gross_salary'] - run.total_deductions, 2)
         
-        run.updated_at = datetime.utcnow()
+        run.updated_at = get_indian_time()
         db.commit()
         
         logger.info(f"[DC-PAYROLL] Run {run_id} recalculated by user {user_id}")
@@ -2552,7 +2553,7 @@ async def update_profile_allowances(
             )
         
         profile.other_components = other_components
-        profile.updated_at = datetime.utcnow()
+        profile.updated_at = get_indian_time()
         db.commit()
         
         logger.info(f"[DC-PAYROLL] Updated allowances for profile {profile_id} by user {user_id}")
@@ -2633,7 +2634,7 @@ async def add_profile_allowance(
         other_components[allowance_name] = amount
         
         profile.other_components = other_components
-        profile.updated_at = datetime.utcnow()
+        profile.updated_at = get_indian_time()
         db.commit()
         
         return {
@@ -2686,7 +2687,7 @@ async def remove_profile_allowance(
         removed_amount = other_components.pop(decoded_name)
         
         profile.other_components = other_components
-        profile.updated_at = datetime.utcnow()
+        profile.updated_at = get_indian_time()
         db.commit()
         
         return {
@@ -2930,7 +2931,7 @@ async def update_allowance_catalog_entry(
             entry.is_active = data.is_active
         
         entry.updated_by_id = user_id
-        entry.updated_at = datetime.utcnow()
+        entry.updated_at = get_indian_time()
         
         db.commit()
         db.refresh(entry)
@@ -2975,7 +2976,7 @@ async def delete_allowance_catalog_entry(
         
         entry.is_active = False
         entry.updated_by_id = user_id
-        entry.updated_at = datetime.utcnow()
+        entry.updated_at = get_indian_time()
         
         db.commit()
         
@@ -3255,7 +3256,7 @@ async def update_consultant_invoice(
         invoice.tds_amount = tds_amount
         invoice.net_payable = net_payable
         invoice.updated_by_id = user_id
-        invoice.updated_at = datetime.utcnow()
+        invoice.updated_at = get_indian_time()
         
         db.commit()
         db.refresh(invoice)
@@ -3300,7 +3301,7 @@ async def submit_consultant_invoice(
             raise HTTPException(status_code=400, detail=f"Cannot submit invoice in {invoice.status} status")
         
         invoice.status = 'SUBMITTED'
-        invoice.submitted_at = datetime.utcnow()
+        invoice.submitted_at = get_indian_time()
         invoice.updated_by_id = user_id
         
         db.commit()
@@ -3346,7 +3347,7 @@ async def approve_consultant_invoice(
         
         invoice.status = 'APPROVED'
         invoice.approved_by = user_id
-        invoice.approved_at = datetime.utcnow()
+        invoice.approved_at = get_indian_time()
         invoice.approval_remarks = remarks
         invoice.updated_by_id = user_id
         

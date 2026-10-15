@@ -4,6 +4,7 @@ Stores call records, call eligibility, call status history, transcripts, and hum
 External AI Voice dispatches remain strictly DISABLED (VOICE_AI_ENABLED = False).
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Float, JSON, ForeignKey, Index
 from datetime import datetime
 from app.models.base import Base
@@ -38,7 +39,7 @@ class VoiceCallRecord(Base):
     scheduled_at = Column(DateTime, nullable=True)
     started_at = Column(DateTime, nullable=True)
     ended_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<VoiceCallRecord id={self.id} lead={self.lead_id} status={self.status} provider={self.provider_name}>'

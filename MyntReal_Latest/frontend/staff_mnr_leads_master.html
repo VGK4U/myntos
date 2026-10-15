@@ -103,7 +103,7 @@ table.ml-table tr.lead-row:hover td{background:#f9fafb}
 .ss-rejected{background:#fee2e2;color:#991b1b}.ss-received{background:#bbf7d0;color:#065f46}.ss-bank_loan_rejected{background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4}
 .pipeline-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .ps-documents_pending{background:#fef3c7;color:#92400e}.ps-application_submitted{background:#dbeafe;color:#1e40af}.ps-pending_with_bank{background:#bfdbfe;color:#1d4ed8}
-.ps-loan_rejected{background:#fee2e2;color:#991b1b}.ps-documents_issue{background:#fed7aa;color:#c2410c}.ps-load_extension{background:#ede9fe;color:#5b21b6}
+.ps-loan_rejected{background:#fee2e2;color:#991b1b}.ps-documents_issue{background:#fed7aa;color:#c2410c}.ps-load_extension{background:#ede9fe;color:#5b21b6}.ps-eb_cust,.ps-electricity_bill_change{background:#fef9c3;color:#92400e}.ps-eb_staff{background:#fef3c7;color:#b45309}.ps-dcr_pending{background:#e0f2fe;color:#0369a1}.ps-discom_pending{background:#ede9fe;color:#6d28d9}
 .ps-subsidy_pending{background:#ccfbf1;color:#0f766e}.ps-completed{background:#bbf7d0;color:#065f46;border:1px solid #6ee7b7}.ps-not_interested{background:#f3f4f6;color:#374151}.ps-cancelled{background:#fce7f3;color:#9d174d}.ps-different_vendor{background:#f3e8ff;color:#7e22ce}.ps-bank_not_interested{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-weight:700}.ps-installed{background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800}.ps-first_payment_received{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-weight:800}
 .b2b-stage-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .bs-application_pending{background:#fef3c7;color:#92400e}.bs-agreement_pending{background:#dbeafe;color:#1e40af}.bs-gst_pending{background:#ede9fe;color:#5b21b6}
@@ -491,9 +491,12 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
       <div class="stat-card" id="pscard_loan_rejected" onclick="filterByLoanRejected()" title="Filter: Loan Rejected (pipeline + bank)"><div class="stat-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-ban"></i></div><div><div class="stat-label">Loan Rejected</div><div class="stat-value" id="ps_loan_rejected">—</div></div></div>
       <div class="stat-card" id="pscard_documents_issue" onclick="filterByPipeline('documents_issue')" title="Filter: Documents Issue"><div class="stat-icon" style="background:#fed7aa;color:#c2410c"><i class="fas fa-exclamation-triangle"></i></div><div><div class="stat-label">Docs Issue</div><div class="stat-value" id="ps_documents_issue">—</div></div></div>
       <div class="stat-card" id="pscard_load_extension" onclick="filterByPipeline('load_extension')" title="Filter: Load Extension"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6"><i class="fas fa-plug"></i></div><div><div class="stat-label">Load Ext</div><div class="stat-value" id="ps_load_extension">—</div></div></div>
-      <div class="stat-card" id="pscard_electricity_bill_change" onclick="filterByPipeline('electricity_bill_change')" title="Filter: Electricity Bill Change"><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-bolt"></i></div><div><div class="stat-label">Bill Change</div><div class="stat-value" id="ps_electricity_bill_change">—</div></div></div>
+      <div class="stat-card" id="pscard_eb_cust" onclick="filterByPipeline('eb_cust')" title="Filter: EB Cust."><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-bolt"></i></div><div><div class="stat-label">EB Cust.</div><div class="stat-value" id="ps_eb_cust">—</div></div></div>
+      <div class="stat-card" id="pscard_eb_staff" onclick="filterByPipeline('eb_staff')" title="Filter: EB Staff"><div class="stat-icon" style="background:#fef3c7;color:#b45309"><i class="fas fa-user-cog"></i></div><div><div class="stat-label">EB Staff</div><div class="stat-value" id="ps_eb_staff">—</div></div></div>
       <div class="stat-card" id="pscard_installation_pending" onclick="filterByPipeline('installation_pending')" title="Filter: Installation Pending"><div class="stat-icon" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-solar-panel"></i></div><div><div class="stat-label">Install Pending</div><div class="stat-value" id="ps_installation_pending">—</div></div></div>
       <div class="stat-card" id="pscard_installed" onclick="filterByPipeline('installed')" title="Filter: Installed (passed installation pending)"><div class="stat-icon" style="background:#dcfce7;color:#15803d"><i class="fas fa-check-double"></i></div><div><div class="stat-label">Installed</div><div class="stat-value" id="ps_installed">—</div></div></div>
+      <div class="stat-card" id="pscard_dcr_pending" onclick="filterByPipeline('dcr_pending')" title="Filter: DCR Pending"><div class="stat-icon" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-file-certificate"></i></div><div><div class="stat-label">DCR Pending</div><div class="stat-value" id="ps_dcr_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_discom_pending" onclick="filterByPipeline('discom_pending')" title="Filter: Discom Pending"><div class="stat-icon" style="background:#ede9fe;color:#6d28d9"><i class="fas fa-broadcast-tower"></i></div><div><div class="stat-label">Discom Pending</div><div class="stat-value" id="ps_discom_pending">—</div></div></div>
       <div class="stat-card" id="pscard_net_meter_pending" onclick="filterByPipeline('net_meter_pending')" title="Filter: Net Meter Pending"><div class="stat-icon" style="background:#f5f3ff;color:#5b21b6"><i class="fas fa-tachometer-alt"></i></div><div><div class="stat-label">Net Meter</div><div class="stat-value" id="ps_net_meter_pending">—</div></div></div>
       <div class="stat-card" id="pscard_balance_pending" onclick="filterByPipeline('balance_pending')" title="Filter: Balance Pending"><div class="stat-icon" style="background:#fff7ed;color:#c2410c"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-label">Bal. Pending</div><div class="stat-value" id="ps_balance_pending">—</div></div></div>
       <div class="stat-card" id="pscard_balance_received" onclick="filterByPipeline('balance_received')" title="Filter: Balance Received"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-hand-holding-usd"></i></div><div><div class="stat-label">Bal. Received</div><div class="stat-value" id="ps_balance_received">—</div></div></div>
@@ -584,6 +587,15 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
           </select>
         </div>
         <div class="fgroup solar-only" style="display:none">
+          <label>Insurance</label>
+          <select class="form-select" id="filterInsurance" style="min-width:120px" onchange="applyFilters()">
+            <option value="">All</option>
+            <option value="ineligible">⚪ Ineligible</option>
+            <option value="eligible">🟡 Eligible</option>
+            <option value="completed">🟢 Completed</option>
+          </select>
+        </div>
+        <div class="fgroup solar-only" style="display:none">
           <label>Association</label>
           <select class="form-select" id="filterAssoc" style="min-width:110px">
             <option value="">All</option>
@@ -646,9 +658,12 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <option value="loan_rejected">Loan Rejected</option>
             <option value="documents_issue">Documents Issue</option>
             <option value="load_extension">Load Extension</option>
-            <option value="electricity_bill_change">Electricity Bill Change</option>
+            <option value="eb_cust">EB Cust.</option>
+            <option value="eb_staff">EB Staff</option>
             <option value="installation_pending">Installation Pending</option>
             <option value="installed">Installed (Completed Installation)</option>
+            <option value="dcr_pending">DCR Pending</option>
+            <option value="discom_pending">Discom Pending</option>
             <option value="net_meter_pending">Net Meter Pending</option>
             <option value="balance_pending">Balance Pending</option>
             <option value="balance_received">Balance Received</option>
@@ -1033,7 +1048,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
         <div class="form-grid g3">
           <div class="form-group"><label>Full Name</label><input type="text" class="form-control" id="ef_name"></div>
           <div class="form-group"><label>Status</label>
-            <select class="form-select" id="ef_status">
+            <select class="form-select" id="ef_status" onchange="if(this.value==='completed'){const _insEl=document.getElementById('ef_insurance_status');if(_insEl&&_insEl.value==='ineligible')_insEl.value='eligible';}">
               <option value="new">New</option><option value="contacted">Contacted</option>
               <option value="interested">Interested</option><option value="qualified">Qualified</option>
               <option value="proposal">Proposal</option><option value="on_hold">On Hold</option>
@@ -1379,6 +1394,31 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
           <div class="form-group"><label>Co-App Bank Account No</label><input type="text" class="form-control" id="ef_co_applicant_bank_account" placeholder="Account number" maxlength="30"></div>
           <div class="form-group"><label>Co-App IFSC</label><input type="text" class="form-control" id="ef_co_applicant_ifsc" placeholder="IFSC code" maxlength="15" style="text-transform:uppercase"></div>
         </div>
+        <div style="margin-top:14px;padding:12px 14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px">
+          <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+            <span><i class="fas fa-shield-alt me-1" style="color:#0284c7"></i>Solar Insurance Details</span>
+            <span style="font-size:10.5px;font-weight:500;color:#64748b">Completed files are automatically Eligible for insurance</span>
+          </div>
+          <div class="form-grid g4">
+            <div class="form-group">
+              <label>Insurance Status</label>
+              <select class="form-select" id="ef_insurance_status">
+                <option value="ineligible">⚪ Ineligible</option>
+                <option value="eligible">🟡 Eligible</option>
+                <option value="completed">🟢 Completed</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Policy Number</label><input type="text" class="form-control" id="ef_insurance_policy_no" placeholder="e.g. POL-2026-00123"></div>
+            <div class="form-group"><label>Insurance Company / Provider</label><input type="text" class="form-control" id="ef_insurance_company" placeholder="e.g. HDFC ERGO / ICICI Lombard"></div>
+            <div class="form-group"><label>Sum Insured (₹)</label><input type="number" class="form-control" id="ef_insurance_sum_insured" step="0.01" min="0" placeholder="e.g. 200000"></div>
+          </div>
+          <div class="form-grid g4" style="margin-top:8px">
+            <div class="form-group"><label>Policy Start Date</label><input type="date" class="form-control" id="ef_insurance_start_date"></div>
+            <div class="form-group"><label>Policy Expiry Date</label><input type="date" class="form-control" id="ef_insurance_expiry_date"></div>
+            <div class="form-group"><label>Premium Amount (₹)</label><input type="number" class="form-control" id="ef_insurance_premium" step="0.01" min="0" placeholder="e.g. 1500"></div>
+            <div class="form-group"><label>Insurance Notes</label><input type="text" class="form-control" id="ef_insurance_notes" placeholder="Coverage remarks / claim ref…"></div>
+          </div>
+        </div>
       </div>
 
       <div class="form-section">
@@ -1717,8 +1757,8 @@ const PIPELINE_LABELS = {
   documents_pending:'Documents Pending', application_submitted:'Application Submitted',
   pending_with_bank:'With Bank', loan_rejected:'Loan Rejected',
   documents_issue:'Documents Issue', load_extension:'Load Extension',
-  electricity_bill_change:'Electricity Bill Change', installation_pending:'Installation Pending',
-  installed:'Installed',
+  eb_cust:'EB Cust.', eb_staff:'EB Staff', electricity_bill_change:'EB Cust.', installation_pending:'Installation Pending',
+  installed:'Installed', dcr_pending:'DCR Pending', discom_pending:'Discom Pending',
   net_meter_pending:'Net Meter Pending', balance_pending:'Balance Pending', balance_received:'Balance Received', subsidy_pending:'Subsidy Pending',
   completed:'Completed', not_interested:'Not Interested', cancelled:'Cancelled',
   different_vendor:'Different Vendor', bank_not_interested:'Bank Not Interested'
@@ -1768,6 +1808,7 @@ const SDOC_GROUPS = {
     {group:'Site & Technical',docs:[
       {type:'roof_top_photo',label:'Roof Top Photo'},
       {type:'geotagging_photo',label:'Geo Solar Photo'},
+      {type:'installation_photo',label:'Installation Photo'},
       {type:'geo_location_photo',label:'Geo Location Photo'},
       {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
       {type:'technical_installation_details',label:'Technical Installation Details'},
@@ -1784,6 +1825,7 @@ const SDOC_GROUPS = {
       {type:'dcr_certificate',label:'DCR Certificate'},
       {type:'invoice',label:'Invoice',generatable:true},
       {type:'installation_certificate',label:'Installation Certificate'},
+      {type:'insurance_policy',label:'Insurance Policy Document'},
       {type:'annexure_a',label:'Annexure-A',generatable:true},
       {type:'annexure_c',label:'Annexure-C (Project Completion)',generatable:true},
       {type:'annexure_c_technical',label:'Annexure-C (Technical Details)',generatable:true},
@@ -1806,6 +1848,24 @@ const SDOC_GROUPS = {
 };
 const SDOC_TOTAL_REQUIRED = Object.values(SDOC_GROUPS).reduce((s,gs)=>s+gs.reduce((s2,g)=>s2+g.docs.length,0),0);
 let _solarVendors = [];
+const INSURANCE_LABELS = { ineligible: 'Ineligible', eligible: 'Eligible', completed: 'Completed' };
+function _insuranceBadge(l) {
+  const raw = (l.insurance_status || '').toLowerCase();
+  const isCompletedLead = (l.solar_pipeline_status === 'completed' || (l.status || '').toLowerCase() === 'completed');
+  const eff = raw === 'completed' ? 'completed' : (isCompletedLead || raw === 'eligible' ? 'eligible' : 'ineligible');
+  const styles = {
+    completed: 'background:#d1fae5;color:#065f46;border:1px solid #6ee7b7',
+    eligible:  'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd',
+    ineligible:'background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db'
+  };
+  const icons = {
+    completed: '<i class="fas fa-shield-alt me-1" style="color:#059669"></i>',
+    eligible:  '<i class="fas fa-check-circle me-1" style="color:#2563eb"></i>',
+    ineligible:'<i class="fas fa-ban me-1" style="color:#9ca3af"></i>'
+  };
+  const pol = l.insurance_policy_no ? `<div style="font-size:9px;color:#374151;font-family:monospace;margin-top:2px" title="Policy: ${_crm_esc(l.insurance_policy_no)}">${_crm_esc(l.insurance_policy_no)}</div>` : '';
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;${styles[eff]||styles.ineligible}">${icons[eff]||''}${INSURANCE_LABELS[eff]||'Ineligible'}</span>${pol}`;
+}
 
 function _crm_esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function _commentCell(l){
@@ -2014,6 +2074,7 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
         <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('insurance_status')">Insurance<span class="sort-icon"></span></th>
         <th>Comments</th>
       </tr>`;
     } else {
@@ -2036,6 +2097,7 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
         <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('complete_date')" title="Sort by Complete Date">Complete Date<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('insurance_status')" title="Insurance Eligibility & Policy Status">Insurance<span class="sort-icon"></span></th>
         <th title="Panel serial numbers (up to 15) + brand, make, warranty">Panel Nos</th>
         <th title="Inverter serial number + brand, make, warranty">Inverter No</th>
         <th>Comments</th>
@@ -2204,10 +2266,12 @@ function updateSortIndicators() {
 }
 
 // ── Load CRM leads ────────────────────────────────────────────────────────
+let _loadDataSeq = 0;
+
 function buildQS() {
-  const t = TABS.find(x=>x.key===activeTab);
+  const t = TABS.find(x=>x.key===activeTab) || TABS[0];
   const p = new URLSearchParams();
-  p.set('category', t.category);
+  if (t && t.category) p.set('category', t.category);
   p.set('page', currentPage);
   p.set('per_page', perPage);
   p.set('sort_by', sortBy);
@@ -2229,6 +2293,7 @@ function buildQS() {
   // rawStatus==='all_status' → no status param → backend returns everything
   addIf('priority', document.getElementById('filterPriority')?.value);
   addIf('subsidy_status', document.getElementById('filterSubsidy')?.value);
+  addIf('insurance_status', document.getElementById('filterInsurance')?.value);
   addIf('existing_association', document.getElementById('filterAssoc')?.value);
   addIf('source', document.getElementById('filterSource')?.value?.trim());
   addIf('handler_emp_code', document.getElementById('filterHandlerCode')?.value?.trim());
@@ -2267,6 +2332,8 @@ function buildQS() {
 }
 
 async function loadData() {
+  const _mySeq = ++_loadDataSeq;
+  const _myTab = activeTab;
   const cols = activeTab==='solar' ? 43 : 17;
   document.getElementById('leadsTableBody').innerHTML =
     `<tr><td colspan="${cols}" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>`;
@@ -2274,8 +2341,10 @@ async function loadData() {
   if (expandedRow) { expandedRow.remove(); expandedRow = null; }
   try {
     const resp = await staffFetch(`${API_CRM}/master-leads?${buildQS()}`);
+    if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
     if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${resp.status}`); }
     const data = await resp.json();
+    if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
     const leads = Array.isArray(data.data) ? data.data : [];
     const pg = data.pagination || {};
     totalCount = pg.total || leads.length;
@@ -2283,15 +2352,16 @@ async function loadData() {
     // [DC-SOLAR-VENDOR-001] Ensure vendor list loaded before rendering solar rows
     if (activeTab === 'solar') {
       await loadSolarVendors();
+      if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
       _populateVendorFilterDropdown();
     }
     renderLeadsTable(leads);
     renderPagination(pg);
     computeStats(leads, totalCount, pg);
     loadStats();
-    if (tabCounts[activeTab] === null && !statFilterVal && !hasActiveFilters()) {
-      tabCounts[activeTab] = totalCount;
-      updateTabCount(activeTab);
+    if (tabCounts[_myTab] === null && !statFilterVal && !hasActiveFilters()) {
+      tabCounts[_myTab] = totalCount;
+      updateTabCount(_myTab);
     }
     // DC-OPEN-LEAD-001: auto-open specific lead if ?open_lead=ID in URL
     if (_openLeadId) {
@@ -2304,6 +2374,7 @@ async function loadData() {
       }
     }
   } catch(e) {
+    if (_mySeq !== _loadDataSeq || _myTab !== activeTab) return;
     console.error('[MNR-ML]',e);
     const cols = activeTab==='solar'?37:17;
     document.getElementById('leadsTableBody').innerHTML =
@@ -2417,6 +2488,7 @@ function renderLeadsTable(leads) {
           <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
           <td style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
           ${_daysCell}
+          <td style="text-align:center;min-width:95px">${_insuranceBadge(l)}</td>
           <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
         </tr>`;
       }
@@ -2442,6 +2514,7 @@ function renderLeadsTable(leads) {
         <td id="stagedt_${l.id}" style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
         ${_daysCell}
         <td style="padding:3px 4px;min-width:110px"><input type="date" class="form-control" style="font-size:10.5px;padding:2px 5px;border:1px solid ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'#d1d5db':'#e5e7eb'};border-radius:4px;min-width:105px;${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'background:#f9fafb;cursor:not-allowed;':''};" value="${l.complete_date?l.complete_date.slice(0,10):''}" ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'disabled title="Locked — only Subash (MR10025) or VGK Mentor (MR10001) can modify"':'title="Complete Date"'} onchange="saveCompleteDate(${l.id},this.value)"></td>
+        <td class="ic" data-lid="${l.id}" data-field="insurance_status" data-type="insurance" data-val="${l.insurance_status==='completed'?'completed':((l.solar_pipeline_status==='completed'||l.status==='completed'||l.insurance_status==='eligible')?'eligible':'ineligible')}" style="text-align:center;min-width:95px;cursor:pointer" title="Click to change Insurance status">${_insuranceBadge(l)}</td>
         <td style="text-align:center;min-width:90px"><button onclick="openPanelSerialModal(${l.id})" style="padding:2px 7px;font-size:10px;border:1px solid #d1d5db;border-radius:5px;background:#f0fdf4;color:#065f46;cursor:pointer;font-weight:600" title="Add/edit panel serial numbers, brand, make, warranty"><i class="fas fa-solar-panel"></i> Panels</button></td>
         <td style="text-align:center;min-width:90px"><button onclick="openInverterModal(${l.id})" style="padding:2px 7px;font-size:10px;border:1px solid #d1d5db;border-radius:5px;background:#eff6ff;color:#1e40af;cursor:pointer;font-weight:600" title="Add/edit inverter serial number, brand, make, warranty"><i class="fas fa-bolt"></i> Inverter</button></td>
         <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
@@ -2655,6 +2728,16 @@ function buildDetailPanel(l) {
       <div class="detail-field"><div class="lbl">CIBIL Status</div><div>${cibilBadge}</div></div>
       <div class="detail-field" id="det-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>
       ${l.documents_folder_link?`<div style="margin-top:7px"><a href="${esc(l.documents_folder_link)}" target="_blank" class="maps-btn" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-folder-open"></i> Open Docs</a></div>`:''}
+    </div>
+    <div class="detail-section"><h6 style="color:#2563eb"><i class="fas fa-shield-alt"></i> Insurance</h6>
+      <div class="detail-field"><div class="lbl">Status</div><div>${_insuranceBadge(l)}</div></div>
+      <div class="detail-field"><div class="lbl">Policy No</div><div>${v(l.insurance_policy_no)}</div></div>
+      <div class="detail-field"><div class="lbl">Insurer</div><div>${v(l.insurance_company)}</div></div>
+      <div class="detail-field"><div class="lbl">Sum Insured</div><div>${l.insurance_sum_insured?'₹'+fmtVal(l.insurance_sum_insured):'—'}</div></div>
+      <div class="detail-field"><div class="lbl">Premium</div><div>${l.insurance_premium?'₹'+fmtVal(l.insurance_premium):'—'}</div></div>
+      <div class="detail-field"><div class="lbl">Start Date</div><div>${v(l.insurance_start_date?fmtDateShort(l.insurance_start_date):null)}</div></div>
+      <div class="detail-field"><div class="lbl">Expiry Date</div><div>${v(l.insurance_expiry_date?fmtDateShort(l.insurance_expiry_date):null)}</div></div>
+      <div class="detail-field"><div class="lbl">Notes</div><div class="val" style="white-space:normal">${esc(l.insurance_notes||'—')}</div></div>
     </div>`;
   }
     const confirmedFinalField = (typeof _isRestrictedFreelancer !== 'undefined' && _isRestrictedFreelancer) ? '' : `
@@ -2851,7 +2934,7 @@ function computeStats(leads, total, pg) {
 }
 
 function resetStats() {
-  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_first_payment_received','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_electricity_bill_change','ps_installation_pending','ps_installed','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_different_vendor','ps_bank_not_interested','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
+  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_first_payment_received','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_eb_cust','ps_eb_staff','ps_installation_pending','ps_installed','ps_dcr_pending','ps_discom_pending','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_different_vendor','ps_bank_not_interested','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.textContent='—';
   });
 }
@@ -2871,6 +2954,7 @@ function buildAnalyticsQS() {
   addIf('date_to', dateTo);
   addIf('priority', document.getElementById('filterPriority')?.value);
   addIf('subsidy_status', document.getElementById('filterSubsidy')?.value);
+  addIf('insurance_status', document.getElementById('filterInsurance')?.value);
   addIf('existing_association', document.getElementById('filterAssoc')?.value);
   addIf('source', document.getElementById('filterSource')?.value?.trim());
   addIf('handler_emp_code', document.getElementById('filterHandlerCode')?.value?.trim());
@@ -2906,10 +2990,12 @@ function buildAnalyticsQS() {
 
 async function loadStats() {
   if (activeTab === 'etc') return;
+  const _myTab = activeTab;
   try {
     const resp = await staffFetch(`${API_CRM}/lead-analytics?${buildAnalyticsQS()}`);
-    if (!resp.ok) return;
+    if (!resp.ok || _myTab !== activeTab) return;
     const data = await resp.json();
+    if (_myTab !== activeTab) return;
     const s = data.summary || {};
     const el = id => document.getElementById(id);
     if (el('statWon'))        el('statWon').textContent        = fmtNum(s.won_leads || 0);
@@ -2922,7 +3008,7 @@ async function loadStats() {
     // Pipeline breakdown (solar tab only)
     if (activeTab === 'solar') {
       const pl = data.pipeline_breakdown || {};
-      ['first_payment_received','documents_pending','application_submitted','pending_with_bank','loan_rejected','documents_issue','load_extension','electricity_bill_change','installation_pending','installed','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','different_vendor','bank_not_interested','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
+      ['first_payment_received','documents_pending','application_submitted','pending_with_bank','loan_rejected','documents_issue','load_extension','eb_cust','eb_staff','installation_pending','installed','dcr_pending','discom_pending','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','different_vendor','bank_not_interested','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
         const e = el('ps_' + k); if (e) e.textContent = fmtNum(pl[k] || 0);
       });
       /* Merged card: loan_rejected pipeline + bank_loan_rejected status */
@@ -3009,7 +3095,7 @@ function toggleFilters() {
 }
 
 function hasActiveFilters() {
-  const ids=['filterStatus','filterPriority','filterSubsidy','filterAssoc','filterSource',
+  const ids=['filterStatus','filterPriority','filterSubsidy','filterInsurance','filterAssoc','filterSource',
              'filterHandlerCode','filterTelecallerCode','filterFieldStaffCode','filterFieldSupportCode','filterPincode',
              'filterGuruName','filterZGuruName','filterLoanBank',
              'filterNfFrom','filterNfTo','filterAccFrom','filterAccTo',
@@ -3019,7 +3105,7 @@ function hasActiveFilters() {
 }
 
 function updateFilterCount() {
-  const ids=['filterStatus','filterPriority','filterSubsidy','filterAssoc','filterSource',
+  const ids=['filterStatus','filterPriority','filterSubsidy','filterInsurance','filterAssoc','filterSource',
              'filterHandlerCode','filterTelecallerCode','filterFieldStaffCode','filterFieldSupportCode','filterPincode',
              'filterGuruName','filterZGuruName','filterLoanBank',
              'filterNfFrom','filterNfTo','filterAccFrom','filterAccTo',
@@ -3104,7 +3190,7 @@ function applyFilters() {
   currentPage=1; updateFilterCount(); if(activeTab==='etc'){loadEtcStudents(1);loadEtcStageStats();}else loadData();
 }
 function resetFilters() {
-  ['filterStatus','filterPriority','filterSubsidy','filterAssoc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['filterStatus','filterPriority','filterSubsidy','filterInsurance','filterAssoc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   ['filterSource','filterHandlerCode','filterTelecallerCode','filterFieldStaffCode','filterFieldSupportCode','filterPincode',
    'filterGuruName','filterZGuruName','filterLoanBank',
    'filterNfFrom','filterNfTo','filterAccFrom','filterAccTo',
@@ -3705,6 +3791,15 @@ function openEdit(leadId){
     loadCibilAdvanceStatus(l.id);
   }
   sv('ef_documents_folder_link',l.documents_folder_link);sv('ef_existing_association',l.existing_association||'');sv('ef_subsidy_status',l.subsidy_status||'');
+  const _effIns = l.insurance_status === 'completed' ? 'completed' : ((l.solar_pipeline_status === 'completed' || l.status === 'completed' || l.insurance_status === 'eligible') ? 'eligible' : 'ineligible');
+  sv('ef_insurance_status', _effIns);
+  sv('ef_insurance_policy_no', l.insurance_policy_no || '');
+  sv('ef_insurance_company', l.insurance_company || '');
+  sv('ef_insurance_sum_insured', l.insurance_sum_insured != null ? String(l.insurance_sum_insured) : '');
+  sv('ef_insurance_start_date', l.insurance_start_date ? l.insurance_start_date.slice(0, 10) : '');
+  sv('ef_insurance_expiry_date', l.insurance_expiry_date ? l.insurance_expiry_date.slice(0, 10) : '');
+  sv('ef_insurance_premium', l.insurance_premium != null ? String(l.insurance_premium) : '');
+  sv('ef_insurance_notes', l.insurance_notes || '');
   sv('ef_bank_entry_updated',l.bank_entry_updated!==null&&l.bank_entry_updated!==undefined?String(l.bank_entry_updated):'');
   sv('ef_bank_statement_available',l.bank_statement_available!==null&&l.bank_statement_available!==undefined?String(l.bank_statement_available):'');
   sv('ef_regular_income_available',l.regular_income_available!==null&&l.regular_income_available!==undefined?String(l.regular_income_available):'');
@@ -4282,6 +4377,9 @@ async function saveLead(){
     application_no:gv('ef_application_no')||null,accepted_date:gd('ef_accepted_date'),
     material_reach_date:gd('ef_material_reach_date'),installation_date:gd('ef_installation_date'),
     documents_folder_link:gv('ef_documents_folder_link')||null,existing_association:gv('ef_existing_association')||null,subsidy_status:gv('ef_subsidy_status')||null,
+    insurance_status:((gv('ef_status')==='completed'||editingLead?.solar_pipeline_status==='completed')&&gv('ef_insurance_status')==='ineligible')?'eligible':(gv('ef_insurance_status')||null),insurance_policy_no:gv('ef_insurance_policy_no')||null,insurance_company:gv('ef_insurance_company')||null,
+    insurance_sum_insured:gn('ef_insurance_sum_insured'),insurance_start_date:gd('ef_insurance_start_date'),insurance_expiry_date:gd('ef_insurance_expiry_date'),
+    insurance_premium:gn('ef_insurance_premium'),insurance_notes:gv('ef_insurance_notes')||null,
     cibil_confirmed: document.getElementById('ef_cibil_confirmed').checked,
     cibil_score: gv('ef_cibil_score')!==''? (parseInt(gv('ef_cibil_score'))||null) : null,
     bank_entry_updated:gb('ef_bank_entry_updated'),bank_statement_available:gb('ef_bank_statement_available'),regular_income_available:gb('ef_regular_income_available'),
@@ -4649,9 +4747,12 @@ function inlineCellEdit(td) {
   } else if (type === 'subsidy') {
     el = document.createElement('select');
     [['','Not Set'],['not_applied','Not Applied'],['applied','Applied'],['under_review','Under Review'],['bank_applied','At Bank'],['approved','Approved'],['pending_installation','Waiting Install'],['installed','Installed ✓'],['rejected','Rejected'],['bank_loan_rejected','Bank Loan Rejected'],['received','Subsidy Received ✓']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
+  } else if (type === 'insurance') {
+    el = document.createElement('select');
+    [['ineligible','Ineligible'],['eligible','Eligible'],['completed','Completed']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
   } else if (type === 'pipeline') {
     el = document.createElement('select');
-    [['','Not Set'],['documents_pending','Documents Pending'],['application_submitted','Application Submitted'],['pending_with_bank','Pending with Bank'],['loan_rejected','Loan Rejected'],['documents_issue','Documents Issue'],['load_extension','Load Extension'],['electricity_bill_change','Electricity Bill Change'],['installation_pending','Installation Pending'],['net_meter_pending','Net Meter Pending'],['balance_pending','Balance Pending'],['balance_received','Balance Received'],['subsidy_pending','Subsidy Pending'],['completed','Completed'],['not_interested','Not Interested'],['cancelled','Cancelled'],['different_vendor','Different Vendor'],['bank_not_interested','Bank Not Interested']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
+    [['','Not Set'],['first_payment_received','1st Payment Received'],['documents_pending','Documents Pending'],['application_submitted','Application Submitted'],['pending_with_bank','Pending with Bank'],['loan_rejected','Loan Rejected'],['documents_issue','Documents Issue'],['load_extension','Load Extension'],['eb_cust','EB Cust.'],['eb_staff','EB Staff'],['installation_pending','Installation Pending'],['installed','Installed'],['dcr_pending','DCR Pending'],['discom_pending','Discom Pending'],['net_meter_pending','Net Meter Pending'],['balance_pending','Balance Pending'],['balance_received','Balance Received'],['subsidy_pending','Subsidy Pending'],['completed','Completed'],['not_interested','Not Interested'],['cancelled','Cancelled'],['different_vendor','Different Vendor'],['bank_not_interested','Bank Not Interested']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal||(v==='eb_cust'&&curVal==='electricity_bill_change'))o.selected=true; el.appendChild(o); });
   } else if (type === 'b2b_stage') {
     el = document.createElement('select');
     [['','Not Set'],['application_pending','Application Pending'],['agreement_pending','Agreement Pending'],['gst_pending','GST Pending'],['training_pending','Training Pending'],['branding_pending','Branding Pending'],['payment_pending','Payment Pending'],['dispatch_pending','Dispatch Pending'],['confirmation_pending','Confirmation Pending'],['completed','Completed']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
@@ -4695,9 +4796,9 @@ function inlineCellEdit(td) {
       showToast('Saved');
     } catch(e) { showToast('Save failed','error'); }
   }
-  if (type!=='status'&&type!=='subsidy'&&type!=='pipeline'&&type!=='b2b_stage'&&type!=='vendor_select') el.addEventListener('blur', () => setTimeout(commit, 150));
+  if (type!=='status'&&type!=='subsidy'&&type!=='insurance'&&type!=='pipeline'&&type!=='b2b_stage'&&type!=='vendor_select') el.addEventListener('blur', () => setTimeout(commit, 150));
   el.addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();commit();} if(e.key==='Escape'){closeIcWidget();saved=true;} });
-  if (type==='status'||type==='subsidy'||type==='pipeline'||type==='b2b_stage'||type==='vendor_select') el.addEventListener('change', commit);
+  if (type==='status'||type==='subsidy'||type==='insurance'||type==='pipeline'||type==='b2b_stage'||type==='vendor_select') el.addEventListener('change', commit);
   setTimeout(() => { document.addEventListener('click', function _out(e){ if(!w||!document.body.contains(w)){document.removeEventListener('click',_out);return;} if(!w.contains(e.target)){ closeIcWidget(); document.removeEventListener('click',_out); } }); }, 200);
 }
 
@@ -4709,14 +4810,26 @@ function icUpdateCell(td, field, val) {
   } else if (field === 'subsidy_status') {
     const sub = val||'';
     td.innerHTML = sub ? `<span class="subsidy-badge ss-${sub}">${SUBSIDY_LABELS[sub]||sub}</span>` : '<span style="color:#9ca3af;font-size:9.5px">— Subsidy</span>';
+  } else if (field === 'insurance_status') {
+    const lead = _leadsCache.find(x => x.id === +td.dataset.lid) || { insurance_status: val };
+    lead.insurance_status = val || 'ineligible';
+    td.innerHTML = _insuranceBadge(lead);
   } else if (field === 'solar_pipeline_status') {
     td.innerHTML = val ? `<span class="pipeline-badge ps-${val}">${PIPELINE_LABELS[val]||val}</span>` : '<span style="color:#9ca3af;font-size:9.5px">— Stage</span>';
     // DC_SOLAR_STAGE_DATE_001: live-update the Stage Date cell with today's date
     const _lid = td.dataset.lid;
     const _dtCell = document.getElementById('stagedt_' + _lid);
     if (_dtCell && val) { _dtCell.textContent = fmtDateShort(new Date().toISOString()); }
+    if (val === 'completed') {
+      const lead = _leadsCache.find(x => x.id === +_lid);
+      if (lead && lead.insurance_status !== 'completed') {
+        lead.insurance_status = 'eligible';
+        const _insCell = td.closest('tr')?.querySelector('td[data-field="insurance_status"]');
+        if (_insCell) { _insCell.dataset.val = 'eligible'; _insCell.innerHTML = _insuranceBadge(lead); }
+      }
+    }
     // DC-SUBMIT-DATE-AUTO-UI: If moving to a bank/submitted stage and submit_date input is empty, live-fill today's date
-    const _bankStages = ['pending_with_bank', 'with_bank', 'app_submitted', 'bank', 'installation_pending', 'net_meter_pending', 'balance_pending', 'completed'];
+    const _bankStages = ['pending_with_bank', 'with_bank', 'app_submitted', 'bank', 'installation_pending', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'completed'];
     if (_bankStages.includes(val)) {
       const _row = td.closest('tr');
       if (_row) {
@@ -5045,7 +5158,7 @@ function inlineHandlerEdit(td) {
 function _computeVendorStatus(status, sps) {
   const _CANCELLED = new Set(['loan_rejected','diff_vendor_loan_rejected','not_interested','cancelled','different_vendor','bank_not_interested']);
   const _FINAL     = new Set(['subsidy_cleared','bank_loan_completed']);
-  const _COMPLETED = new Set(['installed','net_meter_pending','completed']);
+  const _COMPLETED = new Set(['installed','dcr_pending','discom_pending','net_meter_pending','completed']);
   const s = (sps||'').toLowerCase(), st = (status||'').toLowerCase();
   if (st==='lost'||st==='cancelled'||_CANCELLED.has(s)) return 'Cancelled';
   if (_FINAL.has(s)) return 'Final Invoice Completed';
@@ -5542,7 +5655,7 @@ if (!_initIsSaaS) {
 const _openLeadId = parseInt(new URLSearchParams(window.location.search).get('open_lead')) || 0;
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // SaaS Dynamic Segment Loading
+  // SaaS Dynamic Segment Loading (strictly for SaaS tenants only; internal platform retains canonical TABS)
   try {
     const _segRes = await staffFetch('/api/v1/saas/crm-setup/segments');
     if (_segRes && _segRes.ok) {
@@ -5553,29 +5666,40 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (bannerH1) bannerH1.innerHTML = '<i class="fas fa-layer-group me-1"></i>Category-wise Leads';
         const bannerP = document.querySelector('.page-banner p');
         if (bannerP) bannerP.textContent = 'Segment-wise operational pipelines and workflow management';
-      }
-      const _segs = _segData.segments || [];
-      if (_segs.length > 0) {
-        TABS = _segs.map((s, idx) => ({
-          key: s.slug || (s.name || `seg-${idx}`).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          label: s.name,
-          icon: s.icon || 'fa-folder',
-          category: s.name,
-          cls: idx === 0 ? 't-solar' : (idx === 1 ? 't-ev-b2b' : (idx === 2 ? 't-ev-b2c' : 't-etc'))
-        }));
-        tabCounts = {};
-        wonCounts = {};
-        TABS.forEach(t => { tabCounts[t.key] = null; wonCounts[t.key] = null; });
-        activeTab = TABS[0].key;
-        buildTabNav();
-        buildTableHead();
-        const t0 = TABS[0];
-        const titleEl = document.getElementById('tableTitle');
-        if (titleEl && t0) titleEl.textContent = `${t0.label} Leads`;
-        loadData();
-      } else if (isSaaS) {
-        const tabNavEl = document.getElementById('tabNav');
-        if (tabNavEl) tabNavEl.innerHTML = '<div style="padding:10px 16px;font-size:12px;color:#64748b"><i class="fas fa-info-circle me-2"></i>No business segments configured. Please configure segments in <a href="/staff/saas-crm-settings" style="color:#2563eb;font-weight:600">CRM / Workflow Setup</a>.</div>';
+        const _segs = _segData.segments || [];
+        if (_segs.length > 0) {
+          const _seenTabKeys = new Set();
+          const _dedupTabs = [];
+          _segs.forEach((s, idx) => {
+            let normKey = String(s.slug || s.name || `seg-${idx}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            if (normKey === 'etc-training') normKey = 'etc';
+            if (!normKey || _seenTabKeys.has(normKey)) return;
+            _seenTabKeys.add(normKey);
+            const _clsIdx = _dedupTabs.length;
+            _dedupTabs.push({
+              key: normKey,
+              label: s.name,
+              icon: s.icon || 'fa-folder',
+              category: s.name,
+              cls: _clsIdx === 0 ? 't-solar' : (_clsIdx === 1 ? 't-ev-b2b' : (_clsIdx === 2 ? 't-ev-b2c' : 't-etc'))
+            });
+          });
+          if (_dedupTabs.length > 0) {
+            TABS = _dedupTabs;
+            tabCounts = {};
+            wonCounts = {};
+            TABS.forEach(t => { tabCounts[t.key] = null; wonCounts[t.key] = null; });
+            activeTab = TABS[0].key;
+            buildTabNav();
+            buildTableHead();
+            const t0 = TABS[0];
+            const titleEl = document.getElementById('tableTitle');
+            if (titleEl && t0) titleEl.textContent = `${t0.label} Leads`;
+          }
+        } else {
+          const tabNavEl = document.getElementById('tabNav');
+          if (tabNavEl) tabNavEl.innerHTML = '<div style="padding:10px 16px;font-size:12px;color:#64748b"><i class="fas fa-info-circle me-2"></i>No business segments configured. Please configure segments in <a href="/staff/saas-crm-settings" style="color:#2563eb;font-weight:600">CRM / Workflow Setup</a>.</div>';
+        }
       }
     }
   } catch(e) {
@@ -5599,7 +5723,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (_iCF) { const el = document.getElementById('filterCompleteFrom'); if (el) el.value = _iCF; }
   if (_iCT) { const el = document.getElementById('filterCompleteTo');   if (el) el.value = _iCT; }
 
-  const _initTab = _iUrlP.get('tab');
+  const _rawInitTab = (_iUrlP.get('tab') || '').trim().toLowerCase().replace(/_/g, '-');
+  const _initTab = (_rawInitTab === 'etc-training' && TABS.some(t => t.key === 'etc')) ? 'etc' : _rawInitTab;
   const _singleTabEntry = _initTab ? TABS.find(t => t.key === _initTab) : null;
   if (_singleTabEntry) {
     // Single-segment mode: hide tab bar, update banner to show only this segment
@@ -5607,19 +5732,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     const h1 = document.querySelector('.page-banner h1');
     if (h1) h1.innerHTML = `<i class="fas ${_singleTabEntry.icon} me-1"></i>${_singleTabEntry.label}`;
     const sub = document.querySelector('.page-banner p');
-    if (sub) sub.textContent = _initTab === 'etc' ? 'Student Management' : _singleTabEntry.label + ' Leads';
+    if (sub) sub.textContent = _singleTabEntry.key === 'etc' ? 'Student Management' : _singleTabEntry.label + ' Leads';
     const vt = document.querySelector('.view-toggle');
     if (vt) vt.style.display = 'none';
     // DC Protocol: capture pre-call state — switchTab early-returns when already active.
     // Solar is the JS default (activeTab='solar'), so ?tab=solar hits this guard.
-    const _wasAlreadyActive = (activeTab === _initTab);
-    switchTab(_initTab);
+    const _wasAlreadyActive = (activeTab === _singleTabEntry.key);
+    switchTab(_singleTabEntry.key);
     if (_wasAlreadyActive) {
-      if (_initTab === 'etc') { loadEtcStudents(1); loadEtcStageStats(); }
+      if (_singleTabEntry.key === 'etc') { loadEtcStudents(1); loadEtcStageStats(); }
       else loadData();
     }
   } else {
-    loadData();
+    if (activeTab === 'etc') { loadEtcStudents(1); loadEtcStageStats(); }
+    else if (activeTab === 'ground-source') { loadGroundSourceWeekly(); }
+    else loadData();
   }
   setTimeout(loadTabCounts,2000);
 });
@@ -5672,6 +5799,12 @@ const SDOC_BUNDLE={
     {type:'dcr_certificate',label:'DCR Certificate'},
     {type:'geotagging_photo',label:'Geo Tagging Photo'},
   ]},
+  insurance_link:{label:'Insurance Documents',section:'insurance',docs:[
+    {type:'invoice',label:'Invoice'},
+    {type:'adhar',label:'Customer Aadhaar Card'},
+    {type:'pan',label:'PAN Card'},
+    {type:'installation_photo',label:'Installation Photo'},
+  ]},
 };
 function renderSdocs(){
   const um={};_sdocCache.forEach(d=>{um[d.doc_type]=d;});
@@ -5680,13 +5813,13 @@ function renderSdocs(){
     gs.forEach(g=>g.docs.forEach(d=>{tot++;if(um[d.type])upl++;}));
     const el=document.getElementById('sdoc_cnt_'+tab);if(el)el.textContent=upl+'/'+tot;
   });
-  ['bank_link','discom_link'].forEach(tab=>{
+  ['bank_link','discom_link','insurance_link'].forEach(tab=>{
     const bd=SDOC_BUNDLE[tab];if(!bd)return;
     const upl=bd.docs.filter(d=>um[d.type]).length;
     const el=document.getElementById('sdoc_cnt_'+tab);
     if(el)el.textContent=upl+'/'+bd.docs.length;
   });
-  if(_sdocTab==='bank_link'||_sdocTab==='discom_link'){renderBundleTab(_sdocTab,um);return;}
+  if(_sdocTab==='bank_link'||_sdocTab==='discom_link'||_sdocTab==='insurance_link'){renderBundleTab(_sdocTab,um);return;}
   const groups=SDOC_GROUPS[_sdocTab]||[];
   let gTot=0,gUpl=0;groups.forEach(g=>g.docs.forEach(d=>{gTot++;if(um[d.type])gUpl++;}));
   document.getElementById('sdocFooterProg').innerHTML='<b>'+gUpl+'</b> of <b>'+gTot+'</b> documents uploaded in this tab';
@@ -5712,12 +5845,14 @@ function renderBundleTab(tab,um){
     +'<button class="sdoc-bundle-btn" id="sdocBundleDlBtn" style="background:#1e3a5f;color:#fff" onclick="downloadSdocBundle(\''+bd.section+'\')"'+(hasAny?'':' disabled')+'><i class="fas fa-file-pdf"></i> Download All as PDF</button>'
     +'<button class="sdoc-bundle-btn" id="sdocBundleShareBtn" style="background:#16a34a;color:#fff" onclick="shareSdocBundle(\''+tab+'\')"'+(hasAny?'':' disabled')+'><i class="fas fa-share-alt"></i> Share Link</button>'
     +'<button class="sdoc-bundle-btn" id="sdocBundleWaBtn" style="background:#25d366;color:#fff" onclick="openShareDocumentsModal(\''+tab+'\')"'+(hasAny?'':' disabled')+'><i class="fab fa-whatsapp"></i> Share Documents</button>'
+    +'<button class="sdoc-bundle-btn" id="sdocBundleEmailBtn" style="background:#2563eb;color:#fff" onclick="openShareEmailModal(\''+tab+'\')"'+(hasAny?'':' disabled')+'><i class="fas fa-envelope"></i> Email Send</button>'
     +'</div>';
   const rowsHtml=bd.docs.map(doc=>{
     const ud=um[doc.type];const isUp=!!ud;
     const isVendorDefault = ud && ud.is_vendor_default;
+    const isFallback = ud && ud.is_fallback;
     const viewBtn=isUp&&ud.view_url?'<a href="'+esc(ud.view_url)+'" target="_blank" class="sdoc-btn view" style="font-size:11px;padding:4px 10px"><i class="fas fa-eye"></i> View</a>':'';
-    const badge=isUp?(isVendorDefault?'<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 6px;margin-left:6px;border-radius:4px"><i class="fas fa-building me-1"></i>Vendor Default</span>':''):`<span class="sdoc-bundle-pending-tag">Pending</span>`;
+    const badge=isUp?(isVendorDefault?'<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 6px;margin-left:6px;border-radius:4px"><i class="fas fa-building me-1"></i>Vendor Default</span>':(isFallback?'<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;padding:2px 6px;margin-left:6px;border-radius:4px"><i class="fas fa-camera me-1"></i>Geo Solar Photo</span>':'')):`<span class="sdoc-bundle-pending-tag">Pending</span>`;
     return '<div class="sdoc-bundle-row '+(isUp?'uploaded':'pending')+'"><div class="sdoc-bundle-label"><span class="sdoc-status-dot '+(isUp?'uploaded':'pending')+'"></span>'+esc(doc.label)+badge+'</div>'+viewBtn+'</div>';
   }).join('');
   document.getElementById('sdocBody').innerHTML=statsHtml+actionsHtml+rowsHtml;
@@ -5960,7 +6095,7 @@ async function dispatchShareDocumentsViaWa() {
   }
 
   const notes = document.getElementById('sdwNotes')?.value || '';
-  const group = _sdwTab === 'discom_link' ? 'discom' : 'bank';
+  const group = _sdwTab === 'discom_link' ? 'discom' : _sdwTab === 'insurance_link' ? 'insurance' : 'bank';
   const dispatchMode = document.querySelector('input[name="sdwDispatchMode"]:checked')?.value || 'merged';
 
   const sendBtn = document.getElementById('sdwSendBtn');
@@ -6008,6 +6143,196 @@ async function dispatchShareDocumentsViaWa() {
     closeShareDocumentsModal();
   } catch (err) {
     showToast(`Share failed: ${err.message}`, 'error');
+  } finally {
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = origHtml;
+    }
+  }
+}
+
+/* ── Direct Email Document Dispatch Modal Logic ── */
+let _sdeTab = 'insurance_link';
+let _sdeRecipientRole = 'Recipient';
+let _sdeRecipientName = '';
+
+async function openShareEmailModal(tab) {
+  _sdeTab = tab || _sdocTab || 'insurance_link';
+  const bd = SDOC_BUNDLE[_sdeTab];
+  if (!bd) return;
+
+  const modal = document.getElementById('sdocShareEmailModal');
+  if (!modal) return;
+
+  document.getElementById('sdeModalTitle').textContent = `Send ${bd.label} via Email`;
+  document.getElementById('sdeLeadInfo').textContent = `${_sdocLeadName} (#${_sdocLeadId})`;
+
+  // Check SMTP config status dynamically
+  const warnEl = document.getElementById('sdeConfigWarning');
+  if (warnEl) {
+    warnEl.style.display = 'none';
+    staffFetch('/api/v1/crm/solar-docs/email-config-status').then(r => r.ok ? r.json() : null).then(cfg => {
+      if (cfg && !cfg.configured) {
+        warnEl.style.display = 'block';
+      }
+    }).catch(() => {});
+  }
+
+  let lead = (Array.isArray(_leadsCache) ? _leadsCache : []).find(l => String(l.id) === String(_sdocLeadId)) || {};
+  if (!lead.email && _sdocLeadId) {
+    try {
+      const lr = await staffFetch(`/api/v1/crm/leads/${_sdocLeadId}`);
+      if (lr.ok) {
+        const ld = await lr.json();
+        lead = ld.lead || ld || lead;
+      }
+    } catch(e) {}
+  }
+
+  const emails = [];
+  if (lead.email) {
+    emails.push({ role: 'Customer', name: lead.name || 'Customer', email: String(lead.email).trim() });
+  }
+  const chipsContainer = document.getElementById('sdeEmailChips');
+  const emailInput = document.getElementById('sdeEmailInput');
+  if (emails.length > 0) {
+    chipsContainer.innerHTML = emails.map((c, idx) => `
+      <button type="button" class="sdw-chip ${idx === 0 ? 'selected' : ''}"
+        onclick="selectSdeChip('${escJs(c.email)}', '${escJs(c.name)}', '${escJs(c.role)}', this)">
+        <i class="fas fa-envelope me-1"></i><b>${esc(c.role)}:</b> ${esc(c.email)}
+      </button>
+    `).join('');
+    selectSdeChip(emails[0].email, emails[0].name, emails[0].role);
+  } else {
+    chipsContainer.innerHTML = '<span style="font-size:11px;color:#9ca3af">Enter recipient email address above.</span>';
+    if (emailInput) emailInput.value = '';
+    _sdeRecipientRole = 'Recipient';
+    _sdeRecipientName = '';
+  }
+
+  const subjInput = document.getElementById('sdeSubjectInput');
+  if (subjInput) {
+    subjInput.value = `${bd.label} Docket - ${_sdocLeadName} (Lead #${_sdocLeadId})`;
+  }
+
+  const um = {};
+  (_sdocCache || []).forEach(d => { um[d.doc_type] = d; });
+  const docListEl = document.getElementById('sdeDocList');
+  docListEl.innerHTML = bd.docs.map(doc => {
+    const ud = um[doc.type];
+    const isUploaded = !!ud;
+    const fileExists = ud ? (ud.file_exists !== false) : false;
+    const isAvail = isUploaded && fileExists;
+    const isVDef = ud && ud.is_vendor_default;
+    const isFallback = ud && ud.is_fallback;
+
+    let badgeHtml = '';
+    if (isUploaded && !fileExists) {
+      badgeHtml = '<span class="sdw-badge-pend" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 6px;border-radius:4px;font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Storage Missing</span>';
+    } else if (isAvail) {
+      badgeHtml = isVDef
+        ? '<span class="sdw-badge-avail" style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:4px;font-size:10px;">Vendor Default</span>'
+        : isFallback
+        ? '<span class="sdw-badge-avail" style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-size:10px;">Linked from Geo Solar Photo</span>'
+        : '<span class="sdw-badge-avail" style="padding:2px 6px;border-radius:4px;font-size:10px;">Available</span>';
+    } else {
+      badgeHtml = '<span class="sdw-badge-pend">Not Uploaded</span>';
+    }
+
+    return `
+      <div class="sdw-doc-item">
+        <label>
+          <input type="checkbox" class="sde-doc-chk" value="${esc(doc.type)}" ${isAvail ? 'checked' : 'disabled'} onchange="updateSdeDocCount()">
+          <span style="${isAvail ? 'font-weight:600' : 'color:#9ca3af'}">${esc(doc.label)}</span>
+        </label>
+        ${badgeHtml}
+      </div>
+    `;
+  }).join('');
+
+  updateSdeDocCount();
+  document.getElementById('sdeNotes').value = '';
+  modal.classList.add('open');
+}
+
+function closeShareEmailModal() {
+  const modal = document.getElementById('sdocShareEmailModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function selectSdeChip(email, name, role, btnEl) {
+  const eInput = document.getElementById('sdeEmailInput');
+  if (eInput) eInput.value = email;
+  _sdeRecipientName = name || '';
+  _sdeRecipientRole = role || 'Recipient';
+  if (btnEl) {
+    document.querySelectorAll('#sdeEmailChips .sdw-chip').forEach(c => c.classList.remove('selected'));
+    btnEl.classList.add('selected');
+  }
+}
+
+function toggleAllSdeDocs(selectAll) {
+  document.querySelectorAll('.sde-doc-chk:not(:disabled)').forEach(chk => {
+    chk.checked = selectAll;
+  });
+  updateSdeDocCount();
+}
+
+function updateSdeDocCount() {
+  const totalAvail = document.querySelectorAll('.sde-doc-chk:not(:disabled)').length;
+  const checked = document.querySelectorAll('.sde-doc-chk:checked').length;
+  const countEl = document.getElementById('sdeDocCount');
+  if (countEl) countEl.textContent = `${checked} of ${totalAvail} selected`;
+  const sendBtn = document.getElementById('sdeSendBtn');
+  if (sendBtn) sendBtn.disabled = (checked === 0);
+}
+
+async function dispatchDocsEmail() {
+  const emailInput = document.getElementById('sdeEmailInput');
+  const rawEmail = (emailInput?.value || '').trim();
+  if (!rawEmail || !rawEmail.includes('@')) {
+    showToast('Please enter a valid recipient email address', 'error');
+    emailInput?.focus();
+    return;
+  }
+
+  const selectedDocs = Array.from(document.querySelectorAll('.sde-doc-chk:checked')).map(c => c.value);
+  if (selectedDocs.length === 0) {
+    showToast('Please select at least one document to email', 'error');
+    return;
+  }
+
+  const subject = (document.getElementById('sdeSubjectInput')?.value || '').trim();
+  const notes = (document.getElementById('sdeNotes')?.value || '').trim();
+  const group = _sdeTab === 'discom_link' ? 'discom' : _sdeTab === 'insurance_link' ? 'insurance' : 'bank';
+
+  const sendBtn = document.getElementById('sdeSendBtn');
+  const origHtml = sendBtn.innerHTML;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Merging PDF & Sending Email...';
+
+  try {
+    const res = await staffFetch(`/api/v1/crm/leads/${_sdocLeadId}/solar-docs/share-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient_email: rawEmail,
+        recipient_name: _sdeRecipientName,
+        recipient_role: _sdeRecipientRole,
+        doc_group: group,
+        selected_doc_types: selectedDocs,
+        subject: subject,
+        custom_notes: notes
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.detail || 'Email dispatch failed');
+    }
+    showToast(data.message || `✅ Consolidated PDF sent to ${rawEmail}`, 'success');
+    closeShareEmailModal();
+  } catch (err) {
+    showToast(`Email failed: ${err.message}`, 'error');
   } finally {
     if (sendBtn) {
       sendBtn.disabled = false;
@@ -7305,10 +7630,11 @@ async function saveCompleteDate(lid, val) {
       <button class="sdoc-close-btn" onclick="closeSolarDocs()"><i class="fas fa-times"></i></button>
     </div>
     <div class="sdoc-tabs">
-      <div class="sdoc-tab active" data-tab="consumer" onclick="switchSdocTab('consumer')">Consumer Documents <span class="sdoc-tab-count" id="sdoc_cnt_consumer">0/21</span></div>
+      <div class="sdoc-tab" data-tab="consumer" onclick="switchSdocTab('consumer')">Consumer Documents <span class="sdoc-tab-count" id="sdoc_cnt_consumer">0/21</span></div>
       <div class="sdoc-tab" data-tab="co_applicant" onclick="switchSdocTab('co_applicant')">Co-Applicant Documents <span class="sdoc-tab-count" id="sdoc_cnt_co_applicant">0/3</span></div>
       <div class="sdoc-tab" data-tab="bank_link" onclick="switchSdocTab('bank_link')">🏦 Link for Bank <span class="sdoc-tab-count" id="sdoc_cnt_bank_link">0/7</span></div>
       <div class="sdoc-tab" data-tab="discom_link" onclick="switchSdocTab('discom_link')">⚡ Link for DISCOM <span class="sdoc-tab-count" id="sdoc_cnt_discom_link">0/6</span></div>
+      <div class="sdoc-tab" data-tab="insurance_link" onclick="switchSdocTab('insurance_link')">🛡️ Link for Insurance <span class="sdoc-tab-count" id="sdoc_cnt_insurance_link">0/4</span></div>
     </div>
     <div class="sdoc-body" id="sdocBody">
       <div style="text-align:center;padding:30px;color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
@@ -7400,6 +7726,65 @@ async function saveCompleteDate(lid, val) {
       <button type="button" class="sdw-btn-cancel" onclick="closeShareDocumentsModal()">Cancel</button>
       <button type="button" class="sdw-btn-send" id="sdwSendBtn" onclick="dispatchShareDocumentsViaWa()">
         <i class="fab fa-whatsapp"></i> Send Documents
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Direct Email Share Modal -->
+<div class="sdw-overlay" id="sdocShareEmailModal" onclick="if(event.target===this)closeShareEmailModal()">
+  <div class="sdw-box">
+    <div class="sdw-header" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)">
+      <div>
+        <h4><i class="fas fa-envelope" style="font-size:16px"></i> <span id="sdeModalTitle">Send Documents via Email</span></h4>
+        <div class="sdw-sub" id="sdeLeadInfo">Lead Details</div>
+      </div>
+      <button type="button" class="sdw-close" onclick="closeShareEmailModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sdw-body">
+      <div id="sdeConfigWarning" style="display:none;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;padding:8px 12px;border-radius:8px;font-size:11.5px;margin-bottom:12px">
+        <i class="fas fa-exclamation-triangle me-1"></i><b>SMTP Not Configured:</b> <code>MAIL_SERVER</code>, <code>MAIL_USERNAME</code>, and <code>MAIL_PASSWORD</code> must be set in <code>backend/.env</code> to send emails.
+      </div>
+      <div class="sdw-sec-title">
+        <span>Recipient Email ID <span style="color:#ef4444">*</span></span>
+        <small style="color:#6b7280;text-transform:none;font-weight:normal">Consolidated PDF attached</small>
+      </div>
+      <input type="email" id="sdeEmailInput" class="sdw-phone-input" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:13px" placeholder="Enter recipient email address (e.g. insurance@company.com)" />
+      <div style="margin-top:6px;display:flex;align-items:center;gap:6px;font-size:11.5px;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:5px 10px">
+        <i class="fas fa-closed-captioning" style="color:#2563eb"></i>
+        <span><b>Auto-CC (Always Included):</b> <code>contact@myntreal.com</code></span>
+      </div>
+
+      <div class="sdw-sec-title" style="margin-top:10px">
+        <span>Quick Select Email</span>
+        <small style="color:#6b7280;text-transform:none;font-weight:normal">Click to auto-fill</small>
+      </div>
+      <div class="sdw-chips-wrap" id="sdeEmailChips"></div>
+
+      <div class="sdw-sec-title" style="margin-top:10px">
+        <span>Email Subject</span>
+      </div>
+      <input type="text" id="sdeSubjectInput" class="sdw-phone-input" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:12.5px;margin-bottom:10px" placeholder="Email subject..." />
+
+      <div class="sdw-sec-title">
+        <span>Select Documents to Merge into Single PDF</span>
+        <div>
+          <button type="button" class="btn btn-xs btn-link p-0 me-2" style="font-size:11px;color:#1e3a5f;text-decoration:none" onclick="toggleAllSdeDocs(true)">Select All</button>
+          <button type="button" class="btn btn-xs btn-link p-0 me-2" style="font-size:11px;color:#6b7280;text-decoration:none" onclick="toggleAllSdeDocs(false)">Clear All</button>
+          <span id="sdeDocCount" style="color:#2563eb;font-weight:700">0 selected</span>
+        </div>
+      </div>
+      <div class="sdw-docs-list" id="sdeDocList"></div>
+
+      <div class="sdw-sec-title">
+        <span>Additional Message / Notes (Optional)</span>
+      </div>
+      <textarea id="sdeNotes" class="sdw-notes" rows="2" placeholder="e.g., Please find attached the consolidated Insurance PDF docket (Invoice, Aadhaar, PAN, and Installation Photo)..."></textarea>
+    </div>
+    <div class="sdw-footer">
+      <button type="button" class="sdw-btn-cancel" onclick="closeShareEmailModal()">Cancel</button>
+      <button type="button" class="sdw-btn-send" id="sdeSendBtn" style="background:#2563eb" onclick="dispatchDocsEmail()">
+        <i class="fas fa-paper-plane"></i> Email Send
       </button>
     </div>
   </div>
@@ -7582,6 +7967,7 @@ const _SLK_GROUPS = [
   {group:'Site & Technical', docs:[
     {type:'roof_top_photo',label:'Roof Top Photo'},
     {type:'geotagging_photo',label:'Geo Solar Photo'},
+    {type:'installation_photo',label:'Installation Photo'},
     {type:'geo_location_photo',label:'Geo Location Photo'},
     {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
     {type:'technical_installation_details',label:'Technical Installation Details'},
@@ -7598,6 +7984,7 @@ const _SLK_GROUPS = [
     {type:'dcr_certificate',label:'DCR Certificate'},
     {type:'invoice',label:'Invoice'},
     {type:'installation_certificate',label:'Installation Certificate'},
+    {type:'insurance_policy',label:'Insurance Policy Document'},
     {type:'annexure_a',label:'Annexure-A'},
     {type:'annexure_c',label:'Annexure-C (Project Completion)'},
     {type:'annexure_c_technical',label:'Annexure-C (Technical Details)'},

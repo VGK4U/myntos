@@ -3,6 +3,7 @@ Audit Logging System
 Tracks all critical operations for security and compliance
 """
 
+from app.core.timezone import get_indian_time
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, Union
@@ -40,7 +41,7 @@ class AuditLogger:
         user_type = str(getattr(user, 'user_type', 'UNKNOWN'))
         
         audit_entry = {
-            'timestamp': datetime.utcnow(),
+            'timestamp': get_indian_time(),
             'user_id': user_id,
             'user_type': user_type,
             'action': action,
@@ -132,7 +133,7 @@ class AuditLogger:
             user_id = getattr(current_user, 'id', None) or getattr(current_user, 'employee_id', None) or user_id
         
         audit_entry = {
-            'timestamp': datetime.utcnow(),
+            'timestamp': get_indian_time(),
             'user_id': str(user_id) if user_id else 'SYSTEM',
             'user_type': 'RVZ',
             'action': final_action,
@@ -168,7 +169,7 @@ class AuditLogger:
         staff_type = getattr(staff_user, 'staff_type', '') or ''
 
         audit_entry = {
-            'timestamp': datetime.utcnow(),
+            'timestamp': get_indian_time(),
             'staff_id': emp_code,
             'staff_type': staff_type,
             'role_code': role_code,

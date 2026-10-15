@@ -1,3 +1,4 @@
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -14,8 +15,8 @@ class IncentiveProgram(Base):
     program_name = Column(String(200), nullable=False)
     max_pool_pct = Column(Numeric(5, 2), nullable=False, default=0.0)  # e.g. 8.50
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
     rate_configs = relationship("PositionRateConfig", back_populates="program", cascade="all, delete-orphan")
 
@@ -31,7 +32,7 @@ class PositionRateConfig(Base):
     required_qualifying_files = Column(Integer, nullable=False, default=0)
     commission_pct = Column(Numeric(5, 2), nullable=False, default=0.0)  # e.g. 5.00, 6.50, 7.50, 8.25, 8.50
     base_income_amount = Column(Numeric(12, 2), nullable=True)  # e.g. 10000, 13000, 15000, 16500, 17000
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
 
     program = relationship("IncentiveProgram", back_populates="rate_configs")
 
@@ -48,5 +49,5 @@ class MonthlySettlementBatch(Base):
     program_id = Column(Integer, ForeignKey("incentive_programs.id", ondelete="RESTRICT"), nullable=False, index=True)
     net_payable = Column(Numeric(12, 2), nullable=False, default=0.0)
     status = Column(String(20), nullable=False, default='PROCESSED')  # 'PROCESSED', 'CONFIRMED', 'PAID'
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)

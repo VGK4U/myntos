@@ -283,7 +283,7 @@ def handle_social_webhook(
     except Exception as parse_err:
         return {"error": f"Invalid JSON payload: {parse_err}", "status_code": 400}
 
-    event_id = data.get("event_id") or data.get("id") or f"evt_{int(datetime.utcnow().timestamp())}_{hash(body_bytes)}"
+    event_id = data.get("event_id") or data.get("id") or f"evt_{int(get_indian_time().timestamp())}_{hash(body_bytes)}"
     event_type = data.get("event_type") or data.get("type", "unknown")
 
     # Check for duplicate webhook event (idempotency)

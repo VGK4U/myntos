@@ -8436,12 +8436,12 @@ async def edit_expense_entry_endpoint(
                 if new_status == 'PAID':
                     entry.is_paid = True
                     if not entry.paid_at:
-                        entry.paid_at = _dt.utcnow()
+                        entry.paid_at = get_indian_time()
                     if not entry.paid_by_id:
                         entry.paid_by_id = current_user.id
                 elif new_status == 'APPROVED':
                     if not entry.approved_at:
-                        entry.approved_at = _dt.utcnow()
+                        entry.approved_at = get_indian_time()
                     if not entry.approved_by_id:
                         entry.approved_by_id = current_user.id
                 elif new_status in ('DRAFT', 'SUBMITTED'):
@@ -8459,7 +8459,7 @@ async def edit_expense_entry_endpoint(
             entry.net_amount = amt + gst_amt - tds_amt
 
         from datetime import datetime as _dt
-        entry.updated_at = _dt.utcnow()
+        entry.updated_at = get_indian_time()
         db.commit()
         db.refresh(entry)
         return JSONResponse(content={"success": True, "message": "Expense entry updated", "entry_id": entry.id, "status": entry.status, "amount": float(entry.amount)})
@@ -8518,7 +8518,7 @@ async def expense_tally_action_endpoint(
         if not entry:
             return JSONResponse(status_code=404, content={"success": False, "detail": "Expense entry not found"})
 
-        now = _dt.utcnow()
+        now = get_indian_time()
         action = action.lower()
 
         if action == 'confirm':
@@ -8931,7 +8931,7 @@ async def create_fund_transfer_endpoint(
             payment_reference=payment_reference,
             status='CONFIRMED',
             confirmed_by_id=current_user.id,
-            confirmed_at=_dt.utcnow()
+            confirmed_at=get_indian_time()
         )
         db.add(transfer)
         db.flush()
@@ -18802,7 +18802,7 @@ def get_training_admin_overview(
             is_exempt = r.employee_code in _TRAINING_EXEMPT_CODES
             grace_ok  = False
             if deployed_at and not is_exempt and r.emp_created_at:
-                grace_ok = _dt_tv.utcnow() < deployed_at + _td_tv(days=5)
+                grace_ok = get_indian_time() < deployed_at + _td_tv(days=5)
             employees.append({
                 "id":              r.id,
                 "employee_code":   r.employee_code,

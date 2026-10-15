@@ -709,8 +709,10 @@ def list_tenant_segments(
             ]
         })
 
+    ctx = resolve_tenant_context(db, current_user)
     return {
         "success": True,
+        "is_saas_tenant": bool(getattr(ctx, "is_saas_tenant", False)),
         "segments": seg_list
     }
 

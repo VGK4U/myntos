@@ -2063,7 +2063,7 @@ async def upload_journey_checkin_photo(
         raise HTTPException(status_code=403, detail="Not authorized for this journey")
 
     file_bytes = None
-    filename = f"journey_checkin_{journey_id}_{int(datetime.utcnow().timestamp())}.webp"
+    filename = f"journey_checkin_{journey_id}_{int(get_indian_time().timestamp())}.webp"
 
     if file:
         file_bytes = await file.read()
@@ -2106,13 +2106,13 @@ async def upload_journey_checkin_photo(
         address=address,
         wvv_compliant=(accuracy is None or accuracy <= 100),
         notes=notes,
-        created_at=datetime.utcnow()
+        created_at=get_indian_time()
     )
     db.add(checkin)
     
     # Update main journey photo fields for compatibility
     journey.photo_path = photo_path
-    journey.photo_uploaded_at = datetime.utcnow()
+    journey.photo_uploaded_at = get_indian_time()
     
     db.commit()
     db.refresh(checkin)

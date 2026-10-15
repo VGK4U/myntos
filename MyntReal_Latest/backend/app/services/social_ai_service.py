@@ -95,7 +95,7 @@ class SocialAIService:
         """
         company_ctx = self.extract_company_context(db, company_id)
 
-        base_date = start_date or (datetime.utcnow().date() + timedelta(days=1))
+        base_date = start_date or (get_indian_time().date() + timedelta(days=1))
         post_dates = [base_date + timedelta(days=i * 2) for i in range(15)]
 
         # Prepare AI prompt with strict grounding rules

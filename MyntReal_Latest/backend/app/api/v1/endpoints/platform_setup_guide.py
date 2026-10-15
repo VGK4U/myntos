@@ -12,6 +12,7 @@ because of missing optional integrations; environment status is reported
 in the response body instead of as exceptions.
 """
 
+from app.core.timezone import get_indian_time
 import os
 from datetime import datetime
 from fastapi import APIRouter, Depends
@@ -92,7 +93,7 @@ def get_platform_setup_guide(db: Session = Depends(get_db)):
         })
 
     return {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": get_indian_time().isoformat() + "Z",
         "setup_sections": SETUP_SECTIONS,
         "changelog":      PLATFORM_CHANGELOG,
         "live_inventory": {

@@ -3,6 +3,7 @@ Banner and Communication System Models
 Includes: Banner, CustomBanner, BannerSkippedUser, PopupMessage, UserCouponAcceptance, EmailTemplate, BannerMetrics, BannerEventLog
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, String, Boolean, DateTime, Text, Integer, ForeignKey, Date, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
@@ -28,7 +29,7 @@ class Banner(BaseModel):
     # Tracking
     created_by = Column(String(12), nullable=True)  # Staff user_id (nullable for staff creators)
     created_by_staff_id = Column(Integer, nullable=True)  # Staff employee ID (DC Protocol Feb 2026)
-    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_date = Column(DateTime, default=get_indian_time, nullable=False)
     approved_by = Column(String(12), nullable=True)  # Super Admin/RVZ ID who approved
     approved_date = Column(DateTime, nullable=True)
     
@@ -72,9 +73,9 @@ class CustomBanner(BaseModel):
     # Tracking
     created_by = Column(String(12), nullable=True)  # Staff user_id (nullable for staff creators)
     created_by_staff_id = Column(Integer, nullable=True)  # Staff employee ID (DC Protocol Feb 2026)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)  # Alias for compatibility
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    created_date = Column(DateTime, default=get_indian_time, nullable=False)  # Alias for compatibility
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     updated_date = Column(DateTime, nullable=True)  # Alias for compatibility
     updated_by = Column(String(12), nullable=True)
     
@@ -102,7 +103,7 @@ class BannerSkippedUser(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(12), nullable=False, unique=True)
     skipped_by = Column(String(12), nullable=False)  # Admin who skipped
-    skipped_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    skipped_date = Column(DateTime, default=get_indian_time, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)  # Can be reactivated
     reason = Column(Text, nullable=True)
     
@@ -142,7 +143,7 @@ class PopupMessage(BaseModel):
     # Tracking
     created_by = Column(String(12), nullable=True)  # Staff user_id (nullable for staff creators)
     created_by_staff_id = Column(Integer, nullable=True)  # Staff employee ID (DC Protocol Feb 2026)
-    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_date = Column(DateTime, default=get_indian_time, nullable=False)
     approved_by = Column(String(12), nullable=True)
     approved_date = Column(DateTime, nullable=True)
     submission_notes = Column(Text, nullable=True)
@@ -168,13 +169,13 @@ class UserCouponAcceptance(BaseModel):
     user_id = Column(String(12), nullable=False)
     login_attempt_number = Column(Integer, nullable=False)  # 1, 2, or 3
     ip_address = Column(String(45), nullable=False)  # IPv6 compatible
-    acceptance_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    acceptance_timestamp = Column(DateTime, default=get_indian_time, nullable=False)
     user_agent = Column(Text, nullable=True)  # Browser/device information
     accepted_terms_version = Column(String(10), nullable=False, default='1.0')
     
     # Tracking
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<UserCouponAcceptance user={self.user_id} attempt={self.login_attempt_number}>'
@@ -201,8 +202,8 @@ class EmailTemplate(BaseModel):
     
     # Tracking
     created_by = Column(String(12), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<EmailTemplate {self.name} - {self.template_type}>'
@@ -223,9 +224,9 @@ class BirthdayMessage(BaseModel):
     
     # Tracking
     created_by = Column(String(12), ForeignKey('user.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_by = Column(String(12), ForeignKey('user.id'), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<BirthdayMessage {self.id}: {self.message[:30]}...>'
@@ -244,7 +245,7 @@ class BirthdaySkippedUser(BaseModel):
     skipped_by = Column(String(12), ForeignKey('user.id'), nullable=False)
     reason = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    skipped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    skipped_at = Column(DateTime, default=get_indian_time, nullable=False)
     reactivated_at = Column(DateTime, nullable=True)
     reactivated_by = Column(String(12), ForeignKey('user.id'), nullable=True)
     
@@ -271,7 +272,7 @@ class BannerMetrics(BaseModel):
     views = Column(Integer, default=0, nullable=False)
     clicks = Column(Integer, default=0, nullable=False)
     impressions = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<BannerMetrics {self.banner_type}#{self.banner_id} {self.metric_date}: {self.views}v/{self.clicks}c>'
@@ -299,7 +300,7 @@ class BannerEventLog(BaseModel):
     new_status = Column(String(20), nullable=True)  # Status after action
     notes = Column(Text, nullable=True)  # Rejection reason, approval comments, etc.
     metadata_json = Column(Text, nullable=True)  # Additional context as JSON string
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<BannerEventLog {self.banner_type}#{self.banner_id} {self.action} by {self.actor_id}>'
@@ -323,7 +324,7 @@ class BannerViewLog(BaseModel):
     banner_type = Column(String(50), nullable=False)  # 'image', 'custom', 'popup', 'birthday', 'top_performers'
     user_id = Column(String(12), nullable=False)  # User who viewed/clicked
     action = Column(String(20), nullable=False)  # 'view' or 'click'
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=get_indian_time, nullable=False)
     
     def __repr__(self):
         return f'<BannerViewLog {self.banner_type}#{self.banner_id} {self.action} by {self.user_id}>'

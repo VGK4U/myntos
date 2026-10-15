@@ -7,6 +7,7 @@ Represents a retail/consumer customer account across all MyntOS & VGK4U vertical
 - EV Vehicle, Battery & Charging Customers
 - EVolution ETC Training Students
 """
+from app.core.timezone import get_indian_time
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index
 from app.core.database import Base
@@ -26,8 +27,8 @@ class CustomerProfile(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     profile_metadata = Column(Text, nullable=True)  # JSON-encoded extra preferences/saved billing accounts
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     __table_args__ = (
         Index("idx_customer_profile_mobile", "mobile_number"),

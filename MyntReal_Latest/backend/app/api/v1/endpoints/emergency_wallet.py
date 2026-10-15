@@ -4,6 +4,7 @@ Allows RVZ ID to perform manual wallet balance adjustments in emergency situatio
 WITH FULL AUDIT TRAIL
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -143,7 +144,7 @@ async def adjust_wallet(
             amount=amount if adjustment_type == 'add' else -amount,
             balance_before=current_balance,
             balance_after=new_balance,
-            transaction_date=datetime.utcnow(),
+            transaction_date=get_indian_time(),
             description=f"Emergency {adjustment_type.upper()} by RVZ ID: {reason}",
             performed_by=user.id
         )

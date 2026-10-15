@@ -3,6 +3,7 @@ Red Coupon Voting System Endpoints
 Account reactivation approval with 3-tier workflow and voting
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
@@ -121,7 +122,7 @@ async def process_red_coupon_approval(
     if data.action == 'approve':
         approval_request.status = 'approved'
         approval_request.approved_by = current_user.id
-        approval_request.approved_date = datetime.utcnow()
+        approval_request.approved_date = get_indian_time()
         approval_request.approval_reason = data.comments
         
         # Create audit log
@@ -142,7 +143,7 @@ async def process_red_coupon_approval(
     elif data.action == 'reject':
         approval_request.status = 'rejected'
         approval_request.approved_by = current_user.id
-        approval_request.rejected_date = datetime.utcnow()
+        approval_request.rejected_date = get_indian_time()
         approval_request.rejection_reason = data.comments
         
         # Create audit log
@@ -342,18 +343,18 @@ async def submit_red_coupon_vote(
     if approve_count >= 2:
         approval_request.status = 'approved'
         approval_request.approved_by = current_user.id
-        approval_request.approved_date = datetime.utcnow()
+        approval_request.approved_date = get_indian_time()
         approval_request.voting_closed = True
-        approval_request.voting_closed_date = datetime.utcnow()
+        approval_request.voting_closed_date = get_indian_time()
         approval_request.early_majority_reached = True
         message = "Vote recorded. Majority approval reached - request approved"
         final_decision_made = True
     elif reject_count >= 2:
         approval_request.status = 'rejected'
         approval_request.approved_by = current_user.id
-        approval_request.rejected_date = datetime.utcnow()
+        approval_request.rejected_date = get_indian_time()
         approval_request.voting_closed = True
-        approval_request.voting_closed_date = datetime.utcnow()
+        approval_request.voting_closed_date = get_indian_time()
         approval_request.early_majority_reached = True
         message = "Vote recorded. Majority rejection reached - request rejected"
         final_decision_made = True
@@ -362,15 +363,15 @@ async def submit_red_coupon_vote(
         if approve_count > reject_count:
             approval_request.status = 'approved'
             approval_request.approved_by = current_user.id
-            approval_request.approved_date = datetime.utcnow()
+            approval_request.approved_date = get_indian_time()
             message = "Vote recorded. All votes cast - request approved"
         else:
             approval_request.status = 'rejected'
             approval_request.approved_by = current_user.id
-            approval_request.rejected_date = datetime.utcnow()
+            approval_request.rejected_date = get_indian_time()
             message = "Vote recorded. All votes cast - request rejected"
         approval_request.voting_closed = True
-        approval_request.voting_closed_date = datetime.utcnow()
+        approval_request.voting_closed_date = get_indian_time()
         final_decision_made = True
     else:
         message = f"Vote recorded. {3 - total_votes} more vote(s) needed"

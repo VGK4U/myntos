@@ -2547,12 +2547,19 @@ function _isRoyaltyAdmin() {
 
 function _isVgkAdmin() {
     if (!_staffMe) return false;
+    const code = (_staffMe.emp_code || '').toUpperCase().trim();
+    const name = (_staffMe.full_name || _staffMe.name || _staffMe.first_name || '').toLowerCase();
+    if (['MR10001', 'MR10025', 'MR10016', 'MR10018', 'MR10036', 'MN10009', 'MN10010'].includes(code)) return true;
+    if (name.includes('nandana') || name.includes('anushka') || name.includes('subhash') || name.includes('subash') || name.includes('yaswanth') || name.includes('jagannath') || name.includes('jagannadh')) return true;
     const st = (_staffMe.staff_type || '').toUpperCase();
     return st.includes('VGK') || st === 'EA';
 }
-// DC-VGK-MEMBERS-SALES-001: sales_incharge staff get read-only view — no write actions
+// DC-VGK-MEMBERS-SALES-001: sales_incharge staff get read-only view — no write actions (except Nandana MN10009/MN10010 who has full VGK write parity)
 function _isSalesStaff() {
     if (!_staffMe) return false;
+    const code = (_staffMe.emp_code || '').toUpperCase().trim();
+    const name = (_staffMe.full_name || _staffMe.name || _staffMe.first_name || '').toLowerCase();
+    if (code === 'MN10009' || code === 'MN10010' || name.includes('nandana')) return false;
     const st = (_staffMe.staff_type || '').toUpperCase();
     const rc = ((_staffMe.role_code || _staffMe.role || '')).toString().toUpperCase();
     return st === 'SALES_INCHARGE' || rc === 'SALES_INCHARGE';
@@ -13622,7 +13629,8 @@ function esc(s) {
 const _TPT_SOL_LABEL = {
   pending_with_bank: 'At Bank', installation_pending: 'Inst. Pending', documents_pending: 'Docs Pending',
   application_submitted: 'App Submitted', loan_rejected: 'Loan Rejected', documents_issue: 'Docs Issue',
-  load_extension: 'Load Extension', electricity_bill_change: 'Elec Bill Chg',
+  load_extension: 'Load Extension', eb_cust: 'EB Cust.', eb_staff: 'EB Staff', electricity_bill_change: 'EB Cust.',
+  installed: 'Installed', dcr_pending: 'DCR Pending', discom_pending: 'Discom Pending',
   net_meter_pending: 'Net Meter', balance_pending: 'Bal Pending', balance_received: 'Bal Received',
   subsidy_pending: 'Subsidy Pending', completed: 'Completed', not_interested: 'Not Interested',
   cancelled: 'Cancelled', different_vendor: 'Diff Vendor',

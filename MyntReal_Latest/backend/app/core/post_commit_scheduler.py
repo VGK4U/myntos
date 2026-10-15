@@ -9,6 +9,7 @@ Architecture:
 - Implements retry queue for scheduler failures
 - Ensures dual-evidence guarantees are never violated
 """
+from app.core.timezone import get_indian_time
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
@@ -50,7 +51,7 @@ class PostCommitScheduler:
         
         session.info['deferred_jobs'].append({
             **job_params,
-            'registered_at': datetime.utcnow().isoformat()
+            'registered_at': get_indian_time().isoformat()
         })
         
         logger.info(f"[POST-COMMIT] Registered deferred job: {job_params.get('scheduler_job_id')}")
@@ -123,7 +124,7 @@ class PostCommitScheduler:
                 if job:
                     job.scheduler_status = status
                     job.scheduler_job_id = sched_job_id
-                    job.last_scheduler_attempt = datetime.utcnow()
+                    job.last_scheduler_attempt = get_indian_time()
                     if status == 'scheduled':
                         job.error_message = None  # Clear error on success
                     else:

@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, T
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import JSON
-from app.models.base import Base
+from app.models.base import Base, get_indian_time
 
 JSONType = JSONB().with_variant(JSON(), "sqlite")
 
@@ -39,7 +39,7 @@ class AutomationExecution(Base):
     failed_count = Column(Integer, nullable=False, default=0)
     skipped_count = Column(Integer, nullable=False, default=0)
 
-    started_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, nullable=False, default=get_indian_time, index=True)
     completed_at = Column(DateTime, nullable=True)
 
     error_message = Column(Text, nullable=True)
@@ -144,8 +144,8 @@ class AutomationTargetConfig(Base):
     is_active = Column(Boolean, nullable=False, default=True)
 
     created_by_staff_id = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=get_indian_time)
+    updated_at = Column(DateTime, nullable=False, default=get_indian_time, onupdate=get_indian_time)
 
     __table_args__ = (
         Index("idx_atc_job_active", "job_id", "is_active"),

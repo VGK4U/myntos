@@ -513,7 +513,7 @@ def register_scratch_interest(req: ScratchInterestRequest, db: Session = Depends
     pincode = card.pincode if card else None
 
     # Check recent lead created in the last 24h for this category
-    cutoff = datetime.utcnow() - timedelta(hours=24)
+    cutoff = get_indian_time() - timedelta(hours=24)
     existing = db.query(CRMLead).filter(
         CRMLead.phone == phone_10,
         CRMLead.source == "Recharge",
@@ -541,7 +541,7 @@ def register_scratch_interest(req: ScratchInterestRequest, db: Session = Depends
         city=city,
         state=state,
         pincode=pincode,
-        created_at=datetime.utcnow()
+        created_at=get_indian_time()
     )
     db.add(lead)
     db.commit()

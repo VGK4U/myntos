@@ -1,3 +1,4 @@
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -92,19 +93,19 @@ def verify_secondary_password(
     
     # Clean up expired sessions
     db.query(SuperAdminSession).filter_by(admin_id=current_user.id).filter(
-        SuperAdminSession.expires_at < datetime.utcnow()
+        SuperAdminSession.expires_at < get_indian_time()
     ).delete(synchronize_session=False)
     
     # Create new session token
     session_token = generate_session_token()
-    expires_at = datetime.utcnow() + timedelta(minutes=30)
+    expires_at = get_indian_time() + timedelta(minutes=30)
     
     admin_session = SuperAdminSession(
         admin_id=current_user.id,
         session_token=session_token,
         operation_type=data.operation_type,
         is_verified=True,
-        verified_at=datetime.utcnow(),
+        verified_at=get_indian_time(),
         expires_at=expires_at,
         ip_address=request.client.host if request.client else None
     )

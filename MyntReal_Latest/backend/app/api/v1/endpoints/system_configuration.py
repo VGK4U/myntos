@@ -3,6 +3,7 @@ RVZ ID Exclusive: System Configuration Management
 Centralized configuration for all system constants - editable from RVZ dashboard
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -420,7 +421,7 @@ async def update_configuration(
                 "old_value": response_old_value,
                 "new_value": response_new_value,
                 "updated_by": user_id,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_indian_time().isoformat()
             }
         )
         
@@ -464,7 +465,7 @@ async def reset_to_defaults(
                 "success": True,
                 "message": "All configurations reset to default values",
                 "reset_by": user_id,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_indian_time().isoformat()
             }
         )
         
@@ -489,7 +490,7 @@ async def export_configuration(
         settings = AppSettings.get_all_settings(db)
         
         config_export = {
-            'exported_at': datetime.utcnow().isoformat(),
+            'exported_at': get_indian_time().isoformat(),
             'exported_by': user_id,
             'financial_deductions': {
                 'admin_deduction_rate': float(settings.admin_deduction_rate),

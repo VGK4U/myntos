@@ -4,6 +4,7 @@ Handles all 7 benefit types: EV_Discount, RoyalEV_Bonus, Training_Cashback,
 Referral_Opportunity, Franchise_Referral, Insurance_Referral, Fleet_Referral
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from decimal import Decimal
@@ -114,7 +115,7 @@ class EVBenefitService:
             final_amount=ev_price,
             cashback_amount=bonus_amount,
             status='Applied',
-            applied_date=datetime.utcnow(),
+            applied_date=get_indian_time(),
             verification_status='Pending'
         )
         
@@ -159,7 +160,7 @@ class EVBenefitService:
             commission_rate=Decimal('3.0'),
             commission_amount=direct_commission,
             status='Pending',
-            earned_date=datetime.utcnow()
+            earned_date=get_indian_time()
         )
         db.add(direct_income)
         incomes_created.append(direct_income)
@@ -177,7 +178,7 @@ class EVBenefitService:
                 commission_rate=Decimal('1.5'),
                 commission_amount=indirect_commission,
                 status='Pending',
-                earned_date=datetime.utcnow()
+                earned_date=get_indian_time()
             )
             db.add(indirect_income)
             incomes_created.append(indirect_income)
@@ -235,7 +236,7 @@ class EVBenefitService:
             commission_rate=commission_rate,
             total_commission=total_commission,
             status='Pending',
-            order_date=datetime.utcnow()
+            order_date=get_indian_time()
         )
         
         db.add(franchise)
@@ -298,7 +299,7 @@ class EVBenefitService:
             commission_amount=commission_amount,
             policy_start_date=policy_start_date,
             policy_end_date=policy_end_date,
-            issue_date=datetime.utcnow(),
+            issue_date=get_indian_time(),
             status='Active'
         )
         
@@ -317,7 +318,7 @@ class EVBenefitService:
                 commission_rate=commission_percentage,
                 commission_amount=commission_amount,
                 status='Pending',
-                earned_date=datetime.utcnow()
+                earned_date=get_indian_time()
             )
             db.add(referral_income)
             db.commit()
@@ -388,7 +389,7 @@ class EVBenefitService:
             primary_referrer_id=primary_referrer_id,
             secondary_referrer_id=None,  # Removed split per new requirements
             status='Pending',
-            order_date=datetime.utcnow()
+            order_date=get_indian_time()
         )
         
         db.add(fleet_order)
@@ -406,7 +407,7 @@ class EVBenefitService:
                 commission_rate=total_commission_rate,
                 commission_amount=total_commission_pool,
                 status='Pending',
-                earned_date=datetime.utcnow()
+                earned_date=get_indian_time()
             )
             db.add(referral_income)
             db.commit()

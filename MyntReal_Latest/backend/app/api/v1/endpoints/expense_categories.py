@@ -6,6 +6,7 @@ DC Protocol Dec 2025: Updated to support staff portal access
 DC Protocol May 2026: Added Income Category (In & Out Cat.) support
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, Body, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -241,7 +242,7 @@ async def update_main_category(
         category.name = data.name.strip()
         category.description = data.description
         category.updated_by_id = user_id
-        category.updated_at = datetime.utcnow()
+        category.updated_at = get_indian_time()
         
         db.commit()
         
@@ -282,7 +283,7 @@ async def update_sub_category(
         category.name = data.name.strip()
         category.description = data.description
         category.updated_by_id = user_id
-        category.updated_at = datetime.utcnow()
+        category.updated_at = get_indian_time()
         
         db.commit()
         
@@ -332,7 +333,7 @@ async def delete_main_category(
         
         category.is_active = False
         category.updated_by_id = user_id
-        category.updated_at = datetime.utcnow()
+        category.updated_at = get_indian_time()
         
         db.commit()
         
@@ -371,7 +372,7 @@ async def delete_sub_category(
         
         category.is_active = False
         category.updated_by_id = user_id
-        category.updated_at = datetime.utcnow()
+        category.updated_at = get_indian_time()
         
         db.commit()
         
@@ -584,7 +585,7 @@ async def update_income_main_category(
         cat.name = data.name.strip()
         cat.description = data.description
         cat.updated_by_id = user_id
-        cat.updated_at = datetime.utcnow()
+        cat.updated_at = get_indian_time()
         db.commit()
 
         return JSONResponse(content={"success": True, "message": f"Category updated to '{data.name}'"})
@@ -619,7 +620,7 @@ async def update_income_sub_category(
         cat.name = data.name.strip()
         cat.description = data.description
         cat.updated_by_id = user_id
-        cat.updated_at = datetime.utcnow()
+        cat.updated_at = get_indian_time()
         db.commit()
 
         return JSONResponse(content={"success": True, "message": f"Sub category updated to '{data.name}'"})
@@ -663,7 +664,7 @@ async def delete_income_main_category(
 
         cat.is_active = False
         cat.updated_by_id = user_id
-        cat.updated_at = datetime.utcnow()
+        cat.updated_at = get_indian_time()
         db.commit()
 
         return JSONResponse(content={"success": True, "message": f"Income category '{cat.name}' deleted"})
@@ -696,7 +697,7 @@ async def delete_income_sub_category(
 
         cat.is_active = False
         cat.updated_by_id = user_id
-        cat.updated_at = datetime.utcnow()
+        cat.updated_at = get_indian_time()
         db.commit()
 
         return JSONResponse(content={"success": True, "message": f"Sub category '{cat.name}' deleted"})

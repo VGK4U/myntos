@@ -367,6 +367,14 @@ def add_vgk_team_columns():
             lead_cols = [
                 ("is_vgk_program", "BOOLEAN NOT NULL DEFAULT FALSE"),
                 ("vgk_field_support_id", "INTEGER REFERENCES official_partners(id) ON DELETE SET NULL"),
+                ("insurance_status", "VARCHAR(30) DEFAULT 'ineligible'"),
+                ("insurance_policy_no", "VARCHAR(100)"),
+                ("insurance_company", "VARCHAR(150)"),
+                ("insurance_start_date", "DATE"),
+                ("insurance_expiry_date", "DATE"),
+                ("insurance_sum_insured", "DOUBLE PRECISION"),
+                ("insurance_premium", "DOUBLE PRECISION"),
+                ("insurance_notes", "TEXT"),
             ]
             for col_name, col_def in lead_cols:
                 try:
@@ -381,6 +389,21 @@ def add_vgk_team_columns():
                         logging.info(f"[DC-VGK] Added crm_leads.{col_name}")
                 except Exception as ce:
                     logging.debug(f"[DC-VGK] crm_leads.{col_name}: {ce}")
+
+            try:
+                conn.execute(text("""
+                    UPDATE crm_leads
+                    SET insurance_status = 'eligible'
+                    WHERE (solar_pipeline_status = 'completed' OR status = 'completed')
+                      AND (insurance_status IS NULL OR insurance_status = 'ineligible')
+                """))
+                conn.execute(text("""
+                    UPDATE crm_leads
+                    SET insurance_status = 'ineligible'
+                    WHERE insurance_status IS NULL
+                """))
+            except Exception as _ins_e:
+                logging.debug(f"[DC-INSURANCE-INIT] Backfill: {_ins_e}")
 
             conn.commit()
             logging.info("[DC-VGK] VGK Team column migration complete")
@@ -851,7 +874,7 @@ def seed_vgk_support_scenarios():
                 ("Guru Only, Pending",        None,  None,  False),
             ]
 
-            now = _dt.utcnow()
+            now = get_indian_time()
             created_leads = []
             for i, (label, l2_sc, l3_sc, has_l3) in enumerate(SCENARIOS, 1):
                 # Create CRM lead
@@ -2004,7 +2027,7 @@ def seed_sample_dealers_and_stock(db):
             ]
             
             for dealer_data in sample_dealers:
-                partner = OfficialPartner(**dealer_data, created_at=datetime.utcnow())
+                partner = OfficialPartner(**dealer_data, created_at=get_indian_time())
                 db.add(partner)
             
             db.commit()
@@ -2033,7 +2056,7 @@ def seed_sample_dealers_and_stock(db):
                 ]
                 
                 for item_data in sample_items:
-                    item = StockItem(**item_data, created_at=datetime.utcnow())
+                    item = StockItem(**item_data, created_at=get_indian_time())
                     db.add(item)
                 
                 db.commit()
@@ -17598,26 +17621,194 @@ async def serve_root_css_files(filename: str):
     raise HTTPException(status_code=404, detail=f"CSS file '{filename}' not found")
 
 @app.get("/staff/{page:path}", include_in_schema=False)
-async def serve_staff_dynamic_pages(page: str):
-    from fastapi.responses import HTMLResponse
+async def serve_staff_dynamic_pages(page: str, request: Request):
+    from fastapi.responses import HTMLResponse, RedirectResponse
     clean_page = page.split("?")[0].strip().rstrip("/")
+    query_str = request.url.query
+    qs_suffix = f"?{query_str}" if query_str else ""
+
     if not clean_page:
         clean_page = "my-tenant"
-    
+
+    # Workflow segment lead redirects (matches frontend/server.js lines 20314-20345)
+    segment_redirects = {
+        "solar-leads": "/staff/mnr-leads-master?tab=solar&status=won_plus",
+        "ev-b2b-leads": "/staff/mnr-leads-master?tab=ev-b2b&status=won_plus",
+        "ev-b2c-leads": "/staff/mnr-leads-master?tab=ev-b2c&status=won_plus",
+        "ev-spares-leads": "/staff/mnr-leads-master?tab=ev-spares&status=won_plus",
+        "real-dreams-leads": "/staff/mnr-leads-master?tab=real-dreams&status=won_plus",
+        "insurance-leads": "/staff/mnr-leads-master?tab=insurance&status=won_plus",
+        "etc-leads": "/staff/mnr-leads-master?tab=etc",
+        "crm": "/staff/crm/dashboard",
+        "crm/team-leads": "/staff/leads?view=team",
+        "service-tickets/procurement": "/staff/service-tickets/procurement-queue",
+        "timesheet-approval": "/staff/timesheet?tab=team",
+        "my-timesheet": f"/staff/timesheet{qs_suffix}",
+        "accounts/balance-sheet": f"/staff/accounts/DAR{qs_suffix}",
+        "inventory/vehicle-color-sheet": "/staff/inventory/accessories",
+        "consolidated/balance-sheet": "/staff/consolidated?tab=balance-sheet",
+        "consolidated/pl": "/staff/consolidated?tab=pl",
+        "consolidated/sales": "/staff/consolidated?tab=sales",
+        "consolidated/purchases": "/staff/consolidated?tab=purchases",
+    }
+    if clean_page in segment_redirects:
+        return RedirectResponse(url=segment_redirects[clean_page], status_code=302)
+
     mapping = {
         "my-tenant": "staff_my_tenant.html",
         "my-journeys": "staff_my_journeys.html",
         "field-appointments": "staff_field_appointments.html",
         "all-journeys": "staff_all_journeys.html",
+        "all-location-tracker": "staff_all_journeys.html",
+        "all-location-history": "staff_all_journeys.html",
         "team-journeys": "staff_team_journeys.html",
+        "team/journeys": "staff_team_journeys.html",
+        "vgk4u-journeys": "staff_vgk4u_journeys.html",
+        "my-location-history": "staff_my_location_history.html",
+        "team-live-tracker": "staff_team_location_tracker.html",
+        "team-location-tracker": "staff_team_location_tracker.html",
         "my-leads": "staff_my_leads.html",
+        "leads": "staff_my_leads.html",
         "dashboard": "staff_dashboard.html",
+        "executive-dashboard": "staff_executive_dashboard.html",
+        "mnr-leads": "staff_mnr_leads_master.html",
+        "mnr-leads-master": "staff_mnr_leads_master.html",
+        "category-leads": "staff_mnr_leads_master.html",
+        "workflow-leads": "staff_mnr_leads_master.html",
+        "bank-wise-leads": "staff_bank_wise_leads.html",
+        "at-bank-leads": "staff_bank_wise_leads.html",
+        "vendors": "staff_solar_vendors.html",
+        "solar-vendors": "staff_solar_vendors.html",
+        "vgk4u/etc-students": "staff_etc_students.html",
+        "vgk4u/purchase-orders": "staff_vgk4u_po.html",
+        "vgk4u/real-estate": "staff_vgk4u_real_estate.html",
+        "vgk4u/insurance": "staff_vgk4u_insurance.html",
+        "vgk-members": "staff_vgk_members.html",
+        "vgk/vendors": "staff_vgk_vendors.html",
+        "vgk/vendor-categories": "staff_vgk_vendor_categories.html",
+        "vgk/vendor-products": "staff_vgk_vendor_products.html",
+        "vgk/vendor-transactions": "staff_vgk_vendor_transactions.html",
+        "vgk/promo-codes": "staff_vgk_promo_codes.html",
+        "vgk/coupons/available": "staff_vgk_coupons.html",
+        "incentive-source": "staff_incentive_source.html",
+        "incentives/points": "staff_incentives_points.html",
+        "incentives/approvals": "staff_incentives_approvals.html",
+        "incentives/vgk4u": "staff_incentives_vgk4u.html",
+        "crm/dashboard": "staff_crm_dashboard.html",
+        "crm/settings": "staff_lead_sources.html",
+        "crm/lead-sources": "staff_lead_sources.html",
+        "crm/ai-segments": "staff_ai_segments.html",
+        "crm/ai-calling": "staff_ai_calling.html",
+        "crm/whatsapp-bot": "staff_whatsapp_center.html",
+        "crm/whatsapp-inbox": "staff_whatsapp_center.html",
+        "crm/wa-inbox": "staff_whatsapp_center.html",
+        "whatsapp-center": "staff_whatsapp_center.html",
+        "whatsapp-inbox": "staff_whatsapp_center.html",
+        "whatsapp-config": "staff_whatsapp_config.html",
+        "whatsapp/config": "staff_whatsapp_config.html",
+        "call-quality": "staff_call_quality.html",
+        "operator-calls": "staff_operator_calls.html",
+        "dialer": "staff_dialer.html",
+        "auto-dialer": "staff_dialer.html",
+        "softphone-center": "staff_incoming_calls.html",
+        "softphone": "staff_incoming_calls.html",
+        "softphone-hub": "staff_incoming_calls.html",
+        "incoming-calls": "staff_incoming_calls.html",
+        "calling": "staff_incoming_calls.html",
+        "calling-page": "staff_incoming_calls.html",
+        "telephony/incoming-calls": "staff_incoming_calls.html",
+        "telephony/calls": "staff_incoming_calls.html",
+        "call-flow-studio": "staff_call_flow_studio.html",
+        "call-flow": "staff_call_flow_studio.html",
+        "configuration/call-routing": "staff_call_flow_studio.html",
+        "configuration/telephony": "staff_call_flow_studio.html",
+        "service-tickets/queue": "staff_service_queue.html",
+        "service-tickets/raise": "staff_service_raise_ticket.html",
+        "service-tickets/procurement-queue": "staff_service_procurement.html",
+        "service-tickets/performance": "staff_service_performance.html",
+        "service-tickets/reports": "staff_service_reports.html",
+        "service-tickets/revenue": "staff_service_center_revenue.html",
+        "service-center-revenue": "staff_service_center_revenue.html",
+        "service-ticket-guide": "staff_service_ticket_guide.html",
+        "session-guide": "staff_session_guide.html",
+        "marketplace-config": "staff_marketplace_config.html",
+        "marketplace/codes-segments": "staff_marketplace_codes_segments.html",
+        "my-attendance": "staff_my_attendance.html",
+        "my-leaves": "staff_my_leaves.html",
+        "leave-approvals": "staff_leave_approvals.html",
+        "team-attendance": "staff_team_attendance.html",
+        "team/attendance": "staff_team_attendance.html",
+        "attendance-reports": "staff_attendance_reports.html",
+        "timesheet": "staff_my_timesheet.html",
+        "team-attendance-summary": "staff_team_attendance_summary.html",
+        "attendance-exceptions": "staff_attendance_exceptions.html",
+        "attendance-sheet": "staff_attendance_sheet.html",
+        "attendance-computation": "staff_attendance_computation.html",
+        "attendance_computation": "staff_attendance_computation.html",
+        "kra-tracking-sheet": "staff_kra_tracking_sheet.html",
+        "platform-setup-guide": "staff_platform_setup_guide.html",
+        "training-videos": "staff_training_videos.html",
+        "consolidated": "staff_consolidated.html",
         "tenant-users": "staff_tenant_users.html",
         "profile": "staff_profile.html",
         "login": "staff_login.html",
-        "accounts/companies": "staff_accounts_companies.html"
+        "accounts/companies": "staff_accounts_companies.html",
+        "accounts/DAR": "staff_accounts_dar.html",
+        "accounts/dar": "staff_accounts_dar.html",
+        "accounts/fund-allocations": "staff_accounts_fund_allocations.html",
+        "accounts/expense-entries": "staff_accounts_expense_entries.html",
+        "accounts/my-reimbursements": "staff_my_reimbursement_claims.html",
+        "accounts/reimbursement-approvals": "staff_reimbursement_approval.html",
+        "accounts/pending-to-clear": "staff_accounts_pending_clear.html",
+        "accounts/community-services": "staff_accounts_community_services.html",
+        "accounts/estimations": "staff_accounts_estimations.html",
+        "accounts/income-entries": "staff_accounts_income_entries.html",
+        "accounts/purchase-invoices": "staff_accounts_purchase_invoices.html",
+        "accounts/sales-invoices": "staff_accounts_sales_invoices.html",
+        "accounts/reports": "staff_accounts_reports.html",
+        "accounts/parties": "staff_accounts_parties_master.html",
+        "accounts/vendors": "staff_accounts_vendors.html",
+        "accounts/hsn": "staff_accounts_hsn.html",
+        "accounts/stock-items": "staff_accounts_stock_items.html",
+        "accounts/capital": "staff_accounts_capital.html",
+        "accounts/cash-in-hand": "staff_accounts_cash_in_hand.html",
+        "accounts/duties-taxes": "staff_accounts_duties_taxes.html",
+        "accounts/payables": "staff_accounts_payables.html",
+        "accounts/receivables": "staff_accounts_receivables.html",
+        "accounts/segments": "staff_accounts_segments.html",
+        "accounts/pricing": "staff_accounts_pricing.html",
+        "accounts/expense-categories": "staff_accounts_expense_categories.html",
+        "accounts/bom": "staff_accounts_bom.html",
+        "accounts/manufacturing": "staff_accounts_manufacturing.html",
+        "accounts/procurement": "staff_accounts_procurement.html",
+        "inventory/accessories": "staff_inventory_accessories.html",
+        "inventory/stock-items": "staff_accounts_stock_items.html",
+        "inventory/stock-ledger": "staff_inventory_stock_ledger.html",
+        "inventory/stock-transfers": "staff_inventory_stock_transfers.html",
+        "inventory/stock-validation": "staff_inventory_stock_validation.html",
+        "inventory/bom": "staff_accounts_bom.html",
+        "inventory/manufacturing": "staff_accounts_manufacturing.html",
+        "inventory/intake": "staff_inventory_intake.html",
+        "inventory/service-center-tracking": "staff_service_center_tracking.html",
+        "inventory/vendor-returns": "staff_vendor_returns.html",
+        "inventory/procurement": "staff_accounts_procurement.html",
+        "configuration/catalog": "staff_catalog_library.html",
+        "catalog-library": "staff_catalog_library.html",
+        "catalog": "staff_catalog_library.html",
+        "configuration/scope": "staff_configuration_scope.html",
+        "configuration/portal-scope": "staff_configuration_scope.html",
+        "configuration/razorpay": "staff_configuration_razorpay.html",
+        "configuration/a1top": "staff_configuration_a1top.html",
+        "configuration/integrations": "staff_integrations.html",
+        "integrations": "staff_integrations.html",
+        "configuration/social-media": "staff_social_media.html",
+        "social-media": "staff_social_media.html",
+        "partners/sales": "staff_partner_sales.html",
+        "partners/walkins": "staff_partner_walkins.html",
+        "partners/stock": "staff_partner_stock.html",
+        "mnr/log-reports": "staff_audit_logs.html",
     }
-    
+
     filename = mapping.get(clean_page) or f"staff_{clean_page.replace('/', '_').replace('-', '_')}.html"
     file_path = os.path.join(_WORKSPACE_ROOT, "frontend", filename)
     if not os.path.exists(file_path):
@@ -17625,14 +17816,8 @@ async def serve_staff_dynamic_pages(page: str):
     if not os.path.exists(file_path):
         file_path = os.path.join(_WORKSPACE_ROOT, "frontend", clean_page)
 
-    if os.path.exists(file_path):
+    if os.path.exists(file_path) and os.path.isfile(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"})
-
-    fallback = os.path.join(_WORKSPACE_ROOT, "frontend", "staff_my_tenant.html")
-    if os.path.exists(fallback):
-        with open(fallback, "r", encoding="utf-8") as f:
             content = f.read()
         return HTMLResponse(content=content, status_code=200, headers={"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"})
 

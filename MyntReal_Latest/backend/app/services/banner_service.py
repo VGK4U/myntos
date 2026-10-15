@@ -3,6 +3,7 @@ Banner and Communication System Service
 Handles TOP Performers calculation, banner management, popups, and emails
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_
 from app.models.banner import Banner, CustomBanner, BannerSkippedUser, PopupMessage, UserCouponAcceptance, EmailTemplate
@@ -238,7 +239,7 @@ class BannerService:
             skip_record = BannerSkippedUser(
                 user_id=user_id,
                 skipped_by=skipped_by,
-                skipped_date=datetime.utcnow(),
+                skipped_date=get_indian_time(),
                 is_active=True,
                 reason=reason or f"Skipped by {skipped_by}"
             )
@@ -282,7 +283,7 @@ class BannerService:
     def get_active_custom_banners(db: Session) -> List[CustomBanner]:
         """Get all active custom banners sorted by priority and display order"""
         try:
-            now = datetime.utcnow()
+            now = get_indian_time()
             return db.query(CustomBanner).filter(
                 CustomBanner.is_active == True,
                 or_(
@@ -318,7 +319,7 @@ class BannerService:
     def get_popups_for_page(db: Session, page: str) -> List[PopupMessage]:
         """Get active popups for a specific page"""
         try:
-            now = datetime.utcnow()
+            now = get_indian_time()
             return db.query(PopupMessage).filter(
                 PopupMessage.target_page == page,
                 PopupMessage.status == 'Approved',
@@ -371,7 +372,7 @@ class BannerService:
             # Check if popup was already shown recently (within last 2 hours)
             # This prevents showing on every page refresh during the same login session
             from datetime import datetime, timedelta
-            recent_check = datetime.utcnow() - timedelta(hours=2)
+            recent_check = get_indian_time() - timedelta(hours=2)
             recent_acceptance = db.query(UserCouponAcceptance).filter(
                 UserCouponAcceptance.user_id == user_id,
                 UserCouponAcceptance.acceptance_timestamp >= recent_check
@@ -430,7 +431,7 @@ class BannerService:
                 ip_address=ip_address[:45],  # Truncate for IPv6
                 user_agent=user_agent,
                 accepted_terms_version=active_version_str,
-                acceptance_timestamp=datetime.utcnow()
+                acceptance_timestamp=get_indian_time()
             )
             
             db.add(acceptance)

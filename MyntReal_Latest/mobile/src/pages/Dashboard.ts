@@ -195,12 +195,33 @@ export class DashboardPage {
       }
     }
     this.fetchTodayJourneys();
+    this.fetchMemberAppsWidget();
+  }
+
+  private async fetchMemberAppsWidget(): Promise<void> {
+    if (this.isDestroyed) return;
+    try {
+      const response = await apiService.get<any>('/vgk/quick-alerts/staff-dashboard?date_range=30d');
+      if (this.isDestroyed) return;
+      const payload = (response as any).data || response;
+      if (payload && payload.success && payload.is_eligible) {
+        const widget = document.getElementById('mobDashMemberAppsWidget');
+        if (widget) widget.style.display = 'block';
+        const s = payload.summary || {};
+        const pEl = document.getElementById('mobDashMaPending');
+        const rEl = document.getElementById('mobDashMaReclaim');
+        const runEl = document.getElementById('mobDashMaRunning');
+        if (pEl) pEl.textContent = String(s.pending_unclaimed || 0);
+        if (rEl) rEl.textContent = String(s.reclaimable_over_3h || 0);
+        if (runEl) runEl.textContent = String(s.running_in_progress || 0);
+      }
+    } catch (e) {}
   }
 
   private async fetchTodayJourneys(): Promise<void> {
     if (this.isDestroyed) return;
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const response = await apiService.get<any>(`/staff/journeys/my?start_date=${today}&end_date=${today}`);
       if (this.isDestroyed) return;
       if (response.success && response.data) {
@@ -403,6 +424,28 @@ export class DashboardPage {
               <p class="stat-value" id="todayJourneys">0</p>
             </div>
           </div>
+
+          <!-- VGK4U Member Applications & Support Live Card (Sales & Leadership) -->
+          <div id="mobDashMemberAppsWidget" class="card" style="display: none; margin-top: 12px; border-left: 4px solid #2563eb; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-weight: 800; font-size: 14px; color: #0f172a;">⚡ Applications &amp; Support</div>
+              <button id="openMobMemberAppsBtn" class="btn btn-primary btn-sm" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px;">Open Queue</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 4px;">
+                <div style="font-size: 10px; font-weight: 700; color: #b45309;">Pending</div>
+                <div id="mobDashMaPending" style="font-size: 18px; font-weight: 900; color: #d97706;">0</div>
+              </div>
+              <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 8px 4px;">
+                <div style="font-size: 10px; font-weight: 800; color: #c2410c;">&gt;3h Re-Claim</div>
+                <div id="mobDashMaReclaim" style="font-size: 18px; font-weight: 900; color: #ea580c;">0</div>
+              </div>
+              <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 8px 4px;">
+                <div style="font-size: 10px; font-weight: 700; color: #4338ca;">Running</div>
+                <div id="mobDashMaRunning" style="font-size: 18px; font-weight: 900; color: #4f46e5;">0</div>
+              </div>
+            </div>
+          </div>
         </main>
 
         <!-- Selfie Modal -->
@@ -452,6 +495,10 @@ export class DashboardPage {
     document.getElementById('cancelSelfieBtn')?.addEventListener('click', () => this.hideSelfieModal());
     document.getElementById('retakeSelfieBtn')?.addEventListener('click', () => this.handleRetakeSelfie());
     document.getElementById('confirmSelfieBtn')?.addEventListener('click', () => this.handleConfirmSelfie());
+    document.getElementById('openMobMemberAppsBtn')?.addEventListener('click', async () => {
+      const { routerService } = await import('../services/router.service');
+      routerService.navigate('progress');
+    });
 
     // Work mode selector buttons
     document.querySelectorAll('.work-mode-btn').forEach(btn => {

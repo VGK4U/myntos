@@ -676,7 +676,7 @@ def staff_login(
         )
     
     if employee.is_locked():
-        remaining = (employee.locked_until - datetime.utcnow()).seconds // 60
+        remaining = (employee.locked_until - get_indian_time()).seconds // 60
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Account locked. Try again in {remaining} minutes."
@@ -721,7 +721,7 @@ def staff_login(
         lockout_minutes = get_staff_setting(db, 'lockout_duration_minutes', 15)
         
         if employee.failed_login_attempts >= max_attempts:
-            employee.locked_until = datetime.utcnow() + timedelta(minutes=lockout_minutes)
+            employee.locked_until = get_indian_time() + timedelta(minutes=lockout_minutes)
             log_staff_audit(db, employee.id, "ACCOUNT_LOCKED", "auth",
                            new_data={"attempts": employee.failed_login_attempts},
                            ip_address=request.client.host if request and request.client else None)
@@ -753,7 +753,7 @@ def staff_login(
     
     employee.failed_login_attempts = 0
     employee.locked_until = None
-    employee.last_login = datetime.utcnow()
+    employee.last_login = get_indian_time()
     
     t_token_start = time.time()
     # 365-Day Persistent Session for Mobile & Staff Logins (prevents premature auto-logouts)
@@ -1370,7 +1370,7 @@ async def change_staff_password(
         )
     
     current_user.password_hash = SecurityManager.get_password_hash(new_password)
-    current_user.last_password_change = datetime.utcnow()
+    current_user.last_password_change = get_indian_time()
     # Stage 2A: Bump token_version to immediately revoke all existing sessions
     current_user.token_version = (getattr(current_user, "token_version", 1) or 1) + 1
     

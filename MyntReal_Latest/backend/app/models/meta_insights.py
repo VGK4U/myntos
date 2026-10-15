@@ -4,6 +4,7 @@ Stores daily performance metrics synced from Meta Graph Insights API.
 Preserves Meta's native reporting date for 1:1 reconciliation against Ads Manager.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Date, DateTime, Numeric, UniqueConstraint, ForeignKey, Index
 from datetime import datetime
 from app.models.base import Base
@@ -47,8 +48,8 @@ class MetaDailyInsights(Base):
     leads_count = Column(Integer, nullable=False, default=0)
     cpl = Column(Numeric(10, 2), nullable=False, default=0.00)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     def __repr__(self):
         return f'<MetaDailyInsights ad={self.ad_id} date={self.meta_reporting_date} spend={self.spend}>'

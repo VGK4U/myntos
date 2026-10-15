@@ -3,6 +3,7 @@ System Feature Flags Model (Release 1A Feature Flag Layer)
 Provides Layer 2 granular operational feature control per company and vertical.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, UniqueConstraint, ForeignKey
 from datetime import datetime
 from app.models.base import Base
@@ -25,8 +26,8 @@ class SystemFeatureFlag(Base):
     is_enabled = Column(Boolean, nullable=False, default=False)
     
     updated_by_staff_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
 
     def __repr__(self):
         return f'<SystemFeatureFlag company={self.company_id} vert={self.vertical} key={self.feature_key} enabled={self.is_enabled}>'

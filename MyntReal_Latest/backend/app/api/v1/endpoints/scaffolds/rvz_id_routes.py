@@ -3,6 +3,7 @@ RVZ ID Endpoints - Auto-generated scaffold
 Total endpoints: 28
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, status, Form, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
@@ -138,9 +139,9 @@ async def rvz_popup_control_create(
             is_active=is_active,
             status='Approved' if is_active else 'Draft',
             created_by=user_id,
-            created_date=datetime.utcnow(),
+            created_date=get_indian_time(),
             approved_by=user_id if is_active else None,
-            approved_date=datetime.utcnow() if is_active else None
+            approved_date=get_indian_time() if is_active else None
         )
         
         db.add(new_popup)

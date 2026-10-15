@@ -35,6 +35,7 @@ SHEET COLUMN MAP (0-indexed) — verified March 2026 against live sheet (32 colu
   28 = Mark up
 """
 
+from app.core.timezone import get_indian_time
 import csv
 import io
 import os
@@ -285,7 +286,7 @@ def parse_sheet_rows(sheet_url: str = None) -> Tuple[List[Dict[str, Any]], List[
 
 def _generate_proc_number_sync(db: Session, company_id: int) -> str:
     """Generate unique ZYPR-YYYYMM-NNNN procurement number (inline — avoids circular import)."""
-    ym = datetime.utcnow().strftime('%Y%m')
+    ym = get_indian_time().strftime('%Y%m')
     prefix = f'ZYPR-{ym}-'
     count_row = db.execute(text(
         "SELECT COUNT(*)+1 FROM marketplace_procurement_requests WHERE procurement_number LIKE :pfx AND company_id = :cid"
@@ -599,7 +600,7 @@ def run_stock_sync(db: Session, company_id: int = 1, triggered_by: str = 'auto')
                 existing.stock_item_id = item.id
                 existing.is_active     = True
                 existing.segment_id    = existing.segment_id or 1
-                existing.updated_at    = datetime.utcnow()
+                existing.updated_at    = get_indian_time()
                 # Stamp back the marketplace_sku on stock item so the badge lights up
                 if not item.marketplace_sku:
                     item.marketplace_sku = sku
@@ -822,7 +823,7 @@ def _import_sheet_products_to_stock(db: Session) -> None:
                 mkt.source = 'stock'
                 mkt.stock_item_id = new_stock_item.id
                 mkt.is_active = True
-                mkt.updated_at = datetime.utcnow()
+                mkt.updated_at = get_indian_time()
 
             # DC-STOCK-MKT-002a: Create OPENING stock_ledger entry from sheet qty
             # This makes the quantity from the Google Sheet visible on the Stock Items page.
@@ -961,7 +962,7 @@ def run_sync(db: Session, company_id: int, triggered_by: str = 'manual', segment
                 existing.segment_id  = resolved_segment_id
                 existing.source      = 'sheet'
                 existing.is_active   = True   # DC Fix Mar 2026: re-activate if it was deactivated
-                existing.updated_at  = datetime.utcnow()
+                existing.updated_at  = get_indian_time()
             else:
                 new_item = MarketspareItem(
                     sku=item['sku'],

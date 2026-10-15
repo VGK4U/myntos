@@ -83,8 +83,11 @@ class Settings(BaseSettings):
     MAIL_SERVER: Optional[str] = None
     MAIL_PORT: int = 587
     MAIL_USE_TLS: bool = True
+    MAIL_TLS: bool = True
+    MAIL_SSL: bool = False
     MAIL_USERNAME: Optional[str] = None
     MAIL_PASSWORD: Optional[str] = None
+    MAIL_FROM: Optional[str] = None
     
     # MNR ID System Configuration
     # Original format: MNR1823XXXXX (MNR1823 + 5 random digits)

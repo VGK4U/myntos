@@ -102,7 +102,7 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
     logger.info(f"📊 [VGK-MEMBER-STATEMENT] Found {len(qualifying_members)} qualifying members with >= 1 lead.")
 
     # Fetch numbers sent today for strict deduplication from message_log AND wa_inbox
-    ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    ist_now = get_indian_time()
     start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30))
     
     sent_today_numbers = set()

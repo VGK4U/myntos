@@ -3,6 +3,7 @@ System Jobs Model (Release 1A Durable Queue Layer)
 PostgreSQL FOR UPDATE SKIP LOCKED background job queue table.
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Text, JSON, Index, ForeignKey
 from datetime import datetime
 from app.models.base import Base
@@ -25,7 +26,7 @@ class SystemJob(Base):
     attempts = Column(Integer, nullable=False, default=0)
     max_attempts = Column(Integer, nullable=False, default=5)
     
-    next_attempt_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    next_attempt_at = Column(DateTime, default=get_indian_time, nullable=False, index=True)
     locked_by = Column(String(100), nullable=True)
     locked_until = Column(DateTime, nullable=True)
     
@@ -33,7 +34,7 @@ class SystemJob(Base):
     correlation_id = Column(String(100), nullable=True)
     error_log = Column(Text, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     processed_at = Column(DateTime, nullable=True)
 
     def __repr__(self):

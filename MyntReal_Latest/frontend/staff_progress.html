@@ -492,37 +492,178 @@
         </div>
 
         <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+            <li class="nav-item" id="memberAppsTabLi" style="display:none;">
+                <button class="nav-link" data-tab="member_applications" onclick="window._userManuallySwitchedTab=true; switchTab('member_applications')">
+                    <i class="fas fa-bolt text-warning"></i> Member Applications &amp; Support
+                    <span id="memberAppsTabBadge" class="badge bg-danger ms-1" style="display:none; font-size:10.5px; border-radius:10px; padding:2px 6px;">0</span>
+                </button>
+            </li>
             <li class="nav-item">
-                <button class="nav-link active" data-tab="day_progress" onclick="switchTab('day_progress')">
+                <button class="nav-link active" data-tab="day_progress" onclick="window._userManuallySwitchedTab=true; switchTab('day_progress')">
                     <i class="fas fa-tasks"></i> Day Progress
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-tab="extensions" onclick="switchTab('extensions')">
+                <button class="nav-link" data-tab="extensions" onclick="window._userManuallySwitchedTab=true; switchTab('extensions')">
                     <i class="fas fa-phone-volume text-success"></i> Extensions
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-tab="today" onclick="switchTab('today')">
+                <button class="nav-link" data-tab="today" onclick="window._userManuallySwitchedTab=true; switchTab('today')">
                     <i class="fas fa-calendar-day"></i> Day Update
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-tab="range" onclick="switchTab('range')">
+                <button class="nav-link" data-tab="range" onclick="window._userManuallySwitchedTab=true; switchTab('range')">
                     <i class="fas fa-calendar-alt"></i> Date Range Report
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-tab="my_team" onclick="switchTab('my_team')">
+                <button class="nav-link" data-tab="my_team" onclick="window._userManuallySwitchedTab=true; switchTab('my_team')">
                     <i class="fas fa-users"></i> My Team
                 </button>
             </li>
             <li class="nav-item" id="qBonusTabLi" style="display:none;">
-                <button class="nav-link" data-tab="quarterly_bonus" onclick="switchTab('quarterly_bonus')">
+                <button class="nav-link" data-tab="quarterly_bonus" onclick="window._userManuallySwitchedTab=true; switchTab('quarterly_bonus')">
                     <i class="fas fa-hand-holding-usd"></i> Quarterly Bonus
                 </button>
             </li>
         </ul>
+
+        <!-- Member Applications & Support Dashboard Panel (1st tab for Sales & Leadership) -->
+        <div id="memberApplicationsPanel" style="display:none; margin-top:14px;">
+            <!-- Header Banner & 3-Hour Re-Claim Policy Notice -->
+            <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); color:#fff; border-radius:14px; padding:16px 20px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(15,23,42,0.12);">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:800; letter-spacing:0.4px; text-transform:uppercase;">
+                            <i class="fas fa-bolt me-1"></i> Live Desk Queue
+                        </span>
+                        <h5 style="margin:0; font-weight:800; font-size:17px; color:#fff;">VGK4U Member Applications &amp; Support Dashboard</h5>
+                    </div>
+                    <div style="font-size:12.5px; color:#cbd5e1; margin-top:5px;">
+                        <i class="fas fa-clock text-warning me-1"></i>
+                        <strong>3-Hour SLA Rule:</strong> Any application or support request pending or running for <strong>more than 3 hours</strong> without completion can be claimed/re-claimed by any eligible staff member in the department.
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="maLastUpdatedText" style="font-size:11.5px; color:#94a3b8;"></span>
+                    <button class="btn btn-sm btn-warning fw-bold" onclick="loadMemberApplicationsDashboard()" style="border-radius:8px;">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh Queue
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPI Summary Strip -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:12px; margin-bottom:16px;">
+                <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #3b82f6; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+                    <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Total Requests</div>
+                    <div id="maKpiTotal" style="font-size:22px; font-weight:900; color:#0f172a; margin-top:2px;">0</div>
+                    <div id="maKpiTypeSplit" style="font-size:11px; color:#64748b;">0 Apps · 0 Support</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #f59e0b; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+                    <div style="font-size:11px; font-weight:700; color:#b45309; text-transform:uppercase;">Pending (Unclaimed)</div>
+                    <div id="maKpiPending" style="font-size:22px; font-weight:900; color:#d97706; margin-top:2px;">0</div>
+                    <div style="font-size:11px; color:#92400e;">Awaiting staff pickup</div>
+                </div>
+                <div style="background:#fff7ed; border:1px solid #fed7aa; border-left:4px solid #ea580c; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(234,88,12,0.06);">
+                    <div style="font-size:11px; font-weight:800; color:#c2410c; text-transform:uppercase;"><i class="fas fa-sync-alt me-1"></i>Open Re-Claim (&gt;3h)</div>
+                    <div id="maKpiReclaimable" style="font-size:22px; font-weight:900; color:#ea580c; margin-top:2px;">0</div>
+                    <div style="font-size:11px; color:#9a3412;">Anyone in dept can claim</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #6366f1; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+                    <div style="font-size:11px; font-weight:700; color:#4338ca; text-transform:uppercase;">Running / In Progress</div>
+                    <div id="maKpiRunning" style="font-size:22px; font-weight:900; color:#4f46e5; margin-top:2px;">0</div>
+                    <div style="font-size:11px; color:#64748b;">Actively being handled</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+                    <div style="font-size:11px; font-weight:700; color:#047857; text-transform:uppercase;">Completed</div>
+                    <div id="maKpiCompleted" style="font-size:22px; font-weight:900; color:#059669; margin-top:2px;">0</div>
+                    <div style="font-size:11px; color:#64748b;">Processed &amp; closed</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-left:4px solid #0ea5e9; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+                    <div style="font-size:11px; font-weight:700; color:#0369a1; text-transform:uppercase;">Avg Time Taken</div>
+                    <div id="maKpiAvgHandling" style="font-size:20px; font-weight:900; color:#0284c7; margin-top:2px;">—</div>
+                    <div id="maKpiAvgClaimWait" style="font-size:11px; color:#64748b;">Avg pickup: —</div>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; border-radius:12px; padding:12px 14px; box-shadow:0 2px 6px rgba(220,38,38,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; font-weight:800; color:#b91c1c; text-transform:uppercase;"><i class="fas fa-ticket-alt me-1"></i>Service Module Tickets</span>
+                        <a href="/staff/tickets" class="text-decoration-none" style="font-size:10.5px; font-weight:700; color:#2563eb;">Open Service <i class="fas fa-external-link-alt"></i></a>
+                    </div>
+                    <div id="maKpiServiceTickets" style="font-size:20px; font-weight:900; color:#dc2626; margin-top:2px;">0</div>
+                    <div id="maKpiServiceSplit" style="font-size:10.5px; color:#7f1d1d; font-weight:600;">0 Open · 0 Running · 0 Resolved</div>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <div>
+                        <label class="small fw-bold text-muted me-1">Status:</label>
+                        <select id="maFilterStatus" class="form-select form-select-sm d-inline-block" style="width:170px;" onchange="loadMemberApplicationsDashboard()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="PENDING">Pending (Unclaimed)</option>
+                            <option value="RECLAIMABLE">🔄 Open for Re-Claim (&gt;3h)</option>
+                            <option value="RUNNING">Running / Claimed</option>
+                            <option value="PROCESSED">Completed / Processed</option>
+                            <option value="CANCELLED">❌ Cancelled</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="small fw-bold text-muted me-1">Type:</label>
+                        <select id="maFilterType" class="form-select form-select-sm d-inline-block" style="width:155px;" onchange="loadMemberApplicationsDashboard()">
+                            <option value="ALL">All Types</option>
+                            <option value="APPLICATION">⚡ Application</option>
+                            <option value="SUPPORT">🆘 Support</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="small fw-bold text-muted me-1">Period:</label>
+                        <select id="maFilterDateRange" class="form-select form-select-sm d-inline-block" style="width:140px;" onchange="loadMemberApplicationsDashboard()">
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="today">Today</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2" style="min-width:260px; flex:1; max-width:360px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="maFilterSearch" class="form-control" placeholder="Search member, code, phone, staff..." oninput="debounceMemberAppsSearch()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size:13px;">
+                        <thead style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:#475569; font-size:11.5px; text-transform:uppercase; letter-spacing:0.4px;">
+                            <tr>
+                                <th style="padding:12px 14px;">Request &amp; Type</th>
+                                <th style="padding:12px 14px;">Member / Partner</th>
+                                <th style="padding:12px 14px; min-width:220px;">Requirement &amp; Notes</th>
+                                <th style="padding:12px 14px;">Pending Since</th>
+                                <th style="padding:12px 14px;">Claimed By</th>
+                                <th style="padding:12px 14px;">Time Taken / Running</th>
+                                <th style="padding:12px 14px;">Status</th>
+                                <th style="padding:12px 14px; text-align:right; min-width:200px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberApplicationsTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary d-block"></i>
+                                    Loading Member Applications &amp; Support requests...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Day Progress Panel (first tab) -->
         <div id="dayProgressPanel">
@@ -2492,6 +2633,31 @@
                 if (qbTab) {
                     qbTab.style.display = isEligible ? 'block' : 'none';
                 }
+
+                // ── Member Applications & Support (1st Tab for Sales Dept & Key Leadership) ──
+                const _deptName = String(_emp.department_name || _emp.department || '').toLowerCase();
+                const _desigName = String(_emp.designation || '').toLowerCase();
+                const _isSalesOrLeadership = _isKeyLeader ||
+                    _rc.includes('admin') ||
+                    _rc.includes('leadership') ||
+                    _rc.includes('sales') ||
+                    _deptName.includes('sales') ||
+                    _deptName.includes('crm') ||
+                    _desigName.includes('sales');
+
+                window._userCanAccessMemberApps = _isSalesOrLeadership;
+                const maTabLi = document.getElementById('memberAppsTabLi');
+                if (maTabLi && _isSalesOrLeadership) {
+                    maTabLi.style.display = 'block';
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const requestedTab = urlParams.get('tab');
+                    if (requestedTab === 'member_applications' || (!requestedTab && !window._userManuallySwitchedTab)) {
+                        switchTab('member_applications');
+                    } else {
+                        // Still fetch summary badge in background
+                        loadMemberApplicationsDashboard(true);
+                    }
+                }
             } catch (error) {
                 console.error('Error loading user info:', error);
             }
@@ -2742,7 +2908,7 @@
                         };
                         const _adSet = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
                         try {
-                            const _adDate = data?.query?.date || new Date().toISOString().slice(0,10);
+                            const _adDate = data?.query?.date || getISTToday();
                             const _adMthStart = _adDate.slice(0,7) + '-01';
                             const _adDaysElapsed = Math.max(1, (new Date(_adDate) - new Date(_adMthStart)) / 86400000 + 1);
                             const [_ftdR, _mtdR] = await Promise.all([
@@ -2977,7 +3143,7 @@
             const kra = d.kra?.summary || {};
             const tasks = d.tasks?.summary || {};
             const tp = d.team_performance;
-            const queryDate = d.query?.date || new Date().toISOString().slice(0,10);
+            const queryDate = d.query?.date || getISTToday();
 
             const kraPct  = kra.total > 0 ? Math.round((kra.completed||0)*100/kra.total) : 0;
             const tDenom  = (tasks.completed||0)+(tasks.pending||0)+(tasks.overdue||0);
@@ -3110,7 +3276,7 @@
         async function _loadDuKpiAndReorder(data) {
             try {
                 const empId = document.getElementById('employeeFilter')?.value || '';
-                const dateVal = document.getElementById('dateFilter')?.value || new Date().toISOString().slice(0,10);
+                const dateVal = document.getElementById('dateFilter')?.value || getISTToday();
                 let kpiUrl = `/api/v1/staff/performance/employee-kpis?date_from=${dateVal}&date_to=${dateVal}`;
                 if (empId) kpiUrl += `&employee_id=${empId}`;
                 const r = await staffFetch(kpiUrl);
@@ -5289,6 +5455,7 @@
                 if (btn.dataset.tab === tab) btn.classList.add('active');
             });
 
+            const memberAppsPanel = document.getElementById('memberApplicationsPanel');
             const dayProgressPanel = document.getElementById('dayProgressPanel');
             const extPanel = document.getElementById('extensionsPanel');
             const filterBar = document.getElementById('progressFilterBar');
@@ -5297,6 +5464,8 @@
             const execContent = document.getElementById('executiveDashboardContent');
             const myTeamPanel = document.getElementById('myTeamPanel');
 
+            // Hide member applications panel unless on it
+            if (memberAppsPanel) memberAppsPanel.style.display = 'none';
             // Hide extensions panel unless on it
             if (extPanel) extPanel.style.display = 'none';
             // Hide my team panel unless we're on it
@@ -5306,6 +5475,21 @@
             if (qbPanel) qbPanel.style.display = 'none';
             // Hide executive panel unless we're on it
             if (execContent) execContent.classList.add('hidden');
+
+            if (tab === 'member_applications') {
+                dayProgressPanel.style.display = 'none';
+                const dayUpdatePanel = document.getElementById('dayUpdatePanel');
+                if (dayUpdatePanel) dayUpdatePanel.classList.add('hidden');
+                filterBar.style.display = 'none';
+                loadingSpinner.classList.add('hidden');
+                progressContent.classList.add('hidden');
+                const teamOverview = document.getElementById('teamOverviewContent');
+                if (teamOverview) teamOverview.classList.add('hidden');
+                if (memberAppsPanel) memberAppsPanel.style.display = '';
+                loadMemberApplicationsDashboard();
+                startMemberAppsLiveTimers();
+                return;
+            }
 
             if (tab === 'day_progress') {
                 dayProgressPanel.style.display = '';
@@ -5367,7 +5551,7 @@
                 if (dfParent) dfParent.style.display = '';
                 document.getElementById('dateRangeGroup').style.display = 'none';
                 const df = document.getElementById('dateFilter');
-                if (!df.value) df.value = new Date().toISOString().split('T')[0];
+                if (!df.value) df.value = getISTToday();
                 const todaySec = document.getElementById('todaySections'); if (todaySec) todaySec.style.display = 'none';
                 const derb = document.getElementById('dayEndReportBtn'); if (derb) derb.style.display = '';
                 const evb2 = document.getElementById('execViewBtn'); if (evb2) evb2.style.display = 'none';
@@ -8429,6 +8613,439 @@
         </div>
     </div>
 </div>
+
+<script>
+    // ── VGK4U Member Applications & Support Dashboard Controller ──
+    let _maSearchTimer = null;
+    let _maTickInterval = null;
+    let _maPollInterval = null;
+    let _maCachedAlerts = [];
+    let _maCurrentStaffId = null;
+
+    function formatMaDuration(seconds) {
+        if (seconds === null || seconds === undefined || isNaN(seconds)) return '—';
+        const s = Math.max(0, Math.floor(Number(seconds)));
+        const hrs = Math.floor(s / 3600);
+        const mins = Math.floor((s % 3600) / 60);
+        const secs = s % 60;
+        if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+        if (mins > 0) return `${mins}m ${secs}s`;
+        return `${secs}s`;
+    }
+
+    function escapeMaHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function debounceMemberAppsSearch() {
+        if (_maSearchTimer) clearTimeout(_maSearchTimer);
+        _maSearchTimer = setTimeout(() => {
+            loadMemberApplicationsDashboard();
+        }, 320);
+    }
+
+    async function loadMemberApplicationsDashboard(badgeOnly = false) {
+        try {
+            const statusFilter = document.getElementById('maFilterStatus')?.value || 'ALL';
+            const typeFilter = document.getElementById('maFilterType')?.value || 'ALL';
+            const dateRange = document.getElementById('maFilterDateRange')?.value || '30d';
+            const searchVal = (document.getElementById('maFilterSearch')?.value || '').trim();
+
+            const qs = new URLSearchParams({
+                status_filter: statusFilter,
+                alert_type: typeFilter,
+                date_range: dateRange
+            });
+            if (searchVal) qs.set('search', searchVal);
+
+            const res = await staffFetch('/api/v1/vgk/quick-alerts/staff-dashboard?' + qs.toString());
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success) return;
+
+            // If backend confirms eligibility, ensure tab is visible
+            if (data.is_eligible) {
+                const maTabLi = document.getElementById('memberAppsTabLi');
+                if (maTabLi) maTabLi.style.display = 'block';
+            }
+
+            _maCurrentStaffId = data.current_staff?.id || null;
+            const summary = data.summary || {};
+
+            // Update tab badge with urgent count (Pending + >3h Re-Claimable)
+            const urgentCount = (summary.pending_unclaimed || 0) + (summary.reclaimable_over_3h || 0);
+            const badgeEl = document.getElementById('memberAppsTabBadge');
+            if (badgeEl) {
+                if (urgentCount > 0) {
+                    badgeEl.textContent = urgentCount;
+                    badgeEl.style.display = 'inline-block';
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+            }
+
+            if (badgeOnly) return;
+
+            // Populate KPI Cards
+            const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setTxt('maKpiTotal', summary.total || 0);
+            setTxt('maKpiTypeSplit', `${summary.applications_count || 0} Apps · ${summary.support_count || 0} Support${summary.cancelled_count ? ` · ${summary.cancelled_count} Cancelled` : ''}`);
+            setTxt('maKpiPending', summary.pending_unclaimed || 0);
+            setTxt('maKpiReclaimable', summary.reclaimable_over_3h || 0);
+            setTxt('maKpiRunning', summary.running_in_progress || 0);
+            setTxt('maKpiCompleted', summary.completed_processed || 0);
+            setTxt('maKpiAvgHandling', summary.avg_handling_seconds ? formatMaDuration(summary.avg_handling_seconds) : '—');
+            setTxt('maKpiAvgClaimWait', summary.avg_claim_wait_seconds ? `Avg pickup: ${formatMaDuration(summary.avg_claim_wait_seconds)}` : 'Avg pickup: —');
+
+            const svcMod = summary.service_module || {};
+            const totalSvcTickets = (svcMod.partner_support_tickets || summary.support_count || 0);
+            setTxt('maKpiServiceTickets', `${totalSvcTickets} Partner (${svcMod.total_tickets || 0} All)`);
+            setTxt('maKpiServiceSplit', `${summary.support_open || svcMod.open_tickets || 0} Open · ${summary.support_running || svcMod.in_progress_tickets || 0} Running · ${summary.support_resolved || svcMod.resolved_tickets || 0} Resolved`);
+
+            const lastUpd = document.getElementById('maLastUpdatedText');
+            if (lastUpd) {
+                lastUpd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+            }
+
+            _maCachedAlerts = data.alerts || [];
+            renderMemberApplicationsTable(_maCachedAlerts, _maCurrentStaffId);
+        } catch (err) {
+            console.error('[MEMBER-APPS] Error loading dashboard:', err);
+        }
+    }
+
+    function renderMemberApplicationsTable(alerts, currentStaffId) {
+        const tbody = document.getElementById('memberApplicationsTableBody');
+        if (!tbody) return;
+
+        if (!alerts || alerts.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+                        <div class="fw-bold">No Member Applications or Support Requests Found</div>
+                        <div class="small">Requests submitted by VGK4U members will appear here in real time.</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const nowMs = Date.now();
+        tbody.innerHTML = alerts.map(a => {
+            const isApp = a.alert_type === 'APPLICATION';
+            const typeBadge = isApp
+                ? `<span class="badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800;"><i class="fas fa-bolt me-1"></i>Application</span>`
+                : `<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-weight:800;"><i class="fas fa-headset me-1"></i>Support</span>`;
+
+            const createdTimeStr = a.created_at_ist || (a.created_at
+                ? new Date(a.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' IST'
+                : '—');
+
+            const cleanPhone = String(a.partner_phone || '').replace(/\D/g, '').slice(-10);
+            const phoneDisplay = cleanPhone ? `+91 ${cleanPhone}` : '—';
+
+            // Pending Since column
+            const createdEpochMs = a.created_at ? new Date(a.created_at).getTime() : null;
+            const claimedEpochMs = a.claimed_at ? new Date(a.claimed_at).getTime() : null;
+            let pendingSinceHtml = '—';
+            if (a.status === 'PROCESSED') {
+                pendingSinceHtml = `
+                    <div style="font-weight:700;color:#059669;"><i class="fas fa-check-circle me-1"></i>Resolved</div>
+                    <div class="text-muted" style="font-size:11px;">Total: ${formatMaDuration(a.total_turnaround_seconds)}</div>
+                `;
+            } else if (a.status === 'CANCELLED') {
+                pendingSinceHtml = `
+                    <div style="font-weight:700;color:#dc2626;"><i class="fas fa-ban me-1"></i>Cancelled</div>
+                    <div style="font-size:11px; color:#64748b;">Submitted ${createdTimeStr}</div>
+                `;
+            } else {
+                const initPendingSecs = a.pending_since_seconds || 0;
+                const isOver3h = initPendingSecs >= 10800;
+                pendingSinceHtml = `
+                    <div class="ma-live-pending fw-bold" data-created-ms="${createdEpochMs || ''}" style="color:${isOver3h ? '#dc2626' : '#d97706'}; font-size:13.5px;">
+                        <i class="fas fa-hourglass-half me-1"></i><span>${formatMaDuration(initPendingSecs)}</span>
+                    </div>
+                    <div style="font-size:11px; color:#64748b;">Since ${createdTimeStr}</div>
+                `;
+            }
+
+            // Claimed By column
+            let claimedByHtml = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Unclaimed</span>`;
+            if (a.claimed_by_staff_name) {
+                const claimedTimeStr = a.claimed_at_ist || (a.claimed_at
+                    ? new Date(a.claimed_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' IST'
+                    : '');
+                claimedByHtml = `
+                    <div style="font-weight:700; color:#0f172a;">
+                        <i class="fas fa-user-check text-primary me-1"></i>${escapeMaHtml(a.claimed_by_staff_name)}
+                        ${a.claimed_by_emp_code ? `<span class="text-muted" style="font-size:11px;">(${escapeMaHtml(a.claimed_by_emp_code)})</span>` : ''}
+                    </div>
+                    <div style="font-size:11px; color:#64748b;">${claimedTimeStr ? `At ${claimedTimeStr}` : ''}</div>
+                `;
+            }
+
+            // Time Taken / Running column
+            let handlingHtml = `<span class="text-muted" style="font-size:12px;">Waiting for pickup</span>`;
+            if (a.status === 'PROCESSED') {
+                handlingHtml = `
+                    <div style="font-weight:800; color:#059669;">
+                        <i class="fas fa-stopwatch me-1"></i>${formatMaDuration(a.handling_seconds)}
+                    </div>
+                    <div style="font-size:11px; color:#64748b;">Pickup wait: ${formatMaDuration(a.claim_wait_seconds)}</div>
+                `;
+            } else if (a.status === 'CANCELLED') {
+                handlingHtml = `
+                    <div style="font-weight:700; color:#dc2626;">
+                        <i class="fas fa-times-circle me-1"></i>Cancelled
+                    </div>
+                    <div style="font-size:11px; color:#64748b;">${a.processed_at_ist ? `At ${a.processed_at_ist}` : ''}</div>
+                `;
+            } else if (a.claimed_at && (a.status === 'CLAIMED' || a.status === 'IN_PROGRESS')) {
+                const initHandlingSecs = a.handling_seconds || 0;
+                const isRunningOver3h = initHandlingSecs >= 10800;
+                handlingHtml = `
+                    <div class="ma-live-handling fw-bold" data-claimed-ms="${claimedEpochMs || ''}" style="color:${isRunningOver3h ? '#ea580c' : '#4f46e5'}; font-size:13.5px;">
+                        <i class="fas fa-running me-1"></i><span>${formatMaDuration(initHandlingSecs)}</span>
+                        <span class="badge bg-indigo-subtle text-primary ms-1" style="font-size:9.5px;">Running</span>
+                    </div>
+                    <div style="font-size:11px; color:#64748b;">Pickup wait: ${formatMaDuration(a.claim_wait_seconds)}</div>
+                `;
+            }
+
+            // Status column
+            let statusHtml = '';
+            if (a.status === 'PENDING') {
+                statusHtml = `<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>PENDING</span>`;
+            } else if (a.status === 'CLAIMED') {
+                statusHtml = `<span class="badge bg-primary"><i class="fas fa-hand-paper me-1"></i>CLAIMED</span>`;
+            } else if (a.status === 'IN_PROGRESS') {
+                statusHtml = `<span class="badge" style="background:#4f46e5;color:#fff;"><i class="fas fa-spinner fa-spin me-1"></i>RUNNING</span>`;
+            } else if (a.status === 'PROCESSED') {
+                statusHtml = `<span class="badge bg-success"><i class="fas fa-check-double me-1"></i>COMPLETED</span>`;
+            } else if (a.status === 'CANCELLED') {
+                statusHtml = `<span class="badge bg-danger"><i class="fas fa-ban me-1"></i>CANCELLED</span>`;
+            }
+            if (a.is_reclaimable_3h && a.status !== 'PROCESSED' && a.status !== 'CANCELLED') {
+                statusHtml += `<div class="mt-1"><span class="badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;font-size:10px;font-weight:800;"><i class="fas fa-sync-alt me-1"></i>&gt;3h Open Re-Claim</span></div>`;
+            }
+
+            // Actions column
+            const isMyClaim = currentStaffId && (Number(a.claimed_by_staff_id) === Number(currentStaffId));
+            const canManageStatus = isMyClaim || window._userIsKeyLeader || a.status === 'PENDING';
+            const actionBtns = [];
+
+            if (a.status === 'PENDING') {
+                actionBtns.push(`
+                    <button class="btn btn-sm btn-primary fw-bold" onclick="claimMemberAppAlert('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', false)" style="border-radius:8px; font-size:12px;">
+                        <i class="fas fa-bolt me-1"></i>Claim Now
+                    </button>
+                `);
+            } else if (a.status !== 'PROCESSED' && a.status !== 'CANCELLED' && a.is_reclaimable_3h && !isMyClaim) {
+                actionBtns.push(`
+                    <button class="btn btn-sm fw-bold" onclick="claimMemberAppAlert('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', true)" style="background:linear-gradient(135deg,#ea580c,#c2410c);color:#fff;border:none;border-radius:8px;font-size:12px;" title="Pending/Running for >3 hours — Anyone in department can re-claim">
+                        <i class="fas fa-sync-alt me-1"></i>Re-Claim (&gt;3h)
+                    </button>
+                `);
+            }
+
+            if (a.status !== 'PROCESSED' && a.status !== 'CANCELLED' && a.status !== 'PENDING' && (isMyClaim || window._userIsKeyLeader)) {
+                if (a.status === 'CLAIMED') {
+                    actionBtns.push(`
+                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'IN_PROGRESS')" style="border-radius:8px; font-size:11.5px;">
+                            <i class="fas fa-play me-1"></i>Start Running
+                        </button>
+                    `);
+                }
+                actionBtns.push(`
+                    <button class="btn btn-sm btn-success fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'PROCESSED')" style="border-radius:8px; font-size:11.5px;">
+                        <i class="fas fa-check me-1"></i>Complete
+                    </button>
+                `);
+            }
+
+            // Cancel button available for both Application and Support requests
+            if (a.status !== 'CANCELLED' && canManageStatus) {
+                actionBtns.push(`
+                    <button class="btn btn-sm btn-outline-danger fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'CANCELLED')" style="border-radius:8px; font-size:11.5px;" title="Cancel this Application or Support request">
+                        <i class="fas fa-times-circle me-1"></i>Cancel
+                    </button>
+                `);
+            }
+
+            if (cleanPhone) {
+                actionBtns.push(`
+                    <a href="/staff/softphone?phone=${cleanPhone}&auto_dial=1" class="btn btn-sm btn-outline-secondary" style="border-radius:8px; font-size:11.5px;" title="Call Member via Softphone">
+                        <i class="fas fa-phone-alt text-primary"></i>
+                    </a>
+                    <a href="https://wa.me/91${cleanPhone}?text=${encodeURIComponent('Hello ' + (a.partner_name || 'Partner') + ', contacting you from VGK4U regarding your request ' + a.alert_code)}" target="_blank" class="btn btn-sm btn-outline-success" style="border-radius:8px; font-size:11.5px;" title="WhatsApp Member">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                `);
+            }
+
+            const ticketMetaBlock = (a.linked_ticket_code || a.issue_category)
+                ? `<div class="d-flex flex-wrap gap-1 mb-1">
+                    ${a.linked_ticket_code ? `<a href="/staff/tickets" class="badge text-decoration-none" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10.5px;"><i class="fas fa-ticket-alt me-1"></i>${escapeMaHtml(a.linked_ticket_code)}</a>` : ''}
+                    ${a.issue_category ? `<span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:10.5px;">${escapeMaHtml(a.issue_category)}</span>` : ''}
+                   </div>`
+                : '';
+
+            const attachmentsBlock = (a.attachments && a.attachments.length)
+                ? `<div class="d-flex flex-wrap gap-1 mt-1">
+                    ${a.attachments.map((att, idx) => `
+                        <a href="${escapeMaHtml(att.file_url)}" target="_blank" class="badge text-decoration-none" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:10.5px;">
+                            <i class="fas fa-image me-1"></i>Photo ${idx + 1}
+                        </a>
+                    `).join('')}
+                   </div>`
+                : '';
+
+            const notesBlock = a.notes
+                ? `<div style="font-weight:500;color:#1e293b;white-space:pre-wrap;max-height:70px;overflow-y:auto;">${escapeMaHtml(a.notes)}</div>`
+                : `<span class="text-muted fst-italic">No member notes</span>`;
+
+            const procNotesBlock = a.processing_notes
+                ? `<div class="mt-1 p-1 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:11px;color:#475569;white-space:pre-wrap;max-height:60px;overflow-y:auto;"><strong>Log:</strong> ${escapeMaHtml(a.processing_notes)}</div>`
+                : '';
+
+            const rowBg = (a.is_reclaimable_3h && a.status !== 'PROCESSED' && a.status !== 'CANCELLED') ? 'background:#fffaf5;' : '';
+
+            return `
+                <tr style="${rowBg}">
+                    <td style="padding:12px 14px;">
+                        <div class="mb-1">${typeBadge}</div>
+                        <div style="font-family:monospace; font-weight:800; font-size:12px; color:#334155;">${escapeMaHtml(a.alert_code)}</div>
+                        ${a.linked_ticket_code ? `<div style="font-size:10.5px; color:#2563eb; font-weight:700; margin-top:2px;"><i class="fas fa-ticket-alt me-1"></i>${escapeMaHtml(a.linked_ticket_code)}</div>` : ''}
+                    </td>
+                    <td style="padding:12px 14px;">
+                        <div style="font-weight:800; color:#0f172a;">${escapeMaHtml(a.partner_name || 'Channel Partner')}</div>
+                        <div style="font-size:11.5px; color:#64748b;">
+                            <span class="me-2"><i class="fas fa-id-badge me-1"></i>${escapeMaHtml(a.partner_code || '—')}</span>
+                            <span><i class="fas fa-phone-alt me-1 text-success"></i>${phoneDisplay}</span>
+                        </div>
+                    </td>
+                    <td style="padding:12px 14px; max-width:280px;">
+                        ${ticketMetaBlock}
+                        ${notesBlock}
+                        ${attachmentsBlock}
+                        ${procNotesBlock}
+                    </td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${pendingSinceHtml}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${claimedByHtml}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${handlingHtml}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${statusHtml}</td>
+                    <td style="padding:12px 14px; text-align:right;">
+                        <div class="d-flex align-items-center justify-content-end flex-wrap gap-1">
+                            ${actionBtns.join('')}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function claimMemberAppAlert(claimToken, alertCode, isReclaim) {
+        const confirmMsg = isReclaim
+            ? `Re-Claim ${alertCode} (>3 Hours Pending SLA)? This will assign the request to you and notify the Sales WhatsApp group.`
+            : `Claim ${alertCode} now? This will assign the request to you and notify the Sales WhatsApp group.`;
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const res = await staffFetch('/api/v1/vgk/quick-alerts/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: claimToken })
+            });
+            const json = await res.json();
+            if (res.ok && json.success) {
+                alert('✅ ' + (json.message || `Successfully claimed ${alertCode}`));
+                loadMemberApplicationsDashboard();
+            } else {
+                alert(json.detail || json.message || 'Could not claim this request.');
+                loadMemberApplicationsDashboard();
+            }
+        } catch (err) {
+            alert('Network error while claiming request.');
+        }
+    }
+
+    async function updateMemberAppStatus(claimToken, alertCode, newStatus) {
+        let defaultPrompt = `Enter progress update note for ${alertCode} (optional):`;
+        let defaultVal = 'Contacted member; working on application.';
+        if (newStatus === 'PROCESSED') {
+            defaultPrompt = `Enter completion / resolution notes for ${alertCode}:`;
+            defaultVal = 'Spoke with member and processed application/support request.';
+        } else if (newStatus === 'CANCELLED') {
+            defaultPrompt = `Enter reason for cancelling ${alertCode}:`;
+            defaultVal = 'Cancelled as requested / duplicate entry.';
+        }
+        const notes = prompt(defaultPrompt, defaultVal);
+        if (notes === null) return; // User clicked cancel on prompt
+
+        try {
+            const res = await staffFetch('/api/v1/vgk/quick-alerts/update-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: claimToken,
+                    status: newStatus,
+                    notes: notes.trim() || (newStatus === 'PROCESSED' ? 'Completed' : (newStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'))
+                })
+            });
+            const json = await res.json();
+            if (res.ok && json.success) {
+                loadMemberApplicationsDashboard();
+            } else {
+                alert(json.detail || json.message || 'Failed to update status.');
+            }
+        } catch (err) {
+            alert('Network error while updating status.');
+        }
+    }
+
+    function startMemberAppsLiveTimers() {
+        if (!_maTickInterval) {
+            _maTickInterval = setInterval(() => {
+                if (currentTab !== 'member_applications') return;
+                const nowMs = Date.now();
+                document.querySelectorAll('.ma-live-pending').forEach(el => {
+                    const createdMs = Number(el.getAttribute('data-created-ms'));
+                    if (createdMs > 0) {
+                        const secs = Math.max(0, Math.floor((nowMs - createdMs) / 1000));
+                        const span = el.querySelector('span');
+                        if (span) span.textContent = formatMaDuration(secs);
+                        if (secs >= 10800) el.style.color = '#dc2626';
+                    }
+                });
+                document.querySelectorAll('.ma-live-handling').forEach(el => {
+                    const claimedMs = Number(el.getAttribute('data-claimed-ms'));
+                    if (claimedMs > 0) {
+                        const secs = Math.max(0, Math.floor((nowMs - claimedMs) / 1000));
+                        const span = el.querySelector('span');
+                        if (span) span.textContent = formatMaDuration(secs);
+                        if (secs >= 10800) el.style.color = '#ea580c';
+                    }
+                });
+            }, 1000);
+        }
+        if (!_maPollInterval) {
+            _maPollInterval = setInterval(() => {
+                if (currentTab === 'member_applications') {
+                    loadMemberApplicationsDashboard();
+                } else if (window._userCanAccessMemberApps) {
+                    loadMemberApplicationsDashboard(true);
+                }
+            }, 30000);
+        }
+    }
+</script>
 
 </body>
 </html>

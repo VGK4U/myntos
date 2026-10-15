@@ -3,6 +3,7 @@ RVZ Password Change API Endpoints
 Allows RVZ ID to change ANY user's password with secondary password verification
 """
 
+from app.core.timezone import get_indian_time
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from sqlalchemy.orm import Session
@@ -205,7 +206,7 @@ async def change_user_password(
         operation='UPDATE',
         changed_by_id=current_user.id,
         changed_by_role=(getattr(current_user, 'staff_type', None) or getattr(current_user, 'user_type', '')),
-        changed_at=datetime.utcnow(),
+        changed_at=get_indian_time(),
         field_name='password',
         old_value='[REDACTED FOR SECURITY]',
         new_value='[REDACTED FOR SECURITY]',
@@ -217,7 +218,7 @@ async def change_user_password(
             'changed_by': current_user.id,
             'ip_address': client_ip,
             'operation': 'RVZ_PASSWORD_RESET',
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': get_indian_time().isoformat()
         }
     )
     

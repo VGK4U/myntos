@@ -51,16 +51,19 @@ def _canonical_base(request: Request) -> str:
     on mnrteam.com say mnrteam.com, etc.
     In production (REPL_DEPLOYMENT set) falls back to https://mnrteam.com.
     In dev, allows .replit.dev URLs so tokens created in dev are reachable."""
+    if not request:
+        return "http://localhost:5000"
     _RAW_HOSTS = {"127.0.0.1:8000", "localhost:8000", "localhost", "0.0.0.0:8000"}
     is_prod = _os.environ.get("ENVIRONMENT", "").lower() == "production"
-    scheme = request.headers.get("x-forwarded-proto", "https")
-    # X-Forwarded-Host is set by Replit's CDN/proxy to the custom domain
+    raw_proto = request.headers.get("x-forwarded-proto", "").strip()
+    # X-Forwarded-Host is set by Replit's CDN/proxy or frontend/server.js proxy
     forwarded_host = request.headers.get("x-forwarded-host", "").strip()
     if forwarded_host and forwarded_host not in _RAW_HOSTS:
-        # In production, skip raw dev domains so we never embed a .replit.dev URL
         if is_prod and (".replit.dev" in forwarded_host or ".repl.co" in forwarded_host):
             pass  # fall through to hardcoded default below
         else:
+            is_local = forwarded_host.startswith(("localhost", "127.0.0.1", "0.0.0.0"))
+            scheme = raw_proto or ("http" if is_local else "https")
             return f"{scheme}://{forwarded_host}"
     # Fallback: plain Host header
     host = request.headers.get("host", "").strip()
@@ -68,6 +71,8 @@ def _canonical_base(request: Request) -> str:
         if is_prod and (".replit.dev" in host or ".repl.co" in host):
             pass  # fall through to hardcoded default below
         else:
+            is_local = host.startswith(("localhost", "127.0.0.1", "0.0.0.0"))
+            scheme = raw_proto or ("http" if is_local else "https")
             return f"{scheme}://{host}"
     # Last resort: production uses canonical domain; dev uses request base_url
     if is_prod:
@@ -1002,6 +1007,15 @@ class LeadUpdate(BaseModel):
     team_senior_partner_id: Optional[int] = None
     team_extended_partner_id: Optional[int] = None
     team_core_partner_id: Optional[int] = None
+    # Solar Insurance Tracking fields (Oct 2026)
+    insurance_status: Optional[str] = None
+    insurance_policy_no: Optional[str] = None
+    insurance_company: Optional[str] = None
+    insurance_start_date: Optional[date] = None
+    insurance_expiry_date: Optional[date] = None
+    insurance_sum_insured: Optional[float] = None
+    insurance_premium: Optional[float] = None
+    insurance_notes: Optional[str] = None
 
     @validator('gender', pre=True)
     def validate_gender(cls, v):
@@ -4628,11 +4642,11 @@ def get_bank_wise_leads(
     emp_code = current_employee.emp_code or ''
     is_manager = has_view_all
 
-    # 2. Base Query for Bank Files, Balance Pending, Net Meter Pending & Electricity Bill Change Leads
+    # 2. Base Query for Bank Files, Balance Pending, Net Meter Pending & EB Cust. / EB Staff Leads
     query = db.query(CRMLead).filter(
         or_(
-            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'bank_not_interested', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending', 'electricity_bill_change', 'electricity_bill', 'eb_name_change', 'eb_change_pending', 'bill_change_pending']),
-            CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending', 'electricity_bill_change', 'eb_name_change'])
+            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'bank_not_interested', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending', 'dcr_pending', 'discom_pending', 'eb_cust', 'eb_staff', 'electricity_bill_change', 'electricity_bill', 'eb_name_change', 'eb_change_pending', 'bill_change_pending']),
+            CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending', 'dcr_pending', 'discom_pending', 'eb_cust', 'eb_staff', 'electricity_bill_change', 'eb_name_change'])
         )
     )
     if not ctx.is_platform_admin() and tenant_id is not None:
@@ -4995,6 +5009,7 @@ def get_bank_wise_leads(
             'id': lead.id,
             'customer_name': lead.name or 'N/A',
             'phone_number': lead.phone or '',
+            'email': lead.email or '',
             'stage': 'Bal Pending' if getattr(lead, 'solar_pipeline_status', None) in ['balance_pending', 'bal_pending'] else ('Bank Not Interested' if getattr(lead, 'solar_pipeline_status', None) == 'bank_not_interested' else 'At Bank'),
             'bank_name': b_name,
             'bank_branch': br_name,
@@ -5024,6 +5039,16 @@ def get_bank_wise_leads(
             'deal_value_received': float(getattr(lead, 'deal_value_received', 0.0) or 0.0),
             'deal_value_balance': float(getattr(lead, 'deal_value_balance', 0.0) or (deal_val - float(getattr(lead, 'deal_value_received', 0.0) or 0.0))),
             'solar_pipeline_stage': getattr(lead, 'solar_pipeline_status', None) or getattr(lead, 'status', 'At Bank'),
+            'insurance_status': (
+                'completed' if getattr(lead, 'insurance_status', None) == 'completed'
+                else ('eligible' if (
+                    getattr(lead, 'solar_pipeline_status', None) == 'completed'
+                    or getattr(lead, 'status', None) == 'completed'
+                    or getattr(lead, 'insurance_status', None) == 'eligible'
+                ) else 'ineligible')
+            ),
+            'insurance_company': getattr(lead, 'insurance_company', None) or '',
+            'insurance_policy_no': getattr(lead, 'insurance_policy_no', None) or '',
             'capacity_kw': float(re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")).group(1)) if re.search(r"([0-9]+(?:\.[0-9]+)?)", str(lead.kw_size or "0")) else 0.0,
             'remarks': getattr(lead, 'description', '') or '',
             'google_maps_url': lead.google_maps_link or f"https://www.google.com/maps/search/?api=1&query={lead.name}+{lead.city}"
@@ -6869,6 +6894,7 @@ def master_leads(
     created_from: Optional[str] = Query(None),
     created_to: Optional[str] = Query(None),
     solar_pipeline_status: Optional[str] = Query(None),
+    insurance_status: Optional[str] = Query(None, description="Filter by insurance status: ineligible, eligible, completed"),
     ev_b2b_stage: Optional[str] = Query(None),
     combined_bank_filter: Optional[str] = Query(None, description="OR filter: 'with_bank'=pending_with_bank OR waiting_for_bank_loan; 'loan_rejected'=loan_rejected OR bank_loan_rejected"),
     submit_date_from: Optional[str] = Query(None),
@@ -6979,6 +7005,30 @@ def master_leads(
     if subsidy_status:
         query = query.filter(CRMLead.subsidy_status == subsidy_status)
 
+    if insurance_status:
+        _ins_val = insurance_status.strip().lower()
+        if _ins_val == 'completed':
+            query = query.filter(CRMLead.insurance_status == 'completed')
+        elif _ins_val == 'eligible':
+            query = query.filter(
+                and_(
+                    or_(CRMLead.insurance_status.is_(None), CRMLead.insurance_status != 'completed'),
+                    or_(
+                        CRMLead.insurance_status == 'eligible',
+                        CRMLead.solar_pipeline_status == 'completed',
+                        CRMLead.status == 'completed'
+                    )
+                )
+            )
+        elif _ins_val == 'ineligible':
+            query = query.filter(
+                and_(
+                    or_(CRMLead.insurance_status.is_(None), CRMLead.insurance_status == 'ineligible'),
+                    or_(CRMLead.solar_pipeline_status.is_(None), CRMLead.solar_pipeline_status != 'completed'),
+                    CRMLead.status != 'completed'
+                )
+            )
+
     if existing_association:
         query = query.filter(CRMLead.existing_association == existing_association)
 
@@ -7025,7 +7075,7 @@ def master_leads(
         elif solar_pipeline_status == 'installed':
             query = query.filter(or_(
                 and_(CRMLead.installation_date >= _dt_from, CRMLead.installation_date <= _dt_to),
-                and_(CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
+                and_(CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
                      _change_dt >= _dt_from, _change_dt <= _dt_to)
             ))
         elif solar_pipeline_status == 'application_submitted':
@@ -7038,6 +7088,10 @@ def master_leads(
                 and_(CRMLead.complete_date >= _d_from, CRMLead.complete_date <= _d_to),
                 and_(CRMLead.solar_pipeline_status == 'completed', _change_dt >= _dt_from, _change_dt <= _dt_to)
             ))
+        elif solar_pipeline_status in ('eb_cust', 'electricity_bill_change'):
+            query = query.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change'])).filter(
+                _change_dt >= _dt_from, _change_dt <= _dt_to
+            )
         elif solar_pipeline_status:
             query = query.filter(CRMLead.solar_pipeline_status == solar_pipeline_status).filter(
                 _change_dt >= _dt_from, _change_dt <= _dt_to
@@ -7067,8 +7121,10 @@ def master_leads(
             query = query.filter(or_(
                 CRMLead.solar_pipeline_status == 'installed',
                 CRMLead.installation_date.isnot(None),
-                CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
+                CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
             ))
+        elif solar_pipeline_status in ('eb_cust', 'electricity_bill_change'):
+            query = query.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change']))
         elif solar_pipeline_status:
             query = query.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
         if combined_bank_filter and combined_bank_filter in _CBF_MAP:
@@ -7270,6 +7326,7 @@ def master_leads(
         'installation_date': CRMLead.installation_date, 'deal_value_total': CRMLead.deal_value_total,
         'material_reach_date': CRMLead.material_reach_date,
         'solar_pipeline_status_updated_at': CRMLead.solar_pipeline_status_updated_at,
+        'insurance_status': CRMLead.insurance_status,
     }
     _col = _SORT_COLS.get(sort_by or 'created_at', CRMLead.created_at)
     _ord = _col.asc() if (sort_dir or 'desc').lower() == 'asc' else _col.desc()
@@ -7876,7 +7933,7 @@ def get_employee_performance_dashboard(
 
         # Default to current period if set is empty
         if not period_keys_set:
-            now_dt = datetime.utcnow()
+            now_dt = get_indian_time()
             def_key = now_dt.strftime('%Y-%m') if period_type == 'monthly' else now_dt.strftime('%G-W%V')
             period_keys_set.add(def_key)
 
@@ -8138,19 +8195,25 @@ def lead_analytics(
     _SOLAR_PS_KEYS = [
         'completed', 'installation_pending', 'pending_with_bank', 'documents_pending',
         'application_submitted', 'loan_rejected', 'documents_issue', 'load_extension',
-        'electricity_bill_change', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending',
+        'eb_cust', 'eb_staff', 'dcr_pending', 'discom_pending',
+        'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending',
         'not_interested', 'cancelled', 'different_vendor', 'bank_not_interested',
     ]
     def _sp_key(ps): return 'sp_at_bank' if ps == 'pending_with_bank' else ('sp_' + ps)
 
+    def _ps_match(PS, ps):
+        if ps == 'eb_cust':
+            return PS.in_(['eb_cust', 'electricity_bill_change'])
+        return PS == ps
+
     def _solar_stage_exprs():
         PS = CRMLead.solar_pipeline_status
-        return [_f.coalesce(_f.sum(_sa_case((PS == ps, 1), else_=0)), 0).label(_sp_key(ps)) for ps in _SOLAR_PS_KEYS]
+        return [_f.coalesce(_f.sum(_sa_case((_ps_match(PS, ps), 1), else_=0)), 0).label(_sp_key(ps)) for ps in _SOLAR_PS_KEYS]
 
     def _solar_stage_dv_exprs():
         PS = CRMLead.solar_pipeline_status
         DV = _eff_dv()
-        return [_f.coalesce(_f.sum(_sa_case((PS == ps, DV), else_=0)), 0).label('dv_' + _sp_key(ps)) for ps in _SOLAR_PS_KEYS]
+        return [_f.coalesce(_f.sum(_sa_case((_ps_match(PS, ps), DV), else_=0)), 0).label('dv_' + _sp_key(ps)) for ps in _SOLAR_PS_KEYS]
 
     def _solar_stage_dict(r):
         d = {}
@@ -8332,7 +8395,7 @@ def lead_analytics(
             base = base.filter(
                 or_(
                     CRMLead.status.in_(POST_WON),
-                    CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
+                    CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
                 )
             )
         else:
@@ -8400,7 +8463,7 @@ def lead_analytics(
         elif solar_pipeline_status == 'installed':
             base = base.filter(or_(
                 and_(CRMLead.installation_date >= _dt_from_an, CRMLead.installation_date <= _dt_to_an),
-                and_(CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
+                and_(CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
                      _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an)
             ))
         elif solar_pipeline_status == 'application_submitted':
@@ -8413,6 +8476,10 @@ def lead_analytics(
                 and_(CRMLead.complete_date >= _d_from_an, CRMLead.complete_date <= _d_to_an),
                 and_(CRMLead.solar_pipeline_status == 'completed', _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an)
             ))
+        elif solar_pipeline_status in ('eb_cust', 'electricity_bill_change'):
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change'])).filter(
+                _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an
+            )
         elif solar_pipeline_status:
             base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status).filter(
                 _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an
@@ -8442,8 +8509,10 @@ def lead_analytics(
             base = base.filter(or_(
                 CRMLead.solar_pipeline_status == 'installed',
                 CRMLead.installation_date.isnot(None),
-                CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
+                CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
             ))
+        elif solar_pipeline_status in ('eb_cust', 'electricity_bill_change'):
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change']))
         elif solar_pipeline_status:
             base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
         if combined_bank_filter and combined_bank_filter in _CBF_MAP_AN:
@@ -8988,20 +9057,29 @@ def lead_analytics(
     _mo_comp = {}
     _mo_inst = {}
     _mo_inst_pend = {}
+    _mo_dcr_pend = {}
+    _mo_discom_pend = {}
     _mo_net_meter_pend = {}
     _mo_bal_pend = {}
     _mo_sub_pend = {}
     _mo_at_bank = {}
     _mo_pmt_recd = {}
+    _mo_eb_cust = {}
+    _mo_eb_staff = {}
 
     _wk_tot = {}
     _wk_won = {}
     _wk_comp = {}
     _wk_inst = {}
+    _wk_inst_pend = {}
+    _wk_dcr_pend = {}
+    _wk_discom_pend = {}
     _wk_net_meter_pend = {}
     _wk_bal_pend = {}
     _wk_sub_pend = {}
     _wk_pmt_recd = {}
+    _wk_eb_cust = {}
+    _wk_eb_staff = {}
 
     def _get_wk_monday(d):
         return d - _td(days=d.weekday())
@@ -9014,7 +9092,7 @@ def lead_analytics(
 
         is_won = (st in POST_WON) and (ps is None or ps not in _EXCL_WON_PS)
         is_comp = (ps == 'completed' or l.ev_b2b_stage == 'completed' or st == 'completed' or l.id in _etc_comp_ids)
-        is_installed = (l.installation_date is not None or ps in {'installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'} or st == 'completed')
+        is_installed = (l.installation_date is not None or ps in {'installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'} or st == 'completed')
 
         c_date = l.created_at.date() if hasattr(l.created_at, 'date') else l.created_at
         tr_date = l.submit_date or c_date
@@ -9045,9 +9123,13 @@ def lead_analytics(
                 rec[4] += dv
             if ps == 'pending_with_bank':
                 rec[5] += 1
-            if ps == 'electricity_bill_change':
+            if ps in ('eb_cust', 'electricity_bill_change'):
                 rec[6] += 1
-            if ps in {'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
+                _mo_eb_cust[mkey] = _mo_eb_cust.get(mkey, 0) + 1
+            elif ps == 'eb_staff':
+                rec[6] += 1
+                _mo_eb_staff[mkey] = _mo_eb_staff.get(mkey, 0) + 1
+            if ps in {'installation_pending', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
                 rec[7] += 1
                 rec[8] += dv
             if ps == 'installation_pending':
@@ -9079,6 +9161,10 @@ def lead_analytics(
             mkey = (stage_upd_date.year, stage_upd_date.month)
             if ps == 'installation_pending':
                 _mo_inst_pend[mkey] = _mo_inst_pend.get(mkey, 0) + 1
+            elif ps == 'dcr_pending':
+                _mo_dcr_pend[mkey] = _mo_dcr_pend.get(mkey, 0) + 1
+            elif ps == 'discom_pending':
+                _mo_discom_pend[mkey] = _mo_discom_pend.get(mkey, 0) + 1
             elif ps == 'net_meter_pending':
                 _mo_net_meter_pend[mkey] = _mo_net_meter_pend.get(mkey, 0) + 1
             elif ps == 'balance_pending':
@@ -9107,9 +9193,13 @@ def lead_analytics(
                 rec[4] += dv
             if ps == 'pending_with_bank':
                 rec[5] += 1
-            if ps == 'electricity_bill_change':
+            if ps in ('eb_cust', 'electricity_bill_change'):
                 rec[6] += 1
-            if ps in {'installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
+                _wk_eb_cust[wkey] = _wk_eb_cust.get(wkey, 0) + 1
+            elif ps == 'eb_staff':
+                rec[6] += 1
+                _wk_eb_staff[wkey] = _wk_eb_staff.get(wkey, 0) + 1
+            if ps in {'installation_pending', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'}:
                 rec[7] += 1
                 rec[8] += dv
             if ps == 'installation_pending':
@@ -9139,7 +9229,13 @@ def lead_analytics(
 
         if stage_upd_date and stage_upd_date >= _wk12_start_date:
             wkey = _get_wk_monday(stage_upd_date)
-            if ps == 'net_meter_pending':
+            if ps == 'installation_pending':
+                _wk_inst_pend[wkey] = _wk_inst_pend.get(wkey, 0) + 1
+            elif ps == 'dcr_pending':
+                _wk_dcr_pend[wkey] = _wk_dcr_pend.get(wkey, 0) + 1
+            elif ps == 'discom_pending':
+                _wk_discom_pend[wkey] = _wk_discom_pend.get(wkey, 0) + 1
+            elif ps == 'net_meter_pending':
                 _wk_net_meter_pend[wkey] = _wk_net_meter_pend.get(wkey, 0) + 1
             elif ps == 'balance_pending':
                 _wk_bal_pend[wkey] = _wk_bal_pend.get(wkey, 0) + 1
@@ -9166,20 +9262,27 @@ def lead_analytics(
         _m_comp, _m_fdv, _m_cr = _mo_comp.get((_yr, _mn), [0, 0.0, 0.0])
         _m_installed = _mo_inst.get((_yr, _mn), 0)
         _m_inst_pending = _mo_inst_pend.get((_yr, _mn), 0)
+        _m_dcr_pending = _mo_dcr_pend.get((_yr, _mn), 0)
+        _m_discom_pending = _mo_discom_pend.get((_yr, _mn), 0)
         _m_at_bank = _mo_at_bank.get((_yr, _mn), 0)
         _m_net_meter_pending = _mo_net_meter_pend.get((_yr, _mn), 0)
         _m_first_pmt_recd = _mo_pmt_recd.get((_yr, _mn), 0)
         _m_sub_pending = _mo_sub_pend.get((_yr, _mn), 0)
+        _m_eb_cust = _mo_eb_cust.get((_yr, _mn), 0)
+        _m_eb_staff = _mo_eb_staff.get((_yr, _mn), 0)
         monthly_trend.append({
             'label': f"{_date(1900, _mn, 1).strftime('%b')} {_yr}",
             'total': _m_total, 'won': _m_won,
             'submitted': _m_sub, 'submitted_value': _m_sub_val,
             'pipeline': _m_pipe, 'pipeline_value': _m_pipe_val,
             'at_bank': _m_at_bank, 'eb_change': _m_eb_change,
+            'eb_cust': _m_eb_cust, 'eb_staff': _m_eb_staff,
             'first_pmt_recd': _m_first_pmt_recd,
             'installed': _m_installed, 'completed': _m_comp, 'comp_value': _m_fdv,
             'in_progress': _m_in_prog, 'inprog_value': _m_in_prog_val,
-            'inst_pending': _m_inst_pending, 'net_meter_pending': _m_net_meter_pending,
+            'inst_pending': _m_inst_pending,
+            'dcr_pending': _m_dcr_pending, 'discom_pending': _m_discom_pending,
+            'net_meter_pending': _m_net_meter_pending,
             'bal_pending': _m_bal_pending, 'subsidy_pending': _m_sub_pending,
         })
 
@@ -9191,24 +9294,32 @@ def lead_analytics(
         (
             _w_total, _w_submitted, _w_submitted_value, _w_pipeline, _w_pipeline_value,
             _w_at_bank, _w_eb_change, _w_in_progress, _w_inprog_value,
-            _w_inst_pending, _w_bal_pending
+            _w_inst_pending_tr, _w_bal_pending
         ) = _tot_data
         _w_won, _w_dv, _w_wr = _wk_won.get(_w_start, [0, 0.0, 0.0])
         _w_comp, _w_fdv, _w_cr = _wk_comp.get(_w_start, [0, 0.0, 0.0])
         _w_installed = _wk_inst.get(_w_start, 0)
+        _w_inst_pending = _wk_inst_pend.get(_w_start, _w_inst_pending_tr)
+        _w_dcr_pending = _wk_dcr_pend.get(_w_start, 0)
+        _w_discom_pending = _wk_discom_pend.get(_w_start, 0)
         _w_net_meter_pending = _wk_net_meter_pend.get(_w_start, 0)
         _w_first_pmt_recd = _wk_pmt_recd.get(_w_start, 0)
         _w_sub_pending = _wk_sub_pend.get(_w_start, 0)
+        _w_eb_cust = _wk_eb_cust.get(_w_start, 0)
+        _w_eb_staff = _wk_eb_staff.get(_w_start, 0)
         weekly_trend.append({
             'label': f"W{12-_wk} ({_ws.strftime('%d %b')})",
             'total': _w_total, 'won': _w_won,
             'submitted': _w_submitted, 'submitted_value': _w_submitted_value,
             'pipeline': _w_pipeline, 'pipeline_value': _w_pipeline_value,
             'at_bank': _w_at_bank, 'eb_change': _w_eb_change,
+            'eb_cust': _w_eb_cust, 'eb_staff': _w_eb_staff,
             'first_pmt_recd': _w_first_pmt_recd,
             'installed': _w_installed, 'completed': _w_comp, 'comp_value': _w_fdv,
             'in_progress': _w_in_progress, 'inprog_value': _w_inprog_value,
-            'inst_pending': _w_inst_pending, 'net_meter_pending': _w_net_meter_pending,
+            'inst_pending': _w_inst_pending,
+            'dcr_pending': _w_dcr_pending, 'discom_pending': _w_discom_pending,
+            'net_meter_pending': _w_net_meter_pending,
             'bal_pending': _w_bal_pending, 'subsidy_pending': _w_sub_pending,
         })
 
@@ -9233,8 +9344,9 @@ def lead_analytics(
     # ── Solar Pipeline Breakdown ──────────────────────────────────────────────
     _PIPELINE_STAGES = [
         'documents_pending', 'application_submitted', 'pending_with_bank', 'loan_rejected',
-        'documents_issue', 'load_extension', 'electricity_bill_change', 'installation_pending',
-        'installed', 'first_payment_received', 'net_meter_pending', 'balance_pending',
+        'documents_issue', 'load_extension', 'eb_cust', 'eb_staff', 'electricity_bill_change',
+        'installation_pending', 'installed', 'dcr_pending', 'discom_pending',
+        'first_payment_received', 'net_meter_pending', 'balance_pending',
         'balance_received', 'subsidy_pending', 'completed', 'not_interested', 'cancelled', 'different_vendor',
         'bank_not_interested'
     ]
@@ -9250,7 +9362,7 @@ def lead_analytics(
             elif s == 'installed':
                 pipeline_breakdown[s] = base.filter(or_(
                     and_(CRMLead.installation_date >= _dt_from_an, CRMLead.installation_date <= _dt_to_an),
-                    and_(CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
+                    and_(CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
                          _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an)
                 )).count()
             elif s == 'application_submitted':
@@ -9263,6 +9375,12 @@ def lead_analytics(
                     and_(CRMLead.complete_date >= _d_from_an, CRMLead.complete_date <= _d_to_an),
                     and_(CRMLead.solar_pipeline_status == 'completed', _change_dt_an >= _dt_from_an, _change_dt_an <= _dt_to_an)
                 )).count()
+            elif s == 'eb_cust':
+                pipeline_breakdown[s] = base.filter(
+                    CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change']),
+                    _change_dt_an >= _dt_from_an,
+                    _change_dt_an <= _dt_to_an
+                ).count()
             else:
                 pipeline_breakdown[s] = base.filter(
                     CRMLead.solar_pipeline_status == s,
@@ -9283,6 +9401,7 @@ def lead_analytics(
         ).group_by(CRMLead.solar_pipeline_status).all()
         _pl_map = {r.solar_pipeline_status: int(r.cnt) for r in _pl_rows}
         pipeline_breakdown = {s: _pl_map.get(s, 0) for s in _PIPELINE_STAGES}
+        pipeline_breakdown['eb_cust'] = _pl_map.get('eb_cust', 0) + _pl_map.get('electricity_bill_change', 0)
 
         # 1st payment received count
         pipeline_breakdown['first_payment_received'] = base.filter(
@@ -9298,7 +9417,7 @@ def lead_analytics(
             or_(
                 CRMLead.solar_pipeline_status == 'installed',
                 CRMLead.installation_date.isnot(None),
-                CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
+                CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
             )
         ).count()
 
@@ -9491,7 +9610,7 @@ def _apply_exec_dashboard_common_filters(
         if status in POST_WON or status == 'won_plus':
             base = base.filter(_sa_or(
                 CRMLead.status.in_(POST_WON),
-                CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
+                CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed'])
             ))
         else:
             base = base.filter(CRMLead.status == status)
@@ -9561,7 +9680,10 @@ def _apply_exec_dashboard_common_filters(
             _s_clauses.append(CRMLead.id.in_(phone_lead_ids))
         base = base.filter(_sa_or(*_s_clauses))
     if solar_pipeline_status:
-        base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
+        if solar_pipeline_status == 'eb_cust':
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change']))
+        else:
+            base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
     if ev_b2b_stage:
         base = base.filter(CRMLead.ev_b2b_stage == ev_b2b_stage)
     if combined_bank_filter:
@@ -9619,7 +9741,7 @@ def _apply_exec_dashboard_common_filters(
         )
         _installed_cond_filter = _sa_or(
             CRMLead.installation_date.isnot(None),
-            CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
+            CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
             CRMLead.status == 'completed'
         )
         base = base.filter(_installed_cond_filter)
@@ -10060,7 +10182,7 @@ def exec_trend_leads(
         )
         _installed_cond = _sa_or(
             CRMLead.installation_date.isnot(None),
-            CRMLead.solar_pipeline_status.in_(['installed', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
+            CRMLead.solar_pipeline_status.in_(['installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed']),
             CRMLead.status == 'completed'
         )
         base = base.filter(_installed_cond)
@@ -10089,6 +10211,16 @@ def exec_trend_leads(
     elif metric == 'inst_pending':
         _stage_upd_dt_expr = _sa_func.coalesce(_sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), CRMLead.installation_date, _trend_date_expr)
         base = base.filter(CRMLead.solar_pipeline_status == 'installation_pending')
+        if start_dt and end_dt:
+            base = base.filter(_stage_upd_dt_expr >= start_dt, _stage_upd_dt_expr <= end_dt)
+    elif metric == 'dcr_pending':
+        _stage_upd_dt_expr = _sa_func.coalesce(_sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), CRMLead.installation_date, _trend_date_expr)
+        base = base.filter(CRMLead.solar_pipeline_status == 'dcr_pending')
+        if start_dt and end_dt:
+            base = base.filter(_stage_upd_dt_expr >= start_dt, _stage_upd_dt_expr <= end_dt)
+    elif metric == 'discom_pending':
+        _stage_upd_dt_expr = _sa_func.coalesce(_sa_cast(CRMLead.solar_pipeline_status_updated_at, _sa_Date), CRMLead.installation_date, _trend_date_expr)
+        base = base.filter(CRMLead.solar_pipeline_status == 'discom_pending')
         if start_dt and end_dt:
             base = base.filter(_stage_upd_dt_expr >= start_dt, _stage_upd_dt_expr <= end_dt)
     elif metric == 'net_meter_pending':
@@ -10124,10 +10256,12 @@ def exec_trend_leads(
             base = base.filter(CRMLead.solar_pipeline_status == 'pending_with_bank')
         elif metric == 'bank_not_interested':
             base = base.filter(CRMLead.solar_pipeline_status == 'bank_not_interested')
-        elif metric == 'eb_change':
-            base = base.filter(CRMLead.solar_pipeline_status == 'electricity_bill_change')
+        elif metric in ('eb_cust', 'eb_change'):
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['eb_cust', 'electricity_bill_change']))
+        elif metric == 'eb_staff':
+            base = base.filter(CRMLead.solar_pipeline_status == 'eb_staff')
         elif metric == 'in_progress':
-            base = base.filter(CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']))
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['installation_pending', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']))
 
     total = base.count()
     _leads = base.order_by(CRMLead.created_at.desc()).limit(limit).all()
@@ -10927,7 +11061,7 @@ def create_lead(
                 _partner_name = ''
                 if _partner:
                     _partner_name = getattr(_partner, 'business_name', '') or getattr(_partner, 'name', '') or ''
-                _today_str = __import__('datetime').datetime.utcnow().strftime('%d %b %Y')
+                _today_str = __import__('datetime').get_indian_time().strftime('%d %b %Y')
                 _lead_ref = f"MNR-LEAD-{new_lead.id}"
                 # T11: Thank-you WA to the customer
                 send_auto_whatsapp(
@@ -12097,6 +12231,7 @@ def update_lead(
         'submit_date', 'complete_date', 'actual_close_date', 'expected_close_date',
         'accepted_date', 'installation_date', 'material_reach_date',
         'next_followup_date', 'sanction_date', 'last_contact_date',
+        'insurance_start_date', 'insurance_expiry_date',
     )
     for _dwf in _DATE_WRITE_FIELDS:
         _dv = update_data.get(_dwf)
@@ -12134,9 +12269,27 @@ def update_lead(
             with_lock=True
         )
 
+    _was_completed_before = (
+        getattr(lead, 'solar_pipeline_status', None) == 'completed'
+        or getattr(lead, 'status', None) == 'completed'
+    )
+    _prev_ins_status = getattr(lead, 'insurance_status', None)
+
     for key, value in update_data.items():
         if hasattr(lead, key):
             setattr(lead, key, value)
+
+    # Auto-promote insurance_status to 'eligible' when lead becomes completed (unless already 'completed' or explicitly downgraded on an already-completed lead)
+    _is_completed_now = (
+        getattr(lead, 'solar_pipeline_status', None) == 'completed'
+        or getattr(lead, 'status', None) == 'completed'
+    )
+    if _is_completed_now:
+        if _prev_ins_status == 'completed' and update_data.get('insurance_status') not in ('eligible', 'ineligible'):
+            lead.insurance_status = 'completed'
+        elif 'insurance_status' not in update_data or (not _was_completed_before and update_data.get('insurance_status') in (None, '', 'ineligible')):
+            if getattr(lead, 'insurance_status', None) != 'completed':
+                lead.insurance_status = 'eligible'
 
     # DC_STATUS_CHANGE_ASSIGN: Assign lead to current employee if STATUS was changed by this user or follow-up scheduled
     _status_changed = ('status' in update_data and update_data['status'] != _pre_commit_status)
@@ -12653,7 +12806,7 @@ def update_lead(
                 ).all()
                 for _ent in _entries:
                     _ent.support_confirmed = _val
-                    _ent.support_confirmed_at = _dt.datetime.utcnow() if _val is not None else None
+                    _ent.support_confirmed_at = _dt.get_indian_time() if _val is not None else None
                     _ent.support_confirmed_by_id = _staff_id
                     _ent.support_confirmed_by_type = 'staff'
             db.commit()
@@ -13952,18 +14105,10 @@ def search_assignees(
     results = []
     search_term = q.strip().lower() if q else ""
     
-    # DC Protocol (Sep 2026): SaaS Tenant Isolation Enforcement
+    # DC Protocol: SaaS Tenant Isolation vs Internal Platform Enforcement
     from app.services.saas_tenant_resolver import resolve_tenant_context
+    from app.models.staff_accounts import AssociatedCompany
     tenant_ctx = resolve_tenant_context(db, current_employee)
-    
-    accessible_co_ids = []
-    if company_id:
-        accessible_co_ids = [company_id]
-    elif tenant_ctx.company:
-        accessible_co_ids = [tenant_ctx.company.id]
-    elif current_employee.base_company_id:
-        accessible_co_ids = [current_employee.base_company_id]
-        
     is_external_saas = tenant_ctx.is_saas_tenant and tenant_ctx.client and not tenant_ctx.client.is_internal
 
     if assignee_type in ['telecaller', 'field_staff']:
@@ -13971,18 +14116,57 @@ def search_assignees(
             StaffEmployee.status == 'active'
         )
         
-        # Enforce tenant scoping: External SaaS Clients strictly see only their company's employees
-        if is_external_saas or company_id or accessible_co_ids:
-            query = query.filter(StaffEmployee.base_company_id.in_(accessible_co_ids))
-        
-        if search_term:
+        if is_external_saas:
+            # Enforce tenant scoping: External SaaS Clients strictly see only their tenant's employees
+            saas_client_id = tenant_ctx.client.id if tenant_ctx.client else None
+            saas_co_ids = []
+            if saas_client_id:
+                saas_co_ids = [
+                    c.id for c in db.query(AssociatedCompany.id).filter(
+                        AssociatedCompany.client_id == saas_client_id,
+                        AssociatedCompany.is_active == True
+                    ).all()
+                ]
+            elif tenant_ctx.company:
+                saas_co_ids = [tenant_ctx.company.id]
+            elif current_employee.base_company_id:
+                saas_co_ids = [current_employee.base_company_id]
+                
+            if company_id and company_id in saas_co_ids:
+                query = query.filter(StaffEmployee.base_company_id == company_id)
+            elif saas_co_ids:
+                query = query.filter(StaffEmployee.base_company_id.in_(saas_co_ids))
+            else:
+                query = query.filter(StaffEmployee.id == -1)
+        else:
+            # Internal platform user: All active staff across internal companies are searchable globally
+            # DC Protocol Exception: Cross-company assignment allowed per user requirement
+            internal_co_ids = [
+                c.id for c in db.query(AssociatedCompany.id).filter(
+                    or_(
+                        AssociatedCompany.client_id == 1,
+                        AssociatedCompany.company_segment == 'SEGMENT_A_INTERNAL',
+                        AssociatedCompany.client_id.is_(None)
+                    ),
+                    AssociatedCompany.is_active == True
+                ).all()
+            ]
             query = query.filter(
                 or_(
-                    func.lower(StaffEmployee.full_name).contains(search_term),
-                    func.lower(StaffEmployee.emp_code).contains(search_term),
-                    StaffEmployee.phone.contains(search_term) if StaffEmployee.phone else False
+                    StaffEmployee.base_company_id.in_(internal_co_ids),
+                    StaffEmployee.base_company_id.is_(None)
                 )
             )
+        
+        if search_term:
+            search_filters = [
+                func.lower(StaffEmployee.full_name).contains(search_term),
+                func.lower(StaffEmployee.emp_code).contains(search_term),
+                func.coalesce(StaffEmployee.phone, '').contains(search_term)
+            ]
+            if search_term.isdigit():
+                search_filters.append(StaffEmployee.id == int(search_term))
+            query = query.filter(or_(*search_filters))
         
         staff_list = query.order_by(StaffEmployee.full_name).limit(limit).all()
         
@@ -14011,7 +14195,7 @@ def search_assignees(
                 or_(
                     func.lower(VendorMaster.vendor_name).contains(search_term),
                     func.lower(VendorMaster.vendor_code).contains(search_term),
-                    VendorMaster.phone.contains(search_term) if VendorMaster.phone else False
+                    func.coalesce(VendorMaster.phone, '').contains(search_term)
                 )
             )
         
@@ -14034,9 +14218,46 @@ def search_assignees(
             OfficialPartner.is_active == True
         )
         
-        # Enforce tenant isolation for SaaS Client accounts
-        if is_external_saas or company_id or accessible_co_ids:
-            query = query.filter(OfficialPartner.company_id.in_(accessible_co_ids))
+        if is_external_saas:
+            # Enforce tenant isolation for SaaS Client accounts
+            saas_client_id = tenant_ctx.client.id if tenant_ctx.client else None
+            saas_co_ids = []
+            if saas_client_id:
+                saas_co_ids = [
+                    c.id for c in db.query(AssociatedCompany.id).filter(
+                        AssociatedCompany.client_id == saas_client_id,
+                        AssociatedCompany.is_active == True
+                    ).all()
+                ]
+            elif tenant_ctx.company:
+                saas_co_ids = [tenant_ctx.company.id]
+            elif current_employee.base_company_id:
+                saas_co_ids = [current_employee.base_company_id]
+                
+            if company_id and company_id in saas_co_ids:
+                query = query.filter(OfficialPartner.company_id == company_id)
+            elif saas_co_ids:
+                query = query.filter(OfficialPartner.company_id.in_(saas_co_ids))
+            else:
+                query = query.filter(OfficialPartner.id == -1)
+        else:
+            # Internal platform users: All active internal partners are searchable
+            internal_co_ids = [
+                c.id for c in db.query(AssociatedCompany.id).filter(
+                    or_(
+                        AssociatedCompany.client_id == 1,
+                        AssociatedCompany.company_segment == 'SEGMENT_A_INTERNAL',
+                        AssociatedCompany.client_id.is_(None)
+                    ),
+                    AssociatedCompany.is_active == True
+                ).all()
+            ]
+            query = query.filter(
+                or_(
+                    OfficialPartner.company_id.in_(internal_co_ids),
+                    OfficialPartner.company_id.is_(None)
+                )
+            )
         
         if search_term:
             # Use coalesce to handle nullable fields safely in search
@@ -18958,6 +19179,9 @@ SOLAR_DOC_TYPES = {
     'passport_photo':                'Passport Photo',
     'signature':                     'Signature Document',
     'net_meter_application':         'Net Meter Application',
+    # Insurance documents (Oct 2026)
+    'installation_photo':            'Installation Photo',
+    'insurance_policy':              'Insurance Policy Document',
 }
 
 # Doc types that support auto-generation (map to solar_doc_generator functions)
@@ -19084,6 +19308,19 @@ def get_solar_docs(
                 "notes": f"Vendor Level GST Registration Certificate ({v_gst.vendor_name})",
                 "view_url": v_gst.gst_certificate_url,
                 "is_vendor_default": True
+            })
+
+    # DC-INSURANCE-PHOTO-FALLBACK (Oct 2026): Reuse geotagging_photo as installation_photo when not separately uploaded
+    has_inst_photo = any(d["doc_type"] == "installation_photo" for d in docs)
+    if not has_inst_photo:
+        geo_doc = next((d for d in docs if d["doc_type"] == "geotagging_photo" and d.get("file_name")), None)
+        if geo_doc:
+            docs.append({
+                **geo_doc,
+                "id": f"inst_{geo_doc['id']}",
+                "doc_type": "installation_photo",
+                "doc_label": "Installation Photo (Geo Solar Photo)",
+                "is_fallback_photo": True,
             })
 
     # Parallel pre-flight check of physical storage availability
@@ -19510,7 +19747,7 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
     lead = db.execute(text("""
         SELECT
             cl.id, cl.name, cl.phone, cl.email, cl.address, cl.pincode,
-            cl.status, cl.source, cl.application_no, cl.accepted_date,
+            cl.status, cl.solar_pipeline_status, cl.source, cl.application_no, cl.accepted_date,
             cl.aadhaar_number, cl.pan_number, cl.electricity_bill_number,
             cl.bank_account_number, cl.ifsc_code, cl.bank_branch, cl.loan_bank,
             cl.co_applicant_name, cl.co_applicant_phone,
@@ -19518,6 +19755,7 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
             cl.co_applicant_bank_account, cl.co_applicant_ifsc,
             cl.material_reach_date, cl.installation_date,
             cl.deal_value_total, cl.deal_value_received, cl.deal_value_balance,
+            cl.insurance_status, cl.insurance_company, cl.insurance_policy_no,
             cl.next_followup_date, cl.created_at,
             se1.full_name AS telecaller_name, se2.full_name AS field_staff_name
         FROM crm_leads cl
@@ -19560,8 +19798,59 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
         "download_url":     f"/storage/{d.file_name}" if d.file_name else None,
     } for d in filtered_docs_rows]
 
+    # DC-VENDOR-GST-001: If vendor_gst is requested in included_doc_types and not per-lead uploaded, fallback to Solar Vendor GST
+    if (included_doc_types is None or 'vendor_gst' in included_doc_types) and not any(d['doc_type'] == 'vendor_gst' for d in docs):
+        v_gst = db.execute(text("""
+            SELECT id, vendor_name, gst_number, gst_certificate_url
+            FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '').lstrip('/')
+            docs.append({
+                "id":               f"vgst_{v_gst.id}",
+                "doc_category":     "consumer",
+                "doc_type":         "vendor_gst",
+                "doc_label":        f"Solar Vendor GST ({v_gst.vendor_name})",
+                "doc_number":       v_gst.gst_number or "",
+                "original_name":    "Visionera_GST_Registration_Certificate.pdf",
+                "file_size":        None,
+                "uploaded_by_name": "System Default",
+                "uploaded_at":      None,
+                "view_url":         f"/storage/{raw_fn}",
+                "download_url":     f"/storage/{raw_fn}",
+            })
+
+    # DC-INSURANCE-PHOTO-FALLBACK: If installation_photo is requested in included_doc_types and not separately uploaded, fallback to geotagging_photo
+    if (included_doc_types is None or 'installation_photo' in included_doc_types) and not any(d['doc_type'] == 'installation_photo' for d in docs):
+        geo_row = next((r for r in docs_rows if r.doc_type == 'geotagging_photo' and r.file_name), None)
+        if geo_row:
+            docs.append({
+                "id":               f"inst_{geo_row.id}",
+                "doc_category":     geo_row.doc_category,
+                "doc_type":         "installation_photo",
+                "doc_label":        "Installation Photo (Geo Solar Photo)",
+                "doc_number":       geo_row.doc_number or "",
+                "original_name":    geo_row.original_name,
+                "file_size":        geo_row.file_size,
+                "uploaded_by_name": geo_row.uploaded_by_name,
+                "uploaded_at":      geo_row.uploaded_at.isoformat() if geo_row.uploaded_at else None,
+                "view_url":         f"/storage/{geo_row.file_name}" if geo_row.file_name else None,
+                "download_url":     f"/storage/{geo_row.file_name}" if geo_row.file_name else None,
+            })
+
     def _str(v):
         return str(v) if v is not None else ""
+
+    eff_ins_status = (
+        'completed' if getattr(lead, 'insurance_status', None) == 'completed'
+        else ('eligible' if (
+            getattr(lead, 'solar_pipeline_status', None) == 'completed'
+            or getattr(lead, 'status', None) == 'completed'
+            or getattr(lead, 'insurance_status', None) == 'eligible'
+        ) else 'ineligible')
+    )
 
     return {
         "success": True,
@@ -19598,6 +19887,9 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
             "deal_value_total":       _str(lead.deal_value_total),
             "deal_value_received":    _str(lead.deal_value_received),
             "deal_value_balance":     _str(lead.deal_value_balance),
+            "insurance_status":       eff_ins_status,
+            "insurance_company":      _str(lead.insurance_company),
+            "insurance_policy_no":    _str(lead.insurance_policy_no),
             "next_followup_date":     lead.next_followup_date.isoformat() if lead.next_followup_date else "",
             "created_at":             lead.created_at.isoformat() if lead.created_at else "",
             "telecaller_name":        _str(lead.telecaller_name),
@@ -19609,13 +19901,14 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DC-BUNDLE-PDF-001 (Jun 2026): Bank & DISCOM document bundle PDF endpoints
-# Auth endpoint: /leads/{id}/solar-docs/bundle?section=bank|discom
+# DC-BUNDLE-PDF-001 (Jun 2026): Bank, DISCOM & Insurance document bundle PDF endpoints
+# Auth endpoint: /leads/{id}/solar-docs/bundle?section=bank|discom|insurance
 # Public token endpoint: /share/{token}/bundle
-# Uses PyMuPDF (fitz) to merge images + PDFs into a single downloadable PDF.
+# Uses PyMuPDF / pypdf + PIL to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
-_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst','vendor_customer_agreement_annexure_2']
-_DISCOM_DOC_TYPES = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
+_BANK_DOC_TYPES      = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst','vendor_customer_agreement_annexure_2']
+_DISCOM_DOC_TYPES    = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
+_INSURANCE_DOC_TYPES = ['invoice','adhar','pan','installation_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
     'bank_book':'Bank Book','house_tax':'House Tax Receipt',
@@ -19626,6 +19919,7 @@ _BUNDLE_DOC_LABELS = {
     'annexure_c_technical':'Annexure-C (Technical Details)',
     'synchronisation_certificate':'Synchronisation Certificate',
     'dcr_certificate':'DCR Certificate','geotagging_photo':'Geo Tagging Photo',
+    'installation_photo':'Installation Photo','insurance_policy':'Insurance Policy Document',
 }
 
 def _detect_fitz_filetype(data: bytes, filename: str) -> str:
@@ -19672,7 +19966,7 @@ def _build_bundle_pdf(file_names: list, labels: list, storage_svc) -> bytes:
     """Merge a list of storage files (images + PDFs) into one PDF via pypdf, PIL, and reportlab."""
     import io
     from pypdf import PdfWriter, PdfReader
-    from PIL import Image
+    from PIL import Image, ImageOps
 
     writer = PdfWriter()
     merged_count = 0
@@ -19695,12 +19989,15 @@ def _build_bundle_pdf(file_names: list, labels: list, storage_svc) -> bytes:
                     writer.add_page(page)
                     merged_count += 1
             else:
-                # Convert image (PNG/JPEG/WebP) to PDF page via PIL
+                # Convert image (PNG/JPEG/WebP) to PDF page via PIL with EXIF orientation & size cap
                 img = Image.open(io.BytesIO(data))
-                if img.mode in ('RGBA', 'LA', 'P'):
+                img = ImageOps.exif_transpose(img)
+                if img.mode != 'RGB':
                     img = img.convert('RGB')
+                if max(img.size) > 1600:
+                    img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
                 pdf_buf = io.BytesIO()
-                img.save(pdf_buf, format='PDF')
+                img.save(pdf_buf, format='PDF', resolution=150.0, quality=82)
                 pdf_buf.seek(0)
                 img_reader = PdfReader(pdf_buf)
                 for page in img_reader.pages:
@@ -19737,7 +20034,7 @@ def download_solar_docs_bundle(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """
-    DC-BUNDLE-PDF-001 (auth-gated): Stream merged PDF for bank|discom section.
+    DC-BUNDLE-PDF-001 (auth-gated): Stream merged PDF for bank|discom|insurance section.
     Read-only — fetches existing uploaded docs and merges into single PDF.
     """
     from app.services.object_storage import storage_service as _ss
@@ -19750,8 +20047,11 @@ def download_solar_docs_bundle(
     elif sec == 'discom':
         doc_types = _DISCOM_DOC_TYPES
         label = 'DISCOM'
+    elif sec == 'insurance':
+        doc_types = _INSURANCE_DOC_TYPES
+        label = 'Insurance'
     else:
-        raise HTTPException(status_code=400, detail="section must be 'bank' or 'discom'")
+        raise HTTPException(status_code=400, detail="section must be 'bank', 'discom', or 'insurance'")
     lead = get_authorized_lead(db, lead_id, current_employee)
     if doc_types:
         placeholders = ','.join(f':t{i}' for i in range(len(doc_types)))
@@ -19775,6 +20075,16 @@ def download_solar_docs_bundle(
             raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
             DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
             rows.append(DocRow(file_name=raw_fn, doc_type='vendor_gst'))
+
+    # DC-INSURANCE-PHOTO-FALLBACK: If installation_photo not uploaded, fallback to geotagging_photo
+    if 'installation_photo' in doc_types and not any(r.doc_type == 'installation_photo' for r in rows):
+        geo_r = db.execute(text(
+            "SELECT file_name FROM crm_lead_solar_documents "
+            "WHERE lead_id = :lid AND doc_type = 'geotagging_photo' AND file_name IS NOT NULL LIMIT 1"
+        ), {"lid": lead_id}).fetchone()
+        if geo_r and geo_r.file_name:
+            DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
+            rows.append(DocRow(file_name=geo_r.file_name, doc_type='installation_photo'))
 
     order_map = {t: i for i, t in enumerate(doc_types)}
     rows = sorted(rows, key=lambda r: order_map.get(r.doc_type, 999))
@@ -19835,6 +20145,13 @@ def download_share_bundle(token: str, db: Session = Depends(get_db)):
             raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
             DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
             filtered.append(DocRow(file_name=raw_fn, doc_type='vendor_gst'))
+
+    # DC-INSURANCE-PHOTO-FALLBACK: Default installation_photo to geotagging_photo if requested and not uploaded
+    if (included is None or 'installation_photo' in included) and not any(d.doc_type == 'installation_photo' for d in filtered):
+        geo_d = next((d for d in docs if d.doc_type == 'geotagging_photo' and d.file_name), None)
+        if geo_d:
+            DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
+            filtered.append(DocRow(file_name=geo_d.file_name, doc_type='installation_photo'))
 
     if included:
         om = {t: i for i, t in enumerate(included)}
@@ -20006,6 +20323,8 @@ def generate_solar_docket_pdf(
                 img = ImageOps.exif_transpose(img)
                 if img.mode != 'RGB':
                     img = img.convert('RGB')
+                if max(img.size) > 1600:
+                    img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
                 margin = 36
                 max_w = pw - (2 * margin)
                 max_h = ph - (2 * margin) - 40
@@ -20015,6 +20334,9 @@ def generate_solar_docket_pdf(
                 dh = oh * ratio
                 x = margin + (max_w - dw) / 2
                 y = margin + (max_h - dh) / 2
+                jbuf = io.BytesIO()
+                img.save(jbuf, format='JPEG', quality=82, optimize=True)
+                jbuf.seek(0)
                 ibuf = io.BytesIO()
                 ic = canvas.Canvas(ibuf, pagesize=A4)
                 ic.setFont('Helvetica-Bold', 10)
@@ -20026,7 +20348,7 @@ def generate_solar_docket_pdf(
                 ic.setStrokeColor(colors.HexColor('#cbd5e1'))
                 ic.setLineWidth(0.5)
                 ic.line(margin, ph - 32, pw - margin, ph - 32)
-                ic.drawImage(ImageReader(img), x, y, width=dw, height=dh)
+                ic.drawImage(ImageReader(jbuf), x, y, width=dw, height=dh)
                 ic.save()
                 ibuf.seek(0)
                 ir = PdfReader(ibuf)
@@ -20040,7 +20362,7 @@ def generate_solar_docket_pdf(
 
 
 class ShareSolarDocsWAPayload(BaseModel):
-    doc_group: str = Field("bank", description="bank or discom")
+    doc_group: str = Field("bank", description="bank, discom, or insurance")
     recipient_phone: str = Field(..., description="10-digit Indian recipient mobile phone number")
     recipient_name: Optional[str] = Field(None, description="Name or designation of recipient")
     recipient_role: Optional[str] = Field(None, description="Role chip: Customer, BM, Ground Support, etc.")
@@ -20061,7 +20383,7 @@ def share_solar_docs_via_whatsapp(
 ):
     """
     DC-WA-DOC-SHARE-001 (Sep 2026):
-    Direct WhatsApp Document Dispatch for Bank & DISCOM Solar Bundles.
+    Direct WhatsApp Document Dispatch for Bank, DISCOM & Insurance Solar Bundles.
     Dispatches customer & system summary text followed by real attachments (PDFs/Images)
     directly into the WhatsApp chat from the connected scanned WhatsApp number (port 5002).
     """
@@ -20081,7 +20403,8 @@ def share_solar_docs_via_whatsapp(
     lead_row = db.execute(text("""
         SELECT id, name, phone, alternate_phone, address, city, state, pincode,
                kw_size, discom, application_no, sc_number, consumer_no,
-               loan_bank AS bank_name, bank_branch, company_id
+               loan_bank AS bank_name, bank_branch, company_id,
+               insurance_company, insurance_policy_no
         FROM crm_leads WHERE id = :lid
     """), {"lid": lead_id}).fetchone()
     if not lead_row:
@@ -20095,8 +20418,11 @@ def share_solar_docs_via_whatsapp(
     elif group == 'discom':
         base_types = list(_DISCOM_DOC_TYPES)
         group_label = "DISCOM Documents"
+    elif group == 'insurance':
+        base_types = list(_INSURANCE_DOC_TYPES)
+        group_label = "Insurance Documents"
     else:
-        raise HTTPException(status_code=400, detail="doc_group must be 'bank' or 'discom'")
+        raise HTTPException(status_code=400, detail="doc_group must be 'bank', 'discom', or 'insurance'")
 
     if payload.selected_doc_types:
         target_types = [t for t in base_types if t in payload.selected_doc_types]
@@ -20139,6 +20465,20 @@ def share_solar_docs_via_whatsapp(
                 "original_name": "Visionera_GST_Registration_Certificate.pdf"
             })
 
+    # DC-INSURANCE-PHOTO-FALLBACK: Fallback to geotagging_photo when installation_photo is requested and not uploaded
+    if 'installation_photo' in target_types and 'installation_photo' not in found_types:
+        geo_r = db.execute(text(
+            "SELECT file_name, original_name FROM crm_lead_solar_documents "
+            "WHERE lead_id = :lid AND doc_type = 'geotagging_photo' AND file_name IS NOT NULL LIMIT 1"
+        ), {"lid": lead_id}).fetchone()
+        if geo_r and geo_r.file_name:
+            docs_to_send.append({
+                "doc_type": "installation_photo",
+                "label": "Installation Photo (Geo Solar Photo)",
+                "file_name": geo_r.file_name,
+                "original_name": geo_r.original_name or "installation_photo.jpg"
+            })
+
     # Order docs
     order_map = {t: i for i, t in enumerate(base_types)}
     docs_to_send.sort(key=lambda d: order_map.get(d["doc_type"], 999))
@@ -20151,7 +20491,15 @@ def share_solar_docs_via_whatsapp(
     cust_phone = (lead_row.phone or "").strip()
     kw = lead_row.kw_size or "—"
     ref_no = lead_row.application_no or lead_row.sc_number or lead_row.consumer_no or f"APP-{lead_id}"
-    inst_info = f"{lead_row.bank_name or 'Bank'} - {lead_row.bank_branch or 'Main Branch'}" if group == 'bank' else f"{lead_row.discom or 'DISCOM'}"
+    if group == 'bank':
+        inst_info = f"{lead_row.bank_name or 'Bank'} - {lead_row.bank_branch or 'Main Branch'}"
+        inst_title = "Bank & Branch"
+    elif group == 'insurance':
+        inst_info = f"{lead_row.insurance_company or 'Solar Insurance'} {('(' + lead_row.insurance_policy_no + ')') if lead_row.insurance_policy_no else ''}".strip()
+        inst_title = "Insurance"
+    else:
+        inst_info = f"{lead_row.discom or 'DISCOM'}"
+        inst_title = "DISCOM"
     staff_name = f"{current_employee.first_name} {current_employee.last_name or ''}".strip() or "MyntOS Operations"
     rec_disp_name = payload.recipient_name or (f"Recipient ({payload.recipient_role})" if payload.recipient_role else customer_name)
     safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
@@ -20177,23 +20525,7 @@ def share_solar_docs_via_whatsapp(
         lbl = d["label"]
         clean_fn = fn.replace('/storage/', '').lstrip('/')
 
-        file_bytes = None
-        try:
-            file_bytes = _ss.download_file(clean_fn)
-        except Exception as dl_err:
-            logger.warning("[DC-WA-DOC-SHARE] S3 download error for %s: %s", clean_fn, dl_err)
-
-        if file_bytes is None:
-            for root_cand in _local_storage_roots:
-                p_cand = root_cand / clean_fn
-                if not p_cand.exists():
-                    p_cand = root_cand / Path(clean_fn).name
-                if p_cand.exists() and p_cand.is_file():
-                    try:
-                        file_bytes = p_cand.read_bytes()
-                        break
-                    except Exception:
-                        pass
+        file_bytes = _read_doc_bytes(clean_fn, _ss)
 
         if not file_bytes:
             logger.warning("[DC-WA-DOC-SHARE] Skipping %s: file not found in storage (%s)", lbl, clean_fn)
@@ -20252,7 +20584,7 @@ def share_solar_docs_via_whatsapp(
             f"👤 *Customer:* {customer_name}\n"
             f"📞 *Customer Phone:* +91 {cust_phone}\n"
             f"⚡ *System Capacity:* {kw} kW\n"
-            f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
+            f"🏢 *{inst_title}:* {inst_info}\n"
             f"🔢 *Reference / App No:* {ref_no}\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"📑 *Consolidated Dossier Enclosed ({len(verified_docs)} Documents Combined):*\n"
@@ -20266,7 +20598,7 @@ def share_solar_docs_via_whatsapp(
             f"👤 *Customer:* {customer_name}\n"
             f"📞 *Customer Phone:* +91 {cust_phone}\n"
             f"⚡ *System Capacity:* {kw} kW\n"
-            f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
+            f"🏢 *{inst_title}:* {inst_info}\n"
             f"🔢 *Reference / App No:* {ref_no}\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"📎 *Enclosed Documents ({len(verified_docs)} Individual Attachments):*\n"
@@ -20318,7 +20650,7 @@ def share_solar_docs_via_whatsapp(
 
         # 1. Create a 6-hour share token for target_types
         tok = secrets.token_urlsafe(16)
-        exp = datetime.utcnow() + timedelta(hours=6)
+        exp = get_indian_time() + timedelta(hours=6)
         db.execute(text("""
             INSERT INTO crm_lead_share_tokens (token, lead_id, expires_at, created_by_id, created_by_name, doc_filter)
             VALUES (:tok, :lid, :exp, :cid, :cname, :filter)
@@ -20332,10 +20664,8 @@ def share_solar_docs_via_whatsapp(
         })
         db.commit()
         
-        # 2. Build share URL & direct PDF download link for WhatsApp Web
-        req_host = (request.headers.get("host") if request else None) or "localhost:3000"
-        proto = "https" if (request and ("https" in request.headers.get("x-forwarded-proto", "") or "443" in req_host)) else "http"
-        base_url = f"{proto}://{req_host}"
+        # 2. Build share URL & direct PDF download link for WhatsApp Web using canonical public host
+        base_url = _canonical_base(request)
         share_url = f"{base_url}/lead-share.html?token={tok}"
         download_url = f"{base_url}/lead-share.html?token={tok}&download=true"
         bundle_direct_url = f"{base_url}/api/v1/crm/share/{tok}/bundle"
@@ -20517,6 +20847,389 @@ def share_solar_docs_via_whatsapp(
         "failed_count": len(failed_docs),
         "sent_docs": sent_docs,
         "failed_docs": failed_docs
+    }
+
+
+class ShareSolarDocsEmailPayload(BaseModel):
+    doc_group: str = Field("insurance", description="bank, discom, or insurance")
+    recipient_email: str = Field(..., description="Recipient email address")
+    recipient_name: Optional[str] = Field(None, description="Name or designation of recipient")
+    subject: Optional[str] = Field(None, description="Optional custom email subject")
+    selected_doc_types: Optional[List[str]] = Field(None, description="List of doc types to include in merged PDF")
+    custom_notes: Optional[str] = Field(None, description="Optional custom notes to include in email body")
+
+    model_config = {"extra": "ignore"}
+
+
+def _resolve_smtp_config() -> dict:
+    """Dynamically resolve SMTP configuration from .env / os.environ / settings."""
+    import os as _os
+    from dotenv import load_dotenv
+    from app.core.config import settings as _cfg
+    _b_env = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", "..", "..", ".env"))
+    _r_env = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", "..", "..", "..", ".env"))
+    if _os.path.exists(_r_env):
+        load_dotenv(_r_env, override=True)
+    if _os.path.exists(_b_env):
+        load_dotenv(_b_env, override=True)
+    mail_server = (_os.getenv("MAIL_SERVER") or getattr(_cfg, "MAIL_SERVER", None) or "").strip()
+    mail_port   = int(_os.getenv("MAIL_PORT") or getattr(_cfg, "MAIL_PORT", 587) or 587)
+    mail_tls_s  = _os.getenv("MAIL_TLS") or _os.getenv("MAIL_USE_TLS")
+    mail_tls    = (mail_tls_s.lower() in ("true", "1", "yes")) if mail_tls_s is not None else bool(getattr(_cfg, "MAIL_USE_TLS", True))
+    mail_ssl_s  = _os.getenv("MAIL_SSL")
+    mail_ssl    = (mail_ssl_s.lower() in ("true", "1", "yes")) if mail_ssl_s is not None else (mail_port == 465)
+    mail_user   = (_os.getenv("MAIL_USERNAME") or getattr(_cfg, "MAIL_USERNAME", None) or "").strip()
+    mail_pass   = (_os.getenv("MAIL_PASSWORD") or getattr(_cfg, "MAIL_PASSWORD", None) or "").strip()
+    if "gmail.com" in mail_server.lower() and " " in mail_pass:
+        mail_pass = mail_pass.replace(" ", "")
+    mail_from   = (_os.getenv("MAIL_FROM") or getattr(_cfg, "MAIL_FROM", None) or mail_user or "info@myntreal.com").strip()
+    return {
+        "mail_server": mail_server,
+        "mail_port": mail_port,
+        "mail_tls": mail_tls,
+        "mail_ssl": mail_ssl,
+        "mail_user": mail_user,
+        "mail_pass": mail_pass,
+        "mail_from": mail_from,
+    }
+
+
+@router.get("/solar-docs/email-config-status")
+def get_solar_docs_email_config_status(
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Check whether SMTP email configuration (MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD) is populated."""
+    cfg = _resolve_smtp_config()
+    has_server = bool(cfg["mail_server"])
+    has_user   = bool(cfg["mail_user"])
+    has_pass   = bool(cfg["mail_pass"])
+    configured = has_server and has_user and has_pass
+    missing = []
+    if not has_server: missing.append("MAIL_SERVER")
+    if not has_user:   missing.append("MAIL_USERNAME")
+    if not has_pass:   missing.append("MAIL_PASSWORD")
+    return {
+        "configured": configured,
+        "mail_server": cfg["mail_server"],
+        "mail_port": cfg["mail_port"],
+        "mail_from": cfg["mail_from"],
+        "cc_email": "contact@myntreal.com",
+        "missing_keys": missing,
+    }
+
+
+@router.post("/leads/{lead_id}/solar-docs/share-email")
+def share_solar_docs_via_email(
+    lead_id: int,
+    payload: ShareSolarDocsEmailPayload,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC-EMAIL-DOC-SHARE-001 (Oct 2026):
+    Direct Email Document Dispatch for Bank, DISCOM & Insurance Solar Bundles.
+    Compiles the selected documents into a single branded PDF docket and sends it as an email attachment
+    to the given recipient email address via SMTP (with automatic CC to contact@myntreal.com).
+    """
+    import re as _re
+    import smtplib
+    from email.message import EmailMessage
+    from pathlib import Path
+    from app.models.crm import CRMLeadNote
+    from app.services.object_storage import storage_service as _ss
+
+    lead = get_authorized_lead(db, lead_id, current_employee)
+
+    rec_email = (payload.recipient_email or "").strip()
+    if not rec_email or not _re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", rec_email):
+        raise HTTPException(status_code=400, detail="Please enter a valid recipient email address.")
+
+    # Verify SMTP configuration dynamically from .env / environment
+    smtp_cfg    = _resolve_smtp_config()
+    mail_server = smtp_cfg["mail_server"]
+    mail_port   = smtp_cfg["mail_port"]
+    mail_tls    = smtp_cfg["mail_tls"]
+    mail_user   = smtp_cfg["mail_user"]
+    mail_pass   = smtp_cfg["mail_pass"]
+    mail_from   = smtp_cfg["mail_from"]
+
+    if not mail_server or not mail_user or not mail_pass:
+        missing = [k for k, v in [("MAIL_SERVER", mail_server), ("MAIL_USERNAME", mail_user), ("MAIL_PASSWORD", mail_pass)] if not v]
+        raise HTTPException(
+            status_code=400,
+            detail=f"SMTP Mail Configuration is not set on the server (missing: {', '.join(missing)} in backend/.env). Please configure MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, and MAIL_PASSWORD in backend/.env to enable Email Send."
+        )
+
+    lead_row = db.execute(text("""
+        SELECT id, name, phone, email, address, city, state, pincode,
+               kw_size, discom, application_no, sc_number, consumer_no,
+               loan_bank AS bank_name, bank_branch, company_id,
+               insurance_company, insurance_policy_no
+        FROM crm_leads WHERE id = :lid
+    """), {"lid": lead_id}).fetchone()
+    if not lead_row:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    group = (payload.doc_group or "insurance").lower().strip()
+    if group == "bank":
+        base_types = list(_BANK_DOC_TYPES)
+        group_label = "Bank Documents"
+    elif group == "discom":
+        base_types = list(_DISCOM_DOC_TYPES)
+        group_label = "DISCOM Documents"
+    elif group == "insurance":
+        base_types = list(_INSURANCE_DOC_TYPES)
+        group_label = "Insurance Documents"
+    else:
+        raise HTTPException(status_code=400, detail="doc_group must be 'bank', 'discom', or 'insurance'")
+
+    target_types = [t for t in base_types if t in payload.selected_doc_types] if payload.selected_doc_types else list(base_types)
+
+    placeholders = ','.join(f':t{i}' for i in range(len(target_types)))
+    params = {"lid": lead_id, **{f"t{i}": t for i, t in enumerate(target_types)}}
+    doc_rows = db.execute(text(
+        f"SELECT id, doc_type, doc_label, file_name, original_name "
+        f"FROM crm_lead_solar_documents "
+        f"WHERE lead_id = :lid AND doc_type IN ({placeholders}) AND file_name IS NOT NULL"
+    ), params).fetchall() if target_types else []
+
+    found_types = {r.doc_type for r in doc_rows}
+    docs_to_send = [{
+        "doc_type": r.doc_type,
+        "label": _BUNDLE_DOC_LABELS.get(r.doc_type, r.doc_label or r.doc_type),
+        "file_name": r.file_name,
+        "original_name": r.original_name or f"{r.doc_type}.pdf"
+    } for r in doc_rows]
+
+    if group == "bank" and "vendor_gst" in target_types and "vendor_gst" not in found_types:
+        v_gst = db.execute(text("""
+            SELECT id, vendor_name, gst_number, gst_certificate_url
+            FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            docs_to_send.append({
+                "doc_type": "vendor_gst",
+                "label": f"Solar Vendor GST ({v_gst.vendor_name})",
+                "file_name": raw_fn,
+                "original_name": "Visionera_GST_Registration_Certificate.pdf"
+            })
+
+    if "installation_photo" in target_types and "installation_photo" not in found_types:
+        geo_r = db.execute(text(
+            "SELECT file_name, original_name FROM crm_lead_solar_documents "
+            "WHERE lead_id = :lid AND doc_type = 'geotagging_photo' AND file_name IS NOT NULL LIMIT 1"
+        ), {"lid": lead_id}).fetchone()
+        if geo_r and geo_r.file_name:
+            docs_to_send.append({
+                "doc_type": "installation_photo",
+                "label": "Installation Photo (Geo Solar Photo)",
+                "file_name": geo_r.file_name,
+                "original_name": geo_r.original_name or "installation_photo.jpg"
+            })
+
+    order_map = {t: i for i, t in enumerate(base_types)}
+    docs_to_send.sort(key=lambda d: order_map.get(d["doc_type"], 999))
+
+    if not docs_to_send:
+        raise HTTPException(status_code=400, detail=f"No uploaded {group_label} found for this lead to email.")
+
+    _base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+    _local_storage_roots = [
+        _base_dir / "frontend" / "storage",
+        _base_dir / "backend" / "storage",
+        _base_dir / "media_backup" / "solar_docs"
+    ]
+
+    verified_docs = []
+    failed_docs = []
+    for d in docs_to_send:
+        fn = d["file_name"]
+        lbl = d["label"]
+        clean_fn = fn.replace('/storage/', '').lstrip('/')
+        file_bytes = _read_doc_bytes(clean_fn, _ss)
+        if not file_bytes:
+            failed_docs.append({"label": lbl, "error": "File not found in storage"})
+            continue
+        verified_docs.append({**d, "file_bytes": file_bytes, "bytes": file_bytes})
+
+    if not verified_docs:
+        raise HTTPException(status_code=400, detail=f"None of the selected {group_label} could be read from storage.")
+
+    customer_name = (lead_row.name or f"Lead #{lead_id}").strip()
+    cust_phone = (lead_row.phone or "").strip()
+    kw = lead_row.kw_size or "—"
+    ref_no = lead_row.application_no or lead_row.sc_number or lead_row.consumer_no or f"APP-{lead_id}"
+    if group == "bank":
+        inst_info = f"{lead_row.bank_name or 'Bank'} - {lead_row.bank_branch or 'Main Branch'}"
+    elif group == "insurance":
+        inst_info = f"{lead_row.insurance_company or 'Solar Insurance'} {('(' + lead_row.insurance_policy_no + ')') if lead_row.insurance_policy_no else ''}".strip()
+    else:
+        inst_info = f"{lead_row.discom or 'DISCOM'}"
+    staff_name = f"{current_employee.first_name} {current_employee.last_name or ''}".strip() or "MyntOS Operations"
+    rec_disp_name = (payload.recipient_name or rec_email).strip()
+    safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
+    safe_grp = group_label.replace(' ', '_')
+    docket_filename = f"{safe_cust_name}_{safe_grp}_Docket.pdf"
+
+    docket_bytes = generate_solar_docket_pdf(
+        customer_name=customer_name,
+        lead_id=lead_id,
+        lead_phone=cust_phone,
+        kw_size=kw,
+        inst_info=inst_info,
+        ref_no=ref_no,
+        address=str(lead_row.address or "—"),
+        staff_name=staff_name,
+        group_label=group_label,
+        doc_items=verified_docs,
+    )
+
+    subject_line = (payload.subject or "").strip() or f"Solar {group_label} Docket — {customer_name} (Lead #{lead_id})"
+    doc_list_str = "\n".join([f"  {i+1}. {d['label']}" for i, d in enumerate(verified_docs)])
+    body_text = (
+        f"Dear {rec_disp_name},\n\n"
+        f"Please find attached the consolidated single-PDF {group_label} Docket for:\n\n"
+        f"• Customer Name: {customer_name}\n"
+        f"• Lead / App ID: #{lead_id}\n"
+        f"• Phone: +91 {cust_phone}\n"
+        f"• System Capacity: {kw} kW\n"
+        f"• Reference / App No: {ref_no}\n"
+        f"• Address: {lead_row.address or '—'}\n\n"
+        f"Enclosed Documents ({len(verified_docs)} combined in single PDF):\n"
+        f"{doc_list_str}\n"
+    )
+    if payload.custom_notes and payload.custom_notes.strip():
+        body_text += f"\nNotes:\n{payload.custom_notes.strip()}\n"
+    body_text += f"\nBest Regards,\n{staff_name}\nMyntOS Solar Operations"
+
+    always_cc = "contact@myntreal.com"
+    msg = EmailMessage()
+    msg["Subject"] = subject_line
+    msg["From"] = mail_from
+    msg["To"] = rec_email
+    if rec_email.lower() != always_cc.lower():
+        msg["Cc"] = always_cc
+    msg.set_content(body_text)
+    msg.add_attachment(docket_bytes, maintype="application", subtype="pdf", filename=docket_filename)
+
+    import socket as _sock
+    import ssl as _ssl
+
+    def _connect_ipv4_first(host: str, port: int, timeout: float, source_address=None):
+        try:
+            infos = _sock.getaddrinfo(host, port, _sock.AF_INET, _sock.SOCK_STREAM)
+            if infos:
+                af, socktype, proto, _, sa = infos[0]
+                s = _sock.socket(af, socktype, proto)
+                s.settimeout(timeout)
+                if source_address:
+                    s.bind(source_address)
+                s.connect(sa)
+                return s
+        except Exception:
+            pass
+        return _sock.create_connection((host, port), timeout, source_address)
+
+    class _IPv4SMTP(smtplib.SMTP):
+        def _get_socket(self, host, port, timeout):
+            return _connect_ipv4_first(host, port, timeout, self.source_address)
+
+    class _IPv4SMTP_SSL(smtplib.SMTP_SSL):
+        def _get_socket(self, host, port, timeout):
+            new_socket = _connect_ipv4_first(host, port, timeout, self.source_address)
+            return self.context.wrap_socket(new_socket, server_hostname=self._host)
+
+    def _try_smtp_send(port_to_use: int, use_ssl: bool):
+        ssl_ctx = _ssl.create_default_context()
+        if use_ssl or port_to_use == 465:
+            with _IPv4SMTP_SSL(mail_server, port_to_use, timeout=45, context=ssl_ctx) as server:
+                server.ehlo()
+                server.login(mail_user, mail_pass)
+                server.send_message(msg)
+        else:
+            with _IPv4SMTP(mail_server, port_to_use, timeout=45) as server:
+                server.ehlo()
+                if mail_tls:
+                    server.starttls(context=ssl_ctx)
+                    server.ehlo()
+                server.login(mail_user, mail_pass)
+                server.send_message(msg)
+
+    try:
+        try:
+            _try_smtp_send(mail_port, smtp_cfg.get("mail_ssl", False) or (mail_port == 465))
+        except (smtplib.SMTPServerDisconnected, OSError) as first_err:
+            if mail_port != 465:
+                logger.warning("[DC-EMAIL-DOC-SHARE] Port %s disconnected (%s); retrying via SSL port 465...", mail_port, first_err)
+                _try_smtp_send(465, True)
+            else:
+                raise
+    except Exception as smtp_err:
+        logger.error("[DC-EMAIL-DOC-SHARE] SMTP send failed for lead #%s to %s: %s", lead_id, rec_email, smtp_err)
+        raise HTTPException(status_code=502, detail=f"Failed to send email via SMTP ({mail_server}:{mail_port}): {smtp_err}")
+
+    # Audit log & lead note
+    try:
+        company_id = lead_row.company_id or getattr(current_employee, 'base_company_id', 1) or 1
+        note_text = (
+            f"📧 [Documents Shared via Email]\n"
+            f"• Bundle: {group_label}\n"
+            f"• Shared by: {staff_name} (Staff ID: {current_employee.id})\n"
+            f"• Recipient: {rec_disp_name} <{rec_email}>\n"
+            f"• CC: {always_cc}\n"
+            f"• Subject: {subject_line}\n"
+            f"• Attached PDF: {docket_filename} ({len(verified_docs)} docs merged)\n"
+            + "\n".join([f"   - {d['label']}" for d in verified_docs])
+        )
+        if payload.custom_notes and payload.custom_notes.strip():
+            note_text += f"\n• Note: {payload.custom_notes.strip()}"
+        db.add(CRMLeadNote(
+            company_id=company_id,
+            lead_id=lead_id,
+            note=note_text,
+            is_private=False,
+            created_by_type="STAFF",
+            created_by_id=str(current_employee.id)
+        ))
+        db.add(CRMLeadDocumentShare(
+            company_id=company_id,
+            lead_id=lead_id,
+            share_mode="email_merged",
+            recipient_phone=rec_email[:50],
+            recipient_name=rec_disp_name,
+            recipient_role="Email",
+            shared_by_staff_id=current_employee.id,
+            shared_by_staff_name=staff_name,
+            doc_group=group,
+            doc_types=[d["doc_type"] for d in verified_docs],
+            doc_labels=[d["label"] for d in verified_docs],
+            total_docs=len(docs_to_send),
+            sent_docs_count=len(verified_docs),
+            failed_docs_count=len(failed_docs),
+            custom_notes=payload.custom_notes or "",
+            status="completed"
+        ))
+        lead.recent_comments = f"[Docs Shared via Email] {group_label} ({len(verified_docs)} items) sent to {rec_email} (CC: {always_cc}) by {staff_name}"
+        lead.last_contact_date = datetime.now()
+        db.commit()
+    except Exception as _ne:
+        db.rollback()
+        logger.warning("[DC-EMAIL-DOC-SHARE] Audit log skipped: %s", _ne)
+
+    return {
+        "success": True,
+        "recipient_email": rec_email,
+        "cc_email": always_cc,
+        "recipient_name": rec_disp_name,
+        "doc_group": group,
+        "filename": docket_filename,
+        "sent_count": len(verified_docs),
+        "sent_docs": [d["label"] for d in verified_docs],
+        "failed_docs": failed_docs,
+        "message": f"✅ Consolidated PDF sent to {rec_email} (CC: {always_cc})",
     }
 
 
@@ -20978,9 +21691,12 @@ _SOLAR_LEAD_PATCHABLE = {
     "sanction_date", "discom_reg_no", "latitude", "longitude",
     "grid_phase", "loan_bank", "bank_branch", "bank_account_number",
     "application_no", "submit_date", "complete_date", "installation_date",
+    "insurance_status", "insurance_policy_no", "insurance_company",
+    "insurance_start_date", "insurance_expiry_date",
+    "insurance_sum_insured", "insurance_premium", "insurance_notes",
 }
 
-_SOLAR_DATE_FIELDS = {"sanction_date", "submit_date", "complete_date", "installation_date"}
+_SOLAR_DATE_FIELDS = {"sanction_date", "submit_date", "complete_date", "installation_date", "insurance_start_date", "insurance_expiry_date"}
 
 def _normalize_solar_date_value(val: Any) -> Optional[date]:
     """
@@ -22613,4 +23329,128 @@ def public_create_lead(body: PublicLeadCreateRequest, db: Session = Depends(get_
         status_code=403,
         detail="Public intake requires signed HMAC form token verification (Option B). Direct submission is disabled."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HAR GHAR SUPPORT WHATSAPP GROUP REPORT ENDPOINTS (DC-HAR-GHAR-SUPPORT-001)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class HarGharSupportTriggerRequest(BaseModel):
+    people_on_ground: List[str] = []
+    expected_bank_customers: List[str] = []
+    include_manual: bool = True
+    custom_message: Optional[str] = None
+    group_name: Optional[str] = "Har ghar support"
+
+
+@router.get("/har-ghar-support-report/preview")
+def preview_har_ghar_support_report(
+    include_manual: bool = Query(True),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Fetch live Har Ghar Support Report metrics, formatted message preview,
+    and initial search suggestions for People On Ground & Expected Payments From Bank.
+    """
+    from app.services.har_ghar_support_report_service import (
+        get_har_ghar_support_report_metrics,
+        format_har_ghar_support_whatsapp_message,
+        search_active_members_for_ground,
+        search_expected_bank_customers,
+    )
+    metrics = get_har_ghar_support_report_metrics(db)
+    preview_with_manual = format_har_ghar_support_whatsapp_message(
+        metrics=metrics,
+        people_on_ground=[],
+        expected_bank_customers=[],
+        include_manual=True,
+    )
+    preview_without_manual = format_har_ghar_support_whatsapp_message(
+        metrics=metrics,
+        people_on_ground=[],
+        expected_bank_customers=[],
+        include_manual=False,
+    )
+    initial_people = search_active_members_for_ground(db, query_str="", limit=40)
+    initial_customers = search_expected_bank_customers(db, query_str="", limit=40)
+    return {
+        "success": True,
+        "metrics": metrics,
+        "preview_message": preview_with_manual if include_manual else preview_without_manual,
+        "preview_with_manual": preview_with_manual,
+        "preview_without_manual": preview_without_manual,
+        "initial_people": initial_people,
+        "initial_customers": initial_customers,
+        "target_group": "Har ghar support",
+        "schedule_info": "Everyday at 9:00 AM & 8:00 PM IST (Automated without manual entry)",
+    }
+
+
+@router.get("/har-ghar-support-report/search-people")
+def search_har_ghar_ground_people(
+    q: str = Query("", description="Search active staff or VGK members by name, code, or phone"),
+    limit: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Search active staff & VGK members for '2. People On Ground' multi-select."""
+    from app.services.har_ghar_support_report_service import search_active_members_for_ground
+    results = search_active_members_for_ground(db, query_str=q, limit=limit)
+    return {"success": True, "people": results}
+
+
+@router.get("/har-ghar-support-report/search-customers")
+def search_har_ghar_expected_bank_customers(
+    q: str = Query("", description="Search CRM customers by name, phone, or bank"),
+    limit: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Search CRM solar customers for '3. Expected Payments From Bank' multi-select."""
+    from app.services.har_ghar_support_report_service import search_expected_bank_customers
+    results = search_expected_bank_customers(db, query_str=q, limit=limit)
+    return {"success": True, "customers": results}
+
+
+@router.post("/har-ghar-support-report/trigger")
+def trigger_har_ghar_support_report_endpoint(
+    payload: HarGharSupportTriggerRequest,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Manually trigger the Har Ghar Support WhatsApp Group Report to 'Har ghar support'
+    with optional '2. People On Ground' and '3. Expected Payments From Bank' selections.
+    """
+    from app.services.har_ghar_support_report_service import dispatch_har_ghar_support_report
+    staff_name = (
+        getattr(current_employee, "full_name", None)
+        or f"{getattr(current_employee, 'first_name', '') or ''} {getattr(current_employee, 'last_name', '') or ''}".strip()
+        or getattr(current_employee, "emp_code", "Staff")
+    )
+    res = dispatch_har_ghar_support_report(
+        db=db,
+        people_on_ground=payload.people_on_ground or [],
+        expected_bank_customers=payload.expected_bank_customers or [],
+        include_manual=payload.include_manual,
+        slot_label=f"Triggered by {staff_name}",
+        group_name=payload.group_name or "Har ghar support",
+        custom_message=payload.custom_message,
+    )
+    return res
+
+
+@router.get("/har-ghar-support-report/drilldown")
+def get_har_ghar_support_report_drilldown_endpoint(
+    parameter: str = Query(..., description="Parameter key to drill down into"),
+    limit: int = Query(200, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Get detailed records (leads or members) for ANY parameter in Har Ghar Support Report.
+    """
+    from app.services.har_ghar_support_report_service import get_har_ghar_parameter_drilldown
+    return get_har_ghar_parameter_drilldown(db=db, parameter=parameter, limit=limit)
 

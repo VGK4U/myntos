@@ -2,6 +2,7 @@
 RVZ-Only Bonanza Edit Endpoint
 Allows RVZ to update bonanza details
 """
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -101,7 +102,7 @@ async def edit_bonanza(
     if data.advance_count_basis is not None and data.advance_count_basis in ('CIBIL', 'DVR', 'BOTH'):
         bonanza.advance_count_basis = data.advance_count_basis
 
-    bonanza.updated_at = datetime.utcnow()
+    bonanza.updated_at = get_indian_time()
     
     db.commit()
     db.refresh(bonanza)

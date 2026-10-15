@@ -290,6 +290,11 @@ api_router.include_router(vgk_gallery.router,     tags=["VGK Gallery"])
 from app.api.v1.endpoints import vgk_vendors
 api_router.include_router(vgk_vendors.router, tags=["VGK Vendor System"])
 
+# VGK Member Quick Alerts (One-Click Application & Immediate Support)
+from app.api.v1.endpoints import vgk_quick_alerts
+api_router.include_router(vgk_quick_alerts.router, prefix="/vgk/quick-alerts", tags=["VGK Quick Alerts"])
+
+
 # Community Services System (DC Protocol Mar 2026)
 from app.api.v1.endpoints import community_services
 api_router.include_router(community_services.router, prefix="/community-services", tags=["Community Services"])

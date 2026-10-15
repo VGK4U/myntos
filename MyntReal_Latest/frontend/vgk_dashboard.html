@@ -680,6 +680,57 @@
                     <span class="tag-black">Leads. Rewards. Growth.</span>
                 </p>
 
+                <!-- ── VGK4U ONE-CLICK INSTANT ACTION BUTTONS & ACTIVE TRACKER ── -->
+                <div id="vgkQuickAlertsContainer" style="margin: 16px 0 20px;">
+                    <!-- Active Alerts Live Tracker (Rendered dynamically if any active alert exists) -->
+                    <div id="vgkActiveAlertsTracker" style="display:none; margin-bottom: 16px;"></div>
+
+                    <!-- 1-Click Action Buttons Row -->
+                    <div class="row g-2">
+                        <div class="col-md-6 col-12">
+                            <button type="button" onclick="openQuickAlertModal('APPLICATION')" class="w-100 text-start"
+                                style="background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%); color: #ffffff; border: none; border-radius: 14px; padding: 14px 18px; box-shadow: 0 4px 14px rgba(5,150,105,0.35); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 14px;">
+                                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                        <i class="fas fa-bolt text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 15px; font-weight: 800; letter-spacing: 0.2px; display: flex; align-items: center; gap: 6px;">
+                                            I Have an Application
+                                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399;"></span>
+                                        </div>
+                                        <div style="font-size: 11.5px; opacity: 0.9; margin-top: 2px;">1-Click alert to sales team &amp; instant claim link</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.22); border-radius: 8px; padding: 6px 12px; white-space: nowrap;">
+                                    Submit <i class="fas fa-arrow-right ms-1"></i>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="col-md-6 col-12">
+                            <button type="button" onclick="openQuickAlertModal('SUPPORT')" class="w-100 text-start"
+                                style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%); color: #ffffff; border: none; border-radius: 14px; padding: 14px 18px; box-shadow: 0 4px 14px rgba(220,38,38,0.35); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 14px;">
+                                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                        <i class="fas fa-headset"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 15px; font-weight: 800; letter-spacing: 0.2px; display: flex; align-items: center; gap: 6px;">
+                                            Support
+                                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fca5a5; box-shadow: 0 0 8px #ef4444;"></span>
+                                        </div>
+                                        <div style="font-size: 11.5px; opacity: 0.9; margin-top: 2px;">Raise a support ticket · Category, reason, details &amp; images</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.22); border-radius: 8px; padding: 6px 12px; white-space: nowrap;">
+                                    Raise Ticket <i class="fas fa-arrow-right ms-1"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Service shortcuts (tap to submit a lead) -->
                 <div class="service-row">
                     <div class="svc-item" onclick="openLeadSubmit('SOLAR')" title="Submit a Solar lead">
@@ -3664,9 +3715,14 @@
                         'work_order',
                         'installation_pending',
                         'installation',
+                        'installed',
+                        'dcr_pending',
+                        'discom_pending',
                         'inspection',
                         'net_meter_pending',
                         'balance_pending',
+                        'eb_cust',
+                        'eb_staff',
                         'electricity_bill_change'
                     ].includes(stageNorm) || stageNorm.includes('bank');
 
@@ -8869,10 +8925,12 @@
             DEFICIT  : { bg:'#ffedd5', color:'#9a3412', label:'Deficit' },
         };
         const PIPELINE_ADV_LABELS = {
+            first_payment_received:'1st Payment', documents_pending:'Docs Pending',
             application_submitted:'App Submitted', pending_with_bank:'With Bank',
             documents_issue:'Doc Issue', load_extension:'Load Extension',
-            electricity_bill_change:'EB Change', installation_pending:'Install Pending',
-            net_meter_pending:'Net Meter', subsidy_pending:'Subsidy Pending',
+            eb_cust:'EB Cust.', eb_staff:'EB Staff', electricity_bill_change:'EB Cust.', installation_pending:'Install Pending',
+            installed:'Installed', dcr_pending:'DCR Pending', discom_pending:'Discom Pending',
+            net_meter_pending:'Net Meter', balance_pending:'Bal. Pending', balance_received:'Bal. Received', subsidy_pending:'Subsidy Pending',
             completed:'Completed', loan_rejected:'Loan Rejected',
             not_interested:'Not Interested', cancelled:'Cancelled',
         };
@@ -12387,5 +12445,457 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
+
+<!-- ── VGK QUICK ALERT & SUPPORT TICKET MODAL ── -->
+<div class="modal fade" id="vgkQuickAlertModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:18px;overflow:hidden;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+            <div id="quickAlertModalHeader" style="padding:18px 22px;color:white;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div id="quickAlertModalSubtitle" style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">
+                        <i class="fas fa-paper-plane me-1"></i> INSTANT DISPATCH
+                    </div>
+                    <h5 id="quickAlertModalTitle" style="font-weight:900;margin:2px 0 0;font-size:18px;"></h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding:20px 22px;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#475569;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                        <span>Partner: <strong id="quickAlertPartnerName">—</strong></span>
+                        <span id="quickAlertPartnerCode" style="font-family:monospace;font-weight:700;color:#2563eb;">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Phone: <strong id="quickAlertPartnerPhone">—</strong></span>
+                        <span id="quickAlertTicketNotice" style="display:none;font-size:11px;font-weight:700;color:#dc2626;background:#fef2f2;padding:2px 8px;border-radius:10px;border:1px solid #fecaca;">
+                            <i class="fas fa-ticket-alt me-1"></i> Tracked in Service Module
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Support Ticketing Format Fields (Shown when type === 'SUPPORT') -->
+                <div id="quickAlertSupportFields" style="display:none;">
+                    <div class="row g-2 mb-3">
+                        <div class="col-8">
+                            <label class="form-label mb-1" style="font-size:12.5px;font-weight:700;color:#1e293b;">
+                                Issue Category <span class="text-danger">*</span>
+                            </label>
+                            <select id="quickAlertCategorySelect" class="form-select" style="border-color:#cbd5e1;border-radius:10px;font-size:13px;font-weight:600;">
+                                <option value="Solar / Rooftop Support">☀️ Solar / Rooftop Support</option>
+                                <option value="EV / Two-Wheeler Service">🛵 EV / Two-Wheeler Service</option>
+                                <option value="Application / Lead Status">📋 Application / Lead Status</option>
+                                <option value="Commission / Payout / Wallet">💰 Commission / Payout / Wallet</option>
+                                <option value="KYC / Profile / Portal Issue">🪪 KYC / Profile / Portal Issue</option>
+                                <option value="Spares / Warranty Claim">🔧 Spares / Warranty Claim</option>
+                                <option value="Insurance / Policy Support">🛡️ Insurance / Policy Support</option>
+                                <option value="General Support">🆘 General Support</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label mb-1" style="font-size:12.5px;font-weight:700;color:#1e293b;">
+                                Priority
+                            </label>
+                            <select id="quickAlertPrioritySelect" class="form-select" style="border-color:#cbd5e1;border-radius:10px;font-size:13px;font-weight:600;">
+                                <option value="High" selected>🔴 High</option>
+                                <option value="Urgent">🚨 Urgent</option>
+                                <option value="Medium">🟡 Medium</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label mb-1" style="font-size:12.5px;font-weight:700;color:#1e293b;">
+                            Reason / Subject <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="quickAlertReasonInput" class="form-control"
+                            style="border-color:#cbd5e1;border-radius:10px;font-size:13.5px;"
+                            placeholder="e.g. Inverter error code E04 / Lead application payout pending...">
+                    </div>
+                </div>
+
+                <!-- Details / Notes -->
+                <div class="mb-3">
+                    <label id="quickAlertNotesLabel" class="form-label mb-1" style="font-size:12.5px;font-weight:700;color:#1e293b;">
+                        Customer Details / Notes <span class="text-muted fw-normal">(Optional)</span>
+                    </label>
+                    <textarea id="quickAlertNotesInput" class="form-control" rows="3"
+                        style="border-color:#cbd5e1;border-radius:10px;font-size:13.5px;"
+                        placeholder="e.g. Customer Name: Arun Kumar, Phone: 9876543210, looking for 3kW Rooftop Solar..."></textarea>
+                    <div id="quickAlertNotesHint" style="font-size:11.5px;color:#64748b;margin-top:4px;">
+                        <i class="fas fa-info-circle me-1"></i> You can leave this blank to trigger immediate pickup with your partner profile details.
+                    </div>
+                </div>
+
+                <!-- Optional Image Upload (Shown for Support Tickets) -->
+                <div id="quickAlertImageUploadWrap" style="display:none;" class="mb-3">
+                    <label class="form-label mb-1" style="font-size:12.5px;font-weight:700;color:#1e293b;">
+                        <i class="fas fa-camera text-danger me-1"></i> Upload Images <span class="text-muted fw-normal">(Optional, up to 5 photos)</span>
+                    </label>
+                    <input type="file" id="quickAlertImagesInput" class="form-control form-control-sm"
+                        accept="image/*" multiple onchange="handleQuickAlertImagesChange(this)"
+                        style="border-color:#cbd5e1;border-radius:10px;font-size:12.5px;">
+                    <div id="quickAlertImagesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+                </div>
+
+                <button type="button" id="btnSubmitQuickAlert" onclick="submitQuickAlert()" class="btn w-100"
+                    style="border-radius:12px;font-weight:800;padding:12px;font-size:15px;color:white;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="fas fa-bolt"></i> Send Instant Broadcast to Team
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    let currentQuickAlertType = 'APPLICATION';
+    let selectedSupportImages = [];
+
+    window.handleQuickAlertImagesChange = function(input) {
+        const files = Array.from(input.files || []).slice(0, 5);
+        selectedSupportImages = [];
+        const previewEl = document.getElementById('quickAlertImagesPreview');
+        if (previewEl) previewEl.innerHTML = '';
+
+        files.forEach((file, idx) => {
+            if (file.size > 10 * 1024 * 1024) {
+                alert(`File "${file.name}" exceeds 10MB limit and was skipped.`);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const dataUrl = evt.target.result;
+                selectedSupportImages.push({
+                    filename: file.name,
+                    mime_type: file.type || 'image/jpeg',
+                    data_base64: dataUrl
+                });
+                renderSupportImagePreviews();
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    window.removeSupportImageAt = function(idx) {
+        selectedSupportImages.splice(idx, 1);
+        renderSupportImagePreviews();
+    };
+
+    function renderSupportImagePreviews() {
+        const previewEl = document.getElementById('quickAlertImagesPreview');
+        if (!previewEl) return;
+        if (!selectedSupportImages.length) {
+            previewEl.innerHTML = '';
+            return;
+        }
+        previewEl.innerHTML = selectedSupportImages.map((img, i) => `
+            <div style="position:relative;width:62px;height:62px;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;box-shadow:0 2px 5px rgba(0,0,0,0.08);">
+                <img src="${img.data_base64}" style="width:100%;height:100%;object-fit:cover;" alt="Preview">
+                <button type="button" onclick="removeSupportImageAt(${i})"
+                    style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(220,38,38,0.9);color:white;border:none;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    &times;
+                </button>
+            </div>
+        `).join('');
+    }
+
+    window.openQuickAlertModal = function(type) {
+        currentQuickAlertType = type || 'APPLICATION';
+        const isApp = (currentQuickAlertType === 'APPLICATION');
+        selectedSupportImages = [];
+
+        const header = document.getElementById('quickAlertModalHeader');
+        const subtitle = document.getElementById('quickAlertModalSubtitle');
+        const title = document.getElementById('quickAlertModalTitle');
+        const submitBtn = document.getElementById('btnSubmitQuickAlert');
+        const notesInput = document.getElementById('quickAlertNotesInput');
+        const notesLabel = document.getElementById('quickAlertNotesLabel');
+        const notesHint = document.getElementById('quickAlertNotesHint');
+        const supportFields = document.getElementById('quickAlertSupportFields');
+        const imageUploadWrap = document.getElementById('quickAlertImageUploadWrap');
+        const ticketNotice = document.getElementById('quickAlertTicketNotice');
+        const reasonInput = document.getElementById('quickAlertReasonInput');
+        const imagesInput = document.getElementById('quickAlertImagesInput');
+        const previewEl = document.getElementById('quickAlertImagesPreview');
+
+        if (imagesInput) imagesInput.value = '';
+        if (previewEl) previewEl.innerHTML = '';
+        if (reasonInput) reasonInput.value = '';
+
+        if (isApp) {
+            header.style.background = 'linear-gradient(135deg, #059669, #047857)';
+            if (subtitle) subtitle.innerHTML = '<i class="fas fa-paper-plane me-1"></i> INSTANT APPLICATION DISPATCH';
+            title.innerHTML = '<i class="fas fa-bolt text-warning me-2"></i> I Have an Application';
+            submitBtn.style.background = 'linear-gradient(135deg, #059669, #047857)';
+            submitBtn.innerHTML = '<i class="fas fa-bolt me-1"></i> Broadcast Application to Team';
+            if (supportFields) supportFields.style.display = 'none';
+            if (imageUploadWrap) imageUploadWrap.style.display = 'none';
+            if (ticketNotice) ticketNotice.style.display = 'none';
+            if (notesLabel) notesLabel.innerHTML = 'Customer Details / Notes <span class="text-muted fw-normal">(Optional)</span>';
+            notesInput.placeholder = 'e.g. Customer Name: Arun Kumar, Phone: 9876543210, requirement: 3kW Solar Rooftop...';
+            if (notesHint) notesHint.innerHTML = '<i class="fas fa-info-circle me-1"></i> You can leave this blank to trigger immediate pickup with your partner profile details.';
+        } else {
+            header.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+            if (subtitle) subtitle.innerHTML = '<i class="fas fa-ticket-alt me-1"></i> SERVICE DESK SUPPORT TICKET';
+            title.innerHTML = '<i class="fas fa-headset me-2"></i> Raise Support Ticket';
+            submitBtn.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Support Ticket & Broadcast';
+            if (supportFields) supportFields.style.display = 'block';
+            if (imageUploadWrap) imageUploadWrap.style.display = 'block';
+            if (ticketNotice) ticketNotice.style.display = 'inline-block';
+            if (notesLabel) notesLabel.innerHTML = 'Issue Details / Description <span class="text-danger">*</span>';
+            notesInput.placeholder = 'Describe the issue, customer/site details, or support required...';
+            if (notesHint) notesHint.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> Creates an official Service Module Ticket & alerts the support and sales desk immediately.';
+        }
+
+        // Populate partner profile
+        const memberData = window._vgkCurrentMember || {};
+        const pName = memberData.partner_name || memberData.name || document.getElementById('topbarPartnerName')?.textContent || 'Channel Partner';
+        const pCode = memberData.partner_code || memberData.code || document.getElementById('topbarPartnerCode')?.textContent || '';
+        const pPhone = memberData.phone || memberData.mobile_number || '';
+
+        document.getElementById('quickAlertPartnerName').textContent = pName;
+        document.getElementById('quickAlertPartnerCode').textContent = pCode;
+        document.getElementById('quickAlertPartnerPhone').textContent = pPhone ? `+91 ${pPhone.replace(/\D/g,'').slice(-10)}` : 'On file';
+        notesInput.value = '';
+        submitBtn.disabled = false;
+
+        const modalEl = document.getElementById('vgkQuickAlertModal');
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            m.show();
+        }
+    };
+
+    window.submitQuickAlert = async function() {
+        const btn = document.getElementById('btnSubmitQuickAlert');
+        const isApp = (currentQuickAlertType === 'APPLICATION');
+        const notes = (document.getElementById('quickAlertNotesInput')?.value || '').trim();
+        const category = (document.getElementById('quickAlertCategorySelect')?.value || 'General Support').trim();
+        const reason = (document.getElementById('quickAlertReasonInput')?.value || '').trim();
+        const priority = (document.getElementById('quickAlertPrioritySelect')?.value || 'High').trim();
+        const token = localStorage.getItem('vgk_token') || sessionStorage.getItem('vgk_token');
+
+        if (!isApp) {
+            if (!reason && !notes) {
+                alert('Please enter the Issue Reason / Subject or Details for your Support Ticket.');
+                return;
+            }
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
+
+        try {
+            const payload = {
+                alert_type: currentQuickAlertType,
+                notes: notes || null,
+                priority: isApp ? 'High' : priority
+            };
+
+            if (!isApp) {
+                payload.issue_category = category;
+                payload.reason = reason || category;
+                payload.details = notes || reason;
+                payload.images = selectedSupportImages;
+            }
+
+            const res = await fetch('/api/v1/vgk/quick-alerts/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const json = await res.json();
+            if (res.ok && json.success) {
+                const modalEl = document.getElementById('vgkQuickAlertModal');
+                if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const m = bootstrap.Modal.getInstance(modalEl);
+                    if (m) m.hide();
+                }
+
+                const tktMsg = json.service_ticket_code ? `\nService Ticket ID: ${json.service_ticket_code}` : '';
+                alert(`✅ ${json.message || 'Request broadcasted successfully!'}${tktMsg}`);
+                loadQuickAlertsStatus();
+            } else {
+                alert(json.detail || json.message || 'Failed to submit request. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = isApp
+                    ? '<i class="fas fa-bolt me-1"></i> Broadcast Application to Team'
+                    : '<i class="fas fa-paper-plane me-1"></i> Submit Support Ticket & Broadcast';
+            }
+        } catch (e) {
+            alert('Network error while submitting request. Please check your connection.');
+            btn.disabled = false;
+            btn.innerHTML = isApp
+                ? '<i class="fas fa-bolt me-1"></i> Broadcast Application to Team'
+                : '<i class="fas fa-paper-plane me-1"></i> Submit Support Ticket & Broadcast';
+        }
+    };
+
+    window.cancelMyQuickAlert = async function(alertId, alertCode) {
+        const reason = prompt(`Are you sure you want to cancel request ${alertCode}?\nOptional cancellation reason:`, 'Cancelled by member');
+        if (reason === null) return;
+
+        const token = localStorage.getItem('vgk_token') || sessionStorage.getItem('vgk_token');
+        if (!token) return;
+
+        try {
+            const res = await fetch('/api/v1/vgk/quick-alerts/member-cancel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    alert_id: alertId,
+                    reason: reason || 'Cancelled by member'
+                })
+            });
+            const json = await res.json();
+            if (res.ok && json.success) {
+                loadQuickAlertsStatus();
+            } else {
+                alert(json.detail || json.message || 'Could not cancel request.');
+            }
+        } catch (e) {
+            alert('Network error while cancelling request.');
+        }
+    };
+
+    window.loadQuickAlertsStatus = async function() {
+        const container = document.getElementById('vgkActiveAlertsTracker');
+        if (!container) return;
+
+        const token = localStorage.getItem('vgk_token') || sessionStorage.getItem('vgk_token');
+        if (!token) return;
+
+        try {
+            const res = await fetch('/api/v1/vgk/quick-alerts/my-status', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.success || !json.has_active || !json.active_alerts.length) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            container.style.display = 'block';
+            container.innerHTML = json.active_alerts.map(a => renderAlertTrackerCard(a)).join('');
+        } catch (e) {
+            // silent fail on poll
+        }
+    };
+
+    function renderAlertTrackerCard(alert) {
+        const isApp = (alert.alert_type === 'APPLICATION');
+        const badgeColor = isApp ? '#059669' : '#dc2626';
+        const badgeBg = isApp ? '#ecfdf5' : '#fef2f2';
+        const badgeBorder = isApp ? '#a7f3d0' : '#fecaca';
+        const typeLabel = isApp ? '⚡ Application Ready' : '🆘 Support Ticket';
+
+        const isClaimed = (alert.status === 'CLAIMED' || alert.status === 'IN_PROGRESS' || alert.status === 'PROCESSED');
+        const isInProgress = (alert.status === 'IN_PROGRESS' || alert.status === 'PROCESSED');
+        const isCompleted = (alert.status === 'PROCESSED');
+        const canCancel = (alert.status !== 'PROCESSED' && alert.status !== 'CANCELLED');
+
+        const step2Icon = isClaimed ? 'fa-check-circle text-primary' : 'fa-circle-notch fa-spin text-warning';
+        const step2Text = isClaimed ? `Claimed by ${alert.claimed_by_staff_name || 'Staff'}` : 'Awaiting Staff Pickup...';
+
+        const attachmentsHtml = (alert.attachments && alert.attachments.length)
+            ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                ${alert.attachments.map(att => `
+                    <a href="${att.file_url}" target="_blank" title="${att.filename || 'Attachment'}"
+                       style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;padding:3px 8px;border-radius:6px;text-decoration:none;">
+                        <i class="fas fa-image"></i> View Image
+                    </a>
+                `).join('')}
+               </div>`
+            : '';
+
+        return `
+            <div style="background: #ffffff; border-radius: 14px; border: 1.5px solid ${badgeBorder}; padding: 16px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">
+                            ${typeLabel}
+                        </span>
+                        <span style="font-family: monospace; font-size: 12px; font-weight: 700; color: #64748b;">${alert.alert_code}</span>
+                        ${alert.linked_ticket_code ? `
+                            <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;">
+                                <i class="fas fa-ticket-alt me-1"></i>Service Ticket: ${alert.linked_ticket_code}
+                            </span>
+                        ` : ''}
+                        ${alert.issue_category ? `
+                            <span style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;">
+                                ${alert.issue_category}
+                            </span>
+                        ` : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button onclick="loadQuickAlertsStatus()" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size: 12px;">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh
+                        </button>
+                        ${canCancel ? `
+                            <button onclick="cancelMyQuickAlert(${alert.id}, '${alert.alert_code}')" class="btn btn-sm"
+                                style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:8px;">
+                                <i class="fas fa-times-circle me-1"></i> Cancel Request
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                ${alert.notes ? `<div style="font-size: 12.5px; color: #475569; background: #f8fafc; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; white-space: pre-line;">${alert.notes}</div>` : ''}
+                ${attachmentsHtml}
+
+                <!-- 4-Step Visual Progress Stepper -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin-top: 6px;">
+                    <!-- Step 1 -->
+                    <div style="padding: 6px 4px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                        <i class="fas fa-check-circle text-success" style="font-size: 16px; margin-bottom: 4px; display: block;"></i>
+                        <div style="font-size: 11px; font-weight: 700; color: #15803d;">Broadcast Sent</div>
+                        <div style="font-size: 10px; color: #64748b;">${alert.linked_ticket_code ? 'Service + WhatsApp' : 'WhatsApp Group'}</div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div style="padding: 6px 4px; background: ${isClaimed ? '#eff6ff' : '#fffbeb'}; border-radius: 8px; border: 1px solid ${isClaimed ? '#bfdbfe' : '#fde68a'};">
+                        <i class="fas ${step2Icon}" style="font-size: 16px; margin-bottom: 4px; display: block;"></i>
+                        <div style="font-size: 11px; font-weight: 700; color: ${isClaimed ? '#1d4ed8' : '#b45309'};">${isClaimed ? 'Claimed' : 'Pending Claim'}</div>
+                        <div style="font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${step2Text}">${step2Text}</div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div style="padding: 6px 4px; background: ${isInProgress ? '#faf5ff' : '#f8fafc'}; border-radius: 8px; border: 1px solid ${isInProgress ? '#e9d5ff' : '#e2e8f0'};">
+                        <i class="fas ${isInProgress ? 'fa-spinner fa-spin' : 'fa-clock text-muted'}" style="font-size: 16px; margin-bottom: 4px; display: block; color: ${isInProgress ? '#7c3aed' : '#94a3b8'};"></i>
+                        <div style="font-size: 11px; font-weight: 700; color: ${isInProgress ? '#6d28d9' : '#94a3b8'};">In Progress</div>
+                        <div style="font-size: 10px; color: #64748b;">Processing</div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div style="padding: 6px 4px; background: ${isCompleted ? '#f0fdf4' : '#f8fafc'}; border-radius: 8px; border: 1px solid ${isCompleted ? '#bbf7d0' : '#e2e8f0'};">
+                        <i class="fas ${isCompleted ? 'fa-check-double text-success' : 'fa-flag-checkered text-muted'}" style="font-size: 16px; margin-bottom: 4px; display: block; color: ${isCompleted ? '#15803d' : '#94a3b8'};"></i>
+                        <div style="font-size: 11px; font-weight: 700; color: ${isCompleted ? '#15803d' : '#94a3b8'};">Completed</div>
+                        <div style="font-size: 10px; color: #64748b;">${isCompleted ? 'Done' : 'Final Stage'}</div>
+                    </div>
+                </div>
+
+                ${alert.processing_notes ? `
+                    <div style="margin-top: 12px; font-size: 12px; background: #eff6ff; border-left: 3px solid #2563eb; padding: 8px 12px; border-radius: 0 6px 6px 0; color: #1e3a8a;">
+                        <strong>Staff Note:</strong> ${alert.processing_notes.split('\n').pop()}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // Auto-load status on page load & interval
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(loadQuickAlertsStatus, 1500);
+        setInterval(loadQuickAlertsStatus, 30000); // Poll every 30s
+    });
+})();
+</script>
 </body>
 </html>

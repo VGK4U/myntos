@@ -16,6 +16,7 @@ Tables (created in main.py startup):
 Zero changes to existing dialer, CRM, or any other feature.
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
@@ -4282,7 +4283,7 @@ def start_campaign(
     repeat_count      = int(campaign[13] or 1)
 
     from datetime import datetime as _dt
-    run_start = _dt.utcnow()
+    run_start = get_indian_time()
 
     # ── Build lead list based on source type ──────────────────────────────────
     if source_type in ("direct", "csv") and phone_list_raw.strip():
@@ -5683,7 +5684,7 @@ async def webhook_voice_select(
     segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
 
     if not call_sid:
-        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+        call_sid = f"log_{log_id}_{int(get_indian_time().timestamp())}"
 
     base = _webhook_base(request)
 
@@ -6172,7 +6173,7 @@ async def webhook_lang_confirm(
         is_test = 0
 
     if not call_sid:
-        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+        call_sid = f"log_{log_id}_{int(get_indian_time().timestamp())}"
 
     base = _webhook_base(request)
     detected_lang = "te"
@@ -6335,7 +6336,7 @@ async def webhook_voice_confirm(
         is_test = 0
 
     if not call_sid:
-        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+        call_sid = f"log_{log_id}_{int(get_indian_time().timestamp())}"
 
     base = _webhook_base(request)
     try:
@@ -6456,7 +6457,7 @@ async def webhook_incoming(
     provider_qs = f"&amp;provider={provider_str}"
 
     if not call_sid:
-        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+        call_sid = f"log_{log_id}_{int(get_indian_time().timestamp())}"
 
     base = _webhook_base(request)
     twilio_lang = LANG_MAP.get(lang, "te-IN")
@@ -7674,13 +7675,13 @@ def _sync_call_analysis_and_crm(
             if retry_cfg:
                 r1h, r2h, rd2, rd10 = retry_cfg
                 if attempt_number == 1:
-                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r1h or 2))
+                    next_retry_at = get_indian_time() + timedelta(hours=int(r1h or 2))
                 elif attempt_number == 2:
-                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r2h or 4))
+                    next_retry_at = get_indian_time() + timedelta(hours=int(r2h or 4))
                 elif attempt_number == 3:
-                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd2 or 2))
+                    next_retry_at = get_indian_time() + timedelta(days=int(rd2 or 2))
                 elif attempt_number == 4:
-                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd10 or 10))
+                    next_retry_at = get_indian_time() + timedelta(days=int(rd10 or 10))
         except Exception as retry_err:
             logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
 
@@ -8089,13 +8090,13 @@ async def webhook_status(
                 if retry_cfg:
                     r1h, r2h, rd2, rd10 = retry_cfg
                     if attempt_number == 1:
-                        next_retry_at = datetime.utcnow() + timedelta(hours=int(r1h or 2))
+                        next_retry_at = get_indian_time() + timedelta(hours=int(r1h or 2))
                     elif attempt_number == 2:
-                        next_retry_at = datetime.utcnow() + timedelta(hours=int(r2h or 4))
+                        next_retry_at = get_indian_time() + timedelta(hours=int(r2h or 4))
                     elif attempt_number == 3:
-                        next_retry_at = datetime.utcnow() + timedelta(days=int(rd2 or 2))
+                        next_retry_at = get_indian_time() + timedelta(days=int(rd2 or 2))
                     elif attempt_number == 4:
-                        next_retry_at = datetime.utcnow() + timedelta(days=int(rd10 or 10))
+                        next_retry_at = get_indian_time() + timedelta(days=int(rd10 or 10))
                     # attempt_number >= 5: no more scheduled retries
             except Exception as retry_err:
                 logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")

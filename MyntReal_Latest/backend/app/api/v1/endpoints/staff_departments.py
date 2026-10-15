@@ -2,6 +2,7 @@
 Staff Departments API - DC Protocol Compliant
 Handles department CRUD operations with RBAC
 """
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -273,7 +274,7 @@ async def update_department(
     if dept_data.status:
         dept.status = dept_data.status
     
-    dept.updated_at = datetime.utcnow()
+    dept.updated_at = get_indian_time()
     db.commit()
     db.refresh(dept)
     

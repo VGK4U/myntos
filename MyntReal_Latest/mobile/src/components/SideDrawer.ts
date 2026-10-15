@@ -652,8 +652,13 @@ export class SideDrawer {
 
       const isRestrictedFreelancer = user.staff_type === 'FREELANCER' && user.freelancer_access_mode === 'only_leads';
 
-      if (isRestrictedFreelancer || isSaaSTenant) {
+      if (isRestrictedFreelancer) {
         topItems = [];
+      } else if (isSaaSTenant) {
+        topItems = [
+          { menu_code: "PROGRESS", label: `<i class="fas fa-chart-line" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i> Progress`, route: "progress" },
+          { menu_code: "MY_TENANT", label: `<i class="fas fa-building" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i> Workspace`, route: "/staff/my-tenant" }
+        ];
       } else {
         topItems = [
           { menu_code: "PROGRESS", label: `<i class="fas fa-chart-line" style="margin-right: 8px; width: 18px; text-align: center;"></i> Progress`, route: "progress" },
@@ -918,7 +923,8 @@ export class SideDrawer {
       }
     } catch (e) {
       console.error('Failed to load dynamic staff menus:', e);
-      this.allowedPaths = '*';
+      const isSaaS = (roleCode === 'tenant_admin' || staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || user?.company_segment === 'SEGMENT_B_SAAS');
+      this.allowedPaths = isSaaS ? new Set(['/staff/my-tenant', '/staff/tenant-users']) : '*';
       this.updateUI();
     }
   }

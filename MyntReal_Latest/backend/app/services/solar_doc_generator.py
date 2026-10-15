@@ -2378,12 +2378,17 @@ FIELD_LABELS = {
 #  PDF / IMAGE MERGE UTILITIES (for Complete Bundle download)
 # ══════════════════════════════════════════════════════════════════════════════
 def _image_bytes_to_pdf(img_bytes: bytes) -> bytes:
-    """Convert image bytes (JPEG/PNG/WEBP) to a single-page PDF."""
-    from PIL import Image as PILImage
+    """Convert image bytes (JPEG/PNG/WEBP) to a single-page PDF with EXIF orientation & size cap."""
+    from PIL import Image as PILImage, ImageOps as PILImageOps
     import io as _io
-    img = PILImage.open(_io.BytesIO(img_bytes)).convert('RGB')
+    img = PILImage.open(_io.BytesIO(img_bytes))
+    img = PILImageOps.exif_transpose(img)
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+    if max(img.size) > 1600:
+        img.thumbnail((1600, 1600), PILImage.Resampling.LANCZOS)
     out = _io.BytesIO()
-    img.save(out, format='PDF')
+    img.save(out, format='PDF', resolution=150.0, quality=82)
     return out.getvalue()
 
 

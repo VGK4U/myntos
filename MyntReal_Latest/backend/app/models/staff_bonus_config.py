@@ -1,3 +1,4 @@
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, String, Integer, Float, Boolean, Date, DateTime, Numeric
 from datetime import datetime
 from app.models.base import Base
@@ -19,5 +20,5 @@ class StaffQuarterlyBonusConfig(Base):
     kra_activity_threshold_pct = Column(Numeric(5, 2), nullable=False, default=80.00) # 80%
     is_active = Column(Boolean, nullable=False, default=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)

@@ -200,17 +200,22 @@ th[data-sk]:hover{background:#eef2f7!important}
         <p>Live analytics — Solar · EV B2B · EV B2C · EV Spares · Real Dreams · Insurance · ETC Training</p>
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        <button class="btn-banner" style="background:#16a34a;color:#fff;border:1px solid #15803d;font-weight:700;box-shadow:0 2px 6px rgba(22,163,74,.35)" onclick="openHarGharTriggerModal()"><i class="fab fa-whatsapp"></i> Trigger Har Ghar Report</button>
         <button class="btn-banner outline" onclick="loadDashboard()"><i class="fas fa-sync-alt"></i> Refresh</button>
         <button class="btn-banner white" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Back</button>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div class="tab-bar">
+    <div class="tab-bar" style="display:flex;align-items:center;flex-wrap:wrap">
       <button class="tab-btn active" id="tab_overview" onclick="switchTab('overview')"><i class="fas fa-chart-bar me-1"></i>Overview</button>
       <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
       <button class="tab-btn" id="tab_emp_perf" onclick="switchTab('emp_perf')"><i class="fas fa-users-cog me-1"></i>Employee Performance</button>
       <button class="tab-btn" id="tab_etc_batchwise" style="display:none" onclick="switchTab('etc_batchwise')"><i class="fas fa-graduation-cap me-1"></i>ETC Students Batch Wise</button>
+      <div style="margin-left:auto;padding-right:6px;display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;padding:2px 8px;border-radius:12px;font-weight:600" title="Automatically sent at 9:00 AM & 8:00 PM IST to Har ghar support WhatsApp group"><i class="fas fa-clock me-1"></i>Auto WA: 9 AM &amp; 8 PM</span>
+        <button onclick="openHarGharTriggerModal()" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><i class="fab fa-whatsapp"></i> Trigger Har Ghar Support WA</button>
+      </div>
     </div>
 
     <!-- Unified Timeframe Bar -->
@@ -326,8 +331,12 @@ th[data-sk]:hover{background:#eef2f7!important}
           <option value="loan_rejected">Loan Rejected</option>
           <option value="documents_issue">Docs Issue</option>
           <option value="load_extension">Load Extension</option>
-          <option value="electricity_bill_change">Elec Bill Chg</option>
+          <option value="eb_cust">EB Cust.</option>
+          <option value="eb_staff">EB Staff</option>
           <option value="installation_pending">Installation Pending</option>
+          <option value="installed">Installed</option>
+          <option value="dcr_pending">DCR Pending</option>
+          <option value="discom_pending">Discom Pending</option>
           <option value="net_meter_pending">Net Meter</option>
           <option value="balance_pending">Bal Pending</option>
           <option value="balance_received">Bal Received</option>
@@ -446,7 +455,10 @@ th[data-sk]:hover{background:#eef2f7!important}
     <div class="tab-pane" id="pane_trends">
       <div class="dash-grid">
         <div class="dash-card dash-full">
-          <div class="dash-card-title"><i class="fas fa-calendar-alt"></i> Monthly Trend — Last 12 Months</div>
+          <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <span><i class="fas fa-calendar-alt"></i> Monthly Trend — Last 12 Months</span>
+            <button onclick="openHarGharTriggerModal()" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-transform:none;letter-spacing:0"><i class="fab fa-whatsapp"></i> Trigger Har Ghar Support Report (9 AM &amp; 8 PM)</button>
+          </div>
           <div id="dashMonthly"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
         </div>
         <div class="dash-card dash-full">
@@ -2028,7 +2040,10 @@ const SOLAR_SW_COLS = [
   {key:'sp_loan_rejected',          label:'Loan Rejected',        color:'#dc2626'},
   {key:'sp_docs_issue',             label:'Docs Issue',           color:'#b45309'},
   {key:'sp_load_extension',         label:'Load Extension',       color:'#7c3aed'},
-  {key:'sp_electricity_bill_change',label:'Elec Bill Chg',        color:'#0891b2'},
+  {key:'sp_eb_cust',                label:'EB Cust.',             color:'#0891b2'},
+  {key:'sp_eb_staff',               label:'EB Staff',             color:'#0e7490'},
+  {key:'sp_dcr_pending',            label:'DCR Pending',          color:'#0284c7'},
+  {key:'sp_discom_pending',         label:'Discom Pending',       color:'#6d28d9'},
   {key:'sp_net_meter_pending',      label:'Net Meter',            color:'#9333ea'},
   {key:'sp_balance_pending',        label:'Bal Pending',          color:'#c2410c'},
   {key:'sp_balance_received',       label:'Bal Received',         color:'#065f46'},
@@ -2239,7 +2254,10 @@ function _buildSwRows(){
     sp_loan_rejected:r.sp_loan_rejected||0,                  dv_sp_loan_rejected:r.dv_sp_loan_rejected||0,
     sp_docs_issue:r.sp_docs_issue||0,                        dv_sp_docs_issue:r.dv_sp_docs_issue||0,
     sp_load_extension:r.sp_load_extension||0,                dv_sp_load_extension:r.dv_sp_load_extension||0,
-    sp_electricity_bill_change:r.sp_electricity_bill_change||0,dv_sp_electricity_bill_change:r.dv_sp_electricity_bill_change||0,
+    sp_eb_cust:r.sp_eb_cust||r.sp_electricity_bill_change||0, dv_sp_eb_cust:r.dv_sp_eb_cust||r.dv_sp_electricity_bill_change||0,
+    sp_eb_staff:r.sp_eb_staff||0,                            dv_sp_eb_staff:r.dv_sp_eb_staff||0,
+    sp_dcr_pending:r.sp_dcr_pending||0,                      dv_sp_dcr_pending:r.dv_sp_dcr_pending||0,
+    sp_discom_pending:r.sp_discom_pending||0,                dv_sp_discom_pending:r.dv_sp_discom_pending||0,
     sp_net_meter_pending:r.sp_net_meter_pending||0,           dv_sp_net_meter_pending:r.dv_sp_net_meter_pending||0,
     sp_balance_pending:r.sp_balance_pending||0,               dv_sp_balance_pending:r.dv_sp_balance_pending||0,
     sp_balance_received:r.sp_balance_received||0,             dv_sp_balance_received:r.dv_sp_balance_received||0,
@@ -2406,10 +2424,13 @@ function renderTrendTable(containerId, rows){
   const trSubVal = rows.reduce((s,r)=>s+(r.submitted_value||0), 0);
   const trPipe = rows.reduce((s,r)=>s+(r.pipeline||0), 0);
   const trPipeVal = rows.reduce((s,r)=>s+(r.pipeline_value||0), 0);
-  const trEbChange = rows.reduce((s,r)=>s+(r.eb_change||0), 0);
+  const trEbCust = rows.reduce((s,r)=>s+((r.eb_cust!==undefined?r.eb_cust:r.eb_change)||0), 0);
+  const trEbStaff = rows.reduce((s,r)=>s+(r.eb_staff||0), 0);
   const trAtBank = rows.reduce((s,r)=>s+(r.at_bank||0), 0);
   const trFirstPmtRecd = rows.reduce((s,r)=>s+(r.first_pmt_recd||0), 0);
   const trInstPend = rows.reduce((s,r)=>s+(r.inst_pending||0), 0);
+  const trDcrPend = rows.reduce((s,r)=>s+(r.dcr_pending||0), 0);
+  const trDiscomPend = rows.reduce((s,r)=>s+(r.discom_pending||0), 0);
   const trNetMeterPend = rows.reduce((s,r)=>s+(r.net_meter_pending||0), 0);
   const trBalPend = rows.reduce((s,r)=>s+(r.bal_pending||0), 0);
   const trSubPend = rows.reduce((s,r)=>s+(r.subsidy_pending||0), 0);
@@ -2449,12 +2470,15 @@ function renderTrendTable(containerId, rows){
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeSubPct}%</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickValFn('pipeline', 'Pipeline Value', trPipeVal)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">—</td>
-    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_change', 'EB Change', trEbChange)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_cust', 'EB Cust.', trEbCust)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('eb_staff', 'EB Staff', trEbStaff)}</td>
     <td style="${trtotCell};background:#084298;color:#cfe2ff">${totClickFn('at_bank', 'At Bank', trAtBank)}</td>
     
     <!-- PROGRESS TOTALS -->
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('first_pmt_recd', '1st Payment Received', trFirstPmtRecd)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('inst_pending', 'Installation Pending', trInstPend)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('dcr_pending', 'DCR Pending', trDcrPend)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('discom_pending', 'Discom Pending', trDiscomPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('net_meter_pending', 'Net Meter Pending', trNetMeterPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('bal_pending', 'Balance Pending', trBalPend)}</td>
     <td style="${trtotCell};background:#432874;color:#e8def8">${totClickFn('subsidy_pending', 'Subsidy Pending', trSubPend)}</td>
@@ -2473,8 +2497,8 @@ function renderTrendTable(containerId, rows){
           <th rowspan="2" style="text-align:left;vertical-align:middle;padding:6px 8px;border:1px solid #cbd5e1;font-weight:700">Period</th>
           <th rowspan="2" style="text-align:center;vertical-align:middle;padding:6px 5px;border:1px solid #cbd5e1;font-weight:700">Overall Leads</th>
           <th colspan="5" style="text-align:center;background:rgba(16, 185, 129, 0.08);color:#047857;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">WON VS SUBMITTED</th>
-          <th colspan="6" style="text-align:center;background:rgba(59, 130, 246, 0.08);color:#1d4ed8;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PIPELINE</th>
-          <th colspan="10" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PROGRESS</th>
+          <th colspan="7" style="text-align:center;background:rgba(59, 130, 246, 0.08);color:#1d4ed8;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PIPELINE</th>
+          <th colspan="12" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PROGRESS</th>
         </tr>
         <tr style="background:#f8fafc">
           <!-- WON VS SUBMITTED columns -->
@@ -2489,12 +2513,15 @@ function renderTrendTable(containerId, rows){
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE/SUB<br>%</th>
           <th style="color:#2563eb;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE<br>VALUE</th>
           <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
-          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>CHANGE</th>
+          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>CUST.</th>
+          <th style="color:#0e7490;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>STAFF</th>
           <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">AT<br>BANK</th>
 
           <!-- PROGRESS columns -->
           <th style="color:#10b981;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">1ST PMT<br>RECD</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
+          <th style="color:#0284c7;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">DCR<br>PENDING</th>
+          <th style="color:#6d28d9;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">DISCOM<br>PENDING</th>
           <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">NET METER<br>PENDING</th>
           <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
           <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUBSIDY<br>PENDING</th>
@@ -2513,10 +2540,13 @@ function renderTrendTable(containerId, rows){
           const subVal = r.submitted_value || 0;
           const pipe = r.pipeline || 0;
           const pipeVal = r.pipeline_value || 0;
-          const ebChange = r.eb_change || 0;
+          const ebCust = (r.eb_cust !== undefined ? r.eb_cust : r.eb_change) || 0;
+          const ebStaff = r.eb_staff || 0;
           const atBank = r.at_bank || 0;
           const firstPmtRecd = r.first_pmt_recd || 0;
           const instPend = r.inst_pending || 0;
+          const dcrPend = r.dcr_pending || 0;
+          const discomPend = r.discom_pending || 0;
           const netMeterPend = r.net_meter_pending || 0;
           const balPend = r.bal_pending || 0;
           const subPend = r.subsidy_pending || 0;
@@ -2562,12 +2592,15 @@ function renderTrendTable(containerId, rows){
             <td style="${cellStyle} font-weight:700; color:#7c3aed">${pipeSubPct !== '—' ? pipeSubPct + '%' : '—'}</td>
             <td style="${cellStyle} font-weight:700; color:#2563eb; white-space:nowrap">${clickValFn('pipeline', 'Pipeline Value', pipeVal)}</td>
             <td style="${cellStyle}">${pipeVsPrev}</td>
-            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('eb_change', 'EB Change', ebChange)}</td>
+            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('eb_cust', 'EB Cust.', ebCust)}</td>
+            <td style="${cellStyle} font-weight:600; color:#0e7490">${clickFn('eb_staff', 'EB Staff', ebStaff)}</td>
             <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('at_bank', 'At Bank', atBank)}</td>
 
             <!-- PROGRESS -->
             <td style="${cellStyle} font-weight:700; color:#10b981">${clickFn('first_pmt_recd', '1st Payment Received', firstPmtRecd)}</td>
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
+            <td style="${cellStyle} font-weight:600; color:#0284c7">${clickFn('dcr_pending', 'DCR Pending', dcrPend)}</td>
+            <td style="${cellStyle} font-weight:600; color:#6d28d9">${clickFn('discom_pending', 'Discom Pending', discomPend)}</td>
             <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('net_meter_pending', 'Net Meter Pending', netMeterPend)}</td>
             <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
             <td style="${cellStyle} font-weight:600; color:#8b5cf6">${clickFn('subsidy_pending', 'Subsidy Pending', subPend)}</td>
@@ -2602,7 +2635,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (sResp && sResp.ok) {
       const sData = await sResp.json();
       const isSaaS = Boolean(sData && (sData.is_saas_tenant || (typeof StaffSidebar !== 'undefined' && StaffSidebar.isSaaSTenant)));
-      const segs = sData.segments || [];
+      const rawSegs = sData.segments || [];
+      const seenSegNames = new Set();
+      const segs = rawSegs.filter(s => {
+        const nm = (s && s.name ? String(s.name).trim() : '');
+        if (!nm) return false;
+        const k = nm.toLowerCase();
+        if (seenSegNames.has(k)) return false;
+        seenSegNames.add(k);
+        return true;
+      });
       if (isSaaS) {
         const subP = document.querySelector('.page-banner p');
         if (subP) {
@@ -2655,7 +2697,8 @@ const _STATUS_COL = {
 const _SOL_LABEL = {
   pending_with_bank:'At Bank',installation_pending:'Inst. Pending',documents_pending:'Docs Pending',
   application_submitted:'App Submitted',loan_rejected:'Loan Rejected',documents_issue:'Docs Issue',
-  load_extension:'Load Extension',electricity_bill_change:'Elec Bill Chg',
+  load_extension:'Load Extension',eb_cust:'EB Cust.',eb_staff:'EB Staff',electricity_bill_change:'EB Cust.',
+  installed:'Installed',dcr_pending:'DCR Pending',discom_pending:'Discom Pending',
   net_meter_pending:'Net Meter',balance_pending:'Bal Pending',balance_received:'Bal Received',
   subsidy_pending:'Subsidy Pending',completed:'Completed',not_interested:'Not Interested',
   cancelled:'Cancelled',different_vendor:'Diff Vendor',
@@ -3310,6 +3353,772 @@ async function _edToggleCallHist(){
   }
 })();
 </script>
+
+<!-- DC-HAR-GHAR-SUPPORT-001: Har Ghar Support WhatsApp Report Trigger Modal -->
+<div id="hgsTriggerOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:9600;align-items:center;justify-content:center;padding:12px;overflow-y:auto" onclick="if(event.target===this)closeHarGharTriggerModal()">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:940px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.32);overflow:hidden">
+    <!-- Modal Header -->
+    <div style="background:linear-gradient(135deg,#065f46,#047857);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;color:#fff;flex-shrink:0">
+      <div>
+        <div style="font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px">
+          <i class="fab fa-whatsapp" style="font-size:18px;color:#4ade80"></i>
+          Trigger Har Ghar Support WhatsApp Report
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:2px">
+          Target Group: <strong>Har ghar support</strong> (Scanned WhatsApp) &nbsp;·&nbsp; Auto-Scheduled Daily at <strong>9:00 AM &amp; 8:00 PM IST</strong> (without manual entry)
+        </div>
+      </div>
+      <button onclick="closeHarGharTriggerModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:16px 20px;overflow-y:auto;flex:1;display:grid;grid-template-columns:1.1fr 0.9fr;gap:16px">
+      <!-- Left Column: Manual Entry Fields & Interaction SLAs -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <!-- Mode Toggle -->
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#065f46">Include Field &amp; Bank Operations</div>
+            <div style="font-size:10.5px;color:#047857">Uncheck to preview/send the exact 9 AM &amp; 8 PM automated version without manual selections</div>
+          </div>
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;color:#065f46">
+            <input type="checkbox" id="hgsIncludeManual" checked onchange="renderHarGharPreview()" style="width:16px;height:16px;accent-color:#16a34a">
+            Include
+          </label>
+        </div>
+
+        <!-- Member Interaction SLAs Card (Live Tracking: Members with Active Files) -->
+        <div style="border:1.5px solid #fed7aa;border-radius:10px;padding:12px;background:#fffbeb">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:12px;font-weight:800;color:#9a3412;display:flex;align-items:center;gap:6px">
+              <i class="fas fa-phone-volume"></i> Member Interaction SLAs (Active Files)
+            </div>
+            <span id="hgsTotalMembersWithFiles" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:700">0 Active</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <div style="background:#fff;border:1px solid #fee2e2;border-radius:8px;padding:8px;display:flex;flex-direction:column;justify-content:space-between">
+              <div>
+                <div style="font-size:10.5px;color:#991b1b;font-weight:700">No Interaction (3 Days)</div>
+                <div style="font-size:18px;font-weight:900;color:#dc2626;margin-top:2px" id="hgsNoInt3dBadge">0</div>
+                <div style="font-size:9.5px;color:#64748b">VGK members with 0 calls</div>
+              </div>
+              <button type="button" onclick="openHarGharParamDrilldown('no_interaction_3d')" style="background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;padding:4px 8px;margin-top:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
+                <i class="fas fa-eye"></i> View Members
+              </button>
+            </div>
+            <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:8px;display:flex;flex-direction:column;justify-content:space-between">
+              <div>
+                <div style="font-size:10.5px;color:#9a3412;font-weight:700">&lt;5 Mins Talk (24h)</div>
+                <div style="font-size:18px;font-weight:900;color:#d97706;margin-top:2px" id="hgsLowTt24hBadge">0</div>
+                <div style="font-size:9.5px;color:#64748b">&lt;300s total duration</div>
+              </div>
+              <button type="button" onclick="openHarGharParamDrilldown('low_talktime_24h')" style="background:#d97706;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;padding:4px 8px;margin-top:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px">
+                <i class="fas fa-eye"></i> View Members
+              </button>
+            </div>
+          </div>
+          <div id="hgsSlaNamesToggleWrap" style="margin-top:8px;display:none">
+            <button type="button" onclick="toggleHarGharSlaList()" style="background:none;border:none;color:#ea580c;font-size:11px;font-weight:700;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px">
+              <span id="hgsSlaToggleText">▶ View members needing follow-up</span>
+            </button>
+            <div id="hgsSlaListContent" style="display:none;margin-top:6px;max-height:110px;overflow-y:auto;background:#fff;border:1px solid #fde68a;border-radius:6px;padding:6px;font-size:11px;color:#334155"></div>
+          </div>
+        </div>
+
+        <!-- All Report Parameters Live Drilldown Bar -->
+        <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11.5px;font-weight:800;color:#0f172a"><i class="fas fa-table me-1" style="color:#0284c7"></i> View Details For Any Parameter:</span>
+            <span style="font-size:10px;color:#64748b">Live drilldowns</span>
+          </div>
+          <div id="hgsAllParamsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <!-- Populated dynamically via renderHarGharAllParamsGrid() -->
+          </div>
+        </div>
+
+        <!-- People On Ground (Manual Section) -->
+        <div id="hgsManualSection2" style="border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:12px;font-weight:800;color:#1e293b">
+              📍 People On Ground <span id="hgsPeopleCountBadge" style="background:#2563eb;color:#fff;padding:1px 7px;border-radius:10px;font-size:10.5px;margin-left:4px">0</span>
+            </label>
+            <button type="button" onclick="clearHarGharPeople()" style="background:none;border:none;color:#dc2626;font-size:10.5px;font-weight:600;cursor:pointer">Clear All</button>
+          </div>
+          <div style="font-size:10.5px;color:#64748b;margin-bottom:8px">Search &amp; select active VGK members or staff on ground today:</div>
+
+          <!-- Selected People Chips -->
+          <div id="hgsSelectedPeopleChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:24px"></div>
+
+          <!-- Search Input -->
+          <div style="position:relative">
+            <input type="text" id="hgsPeopleSearchInput" class="form-control form-control-sm"
+              placeholder="Type name, code, or phone to search active member/staff..."
+              oninput="onHarGharPeopleSearch(this.value)"
+              onfocus="onHarGharPeopleSearch(this.value)"
+              style="font-size:12px;border-radius:7px;border:1.5px solid #cbd5e1;padding:6px 10px">
+            <div id="hgsPeopleDropdown" style="max-height:155px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:7px;background:#fff;margin-top:5px"></div>
+          </div>
+        </div>
+
+        <!-- Expected Payments From Bank (Manual Section) -->
+        <div id="hgsManualSection3" style="border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:12px;font-weight:800;color:#1e293b">
+              🏦 Expected Payments From Bank <span id="hgsCustomerCountBadge" style="background:#059669;color:#fff;padding:1px 7px;border-radius:10px;font-size:10.5px;margin-left:4px">0</span>
+            </label>
+            <button type="button" onclick="clearHarGharCustomers()" style="background:none;border:none;color:#dc2626;font-size:10.5px;font-weight:600;cursor:pointer">Clear All</button>
+          </div>
+          <div style="font-size:10.5px;color:#64748b;margin-bottom:8px">Type &amp; search customer names expecting payment from bank (count &amp; names):</div>
+
+          <!-- Selected Customer Chips -->
+          <div id="hgsSelectedCustomersChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:24px"></div>
+
+          <!-- Search Input -->
+          <div style="position:relative">
+            <input type="text" id="hgsCustomerSearchInput" class="form-control form-control-sm"
+              placeholder="Type customer name, phone, or bank name..."
+              oninput="onHarGharCustomerSearch(this.value)"
+              onfocus="onHarGharCustomerSearch(this.value)"
+              style="font-size:12px;border-radius:7px;border:1.5px solid #cbd5e1;padding:6px 10px">
+            <div id="hgsCustomerDropdown" style="max-height:155px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:7px;background:#fff;margin-top:5px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live WhatsApp Message Preview -->
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <label style="font-size:12px;font-weight:800;color:#1e293b"><i class="fab fa-whatsapp me-1" style="color:#16a34a"></i>WhatsApp Message Preview</label>
+          <button type="button" onclick="refreshHarGharMetrics()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:600;color:#334155;cursor:pointer">
+            <i class="fas fa-sync-alt me-1"></i>Refresh Live Counts
+          </button>
+        </div>
+        <textarea id="hgsMessagePreview" rows="18"
+          style="width:100%;flex:1;font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;line-height:1.55;padding:12px;border-radius:10px;border:1.5px solid #86efac;background:#f0fdf4;color:#0f172a;resize:vertical"></textarea>
+        <div id="hgsStatusAlert" style="display:none;padding:8px 12px;border-radius:8px;font-size:11.5px;font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0">
+      <div style="font-size:11px;color:#64748b">
+        <i class="fas fa-info-circle me-1" style="color:#0284c7"></i>
+        Scheduled runs at <strong>9:00 AM</strong> &amp; <strong>8:00 PM IST</strong> automatically send to <strong>Har ghar support</strong> without manual entry.
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button type="button" onclick="closeHarGharTriggerModal()" style="padding:7px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="button" id="hgsSendBtn" onclick="submitHarGharTrigger()" style="padding:7px 18px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(22,163,74,.35)">
+          <i class="fab fa-whatsapp"></i> Send to "Har ghar support" Group
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DC-HAR-GHAR-SUPPORT-001: Har Ghar Support WhatsApp Trigger Modal Controller
+// ─────────────────────────────────────────────────────────────────────────────
+let _hgsMetrics = null;
+let _hgsSelectedPeople = [];
+let _hgsSelectedCustomers = [];
+let _hgsInitialPeople = [];
+let _hgsInitialCustomers = [];
+let _hgsPeopleSearchTimer = null;
+let _hgsCustomerSearchTimer = null;
+
+async function openHarGharTriggerModal(){
+  const ov = document.getElementById('hgsTriggerOverlay');
+  if(!ov) return;
+  ov.style.display = 'flex';
+  const alertEl = document.getElementById('hgsStatusAlert');
+  if(alertEl) alertEl.style.display = 'none';
+  renderHarGharSelectedPeople();
+  renderHarGharSelectedCustomers();
+  await refreshHarGharMetrics();
+}
+
+function closeHarGharTriggerModal(){
+  const ov = document.getElementById('hgsTriggerOverlay');
+  if(ov) ov.style.display = 'none';
+}
+
+function toggleHarGharSlaList(){
+  const c = document.getElementById('hgsSlaListContent');
+  const t = document.getElementById('hgsSlaToggleText');
+  if(!c) return;
+  const isHidden = c.style.display === 'none';
+  c.style.display = isHidden ? 'block' : 'none';
+  if(t) t.textContent = isHidden ? '▼ Hide members list' : '▶ View members needing follow-up';
+}
+
+async function refreshHarGharMetrics(){
+  const previewEl = document.getElementById('hgsMessagePreview');
+  if(previewEl && !_hgsMetrics) previewEl.value = 'Loading live Har Ghar Solar metrics...';
+  try {
+    const res = await staffFetch(`${API_CRM}/har-ghar-support-report/preview?include_manual=true`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _hgsMetrics = data.metrics || {};
+    _hgsInitialPeople = data.initial_people || [];
+    _hgsInitialCustomers = data.initial_customers || [];
+
+    // Update SLA KPI Cards
+    const totalWithFiles = _hgsMetrics.members_with_files_total ?? 0;
+    const noInt3d = _hgsMetrics.members_no_interaction_3d_count ?? 0;
+    const lowTt24h = _hgsMetrics.members_low_talktime_24h_count ?? 0;
+
+    const elTotal = document.getElementById('hgsTotalMembersWithFiles');
+    if(elTotal) elTotal.textContent = `${totalWithFiles} Active`;
+    const elNoInt = document.getElementById('hgsNoInt3dBadge');
+    if(elNoInt) elNoInt.textContent = String(noInt3d);
+    const elLowTt = document.getElementById('hgsLowTt24hBadge');
+    if(elLowTt) elLowTt.textContent = String(lowTt24h);
+
+    const wrap = document.getElementById('hgsSlaNamesToggleWrap');
+    const content = document.getElementById('hgsSlaListContent');
+    if(wrap && content && _hgsMetrics.members_no_interaction_3d_names?.length){
+      wrap.style.display = 'block';
+      content.innerHTML = _hgsMetrics.members_no_interaction_3d_names.map(name => `
+        <div style="padding:2px 0;border-bottom:1px dashed #fef3c7;display:flex;align-items:center;justify-content:space-between">
+          <span>${esc(name)}</span>
+          <span style="font-size:9.5px;color:#dc2626;font-weight:700">0 calls (72h)</span>
+        </div>
+      `).join('');
+    }
+
+    renderHarGharPeopleDropdown(_hgsInitialPeople, '');
+    renderHarGharCustomerDropdown(_hgsInitialCustomers, '');
+    renderHarGharPreview();
+    renderHarGharAllParamsGrid();
+  } catch (e) {
+    if(previewEl) previewEl.value = 'Error loading metrics: ' + e.message;
+  }
+}
+
+function renderHarGharPreview(){
+  const m = _hgsMetrics || {};
+  const includeManual = document.getElementById('hgsIncludeManual')?.checked !== false;
+  const sec2 = document.getElementById('hgsManualSection2');
+  const sec3 = document.getElementById('hgsManualSection3');
+  if(sec2) sec2.style.opacity = includeManual ? '1' : '0.45';
+  if(sec3) sec3.style.opacity = includeManual ? '1' : '0.45';
+
+  const d = new Date();
+  let dateStr = d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+  let timeStr = d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true});
+  if(m.timestamp_ist && m.timestamp_ist.includes(',')){
+    const parts = m.timestamp_ist.split(',');
+    dateStr = parts[0].trim();
+    timeStr = parts[1].trim();
+  }
+
+  const lines = [];
+  lines.push('☀️ *HAR GHAR SOLAR — STATUS REPORT*');
+  lines.push(`📅 *${dateStr}* | ⏰ *${timeStr} IST*`);
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(`1. No. of Leads At Bank - *${m.leads_at_bank ?? 0}*`);
+  lines.push(`2. New VGK Members (Current Month) - *${m.new_vgk_members_current_month ?? 0}*`);
+  const revLabel = m.month_label ? ` (${m.month_label})` : '';
+  lines.push(`3. Revenue${revLabel} - *${m.revenue_current_month_formatted || '₹0'}*`);
+  lines.push(`4. Files From VGK members - *${m.files_from_vgk ?? 0}*`);
+  lines.push(`5. Files from the Company - *${m.files_from_company ?? 0}*`);
+  lines.push(`6. Files from Staff - *${m.files_from_staff ?? 0}*`);
+  lines.push(`7. Overall Completed Installations - *${m.overall_completed_installations ?? 0}*`);
+  lines.push(`8. This Month Installations - *${m.this_month_installations ?? 0}*`);
+  lines.push(`9. Pending for Installations - *${m.pending_for_installations ?? 0}*`);
+  lines.push(`10. 2nd payment pending - *${m.second_payment_pending ?? 0}*`);
+  lines.push(`11. Discom Pending - *${m.discom_pending ?? 0}*`);
+  lines.push(`12. DCR Pending - *${m.dcr_pending ?? 0}*`);
+  lines.push(`13. EB Cust. - *${m.eb_cust ?? 0}*`);
+  lines.push(`14. EB Staff - *${m.eb_staff ?? 0}*`);
+
+  if(includeManual || _hgsSelectedPeople.length > 0 || _hgsSelectedCustomers.length > 0){
+    lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('👥 *FIELD & BANK OPERATIONS:*');
+    const pCount = _hgsSelectedPeople.length;
+    const pNames = _hgsSelectedPeople.join(', ');
+    lines.push(pNames ? `• People On Ground - *${pCount}* (${pNames})` : `• People On Ground - *${pCount}*`);
+
+    const cCount = _hgsSelectedCustomers.length;
+    const cNames = _hgsSelectedCustomers.join(', ');
+    lines.push(cNames ? `• Expected Payments From Bank - *${cCount}* (${cNames})` : `• Expected Payments From Bank - *${cCount}*`);
+  }
+
+  const noInt3d = m.members_no_interaction_3d_count ?? 0;
+  const lowTt24h = m.members_low_talktime_24h_count ?? 0;
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('📞 *MEMBER INTERACTIONS (With Active Files):*');
+  lines.push(`• Members Without Interaction (Last 3 Days) - *${noInt3d}*`);
+  lines.push(`• Members With <5 Mins Talktime (Last 24 Hours) - *${lowTt24h}*`);
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  const previewEl = document.getElementById('hgsMessagePreview');
+  if(previewEl) previewEl.value = lines.join('\n');
+}
+
+function renderHarGharSelectedPeople(){
+  const wrap = document.getElementById('hgsSelectedPeopleChips');
+  const badge = document.getElementById('hgsPeopleCountBadge');
+  if(badge) badge.textContent = String(_hgsSelectedPeople.length);
+  if(!wrap) return;
+  if(!_hgsSelectedPeople.length){
+    wrap.innerHTML = '<span style="font-size:11px;color:#94a3b8;font-style:italic">No people selected yet — click below to add</span>';
+    return;
+  }
+  wrap.innerHTML = _hgsSelectedPeople.map((name, idx) => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">
+      ${esc(name)}
+      <button type="button" onclick="removeHarGharPerson(${idx})" style="background:none;border:none;color:#1e40af;cursor:pointer;font-size:11px;padding:0;line-height:1">✕</button>
+    </span>
+  `).join('');
+}
+
+function addHarGharPerson(name){
+  const clean = (name || '').trim();
+  if(!clean) return;
+  if(!_hgsSelectedPeople.includes(clean)){
+    _hgsSelectedPeople.push(clean);
+  }
+  renderHarGharSelectedPeople();
+  renderHarGharPreview();
+}
+
+function removeHarGharPerson(idx){
+  _hgsSelectedPeople.splice(idx, 1);
+  renderHarGharSelectedPeople();
+  renderHarGharPreview();
+}
+
+function clearHarGharPeople(){
+  _hgsSelectedPeople = [];
+  renderHarGharSelectedPeople();
+  renderHarGharPreview();
+}
+
+function onHarGharPeopleSearch(q){
+  if(_hgsPeopleSearchTimer) clearTimeout(_hgsPeopleSearchTimer);
+  const query = (q || '').trim();
+  if(!query && _hgsInitialPeople.length){
+    renderHarGharPeopleDropdown(_hgsInitialPeople, '');
+    return;
+  }
+  _hgsPeopleSearchTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(`${API_CRM}/har-ghar-support-report/search-people?q=${encodeURIComponent(query)}&limit=30`);
+      if(!res.ok) return;
+      const data = await res.json();
+      renderHarGharPeopleDropdown(data.people || [], query);
+    } catch (e) {}
+  }, 180);
+}
+
+function renderHarGharPeopleDropdown(list, query){
+  const dd = document.getElementById('hgsPeopleDropdown');
+  if(!dd) return;
+  const items = [];
+  if(query && !list.some(p => (p.name || '').toLowerCase() === query.toLowerCase())){
+    const safeQ = query.replace(/'/g, "\\'");
+    items.push(`
+      <div onclick="addHarGharPerson('${safeQ}')" style="padding:6px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:11.5px;color:#16a34a;font-weight:700;background:#f0fdf4">
+        <i class="fas fa-plus-circle me-1"></i>Add custom: "${esc(query)}"
+      </div>
+    `);
+  }
+  list.forEach(p => {
+    const isSel = _hgsSelectedPeople.includes(p.name);
+    const safeName = (p.name || '').replace(/'/g, "\\'");
+    const badgeColor = p.type === 'Staff' ? '#0284c7' : '#7c3aed';
+    items.push(`
+      <div onclick="addHarGharPerson('${safeName}')" style="padding:6px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:${isSel ? '#eff6ff' : '#fff'}">
+        <div>
+          <strong style="color:#0f172a">${esc(p.name)}</strong>
+          <span style="font-size:10px;color:#64748b;margin-left:5px">${esc(p.code || '')}</span>
+        </div>
+        <span style="font-size:9.5px;padding:1px 6px;border-radius:8px;background:${badgeColor}18;color:${badgeColor};font-weight:700">${esc(p.type || 'Member')}</span>
+      </div>
+    `);
+  });
+  dd.innerHTML = items.length ? items.join('') : '<div style="padding:8px 10px;font-size:11px;color:#94a3b8">No matching active members found</div>';
+}
+
+function renderHarGharSelectedCustomers(){
+  const wrap = document.getElementById('hgsSelectedCustomersChips');
+  const badge = document.getElementById('hgsCustomerCountBadge');
+  if(badge) badge.textContent = String(_hgsSelectedCustomers.length);
+  if(!wrap) return;
+  if(!_hgsSelectedCustomers.length){
+    wrap.innerHTML = '<span style="font-size:11px;color:#94a3b8;font-style:italic">No customers selected yet — click below to add</span>';
+    return;
+  }
+  wrap.innerHTML = _hgsSelectedCustomers.map((name, idx) => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">
+      ${esc(name)}
+      <button type="button" onclick="removeHarGharCustomer(${idx})" style="background:none;border:none;color:#065f46;cursor:pointer;font-size:11px;padding:0;line-height:1">✕</button>
+    </span>
+  `).join('');
+}
+
+function addHarGharCustomer(name){
+  const clean = (name || '').trim();
+  if(!clean) return;
+  if(!_hgsSelectedCustomers.includes(clean)){
+    _hgsSelectedCustomers.push(clean);
+  }
+  renderHarGharSelectedCustomers();
+  renderHarGharPreview();
+}
+
+function removeHarGharCustomer(idx){
+  _hgsSelectedCustomers.splice(idx, 1);
+  renderHarGharSelectedCustomers();
+  renderHarGharPreview();
+}
+
+function clearHarGharCustomers(){
+  _hgsSelectedCustomers = [];
+  renderHarGharSelectedCustomers();
+  renderHarGharPreview();
+}
+
+function onHarGharCustomerSearch(q){
+  if(_hgsCustomerSearchTimer) clearTimeout(_hgsCustomerSearchTimer);
+  const query = (q || '').trim();
+  if(!query && _hgsInitialCustomers.length){
+    renderHarGharCustomerDropdown(_hgsInitialCustomers, '');
+    return;
+  }
+  _hgsCustomerSearchTimer = setTimeout(async () => {
+    try {
+      const res = await staffFetch(`${API_CRM}/har-ghar-support-report/search-customers?q=${encodeURIComponent(query)}&limit=30`);
+      if(!res.ok) return;
+      const data = await res.json();
+      renderHarGharCustomerDropdown(data.customers || [], query);
+    } catch (e) {}
+  }, 180);
+}
+
+function renderHarGharCustomerDropdown(list, query){
+  const dd = document.getElementById('hgsCustomerDropdown');
+  if(!dd) return;
+  const items = [];
+  if(query && !list.some(c => (c.name || '').toLowerCase() === query.toLowerCase())){
+    const safeQ = query.replace(/'/g, "\\'");
+    items.push(`
+      <div onclick="addHarGharCustomer('${safeQ}')" style="padding:6px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:11.5px;color:#16a34a;font-weight:700;background:#f0fdf4">
+        <i class="fas fa-plus-circle me-1"></i>Add custom customer: "${esc(query)}"
+      </div>
+    `);
+  }
+  list.forEach(c => {
+    const isSel = _hgsSelectedCustomers.includes(c.name);
+    const safeName = (c.name || '').replace(/'/g, "\\'");
+    const isAtBank = c.stage === 'pending_with_bank' || c.status === 'waiting_for_bank_loan';
+    const stageText = isAtBank ? 'At Bank' : (c.stage || c.status || '').replace(/_/g, ' ');
+    items.push(`
+      <div onclick="addHarGharCustomer('${safeName}')" style="padding:6px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:${isSel ? '#ecfdf5' : '#fff'}">
+        <div>
+          <strong style="color:#0f172a">${esc(c.name)}</strong>
+          ${c.bank ? `<span style="font-size:10px;color:#047857;margin-left:5px">(${esc(c.bank)})</span>` : ''}
+        </div>
+        <span style="font-size:9.5px;padding:1px 6px;border-radius:8px;background:${isAtBank ? '#fef3c7' : '#f1f5f9'};color:${isAtBank ? '#b45309' : '#475569'};font-weight:700">${esc(stageText)}</span>
+      </div>
+    `);
+  });
+  dd.innerHTML = items.length ? items.join('') : '<div style="padding:8px 10px;font-size:11px;color:#94a3b8">No matching customers found</div>';
+}
+
+async function submitHarGharTrigger(){
+  const btn = document.getElementById('hgsSendBtn');
+  const alertEl = document.getElementById('hgsStatusAlert');
+  const includeManual = document.getElementById('hgsIncludeManual')?.checked !== false;
+  const customMessage = (document.getElementById('hgsMessagePreview')?.value || '').trim();
+
+  if(btn){
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending to Har ghar support...';
+  }
+  if(alertEl) alertEl.style.display = 'none';
+
+  try {
+    const res = await staffFetch(`${API_CRM}/har-ghar-support-report/trigger`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        people_on_ground: _hgsSelectedPeople,
+        expected_bank_customers: _hgsSelectedCustomers,
+        include_manual: includeManual,
+        custom_message: customMessage || null,
+        group_name: 'Har ghar support'
+      })
+    });
+    const data = await res.json();
+    if(alertEl){
+      alertEl.style.display = 'block';
+      if(data.success){
+        alertEl.style.background = '#dcfce7';
+        alertEl.style.color = '#166534';
+        alertEl.style.border = '1px solid #86efac';
+        alertEl.innerHTML = `<i class="fas fa-check-circle me-1"></i> Report triggered to <strong>"Har ghar support"</strong> WhatsApp group!`;
+      } else {
+        alertEl.style.background = '#fef2f2';
+        alertEl.style.color = '#991b1b';
+        alertEl.style.border = '1px solid #fecaca';
+        alertEl.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Queued / Warning: ${esc(data.dispatch_result?.error || data.error || 'Check Scanned WhatsApp connection')}`;
+      }
+    }
+  } catch (e) {
+    if(alertEl){
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#fef2f2';
+      alertEl.style.color = '#991b1b';
+      alertEl.style.border = '1px solid #fecaca';
+      alertEl.innerHTML = `<i class="fas fa-times-circle me-1"></i> Failed to trigger report: ${esc(e.message)}`;
+    }
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fab fa-whatsapp"></i> Send to "Har ghar support" Group';
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DC-HAR-GHAR-SUPPORT-002: Har Ghar Report Parameters Drilldown Controller
+// ─────────────────────────────────────────────────────────────────────────────
+let _hgsDrilldownData = null;
+let _hgsDrilldownRecords = [];
+
+function renderHarGharAllParamsGrid(){
+  const wrap = document.getElementById('hgsAllParamsGrid');
+  if(!wrap) return;
+  const m = _hgsMetrics || {};
+
+  const paramsConfig = [
+    { key: 'leads_at_bank', label: '1. Leads At Bank', val: m.leads_at_bank ?? 0, color: '#0284c7' },
+    { key: 'new_vgk_members', label: '2. New VGK Members', val: m.new_vgk_members_current_month ?? 0, color: '#16a34a' },
+    { key: 'files_from_vgk', label: '4. Files From VGK', val: m.files_from_vgk ?? 0, color: '#7c3aed' },
+    { key: 'files_from_company', label: '5. Files Company', val: m.files_from_company ?? 0, color: '#059669' },
+    { key: 'files_from_staff', label: '6. Files Staff', val: m.files_from_staff ?? 0, color: '#2563eb' },
+    { key: 'overall_completed_installations', label: '7. Installations Overall', val: m.overall_completed_installations ?? 0, color: '#0d9488' },
+    { key: 'this_month_installations', label: '8. Installations Month', val: m.this_month_installations ?? 0, color: '#10b981' },
+    { key: 'pending_for_installations', label: '9. Pending Installation', val: m.pending_for_installations ?? 0, color: '#f59e0b' },
+    { key: 'second_payment_pending', label: '10. 2nd Pmt Pending', val: m.second_payment_pending ?? 0, color: '#d97706' },
+    { key: 'discom_pending', label: '11. Discom Pending', val: m.discom_pending ?? 0, color: '#6366f1' },
+    { key: 'dcr_pending', label: '12. DCR Pending', val: m.dcr_pending ?? 0, color: '#8b5cf6' },
+    { key: 'eb_cust', label: '13. EB Cust.', val: m.eb_cust ?? 0, color: '#0284c7' },
+    { key: 'eb_staff', label: '14. EB Staff', val: m.eb_staff ?? 0, color: '#475569' },
+    { key: 'no_interaction_3d', label: '📞 0 Calls (3 Days)', val: m.members_no_interaction_3d_count ?? 0, color: '#dc2626' },
+    { key: 'low_talktime_24h', label: '📞 <5m Talk (24h)', val: m.members_low_talktime_24h_count ?? 0, color: '#ea580c' },
+  ];
+
+  wrap.innerHTML = paramsConfig.map(cfg => `
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <div style="min-width:0;overflow:hidden">
+        <div style="font-size:10.5px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(cfg.label)}">${esc(cfg.label)}</div>
+        <span style="font-size:12px;font-weight:900;color:${cfg.color}">${cfg.val}</span>
+      </div>
+      <button type="button" onclick="openHarGharParamDrilldown('${cfg.key}')" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:5px;font-size:10px;font-weight:700;color:#0f172a;padding:2px 7px;cursor:pointer;white-space:nowrap" title="View records for ${esc(cfg.label)}">
+        <i class="fas fa-eye me-1" style="color:${cfg.color}"></i>View
+      </button>
+    </div>
+  `).join('');
+}
+
+async function openHarGharParamDrilldown(paramKey){
+  const ov = document.getElementById('hgsDrilldownOverlay');
+  const titleEl = document.getElementById('hgsDrilldownTitle');
+  const countEl = document.getElementById('hgsDrilldownCountBadge');
+  const thead = document.getElementById('hgsDrilldownThead');
+  const tbody = document.getElementById('hgsDrilldownTbody');
+  const searchInput = document.getElementById('hgsDrilldownSearchInput');
+
+  if(searchInput) searchInput.value = '';
+  if(ov) ov.style.display = 'flex';
+  if(titleEl) titleEl.textContent = 'Loading records…';
+  if(countEl) countEl.textContent = '…';
+  if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Fetching detailed records from live database…</td></tr>';
+
+  try {
+    const res = await staffFetch(`${API_CRM}/har-ghar-support-report/drilldown?parameter=${encodeURIComponent(paramKey)}&limit=250`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _hgsDrilldownData = data;
+    _hgsDrilldownRecords = data.records || [];
+
+    if(titleEl) titleEl.textContent = data.title || 'Parameter Details';
+    if(countEl) countEl.textContent = String(data.total || _hgsDrilldownRecords.length);
+
+    renderHgsDrilldownTable(_hgsDrilldownRecords, data.record_type);
+  } catch(e) {
+    if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:25px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load records: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+function closeHarGharParamDrilldown(){
+  const ov = document.getElementById('hgsDrilldownOverlay');
+  if(ov) ov.style.display = 'none';
+  _hgsDrilldownData = null;
+  _hgsDrilldownRecords = [];
+}
+
+function renderHgsDrilldownTable(records, recordType){
+  const thead = document.getElementById('hgsDrilldownThead');
+  const tbody = document.getElementById('hgsDrilldownTbody');
+  const infoEl = document.getElementById('hgsDrilldownFilteredInfo');
+  if(!thead || !tbody) return;
+
+  if(infoEl) infoEl.textContent = `Showing ${records.length} record${records.length!==1?'s':''}`;
+
+  if(recordType === 'member'){
+    thead.innerHTML = `
+      <tr>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1;text-align:center">#</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Member / Partner</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Code</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Phone / Dial</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1;text-align:center">Active Files</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">SLA Status</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Last Interaction</th>
+      </tr>
+    `;
+    if(!records.length){
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:25px;color:#94a3b8">No members found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map((r, i) => `
+      <tr style="border-bottom:1px solid #f1f5f9;background:${i%2===0?'#fff':'#f8fafc'}">
+        <td style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8">${i+1}</td>
+        <td style="padding:8px 10px">
+          <div style="font-weight:800;color:#0f172a;font-size:12px">${esc(r.name)}</div>
+          ${r.location && r.location!=='—' ? `<span style="font-size:10px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(r.location)}</span>` : ''}
+          ${r.lead_names ? `<div style="font-size:9.5px;color:#0369a1;margin-top:2px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Leads: ${esc(r.lead_names)}"><i class="fas fa-file-alt me-1"></i>${esc(r.lead_names)}</div>` : ''}
+        </td>
+        <td style="padding:8px 10px;font-size:11px;font-weight:700;color:#475569">${esc(r.code || '—')}</td>
+        <td style="padding:8px 10px">
+          <a href="tel:${esc(r.phone)}" style="font-weight:700;color:#2563eb;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-phone-alt" style="font-size:10px"></i> ${esc(r.phone || '—')}
+          </a>
+        </td>
+        <td style="padding:8px 10px;text-align:center">
+          <span style="background:#e0f2fe;color:#0369a1;font-weight:800;padding:2px 8px;border-radius:10px;font-size:11px">${r.files_count ?? 0}</span>
+        </td>
+        <td style="padding:8px 10px">
+          <span style="background:${r.status_color || '#dc2626'}18;color:${r.status_color || '#dc2626'};font-weight:800;padding:2px 8px;border-radius:8px;font-size:10.5px">
+            ${esc(r.status_badge || '—')}
+          </span>
+        </td>
+        <td style="padding:8px 10px;font-size:11px;color:#64748b">${esc(r.last_interaction || 'No calls logged')}</td>
+      </tr>
+    `).join('');
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1;text-align:center">#</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Customer Lead</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Phone / Dial</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Solar Stage</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">Bank / Branch</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1;text-align:right">Deal Value</th>
+        <th style="padding:8px 10px;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1;text-align:center">Date</th>
+      </tr>
+    `;
+    if(!records.length){
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:25px;color:#94a3b8">No lead records found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map((r, i) => `
+      <tr style="border-bottom:1px solid #f1f5f9;background:${i%2===0?'#fff':'#f8fafc'}">
+        <td style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8">${i+1}</td>
+        <td style="padding:8px 10px">
+          <div style="font-weight:800;color:#0f172a;font-size:12px">${esc(r.name)}</div>
+          <span style="font-size:10px;color:#64748b">${esc(r.code)} ${r.location && r.location!=='—' ? `· ${esc(r.location)}` : ''}</span>
+        </td>
+        <td style="padding:8px 10px">
+          <a href="tel:${esc(r.phone)}" style="font-weight:700;color:#2563eb;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-phone-alt" style="font-size:10px"></i> ${esc(r.phone || '—')}
+          </a>
+        </td>
+        <td style="padding:8px 10px">
+          <span style="background:${r.status_color || '#0284c7'}18;color:${r.status_color || '#0284c7'};font-weight:800;padding:2px 8px;border-radius:8px;font-size:10.5px">
+            ${esc(r.status_badge || 'Active')}
+          </span>
+        </td>
+        <td style="padding:8px 10px;font-size:11px;color:#334155">
+          ${r.bank ? `<strong style="color:#047857">${esc(r.bank)}</strong>` : '—'}
+          ${r.branch ? `<div style="font-size:10px;color:#64748b">${esc(r.branch)}</div>` : ''}
+        </td>
+        <td style="padding:8px 10px;text-align:right;font-weight:800;color:#1e3a5f;font-size:11.5px">
+          ${esc(r.deal_value_formatted || '₹0')}
+        </td>
+        <td style="padding:8px 10px;text-align:center;font-size:11px;color:#64748b">${esc(r.submit_date || '—')}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function _filterHgsDrilldownTable(query){
+  if(!_hgsDrilldownData) return;
+  const q = (query || '').trim().toLowerCase();
+  const all = _hgsDrilldownRecords || [];
+  if(!q){
+    renderHgsDrilldownTable(all, _hgsDrilldownData.record_type);
+    return;
+  }
+  const filtered = all.filter(r => {
+    return (r.name && r.name.toLowerCase().includes(q)) ||
+           (r.phone && r.phone.toLowerCase().includes(q)) ||
+           (r.code && r.code.toLowerCase().includes(q)) ||
+           (r.location && r.location.toLowerCase().includes(q)) ||
+           (r.bank && r.bank.toLowerCase().includes(q)) ||
+           (r.status_badge && r.status_badge.toLowerCase().includes(q)) ||
+           (r.lead_names && r.lead_names.toLowerCase().includes(q));
+  });
+  renderHgsDrilldownTable(filtered, _hgsDrilldownData.record_type);
+}
+</script>
+
+<!-- DC-HAR-GHAR-DRILLDOWN-001: Parameter Drilldown Modal -->
+<div id="hgsDrilldownOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:9700;align-items:center;justify-content:center;padding:12px;overflow-y:auto" onclick="if(event.target===this)closeHarGharParamDrilldown()">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:980px;max-height:calc(100vh - 30px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:hidden">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0f2440,#1e3a5f);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;color:#fff;flex-shrink:0">
+      <div>
+        <div style="font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px">
+          <i class="fas fa-list-alt" style="color:#38bdf8"></i>
+          <span id="hgsDrilldownTitle">Parameter Records</span>
+          <span id="hgsDrilldownCountBadge" style="background:#0284c7;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">0</span>
+        </div>
+        <div id="hgsDrilldownSubtitle" style="font-size:11px;color:#94a3b8;margin-top:2px">Detailed records from live database</div>
+      </div>
+      <button onclick="closeHarGharParamDrilldown()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div style="padding:10px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0">
+      <div style="position:relative;flex:1;max-width:380px">
+        <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px"></i>
+        <input type="text" id="hgsDrilldownSearchInput" placeholder="Quick search in records..." oninput="_filterHgsDrilldownTable(this.value)"
+          style="width:100%;font-size:12px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 10px 6px 30px">
+      </div>
+      <div id="hgsDrilldownFilteredInfo" style="font-size:11.5px;color:#64748b;font-weight:600"></div>
+    </div>
+
+    <!-- Table Body -->
+    <div style="padding:0;overflow-x:auto;overflow-y:auto;flex:1;min-height:220px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead id="hgsDrilldownThead" style="background:#f1f5f9;position:sticky;top:0;z-index:1"></thead>
+        <tbody id="hgsDrilldownTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:10px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-size:11px;color:#64748b">Live data dynamically fetched from PostgreSQL</div>
+      <button type="button" onclick="closeHarGharParamDrilldown()" style="padding:6px 16px;border-radius:7px;border:1px solid #cbd5e1;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer">Close</button>
+    </div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

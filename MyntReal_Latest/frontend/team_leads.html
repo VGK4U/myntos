@@ -3564,21 +3564,21 @@
                     document.getElementById('leadHandlerType').value = lead.handler_type || 'unassigned';
                     document.getElementById('leadHandlerId').value = lead.handler_id || '';
                     if (typeof telecallerSearch !== 'undefined' && telecallerSearch) {
-                        if (lead.telecaller_id && lead.telecaller_name) {
+                        if (lead.telecaller_id) {
                             telecallerSearch.setValue(lead.telecaller_id, lead.telecaller_name, lead.telecaller_code || '');
                         } else {
                             telecallerSearch.clearSelection();
                         }
                     }
                     if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) {
-                        if (lead.field_staff_id && lead.field_staff_name) {
+                        if (lead.field_staff_id) {
                             fieldStaffSearch.setValue(lead.field_staff_id, lead.field_staff_name, lead.field_staff_code || '');
                         } else {
                             fieldStaffSearch.clearSelection();
                         }
                     }
                     if (typeof partnerSearch !== 'undefined' && partnerSearch) {
-                        if (lead.associated_partner_id && lead.associated_partner_name) {
+                        if (lead.associated_partner_id) {
                             partnerSearch.setValue(lead.associated_partner_id, lead.associated_partner_name, lead.associated_partner_code || '');
                         } else {
                             partnerSearch.clearSelection();
@@ -3590,12 +3590,12 @@
                     document.getElementById('leadPrimaryOwnerId').value = lead.primary_owner_id || '';
                     
                     if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch) {
-                        if (lead.primary_owner_id && lead.primary_owner_name) {
+                        if (lead.primary_owner_id) {
                             primaryOwnerSearch.setValue(lead.primary_owner_id, lead.primary_owner_name, lead.primary_owner_employee_id || '');
                         } else {
                             primaryOwnerSearch.clearSelection();
                         }
-                        
+                    }    
                         // RBAC: Disable if user cannot change owner
                         const canChangeOwner = lead.can_change_owner || false;
                         primaryOwnerSearch.setDisabled(!canChangeOwner);

@@ -19,7 +19,7 @@ class SuperAdminSession(Base):
     admin = relationship('User', foreign_keys=[admin_id], backref='admin_sessions')
     
     def is_valid(self):
-        return self.is_verified and self.expires_at > datetime.utcnow()
+        return self.is_verified and self.expires_at > get_indian_time()
     
     def __repr__(self):
         return f'<SuperAdminSession {self.admin_id} - {self.operation_type}>'

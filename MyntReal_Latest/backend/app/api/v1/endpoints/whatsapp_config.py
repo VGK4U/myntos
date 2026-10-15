@@ -5,6 +5,7 @@ bulk campaigns, message history, and CRM lead send.
 Access: VGK4u (vgk4u_supreme) + Key Leadership (key_leadership) + EA (ea role)
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import re
 from datetime import datetime
@@ -388,7 +389,7 @@ def create_template(
     # Ensure uniqueness
     existing = db.query(WhatsAppTemplate).filter_by(slug=slug).first()
     if existing:
-        slug = f"{slug}_{int(datetime.utcnow().timestamp())}"
+        slug = f"{slug}_{int(get_indian_time().timestamp())}"
 
     # Auto-derive example_values from segment defaults + any provided values
     derived_examples, missing_vars = _derive_example_values(
@@ -450,7 +451,7 @@ def update_template(
         t.example_values = derived
 
     t.updated_by_staff_id = _get_staff_id(current_user)
-    t.updated_at = datetime.utcnow()
+    t.updated_at = get_indian_time()
     db.commit()
     db.refresh(t)
     resp = {"success": True, "template": t.to_dict()}
@@ -564,7 +565,7 @@ def link_meta_template(
     tpl.meta_template_name = data.meta_template_name.strip()
     tpl.meta_template_language = data.meta_template_language or "en"
     tpl.is_meta_approved = True
-    tpl.updated_at = datetime.utcnow()
+    tpl.updated_at = get_indian_time()
     db.commit()
     db.refresh(tpl)
     return {"success": True, "template": tpl.to_dict()}
@@ -1087,7 +1088,7 @@ def submit_to_meta(
         tpl = db.query(WhatsAppTemplate).filter(WhatsAppTemplate.meta_template_name == name).first()
     _safe_body = (data.body_text or "").strip() or "{{1}} is your verification code."
     if not tpl:
-        slug = name + "_" + str(int(datetime.utcnow().timestamp()))[-6:]
+        slug = name + "_" + str(int(get_indian_time().timestamp()))[-6:]
         tpl = WhatsAppTemplate(
             name=name.replace("_", " ").title(),
             slug=slug, body_text=_safe_body,
@@ -1102,7 +1103,7 @@ def submit_to_meta(
     tpl.meta_approval_status = meta_status
     tpl.meta_template_id = meta_id
     tpl.meta_category = data.category.upper()
-    tpl.meta_submitted_at = datetime.utcnow()
+    tpl.meta_submitted_at = get_indian_time()
     tpl.is_meta_approved = (meta_status == "APPROVED")
     if data.body_text and data.body_text.strip():
         tpl.body_text = data.body_text.strip()
@@ -1112,7 +1113,7 @@ def submit_to_meta(
         tpl.footer_text = data.footer_text
     if data.example_values:
         tpl.example_values = [v for v in data.example_values if v.strip()]
-    tpl.updated_at = datetime.utcnow()
+    tpl.updated_at = get_indian_time()
     tpl.updated_by_staff_id = _get_staff_id(current_user)
     db.commit()
     db.refresh(tpl)
@@ -1197,7 +1198,7 @@ def sync_meta_template_status(
             t.meta_template_id = meta_t.get("id") or t.meta_template_id
             t.is_meta_approved = (new_status == "APPROVED")
             t.meta_rejected_reason = rejected_reason or None  # DC-WA-REJECTED-001: persist
-            t.updated_at = datetime.utcnow()
+            t.updated_at = get_indian_time()
             updated.append({
                 "id": t.id, "name": t.name,
                 "meta_name": t.meta_template_name,
@@ -1253,7 +1254,7 @@ def sync_meta_template_status(
             meta_category=meta_t.get("category", ""),
             meta_rejected_reason=rej_reason,
             is_meta_approved=(meta_t.get("status", "") == "APPROVED"),
-            created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+            created_at=get_indian_time(), updated_at=get_indian_time(),
         )
         db.add(new_tpl)
         orphans_captured.append({"name": meta_t.get("name", ""), "status": meta_t.get("status", "")})
@@ -1313,7 +1314,7 @@ def update_trigger(
     if data.delay_minutes is not None:
         trigger.delay_minutes = data.delay_minutes
     trigger.updated_by_staff_id = _get_staff_id(current_user)
-    trigger.updated_at = datetime.utcnow()
+    trigger.updated_at = get_indian_time()
     db.commit()
     db.refresh(trigger)
     return {"success": True, "trigger": trigger.to_dict()}
@@ -1751,7 +1752,7 @@ def launch_campaign(
     campaign.status = "running"
     campaign.total_recipients = len(recipients)
     campaign.pending_count = len(recipients)
-    campaign.started_at = datetime.utcnow()
+    campaign.started_at = get_indian_time()
     db.commit()
 
     # Launch background send
@@ -1805,7 +1806,7 @@ def _execute_campaign(campaign_id: int):
             time.sleep(delay_seconds)
 
         campaign.status = "completed"
-        campaign.completed_at = datetime.utcnow()
+        campaign.completed_at = get_indian_time()
         db.commit()
 
     except Exception as e:
@@ -1832,7 +1833,7 @@ def pause_campaign(
     if not c:
         raise HTTPException(404, "Not found")
     c.status = "paused"
-    c.paused_at = datetime.utcnow()
+    c.paused_at = get_indian_time()
     db.commit()
     return {"success": True}
 

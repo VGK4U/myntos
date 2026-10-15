@@ -3,6 +3,7 @@ RVZ Admin - Scheduler Management & Manual Triggers
 Allows RVZ ID to monitor and manually trigger automated tasks
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -530,7 +531,7 @@ async def diagnose_matching_calculation(
         from app.models.transaction import PendingIncome
         from sqlalchemy import func
         
-        target_date = datetime.strptime(business_date, '%Y-%m-%d').date() if business_date else (datetime.utcnow() - timedelta(days=1)).date()
+        target_date = datetime.strptime(business_date, '%Y-%m-%d').date() if business_date else (get_indian_time() - timedelta(days=1)).date()
         
         if user_id:
             users = db.query(User).filter(User.id == user_id).all()

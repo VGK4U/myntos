@@ -153,9 +153,39 @@ async function processOutboundQueue() {
             let target = item.target_jid || item.phone;
             if (!target) continue;
             if (!target.includes('@')) {
-                let cleanPhone = String(target).replace(/\D/g, '');
-                if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
-                target = `${cleanPhone}@s.whatsapp.net`;
+                if (item.target_type === 'group') {
+                    const cleanCode = cleanTargetCode(target);
+                    let resolvedGroupJid = jidCache[cleanCode] || null;
+                    if (!resolvedGroupJid && sock && connectionStatus === 'connected') {
+                        try {
+                            const gInfo = await sock.groupGetInviteInfo(cleanCode);
+                            if (gInfo && gInfo.id) {
+                                resolvedGroupJid = gInfo.id.includes('@g.us') ? gInfo.id : `${gInfo.id}@g.us`;
+                                jidCache[cleanCode] = resolvedGroupJid;
+                            }
+                        } catch (e) {}
+                        if (!resolvedGroupJid) {
+                            try {
+                                const participating = await sock.groupFetchAllParticipating();
+                                const matched = Object.values(participating).find(g =>
+                                    g.subject && g.subject.trim().toLowerCase() === String(target).trim().toLowerCase()
+                                ) || Object.values(participating).find(g =>
+                                    g.subject && g.subject.trim().toLowerCase().includes(String(target).trim().toLowerCase())
+                                );
+                                if (matched && matched.id) {
+                                    resolvedGroupJid = matched.id;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                    if (resolvedGroupJid) {
+                        target = resolvedGroupJid;
+                    }
+                } else {
+                    let cleanPhone = String(target).replace(/\D/g, '');
+                    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+                    target = `${cleanPhone}@s.whatsapp.net`;
+                }
             }
 
             // DC-DEDUP-003: Suppress queued duplicate if already sent directly within last 3 minutes
@@ -1623,8 +1653,8 @@ app.post('/api/send-group-message', async (req, res) => {
                 });
             }
             try {
-                let queueTargetJid = groupId || null;
-                if (!queueTargetJid && !req.body.inviteCode && !req.body.inviteCodes && !req.body.groupName) {
+                let queueTargetJid = groupId || req.body.inviteCode || (Array.isArray(req.body.inviteCodes) ? req.body.inviteCodes[0] : req.body.inviteCodes) || req.body.groupName || null;
+                if (!queueTargetJid) {
                     queueTargetJid = DEFAULT_INVITE_CODE;
                 }
                 if (!queueTargetJid) {
@@ -1881,25 +1911,85 @@ app.post('/api/send-group-message', async (req, res) => {
                     fallback_used: false
                 });
             } catch (sendErr) {
-                console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
-                failedCount++;
-                let userFriendlyErr = sendErr.message || String(sendErr);
-                if (String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) {
-                    if (targetType === 'channel' || String(destinationJid).includes('@newsletter')) {
-                        userFriendlyErr = "CHANNEL PERMISSION DENIED: The connected WhatsApp phone account is not an Admin or Owner of this WhatsApp Channel. In WhatsApp Channels, only Channel Admins can publish messages. Please make the connected WhatsApp phone an Admin of the channel.";
-                    } else {
-                        userFriendlyErr = `GROUP PERMISSION DENIED: In this WhatsApp group, only Admins can send messages. Please promote the connected WhatsApp phone to Admin or set group settings to 'All Participants'.`;
+                console.warn(`[WA-BOT] Primary send failed to ${destinationJid}: ${sendErr.message}. Attempting fallback resolution...`);
+                let fallbackSuccess = false;
+                let fallbackJid = null;
+
+                if (targetType === 'group') {
+                    // Fallback 1: Resolve by groupName across participating groups
+                    if (req.body.groupName) {
+                        try {
+                            const participating = await sock.groupFetchAllParticipating();
+                            const matchedGroup = Object.values(participating).find(g =>
+                                g.subject && g.subject.trim().toLowerCase() === String(req.body.groupName).trim().toLowerCase()
+                            ) || Object.values(participating).find(g =>
+                                g.subject && g.subject.trim().toLowerCase().includes(String(req.body.groupName).trim().toLowerCase())
+                            );
+                            if (matchedGroup && matchedGroup.id) {
+                                fallbackJid = matchedGroup.id;
+                            }
+                        } catch (fbNameErr) {}
+                    }
+                    // Fallback 2: Resolve by inviteCode if available
+                    if (!fallbackJid && codeToUse && !codeToUse.endsWith('@g.us')) {
+                        try {
+                            const gInfo = await sock.groupGetInviteInfo(codeToUse);
+                            if (gInfo && gInfo.id) {
+                                fallbackJid = gInfo.id.includes('@g.us') ? gInfo.id : `${gInfo.id}@g.us`;
+                            }
+                        } catch (fbInvErr) {
+                            try {
+                                const joined = await sock.groupAcceptInvite(codeToUse);
+                                if (joined) {
+                                    fallbackJid = joined.includes('@g.us') ? joined : `${joined}@g.us`;
+                                }
+                            } catch (fbAccErr) {}
+                        }
+                    }
+
+                    if (fallbackJid) {
+                        try {
+                            const retryRes = await sock.sendMessage(fallbackJid, contentPayload, sendOptions);
+                            sentCount++;
+                            fallbackSuccess = true;
+                            recentDispatchedMessageHashes.set(dedupKey, Date.now());
+                            logDispatchToBackend(fallbackJid, message || '[Media Attachment]', req.body.groupName || 'Sales Team Group');
+                            results.push({
+                                intended_target: rawCode,
+                                clean_code: codeToUse,
+                                target_type: targetType,
+                                resolved_jid: fallbackJid,
+                                message_id: retryRes?.key?.id,
+                                success: true,
+                                fallback_used: true
+                            });
+                        } catch (retryErr) {
+                            console.error(`[WA-BOT] Fallback send also failed to ${fallbackJid}: ${retryErr.message}`);
+                        }
                     }
                 }
-                results.push({
-                    intended_target: rawCode,
-                    clean_code: codeToUse,
-                    target_type: targetType,
-                    resolved_jid: destinationJid,
-                    success: false,
-                    error: userFriendlyErr,
-                    fallback_used: false
-                });
+
+                if (!fallbackSuccess) {
+                    console.error(`[WA-BOT] Send failed to ${destinationJid}: ${sendErr.message}`);
+                    failedCount++;
+                    let userFriendlyErr = sendErr.message || String(sendErr);
+                    if (String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) {
+                        if (targetType === 'channel' || String(destinationJid).includes('@newsletter')) {
+                            userFriendlyErr = "CHANNEL PERMISSION DENIED: The connected WhatsApp phone account is not an Admin or Owner of this WhatsApp Channel. In WhatsApp Channels, only Channel Admins can publish messages. Please make the connected WhatsApp phone an Admin of the channel.";
+                        } else {
+                            userFriendlyErr = `GROUP PERMISSION DENIED: In this WhatsApp group, only Admins can send messages. Please promote the connected WhatsApp phone to Admin or set group settings to 'All Participants'.`;
+                        }
+                    }
+                    results.push({
+                        intended_target: rawCode,
+                        clean_code: codeToUse,
+                        target_type: targetType,
+                        resolved_jid: destinationJid,
+                        success: false,
+                        error: userFriendlyErr,
+                        fallback_used: Boolean(fallbackJid)
+                    });
+                }
             }
         }
 

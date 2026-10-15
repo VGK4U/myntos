@@ -328,7 +328,7 @@ def get_connect_url(
         db.commit()
 
     redirect = req.redirect_uri or "/staff/configuration/social-media?connected=1"
-    state = f"state_t{ctx.tenant_id}_c{ctx.active_company_id}_{int(datetime.utcnow().timestamp())}"
+    state = f"state_t{ctx.tenant_id}_c{ctx.active_company_id}_{int(get_indian_time().timestamp())}"
 
     url = social_prov.generate_connect_url(
         profile_id=profile_id,
@@ -357,7 +357,7 @@ def mock_connect_account(
     tid = ctx.tenant_id
 
     plat = req.platform.lower()
-    plat_acc_id = f"mock_{plat}_{cid}_{int(datetime.utcnow().timestamp())}"
+    plat_acc_id = f"mock_{plat}_{cid}_{int(get_indian_time().timestamp())}"
 
     icons = {
         "facebook": "https://cdn-icons-png.flaticon.com/512/124/124010.png",

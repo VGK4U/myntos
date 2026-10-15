@@ -3,6 +3,7 @@ Staff Journey Checkin Model
 DC Protocol: Bi-Hourly Photo Verification & GPS Location Audit Trail
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -33,7 +34,7 @@ class StaffJourneyCheckin(Base):
     wvv_compliant = Column(Boolean, default=True, nullable=False)
     notes = Column(Text, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
 
     journey = relationship("StaffJourney", backref="checkins")
     employee = relationship("StaffEmployee", backref="journey_checkins")

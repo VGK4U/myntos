@@ -2,6 +2,7 @@
 Unified WhatsApp Trigger Execution Audit Service
 Logs all system-level WhatsApp batch, group, and alert dispatches to wa_execution_logs.json.
 """
+from app.core.timezone import get_indian_time
 import os
 import json
 import uuid
@@ -38,7 +39,7 @@ def log_wa_trigger_execution(
     try:
         os.makedirs(os.path.dirname(EXEC_LOGS_FILE_PATH), exist_ok=True)
 
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
         now_ist = now_utc + timedelta(hours=5, minutes=30)
 
         target_names = []

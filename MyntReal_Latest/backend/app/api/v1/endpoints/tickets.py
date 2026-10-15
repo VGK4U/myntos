@@ -379,7 +379,7 @@ async def upload_ticket_attachment(
             action_type='Updated',
             action_description='File attached',
             performed_by=user_id_str if user_id_str and user_id_str.startswith('MNR') else None,
-            performed_at=dt.utcnow(),
+            performed_at=get_indian_time(),
             old_value=None,
             new_value=upload_result['file_name'],
             comments=f"Uploaded: {attachment.filename}"
@@ -1004,7 +1004,7 @@ async def get_ticket_timeline(
     
     # Get recent tickets for timeline
     from datetime import timedelta
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = get_indian_time() - timedelta(days=days)
     
     tickets = db.query(ServiceTicket).filter(
         ServiceTicket.created_date >= cutoff_date
@@ -1169,7 +1169,7 @@ async def create_service_ticket(
         if spare_count > 0:
             # Update ticket status to indicate spares workflow
             ticket.sub_status = 'awaiting_spares'
-            ticket.spare_requested_at = datetime.utcnow()
+            ticket.spare_requested_at = get_indian_time()
             db.commit()
 
     # DC_WA_TEMPLATES_SEED_001: Notify customer on ticket creation (non-fatal)
@@ -2004,7 +2004,7 @@ async def update_service_ticket_status(
     staff = get_current_staff_user_from_hybrid(current_user, db)
     staff_id = staff.id if staff else None
     old_status = ticket.sub_status
-    now = datetime.utcnow()
+    now = get_indian_time()
 
     ticket.sub_status = sub_status
 
@@ -2280,7 +2280,7 @@ async def upload_spare_media(
                 'type': 'image',
                 'filename': img.filename,
                 'path': filepath,
-                'uploaded_at': datetime.utcnow().isoformat()
+                'uploaded_at': get_indian_time().isoformat()
             })
             uploaded.append({'type': 'image', 'filename': img.filename})
     
@@ -2300,7 +2300,7 @@ async def upload_spare_media(
             'type': 'video',
             'filename': video.filename,
             'path': filepath,
-            'uploaded_at': datetime.utcnow().isoformat()
+            'uploaded_at': get_indian_time().isoformat()
         })
         uploaded.append({'type': 'video', 'filename': video.filename})
     
@@ -2596,7 +2596,7 @@ async def request_custom_spare(
 
     from app.models.marketplace import MarketplacePurchaseOrder, MarketplacePOItem
     from sqlalchemy import text as _text
-    ym = datetime.utcnow().strftime('%Y%m')
+    ym = get_indian_time().strftime('%Y%m')
     prefix = f'ZYPO-{ym}-'
     row = db.execute(_text(
         "SELECT COUNT(*)+1 FROM marketplace_purchase_orders WHERE po_number LIKE :pfx AND company_id=:cid"
@@ -2650,7 +2650,7 @@ async def request_custom_spare(
     db.add(spare_request)
     
     ticket.spares_required = True
-    ticket.spare_requested_at = datetime.utcnow()
+    ticket.spare_requested_at = get_indian_time()
     if ticket.sub_status in ['new', 'acknowledged', 'diagnosing']:
         ticket.sub_status = 'awaiting_spares'
     
@@ -2904,7 +2904,7 @@ async def verify_custom_spare(
     spare.gst_amount = (spare.unit_price * spare.quantity_required * spare.gst_rate) / 100
     spare.total_with_gst = (spare.unit_price * spare.quantity_required) + spare.gst_amount
     spare.verified_by_id = staff.id
-    spare.verified_at = datetime.utcnow()
+    spare.verified_at = get_indian_time()
     spare.verification_notes = verification_notes
     
     if stock_item.default_vendor_id:
@@ -3015,7 +3015,7 @@ async def accept_spare_request(
         if existing_po and existing_po.status == 'draft':
             existing_po.status = 'confirmed'
             existing_po.confirmed_by_staff_id = staff.id
-            existing_po.confirmed_at = datetime.utcnow()
+            existing_po.confirmed_at = get_indian_time()
             po_number = existing_po.po_number
             logger.info(f'[SPARE-ACCEPT] Draft ZYPO {po_number} confirmed on accept')
 
@@ -3031,7 +3031,7 @@ async def accept_spare_request(
         qty = spare.quantity_required or 1
         company_id = getattr(ticket, 'company_id', None) or 1
         source_type = 'technical_ticket' if ticket.ticket_type == 'technical' else 'service_ticket'
-        ym = datetime.utcnow().strftime('%y%m')
+        ym = get_indian_time().strftime('%y%m')
 
         # Always create ZYPO — for both catalog and custom spares
         prefix_po = f'ZYPO-{ym}-'
@@ -3139,7 +3139,7 @@ async def accept_spare_request(
     # WVV: WRITE
     spare.procurement_status = 'acknowledged'
     spare.acknowledged_by_id = staff.id
-    spare.acknowledged_at = datetime.utcnow()
+    spare.acknowledged_at = get_indian_time()
     if notes:
         spare.acknowledgment_notes = notes
 
@@ -3546,7 +3546,7 @@ async def record_spare_payment(
     # return the existing transaction instead of creating a duplicate.
     from sqlalchemy import text as _dedup_text
     from datetime import timedelta
-    _cutoff = datetime.utcnow() - timedelta(seconds=60)
+    _cutoff = get_indian_time() - timedelta(seconds=60)
     _recent = db.execute(_dedup_text(
         "SELECT st.income_entry_number, st.transaction_number FROM service_ticket_spare_transactions st "
         "WHERE st.spare_request_id = :sid AND st.amount = :amt "
@@ -3560,7 +3560,7 @@ async def record_spare_payment(
                    f"(IE: {_recent[0] or 'pending'}). Please refresh and try again if this is a new payment."
         )
 
-    pay_date = datetime.utcnow()
+    pay_date = get_indian_time()
     if payment_date_str:
         try:
             pay_date = datetime.fromisoformat(payment_date_str.replace('Z', ''))
@@ -3578,7 +3578,7 @@ async def record_spare_payment(
     income_entry_id = None
     if income_source:
         # Generate IE number using MAX(id) to avoid COUNT(*) race on deletions
-        year_prefix = f"IE-{datetime.utcnow().year}-"
+        year_prefix = f"IE-{get_indian_time().year}-"
         last_row = db.execute(_text(
             "SELECT entry_number FROM income_entries WHERE entry_number LIKE :pfx ORDER BY id DESC LIMIT 1"
         ), {'pfx': year_prefix + '%'}).fetchone()
@@ -3626,7 +3626,7 @@ async def record_spare_payment(
         spare.income_entry_id = income_entry_id  # keep legacy ref to most recent
 
     # Generate transaction number SPRTXN-YYMM-NNNN
-    ym = datetime.utcnow().strftime('%y%m')
+    ym = get_indian_time().strftime('%y%m')
     pfx = f'SPRTXN-{ym}-'
     cnt_row = db.execute(_text("SELECT COUNT(*) FROM service_ticket_spare_transactions WHERE transaction_number LIKE :p"),
                          {'p': pfx + '%'}).fetchone()
@@ -3739,7 +3739,7 @@ async def dispatch_spare_request(
             mkt.available_qty = max(0, int(mkt.available_qty or 0) - qty)
 
     spare.procurement_status = 'dispatched'
-    spare.dispatched_at = datetime.utcnow()
+    spare.dispatched_at = get_indian_time()
     spare.dispatched_by_id = staff.id
     if notes:
         spare.release_notes = notes
@@ -3918,7 +3918,7 @@ async def get_service_dashboard_stats(
     from datetime import timedelta
     from sqlalchemy import func
     
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = get_indian_time() - timedelta(days=days)
     
     tickets = db.query(ServiceTicket).filter(
         ServiceTicket.created_date >= cutoff_date,
@@ -4249,7 +4249,7 @@ async def record_billing_payment(
 
     ticket = db.query(SvcTkt).filter(SvcTkt.id == billing.ticket_id).first()
 
-    pay_date_obj = datetime.utcnow()
+    pay_date_obj = get_indian_time()
     if payment_date:
         try:
             pay_date_obj = datetime.fromisoformat(payment_date.replace('Z', ''))
@@ -4270,7 +4270,7 @@ async def record_billing_payment(
     ie_number = None
     if income_source:
         # Generate IE number using MAX(id) to avoid COUNT(*) race on deletions
-        year_prefix = f"IE-{datetime.utcnow().year}-"
+        year_prefix = f"IE-{get_indian_time().year}-"
         last_row = db.execute(_t(
             "SELECT entry_number FROM income_entries WHERE entry_number LIKE :pfx ORDER BY id DESC LIMIT 1"
         ), {'pfx': year_prefix + '%'}).fetchone()
@@ -4360,8 +4360,8 @@ async def record_billing_payment(
                     validation_status='pending',
                     income_entry_id=ie.id,
                     created_by_id=staff.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=get_indian_time(),
+                    updated_at=get_indian_time(),
                 )
                 db.add(_crmt)
         except Exception as _po_link_err:

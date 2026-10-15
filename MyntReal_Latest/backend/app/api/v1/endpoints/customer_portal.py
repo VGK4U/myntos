@@ -7,6 +7,7 @@ Provides multi-vertical customer access across:
 4. Quick Redo Repeat Transactions
 5. Zero DB Pollution Sandbox Mode for Test Customer Profiles
 """
+from app.core.timezone import get_indian_time
 import logging
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
@@ -546,7 +547,7 @@ def create_customer_profile(payload: CustomerProfileCreate, db: Session = Depend
             customer.city = payload.city
         if payload.state:
             customer.state = payload.state
-        customer.updated_at = datetime.utcnow()
+        customer.updated_at = get_indian_time()
     else:
         customer = CustomerProfile(
             mobile_number=clean_phone,
@@ -689,7 +690,7 @@ def reset_customer_pin(payload: ResetPinRequest, db: Session = Depends(get_db)):
         )
 
     customer.security_pin_hash = SecurityManager.get_password_hash(payload.new_security_pin)
-    customer.updated_at = datetime.utcnow()
+    customer.updated_at = get_indian_time()
     db.commit()
 
     token_data = {

@@ -8,6 +8,7 @@ DC Protocol (Oct 2026):
 - Public brand knowledge & FAQ endpoint for AI Search engines (ChatGPT/Gemini/Perplexity)
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import re
 from typing import Optional, Dict, Any
@@ -75,7 +76,7 @@ def capture_suryanz_lead(
 
     try:
         # Idempotency Check: Prevent duplicate lead creation within 5 minutes
-        five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
+        five_mins_ago = get_indian_time() - timedelta(minutes=5)
         existing_recent = db.query(CRMLead).filter(
             CRMLead.phone == phone,
             CRMLead.source == "SURYANZ_SOLAR_WEBSITE",

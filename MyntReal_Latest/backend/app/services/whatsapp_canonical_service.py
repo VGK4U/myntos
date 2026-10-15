@@ -114,7 +114,7 @@ class WhatsAppCanonicalService:
 
         # 3. Deduplication Guard
         dedup_k = idempotency_key or f"{template_name}:{recipient}"
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
         if dedup_k in _in_memory_dedup:
             last_sent = _in_memory_dedup[dedup_k]
             if now_utc - last_sent < timedelta(minutes=_DEDUP_WINDOW_MINUTES):
@@ -456,7 +456,7 @@ class WhatsAppCanonicalService:
                     logger.error(f"[WA-CANONICAL] Scanned fallback on unapproved template failed: {_fbe}")
 
             recipient = cls.normalize_phone(phone) or phone
-            now_utc = datetime.utcnow()
+            now_utc = get_indian_time()
             log_entry = MessageLog(
                 message_sid=f"unmapped_tmpl_{int(now_utc.timestamp())}_{recipient[-4:] if len(recipient)>=4 else '0000'}",
                 mobile_number=recipient,

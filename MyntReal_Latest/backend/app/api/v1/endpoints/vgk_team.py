@@ -44,8 +44,7 @@ def _get_staff_company_id(current_user) -> int:
 
 
 def require_vgk_admin(current_user: StaffEmployee = Depends(get_current_staff_user)):
-    st = (current_user.staff_type or '').upper()
-    if 'VGK' not in st and st != 'EA':
+    if not _is_vgk_admin(current_user):
         raise HTTPException(status_code=403, detail="VGK Admin access required (EA or VGK Mentor only)")
     return current_user
 
@@ -57,7 +56,7 @@ def require_ea(current_user: StaffEmployee = Depends(get_current_staff_user)):
     return current_user
 
 
-# [DC-VGK-RBAC-001] Strict 5-User Visibility Whitelist
+# [DC-VGK-RBAC-001] Strict Visibility & Admin Whitelist
 # Requirement: All members displayed to Anushka, Nandana, Subash, Yaswanth, Jagannath and Mr10001 only.
 # All other staff only see members registered by them or assigned to them.
 VGK_FULL_VISIBILITY_EMP_CODES = {
@@ -67,8 +66,9 @@ VGK_FULL_VISIBILITY_EMP_CODES = {
     'MR10018',   # Jagannath (Mr. Jagannadh Velaga)
     'MR10036',   # Anushka (Ms. Anushka Karri) - transferred authority from MN10016 (Poojitha)
     'MN10009',   # Nandana (Ms. Oleti Gayatri Nandana) - Sales Incharge parity with Anushka
+    'MN10010',   # Nandana (Ms. Oleti Gayatri Nandana) - secondary staff profile
 }
-VGK_FULL_VISIBILITY_STAFF_IDS = {1, 16, 19, 28, 48, 73}
+VGK_FULL_VISIBILITY_STAFF_IDS = {1, 16, 19, 28, 48, 49, 73}
 
 
 def _is_vgk_admin(user: StaffEmployee) -> bool:
@@ -2598,12 +2598,12 @@ def bulk_send_preview(
             (OfficialPartner.login_count == 0) | (OfficialPartner.login_count == None)
         ).count()
     elif target_filter == "inactive_3_days":
-        cutoff = datetime.utcnow() - timedelta(days=3)
+        cutoff = get_indian_time() - timedelta(days=3)
         count = base_q.filter(
             (OfficialPartner.last_login == None) | (OfficialPartner.last_login < cutoff)
         ).count()
     elif target_filter == "inactive_7_days":
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        cutoff = get_indian_time() - timedelta(days=7)
         count = base_q.filter(
             (OfficialPartner.last_login == None) | (OfficialPartner.last_login < cutoff)
         ).count()
@@ -5532,7 +5532,7 @@ def _vgk_wa_can_send(member_id: int) -> bool:
     last = _vgk_wa_sent_today.get(member_id)
     if not last:
         return True
-    return (datetime.utcnow() - last).total_seconds() > 86400
+    return (get_indian_time() - last).total_seconds() > 86400
 
 
 def _vgk_wa_find_template(db):
@@ -5621,7 +5621,7 @@ def send_vgk_member_credentials_wa(
     )
 
     if result.get("success"):
-        _vgk_wa_sent_today[member_id] = datetime.utcnow()
+        _vgk_wa_sent_today[member_id] = get_indian_time()
         return {
             "success": True,
             "message": f"WhatsApp sent to {_name} ({phone})",
@@ -5680,12 +5680,12 @@ def bulk_send_vgk_credentials_wa(
             (OfficialPartner.login_count == 0) | (OfficialPartner.login_count == None)
         ).all()
     elif tf == "inactive_3_days":
-        cutoff = datetime.utcnow() - timedelta(days=3)
+        cutoff = get_indian_time() - timedelta(days=3)
         members = base_q.filter(
             (OfficialPartner.last_login == None) | (OfficialPartner.last_login < cutoff)
         ).all()
     elif tf == "inactive_7_days":
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        cutoff = get_indian_time() - timedelta(days=7)
         members = base_q.filter(
             (OfficialPartner.last_login == None) | (OfficialPartner.last_login < cutoff)
         ).all()
@@ -5726,7 +5726,7 @@ def bulk_send_vgk_credentials_wa(
         }
         result = send_direct_whatsapp(db=db, phone=phone, message=msg, staff_id=current_user.id, template_id=template_id, context=bulk_ctx)
         if result.get("success"):
-            _vgk_wa_sent_today[m.id] = datetime.utcnow()
+            _vgk_wa_sent_today[m.id] = get_indian_time()
             sent += 1
             detail.append({"id": m.id, "code": m.partner_code, "status": "submitted"})
         else:

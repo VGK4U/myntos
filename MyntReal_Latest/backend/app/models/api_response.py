@@ -3,6 +3,7 @@ Standard API Response Models for FastAPI
 Provides consistent response structure across all endpoints
 """
 
+from app.core.timezone import get_indian_time
 from typing import Any, Optional, List, Dict
 from pydantic import BaseModel
 from datetime import datetime
@@ -13,7 +14,7 @@ class ApiResponse(BaseModel):
     message: str
     data: Optional[Any] = None
     errors: Optional[List[str]] = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = get_indian_time()
     
     class Config:
         json_encoders = {
@@ -26,7 +27,7 @@ class PaginatedResponse(BaseModel):
     message: str
     data: List[Any]
     pagination: Dict[str, Any]
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = get_indian_time()
     
     class Config:
         json_encoders = {
@@ -39,7 +40,7 @@ class ErrorResponse(BaseModel):
     message: str
     errors: List[str]
     error_code: Optional[str] = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = get_indian_time()
     
     class Config:
         json_encoders = {
@@ -52,7 +53,7 @@ def success_response(message: str, data: Any = None) -> Dict[str, Any]:
         "success": True,
         "message": message,
         "data": data,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": get_indian_time().isoformat()
     }
 
 def error_response(message: str, errors: List[str] = None, error_code: str = None) -> Dict[str, Any]:
@@ -62,7 +63,7 @@ def error_response(message: str, errors: List[str] = None, error_code: str = Non
         "message": message,
         "errors": errors or [],
         "error_code": error_code,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": get_indian_time().isoformat()
     }
 
 def paginated_response(message: str, data: List[Any], page: int, per_page: int, total: int) -> Dict[str, Any]:
@@ -77,5 +78,5 @@ def paginated_response(message: str, data: List[Any], page: int, per_page: int, 
             "total": total,
             "pages": (total + per_page - 1) // per_page if per_page > 0 else 0
         },
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": get_indian_time().isoformat()
     }

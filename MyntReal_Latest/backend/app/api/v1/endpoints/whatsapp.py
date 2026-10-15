@@ -3,6 +3,7 @@ WhatsApp Messaging API Endpoints
 Handles WhatsApp OTP sending, message logging, and delivery tracking via Meta Cloud API
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_, text
@@ -165,7 +166,7 @@ class WhatsAppService:
             wamid = data.get("messages", [{}])[0].get("id", "")
 
             # Structured Logging
-            logger.info(f"WHATSAPP_OUTGOING message_id={wamid} recipient={recipient} type=template template=otp api_status=accepted created_at={datetime.utcnow().isoformat()}")
+            logger.info(f"WHATSAPP_OUTGOING message_id={wamid} recipient={recipient} type=template template=otp api_status=accepted created_at={get_indian_time().isoformat()}")
 
             message_log = MessageLog(
                 message_sid=wamid,
@@ -179,7 +180,7 @@ class WhatsAppService:
                 initial_status='API_ACCEPTED',
                 current_status='API_ACCEPTED',
                 status_source='SYSTEM',
-                sent_at=datetime.utcnow()
+                sent_at=get_indian_time()
             )
             self.db.add(message_log)
             self.db.commit()
@@ -312,13 +313,13 @@ async def control_whatsapp(
     if control_request.action == 'pause':
         control.is_paused = True
         control.paused_by_user_id = current_user.id
-        control.paused_at = datetime.utcnow()
+        control.paused_at = get_indian_time()
         control.pause_reason = control_request.reason
         message = f"WhatsApp messaging paused by {current_user.name}"
     else:
         control.is_paused = False
         control.resumed_by_user_id = current_user.id
-        control.resumed_at = datetime.utcnow()
+        control.resumed_at = get_indian_time()
         message = f"WhatsApp messaging resumed by {current_user.name}"
     
     db.commit()
@@ -501,12 +502,12 @@ async def meta_status_webhook(
                     continue
                 
                 message_log.current_status = mapped_status
-                message_log.last_status_update = datetime.utcnow()
+                message_log.last_status_update = get_indian_time()
                 
                 if mapped_status == 'delivered':
-                    message_log.delivered_at = datetime.utcnow()
+                    message_log.delivered_at = get_indian_time()
                 elif mapped_status == 'failed':
-                    message_log.failed_at = datetime.utcnow()
+                    message_log.failed_at = get_indian_time()
                     errors = status_update.get("errors", [])
                     if errors:
                         message_log.error_code = str(errors[0].get("code", ""))
@@ -734,7 +735,7 @@ def handle_recharge_service_lead(
     from datetime import timedelta
 
     # Deduplication guard: ignore if identical lead created in last 24h
-    cutoff = datetime.utcnow() - timedelta(hours=24)
+    cutoff = get_indian_time() - timedelta(hours=24)
     existing_lead = db.query(CRMLead).filter(
         CRMLead.phone == phone_10,
         CRMLead.source == "Recharge",
@@ -776,7 +777,7 @@ def handle_recharge_service_lead(
         city=city,
         state=state,
         pincode=pincode,
-        created_at=datetime.utcnow()
+        created_at=get_indian_time()
     )
     db.add(lead)
     db.commit()
@@ -841,8 +842,8 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                 # Idempotent status update
                 ml.current_status     = mapped
                 ml.status_source      = 'META_WEBHOOK'
-                ml.last_status_update = datetime.utcnow()
-                ml.last_updated       = datetime.utcnow()
+                ml.last_status_update = get_indian_time()
+                ml.last_updated       = get_indian_time()
                 ml.webhook_data       = _json.dumps(su)
                 
                 err_code = None
@@ -850,15 +851,15 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                 
                 if mapped == "delivered":
                     if not ml.delivered_at:
-                        ml.delivered_at = datetime.utcnow()
+                        ml.delivered_at = get_indian_time()
                 elif mapped == "read":
                     if not ml.read_at:
-                        ml.read_at = datetime.utcnow()
+                        ml.read_at = get_indian_time()
                     if not ml.delivered_at:
-                        ml.delivered_at = datetime.utcnow()
+                        ml.delivered_at = get_indian_time()
                 elif mapped == "failed":
                     if not ml.failed_at:
-                        ml.failed_at = datetime.utcnow()
+                        ml.failed_at = get_indian_time()
                     errs = su.get("errors", [])
                     if errs:
                         err_code = str(errs[0].get("code", ""))
@@ -919,12 +920,12 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                         if wa_curr_prec <= new_prec or mapped == "failed":
                             wa_msg.delivery_status = mapped.upper()
                             if mapped == "delivered" and not wa_msg.delivered_at:
-                                wa_msg.delivered_at = datetime.utcnow()
+                                wa_msg.delivered_at = get_indian_time()
                             elif mapped == "read":
                                 if not wa_msg.read_at:
-                                    wa_msg.read_at = datetime.utcnow()
+                                    wa_msg.read_at = get_indian_time()
                                 if not wa_msg.delivered_at:
-                                    wa_msg.delivered_at = datetime.utcnow()
+                                    wa_msg.delivered_at = get_indian_time()
                 except Exception as _wamsg_sync_err:
                     logger.warning(f"[WA-WEBHOOK] Could not sync status to WAMessage for {wamid}: {_wamsg_sync_err}")
 
@@ -937,14 +938,14 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                         if new_prec >= c_curr or c_curr == 99:
                             c_log.status = mapped
                             if mapped == "delivered" and not c_log.delivered_at:
-                                c_log.delivered_at = datetime.utcnow()
+                                c_log.delivered_at = get_indian_time()
                             elif mapped == "read":
                                 if not c_log.read_at:
-                                    c_log.read_at = datetime.utcnow()
+                                    c_log.read_at = get_indian_time()
                                 if not c_log.delivered_at:
-                                    c_log.delivered_at = datetime.utcnow()
+                                    c_log.delivered_at = get_indian_time()
                             elif mapped == "failed" and not c_log.failed_at:
-                                c_log.failed_at = datetime.utcnow()
+                                c_log.failed_at = get_indian_time()
                 except Exception as _ce:
                     pass
                 print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
@@ -1024,7 +1025,7 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                         media_mime_type=media_mime,
                         lead_id=lead.id if lead else None,
                         is_read=False,
-                        received_at=datetime.utcnow(),
+                        received_at=get_indian_time(),
                         raw_payload=_json.dumps(msg),
                     )
                     db.add(inbox)
@@ -1040,7 +1041,7 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                         
                         if lead:
                             # 1. Look up active session
-                            cutoff_now = datetime.utcnow()
+                            cutoff_now = get_indian_time()
                             active_conv = db.query(WAConversation).filter(
                                 WAConversation.company_id == target_company_id,
                                 WAConversation.lead_id == lead.id,
@@ -1096,7 +1097,7 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                     try:
                         from app.services.whatsapp_auto_service import _send_meta as _sm, _is_valid_phone as _ivp
                         from datetime import timedelta as _td
-                        _cutoff = datetime.utcnow() - _td(hours=24)
+                        _cutoff = get_indian_time() - _td(hours=24)
                         _already = db.query(WAInbox).filter(
                             WAInbox.from_phone == from_phone,
                             WAInbox.auto_replied == True,
@@ -1111,7 +1112,7 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
                             _ar = _sm(from_phone, _ar_msg, db=db)
                             if _ar.get("success"):
                                 inbox.auto_replied    = True
-                                inbox.auto_replied_at = datetime.utcnow()
+                                inbox.auto_replied_at = get_indian_time()
                                 print(f"[WA-INBOX] ✅ Auto-reply sent to {from_phone}")
                     except Exception as _are:
                         print(f"[WA-INBOX] ⚠️ Auto-reply error: {_are}")
@@ -1827,7 +1828,7 @@ def get_inbox(
             from datetime import timezone, timedelta
             ist_tz = timezone(timedelta(hours=5, minutes=30))
             if last_act_dt.tzinfo is None:
-                dt_ist = last_act_dt.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+                dt_ist = last_act_dt.replace(tzinfo=ist_tz)
             else:
                 dt_ist = last_act_dt.astimezone(ist_tz)
             last_activity_ist = dt_ist.strftime("%d %b %Y, %I:%M %p")
@@ -1942,7 +1943,7 @@ def reply_to_inbox(
 
     result = _send_meta(msg.from_phone, reply_text, db=db)
     if result.get("success"):
-        now = datetime.utcnow()
+        now = get_indian_time()
         msg.replied       = True
         msg.replied_at    = now
         msg.replied_by_id = current_user.id
@@ -2421,7 +2422,7 @@ def get_inbox_thread(
                 else:
                     dt_obj = rec_at
                 if dt_obj.tzinfo is None:
-                    dt_ist = dt_obj.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+                    dt_ist = dt_obj.replace(tzinfo=ist_tz)
                 else:
                     dt_ist = dt_obj.astimezone(ist_tz)
                 m["received_at_ist"] = dt_ist.strftime("%d %b %Y, %I:%M %p")
@@ -2506,7 +2507,7 @@ def assign_inbox_message(
 
     msg.dept_code          = dept_code or None
     msg.assigned_to_emp_id = emp_id or None
-    msg.assigned_at        = datetime.utcnow()
+    msg.assigned_at        = get_indian_time()
     msg.target_date        = target_date
     msg.category_code      = category_code or None
     msg.assigned_notes     = notes or None
@@ -2702,7 +2703,7 @@ def get_whatsapp_delivery_logs(
             days_val = 3
 
         if days_val and days_val > 0:
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_val)
+            cutoff = get_indian_time() - timedelta(days=days_val)
             query = query.filter(MessageLog.sent_at >= cutoff)
 
         broadcast_types = {
@@ -3006,7 +3007,7 @@ def log_bot_dispatch(payload: LogBotDispatchPayload, db: Session = Depends(get_d
     from app.models.whatsapp import WAInbox, MessageLog
     from datetime import datetime
 
-    now = datetime.utcnow()
+    now = get_indian_time()
     clean_target = ''.join(filter(str.isdigit, payload.phone_or_target)) or payload.phone_or_target.strip()
     if len(clean_target) == 10:
         clean_target = '91' + clean_target
@@ -3227,7 +3228,7 @@ def update_whatsapp_conversation_status(
         from app.models.whatsapp import WAInbox
         from sqlalchemy import or_
 
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
         inbox_records = db.query(WAInbox).filter(
             or_(
                 WAInbox.from_phone.like(f"%{clean_phone}"),
@@ -3287,7 +3288,7 @@ def claim_whatsapp_conversation(
         from app.models.crm import CRMLead
         from sqlalchemy import or_
 
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
 
         # 1. Update matching WAInbox entries strictly within caller's authorized scope
         inbox_query = db.query(WAInbox).filter(
@@ -4436,7 +4437,7 @@ def get_whatsapp_chat_history(
             if not dt_val:
                 return "—"
             if dt_val.tzinfo is None:
-                dt_ist = dt_val.replace(tzinfo=timezone.utc).astimezone(ist_tz)
+                dt_ist = dt_val.replace(tzinfo=ist_tz)
             else:
                 dt_ist = dt_val.astimezone(ist_tz)
             return dt_ist.strftime('%d %b %Y, %I:%M %p')
@@ -5307,7 +5308,7 @@ def send_manual_whatsapp_message(
         _processed_client_msg_ids.add(client_id)
 
     # DB-level deduplication check (recent identical message in last 15 seconds)
-    recent_cutoff = datetime.utcnow() - timedelta(seconds=15)
+    recent_cutoff = get_indian_time() - timedelta(seconds=15)
     recent_dup = db.query(MessageLog).filter(
         MessageLog.mobile_number.like(f"%{clean_target}"),
         MessageLog.message_body == msg_text,
@@ -5360,7 +5361,7 @@ def send_manual_whatsapp_message(
     except Exception as exc:
         error_msg = str(exc)
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
 
     # Ingest into MessageLog
     reply_context_dict = None
@@ -6354,7 +6355,7 @@ def _record_job_trigger_audit_log(db: Session, job_id: str, job_name: str, res: 
             user_name=staff_label[:100],
             message_body=f"⚡ Manual Trigger Executed: {job_name} ({job_id}) by {staff_label}",
             current_status="sent" if is_succ else "failed",
-            sent_at=datetime.utcnow()
+            sent_at=get_indian_time()
         )
         db.add(log_entry)
         db.commit()
@@ -6418,7 +6419,7 @@ def trigger_wa_job_manual(
                     message_body=f"Sales Performance Report (Manual Trigger by {staff_label})",
                     initial_status="sent" if is_success else "failed",
                     current_status="sent" if is_success else "failed",
-                    sent_at=datetime.utcnow()
+                    sent_at=get_indian_time()
                 )
                 db.add(log_entry)
                 db.commit()
@@ -6527,6 +6528,22 @@ def trigger_wa_job_manual(
             res = send_staff_morning_leadership(db, staff_employee=emp, override_phone="8875551666")
             _record_job_trigger_audit_log(db, "staff_morning_leadership", "Staff Morning Leadership Snapshot (8875551666)", {"success": True}, staff_label)
             return {"success": True, "message": "Staff Morning Leadership Snapshot dispatched to 8875551666", "detail": res}
+
+        elif job_id == "har_ghar_support_report":
+            from app.services.har_ghar_support_report_service import dispatch_har_ghar_support_report
+            res = dispatch_har_ghar_support_report(
+                db=db,
+                people_on_ground=[],
+                expected_bank_customers=[],
+                include_manual=False,
+                slot_label=f"Manual Trigger ({staff_label})",
+            )
+            _record_job_trigger_audit_log(db, "har_ghar_support_report", "Har Ghar Support Daily Status Report (9:00 AM & 8:00 PM IST)", res, staff_label)
+            return {
+                "success": bool(res.get("success")),
+                "message": "Har Ghar Support Status Report dispatched to 'Har ghar support' WhatsApp group",
+                "detail": res,
+            }
 
         else:
             raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
@@ -6646,7 +6663,7 @@ def get_whatsapp_bot_status():
     if _last_bot_status_cache and (now_mono - _last_bot_status_time) < 2.0:
         return _last_bot_status_cache
 
-    now_ts = int(datetime.utcnow().timestamp() * 1000)
+    now_ts = int(get_indian_time().timestamp() * 1000)
     res = None
     try:
         rqr = requests.get("http://localhost:5002/qr-data", timeout=1.5)
@@ -7059,7 +7076,7 @@ def backup_bot_session_files(
         s3_key = f"whatsapp-sessions/{session_id}.json"
         data_payload = json.dumps({
             "session_id": session_id,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": get_indian_time().isoformat(),
             "files": files
         }, ensure_ascii=False).encode("utf-8")
         
@@ -7473,7 +7490,7 @@ def recover_stale_queue_claims(db: Session, threshold_seconds: int = 60) -> int:
             FOR UPDATE SKIP LOCKED
         """)).fetchall()
 
-        now_utc = datetime.utcnow()
+        now_utc = get_indian_time()
         for r in rows:
             q_id = r[0]
             target = r[1] or ""
@@ -7682,7 +7699,7 @@ def poll_bot_queue(
             return {"success": True, "items": []}
 
         items = []
-        now_iso = datetime.utcnow().isoformat()
+        now_iso = get_indian_time().isoformat()
         worker_id = instance_id if (instance_id and isinstance(instance_id, str)) else "leader_worker"
 
         for r in rows:
@@ -7756,7 +7773,7 @@ def mark_bot_queue_attempting(payload: dict = Body(...), db: Session = Depends(g
             "send_boundary_entered": True,
             "send_attempted": True,
             "dispatch_stage": "send_boundary_entered",
-            "send_boundary_at": datetime.utcnow().isoformat(),
+            "send_boundary_at": get_indian_time().isoformat(),
             "attempt_instance_id": instance_id
         })
 
@@ -8395,7 +8412,7 @@ def ingest_bot_inbound_message(
         if prev_thread and prev_thread.assigned_to_emp_id:
             assigned_emp_id = prev_thread.assigned_to_emp_id
 
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     m_type = (payload.message_type or 'text').lower()
     if (m_type == 'text' or not m_type) and payload.media_url:
         mime = (payload.media_mime_type or '').lower()

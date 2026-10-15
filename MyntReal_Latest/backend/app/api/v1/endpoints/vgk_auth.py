@@ -1784,7 +1784,7 @@ def vgk_create_ticket(
         ticket_type='general',
         source_channel='vgk_portal',
         partner_id=current_member.id,
-        created_date=datetime.utcnow(),
+        created_date=get_indian_time(),
         company_id=_derive_ticket_company_id(db, partner_id=current_member.id),
     )
     if request.customer_name:
@@ -3277,7 +3277,7 @@ async def vgk_membership_receipt(
 
     # Filename: Name_VGKID_ActivationDate.pdf
     safe_name = (current_member.partner_name or 'Member').replace(' ', '_').replace('/', '-')
-    act_date_short = (current_member.vgk_activated_at or current_member.created_at or datetime.utcnow()).strftime('%d%b%Y')
+    act_date_short = (current_member.vgk_activated_at or current_member.created_at or get_indian_time()).strftime('%d%b%Y')
     filename = f"{safe_name}_{current_member.partner_code}_{act_date_short}.pdf"
     return StreamingResponse(
         pdf_buffer,
@@ -4558,7 +4558,7 @@ async def vgk_update_lead(
     if field_support_supported is not None:
         lead.field_support_supported = field_support_supported
 
-    lead.updated_at = datetime.utcnow()
+    lead.updated_at = get_indian_time()
     db.commit()
     db.refresh(lead)
 

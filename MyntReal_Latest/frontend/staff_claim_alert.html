@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claim VGK4U Request — Staff Portal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; min-height: 100vh; padding-bottom: 50px; }
+    .claim-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 26px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .claim-container { max-width: 680px; margin: -20px auto 0; padding: 0 16px; }
+    .claim-card { background: white; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; overflow: hidden; }
+    .badge-app { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-sup { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .btn-claim { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: 700; padding: 14px 28px; border-radius: 12px; font-size: 16px; border: none; box-shadow: 0 4px 14px rgba(37,99,235,0.35); transition: all 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-claim:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.45); color: white; }
+    .action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px; text-decoration: none; border: 1px solid transparent; transition: all 0.15s; }
+  </style>
+</head>
+<body>
+
+  <div class="claim-header text-center">
+    <div style="font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">
+      <i class="fas fa-shield-alt me-1 text-primary"></i> VGK4U Staff Intake Portal
+    </div>
+    <h3 style="font-weight: 900; margin: 0; font-size: 22px;">Partner Alert &amp; Application Claim</h3>
+  </div>
+
+  <div class="claim-container">
+    <div class="claim-card mt-3">
+      <!-- Loading Skeleton -->
+      <div id="loadingState" class="p-5 text-center">
+        <i class="fas fa-circle-notch fa-spin fa-2x text-primary mb-3"></i>
+        <div style="font-weight: 600; color: #64748b;">Loading request details...</div>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="p-5 text-center" style="display: none;">
+        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+        <h5 id="errorMessage" style="font-weight: 800; color: #0f172a;">Request Not Found</h5>
+        <p class="text-muted small">The claim link may be invalid or expired.</p>
+        <a href="/staff/login.html" class="btn btn-outline-primary btn-sm mt-2">Go to Staff Login</a>
+      </div>
+
+      <!-- Main Content -->
+      <div id="contentState" style="display: none;">
+        <!-- Alert Status Banner -->
+        <div id="statusBanner" style="padding: 16px 22px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="alertTypeBadge" class="badge px-3 py-2 rounded-pill fw-bold" style="font-size: 13px;"></span>
+            <span id="alertCodeDisplay" style="font-family: monospace; font-weight: 700; color: #475569; font-size: 13px;"></span>
+          </div>
+          <div id="statusBadge" style="font-size: 13px; font-weight: 700;"></div>
+        </div>
+
+        <div style="padding: 24px;">
+          <!-- Partner Profile Box -->
+          <div style="background: #f8fafc; border-radius: 12px; padding: 18px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <div class="text-muted small text-uppercase fw-bold mb-2" style="letter-spacing: 0.5px;">Channel Partner Information</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <div id="partnerNameDisplay" style="font-size: 18px; font-weight: 800; color: #0f172a;"></div>
+                <div style="color: #64748b; font-size: 13px; margin-top: 2px;">
+                  <i class="fas fa-id-badge me-1"></i> <span id="partnerCodeDisplay"></span>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 16px; font-weight: 700; color: #0f172a;">
+                  <i class="fas fa-phone-alt me-1 text-success"></i> <span id="partnerPhoneDisplay"></span>
+                </div>
+                <div id="submittedTimeDisplay" style="font-size: 12px; color: #94a3b8; margin-top: 2px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes / Customer Details -->
+          <div style="margin-bottom: 18px;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+              <div class="text-muted small text-uppercase fw-bold" style="letter-spacing: 0.5px;">Request Notes / Customer Requirement</div>
+              <div id="serviceTicketBadgesWrap" class="d-flex flex-wrap gap-1"></div>
+            </div>
+            <div id="notesDisplay" style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.6; color: #334155; white-space: pre-wrap;"></div>
+            <div id="attachmentsDisplay" style="display: none; margin-top: 10px;"></div>
+          </div>
+
+          <!-- SLA & Handling Metrics Strip -->
+          <div id="slaMetricsStrip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Pending Since</div>
+              <div id="metricPendingSince" style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">—</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Claimed By</div>
+              <div id="metricClaimedBy" style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">Unclaimed</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Time Taken / Running</div>
+              <div id="metricHandlingTime" style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">—</div>
+            </div>
+          </div>
+
+          <!-- Claim Action Section -->
+          <div id="claimActionSection">
+            <!-- Unclaimed: Show Big Claim Button -->
+            <div id="unclaimedBox">
+              <div class="alert alert-info py-2 px-3 small mb-3" style="border-radius: 8px;">
+                <i class="fas fa-info-circle me-1"></i> Clicking claim assigns this partner request to you and notifies the team.
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <button id="btnClaimNow" onclick="doClaimAlert()" class="btn-claim">
+                  <i class="fas fa-bolt"></i> Claim This Request Now
+                </button>
+                <button onclick="doUpdateStatus('CANCELLED')" class="btn btn-outline-danger fw-bold py-2" style="border-radius: 10px;">
+                  <i class="fas fa-times-circle me-1"></i> Cancel Request
+                </button>
+              </div>
+            </div>
+
+            <!-- Login Prompt if not logged in -->
+            <div id="loginPromptBox" style="display: none;" class="text-center p-3 border rounded-3 bg-light">
+              <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+              <div class="fw-bold text-dark mb-1">Staff Authentication Required</div>
+              <p class="text-muted small mb-3">Please log in to your staff account to claim this request.</p>
+              <button onclick="goToStaffLogin()" class="btn btn-primary px-4 fw-bold">Log In as Staff</button>
+            </div>
+
+            <!-- Already Claimed by Someone Else -->
+            <div id="alreadyClaimedOtherBox" style="display: none;" class="p-3 bg-warning-subtle border border-warning rounded-3 mb-3">
+              <div style="font-weight: 800; color: #854d0e; font-size: 15px; margin-bottom: 4px;">
+                <i class="fas fa-lock me-1"></i> Already Claimed
+              </div>
+              <div id="claimedOtherText" style="font-size: 13.5px; color: #713f12;"></div>
+              <div id="reclaim3hContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #eab308;">
+                <div style="font-size: 12.5px; font-weight: 700; color: #b91c1c; margin-bottom: 8px;">
+                  <i class="fas fa-clock me-1"></i> SLA Alert: Pending for over 3 hours without completion — eligible for Re-Claim by any Sales/Leadership staff!
+                </div>
+                <button id="btnReclaimNow" onclick="doClaimAlert()" class="btn-claim" style="background: linear-gradient(135deg, #ea580c, #c2410c);">
+                  <i class="fas fa-sync-alt"></i> Re-Claim This Request Now (&gt;3h SLA)
+                </button>
+              </div>
+            </div>
+
+            <!-- Claimed by Current User: Actions Workspace -->
+            <div id="claimedCurrentBox" style="display: none;">
+              <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3 mb-3" style="border-radius: 8px;">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fas fa-check-circle text-success fs-5"></i>
+                  <div id="activeHandlerBannerText" style="font-size: 13.5px; font-weight: 600;">
+                    You are handling this request! Contact the member below:
+                  </div>
+                </div>
+                <a href="/staff/progress?tab=member_applications" class="btn btn-sm btn-outline-dark fw-bold" style="font-size: 12px;">
+                  <i class="fas fa-th-list me-1"></i> Full Applications Dashboard
+                </a>
+              </div>
+
+              <!-- Quick Communication Tools -->
+              <div class="d-flex flex-wrap gap-2 mb-4">
+                <a id="btnCallSoftphone" href="#" class="action-btn" style="background: #2563eb; color: white;">
+                  <i class="fas fa-phone-volume"></i> Call via Softphone
+                </a>
+                <a id="btnWhatsApp" href="#" target="_blank" class="action-btn" style="background: #16a34a; color: white;">
+                  <i class="fab fa-whatsapp"></i> WhatsApp Chat
+                </a>
+                <a id="btnOpenCRM" href="/staff/leads" class="action-btn" style="background: #64748b; color: white;">
+                  <i class="fas fa-external-link-alt"></i> Open CRM
+                </a>
+                <a id="btnOpenServiceModule" href="/staff/tickets" class="action-btn" style="display: none; background: #dc2626; color: white;">
+                  <i class="fas fa-ticket-alt"></i> Open Service Tickets
+                </a>
+              </div>
+
+              <!-- Status Progression & Notes -->
+              <div style="background: #f1f5f9; border-radius: 12px; padding: 18px; border: 1px solid #e2e8f0;">
+                <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; color: #1e293b;">
+                  <i class="fas fa-edit me-1 text-primary"></i> Update Request Status
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-bold text-muted">Processing Notes / Update / Cancellation Reason</label>
+                  <textarea id="staffNotesInput" class="form-control" rows="2" placeholder="e.g. Spoke to partner; customer lead created for 3kW solar system..."></textarea>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button onclick="doUpdateStatus('IN_PROGRESS')" class="btn btn-outline-primary btn-sm fw-bold">
+                    <i class="fas fa-spinner me-1"></i> Mark In Progress
+                  </button>
+                  <button onclick="doUpdateStatus('PROCESSED')" class="btn btn-success btn-sm fw-bold">
+                    <i class="fas fa-check-double me-1"></i> Mark as Completed
+                  </button>
+                  <button onclick="doUpdateStatus('CANCELLED')" class="btn btn-outline-danger btn-sm fw-bold">
+                    <i class="fas fa-times-circle me-1"></i> Cancel Request
+                  </button>
+                </div>
+              </div>
+
+              <!-- Existing Processing History -->
+              <div id="processingHistorySection" style="margin-top: 16px; display: none;">
+                <div class="text-muted small fw-bold mb-1">Previous Update Notes:</div>
+                <div id="historyNotesDisplay" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12.5px; color: #475569; white-space: pre-wrap;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentToken = '';
+    let alertData = null;
+
+    function formatDurationSec(secs) {
+      if (secs === null || secs === undefined || isNaN(secs)) return '—';
+      const s = Math.max(0, Math.floor(Number(secs)));
+      const hrs = Math.floor(s / 3600);
+      const mins = Math.floor((s % 3600) / 60);
+      if (hrs > 0) return `${hrs}h ${mins}m`;
+      if (mins > 0) return `${mins}m ${s % 60}s`;
+      return `${s}s`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      currentToken = urlParams.get('token');
+
+      if (!currentToken) {
+        showError('Missing Claim Token', 'A valid security token is required to view this request.');
+        return;
+      }
+
+      loadAlertDetails();
+    });
+
+    async function loadAlertDetails() {
+      try {
+        const res = await fetch(`/api/v1/vgk/quick-alerts/details-by-token?token=${encodeURIComponent(currentToken)}`);
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+          showError('Request Not Found', json.detail || 'This request may have been removed or expired.');
+          return;
+        }
+
+        alertData = json.alert;
+        renderAlertUI(alertData);
+      } catch (err) {
+        showError('Connection Error', 'Could not communicate with the server. Please check your network.');
+      }
+    }
+
+    function renderAlertUI(alert) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'none';
+      document.getElementById('contentState').style.display = 'block';
+
+      // Type Badge
+      const isApp = alert.alert_type === 'APPLICATION';
+      const typeBadge = document.getElementById('alertTypeBadge');
+      typeBadge.className = isApp ? 'badge badge-app px-3 py-2 rounded-pill fw-bold' : 'badge badge-sup px-3 py-2 rounded-pill fw-bold';
+      typeBadge.innerHTML = isApp ? '<i class="fas fa-bolt me-1"></i> Application Ready' : '<i class="fas fa-life-ring me-1"></i> Support';
+
+      document.getElementById('alertCodeDisplay').textContent = alert.alert_code;
+
+      // Status Badge
+      const statusBadge = document.getElementById('statusBadge');
+      if (alert.status === 'PENDING') {
+        statusBadge.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i> Unclaimed (Pending)</span>';
+      } else if (alert.status === 'CLAIMED' || alert.status === 'IN_PROGRESS') {
+        statusBadge.innerHTML = '<span class="badge bg-primary"><i class="fas fa-user-check me-1"></i> ' + alert.status + '</span>';
+      } else if (alert.status === 'PROCESSED') {
+        statusBadge.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Processed / Completed</span>';
+      } else if (alert.status === 'CANCELLED') {
+        statusBadge.innerHTML = '<span class="badge bg-danger"><i class="fas fa-ban me-1"></i> Cancelled</span>';
+      }
+
+      // Service Ticket Badges & Attachments
+      const badgesWrap = document.getElementById('serviceTicketBadgesWrap');
+      if (badgesWrap) {
+        let bHtml = '';
+        if (alert.linked_ticket_code) {
+          bHtml += `<a href="/staff/tickets" class="badge text-decoration-none" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:12px;"><i class="fas fa-ticket-alt me-1"></i>Service Ticket: ${alert.linked_ticket_code}</a>`;
+          const svcBtn = document.getElementById('btnOpenServiceModule');
+          if (svcBtn) svcBtn.style.display = 'inline-flex';
+        }
+        if (alert.issue_category) {
+          bHtml += `<span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:12px;">${alert.issue_category}</span>`;
+        }
+        badgesWrap.innerHTML = bHtml;
+      }
+
+      const attWrap = document.getElementById('attachmentsDisplay');
+      if (attWrap) {
+        if (alert.attachments && alert.attachments.length) {
+          attWrap.style.display = 'block';
+          attWrap.innerHTML = `<div class="small fw-bold text-muted mb-1"><i class="fas fa-images me-1"></i>Uploaded Support Images:</div>` +
+            `<div class="d-flex flex-wrap gap-2">` +
+            alert.attachments.map((att, idx) => `
+              <a href="${att.file_url}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold" style="border-radius:8px;font-size:12px;">
+                <i class="fas fa-image me-1"></i>View Image ${idx + 1}
+              </a>
+            `).join('') +
+            `</div>`;
+        } else {
+          attWrap.style.display = 'none';
+        }
+      }
+
+      // Member Details
+      document.getElementById('partnerNameDisplay').textContent = alert.partner_name || 'Channel Partner';
+      document.getElementById('partnerCodeDisplay').textContent = alert.partner_code || '—';
+      const cleanPhone = (alert.partner_phone || '').replace(/\D/g, '').slice(-10);
+      document.getElementById('partnerPhoneDisplay').textContent = cleanPhone ? `+91 ${cleanPhone}` : 'No Phone';
+      
+      const createdDate = alert.created_at_ist || (alert.created_at ? new Date(alert.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '');
+      document.getElementById('submittedTimeDisplay').textContent = createdDate ? `Submitted: ${createdDate}` : '';
+
+      document.getElementById('notesDisplay').textContent = alert.notes || 'No extra notes provided by partner.';
+
+      // SLA Metrics
+      document.getElementById('metricPendingSince').textContent = alert.status === 'PROCESSED'
+        ? `Resolved (${formatDurationSec(alert.total_turnaround_seconds)})`
+        : (alert.status === 'CANCELLED' ? 'Cancelled' : `${formatDurationSec(alert.pending_since_seconds)} ago`);
+      document.getElementById('metricClaimedBy').textContent = alert.claimed_by_staff_name
+        ? `${alert.claimed_by_staff_name}${alert.claimed_by_emp_code ? ' (' + alert.claimed_by_emp_code + ')' : ''}`
+        : 'Unclaimed';
+      document.getElementById('metricHandlingTime').textContent = alert.status === 'CANCELLED'
+        ? 'Cancelled'
+        : (alert.claimed_at
+          ? `${formatDurationSec(alert.handling_seconds)} (${alert.status === 'PROCESSED' ? 'Completed' : 'Running'})`
+          : 'Waiting for Claim');
+
+      // Check Staff Login
+      const staffToken = localStorage.getItem('staff_token') || localStorage.getItem('access_token');
+      const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+      const staffId = staffUser.id || null;
+
+      // Section switches
+      const unclaimedBox = document.getElementById('unclaimedBox');
+      const loginPromptBox = document.getElementById('loginPromptBox');
+      const alreadyClaimedOtherBox = document.getElementById('alreadyClaimedOtherBox');
+      const claimedCurrentBox = document.getElementById('claimedCurrentBox');
+      const reclaim3hContainer = document.getElementById('reclaim3hContainer');
+
+      unclaimedBox.style.display = 'none';
+      loginPromptBox.style.display = 'none';
+      alreadyClaimedOtherBox.style.display = 'none';
+      claimedCurrentBox.style.display = 'none';
+      if (reclaim3hContainer) reclaim3hContainer.style.display = 'none';
+
+      if (alert.status === 'PENDING') {
+        if (!staffToken) {
+          loginPromptBox.style.display = 'block';
+        } else {
+          unclaimedBox.style.display = 'block';
+        }
+      } else {
+        // Already claimed
+        const isMyClaim = staffId && (Number(alert.claimed_by_staff_id) === Number(staffId));
+        if (!isMyClaim) {
+          alreadyClaimedOtherBox.style.display = 'block';
+          const claimedAtStr = alert.claimed_at_ist || (alert.claimed_at ? new Date(alert.claimed_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : 'recently');
+          document.getElementById('claimedOtherText').textContent = `Claimed by ${alert.claimed_by_staff_name || 'Staff'} on ${claimedAtStr}.`;
+          if (staffToken && alert.is_reclaimable_3h && alert.status !== 'PROCESSED' && alert.status !== 'CANCELLED') {
+            if (reclaim3hContainer) reclaim3hContainer.style.display = 'block';
+          }
+        }
+        if (staffToken) {
+          claimedCurrentBox.style.display = 'block';
+          const bannerTxt = document.getElementById('activeHandlerBannerText');
+          if (bannerTxt) {
+            bannerTxt.textContent = isMyClaim
+              ? 'You are handling this request! Contact the member below:'
+              : `Currently assigned to ${alert.claimed_by_staff_name || 'Staff'}. Workspace controls below:`;
+          }
+          // Wire buttons
+          document.getElementById('btnCallSoftphone').href = `/staff/softphone?phone=${cleanPhone}&auto_dial=1`;
+          document.getElementById('btnWhatsApp').href = `https://wa.me/91${cleanPhone}?text=Hello%20${encodeURIComponent(alert.partner_name)}%2C%20I%20am%20contacting%20you%20from%20VGK4U%20regarding%20your%20request%20${alert.alert_code}.`;
+          
+          if (alert.processing_notes) {
+            document.getElementById('processingHistorySection').style.display = 'block';
+            document.getElementById('historyNotesDisplay').textContent = alert.processing_notes;
+          }
+        } else if (!isMyClaim) {
+          loginPromptBox.style.display = 'block';
+        }
+      }
+    }
+
+    async function doClaimAlert() {
+      const btn = document.getElementById('btnClaimNow');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Locking Claim...';
+
+      const staffToken = localStorage.getItem('staff_token') || localStorage.getItem('access_token');
+      if (!staffToken) {
+        goToStaffLogin();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/vgk/quick-alerts/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + staffToken
+          },
+          body: JSON.stringify({ token: currentToken })
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          alert('Success: ' + json.message);
+          window.location.reload();
+        } else {
+          alert(json.message || 'Could not claim this request.');
+          window.location.reload();
+        }
+      } catch (err) {
+        alert('Network error while claiming request.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-bolt"></i> Claim This Request Now';
+      }
+    }
+
+    async function doUpdateStatus(newStatus) {
+      let notes = (document.getElementById('staffNotesInput')?.value || '').trim();
+      if (newStatus === 'CANCELLED' && !notes) {
+        const reason = prompt('Enter reason for cancelling this request:', 'Cancelled as requested / duplicate');
+        if (reason === null) return;
+        notes = reason.trim() || 'Cancelled by staff';
+      }
+      const staffToken = localStorage.getItem('staff_token') || localStorage.getItem('access_token');
+
+      try {
+        const res = await fetch('/api/v1/vgk/quick-alerts/update-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + staffToken
+          },
+          body: JSON.stringify({
+            token: currentToken,
+            status: newStatus,
+            notes: notes || (newStatus === 'PROCESSED' ? 'Request marked as completed' : (newStatus === 'CANCELLED' ? 'Cancelled by staff' : 'Processing request'))
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`Status updated to ${newStatus}`);
+          window.location.reload();
+        } else {
+          alert(json.detail || 'Failed to update status.');
+        }
+      } catch (err) {
+        alert('Error updating status.');
+      }
+    }
+
+    function goToStaffLogin() {
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/staff/login.html?redirect=${returnUrl}`;
+    }
+
+    function showError(title, msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('contentState').style.display = 'none';
+      document.getElementById('errorMessage').textContent = title;
+      document.getElementById('errorState').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

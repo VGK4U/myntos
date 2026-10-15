@@ -15666,7 +15666,7 @@ class SalesInvoiceService:
             # 2. DC_COUPON_UNIFIED_001: Check marketplace_promo_codes (same pool as Marketplace)
             from app.models.marketplace import MarketplacePromoCode
             from datetime import datetime as _dt
-            _now = _dt.utcnow()
+            _now = get_indian_time()
             mp = db.query(MarketplacePromoCode).filter(
                 MarketplacePromoCode.code == code_upper,
                 MarketplacePromoCode.status == 'active',

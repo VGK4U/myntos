@@ -4,6 +4,7 @@ Global Multi-Tenant Worker implementing FOR UPDATE SKIP LOCKED.
 Includes stale lock recovery sweeper, exponential backoff, DLQ, and non-blocking job handlers.
 """
 
+from app.core.timezone import get_indian_time
 import logging
 import asyncio
 import signal
@@ -161,11 +162,11 @@ def fail_job(db: Session, job_id: int, attempts: int, max_attempts: int, error_m
     new_attempts = attempts + 1
     if new_attempts >= max_attempts:
         status = 'FAILED_DLQ'
-        next_attempt = datetime.utcnow()
+        next_attempt = get_indian_time()
     else:
         status = 'QUEUED'
         delay_seconds = 30 * (2 ** attempts)
-        next_attempt = datetime.utcnow() + timedelta(seconds=delay_seconds)
+        next_attempt = get_indian_time() + timedelta(seconds=delay_seconds)
 
     try:
         db.execute(text("""
@@ -222,7 +223,7 @@ def process_single_job(db: Session, job: Dict[str, Any]):
                         sender_type=sender,
                         body_text=body[:2000],
                         delivery_status="DELIVERED" if direction == "INBOUND" else "SENT",
-                        sent_at=datetime.utcnow()
+                        sent_at=get_indian_time()
                     )
                     db.add(wa_msg)
                     db.commit()

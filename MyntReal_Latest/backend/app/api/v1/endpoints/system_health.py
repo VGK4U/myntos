@@ -3,6 +3,7 @@ System Health & Monitoring Endpoint (Release 1A Observability Layer)
 Provides real-time health telemetry for background queue, CAPI foundation, WA audit, and security encryption status.
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -60,7 +61,7 @@ def get_release_1a_health(db: Session = Depends(get_db)):
 
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": get_indian_time().isoformat(),
         "release": "Release 1A (Foundation)",
         "feature_flags": flags,
         "queue_telemetry": queue_telemetry,

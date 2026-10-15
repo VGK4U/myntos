@@ -13,6 +13,7 @@ Actions: POST /api/v1/operator-calls/{call_id}/convert-lead
 Created: Mar 2026
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -332,7 +333,7 @@ def set_myoperator_api_token(
     else:
         sc.settings_data = json.dumps({"token": token})
         sc.controlled_by_user_id = str(emp_code)
-        sc.updated_at = datetime.utcnow()
+        sc.updated_at = get_indian_time()
     db.commit()
     
     os.environ['MYOPERATOR_API_TOKEN'] = token

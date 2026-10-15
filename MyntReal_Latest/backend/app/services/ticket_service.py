@@ -4,6 +4,7 @@ Handles all ticket operations, SLA tracking, and escalation logic
 DC Protocol Jan 2026: Enhanced with EV Service workflow support
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, and_, or_
 from app.models.ticket import ServiceTicket, TicketComment, TicketAssignment, TicketAttachment, TicketLog, ServiceTicketSpareRequest, ServiceTicketBilling, ServiceTicketBillingItem
@@ -83,7 +84,7 @@ class TicketService:
         DC Protocol Mar 2026: Sequential 4-digit daily counter starting at 0001.
         Falls back to random suffix if db is unavailable.
         """
-        today = datetime.utcnow().strftime('%Y%m%d')
+        today = get_indian_time().strftime('%Y%m%d')
         prefix = f"TKT{today}"
         if db is not None:
             try:
@@ -114,7 +115,7 @@ class TicketService:
         if ticket.status in ['Resolved', 'Closed']:
             return ticket.sla_status
         
-        now = datetime.utcnow()
+        now = get_indian_time()
         if now > ticket.sla_deadline:
             return 'SLA Breached'
         return 'Within SLA'
@@ -132,7 +133,7 @@ class TicketService:
         """Create new support ticket"""
         try:
             ticket_id = TicketService.generate_ticket_id(db=db)
-            created_date = datetime.utcnow()
+            created_date = get_indian_time()
             sla_deadline = TicketService.calculate_sla_deadline(created_date)
             
             ticket = ServiceTicket(
@@ -245,24 +246,24 @@ class TicketService:
             
             old_assignee = ticket.assigned_to
             ticket.assigned_to = assigned_to
-            ticket.assigned_date = datetime.utcnow()
+            ticket.assigned_date = get_indian_time()
             
             if ticket.status == 'Open':
                 ticket.status = 'In Progress'
-                ticket.in_progress_date = datetime.utcnow()
+                ticket.in_progress_date = get_indian_time()
             
             # Deactivate previous assignments
             db.query(TicketAssignment).filter(
                 TicketAssignment.ticket_id == ticket_id,
                 TicketAssignment.is_active == True
-            ).update({'is_active': False, 'completed_date': datetime.utcnow()})
+            ).update({'is_active': False, 'completed_date': get_indian_time()})
             
             # Create new assignment
             assignment = TicketAssignment(
                 ticket_id=ticket_id,
                 assigned_from=assigned_by,
                 assigned_to=assigned_to,
-                assigned_date=datetime.utcnow(),
+                assigned_date=get_indian_time(),
                 assignment_reason=reason,
                 is_active=True
             )
@@ -274,7 +275,7 @@ class TicketService:
                 action_type='Assigned',
                 action_description=f'Ticket assigned to {assigned_to}',
                 performed_by=assigned_by,
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 old_value=old_assignee,
                 new_value=assigned_to,
                 comments=reason
@@ -311,7 +312,7 @@ class TicketService:
                 comment_type=comment_type,
                 is_internal=is_internal,
                 is_visible_to_user=not is_internal,
-                created_at=datetime.utcnow(),
+                created_at=get_indian_time(),
                 ip_address=ip_address,
                 user_agent=user_agent
             )
@@ -321,7 +322,7 @@ class TicketService:
             # Update ticket last response date
             ticket = db.query(ServiceTicket).filter(ServiceTicket.id == ticket_id).first()
             if ticket:
-                ticket.last_response_date = datetime.utcnow()
+                ticket.last_response_date = get_indian_time()
                 if comment_type == 'admin_response':
                     ticket.admin_response = comment_text
             
@@ -350,7 +351,7 @@ class TicketService:
             if not ticket:
                 return {"success": False, "message": "Ticket not found"}
             
-            now = datetime.utcnow()
+            now = get_indian_time()
             ticket.status = 'Resolved'
             ticket.resolved_date = now
             ticket.resolution_summary = resolution_summary
@@ -458,7 +459,7 @@ class TicketService:
             
             ticket.status = 'Closed'
             ticket.sub_status = 'closed'
-            ticket.closed_date = datetime.utcnow()
+            ticket.closed_date = get_indian_time()
             
             if customer_satisfaction:
                 ticket.customer_satisfaction = customer_satisfaction
@@ -469,7 +470,7 @@ class TicketService:
                 action_type='Closed',
                 action_description=f'Ticket closed by {closed_by}',
                 performed_by=closed_by,
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 old_value='Resolved',
                 new_value='Closed'
             )
@@ -489,7 +490,7 @@ class TicketService:
     def get_timeline_stats(db: Session, days: int = 30) -> Dict[str, Any]:
         """Get ticket timeline statistics"""
         try:
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = get_indian_time() - timedelta(days=days)
             
             tickets = db.query(ServiceTicket).filter(
                 ServiceTicket.created_date >= cutoff_date
@@ -588,7 +589,7 @@ class TicketService:
         """Create new EV service ticket with full customer and product details"""
         try:
             ticket_id = TicketService.generate_ticket_id(db=db)
-            created_date = datetime.utcnow()
+            created_date = get_indian_time()
             sla_deadline = TicketService.calculate_sla_deadline(created_date)
             
             base_tat_hours = 24 if ticket_type == 'technical' else 48
@@ -699,7 +700,7 @@ class TicketService:
             old_status = ticket.sub_status
             ticket.sub_status = 'acknowledged'
             ticket.status = 'In Progress'
-            ticket.in_progress_date = datetime.utcnow()
+            ticket.in_progress_date = get_indian_time()
             ticket.service_technician_id = staff_id
             # [DC_DAR_003] Always assign (even None) so we never retain a
             # stale company tag from a prior assignment — preventing
@@ -711,7 +712,7 @@ class TicketService:
                 partner_id=ticket.partner_id,
             )
             
-            now = datetime.utcnow()
+            now = get_indian_time()
             performed_by = user_id if isinstance(user_id, str) and user_id.startswith('MNR') else None
 
             status_log = TicketLog(
@@ -770,14 +771,14 @@ class TicketService:
                 return {"success": False, "message": f"Cannot diagnose ticket in status: {ticket.sub_status}"}
             
             old_status = ticket.sub_status
-            ticket.diagnosed_at = datetime.utcnow()
+            ticket.diagnosed_at = get_indian_time()
             ticket.diagnosis_notes = diagnosis_notes
             ticket.spares_required = spares_required
             
             if spares_required:
                 ticket.sub_status = 'awaiting_spares'
                 ticket.tat_extension_hours = 48
-                new_tat = TicketService.calculate_tat_due(datetime.utcnow(), 48)
+                new_tat = TicketService.calculate_tat_due(get_indian_time(), 48)
                 ticket.tat_due_at = new_tat
             else:
                 ticket.sub_status = 'ready_for_work'
@@ -787,7 +788,7 @@ class TicketService:
                 action_type='Status Changed',
                 action_description=f'Diagnosis complete - Spares required: {spares_required}',
                 performed_by=user_id if isinstance(user_id, str) and user_id.startswith('MNR') else None,
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 old_value=old_status,
                 new_value=ticket.sub_status,
                 comments=diagnosis_notes,
@@ -822,7 +823,7 @@ class TicketService:
 
         def _gen_po_number(company_id: int) -> tuple:
             from sqlalchemy import text as _text
-            ym = datetime.utcnow().strftime('%Y%m')
+            ym = get_indian_time().strftime('%Y%m')
             prefix = f'ZYPO-{ym}-'
             row = db.execute(_text(
                 "SELECT COUNT(*)+1 FROM marketplace_purchase_orders WHERE po_number LIKE :pfx AND company_id=:cid"
@@ -836,7 +837,7 @@ class TicketService:
 
         def _gen_proc_number(company_id: int) -> str:
             from sqlalchemy import text as _text
-            ym = datetime.utcnow().strftime('%Y%m')
+            ym = get_indian_time().strftime('%Y%m')
             prefix = f'ZYPR-{ym}-'
             row = db.execute(_text(
                 "SELECT COUNT(*)+1 FROM marketplace_procurement_requests WHERE procurement_number LIKE :pfx AND company_id=:cid"
@@ -857,7 +858,7 @@ class TicketService:
             if ticket.status in ['Resolved', 'Closed']:
                 return {"success": False, "message": f"Cannot request spares — ticket is {ticket.status}"}
 
-            ticket.spare_requested_at = datetime.utcnow()
+            ticket.spare_requested_at = get_indian_time()
             ticket.sub_status = 'awaiting_spares'
 
             company_id = getattr(ticket, 'company_id', None) or 1
@@ -1174,7 +1175,7 @@ class TicketService:
                     + (f'; {len(created_pos)} ZYPO(s) created' if created_pos else '')
                     + (f'; {len(created_procs)} ZYPR(s) raised' if created_procs else ''),
                 performed_by=user_id if isinstance(user_id, str) and str(user_id).startswith('MNR') else None,
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 new_value='awaiting_spares',
                 staff_performer_id=staff_id
             )
@@ -1220,7 +1221,7 @@ class TicketService:
             if not spare:
                 return {"success": False, "message": "Spare request not found"}
             
-            spare.acknowledged_at = datetime.utcnow()
+            spare.acknowledged_at = get_indian_time()
             spare.acknowledged_by_id = staff_id
             spare.acknowledgment_notes = notes
             spare.stock_available = stock_available
@@ -1233,7 +1234,7 @@ class TicketService:
             
             ticket = spare.ticket
             if ticket:
-                ticket.spare_acknowledged_at = datetime.utcnow()
+                ticket.spare_acknowledged_at = get_indian_time()
                 ticket.sub_status = 'procurement_in_progress'
                 
                 log = TicketLog(
@@ -1241,7 +1242,7 @@ class TicketService:
                     action_type='Updated',
                     action_description=f'Spare acknowledged - Stock available: {stock_available}',
                     performed_by=user_id if isinstance(user_id, str) and str(user_id).startswith('MNR') else None,
-                    performed_at=datetime.utcnow(),
+                    performed_at=get_indian_time(),
                     new_value='procurement_in_progress',
                     comments=notes,
                     staff_performer_id=staff_id
@@ -1272,7 +1273,7 @@ class TicketService:
             if not spare:
                 return {"success": False, "message": "Spare request not found"}
             
-            spare.released_at = datetime.utcnow()
+            spare.released_at = get_indian_time()
             spare.released_by_id = staff_id
             spare.release_notes = notes
             spare.procurement_status = 'released'
@@ -1297,7 +1298,7 @@ class TicketService:
                 all_released = all(s.procurement_status == 'released' for s in all_spares)
                 
                 if all_released:
-                    ticket.spare_released_at = datetime.utcnow()
+                    ticket.spare_released_at = get_indian_time()
                     ticket.sub_status = 'ready_for_work'
                     
                     log = TicketLog(
@@ -1305,7 +1306,7 @@ class TicketService:
                         action_type='Status Changed',
                         action_description='All spares released - Ready for work',
                         performed_by=user_id if isinstance(user_id, str) and str(user_id).startswith('MNR') else None,
-                        performed_at=datetime.utcnow(),
+                        performed_at=get_indian_time(),
                         old_value='procurement_in_progress',
                         new_value='ready_for_work',
                         staff_performer_id=staff_id
@@ -1341,10 +1342,10 @@ class TicketService:
             old_status = ticket.sub_status
             ticket.sub_status = 'work_complete'
             ticket.status = 'Resolved'
-            ticket.resolved_date = datetime.utcnow()
+            ticket.resolved_date = get_indian_time()
             ticket.resolution_summary = resolution_summary
             
-            resolution_time = (datetime.utcnow() - ticket.created_date).total_seconds() / 3600
+            resolution_time = (get_indian_time() - ticket.created_date).total_seconds() / 3600
             ticket.resolution_time_hours = resolution_time
             
             log = TicketLog(
@@ -1352,7 +1353,7 @@ class TicketService:
                 action_type='Resolved',
                 action_description='Service work completed',
                 performed_by=user_id if isinstance(user_id, str) and user_id.startswith('MNR') else None,
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 old_value=old_status,
                 new_value='work_complete',
                 comments=resolution_summary,
@@ -1401,7 +1402,7 @@ class TicketService:
             old_status = ticket.sub_status
             ticket.sub_status = 'closed'
             ticket.status = 'Closed'
-            ticket.closed_date = datetime.utcnow()
+            ticket.closed_date = get_indian_time()
             
             if customer_satisfaction:
                 ticket.customer_satisfaction = customer_satisfaction
@@ -1413,7 +1414,7 @@ class TicketService:
                 action_type='Closed',
                 action_description='Service ticket closed',
                 performed_by=None,  # Staff action - no MNR user ID
-                performed_at=datetime.utcnow(),
+                performed_at=get_indian_time(),
                 old_value=old_status,
                 new_value='closed',
                 staff_performer_id=staff_id
@@ -1452,7 +1453,7 @@ class TicketService:
         from datetime import datetime, timedelta
         # DC-SQ-PERF-001: Eager-load spare_requests to avoid N+1 (one query per ticket)
         # DC-SQ-PERF-002: Closed/cancelled limited to last 30 days to avoid full-table scan
-        _thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        _thirty_days_ago = get_indian_time() - timedelta(days=30)
         query = db.query(ServiceTicket).options(
             joinedload(ServiceTicket.service_technician),
             joinedload(ServiceTicket.service_manager),
@@ -1558,7 +1559,7 @@ class TicketService:
     @staticmethod
     def _generate_invoice_number(db: Session) -> str:
         """Generate unique invoice number for GST invoices: INV-YYYYMMDD-XXXX"""
-        date_str = datetime.utcnow().strftime('%Y%m%d')
+        date_str = get_indian_time().strftime('%Y%m%d')
         prefix = f"INV-{date_str}"
         last = db.query(ServiceTicketBilling).filter(
             ServiceTicketBilling.invoice_number.like(f"{prefix}%")
@@ -1574,7 +1575,7 @@ class TicketService:
     @staticmethod
     def _generate_estimate_number(db: Session) -> str:
         """Generate unique estimate number for non-GST bills: EST-YYYYMMDD-XXXX"""
-        date_str = datetime.utcnow().strftime('%Y%m%d')
+        date_str = get_indian_time().strftime('%Y%m%d')
         prefix = f"EST-{date_str}"
         last = db.query(ServiceTicketBilling).filter(
             ServiceTicketBilling.bill_reference.like(f"{prefix}%")
@@ -1776,7 +1777,7 @@ class TicketService:
                 return {"success": False, "message": "Already posted to SFMS"}
             
             billing.sfms_status = 'posted'
-            billing.sfms_posted_at = datetime.utcnow()
+            billing.sfms_posted_at = get_indian_time()
             billing.posted_by_id = posted_by_id
             
             db.commit()

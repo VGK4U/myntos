@@ -1,3 +1,4 @@
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -34,8 +35,8 @@ class RechargeTransaction(Base):
     api_tx_id = Column(String, nullable=True) # A1Topup transaction ID
     api_operator_id = Column(String, nullable=True) # ID from telecom operator
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
     
     # Relationship
     # user = relationship("User", backref="recharge_history")
@@ -55,4 +56,4 @@ class RechargePlan(Base):
     validity = Column(String, nullable=False) # e.g., '28 Days'
     data_benefit = Column(String, nullable=True) # e.g., '1.5 GB/Day'
     description = Column(String, nullable=True) # Detailed text
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)

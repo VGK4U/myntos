@@ -4,6 +4,7 @@ Complete implementation matching pre-migration Flask system
 DC Protocol Jan 2026: Enhanced with EV Service workflow support
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Boolean, Float, ForeignKey, CheckConstraint, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -43,7 +44,7 @@ class ServiceTicket(Base):
     status = Column(String(20), default='Open', nullable=False, index=True)
     
     # Timestamps
-    created_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_date = Column(DateTime, default=get_indian_time, nullable=False)
     assigned_date = Column(DateTime, nullable=True)
     in_progress_date = Column(DateTime, nullable=True)
     resolved_date = Column(DateTime, nullable=True)
@@ -251,7 +252,7 @@ class TicketComment(Base):
     
     # User tracking
     user_id = Column(String(12), ForeignKey('user.id'), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Status tracking
     is_visible_to_user = Column(Boolean, default=True, nullable=False)
@@ -289,7 +290,7 @@ class TicketAssignment(Base):
     assigned_to = Column(String(12), ForeignKey('user.id'), nullable=False)
     
     # Assignment tracking
-    assigned_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    assigned_date = Column(DateTime, default=get_indian_time, nullable=False)
     assignment_reason = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     
@@ -329,7 +330,7 @@ class TicketAttachment(Base):
     uploaded_by = Column(String(12), ForeignKey('user.id'), nullable=True)
     uploaded_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     uploaded_by_partner_id = Column(Integer, ForeignKey('official_partners.id'), nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    uploaded_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Security
     is_scanned = Column(Boolean, default=False, nullable=False)
@@ -396,7 +397,7 @@ class TicketLog(Base):
     
     # User tracking - performed_by is nullable for staff-only actions (uses staff_performer_id instead)
     performed_by = Column(String(12), ForeignKey('user.id'), nullable=True)
-    performed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    performed_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Change tracking
     old_value = Column(String(200), nullable=True)
@@ -471,7 +472,7 @@ class ServiceTicketSpareRequest(Base):
     released_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     
     # Timestamps
-    requested_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    requested_at = Column(DateTime, default=get_indian_time, nullable=False)
     acknowledged_at = Column(DateTime, nullable=True)
     ordered_at = Column(DateTime, nullable=True)
     received_at = Column(DateTime, nullable=True)
@@ -671,7 +672,7 @@ class ServiceTicketSpareTransaction(Base):
     income_entry_number = Column(String(30), nullable=True)                # denormalized for display
     income_entry_status = Column(String(20), default='PENDING', nullable=False)  # PENDING / CONFIRMED
     created_by_id       = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
-    created_at          = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at          = Column(DateTime, default=get_indian_time, nullable=False)
 
     spare_request = relationship('ServiceTicketSpareRequest', backref='transactions')
     created_by    = relationship('StaffEmployee', foreign_keys=[created_by_id], backref='spare_transactions_created')
@@ -723,7 +724,7 @@ class ServiceTicketPartnerHistory(Base):
     changed_by_user_id = Column(String(12), ForeignKey('user.id'), nullable=True)
     
     # Timestamp
-    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    changed_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # IP tracking for audit
     ip_address = Column(String(45), nullable=True)
@@ -844,8 +845,8 @@ class ServiceTicketBilling(Base):
     
     # Audit
     created_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
     posted_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     
     # Relationships
@@ -968,7 +969,7 @@ class ServiceTicketBillingItem(Base):
     product_category = Column(String(50), nullable=True)
 
     # Audit
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Relationships
     billing = relationship('ServiceTicketBilling', backref='items')

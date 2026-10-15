@@ -21,6 +21,7 @@ Reference types used (per existing constraint):
 
 from __future__ import annotations
 
+from app.core.timezone import get_indian_time
 import logging
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
@@ -360,8 +361,8 @@ def process_inter_company_transfer(
         transfer_type     = "SALE",
         narration         = narration or f"Inter-company: {reference_type} #{reference_id}",
         status            = "RECEIVED",
-        dispatched_at     = datetime.utcnow(),
-        received_at       = datetime.utcnow(),
+        dispatched_at     = get_indian_time(),
+        received_at       = get_indian_time(),
         created_by_id     = created_by_id,
     )
     db.add(transfer)

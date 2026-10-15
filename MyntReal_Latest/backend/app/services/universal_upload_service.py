@@ -23,6 +23,7 @@ USAGE:
     )
 """
 
+from app.core.timezone import get_indian_time
 import hashlib
 import logging
 import uuid
@@ -307,7 +308,7 @@ class UniversalUploadService:
         if uploaded_at and hasattr(uploaded_at, 'strftime'):
             timestamp = uploaded_at.strftime('%Y%m%d_%H%M%S')
         else:
-            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            timestamp = get_indian_time().strftime('%Y%m%d_%H%M%S')
         
         # Sanitize original filename
         # DC: Keep extension, sanitize name, limit length

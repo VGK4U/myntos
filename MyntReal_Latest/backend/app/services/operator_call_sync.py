@@ -375,7 +375,7 @@ def sync_myoperator_logs(
         close_db = True
 
     now = get_ist_now()
-    now_utc = datetime.utcnow()
+    now_utc = get_indian_time()
     # Add 1 day buffer to ts_to so IST calls occurring today are never excluded by UTC time offset
     ts_to = int((now_utc + timedelta(days=1)).timestamp())
     if days_back and days_back > 0:
@@ -486,7 +486,7 @@ def sync_myoperator_logs(
                         if call.started_at and trigger_type != "DAILY_BACKFILL":
                             try:
                                 call_start_utc = call.started_at.replace(tzinfo=None)
-                                if (datetime.utcnow() - call_start_utc).total_seconds() <= 2700:  # 45 minutes
+                                if (get_indian_time() - call_start_utc).total_seconds() <= 2700:  # 45 minutes
                                     is_recent_call = True
                             except Exception:
                                 pass

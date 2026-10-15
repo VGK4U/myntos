@@ -3,6 +3,7 @@ EV Discount Coupon System Models
 Handles Electric Vehicle purchases with coupon discount redemption
 """
 
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Numeric, Date, CheckConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -29,8 +30,8 @@ class EV(Base):
     image_url = Column(String(500))
     
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
     
     # Relationships
     purchases = relationship("Purchase", back_populates="ev")
@@ -61,7 +62,7 @@ class Purchase(Base):
     coupon_code = Column(String(50))
     
     # Status tracking
-    purchase_date = Column(Date, default=datetime.utcnow().date, nullable=False)
+    purchase_date = Column(Date, default=get_indian_time().date, nullable=False)
     status = Column(String(20), default='Pending', nullable=False)  # Pending, Approved, Completed, Cancelled, Rejected
     
     # Admin verification
@@ -114,7 +115,7 @@ class CouponBenefit(Base):
     
     # Status tracking
     status = Column(String(20), default='Applied', nullable=False)  # Applied, Verified, Reversed
-    applied_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    applied_date = Column(DateTime, default=get_indian_time, nullable=False)
     applied_by = Column(String(20))  # Admin who applied benefit
     
     # Verification
@@ -167,7 +168,7 @@ class EVRedemptionRequest(Base):
     
     # Status tracking
     status = Column(String(30), default='Pending', nullable=False)  # Pending, Approved, Rejected, Completed
-    request_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    request_date = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Admin processing
     admin_claim_status = Column(String(20), default='pending')  # pending, approved, rejected
@@ -216,7 +217,7 @@ class ReferralIncome(Base):
     
     # Status
     status = Column(String(20), default='Pending', nullable=False)  # Pending, Approved, Paid, Reversed
-    earned_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    earned_date = Column(DateTime, default=get_indian_time, nullable=False)
     approved_date = Column(DateTime)
     paid_date = Column(DateTime)
     
@@ -268,7 +269,7 @@ class FranchisePurchase(Base):
     
     # Status
     status = Column(String(30), default='Pending', nullable=False)
-    order_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    order_date = Column(DateTime, default=get_indian_time, nullable=False)
     approval_date = Column(DateTime)
     delivery_date = Column(DateTime)
     
@@ -313,7 +314,7 @@ class InsurancePolicy(Base):
     # Policy dates
     policy_start_date = Column(Date, nullable=False)
     policy_end_date = Column(Date, nullable=False)
-    issue_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    issue_date = Column(DateTime, default=get_indian_time, nullable=False)
     
     # Status
     status = Column(String(20), default='Active', nullable=False)
@@ -366,7 +367,7 @@ class FleetOrder(Base):
     
     # Status & dates
     status = Column(String(30), default='Pending', nullable=False)
-    order_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    order_date = Column(DateTime, default=get_indian_time, nullable=False)
     expected_delivery_date = Column(Date)
     
     # Relationships

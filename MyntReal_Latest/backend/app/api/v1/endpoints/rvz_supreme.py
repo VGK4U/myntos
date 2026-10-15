@@ -98,9 +98,9 @@ async def supreme_approve_income(
             .values(
                 verification_status='Super Admin Verified',  # WVV: Awaiting Finance payment
                 admin_verified_by_id=current_user.id,
-                admin_verified_at=datetime.utcnow(),
+                admin_verified_at=get_indian_time(),
                 super_admin_verified_by_id=current_user.id,
-                super_admin_verified_at=datetime.utcnow(),
+                super_admin_verified_at=get_indian_time(),
                 notes=f"RVZ Supreme Verification by {current_user.id} - Awaiting Finance payment"
             )
         )
@@ -195,8 +195,8 @@ async def supreme_approve_withdrawal(
                 # Skip-Level: Set status to Admin Verified (uniform with standard flow)
                 status='Admin Verified',
                 verified_by=current_user.id,
-                verified_at=datetime.utcnow(),
-                processed_at=datetime.utcnow(),
+                verified_at=get_indian_time(),
+                processed_at=get_indian_time(),
                 notes=f"RVZ Supreme Skip-Level Approval by {current_user.id}"
             )
         )
@@ -275,7 +275,7 @@ async def supreme_bank_transfer(
                         AND status = 'Admin Verified'
                         RETURNING user_id, withdrawal_amount, final_payout
                     """),
-                    {"req_id": withdrawal_id, "ref": request.utr_number or f"VGK_{int(datetime.utcnow().timestamp())}"}
+                    {"req_id": withdrawal_id, "ref": request.utr_number or f"VGK_{int(get_indian_time().timestamp())}"}
                 ).fetchone()
                 
                 if not withdrawal_result:
@@ -390,7 +390,7 @@ async def supreme_approve_and_pay(
                     {
                         "req_id": withdrawal_id,
                         "rvz_id": current_user.id,
-                        "ref": request.utr_number or f"RVZ_SUPREME_{int(datetime.utcnow().timestamp())}"
+                        "ref": request.utr_number or f"RVZ_SUPREME_{int(get_indian_time().timestamp())}"
                     }
                 ).fetchone()
                 

@@ -8,6 +8,7 @@ Architecture:
 - Idempotent: safe to run multiple times without duplicating records.
 """
 
+from app.core.timezone import get_indian_time
 import os
 import json
 import logging
@@ -43,7 +44,7 @@ JOB_NAMES = {
 
 def parse_iso_or_legacy_timestamp(ts_str: str) -> datetime:
     if not ts_str:
-        return datetime.utcnow()
+        return get_indian_time()
     try:
         return datetime.fromisoformat(ts_str.replace("Z", "+00:00")).replace(tzinfo=None)
     except Exception:
@@ -52,7 +53,7 @@ def parse_iso_or_legacy_timestamp(ts_str: str) -> datetime:
         return datetime.strptime(ts_str.split(" IST")[0], "%d %b %Y, %I:%M:%S %p")
     except Exception:
         pass
-    return datetime.utcnow()
+    return get_indian_time()
 
 
 def migrate_legacy_execution_logs(db: Session) -> dict:

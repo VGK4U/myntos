@@ -4,6 +4,7 @@ Complete expense tracking with bill uploads and approval workflow
 Uses hierarchical categories from ExpenseMainCategory & ExpenseSubCategory
 """
 
+from app.core.timezone import get_indian_time
 from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -531,7 +532,7 @@ async def approve_expense(
     
     expense.status = 'approved'
     expense.approved_by_id = current_user.id
-    expense.approved_at = datetime.utcnow()
+    expense.approved_at = get_indian_time()
     expense.notes = data.notes
     
     db.commit()
@@ -567,7 +568,7 @@ async def reject_expense(
     
     expense.status = 'rejected'
     expense.approved_by_id = current_user.id
-    expense.approved_at = datetime.utcnow()
+    expense.approved_at = get_indian_time()
     expense.notes = notes
     
     db.commit()
@@ -674,7 +675,7 @@ async def expense_summary(
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
     else:
-        end = datetime.utcnow()
+        end = get_indian_time()
         start = end - timedelta(days=days)
     
     expenses = db.query(Expense).filter(

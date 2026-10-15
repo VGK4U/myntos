@@ -236,6 +236,18 @@ class CRMLead(BaseModel):
     longitude = Column(String(20), nullable=True)
     grid_phase = Column(String(20), nullable=True)        # "Single Phase" / "Three Phase"
 
+    # Solar Insurance Tracking fields (Oct 2026)
+    # insurance_status: 'ineligible' | 'eligible' | 'completed'
+    # Rule: All completed leads (solar_pipeline_status == 'completed' or status == 'completed') are eligible by default unless already completed.
+    insurance_status = Column(String(30), nullable=True, default='ineligible', index=True)
+    insurance_policy_no = Column(String(100), nullable=True)
+    insurance_company = Column(String(150), nullable=True)
+    insurance_start_date = Column(Date, nullable=True)
+    insurance_expiry_date = Column(Date, nullable=True)
+    insurance_sum_insured = Column(Float, nullable=True)
+    insurance_premium = Column(Float, nullable=True)
+    insurance_notes = Column(Text, nullable=True)
+
     # B2B Meta Lead Form fields (Mar 2026)
     investment_capacity = Column(String(100), nullable=True)   # e.g. "Below ₹5 Lakhs" / "₹5-10 Lakhs"
     planning_to_start   = Column(String(100), nullable=True)   # e.g. "Immediately" / "Within 3 months"
@@ -457,6 +469,21 @@ class CRMLead(BaseModel):
             'latitude': getattr(self, 'latitude', None),
             'longitude': getattr(self, 'longitude', None),
             'grid_phase': getattr(self, 'grid_phase', None),
+            'insurance_status': (
+                'completed' if getattr(self, 'insurance_status', None) == 'completed'
+                else ('eligible' if (
+                    getattr(self, 'solar_pipeline_status', None) == 'completed'
+                    or getattr(self, 'status', None) == 'completed'
+                    or getattr(self, 'insurance_status', None) == 'eligible'
+                ) else 'ineligible')
+            ),
+            'insurance_policy_no': getattr(self, 'insurance_policy_no', None),
+            'insurance_company': getattr(self, 'insurance_company', None),
+            'insurance_start_date': _si(getattr(self, 'insurance_start_date', None)),
+            'insurance_expiry_date': _si(getattr(self, 'insurance_expiry_date', None)),
+            'insurance_sum_insured': float(self.insurance_sum_insured) if getattr(self, 'insurance_sum_insured', None) is not None else None,
+            'insurance_premium': float(self.insurance_premium) if getattr(self, 'insurance_premium', None) is not None else None,
+            'insurance_notes': getattr(self, 'insurance_notes', None),
             'investment_capacity': getattr(self, 'investment_capacity', None),
             'planning_to_start':   getattr(self, 'planning_to_start', None),
             'full_time_business':  getattr(self, 'full_time_business', None),
@@ -1056,8 +1083,8 @@ class CRMLeadPhone(BaseModel):
     is_primary = Column(Boolean, default=True, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     verification_status = Column(String(30), default='UNVERIFIED', nullable=False)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=get_indian_time, onupdate=get_indian_time, nullable=False)
 
     lead = relationship('CRMLead', backref='phone_associations')
     provenances = relationship('CRMLeadPhoneProvenance', backref='association', cascade='all, delete-orphan')
@@ -1083,7 +1110,7 @@ class CRMLeadPhoneProvenance(BaseModel):
     raw_value = Column(String(100), nullable=True)
     source_channel = Column(String(50), default='manual', nullable=False)
     source_ref = Column(Text, nullable=True)
-    captured_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    captured_at = Column(DateTime(timezone=True), default=get_indian_time, nullable=False)
 
 
 TERMINAL_LEAD_STATUSES = {'lost', 'won', 'completed', 'do_not_call'}

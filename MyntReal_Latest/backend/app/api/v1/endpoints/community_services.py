@@ -351,7 +351,7 @@ def dispatch_guc_whatsapp_messages(phones: List[str], message: str, db: Optional
         for c10 in canonical_phones:
             clean_p = "91" + c10
             target_jid = f"{clean_p}@s.whatsapp.net"
-            exec_id = f"guc_wa_{c10}_{int(datetime.utcnow().timestamp())}"
+            exec_id = f"guc_wa_{c10}_{int(get_indian_time().timestamp())}"
             
             dispatched = False
             last_err = None
@@ -412,7 +412,7 @@ def dispatch_guc_whatsapp_messages(phones: List[str], message: str, db: Optional
                             "clean_phone": clean_p,
                             "source": "guc_registration",
                             "enqueued_reason": last_err or "Scanned bot offline/disconnected",
-                            "enqueued_at": datetime.utcnow().isoformat()
+                            "enqueued_at": get_indian_time().isoformat()
                         }
                         db.execute(text("""
                             INSERT INTO whatsapp_bot_queue (

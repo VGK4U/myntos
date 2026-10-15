@@ -4,6 +4,7 @@ Fetches training video list from a public Google Doc, parses "N. Title - URL" li
 and upserts into the training_videos table.
 Called at startup, every hour via APScheduler, and on admin manual trigger.
 """
+from app.core.timezone import get_indian_time
 import re
 import logging
 import requests
@@ -69,7 +70,7 @@ def sync_training_videos_from_gdoc(db=None):
             logger.warning("[DC_TRAINING_SYNC_001] No video entries found in Google Doc")
             return {"added": 0, "updated": 0, "deactivated": 0, "total": 0}
 
-        now = datetime.utcnow()
+        now = get_indian_time()
         active_order_nums = set()
         added = 0
         updated = 0

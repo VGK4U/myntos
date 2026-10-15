@@ -3,6 +3,7 @@ Staff Journey Tracking Models
 DC Protocol: Complete audit trail for journey tracking and reimbursement
 WVV: Validated GPS data, distance calculation, photo verification
 """
+from app.core.timezone import get_indian_time
 from sqlalchemy import Column, Integer, String, DateTime, Date, Float, Text, ForeignKey, Boolean, Enum as SQLEnum, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -134,8 +135,8 @@ class StaffJourney(Base):
     distance_overridden_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
     distance_overridden_at = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
     created_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=True)
     
     employee = relationship("StaffEmployee", foreign_keys=[employee_id], backref="journeys")
@@ -270,7 +271,7 @@ class StaffJourneyTrackPoint(Base):
     
     # Canonical Observation Identity (UUIDv4 generated at sensor capture)
     client_observation_id = Column(String(36), nullable=True, index=True)
-    server_received_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+    server_received_at = Column(DateTime, nullable=True, default=get_indian_time)
     
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
@@ -292,7 +293,7 @@ class StaffJourneyTrackPoint(Base):
     # DC_JOURNEY_ADDRESS_001 (Jan 22, 2026): Location address for stop point visualization
     address = Column(String(500), nullable=True)
     
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
+    timestamp = Column(DateTime, nullable=False, default=get_indian_time)
     
     journey = relationship("StaffJourney", back_populates="track_points")
 
@@ -348,7 +349,7 @@ class StaffJourneyApproval(Base):
     new_status = Column(String(50), nullable=False)
     
     approved_by = Column(Integer, ForeignKey("staff_employees.id"), nullable=False)
-    approved_at = Column(DateTime, default=datetime.utcnow)
+    approved_at = Column(DateTime, default=get_indian_time)
     
     remarks = Column(Text, nullable=True)
     
