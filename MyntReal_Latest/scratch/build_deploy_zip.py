@@ -35,7 +35,9 @@ EXCLUDE_DIRS = {
     "pgsql",
     "pgsql16",
     "frontend-next",
-    "catalog"
+    "catalog",
+    "phase5_screenshots",
+    "reports"
 }
 
 EXCLUDE_FILES = {
@@ -61,7 +63,22 @@ EXCLUDE_FILES = {
     "MyntReal_Release_v204.zip",
     "deployment.zip",
     "modified_changes.zip",
-    "modified_files.zip"
+    "modified_files.zip",
+    ".env",
+    ".env.local",
+    ".env.production",
+    "local_test.jpg",
+    "test.html",
+    "test_endpoints.js",
+    "test_output.txt",
+    "flake8_errors.txt",
+    "verify_e2e_readiness.py",
+    "fix_ts.py",
+    "fix_ts2.py",
+    "fix_ts3.py",
+    "Secrets",
+    "main",
+    "tools"
 }
 
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
@@ -146,25 +163,14 @@ def build_zip():
                 except Exception as err:
                     print(f"Warning skipping file {rel_path}: {err}")
                     
-        # Dynamically inject the .env variables securely into the zip without writing to disk
-        env_path = SOURCE_DIR / 'backend' / '.env'
-        if not env_path.exists():
-            env_path = SOURCE_DIR / '.env'
-            
-        if env_path.exists():
-            env_config_lines = ["option_settings:", "  aws:elasticbeanstalk:application:environment:"]
-            with open(env_path, 'r', encoding='utf-8') as env_file:
-                for line in env_file:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, val = line.split('=', 1)
-                        val = val.strip().strip('\'"')
-                        if key.strip() != "SECRET_KEY":  # Exclude sensitive raw secret key from config
-                            env_config_lines.append(f"    {key.strip()}: \"{val}\"")
-            
-            env_config_content = '\n'.join(env_config_lines) + '\n'
-            zf.writestr('.ebextensions/01_env.config', env_config_content)
-            print(f"[SUCCESS] Injected environment variables from {env_path.name} into .ebextensions/01_env.config")
+        # Verify .ebextensions/01_env.config adheres to AWS 4096-byte hard limit
+        if '.ebextensions/01_env.config' in zf.namelist():
+            config_bytes = len(zf.read('.ebextensions/01_env.config'))
+            print(f"[VERIFY] .ebextensions/01_env.config size: {config_bytes} bytes (AWS Limit: 4096 bytes)")
+            if config_bytes > 4096:
+                raise ValueError(f"CRITICAL: .ebextensions/01_env.config size ({config_bytes} bytes) exceeds AWS limit of 4096 bytes!")
+        else:
+            print("[NOTICE] .ebextensions/01_env.config not bundled; using environment settings from EB console.")
 
     compressed_size = OUTPUT_ZIP.stat().st_size
     
