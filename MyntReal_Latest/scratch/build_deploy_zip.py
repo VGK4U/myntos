@@ -179,6 +179,9 @@ def build_zip():
     try:
         shutil.copyfile(OUTPUT_ZIP, root_zip)
         print(f"[SYNC] Synchronized {root_zip}")
+        deploy_zip = SOURCE_DIR.parent / "MyntReal_AWS_Deploy.zip"
+        shutil.copyfile(OUTPUT_ZIP, deploy_zip)
+        print(f"[SYNC] Synchronized {deploy_zip}")
     except Exception as e:
         print(f"Notice: Root copy: {e}")
 
