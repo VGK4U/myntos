@@ -7809,6 +7809,7 @@ const server = http.createServer(async (req, res) => {
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
     const RESERVED_PREFIXES = new Set([
+      'app', 'apk', 'get-app', 'download-app', 'mobile-app', 'myntreal',
       'customer', 'recharge', 'scratch-card', 'public', 'assets', 'api', 'staff', 'health', 'healthz', 'ping',
       'scan', 'qr', 'whatsapp', 'whatsapp-qr', 'qr-data', 'user', 'user-home', 'rvz', 'admin', 'favicon.ico',
       'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator',
@@ -7834,7 +7835,9 @@ const server = http.createServer(async (req, res) => {
           // Render Public Tenant Single Page Landing Site
           try {
             const landingApiUrl = `${BACKEND_URL_SERVER}/api/v1/public/tenant/${extractedCode}/landing`;
-            const apiRes = await fetch(landingApiUrl);
+            const _landingAbort = new AbortController();
+            const _landingTimer = setTimeout(() => _landingAbort.abort(), 3000);
+            const apiRes = await fetch(landingApiUrl, { signal: _landingAbort.signal }).finally(() => clearTimeout(_landingTimer));
             if (apiRes.ok) {
               const apiJson = await apiRes.json();
               const landingData = apiJson.data || {};
