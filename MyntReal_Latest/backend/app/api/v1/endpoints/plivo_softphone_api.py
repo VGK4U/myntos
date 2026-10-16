@@ -289,11 +289,15 @@ def sync_browser_call_event(
                         except Exception:
                             pass
 
+                    effective_phone = (session.customer_phone if session.direction == 'inbound' else session.destination_number) or ''
+                    if not effective_phone and session.customer_phone:
+                        effective_phone = session.customer_phone
+
                     if not existing_log:
                         db.add(StaffCallLog(
                             company_id=session.company_id or user_company_id or 1,
                             staff_id=session.operator_id,
-                            phone_number=session.destination_number or '',
+                            phone_number=effective_phone,
                             contact_name=lead_contact_name or '',
                             call_type=call_type_val,
                             call_datetime=call_dt,
@@ -310,6 +314,10 @@ def sync_browser_call_event(
                     else:
                         existing_log.duration_seconds = session.duration_seconds or 0
                         existing_log.call_type = call_type_val
+                        if effective_phone and (not existing_log.phone_number or existing_log.phone_number in ('918031728899', '+918031728899')):
+                            existing_log.phone_number = effective_phone
+                        if lead_contact_name:
+                            existing_log.contact_name = lead_contact_name
                 except Exception as e:
                     logger.warning(f"[SOFTPHONE-STAFF-CALL-LOG] Sync error: {e}")
 

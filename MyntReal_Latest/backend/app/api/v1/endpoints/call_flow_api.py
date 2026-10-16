@@ -1169,12 +1169,42 @@ async def plivo_application_hangup(
                 call_type_val = 'INCOMING' if session.direction == 'inbound' else 'OUTGOING'
             else:
                 call_type_val = 'MISSED'
+
+            # Accurately resolve caller customer phone vs company DID
+            effective_phone = (session.customer_phone if session.direction == 'inbound' else session.destination_number) or ''
+            if not effective_phone and session.customer_phone:
+                effective_phone = session.customer_phone
+
+            lead_contact_name = ''
+            if session.lead_id:
+                try:
+                    from app.models.crm import CRMLead
+                    lead_obj = db.query(CRMLead).filter(CRMLead.id == session.lead_id).first()
+                    if lead_obj and lead_obj.name:
+                        lead_contact_name = lead_obj.name.strip()
+                except Exception:
+                    pass
+            elif effective_phone:
+                try:
+                    from app.models.crm import CRMLead
+                    clean_d = re.sub(r'\D', '', effective_phone)[-10:]
+                    if clean_d:
+                        lead_obj = db.query(CRMLead).filter(CRMLead.phone.ilike(f"%{clean_d}%")).order_by(CRMLead.id.desc()).first()
+                        if lead_obj and lead_obj.name:
+                            lead_contact_name = lead_obj.name.strip()
+                            if not session.lead_id:
+                                session.lead_id = lead_obj.id
+                except Exception:
+                    pass
+
+            contact_name_val = lead_contact_name or (session.operator_name if session.direction != 'inbound' else '') or ''
+
             if not existing_log:
                 db.add(StaffCallLog(
                     company_id=session.company_id or 1,
                     staff_id=session.operator_id,
-                    phone_number=session.destination_number or '',
-                    contact_name=session.operator_name or '',
+                    phone_number=effective_phone,
+                    contact_name=contact_name_val,
                     call_type=call_type_val,
                     call_datetime=call_dt,
                     call_date=call_dt.strftime('%Y-%m-%d'),
@@ -1190,6 +1220,13 @@ async def plivo_application_hangup(
             else:
                 existing_log.duration_seconds = session.duration_seconds or 0
                 existing_log.call_type = call_type_val
+                if effective_phone and (not existing_log.phone_number or existing_log.phone_number in ('918031728899', '+918031728899')):
+                    existing_log.phone_number = effective_phone
+                if contact_name_val:
+                    existing_log.contact_name = contact_name_val
+                if session.lead_id and not existing_log.matched_lead_id:
+                    existing_log.matched_lead_id = session.lead_id
+                    existing_log.matched_at = get_indian_time()
                 if hangup_rec_url:
                     existing_log.has_recording = True
         except Exception as e:
@@ -3399,13 +3436,11 @@ def stream_call_recording(
         except Exception:
             pass
 
-    # 4. Fallback: Spoken announcement only for genuinely answered calls
-    dur = session.duration_seconds or 0
-    if dur > 0 and session.answered_at:
-        wav_bytes = _generate_synthetic_call_audio(dur)
-        return _serve_audio_bytes(request, wav_bytes, media_type="audio/wav")
-
-    raise HTTPException(status_code=404, detail="No audio recording available for unanswered or zero-duration call")
+    # 4. If no recording available, report 404 rather than playing synthetic placeholder carrier prompt voice
+    raise HTTPException(
+        status_code=404,
+        detail="Audio recording is currently being processed by carrier or unavailable"
+    )
 
 
 @router.get("/calls/{phone}/customer-history")
@@ -4254,6 +4289,32 @@ async def plivo_ivr_agent_dial_complete(
 
     query_params = dict(request.query_params)
     xml_response = CallFlowInterpreter.handle_agent_dial_complete(
+        db=db,
+        form_data=dict(form_data),
+        query_params=query_params
+    )
+    return Response(content=xml_response, media_type="application/xml")
+
+
+@router.api_route("/plivo/ivr/sticky-dial-complete", methods=["GET", "POST"])
+async def plivo_ivr_sticky_dial_complete(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Invoked by Plivo when a sticky agent <Dial> completes.
+    Option A: If answered/completed -> Hangup.
+    If unanswered -> dedicated personal voicemail & alert.
+    """
+    form_data = {}
+    if request.method == "POST":
+        try:
+            form_data = await request.form()
+        except Exception:
+            pass
+
+    query_params = dict(request.query_params)
+    xml_response = CallFlowInterpreter.handle_sticky_dial_complete(
         db=db,
         form_data=dict(form_data),
         query_params=query_params

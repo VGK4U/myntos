@@ -1590,14 +1590,17 @@ class CallFlowInterpreter:
         caller_phone: str,
         called_did: str,
         company_id: int,
-        now_dt: Optional[datetime] = None
+        now_dt: Optional[datetime] = None,
+        session_id: Optional[str] = None,
+        call_uuid: Optional[str] = None
     ) -> Optional[str]:
         """
         Deterministic Recent-Caller Callback Routing:
         1. Guard: Check Business Hours & Holiday evaluation (MUST NEVER dial staff when closed).
         2. Resolve assigned employee via _resolve_caller_assigned_staff.
         3. Verify employee has a registered/live Plivo WebRTC softphone endpoint.
-        4. If available -> attempt direct dial. If no-answer/offline -> proceed to Sales IVR.
+        4. If available -> attempt direct dial with dual-party session recording.
+           Extended timeout (35s) + Option A dedicated personal voicemail fallback.
         """
         if not caller_phone:
             return None
@@ -1640,13 +1643,18 @@ class CallFlowInterpreter:
                 targets_xml = "\n".join(dial_targets)
                 mode_desc = "dual-ring (WebRTC + Mobile)" if len(dial_targets) > 1 else ("WebRTC Softphone" if sip_uri else f"Personal Mobile {agent_phone}")
                 logger.info(f"[STICKY-AGENT] Caller {caller_phone} routed to employee {emp.full_name} ({emp.id}) via {match_reason} [{mode_desc}]")
+
+                domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
+                rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback?session_id={session_id or ''}"
+                dial_cb = f"{domain}/api/v1/telephony/plivo/dial-callback?session_id={session_id or ''}&amp;direction=inbound"
+                sticky_action_url = f"{domain}/api/v1/telephony/plivo/ivr/sticky-dial-complete?staff_id={emp.id}&amp;called_did={called_did}&amp;caller_phone={caller_phone}&amp;session_id={session_id or ''}"
+
                 return cls._generate_xml_response([
                     f'<Speak voice="Polly.Aditi" language="en-IN">Welcome back to Mynt Real. Connecting you directly to your executive, {emp.full_name}. Please hold.</Speak>',
-                    f'<Dial timeout="25" callerId="{called_did}" action="https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete">',
+                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" maxLength="28800" callbackUrl="{rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                    f'<Dial timeout="35" callerId="{called_did}" action="{sticky_action_url}" method="POST" callbackUrl="{dial_cb}" callbackMethod="POST">',
                     targets_xml,
-                    f'</Dial>',
-                    f'<Speak voice="Polly.Aditi" language="en-IN">Your executive is currently assisting another client. Connecting to our Sales desk.</Speak>',
-                    cls._build_telesales_simultaneous_dial(db, company_id, "Sales", called_did)
+                    f'</Dial>'
                 ])
             else:
                 logger.info(f"[STICKY-AGENT] Recent staff {emp.full_name} ({emp.id}) has neither registered softphone nor personal mobile ({match_reason}). Continuing to Sales IVR.")
@@ -1660,12 +1668,13 @@ class CallFlowInterpreter:
         company_id: int,
         department_name: str,
         called_did: str,
-        lang: str = "en"
+        lang: str = "en",
+        session_id: Optional[str] = None
     ) -> str:
         """
         Builds a multi-user simultaneous <Dial> XML for the target department/ring group.
         Dynamically routes to active team members configured in CRM Lead Handlers.
-        All available online agent softphones ring in parallel.
+        All available online agent softphones ring in parallel with dual-party session recording.
         If no agent answers within timeout -> routes automatically to Voicemail in selected language.
         """
         from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
@@ -1738,19 +1747,23 @@ class CallFlowInterpreter:
             user_tags.append(f'  <User>sip:agentc{company_id}s_general@phone.plivo.com</User>')
 
         users_joined = "\n".join(user_tags)
-        dial_complete_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete"
-        voicemail_url = "https://www.myntreal.com/api/v1/telephony/plivo/voicemail"
+        domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
+        rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback?session_id={session_id or ''}"
+        dial_cb = f"{domain}/api/v1/telephony/plivo/dial-callback?session_id={session_id or ''}&amp;direction=inbound"
+        dial_complete_url = f"{domain}/api/v1/telephony/plivo/ivr/dial-complete?session_id={session_id or ''}"
+        voicemail_url = f"{domain}/api/v1/telephony/plivo/voicemail?session_id={session_id or ''}"
 
         if lang in ("te", "telugu"):
             vm_prompt = "మా ఎగ్జిక్యూటివ్‌లు అందరూ ప్రస్తుతం ఇతర కాల్స్‌లో బిజీగా ఉన్నారు. దయచేసి బీప్ తర్వాత మీ వాయిస్‌మెయిల్‌ను రికార్డ్ చేయండి, మా బృందం వెంటనే మిమ్మల్ని సంప్రదిస్తుంది."
         else:
             vm_prompt = f"All our {department_name} executives are currently busy on other calls. Please leave a voicemail after the beep, and we will return your call promptly."
 
-        return f"""<Dial timeout="25" callerId="{called_did}" action="{dial_complete_url}">
+        return f"""<Record recordSession="true" startOnDialAnswer="true" redirect="false" maxLength="28800" callbackUrl="{rec_cb}" callbackMethod="POST" fileFormat="mp3" />
+<Dial timeout="25" callerId="{called_did}" action="{dial_complete_url}" method="POST" callbackUrl="{dial_cb}" callbackMethod="POST">
 {users_joined}
 </Dial>
 <Speak voice="Polly.Aditi" language="en-IN">{vm_prompt}</Speak>
-<Record maxLength="120" finishOnKey="#" action="{voicemail_url}" />
+<Record maxLength="120" finishOnKey="#" action="{voicemail_url}" playBeep="true" />
 <Hangup />"""
 
     @classmethod
@@ -1859,10 +1872,14 @@ class CallFlowInterpreter:
                     except Exception as e:
                         logger.warning(f"[DIRECT-ROUTING] Error recording operator_id to session: {e}")
 
-                    dial_action_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/agent-dial-complete?staff_id={emp.id}&amp;called_did={called_did}&amp;caller_phone={caller_phone}"
+                    domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
+                    rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback?session_id={session_id or ''}"
+                    dial_cb = f"{domain}/api/v1/telephony/plivo/dial-callback?session_id={session_id or ''}&amp;direction=inbound"
+                    dial_action_url = f"{domain}/api/v1/telephony/plivo/ivr/agent-dial-complete?staff_id={emp.id}&amp;called_did={called_did}&amp;caller_phone={caller_phone}&amp;session_id={session_id or ''}"
                     logger.info(f"[DIRECT-ROUTING] Ringing staff #{emp.id} ({emp.full_name}) at {sip_uri} for {ring_timeout}s.")
                     return cls._generate_xml_response([
-                        f'<Dial timeout="{ring_timeout}" callerId="{called_did}" action="{dial_action_url}">',
+                        f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" maxLength="28800" callbackUrl="{rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                        f'<Dial timeout="{ring_timeout}" callerId="{called_did}" action="{dial_action_url}" method="POST" callbackUrl="{dial_cb}" callbackMethod="POST">',
                         f'  <User>{sip_uri}</User>',
                         f'</Dial>'
                     ])
@@ -2032,5 +2049,49 @@ class CallFlowInterpreter:
         return cls._generate_xml_response([
             f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
             *cls._get_department_menu_elements(db, company_id, called_did, lang="en")
+        ])
+
+    @classmethod
+    def handle_sticky_dial_complete(
+        cls,
+        db: Session,
+        form_data: Dict[str, Any],
+        query_params: Dict[str, Any]
+    ) -> str:
+        """
+        Invoked when sticky agent <Dial> completes.
+        Option A (Extended ring & dedicated voicemail / route prompt):
+        If answered -> Hangup.
+        If no-answer/busy/timeout -> Provide dedicated executive unavailable prompt and personal voicemail.
+        """
+        dial_status = str(form_data.get("DialStatus") or query_params.get("DialStatus") or "").strip().lower()
+        caller_phone = str(form_data.get("From") or query_params.get("caller_phone") or "").strip()
+        called_did = str(form_data.get("To") or query_params.get("called_did") or "").strip()
+        staff_id_raw = query_params.get("staff_id") or form_data.get("staff_id")
+        session_id = query_params.get("session_id") or form_data.get("session_id") or ""
+        company_id = cls._resolve_company_from_did(db, called_did) or 1
+
+        logger.info(f"[STICKY-DIAL-COMPLETE] Sticky dial to staff #{staff_id_raw} ended with DialStatus: '{dial_status}' (Caller: {caller_phone})")
+
+        if dial_status in ('answered', 'completed'):
+            return cls._generate_xml_response([f'<Hangup />'])
+
+        emp = None
+        if staff_id_raw:
+            try:
+                emp = db.query(StaffEmployee).filter(StaffEmployee.id == int(staff_id_raw)).first()
+            except Exception:
+                pass
+
+        emp_name = emp.full_name if emp else "Your executive"
+        emp_first = emp.first_name if emp else "our team"
+        domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
+        voicemail_url = f"{domain}/api/v1/telephony/plivo/voicemail?staff_id={staff_id_raw or ''}&amp;session_id={session_id}"
+
+        unavailable_prompt = f"Welcome back. Your executive, {emp_name}, is currently assisting another client. Please leave a personal message after the tone, and {emp_first} will return your call promptly."
+        return cls._generate_xml_response([
+            f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
+            f'<Record maxLength="120" finishOnKey="#" action="{voicemail_url}" playBeep="true" />',
+            f'<Hangup />'
         ])
 

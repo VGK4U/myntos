@@ -1948,10 +1948,13 @@ async def get_staff_call_details(
         try:
             import json
             from app.models.voip_call_session import VoIPCallSession
-            v_rows = db.query(VoIPCallSession.call_session_id, VoIPCallSession.metadata_json).filter(
+            v_rows = db.query(VoIPCallSession.call_session_id, VoIPCallSession.customer_phone, VoIPCallSession.metadata_json).filter(
                 VoIPCallSession.call_session_id.in_(vcs_session_ids)
             ).all()
-            for cs_id, m_json in v_rows:
+            vcs_cust_phone_map = {}
+            for cs_id, cust_ph, m_json in v_rows:
+                if cust_ph:
+                    vcs_cust_phone_map[cs_id] = cust_ph
                 if m_json:
                     try:
                         m_data = json.loads(m_json)
@@ -1964,10 +1967,16 @@ async def get_staff_call_details(
 
     def enrich_call(c):
         d = c.to_dict()
+        effective_num = c.phone_number
+        if c.call_type == 'INCOMING' and effective_num in ('918031728899', '+918031728899', '8031728899'):
+            if c.device_call_id and c.device_call_id in vcs_cust_phone_map:
+                effective_num = vcs_cust_phone_map[c.device_call_id]
+                d['phone_number'] = effective_num
+
         li = lead_info.get(c.matched_lead_id) if c.matched_lead_id else None
         d['matched_lead_name'] = li['name'] if li else None
         d['matched_lead_status'] = li['status'] if li else None
-        norm_ph = normalize_phone(c.phone_number)
+        norm_ph = normalize_phone(effective_num)
         ci = contact_map.get(norm_ph)
         d['contact_name_crm'] = ci['name'] if ci else None
         d['contact_lead_id'] = ci['lead_id'] if ci else None
