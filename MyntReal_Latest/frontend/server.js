@@ -8482,9 +8482,9 @@ const server = http.createServer(async (req, res) => {
     
     function attemptProxy(hostIndex = 0, retryCount = 0) {
       if (hostIndex >= BACKEND_HOSTS.length) {
-        if (retryCount < 4) {
-          const delay = Math.pow(2, retryCount) * 500;
-          console.log(`[DC-PROXY-STORAGE-${requestId}] Retry ${retryCount + 1}/4 after ${delay}ms`);
+        if (retryCount < 2) {
+          const delay = Math.min(500, (retryCount + 1) * 250);
+          console.log(`[DC-PROXY-STORAGE-${requestId}] Retry ${retryCount + 1}/2 after ${delay}ms`);
           setTimeout(() => attemptProxy(0, retryCount + 1), delay);
           return;
         }

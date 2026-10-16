@@ -503,9 +503,8 @@ class BonanzaCategoryFilter(BaseModel):
 class BonanzaBrandFilter(BaseModel):
     __tablename__ = 'bonanza_brand_filters'
 
-    id          = Column(Integer, primary_key=True)
-    bonanza_id  = Column(Integer, ForeignKey('bonanza.id', ondelete='CASCADE'), nullable=False, index=True)
-    brand_id    = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='CASCADE'), nullable=False)
+    bonanza_id  = Column(Integer, ForeignKey('bonanza.id', ondelete='CASCADE'), primary_key=True, nullable=False, index=True)
+    brand_id    = Column(Integer, ForeignKey('vgk_incentive_brands.id', ondelete='CASCADE'), primary_key=True, nullable=False)
 
     # Overrides for Brand Specific Extra Commission (reward_type = 'brand_wise_commission')
     ec_l1_amount  = Column(Numeric(10, 2), nullable=True)

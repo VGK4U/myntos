@@ -883,13 +883,19 @@ class FacebookLeadsService:
                 logger.info(f"[META-CONCURRENT-DEDUP] Meta lead {lead_id} was ingested concurrently. Returning existing lead #{existing_att.lead_id}.")
                 return db.query(CRMLead).filter(CRMLead.id == existing_att.lead_id).first()
 
-            # Handle phone number unique constraint collision across tenants/companies
+            # Handle phone number unique constraint collision within company or across companies
             if target_phone:
                 existing_phone_lead = db.query(CRMLead).filter(
+                    CRMLead.company_id == target_company_id,
                     (CRMLead.phone == target_phone) | (CRMLead.alternate_phone == target_phone)
                 ).first()
+                if not existing_phone_lead:
+                    existing_phone_lead = db.query(CRMLead).filter(
+                        (CRMLead.phone == target_phone) | (CRMLead.alternate_phone == target_phone)
+                    ).first()
+
                 if existing_phone_lead:
-                    logger.info(f"[META-PHONE-DEDUP] Phone {target_phone} already exists on Lead #{existing_phone_lead.id}. Linking Meta attribution.")
+                    logger.info(f"[META-PHONE-DEDUP] Phone {target_phone} already exists on Lead #{existing_phone_lead.id} (Company: {existing_phone_lead.company_id}). Linking Meta attribution.")
                     try:
                         attribution = MetaLeadsAttribution(
                             company_id=existing_phone_lead.company_id,
@@ -918,7 +924,7 @@ class FacebookLeadsService:
         except Exception as ex:
             db.rollback()
             logger.exception(f"[CRITICAL-INGESTION-ERROR] Failed to atomically persist Meta lead {lead_id}: {ex}")
-            raise ex
+            return None
 
         # 4. Canonical Post-Commit Ingestion Triggers
         # DC_LEAD_FILTER: Suppress automated WhatsApp triggers for Developer test leads
