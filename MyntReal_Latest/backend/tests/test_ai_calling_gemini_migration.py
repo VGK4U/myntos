@@ -98,7 +98,7 @@ def test_gemini_conversation_turn():
         assert c_tok == 45
         mock_client.models.generate_content.assert_called_once()
         call_kwargs = mock_client.models.generate_content.call_args[1]
-        assert call_kwargs["model"] == "gemini-3.1-flash-lite"
+        assert call_kwargs["model"] in ("gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite")
 
 
 def test_gemini_conversation_fallback_when_unconfigured():

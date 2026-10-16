@@ -1533,14 +1533,22 @@ AI will automatically:
             <i class="fas fa-chevron-right retry-arrow"></i>
             <div class="retry-node"><div class="rn-label">Attempt 3</div><div class="rn-val">Same</div><div class="rn-unit">day</div></div>
           </div>
-          <div style="display:flex;gap:12px;margin-top:10px">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px">
             <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280">
               <i class="fas fa-calendar-plus" style="color:var(--ai-warn)"></i>
-              Then after <input type="number" id="retryD2" value="2" min="1" max="30" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — Day 2 attempt
+              Then after <input type="number" id="retryD2" value="2" min="1" max="30" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — 4th attempt
             </div>
             <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280">
               <i class="fas fa-calendar-check" style="color:var(--ai-secondary)"></i>
-              Then after <input type="number" id="retryD10" value="10" min="3" max="60" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — Final attempt
+              Then after <input type="number" id="retryD10" value="10" min="3" max="60" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — 5th attempt
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280">
+              <i class="fas fa-calendar-alt" style="color:#6366f1"></i>
+              Then after <input type="number" id="retryD15" value="15" min="5" max="60" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — 6th attempt
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280">
+              <i class="fas fa-calendar" style="color:#10b981"></i>
+              Then after <input type="number" id="retryD30" value="30" min="10" max="90" style="width:55px" class="form-control form-control-sm d-inline-block"/> days — 7th attempt
             </div>
           </div>
         </div>
@@ -2452,6 +2460,8 @@ async function openCreateCampaign() {
   document.getElementById('retry2').value = 4;
   document.getElementById('retryD2').value = 2;
   document.getElementById('retryD10').value = 10;
+  document.getElementById('retryD15').value = 15;
+  document.getElementById('retryD30').value = 30;
   document.getElementById('langHi').checked = true;
   document.getElementById('langTe').checked = false;
   document.getElementById('langEn').checked = false;
@@ -2494,6 +2504,8 @@ async function editCampaign(id) {
   document.getElementById('retry2').value = c.retry_2_hours || 4;
   document.getElementById('retryD2').value = c.retry_day2_offset || 2;
   document.getElementById('retryD10').value = c.retry_day10_offset || 10;
+  document.getElementById('retryD15').value = c.retry_day15_offset || 15;
+  document.getElementById('retryD30').value = c.retry_day30_offset || 30;
   const langs = (c.languages || 'hi').split(',');
   document.getElementById('langHi').checked = langs.includes('hi');
   document.getElementById('langTe').checked = langs.includes('te');
@@ -2544,6 +2556,8 @@ async function saveCampaign() {
     retry_2_hours: parseInt(document.getElementById('retry2').value),
     retry_day2_offset: parseInt(document.getElementById('retryD2').value),
     retry_day10_offset: parseInt(document.getElementById('retryD10').value),
+    retry_day15_offset: parseInt(document.getElementById('retryD15').value || 15),
+    retry_day30_offset: parseInt(document.getElementById('retryD30').value || 30),
     max_concurrent: parseInt(document.getElementById('campConc').value),
     ai_persona: document.getElementById('campPersona').value,
     staff: _staffAdded,

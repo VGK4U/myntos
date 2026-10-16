@@ -3212,6 +3212,8 @@ def create_marketplace_tables():
                         retry_2_hours INTEGER DEFAULT 4,
                         retry_day2_offset INTEGER DEFAULT 2,
                         retry_day10_offset INTEGER DEFAULT 10,
+                        retry_day15_offset INTEGER DEFAULT 15,
+                        retry_day30_offset INTEGER DEFAULT 30,
                         max_concurrent INTEGER DEFAULT 3,
                         status VARCHAR(20) DEFAULT 'draft',
                         created_by VARCHAR(50),
@@ -3380,6 +3382,8 @@ def create_marketplace_tables():
                     "ALTER TABLE ai_campaigns ADD COLUMN IF NOT EXISTS repeat_enabled BOOLEAN DEFAULT FALSE",
                     "ALTER TABLE ai_campaigns ADD COLUMN IF NOT EXISTS repeat_count INTEGER DEFAULT 1",
                     "ALTER TABLE ai_campaigns ADD COLUMN IF NOT EXISTS last_started_at TIMESTAMP",
+                    "ALTER TABLE ai_campaigns ADD COLUMN IF NOT EXISTS retry_day15_offset INTEGER DEFAULT 15",
+                    "ALTER TABLE ai_campaigns ADD COLUMN IF NOT EXISTS retry_day30_offset INTEGER DEFAULT 30",
                     # Per-call CRM status snapshot for history tracking
                     "ALTER TABLE ai_call_logs ADD COLUMN IF NOT EXISTS crm_status_before VARCHAR(30)",
                     "ALTER TABLE ai_call_logs ADD COLUMN IF NOT EXISTS crm_status_after VARCHAR(30)",

@@ -441,6 +441,8 @@ class GeminiProjectPool:
                         raw_k = acc.get("api_key", "")
                         if raw_k:
                             acc["api_key"] = _decrypt_credential(raw_k)
+                        if acc.get("is_env_default") and not acc.get("api_key"):
+                            acc["api_key"] = _get_gemini_key()
             finally:
                 db.close()
         except Exception as e:
@@ -3929,11 +3931,12 @@ def create_campaign(
         INSERT INTO ai_campaigns
             (company_id, name, description, lead_filter, languages, default_language,
              retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset,
+             retry_day15_offset, retry_day30_offset,
              max_concurrent, ai_persona, created_by, status, campaign_segment, crm_status_filter,
              source_type, phone_list, repeat_enabled, repeat_count)
         VALUES
             (:cid, :name, :desc, :lf, :langs, :dlang,
-             :r1, :r2, :rd2, :rd10,
+             :r1, :r2, :rd2, :rd10, :rd15, :rd30,
              :conc, :persona, :creator, 'draft', :cseg, :csf,
              :stype, :plist, :rep_en, :rep_cnt)
         RETURNING id
@@ -3948,6 +3951,8 @@ def create_campaign(
         "r2": int(payload.get("retry_2_hours", 4)),
         "rd2": int(payload.get("retry_day2_offset", 2)),
         "rd10": int(payload.get("retry_day10_offset", 10)),
+        "rd15": int(payload.get("retry_day15_offset", 15)),
+        "rd30": int(payload.get("retry_day30_offset", 30)),
         "conc": int(payload.get("max_concurrent", 3)),
         "persona": payload.get("ai_persona", ""),
         "creator": current_user.emp_code,
@@ -3991,6 +3996,7 @@ def update_campaign(
 
     allowed = ["name", "description", "lead_filter", "languages", "default_language",
                "retry_1_hours", "retry_2_hours", "retry_day2_offset", "retry_day10_offset",
+               "retry_day15_offset", "retry_day30_offset",
                "max_concurrent", "ai_persona", "campaign_segment", "crm_status_filter",
                "source_type", "phone_list", "repeat_enabled", "repeat_count"]
     fields, params = [], {"id": campaign_id, "cid": current_user.base_company_id}
@@ -4365,9 +4371,29 @@ def start_campaign(
         else:
             conditions.append("l.status NOT IN ('won','lost','do_not_call','completed')")
         where = " AND ".join(conditions)
-        leads = db.execute(text(
+        leads = list(db.execute(text(
             f"SELECT l.id, l.phone, l.name, l.ai_language, l.status FROM crm_leads l WHERE {where} ORDER BY l.created_at ASC LIMIT :lim"
-        ), {**params, "lim": max_concurrent}).fetchall()
+        ), {**params, "lim": max_concurrent}).fetchall())
+
+        # OPTION B: If fresh leads are exhausted or fewer than max_concurrent, pull unanswered leads (attempts 1-5)
+        if len(leads) < max_concurrent:
+            rem_start = max_concurrent - len(leads)
+            ex_lids = [x[0] for x in leads if x[0] is not None]
+            ex_sql = f"AND l.lead_id NOT IN ({','.join(str(i) for i in ex_lids)})" if ex_lids else ""
+            recycled = db.execute(text(f"""
+                SELECT DISTINCT ON (l.lead_id) c.id, c.phone, c.name, l.language_used, c.status
+                FROM ai_call_logs l
+                JOIN crm_leads c ON c.id = l.lead_id
+                WHERE l.campaign_id = :cid
+                  AND l.status IN ('no_answer', 'busy', 'failed', 'canceled')
+                  AND l.attempt_number BETWEEN 1 AND 5
+                  AND c.status NOT IN ('won', 'lost', 'do_not_call')
+                  AND c.phone IS NOT NULL
+                  {ex_sql}
+                ORDER BY l.lead_id, l.started_at ASC
+                LIMIT :lim
+            """), {"cid": campaign_id, "lim": rem_start}).fetchall()
+            leads.extend(recycled)
 
     db.execute(text(
         "UPDATE ai_campaigns SET status='active', started_at=NOW(), last_started_at=:rs, updated_at=NOW() WHERE id=:id"
@@ -4499,6 +4525,7 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
         camp = db.execute(text("""
             SELECT id, status, lead_filter, default_language, max_concurrent, company_id,
                    retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset,
+                   retry_day15_offset, retry_day30_offset,
                    crm_status_filter, campaign_segment, source_type, phone_list,
                    repeat_enabled, repeat_count, last_started_at
             FROM ai_campaigns WHERE id = :id AND status = 'active'
@@ -4692,13 +4719,63 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
                 ), {**fresh_params, "lim": remaining}).fetchall()
                 leads_to_dial.extend((r[0], r[1], r[2], r[3], r[4]) for r in fresh)
 
-            # If no leads remain and nothing in flight → campaign complete
+            # 3) OPTION B: When fresh leads are exhausted, pull unanswered leads (attempts 1-5) into queue
+            if len(leads_to_dial) < slots_to_fill:
+                rem_recycle = slots_to_fill - len(leads_to_dial)
+                already_queued_lids = [x[0] for x in leads_to_dial if x[0] is not None]
+                exclude_recycle_sql = ""
+                if already_queued_lids:
+                    ex_str = ",".join(str(i) for i in already_queued_lids)
+                    exclude_recycle_sql = f"AND l.lead_id NOT IN ({ex_str})"
+
+                recycle_rows = db.execute(text(f"""
+                    SELECT DISTINCT ON (l.lead_id) l.lead_id, l.id as log_id, l.language_used
+                    FROM ai_call_logs l
+                    JOIN crm_leads c ON c.id = l.lead_id
+                    WHERE l.campaign_id = :cid
+                      AND l.status IN ('no_answer', 'busy', 'failed', 'canceled')
+                      AND l.attempt_number BETWEEN 1 AND 5
+                      AND c.status NOT IN ('won', 'lost', 'do_not_call')
+                      AND c.phone IS NOT NULL
+                      {exclude_recycle_sql}
+                    ORDER BY l.lead_id, l.started_at ASC
+                    LIMIT :lim
+                """), {"cid": campaign_id, "lim": rem_recycle}).fetchall()
+
+                for rrow in recycle_rows:
+                    if len(leads_to_dial) >= slots_to_fill:
+                        break
+                    lead_rec = db.execute(text("""
+                        SELECT id, phone, name, ai_language, status
+                        FROM crm_leads
+                        WHERE id = :lid AND status NOT IN ('won', 'lost', 'do_not_call')
+                          AND phone IS NOT NULL
+                    """), {"lid": rrow[0]}).fetchone()
+                    if lead_rec:
+                        leads_to_dial.append((lead_rec[0], lead_rec[1], lead_rec[2], rrow[2] or lead_rec[3], lead_rec[4]))
+                        db.execute(text(
+                            "UPDATE ai_call_logs SET next_retry_at = NULL WHERE id = :id"
+                        ), {"id": rrow[1]})
+
+            # If no leads remain to dial right now and nothing in flight:
+            # Check if there are future scheduled retries before marking completed
             if not leads_to_dial and active_count == 0:
+                pending_retries = db.execute(text("""
+                    SELECT COUNT(*) FROM ai_call_logs
+                    WHERE campaign_id = :cid
+                      AND next_retry_at IS NOT NULL
+                      AND next_retry_at > NOW()
+                """), {"cid": campaign_id}).scalar() or 0
+
+                if pending_retries > 0:
+                    logger.info(f"[AI_CALLING] Campaign {campaign_id} has {pending_retries} scheduled retries pending — keeping active.")
+                    return
+
                 db.execute(text(
                     "UPDATE ai_campaigns SET status='completed', updated_at=NOW() WHERE id=:id"
                 ), {"id": campaign_id})
                 db.commit()
-                logger.info(f"[AI_CALLING] Campaign {campaign_id} auto-completed — leads exhausted")
+                logger.info(f"[AI_CALLING] Campaign {campaign_id} auto-completed — leads exhausted and no pending retries")
                 return
 
             if not leads_to_dial:
@@ -7669,11 +7746,11 @@ def _sync_call_analysis_and_crm(
     if final_status in ("no_answer", "busy", "failed", "canceled") and campaign_id:
         try:
             retry_cfg = db.execute(text(
-                "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset"
+                "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset, retry_day15_offset, retry_day30_offset"
                 " FROM ai_campaigns WHERE id=:id"
             ), {"id": campaign_id}).fetchone()
             if retry_cfg:
-                r1h, r2h, rd2, rd10 = retry_cfg
+                r1h, r2h, rd2, rd10, rd15, rd30 = retry_cfg
                 if attempt_number == 1:
                     next_retry_at = get_indian_time() + timedelta(hours=int(r1h or 2))
                 elif attempt_number == 2:
@@ -7682,6 +7759,11 @@ def _sync_call_analysis_and_crm(
                     next_retry_at = get_indian_time() + timedelta(days=int(rd2 or 2))
                 elif attempt_number == 4:
                     next_retry_at = get_indian_time() + timedelta(days=int(rd10 or 10))
+                elif attempt_number == 5:
+                    next_retry_at = get_indian_time() + timedelta(days=int(rd15 or 15))
+                elif attempt_number == 6:
+                    next_retry_at = get_indian_time() + timedelta(days=int(rd30 or 30))
+                # attempt_number >= 7: no more scheduled retries
         except Exception as retry_err:
             logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
 
@@ -8084,11 +8166,11 @@ async def webhook_status(
         if final_status in ("no_answer", "busy", "failed", "canceled") and campaign_id:
             try:
                 retry_cfg = db.execute(text(
-                    "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset"
+                    "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset, retry_day15_offset, retry_day30_offset"
                     " FROM ai_campaigns WHERE id=:id"
                 ), {"id": campaign_id}).fetchone()
                 if retry_cfg:
-                    r1h, r2h, rd2, rd10 = retry_cfg
+                    r1h, r2h, rd2, rd10, rd15, rd30 = retry_cfg
                     if attempt_number == 1:
                         next_retry_at = get_indian_time() + timedelta(hours=int(r1h or 2))
                     elif attempt_number == 2:
@@ -8097,7 +8179,11 @@ async def webhook_status(
                         next_retry_at = get_indian_time() + timedelta(days=int(rd2 or 2))
                     elif attempt_number == 4:
                         next_retry_at = get_indian_time() + timedelta(days=int(rd10 or 10))
-                    # attempt_number >= 5: no more scheduled retries
+                    elif attempt_number == 5:
+                        next_retry_at = get_indian_time() + timedelta(days=int(rd15 or 15))
+                    elif attempt_number == 6:
+                        next_retry_at = get_indian_time() + timedelta(days=int(rd30 or 30))
+                    # attempt_number >= 7: no more scheduled retries
             except Exception as retry_err:
                 logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
 
