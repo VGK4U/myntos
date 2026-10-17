@@ -183,6 +183,7 @@ import { VGKAwards } from './pages/vgk/VGKAwards';
 import { VGKMyRegistrations } from './pages/vgk/VGKMyRegistrations';
 import { VGKBonanzaRewardsPage } from './pages/vgk/VGKBonanzaRewards';
 import { VGKPointsBalancePage } from './pages/vgk/VGKPointsBalance';
+import { VGKGames } from './pages/vgk/VGKGames';
 // VGK4U Member Portal Pages (Task #34 Phase 2 write-flow — iframe wrappers)
 import { VGKFeedbackPage } from './pages/vgk/VGKFeedback';
 import { VGKAnnouncementsPage } from './pages/vgk/VGKAnnouncements';
@@ -1370,6 +1371,9 @@ class MNRApp {
         break;
       case 'vgk-points-balance':
         page = new VGKPointsBalancePage(this.pageContainer);
+        break;
+      case 'vgk-games':
+        page = new VGKGames(this.pageContainer);
         break;
 
       // Task #34 — VGK4U Member Parity Phase 2 (Write-Flow iframe wrappers)

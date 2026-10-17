@@ -183,6 +183,7 @@ export type PageRoute =
   | 'vgk-training'
   | 'vgk-coupon-benefits'
   | 'vgk-my-submissions'
+  | 'vgk-games'
   // Zynova Portal Routes
   | 'zynova-real-estate'
   | 'zynova-insurance'
@@ -441,6 +442,7 @@ class RouterService {
     'vgk-training': { id: 'vgk-training', title: 'Training', icon: 'book-open', showInTabs: false, portal: 'vgk' },
     'vgk-coupon-benefits': { id: 'vgk-coupon-benefits', title: 'Coupon Benefits', icon: 'percent', showInTabs: false, portal: 'vgk' },
     'vgk-my-submissions': { id: 'vgk-my-submissions', title: 'My Submissions', icon: 'file-text', showInTabs: false, portal: 'vgk' },
+    'vgk-games': { id: 'vgk-games', title: 'Arcade & Games', icon: 'gamepad', showInTabs: false, portal: 'vgk' },
 
 
 

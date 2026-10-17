@@ -42,6 +42,14 @@
             transform: scale(1.1) rotate(5deg) !important;
             background: linear-gradient(135deg, #34d399 0%, #059669 100%) !important;
         }
+        .mynt-chatbot-icon-img {
+            width: 52px !important;
+            height: 52px !important;
+            object-fit: cover !important;
+            border-radius: 50% !important;
+            pointer-events: none !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+        }
         .mynt-chatbot-badge {
             position: absolute !important;
             top: 2px !important;
@@ -95,11 +103,12 @@
             width: 44px !important;
             height: 44px !important;
             border-radius: 50% !important;
-            background: #10b981 !important;
+            background: rgba(255, 255, 255, 0.1) !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             font-size: 22px !important;
+            overflow: hidden !important;
         }
         .mynt-chatbot-title {
             font-size: 16px !important;
@@ -261,12 +270,16 @@
         document.head.appendChild(styleEl);
 
         const isSaaS = isSaaSMode();
-        const chatbotTitle = 'Zynova Zen Assistant';
-        const chatbotAvatar = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:2px;">' : '🤖';
-        const btnIcon = isSaaS ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:48px;height:48px;object-fit:contain;border-radius:50%;background:#ffffff;padding:4px;">' : '💬';
+        const chatbotTitle = isSaaS ? 'Zynova Zen Assistant' : 'MyntReal AI Assistant';
+        const chatbotAvatar = isSaaS
+            ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:2px;">'
+            : '<img src="/public/vgk-assistant-logo.png" alt="AI Agent" style="width:40px;height:40px;object-fit:cover;border-radius:50%;" onerror="this.src=\'/vgk-assistant-logo.png\'">';
+        const btnIcon = isSaaS
+            ? '<img src="/public/zynova-os-icon.png" alt="Z" class="mynt-chatbot-icon-img" style="background:#ffffff;padding:4px;">'
+            : '<img src="/public/vgk-assistant-logo.png" alt="AI Agent" class="mynt-chatbot-icon-img" onerror="this.src=\'/vgk-assistant-logo.png\'">';
         const welcomeText = isSaaS
             ? 'Hello! 👋 Welcome to <b>Zynova OS SaaS Platform</b>. How can I help you explore our SaaS modules and plans today? Please choose an option below:'
-            : 'Hello! 👋 Welcome to MyntReal Har Ghar Solar. How can I help you today? Please choose an option below:';
+            : 'Hello! 👋 Welcome to <b>MyntReal Ecosystem</b>. How can I help you today? Please choose an option below:';
 
         const initialOptions = isSaaS
             ? `

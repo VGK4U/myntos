@@ -4951,11 +4951,11 @@ function setupHtmlCacheWatcher() {
     if (!fs.existsSync(dir)) return;
     try {
       fs.watch(dir, { persistent: false }, (eventType, filename) => {
-        if (!filename || !filename.endsWith('.html')) return;
         const fullPath = path.join(dir, filename);
         const deleted1 = htmlCache.delete(filename);
         const deleted2 = htmlCache.delete(fullPath);
-        if (deleted1 || deleted2) {
+        const deleted3 = htmlCache.delete('public/' + filename);
+        if (deleted1 || deleted2 || deleted3) {
           console.log(`🔄 [DC_CACHE] Cache invalidated: ${filename} (will reload from disk on next request)`);
         }
       });
@@ -9851,9 +9851,14 @@ const server = http.createServer(async (req, res) => {
                             '<span>' + s.short_name + '</span>' +
                             '</a>';
                     }).join('');
+                } else {
+                    badgeWrap.innerHTML = '';
                 }
             })
-            .catch(err => console.error('Failed to load active community badges for hub:', err));
+            .catch(err => {
+                console.error('Failed to load active community badges for hub:', err);
+                if (badgeWrap) badgeWrap.innerHTML = '';
+            });
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initActiveBadges);
@@ -20168,6 +20173,19 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
+  } else if (url.startsWith('/vgk/games') || url.startsWith('/vgk-games') || url.startsWith('/vgk_games')) {
+    const filePath = path.join(__dirname, 'public', 'vgk_games.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('VGK Games page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/vendor/login')) {
     const filePath = path.join(__dirname, 'vendor_login.html');
     readFileWithRetry(filePath, (err, data) => {
@@ -25418,7 +25436,8 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
           if (cookieHeader) headers['Cookie'] = cookieHeader;
           const backendResponse = await fetch(apiUrl, {
             method: 'GET',
-            headers: headers
+            headers: headers,
+            signal: AbortSignal.timeout(25000)
           });
           const data = await backendResponse.json();
           res.setHeader('Content-Type', 'application/json');
@@ -25427,8 +25446,13 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
         } catch (error) {
           console.error('API proxy error (GET):', error);
           res.setHeader('Content-Type', 'application/json');
-          res.writeHead(500);
-          res.end(JSON.stringify({ success: false, message: 'API proxy error: ' + error.message }));
+          if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+            res.writeHead(504);
+            res.end(JSON.stringify({ success: false, message: 'Gateway timeout: backend took too long to respond. Please retry.' }));
+          } else {
+            res.writeHead(500);
+            res.end(JSON.stringify({ success: false, message: 'API proxy error: ' + error.message }));
+          }
         }
       })();
     } else if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
@@ -25474,19 +25498,25 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
             const backendResponse = await fetch(apiUrl, {
               method: req.method,
               headers: headers,
-              body: body
+              body: body,
+              signal: AbortSignal.timeout(25000)
             });
-          const data = await backendResponse.json();
-          res.setHeader('Content-Type', 'application/json');
-          res.writeHead(backendResponse.status);
-          res.end(JSON.stringify(data));
-        } catch (error) {
-          console.error(`API proxy error (${req.method}):`, error);
-          res.setHeader('Content-Type', 'application/json');
-          res.writeHead(500);
-          res.end(JSON.stringify({ success: false, message: 'API proxy error: ' + error.message }));
-        }
-      });
+            const data = await backendResponse.json();
+            res.setHeader('Content-Type', 'application/json');
+            res.writeHead(backendResponse.status);
+            res.end(JSON.stringify(data));
+          } catch (error) {
+            console.error(`API proxy error (${req.method}):`, error);
+            res.setHeader('Content-Type', 'application/json');
+            if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+              res.writeHead(504);
+              res.end(JSON.stringify({ success: false, message: 'Gateway timeout: backend took too long to respond. Please retry.' }));
+            } else {
+              res.writeHead(500);
+              res.end(JSON.stringify({ success: false, message: 'API proxy error: ' + error.message }));
+            }
+          }
+        });
       }
     }
     return;
@@ -31205,6 +31235,19 @@ async function processAction(id, action){
     const custDashPath = path.join(__dirname, 'public', 'customer_dashboard.html');
     fs.readFile(custDashPath, 'utf8', (err, data) => {
       if (err) { res.writeHead(404); res.end('Customer Dashboard not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/customer/games') || url.startsWith('/customer-games') || url.startsWith('/customer_games')) {
+    // Dedicated Customer Gaming & Rewards Hub
+    const custGamesPath = path.join(__dirname, 'public', 'customer_games.html');
+    fs.readFile(custGamesPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Customer Games page not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

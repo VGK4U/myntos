@@ -55,16 +55,26 @@ def get_active_headers(db: Session = Depends(get_db)):
     ).all()
 
     if not active_services:
-        active_services = db.query(CommunityService).filter(
-            or_(CommunityService.status == 'ACTIVE', CommunityService.status == 'active')
-        ).all()
-    
+        result = {
+            "success": True,
+            "status": "success",
+            "services": [],
+            "active_services": [],
+            "total_approved_registrations": 0,
+            "total_registered_projects": 0,
+            "display_registered_label": ""
+        }
+        _COMMUNITY_HEADERS_CACHE = (now, result)
+        return result
+
+    active_service_ids = [s.id for s in active_services]
     total_approved = db.query(CommunityRegistration).filter(
+        CommunityRegistration.community_service_id.in_(active_service_ids),
         CommunityRegistration.status == 'APPROVED'
     ).count()
-    
+
     display_label = f"{max(18, total_approved)}+ Projects Registered"
-    
+
     service_list = [
         {
             "id": s.id,
@@ -75,7 +85,7 @@ def get_active_headers(db: Session = Depends(get_db)):
             "banner_images": s.banner_images or []
         } for s in active_services
     ]
-    
+
     result = {
         "success": True,
         "status": "success",
@@ -101,9 +111,11 @@ def get_active_homepage_popup(db: Session = Depends(get_db)):
         return _COMMUNITY_POPUP_CACHE[1]
 
     today = get_indian_time().date()
-    # Query all active services
+    # Query all active services within valid date range
     active_services = db.query(CommunityService).filter(
-        CommunityService.status == 'ACTIVE'
+        or_(CommunityService.status == 'ACTIVE', CommunityService.status == 'active'),
+        or_(CommunityService.start_date.is_(None), CommunityService.start_date <= today),
+        or_(CommunityService.end_date.is_(None), CommunityService.end_date >= today)
     ).all()
     
     for s in active_services:
@@ -1867,7 +1879,7 @@ def update_service_status(
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
     status_val = payload.get("status", "ACTIVE").upper()
-    if status_val not in ["ACTIVE", "PAUSED"]:
+    if status_val not in ["ACTIVE", "PAUSED", "COMPLETED", "INACTIVE"]:
         raise HTTPException(status_code=400, detail="Invalid status value")
     service.status = status_val
     service.updated_at = get_indian_time()

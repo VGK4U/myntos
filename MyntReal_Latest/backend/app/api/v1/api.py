@@ -324,6 +324,10 @@ api_router.include_router(suryanz_public.router, prefix="/public/suryanz", tags=
 from app.api.v1.endpoints import social_media_api
 api_router.include_router(social_media_api.router)
 
+# Games, Points & Rewards Engine (MyntReal & VGK4U - Oct 2026)
+from app.api.v1.endpoints import games_api
+api_router.include_router(games_api.router)
+
 @api_router.get("/health")
 async def api_health():
     """API health check"""

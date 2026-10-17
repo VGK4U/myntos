@@ -35,7 +35,7 @@
   }
 
   function getLogoUrl() {
-    return ZYNOVA_Z_ICON;
+    return isSaaSMode() ? ZYNOVA_Z_ICON : '/public/vgk-assistant-logo.png';
   }
 
   const MENU_INTENT_MAP = {
@@ -320,8 +320,8 @@
     if (document.getElementById('myntChatbotBtn') || document.getElementById('vgkFab')) return;
 
     const logoSrc = getLogoUrl();
-    const assistantTitle = 'Zen Assistant';
-    const assistantSub = 'Zynova OS AI Assistant';
+    const assistantTitle = isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant';
+    const assistantSub = isSaaSMode() ? 'Zynova OS AI Assistant' : 'AI Voice & Text Assistant';
 
     document.body.insertAdjacentHTML('beforeend', `
       <div id="vgkOverlay"></div>

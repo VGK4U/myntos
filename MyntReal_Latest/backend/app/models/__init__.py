@@ -567,4 +567,8 @@ from app.models.social_media import (
 )
 
 # VGK Member Quick Alerts (One-Click Application & Immediate Support)
-from app.models.vgk_quick_alert import VGKMemberQuickAlert
+from app.models.vgk_quick_alert import VGKMemberQuickAlert
+
+# Customer Profiles & Loyalty Rewards (Oct 2026)
+from app.models.customer_profile import CustomerProfile
+from app.models.games_and_points import GameSession, CustomerPointsLedger, GameRewardCode

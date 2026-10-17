@@ -490,204 +490,464 @@
             text-transform: uppercase;
         }
 
-        /* ─── LOGIN SELECTION PAGE ─── */
+        /* ─── LOGIN SELECTION PAGE (EARLIER MIDNIGHT OBSIDIAN THEME) ─── */
         .login-selection-page {
+            --portal-bg: radial-gradient(circle at 50% 8%, rgba(37, 99, 235, 0.28) 0%, transparent 55%),
+                         radial-gradient(circle at 10% 85%, rgba(16, 185, 129, 0.14) 0%, transparent 45%),
+                         radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.16) 0%, transparent 45%),
+                         linear-gradient(180deg, #070d18 0%, #0d1729 45%, #070d18 100%);
+            --portal-dots: rgba(255, 255, 255, 0.08);
+            --portal-title: #ffffff;
+            --portal-subtitle: rgba(255, 255, 255, 0.72);
+            --portal-brand-grad: linear-gradient(135deg, #60a5fa 0%, #34d399 50%, #a78bfa 100%);
+            --eyebrow-bg: rgba(37, 99, 235, 0.16);
+            --eyebrow-border: rgba(96, 165, 250, 0.35);
+            --eyebrow-color: #93c5fd;
+            --eyebrow-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+            --nav-btn-bg: rgba(255, 255, 255, 0.06);
+            --nav-btn-border: rgba(255, 255, 255, 0.18);
+            --nav-btn-color: #ffffff;
+            --nav-btn-hover-bg: rgba(255, 255, 255, 0.14);
+            --nav-btn-hover-border: rgba(255, 255, 255, 0.35);
+            --nav-btn-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            --card-bg: rgba(13, 22, 40, 0.82);
+            --card-border: rgba(255, 255, 255, 0.10);
+            --card-border-hover: rgba(255, 255, 255, 0.28);
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            --card-shadow-hover: 0 22px 50px rgba(0, 0, 0, 0.55);
+            --card-title: #ffffff;
+            --card-desc: rgba(255, 255, 255, 0.65);
+            --footer-line: rgba(255, 255, 255, 0.35);
+            --footer-text: rgba(255, 255, 255, 0.55);
+            --footer-brand: rgba(255, 255, 255, 0.85);
+            --footer-disclaimer: rgba(255, 255, 255, 0.45);
+            --partner-link: rgba(147, 197, 253, 0.85);
+            --partner-link-hover: #ffffff;
+            --partner-link-bg: rgba(255, 255, 255, 0.08);
+            --zynova-badge-color: #60a5fa;
+            --zynova-badge-bg: rgba(37, 99, 235, 0.18);
+            --zynova-badge-border: rgba(96, 165, 250, 0.35);
+            --zynova-strong: #60a5fa;
+
             display: none;
             min-height: 100vh;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: calc(72px + 40px) 24px 60px;
+            padding: calc(72px + 44px) 24px 64px;
             position: relative;
+            background: var(--portal-bg);
+            color: var(--portal-title);
+            z-index: 10;
+        }
+
+        .login-selection-page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle at 1px 1px, var(--portal-dots) 1px, transparent 0);
+            background-size: 30px 30px;
+            pointer-events: none;
+            z-index: 0;
         }
         .login-selection-page.active { display: flex; }
         .main-landing.hidden { display: none; }
 
         .back-btn {
             position: absolute;
-            top: calc(72px + 16px);
+            top: calc(72px + 20px);
             left: 40px;
-            background: rgba(0,0,0,0.28);
-            border: 1.5px solid rgba(255,255,255,0.5);
-            padding: 9px 20px;
+            background: var(--nav-btn-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--nav-btn-border);
+            padding: 9px 22px;
             border-radius: 50px;
             font-size: 0.82rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: #fff;
-            transition: all 0.25s ease;
+            color: var(--nav-btn-color);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--nav-btn-shadow);
+            z-index: 2;
         }
-        .back-btn:hover { background: rgba(0,0,0,0.42); transform: translateX(-4px); }
+        .back-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            border-color: var(--nav-btn-hover-border);
+            transform: translateX(-3px);
+            color: var(--nav-btn-color);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
         .home-btn {
             position: absolute;
-            top: calc(72px + 16px);
+            top: calc(72px + 20px);
             right: 40px;
-            background: rgba(0,0,0,0.28);
-            border: 1.5px solid rgba(255,255,255,0.5);
-            padding: 9px 20px;
+            background: var(--nav-btn-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--nav-btn-border);
+            padding: 9px 22px;
             border-radius: 50px;
             font-size: 0.82rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: #fff;
+            color: var(--nav-btn-color);
             text-decoration: none;
-            transition: all 0.25s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--nav-btn-shadow);
+            z-index: 2;
         }
-        .home-btn:hover { background: rgba(0,0,0,0.42); color: #fff; transform: translateX(4px); }
+        .home-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            border-color: var(--nav-btn-hover-border);
+            transform: translateX(3px);
+            color: var(--nav-btn-color);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
 
         .welcome-title {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 44px;
+            position: relative;
+            z-index: 1;
         }
         .welcome-eyebrow {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
-            border: none;
+            background: var(--eyebrow-bg);
+            border: 1px solid var(--eyebrow-border);
             border-radius: 50px;
-            padding: 7px 20px;
+            padding: 7px 22px;
             font-size: 0.72rem;
             font-weight: 700;
-            letter-spacing: 0.1em;
-            color: #fff;
+            letter-spacing: 0.12em;
+            color: var(--eyebrow-color);
             text-transform: uppercase;
-            margin-bottom: 18px;
-            box-shadow: 0 4px 14px rgba(30,58,138,0.45);
+            margin-bottom: 16px;
+            box-shadow: var(--eyebrow-shadow);
         }
         .welcome-title h2 {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: #fff;
+            font-size: clamp(2.1rem, 3.8vw, 2.9rem);
+            font-weight: 800;
+            color: var(--portal-title);
             letter-spacing: -0.5px;
-            line-height: 1.15;
+            line-height: 1.2;
             margin: 0;
+            transition: color 0.3s ease;
         }
-        .welcome-title h2 span { color: #d1fae5; }
+        .welcome-title h2 span.brand-gradient {
+            background: var(--portal-brand-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
         .welcome-subtitle {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
+            font-size: 0.95rem;
+            color: var(--portal-subtitle);
             margin-top: 10px;
-            font-weight: 500;
+            font-weight: 400;
+            letter-spacing: 0.2px;
+            transition: color 0.3s ease;
         }
 
         .login-cards-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 18px;
-            max-width: 1400px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            max-width: 1380px;
             width: 100%;
+            margin: 0 auto;
+            align-items: stretch;
+            position: relative;
+            z-index: 1;
         }
 
         .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 22px;
-            padding: 36px 24px 28px;
+            border: 1px solid var(--card-border);
+            padding: 32px 20px 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0;
-            transition: all 0.28s cubic-bezier(0.34,1.56,0.64,1);
+            text-align: center;
             cursor: pointer;
-            width: 230px;
             position: relative;
             overflow: hidden;
-            border: 1.5px solid rgba(255,255,255,0.12);
-        }
-        .login-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 60%);
-            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: var(--card-shadow);
         }
         .login-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 24px 48px rgba(0,0,0,0.35);
-            border-color: rgba(255,255,255,0.25);
-        }
-        .login-card.blue   { background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 100%); }
-        .login-card.indigo { background: linear-gradient(160deg, #3730a3 0%, #4f46e5 100%); }
-        .login-card.vgk    { background: linear-gradient(160deg, #3b0764 0%, #7c3aed 100%); border-color: rgba(196,181,253,0.25); }
-        .login-card.vgk .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(124,58,237,0.5); }
-        .login-card.vgk .login-card-btn { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 16px rgba(245,158,11,0.4); }
-        .login-card.green  { background: linear-gradient(160deg, #064e3b 0%, #059669 100%); border-color: rgba(110,231,183,0.25); }
-        .login-card.green .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(5,150,105,0.4); }
-        .login-card.vgk .loyalty-tag {
-            display: inline-block;
-            background: rgba(251,191,36,.18);
-            border: 1px solid rgba(251,191,36,.4);
-            border-radius: 20px;
-            padding: 2px 10px;
-            font-size: 10px;
-            font-weight: 800;
-            color: #fbbf24;
-            letter-spacing: .5px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
+            transform: translateY(-8px);
+            border-color: var(--card-border-hover);
+            box-shadow: var(--card-shadow-hover);
         }
 
+        .card-accent-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transition: height 0.3s ease;
+        }
+        .login-card:hover .card-accent-line {
+            height: 6px;
+        }
+
+        /* 1. Staff Card */
+        .card-staff .card-accent-line { background: linear-gradient(90deg, #1d4ed8, #60a5fa); }
+        .card-staff:hover { border-color: rgba(96, 165, 250, 0.55); box-shadow: 0 20px 48px rgba(37, 99, 235, 0.22); }
+        .card-staff .login-card-icon-wrap { background: linear-gradient(135deg, #1e3a8a, #2563eb); border: 1px solid rgba(96, 165, 250, 0.4); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35); color: #ffffff; }
+        .card-staff .login-card-btn { background: linear-gradient(135deg, #1d4ed8, #2563eb); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35); }
+
+        /* 2. VGK4U Card */
+        .card-vgk .card-accent-line { background: linear-gradient(90deg, #7c3aed, #f59e0b); }
+        .card-vgk:hover { border-color: rgba(167, 139, 250, 0.55); box-shadow: 0 20px 48px rgba(124, 58, 237, 0.24); }
+        .card-vgk .login-card-icon-wrap { background: linear-gradient(135deg, #5b21b6, #7c3aed); border: 1px solid rgba(167, 139, 250, 0.4); box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35); color: #fbbf24; }
+        .card-vgk .login-card-btn { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35); color: #ffffff; }
+
+        /* 3. Customer Card */
+        .card-customer .card-accent-line { background: linear-gradient(90deg, #059669, #10b981); }
+        .card-customer:hover { border-color: rgba(52, 211, 153, 0.55); box-shadow: 0 20px 48px rgba(16, 185, 129, 0.22); }
+        .card-customer .login-card-icon-wrap { background: linear-gradient(135deg, #064e3b, #059669); border: 1px solid rgba(52, 211, 153, 0.4); box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35); color: #ffffff; }
+        .card-customer .login-card-btn { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35); }
+
+        /* 4. Vendor Card */
+        .card-vendor .card-accent-line { background: linear-gradient(90deg, #d97706, #f97316); }
+        .card-vendor:hover { border-color: rgba(251, 146, 60, 0.55); box-shadow: 0 20px 48px rgba(249, 115, 22, 0.22); }
+        .card-vendor .login-card-icon-wrap { background: linear-gradient(135deg, #78350f, #d97706); border: 1px solid rgba(251, 146, 60, 0.4); box-shadow: 0 8px 24px rgba(217, 119, 6, 0.35); color: #ffffff; }
+        .card-vendor .login-card-btn { background: linear-gradient(135deg, #ea580c, #f97316); box-shadow: 0 4px 16px rgba(234, 88, 12, 0.35); }
+
+        /* 5. MNR Card */
+        .card-mnr .card-accent-line { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+        .card-mnr:hover { border-color: rgba(56, 189, 248, 0.55); box-shadow: 0 20px 48px rgba(2, 132, 199, 0.22); }
+        .card-mnr .login-card-icon-wrap { background: linear-gradient(135deg, #0369a1, #0284c7); border: 1px solid rgba(56, 189, 248, 0.4); box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35); color: #ffffff; }
+        .card-mnr .login-card-btn { background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35); }
+
+        .portal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 18px;
+        }
+        .badge-staff    { background: rgba(37, 99, 235, 0.08); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.25); }
+        .badge-vgk      { background: rgba(245, 158, 11, 0.10); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.28); }
+        .badge-customer { background: rgba(16, 185, 129, 0.10); color: #047857; border: 1px solid rgba(16, 185, 129, 0.28); }
+        .badge-vendor   { background: rgba(249, 115, 22, 0.10); color: #c2410c; border: 1px solid rgba(249, 115, 22, 0.28); }
+        .badge-mnr      { background: rgba(2, 132, 199, 0.10); color: #0369a1; border: 1px solid rgba(2, 132, 199, 0.28); }
+
+        .theme-midnight .badge-staff    { background: rgba(37, 99, 235, 0.16); color: #93c5fd; border-color: rgba(96, 165, 250, 0.35); }
+        .theme-midnight .badge-vgk      { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35); }
+        .theme-midnight .badge-customer { background: rgba(16, 185, 129, 0.16); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.35); }
+        .theme-midnight .badge-vendor   { background: rgba(249, 115, 22, 0.16); color: #fdba74; border-color: rgba(249, 115, 22, 0.35); }
+        .theme-midnight .badge-mnr      { background: rgba(2, 132, 199, 0.16); color: #7dd3fc; border-color: rgba(2, 132, 199, 0.35); }
+
         .login-card-icon-wrap {
-            width: 76px;
-            height: 76px;
+            width: 72px;
+            height: 72px;
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            font-size: 2rem;
-            color: #fff;
+            margin-bottom: 18px;
+            font-size: 1.85rem;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
         }
-        .login-card.blue  .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(29,78,216,0.4); }
-        .login-card.indigo .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(79,70,229,0.4); }
+        .login-card:hover .login-card-icon-wrap {
+            transform: scale(1.08);
+        }
 
         .login-card-title {
             font-size: 1.25rem;
-            font-weight: 900;
-            color: #fff;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-bottom: 6px;
+            font-weight: 800;
+            color: var(--card-title);
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
         }
         .login-card-desc {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.6);
-            font-weight: 500;
+            font-size: 0.76rem;
+            color: var(--card-desc);
+            font-weight: 400;
             margin-bottom: 24px;
             text-align: center;
-            line-height: 1.4;
+            line-height: 1.5;
+            flex-grow: 1;
+            transition: color 0.3s ease;
         }
         .login-card-btn {
-            background: linear-gradient(135deg, #2ECC71, #27ae60);
-            color: #fff;
+            color: #ffffff;
             border: none;
-            padding: 10px 28px;
+            padding: 11px 20px;
             border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 800;
+            font-size: 0.82rem;
+            font-weight: 700;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            letter-spacing: 0.04em;
             transition: all 0.22s ease;
-            box-shadow: 0 4px 16px rgba(46,204,113,0.4);
             width: 100%;
             justify-content: center;
         }
-        .login-card-btn:hover { opacity: 0.92; transform: scale(1.03); }
+        .login-card-btn:hover {
+            opacity: 0.95;
+            transform: scale(1.02);
+        }
 
-        @media (max-width: 640px) {
-            .login-card { width: 100%; max-width: 340px; }
-            .welcome-title h2 { font-size: 1.8rem; }
+        .partner-quicklink {
+            margin-top: 12px;
+            font-size: 0.72rem;
+            color: var(--partner-link);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .partner-quicklink:hover {
+            color: var(--partner-link-hover);
+            background: var(--partner-link-bg);
+            text-decoration: underline;
+        }
+
+        .portal-footer-badge {
+            margin-top: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 780px;
+            padding: 0 16px;
+        }
+        .portal-footer-line {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--footer-line), transparent);
+        }
+        .portal-footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .zynova-badge-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--zynova-badge-color);
+            background: var(--zynova-badge-bg);
+            border: 1px solid var(--zynova-badge-border);
+            padding: 3px 12px;
+            border-radius: 50px;
+        }
+        .zynova-provider-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--footer-text);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .portal-footer-name {
+            color: var(--footer-brand);
+            font-weight: 500;
+        }
+        .portal-footer-name strong {
+            font-weight: 800;
+            color: var(--zynova-strong);
+        }
+        .portal-footer-sep {
+            color: var(--footer-text);
+            opacity: 0.5;
+        }
+        .portal-footer-sub {
+            color: var(--footer-text);
+            font-size: 0.76rem;
+            font-weight: 500;
+        }
+        .portal-footer-disclaimer {
+            font-size: 0.72rem;
+            color: var(--footer-disclaimer);
+            line-height: 1.5;
+            max-width: 640px;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 1200px) {
+            .login-cards-container {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 900px;
+            }
+        }
+        @media (max-width: 820px) {
+            .login-selection-page {
+                padding: calc(72px + 20px) 16px 40px;
+            }
+            .login-cards-container {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 600px;
+                gap: 16px;
+            }
+            .back-btn {
+                top: calc(72px + 12px);
+                left: 16px;
+                padding: 8px 16px;
+                font-size: 0.78rem;
+            }
+            .home-btn {
+                top: calc(72px + 12px);
+                right: 16px;
+                padding: 8px 16px;
+                font-size: 0.78rem;
+            }
+            .welcome-title {
+                margin-top: 36px;
+                margin-bottom: 28px;
+            }
+        }
+        @media (max-width: 540px) {
+            .login-cards-container {
+                grid-template-columns: 1fr;
+                max-width: 360px;
+                gap: 14px;
+            }
+            .welcome-title h2 {
+                font-size: 1.85rem;
+            }
+            .welcome-subtitle {
+                font-size: 0.85rem;
+            }
         }
 
         /* ─── RESPONSIVE ─── */
@@ -710,8 +970,6 @@
             .stats-bar { gap: 4px; }
             .stat-item { border-right: none; padding: 6px 14px; }
             .stat-value { font-size: 0.88rem; }
-            .login-card { min-width: 200px; padding: 20px 22px; }
-            .back-btn { top: 14px; left: 14px; padding: 8px 16px; font-size: 0.8rem; }
         }
 
         /* ─── EXISTING UTILITY STYLES (kept for JS compat) ─── */
@@ -748,6 +1006,7 @@
         .hub-nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:.3s;z-index:1900;}
         .hub-nav-overlay.active{opacity:1;pointer-events:auto;}
         .hub-content-pad{padding-top:72px;}
+        .hub-mobile-auth-block { display: none; }
         @media(max-width:998px){
         #mnr-hub-header .hub-nav{display:grid;grid-template-columns:auto 1fr auto;padding:10px 16px;}
         #mnr-hub-header .hub-menu-toggle{display:flex;justify-self:start;}
@@ -760,9 +1019,12 @@
         #mnr-hub-header .hub-dropdown-menu{position:relative;box-shadow:none;display:none;width:100%;}
         #mnr-hub-header .hub-dropdown.active .hub-dropdown-menu{display:flex;}
         #mnr-hub-header .hub-dropdown-trigger{font-size:18px;margin:12px 0;}
+        .hub-mobile-auth-block { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #e2e8f0; width: 100%; }
+        .hub-mobile-login-btn { display: flex !important; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px !important; background: linear-gradient(135deg,#111a2f,#2563eb) !important; color: #fff !important; border-radius: 12px; font-weight: 700 !important; font-size: 15px !important; text-align: center; border: none; cursor: pointer; width: 100%; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+        .hub-mobile-cust-btn { display: flex !important; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px !important; background: rgba(16,185,129,0.12) !important; color: #059669 !important; border: 1.5px solid rgba(16,185,129,0.4); border-radius: 12px; font-weight: 700 !important; font-size: 14px !important; text-align: center; text-decoration: none; width: 100%; box-sizing: border-box; }
         }
         @media(max-width:480px){
-        #mnr-hub-header .hub-btn-login{padding:6px 12px;font-size:12px;}
+        #mnr-hub-header .hub-btn-login{padding:6px 14px;font-size:13px;font-weight:700;}
         }
 
         /* ── MyntReal Hub Footer ── */
@@ -824,6 +1086,10 @@
             </div>
             <a href="/hub/contact">Contact</a>
             <a href="/careers">Careers</a>
+            <div class="hub-mobile-auth-block">
+              <button onclick="showLoginSelection()" class="hub-mobile-login-btn"><i class="fas fa-sign-in-alt"></i> Login / All Portals</button>
+              <a href="/customer" class="hub-mobile-cust-btn"><i class="fas fa-user-circle"></i> Customer Portal</a>
+            </div>
           </div>
           <button class="hub-btn-login" onclick="showLoginSelection()" style="border:none;cursor:pointer;font-family:inherit">Login</button>
         </div>
@@ -1035,61 +1301,78 @@
             </a>
 
             <div class="welcome-title">
-                <div class="welcome-eyebrow"><i class="fas fa-lock"></i> Select Your Portal</div>
-                <h2>Welcome to <span>MyntReal</span></h2>
-                <div class="welcome-subtitle">Choose your access type to continue</div>
+                <div class="welcome-eyebrow"><i class="fas fa-shield-halved"></i> Authorized Portal Gateway</div>
+                <h2>Welcome to <span class="brand-gradient">MyntReal</span></h2>
+                <div class="welcome-subtitle">Select your authorized portal to access your dashboard &amp; services</div>
             </div>
 
             <div class="login-cards-container">
-                <div class="login-card green" onclick="navigateToLogin('customer')" style="border: 2px solid rgba(16, 185, 129, 0.4); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);">
-                    <div class="login-card-icon-wrap" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-user-circle"></i></div>
-                    <div class="loyalty-tag" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">⚡ Universal Access</div>
-                    <div class="login-card-title">Customer</div>
-                    <div class="login-card-desc">Recharges, Bills, Solar,<br>EV &amp; Students Portal</div>
-                    <button class="login-card-btn" style="background: linear-gradient(135deg, #10b981, #059669);">Customer Login <i class="fas fa-arrow-right"></i></button>
-                </div>
-
-                <div class="login-card blue" onclick="navigateToLogin('staff')">
+                <!-- 1. STAFF -->
+                <div class="login-card card-staff" onclick="navigateToLogin('staff')">
+                    <div class="card-accent-line"></div>
+                    <span class="portal-badge badge-staff"><i class="fas fa-user-shield"></i> Internal Team</span>
                     <div class="login-card-icon-wrap"><i class="fas fa-user-tie"></i></div>
                     <div class="login-card-title">Staff</div>
-                    <div class="login-card-desc">Internal Team<br>& Admin Access</div>
-                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                    <div class="login-card-desc">Employees, Operations &amp; Admin Controls</div>
+                    <button class="login-card-btn">Staff Login <i class="fas fa-arrow-right"></i></button>
                 </div>
 
-                <div class="login-card indigo" onclick="navigateToLogin('partner')">
-                    <div class="login-card-icon-wrap"><i class="fas fa-handshake"></i></div>
-                    <div class="login-card-title">Partner</div>
-                    <div class="login-card-desc">Official Business<br>Partners Portal</div>
-                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
-                </div>
-
-                <div class="login-card blue" onclick="navigateToLogin('mnr')">
-                    <div class="login-card-icon-wrap"><i class="fas fa-users"></i></div>
-                    <div class="login-card-title">MNR Member</div>
-                    <div class="login-card-desc">MNR</div>
-                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
-                </div>
-
-                <div class="login-card vgk" onclick="navigateToLogin('vgk')">
+                <!-- 2. VGK4U -->
+                <div class="login-card card-vgk" onclick="navigateToLogin('vgk')">
+                    <div class="card-accent-line"></div>
+                    <span class="portal-badge badge-vgk"><i class="fas fa-star"></i> Loyalty Program</span>
                     <div class="login-card-icon-wrap"><i class="fas fa-crown"></i></div>
-                    <div class="loyalty-tag">⭐ Loyalty Program</div>
                     <div class="login-card-title">VGK4U</div>
-                    <div class="login-card-desc">Loyalty Points &amp; Referral<br>Bonus Program</div>
+                    <div class="login-card-desc">Loyalty Points, Referral Bonus &amp; Rewards</div>
                     <button class="login-card-btn">Join / Login <i class="fas fa-arrow-right"></i></button>
                 </div>
 
-                <div class="login-card green" onclick="navigateToLogin('vendor')">
+                <!-- 3. CUSTOMER -->
+                <div class="login-card card-customer" onclick="navigateToLogin('customer')">
+                    <div class="card-accent-line"></div>
+                    <span class="portal-badge badge-customer"><i class="fas fa-bolt"></i> Universal Access</span>
+                    <div class="login-card-icon-wrap"><i class="fas fa-user-circle"></i></div>
+                    <div class="login-card-title">Customer</div>
+                    <div class="login-card-desc">Recharges, Bills, Solar, EV &amp; Students Portal</div>
+                    <button class="login-card-btn">Customer Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <!-- 4. VENDOR -->
+                <div class="login-card card-vendor" onclick="navigateToLogin('vendor')">
+                    <div class="card-accent-line"></div>
+                    <span class="portal-badge badge-vendor"><i class="fas fa-truck-ramp-box"></i> Supply Chain</span>
                     <div class="login-card-icon-wrap"><i class="fas fa-store"></i></div>
                     <div class="login-card-title">Vendor</div>
-                    <div class="login-card-desc">Supplier &amp; Vendor<br>Partner Portal</div>
-                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                    <div class="login-card-desc">Suppliers, Inventory &amp; Merchant Partner Network</div>
+                    <button class="login-card-btn">Vendor Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <!-- 5. MNR -->
+                <div class="login-card card-mnr" onclick="navigateToLogin('mnr')">
+                    <div class="card-accent-line"></div>
+                    <span class="portal-badge badge-mnr"><i class="fas fa-handshake"></i> Members &amp; Partners</span>
+                    <div class="login-card-icon-wrap"><i class="fas fa-users-gear"></i></div>
+                    <div class="login-card-title">MNR Member</div>
+                    <div class="login-card-desc">MyntReal Associates &amp; Core Member Network</div>
+                    <button class="login-card-btn">MNR Login <i class="fas fa-arrow-right"></i></button>
+                    <a href="/partner/login" class="partner-quicklink" onclick="event.stopPropagation();">
+                        <i class="fas fa-briefcase"></i> Partner Portal Login &rarr;
+                    </a>
                 </div>
             </div>
 
-            <div style="margin-top: 56px; display: flex; align-items: center; gap: 12px; opacity:0.75;">
-                <div>
-                    <div style="font-size: 0.85rem; font-weight: 800; color: #fff; letter-spacing: 1px;">MYNTREAL</div>
-                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.55);">Redefining Future</div>
+            <div class="portal-footer-badge">
+                <div class="portal-footer-line"></div>
+                <div class="portal-footer-content">
+                    <span class="zynova-badge-tag"><i class="fas fa-shield-halved"></i> OFFICIAL SOFTWARE PROVIDER</span>
+                    <div class="zynova-provider-row">
+                        <span class="portal-footer-name">Supported &amp; Authorized by <strong>Zynova OS</strong></span>
+                        <span class="portal-footer-sep">·</span>
+                        <span class="portal-footer-sub">Core SaaS Software Provider</span>
+                    </div>
+                </div>
+                <div class="portal-footer-disclaimer">
+                    MyntReal, VGK4U &amp; MNR operate as independent participating service providers powered by Zynova OS Enterprise Architecture.
                 </div>
             </div>
         </div>
@@ -1216,6 +1499,7 @@
         // Always show login portal selection first when arriving at /landing
         document.addEventListener('DOMContentLoaded', function() {
             showLoginSelection();
+            localStorage.removeItem('mynt_portal_theme');
             // Clear all portal tokens to prevent auto-login bypass (Security enforcement)
             localStorage.removeItem('vgk_token');
             localStorage.removeItem('vgk_partner');

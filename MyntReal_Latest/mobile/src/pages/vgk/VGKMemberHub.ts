@@ -32,6 +32,7 @@ const NATIVE_ROUTES: Record<string, string> = {
   'bonanza-rewards':    'vgk-bonanza-rewards',
   'points-balance':     'vgk-points-balance',
   'career':             'vgk-career',
+  'arcade':             'vgk-games',
 };
 
 interface ParityModule {
@@ -43,6 +44,7 @@ interface ParityModule {
 
 const MODULES: ParityModule[] = [
   { slug: 'career',             label: 'Career & Milestones', icon: '🏆', color: '#7c3aed' },
+  { slug: 'arcade',             label: 'Arcade & Games',    icon: '🎮', color: '#f59e0b' },
   { slug: 'birthdays',          label: 'Birthdays',         icon: '🎂', color: '#0ea5e9' },
   { slug: 'top-earners',        label: 'Top Earners',       icon: '🏆', color: '#f59e0b' },
   { slug: 'awards',             label: 'My Awards',         icon: '🥇', color: '#a21caf' },
@@ -89,7 +91,8 @@ export class VGKMemberHubPage {
       vendors: 'Vendor Shops',
       media: 'Media Hub',
       orders: 'Orders',
-      career: 'Career & Milestones'
+      career: 'Career & Milestones',
+      arcade: 'Arcade & Games'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
@@ -143,7 +146,8 @@ export class VGKMemberHubPage {
       bonanza: 'Bonanza Rewards',
       vendors: 'Vendor Shops',
       media: 'Media Hub',
-      orders: 'Orders'
+      orders: 'Orders',
+      arcade: 'Arcade & Games'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
@@ -187,7 +191,8 @@ export class VGKMemberHubPage {
       vendors: 'Vendor Shops',
       media: 'Media Hub',
       orders: 'Orders',
-      career: 'Career & Milestones'
+      career: 'Career & Milestones',
+      arcade: 'Arcade & Games'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 

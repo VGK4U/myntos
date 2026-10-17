@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VGK Arcade & Rewards Hub | VGK4U Channel Partner</title>
+  
+  <!-- Bootstrap 5 CSS & JS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- FontAwesome 6 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --vgk-bg: #0c0a1a;
+      --vgk-card: #15122b;
+      --vgk-surface: #1e1b40;
+      --vgk-border: rgba(168, 85, 247, 0.18);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.3);
+      --purple: #8b5cf6;
+      --purple-glow: rgba(139, 92, 246, 0.35);
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--vgk-bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navbar */
+    .vgk-navbar {
+      background: rgba(21, 18, 43, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--vgk-border);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 12px 0;
+    }
+
+    .vgk-logo {
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vgk-badge-gold {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      font-weight: 800;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Game Tab Buttons */
+    .vgk-tab-btn {
+      background: var(--vgk-card);
+      border: 1px solid var(--vgk-border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      flex: 1;
+    }
+
+    .vgk-tab-btn:hover {
+      background: var(--vgk-surface);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .vgk-tab-btn.active {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+      border-color: var(--gold);
+      color: #fff;
+      box-shadow: 0 4px 18px var(--gold-glow);
+    }
+
+    .vgk-tab-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    /* HUD */
+    .vgk-hud-panel {
+      background: var(--vgk-card);
+      border: 1px solid var(--vgk-border);
+      border-radius: 18px;
+      padding: 16px 20px;
+    }
+
+    .score-metric-box {
+      text-align: center;
+      padding: 6px 12px;
+    }
+
+    .score-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .score-val-current {
+      font-size: 1.85rem;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1.1;
+    }
+
+    .score-val-best {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #c084fc;
+      line-height: 1.2;
+    }
+
+    /* Arena */
+    .vgk-arena-wrapper {
+      background: #080612;
+      border: 1px solid var(--vgk-border);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+      min-height: 380px;
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+      touch-action: none;
+    }
+
+    /* Overlays */
+    .game-ui-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(12, 10, 26, 0.9);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    /* Mobile Controls Bar */
+    .mobile-controls-bar {
+      display: none;
+      margin-top: 14px;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .dpad-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: var(--vgk-surface);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      color: #fff;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: manipulation;
+      transition: all 0.1s;
+    }
+
+    .dpad-btn:active {
+      background: var(--gold);
+      color: #000;
+      transform: scale(0.92);
+    }
+
+    .btn-action-jump {
+      width: 90px;
+      height: 58px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+      color: #000;
+      font-weight: 800;
+      font-size: 1rem;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px var(--gold-glow);
+    }
+
+    .btn-action-jump:active {
+      transform: scale(0.94);
+    }
+
+    .char-picker-pill {
+      background: var(--vgk-card);
+      border: 1px solid var(--vgk-border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .char-picker-pill.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold);
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-controls-bar { display: flex; }
+      .vgk-tab-btn { padding: 10px 12px; }
+      .score-val-current { font-size: 1.45rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <header class="vgk-navbar">
+    <div class="container d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <a href="/catalog/vgk4u" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1">
+          <i class="fa-solid fa-arrow-left me-1"></i> Hub
+        </a>
+        <div class="vgk-logo">
+          <span><i class="fa-solid fa-crown text-warning me-1"></i> VGK<span class="text-warning">4U</span></span>
+          <span class="vgk-badge-gold">Arcade</span>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <a href="/vgk/points" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-2">
+          <i class="fa-solid fa-crown text-warning"></i>
+          <span><span id="nav-vgk-points">0</span> Pts</span>
+        </a>
+        <button type="button" onclick="openClaimDialog()" class="btn btn-sm btn-warning text-dark rounded-pill px-3 py-1 fw-bold">
+          <i class="fa-solid fa-gift me-1"></i> Claim Code
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="container my-4 flex-grow-1">
+    
+    <!-- PAGE TITLE -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <h1 class="h3 fw-bold mb-1 text-white">VGK Arcade & Bonanza Rewards</h1>
+        <p class="text-muted small mb-0">Partner arcade skill games synced directly to your verified VGK Points balance.</p>
+      </div>
+
+      <!-- AUDIO CONTROLS TOGGLES -->
+      <div class="d-flex align-items-center gap-2 bg-dark p-2 rounded-pill border border-secondary">
+        <button type="button" id="btn-audio-sfx" onclick="toggleSfx()" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1" title="Sound Effects">
+          <i class="fa-solid fa-volume-high"></i> SFX
+        </button>
+        <button type="button" id="btn-audio-music" onclick="toggleMusic()" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1" title="Background Music">
+          <i class="fa-solid fa-music"></i> Music
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. GAME SELECTOR CARDS -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="vgk-tab-btn active" id="tab-snake" onclick="selectGame('SNAKE')">
+          <div class="vgk-tab-icon" style="background: rgba(245, 158, 11, 0.2); color: var(--gold);">
+            <i class="fa-solid fa-worm"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Golden Snake</div>
+            <div class="small text-muted">Eat orbs & grow the serpent</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="vgk-tab-btn" id="tab-block" onclick="selectGame('BLOCK_DROP')">
+          <div class="vgk-tab-icon" style="background: rgba(139, 92, 246, 0.2); color: #c084fc;">
+            <i class="fa-solid fa-cubes"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Block Drop</div>
+            <div class="small text-muted">Rotate & clear full lines</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="vgk-tab-btn" id="tab-runner" onclick="selectGame('ENDLESS_RUNNER')">
+          <div class="vgk-tab-icon" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan);">
+            <i class="fa-solid fa-person-running"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Endless Runner</div>
+            <div class="small text-muted">Dodge drones & grab bonanza stars</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. RUNNER CHARACTER SELECTOR -->
+    <div id="runner-char-picker" class="card bg-dark border-secondary p-3 mb-4 d-none">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase text-muted"><i class="fa-solid fa-user-astronaut me-1 text-warning"></i> Select Arcade Hero:</span>
+        <span class="badge bg-secondary" style="font-size: 0.7rem;">Configurable Character System</span>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <div class="char-picker-pill active" id="pill-volt_fox" onclick="selectRunnerCharacter('volt_fox')">
+          <i class="fa-solid fa-paw text-warning"></i> Volt Fox
+        </div>
+        <div class="char-picker-pill" id="pill-robo_runner" onclick="selectRunnerCharacter('robo_runner')">
+          <i class="fa-solid fa-robot text-info"></i> Robo Runner
+        </div>
+        <div class="char-picker-pill" id="pill-astro_rabbit" onclick="selectRunnerCharacter('astro_rabbit')">
+          <i class="fa-solid fa-moon text-purple" style="color: #c084fc;"></i> Astro Rabbit
+        </div>
+        <div class="char-picker-pill" id="pill-cyber_duck" onclick="selectRunnerCharacter('cyber_duck')">
+          <i class="fa-solid fa-feather text-success"></i> Cyber Duck
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SCOREBOARD HUD -->
+    <div class="vgk-hud-panel mb-4">
+      <div class="row g-2 align-items-center">
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Current Score</div>
+            <div class="score-val-current" id="hud-current-score">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Personal Best</div>
+            <div class="score-val-best" id="hud-best-score">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Time & Level</div>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <span class="badge bg-warning text-dark fw-bold" id="hud-level">Lvl 1</span>
+              <span class="fw-bold text-white" id="hud-time">00:00</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label" id="hud-progress-label">Milestone Progress</div>
+            <div class="progress mt-1" style="height: 8px; background: rgba(255,255,255,0.1);">
+              <div id="hud-progress-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. ARENA -->
+    <div class="vgk-arena-wrapper" id="game-container">
+      <canvas id="game-canvas" width="400" height="400"></canvas>
+
+      <div id="block-drop-preview-panel" class="d-none" style="position: absolute; top: 16px; right: 16px; background: rgba(21, 18, 43, 0.88); padding: 8px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2); text-align: center;">
+        <div style="font-size: 0.65rem; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">NEXT</div>
+        <canvas id="preview-canvas" width="80" height="80"></canvas>
+      </div>
+
+      <!-- OVERLAY: READY -->
+      <div class="game-ui-overlay" id="overlay-ready">
+        <div class="mb-3">
+          <div class="h2 fw-bold text-white mb-1" id="ready-game-title">Golden Snake</div>
+          <p class="text-muted small" id="ready-game-desc">Guide the golden serpent, eat glowing energy orbs, and beat your partner record!</p>
+        </div>
+        <button type="button" onclick="handleStartGame()" class="btn btn-lg btn-warning text-dark rounded-pill px-5 py-2 fw-bold" style="box-shadow: 0 4px 18px var(--gold-glow);">
+          <i class="fa-solid fa-play me-2"></i> Start Arcade Game
+        </button>
+      </div>
+
+      <!-- OVERLAY: PAUSED -->
+      <div class="game-ui-overlay d-none" id="overlay-paused">
+        <div class="h2 fw-bold text-warning mb-2"><i class="fa-solid fa-pause me-2"></i> ARCADE PAUSED</div>
+        <p class="text-muted small mb-4">Gameplay is paused. Your session state is preserved.</p>
+        <div class="d-flex gap-3">
+          <button type="button" onclick="handleResumeGame()" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-play me-1"></i> Resume
+          </button>
+          <button type="button" onclick="handleRestartGame()" class="btn btn-outline-danger rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-rotate-right me-1"></i> Restart
+          </button>
+        </div>
+      </div>
+
+      <!-- OVERLAY: SUBMITTING -->
+      <div class="game-ui-overlay d-none" id="overlay-submitting">
+        <div class="spinner-border text-warning mb-3" role="status"></div>
+        <div class="h5 fw-bold text-white">Verifying Arcade Telemetry...</div>
+        <p class="text-muted small">Validating session integrity and calculating VGK points.</p>
+      </div>
+
+      <!-- OVERLAY: GAME OVER -->
+      <div class="game-ui-overlay d-none" id="overlay-gameover">
+        <div class="h3 fw-bold text-danger mb-1"><i class="fa-solid fa-skull me-2"></i> GAME OVER</div>
+        <div class="my-2">
+          <span class="h1 fw-bold text-white" id="go-final-score">0</span>
+          <div class="small text-muted">Final Score</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="badge bg-warning text-dark px-3 py-1 fw-bold" id="go-new-best-badge" style="display: none;">🏆 NEW PERSONAL BEST!</span>
+          <div class="small text-muted mt-1">All-Time Best: <strong class="text-warning" id="go-best-score">0</strong></div>
+        </div>
+
+        <div class="card bg-dark border-warning p-3 mb-3 d-none w-100" style="max-width: 360px;" id="go-reward-card">
+          <div class="fw-bold text-warning small mb-1"><i class="fa-solid fa-gift me-1"></i> Reward Status</div>
+          <div class="small text-white" id="go-reward-msg">20 promotional points added to VGK balance!</div>
+          <div class="mt-2 d-none" id="go-reward-code-wrap">
+            <div class="small text-muted mb-1">Single-Use Claim Code:</div>
+            <div class="p-2 rounded bg-secondary text-warning fw-bold font-monospace" id="go-reward-code">PLAY-XXXX-NNNN</div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="button" onclick="handleRestartGame()" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-rotate-right me-1"></i> Play Again
+          </button>
+          <button type="button" onclick="handleBackToLobby()" class="btn btn-outline-secondary rounded-pill px-4 py-2">
+            Change Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. MOBILE TOUCH CONTROLS -->
+    <div class="mobile-controls-bar" id="mobile-controls-snake">
+      <div class="d-flex flex-column align-items-center gap-1">
+        <button type="button" class="dpad-btn" onclick="triggerDpad('UP')"><i class="fa-solid fa-arrow-up"></i></button>
+        <div class="d-flex gap-2">
+          <button type="button" class="dpad-btn" onclick="triggerDpad('LEFT')"><i class="fa-solid fa-arrow-left"></i></button>
+          <button type="button" class="dpad-btn" onclick="triggerDpad('DOWN')"><i class="fa-solid fa-arrow-down"></i></button>
+          <button type="button" class="dpad-btn" onclick="triggerDpad('RIGHT')"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-controls-bar d-none" id="mobile-controls-block">
+      <button type="button" class="dpad-btn" onclick="triggerBlock('LEFT')"><i class="fa-solid fa-arrow-left"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('ROTATE')" style="background: rgba(168, 85, 247, 0.3); border-color: #a855f7;"><i class="fa-solid fa-rotate"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('RIGHT')"><i class="fa-solid fa-arrow-right"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('DOWN')"><i class="fa-solid fa-arrow-down"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('DROP')" style="background: rgba(245, 158, 11, 0.3); border-color: #f59e0b;"><i class="fa-solid fa-angles-down"></i></button>
+    </div>
+
+    <div class="mobile-controls-bar d-none" id="mobile-controls-runner">
+      <button type="button" class="btn-action-jump w-100" style="max-width: 320px;" onclick="triggerRunnerJump()">
+        <i class="fa-solid fa-bolt"></i> TAP TO JUMP (DOUBLE JUMP READY)
+      </button>
+    </div>
+
+  </main>
+
+  <!-- CLAIM MODAL -->
+  <div class="modal fade" id="claimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border-warning text-white">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold text-warning"><i class="fa-solid fa-gift me-2"></i> Redeem Arcade Code</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">Enter your verified single-use arcade claim code to credit points to your VGK balance:</p>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Arcade Code</label>
+            <input type="text" id="claimCodeInput" class="form-control bg-secondary text-white border-0 text-uppercase fw-bold font-monospace" placeholder="PLAY-XXXX-NNNN" maxlength="16">
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitClaimCode()" class="btn btn-warning text-dark rounded-pill fw-bold">Redeem Points</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT GAME ASSETS -->
+  <script src="/public/js/games/audio_synthesizer.js"></script>
+  <script src="/public/js/games/character_registry.js"></script>
+  <script src="/public/js/games/games_shared.js"></script>
+  <script src="/public/js/games/snake_game.js"></script>
+  <script src="/public/js/games/block_drop_game.js"></script>
+  <script src="/public/js/games/endless_runner_game.js"></script>
+
+  <script>
+    let activeFramework = null;
+    let snakeEngine = null;
+    let blockDropEngine = null;
+    let runnerEngine = null;
+    let currentGameType = 'SNAKE';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initFramework();
+      loadPartnerPoints();
+    });
+
+    function initFramework() {
+      const canvas = document.getElementById('game-canvas');
+      const previewCanvas = document.getElementById('preview-canvas');
+
+      activeFramework = new GameFramework({
+        containerId: 'game-container',
+        canvasId: 'game-canvas',
+        gameType: 'SNAKE',
+        theme: 'vgk4u'
+      });
+
+      snakeEngine = new SnakeGame(canvas, activeFramework);
+      blockDropEngine = new BlockDropGame(canvas, previewCanvas, activeFramework);
+      runnerEngine = new EndlessRunnerGame(canvas, activeFramework);
+
+      activeFramework.setGameEngine(snakeEngine);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
+      const initialGame = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER'].includes(reqGame) ? reqGame : 'SNAKE';
+      selectGame(initialGame);
+    }
+
+    function selectGame(type) {
+      currentGameType = type;
+      activeFramework.gameType = type;
+      activeFramework._initStorage();
+      activeFramework._updateScoreHUD();
+
+      document.querySelectorAll('.vgk-tab-btn').forEach(b => b.classList.remove('active'));
+      if (type === 'SNAKE') document.getElementById('tab-snake').classList.add('active');
+      if (type === 'BLOCK_DROP') document.getElementById('tab-block').classList.add('active');
+      if (type === 'ENDLESS_RUNNER') document.getElementById('tab-runner').classList.add('active');
+
+      const charPicker = document.getElementById('runner-char-picker');
+      const previewPanel = document.getElementById('block-drop-preview-panel');
+      charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+      previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
+
+      document.getElementById('mobile-controls-snake').classList.toggle('d-none', type !== 'SNAKE');
+      document.getElementById('mobile-controls-block').classList.toggle('d-none', type !== 'BLOCK_DROP');
+      document.getElementById('mobile-controls-runner').classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+
+      if (type === 'SNAKE') activeFramework.setGameEngine(snakeEngine);
+      if (type === 'BLOCK_DROP') activeFramework.setGameEngine(blockDropEngine);
+      if (type === 'ENDLESS_RUNNER') activeFramework.setGameEngine(runnerEngine);
+
+      const titleEl = document.getElementById('ready-game-title');
+      const descEl = document.getElementById('ready-game-desc');
+      if (type === 'SNAKE') {
+        titleEl.textContent = 'Golden Snake';
+        descEl.textContent = 'Guide the golden serpent, eat glowing energy orbs, and beat your partner record!';
+      } else if (type === 'BLOCK_DROP') {
+        titleEl.textContent = 'Block Drop';
+        descEl.textContent = 'Place and rotate falling blocks, complete lines, and progress through levels!';
+      } else if (type === 'ENDLESS_RUNNER') {
+        titleEl.textContent = 'Endless Runner';
+        descEl.textContent = 'Sprint, double jump obstacles, and collect bonanza stars for point milestones!';
+      }
+
+      activeFramework._hideAllOverlays();
+      document.getElementById('overlay-ready').classList.remove('d-none');
+
+      if (type === 'SNAKE') snakeEngine.resizeCanvas();
+      if (type === 'BLOCK_DROP') blockDropEngine.resizeCanvas();
+      if (type === 'ENDLESS_RUNNER') runnerEngine.resizeCanvas();
+    }
+
+    function selectRunnerCharacter(charId) {
+      document.querySelectorAll('.char-picker-pill').forEach(p => p.classList.remove('active'));
+      const activePill = document.getElementById(`pill-${charId}`);
+      if (activePill) activePill.classList.add('active');
+      activeFramework.setCharacter(charId);
+    }
+
+    function handleStartGame() { activeFramework.startGame(); }
+    function handleResumeGame() { activeFramework.resumeGame(); }
+    function handleRestartGame() { activeFramework.restartGame(); }
+    function handleBackToLobby() { selectGame(currentGameType); }
+
+    function triggerDpad(dir) { if (snakeEngine) snakeEngine.setDirection(dir); }
+    function triggerBlock(action) {
+      if (!blockDropEngine) return;
+      if (action === 'LEFT') blockDropEngine.moveLeft();
+      if (action === 'RIGHT') blockDropEngine.moveRight();
+      if (action === 'ROTATE') blockDropEngine.rotate();
+      if (action === 'DOWN') blockDropEngine.softDrop();
+      if (action === 'DROP') blockDropEngine.hardDrop();
+    }
+    function triggerRunnerJump() { if (runnerEngine) runnerEngine.jump(); }
+
+    function toggleSfx() {
+      const active = window.gameAudio ? window.gameAudio.toggleSfx() : false;
+      const btn = document.getElementById('btn-audio-sfx');
+      btn.classList.toggle('btn-outline-info', active);
+      btn.classList.toggle('btn-secondary', !active);
+    }
+
+    function toggleMusic() {
+      const active = window.gameAudio ? window.gameAudio.toggleMusic() : false;
+      const btn = document.getElementById('btn-audio-music');
+      btn.classList.toggle('btn-outline-warning', active);
+      btn.classList.toggle('btn-secondary', !active);
+    }
+
+    async function loadPartnerPoints() {
+      try {
+        const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+        if (!token) return;
+
+        const resp = await fetch('/api/v1/vgk/dashboard/points', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const pts = (data.summary && data.summary.available_balance) || 0;
+          document.getElementById('nav-vgk-points').textContent = pts.toLocaleString();
+        }
+      } catch (e) {}
+    }
+
+    function openClaimDialog() {
+      const modal = new bootstrap.Modal(document.getElementById('claimModal'));
+      modal.show();
+    }
+
+    async function submitClaimCode() {
+      const input = document.getElementById('claimCodeInput');
+      const code = (input.value || '').trim().toUpperCase();
+      if (!code) {
+        Swal.fire({ icon: 'warning', title: 'Enter Code', text: 'Please enter your arcade code.' });
+        return;
+      }
+
+      const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+      if (!token) {
+        Swal.fire({ icon: 'info', title: 'Sign In Required', text: 'Please sign in to your VGK account to claim codes.' });
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/v1/games/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ claim_code: code })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('claimModal')).hide();
+          input.value = '';
+          Swal.fire({
+            icon: 'success',
+            title: 'Points Redeemed!',
+            text: `${data.credited_points} points added to your VGK balance. New Balance: ${data.new_balance} Pts`
+          });
+          document.getElementById('nav-vgk-points').textContent = data.new_balance.toLocaleString();
+        } else {
+          Swal.fire({ icon: 'error', title: 'Redemption Failed', text: data.detail || data.message || 'Could not claim code.' });
+        }
+      } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Network error. Please try again.' });
+      }
+    }
+  </script>
+</body>
+</html>

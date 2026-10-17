@@ -89,6 +89,7 @@ class CustomerProfileOut(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     email: Optional[str] = None
+    loyalty_points_balance: Optional[float] = 0.0
     created_at: Optional[datetime] = None
 
     class Config:

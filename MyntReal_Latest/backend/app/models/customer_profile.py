@@ -9,7 +9,7 @@ Represents a retail/consumer customer account across all MyntOS & VGK4U vertical
 """
 from app.core.timezone import get_indian_time
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Index, Numeric
 from app.core.database import Base
 
 
@@ -26,6 +26,32 @@ class CustomerProfile(Base):
     state = Column(String(64), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     profile_metadata = Column(Text, nullable=True)  # JSON-encoded extra preferences/saved billing accounts
+
+    @property
+    def loyalty_points_balance(self) -> float:
+        import json
+        if self.profile_metadata:
+            try:
+                data = json.loads(self.profile_metadata)
+                if isinstance(data, dict):
+                    return float(data.get("loyalty_points_balance", 0.0))
+            except Exception:
+                pass
+        return 0.0
+
+    @loyalty_points_balance.setter
+    def loyalty_points_balance(self, value):
+        import json
+        data = {}
+        if self.profile_metadata:
+            try:
+                data = json.loads(self.profile_metadata)
+                if not isinstance(data, dict):
+                    data = {}
+            except Exception:
+                data = {}
+        data["loyalty_points_balance"] = float(value or 0.0)
+        self.profile_metadata = json.dumps(data)
 
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)

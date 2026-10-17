@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Play & Earn — Casual Games & Rewards | MyntReal</title>
+  
+  <!-- Bootstrap 5 CSS & JS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- FontAwesome 6 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --primary-dark: #080d16;
+      --card-dark: #101826;
+      --card-surface: #141f32;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --cyan: #38bdf8;
+      --indigo: #6366f1;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--primary-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Universal Header */
+    .top-navbar {
+      background: rgba(16, 24, 38, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 12px 0;
+    }
+
+    .brand-logo-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .brand-logo-accent {
+      background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Game Selector Cards */
+    .game-tab-btn {
+      background: var(--card-dark);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      flex: 1;
+    }
+
+    .game-tab-btn:hover {
+      background: var(--card-surface);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .game-tab-btn.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%);
+      border-color: var(--emerald);
+      color: #fff;
+      box-shadow: 0 4px 18px var(--emerald-glow);
+    }
+
+    .game-tab-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      flex-shrink: 0;
+    }
+
+    /* Scoreboard HUD */
+    .hud-panel {
+      background: var(--card-dark);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 16px 20px;
+    }
+
+    .score-metric-box {
+      text-align: center;
+      padding: 6px 12px;
+    }
+
+    .score-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .score-val-current {
+      font-size: 1.85rem;
+      font-weight: 900;
+      color: var(--emerald);
+      line-height: 1.1;
+    }
+
+    .score-val-best {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1.2;
+    }
+
+    /* Game Stage Arena */
+    .game-arena-wrapper {
+      background: #04070e;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      min-height: 380px;
+    }
+
+    #game-canvas {
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+      touch-action: none;
+    }
+
+    /* Overlays */
+    .game-ui-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 13, 22, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    /* Mobile Controls Bar */
+    .mobile-controls-bar {
+      display: none;
+      margin-top: 14px;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .dpad-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: var(--card-surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: manipulation;
+      transition: all 0.1s;
+    }
+
+    .dpad-btn:active {
+      background: var(--emerald);
+      color: #000;
+      transform: scale(0.92);
+    }
+
+    .btn-action-jump {
+      width: 90px;
+      height: 58px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px var(--emerald-glow);
+    }
+
+    .btn-action-jump:active {
+      transform: scale(0.94);
+    }
+
+    /* Character Selection Pills */
+    .char-picker-pill {
+      background: var(--card-dark);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .char-picker-pill.active {
+      background: rgba(168, 85, 247, 0.2);
+      border-color: #a855f7;
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-controls-bar { display: flex; }
+      .game-tab-btn { padding: 10px 12px; }
+      .score-val-current { font-size: 1.45rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <header class="top-navbar">
+    <div class="container d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <a href="/customer/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1">
+          <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+        </a>
+        <div class="brand-logo-text">
+          Mynt<span class="brand-logo-accent">Real</span> <span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8;">Arcade</span>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <!-- Loyalty Balance Pill -->
+        <button type="button" onclick="openLedgerModal()" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-2">
+          <i class="fa-solid fa-coins text-warning"></i>
+          <span><span id="nav-points-balance">0</span> Pts</span>
+        </button>
+
+        <!-- Player Identity / Guest Save Progress Button -->
+        <button type="button" id="btn-player-identity" onclick="promptMobilePopup()" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-2" title="Click to sync your high scores & rewards with mobile number">
+          <i class="fa-solid fa-mobile-screen"></i>
+          <span id="player-identity-text">Guest Mode &bull; Save Progress</span>
+        </button>
+
+        <!-- Claim Code Button -->
+        <button type="button" onclick="openClaimDialog()" class="btn btn-sm btn-success rounded-pill px-3 py-1 fw-bold">
+          <i class="fa-solid fa-gift me-1"></i> Claim Code
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="container my-4 flex-grow-1">
+    
+    <!-- PAGE TITLE & SUBTITLE -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <h1 class="h3 fw-bold mb-1 text-white">Play & Earn Rewards</h1>
+        <p class="text-muted small mb-0">Play casual skill games, beat personal bests, and earn verified loyalty discount points.</p>
+      </div>
+
+      <!-- AUDIO CONTROLS TOGGLES -->
+      <div class="d-flex align-items-center gap-2 bg-dark p-2 rounded-pill border border-secondary">
+        <button type="button" id="btn-audio-sfx" onclick="toggleSfx()" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1" title="Sound Effects">
+          <i class="fa-solid fa-volume-high"></i> SFX
+        </button>
+        <button type="button" id="btn-audio-music" onclick="toggleMusic()" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" title="Background Music">
+          <i class="fa-solid fa-music"></i> Music
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. GAME SELECTOR CARDS -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="game-tab-btn active" id="tab-snake" onclick="selectGame('SNAKE')">
+          <div class="game-tab-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">
+            <i class="fa-solid fa-worm"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Neon Snake</div>
+            <div class="small text-muted">Eat glowing food & survive</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="game-tab-btn" id="tab-block" onclick="selectGame('BLOCK_DROP')">
+          <div class="game-tab-icon" style="background: rgba(56, 189, 248, 0.2); color: var(--cyan);">
+            <i class="fa-solid fa-cubes"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Block Drop</div>
+            <div class="small text-muted">Rotate & clear full lines</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="game-tab-btn" id="tab-runner" onclick="selectGame('ENDLESS_RUNNER')">
+          <div class="game-tab-icon" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">
+            <i class="fa-solid fa-person-running"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white">Endless Runner</div>
+            <div class="small text-muted">Jump hazards & gather stars</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. RUNNER CHARACTER SELECTOR (Visible only when Runner selected) -->
+    <div id="runner-char-picker" class="card bg-dark border-secondary p-3 mb-4 d-none">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase text-muted"><i class="fa-solid fa-user-astronaut me-1 text-info"></i> Choose Your Playable Character:</span>
+        <span class="badge bg-secondary" style="font-size: 0.7rem;">Configurable Character System</span>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <div class="char-picker-pill active" id="pill-volt_fox" onclick="selectRunnerCharacter('volt_fox')">
+          <i class="fa-solid fa-paw text-warning"></i> Volt Fox
+        </div>
+        <div class="char-picker-pill" id="pill-robo_runner" onclick="selectRunnerCharacter('robo_runner')">
+          <i class="fa-solid fa-robot text-info"></i> Robo Runner
+        </div>
+        <div class="char-picker-pill" id="pill-astro_rabbit" onclick="selectRunnerCharacter('astro_rabbit')">
+          <i class="fa-solid fa-moon text-purple" style="color: #c084fc;"></i> Astro Rabbit
+        </div>
+        <div class="char-picker-pill" id="pill-cyber_duck" onclick="selectRunnerCharacter('cyber_duck')">
+          <i class="fa-solid fa-feather text-success"></i> Cyber Duck
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SCOREBOARD & HUD PANEL -->
+    <div class="hud-panel mb-4">
+      <div class="row g-2 align-items-center">
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Current Score</div>
+            <div class="score-val-current" id="hud-current-score">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Personal Best</div>
+            <div class="score-val-best" id="hud-best-score">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label">Time & Level</div>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <span class="badge bg-info text-dark fw-bold" id="hud-level">Lvl 1</span>
+              <span class="fw-bold text-white" id="hud-time">00:00</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="score-metric-box">
+            <div class="score-label" id="hud-progress-label">Milestone Progress</div>
+            <div class="progress mt-1" style="height: 8px; background: rgba(255,255,255,0.1);">
+              <div id="hud-progress-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. MAIN GAME ARENA -->
+    <div class="game-arena-wrapper" id="game-container">
+      <canvas id="game-canvas" width="400" height="400"></canvas>
+
+      <!-- Preview Canvas for Block Drop -->
+      <div id="block-drop-preview-panel" class="d-none" style="position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+        <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">NEXT</div>
+        <canvas id="preview-canvas" width="80" height="80"></canvas>
+      </div>
+
+      <!-- OVERLAY: READY TO PLAY -->
+      <div class="game-ui-overlay" id="overlay-ready">
+        <div class="mb-3">
+          <div class="h2 fw-bold text-white mb-1" id="ready-game-title">Neon Snake</div>
+          <p class="text-muted small" id="ready-game-desc">Use arrow keys or swipe to guide the snake. Eat food to grow and earn points!</p>
+        </div>
+        <button type="button" onclick="handleStartGame()" class="btn btn-lg btn-success rounded-pill px-5 py-2 fw-bold" style="box-shadow: 0 4px 18px var(--emerald-glow);">
+          <i class="fa-solid fa-play me-2"></i> Start Game
+        </button>
+      </div>
+
+      <!-- OVERLAY: PAUSED -->
+      <div class="game-ui-overlay d-none" id="overlay-paused">
+        <div class="h2 fw-bold text-warning mb-2"><i class="fa-solid fa-pause me-2"></i> GAME PAUSED</div>
+        <p class="text-muted small mb-4">Gameplay and timers are frozen. Take your time!</p>
+        <div class="d-flex gap-3">
+          <button type="button" onclick="handleResumeGame()" class="btn btn-success rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-play me-1"></i> Resume
+          </button>
+          <button type="button" onclick="handleRestartGame()" class="btn btn-outline-danger rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-rotate-right me-1"></i> Restart
+          </button>
+        </div>
+      </div>
+
+      <!-- OVERLAY: SUBMITTING RESULT -->
+      <div class="game-ui-overlay d-none" id="overlay-submitting">
+        <div class="spinner-border text-info mb-3" role="status"></div>
+        <div class="h5 fw-bold text-white">Verifying Anti-Cheat Telemetry...</div>
+        <p class="text-muted small">Saving session and calculating reward eligibility.</p>
+      </div>
+
+      <!-- OVERLAY: GAME OVER -->
+      <div class="game-ui-overlay d-none" id="overlay-gameover">
+        <div class="h3 fw-bold text-danger mb-1"><i class="fa-solid fa-skull me-2"></i> GAME OVER</div>
+        <div class="my-2">
+          <span class="h1 fw-bold text-white" id="go-final-score">0</span>
+          <div class="small text-muted">Final Score</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="badge bg-warning text-dark px-3 py-1 fw-bold" id="go-new-best-badge" style="display: none;">🏆 NEW PERSONAL BEST!</span>
+          <div class="small text-muted mt-1">All-Time Best: <strong class="text-warning" id="go-best-score">0</strong></div>
+        </div>
+
+        <!-- Reward Card -->
+        <div class="card bg-dark border-warning p-3 mb-3 d-none w-100" style="max-width: 360px;" id="go-reward-card">
+          <div class="fw-bold text-warning small mb-1"><i class="fa-solid fa-gift me-1"></i> Reward Status</div>
+          <div class="small text-white" id="go-reward-msg">20 loyalty points credited!</div>
+          <div class="mt-2 d-none" id="go-reward-code-wrap">
+            <div class="small text-muted mb-1">Your Single-Use Claim Code:</div>
+            <div class="p-2 rounded bg-secondary text-warning fw-bold font-monospace" id="go-reward-code">PLAY-XXXX-NNNN</div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="button" onclick="handleRestartGame()" class="btn btn-success rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-rotate-right me-1"></i> Play Again
+          </button>
+          <button type="button" onclick="handleBackToLobby()" class="btn btn-outline-secondary rounded-pill px-4 py-2">
+            Change Game
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. MOBILE TOUCH CONTROLS BAR -->
+    <div class="mobile-controls-bar" id="mobile-controls-snake">
+      <div class="d-flex flex-column align-items-center gap-1">
+        <button type="button" class="dpad-btn" onclick="triggerDpad('UP')"><i class="fa-solid fa-arrow-up"></i></button>
+        <div class="d-flex gap-2">
+          <button type="button" class="dpad-btn" onclick="triggerDpad('LEFT')"><i class="fa-solid fa-arrow-left"></i></button>
+          <button type="button" class="dpad-btn" onclick="triggerDpad('DOWN')"><i class="fa-solid fa-arrow-down"></i></button>
+          <button type="button" class="dpad-btn" onclick="triggerDpad('RIGHT')"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-controls-bar d-none" id="mobile-controls-block">
+      <button type="button" class="dpad-btn" onclick="triggerBlock('LEFT')"><i class="fa-solid fa-arrow-left"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('ROTATE')" style="background: rgba(168, 85, 247, 0.3); border-color: #a855f7;"><i class="fa-solid fa-rotate"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('RIGHT')"><i class="fa-solid fa-arrow-right"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('DOWN')"><i class="fa-solid fa-arrow-down"></i></button>
+      <button type="button" class="dpad-btn" onclick="triggerBlock('DROP')" style="background: rgba(245, 158, 11, 0.3); border-color: #f59e0b;"><i class="fa-solid fa-angles-down"></i></button>
+    </div>
+
+    <div class="mobile-controls-bar d-none" id="mobile-controls-runner">
+      <button type="button" class="btn-action-jump w-100" style="max-width: 320px;" onclick="triggerRunnerJump()">
+        <i class="fa-solid fa-bolt"></i> TAP TO JUMP (DOUBLE JUMP READY)
+      </button>
+    </div>
+
+  </main>
+
+  <!-- CLAIM REWARD CODE MODAL -->
+  <div class="modal fade" id="claimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border-secondary text-white">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-gift text-warning me-2"></i> Redeem Reward Code</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">Enter the 8-character single-use code won from guest gameplay or promotional bonanzas:</p>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Claim Code</label>
+            <input type="text" id="claimCodeInput" class="form-control bg-secondary text-white border-0 text-uppercase fw-bold font-monospace" placeholder="PLAY-XXXX-NNNN" maxlength="16">
+          </div>
+          <div class="alert alert-info py-2 small" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #7dd3fc;">
+            <i class="fa-solid fa-shield-halved me-1"></i> Reward points are credited directly into your verified MyntReal loyalty balance.
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitClaimCode()" class="btn btn-success rounded-pill fw-bold">Redeem Points</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER POINTS LEDGER MODAL -->
+  <div class="modal fade" id="ledgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-dark border-secondary text-white">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-coins text-warning me-2"></i> Loyalty Points Ledger</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Current Available Balance:</span>
+            <span class="h4 fw-bold text-warning mb-0" id="ledger-modal-balance">0 Pts</span>
+          </div>
+          <div class="table-responsive" style="max-height: 380px;">
+            <table class="table table-dark table-hover mb-0" style="font-size: 0.85rem;">
+              <thead>
+                <tr class="text-muted" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                  <th>Date</th>
+                  <th>Reason / Notes</th>
+                  <th class="text-end">Credit</th>
+                  <th class="text-end">Debit</th>
+                  <th class="text-end">Balance After</th>
+                </tr>
+              </thead>
+              <tbody id="ledger-table-body">
+                <tr><td colspan="5" class="text-center py-4 text-muted">Loading points ledger...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  <!-- RESUME GAME & MOBILE NUMBER POPUP MODAL -->
+  <div class="modal fade" id="resumeGameModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-white" style="background: #101826; border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.85);">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+              <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-white mb-0" id="resumeModalTitle">Play &amp; Save Progress</h5>
+              <div class="small text-muted">Sync high scores &amp; earn MyntReal rewards</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="handleSkipGuest()" aria-label="Close"></button>
+        </div>
+        
+        <div class="modal-body px-4 pt-3 pb-2">
+          <p class="small text-slate-300" style="color: #cbd5e1; line-height: 1.5;">
+            Enter your mobile number to resume your saved games, load your personal bests, and earn loyalty points!
+          </p>
+
+          <form id="quickResumeForm" onsubmit="event.preventDefault(); handleQuickResume();">
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted mb-1">Mobile Number</label>
+              <div class="input-group">
+                <span class="input-group-text bg-secondary border-0 text-white fw-bold px-3">+91</span>
+                <input type="tel" id="quickMobileInput" class="form-control text-white border-0 fw-bold" 
+                       style="background: #1e293b; font-size: 1.05rem; letter-spacing: 0.5px;" 
+                       placeholder="10-digit mobile number" maxlength="10" autocomplete="tel">
+              </div>
+              <div class="form-text small" style="color: #94a3b8; font-size: 0.78rem;">
+                <i class="fa-solid fa-shield-halved text-success me-1"></i> No password needed. We'll automatically secure your game session and progress.
+              </div>
+            </div>
+
+            <div class="d-grid gap-2 mb-2">
+              <button type="submit" id="btn-submit-quick-resume" class="btn btn-warning fw-bold py-2 rounded-pill" style="box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);">
+                <i class="fa-solid fa-play me-1"></i> Resume &amp; Save Progress
+              </button>
+            </div>
+          </form>
+
+          <div class="text-center my-2">
+            <button type="button" onclick="handleSkipGuest()" class="btn btn-link text-muted text-decoration-none small py-1" style="font-size: 0.82rem;">
+              <i class="fa-solid fa-forward me-1"></i> Skip &amp; Play Directly as Guest
+            </button>
+          </div>
+
+          <div class="alert alert-dark border-0 py-2 px-3 small text-center mb-0 mt-2" style="background: rgba(255, 255, 255, 0.04); font-size: 0.75rem; color: #94a3b8; border-radius: 10px;">
+            <i class="fa-solid fa-circle-info text-info me-1"></i> Note: If you skip, you can play directly right now, but high scores and point rewards will not be saved.
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 pt-0 pb-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT GAME ASSETS -->
+  <script src="/public/js/games/audio_synthesizer.js"></script>
+  <script src="/public/js/games/character_registry.js"></script>
+  <script src="/public/js/games/games_shared.js"></script>
+  <script src="/public/js/games/snake_game.js"></script>
+  <script src="/public/js/games/block_drop_game.js"></script>
+  <script src="/public/js/games/endless_runner_game.js"></script>
+
+  <script>
+    let activeFramework = null;
+    let snakeEngine = null;
+    let blockDropEngine = null;
+    let runnerEngine = null;
+    let currentGameType = 'SNAKE';
+    let resumeModalInstance = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initFramework();
+      checkAuthOrPromptResume();
+    });
+
+    function initFramework() {
+      const canvas = document.getElementById('game-canvas');
+      const previewCanvas = document.getElementById('preview-canvas');
+
+      activeFramework = new GameFramework({
+        containerId: 'game-container',
+        canvasId: 'game-canvas',
+        gameType: 'SNAKE',
+        theme: 'myntreal'
+      });
+
+      snakeEngine = new SnakeGame(canvas, activeFramework);
+      blockDropEngine = new BlockDropGame(canvas, previewCanvas, activeFramework);
+      runnerEngine = new EndlessRunnerGame(canvas, activeFramework);
+
+      activeFramework.setGameEngine(snakeEngine);
+
+      // Check URL query parameters (e.g. ?game=BLOCK_DROP or ?game=ENDLESS_RUNNER)
+      const urlParams = new URLSearchParams(window.location.search);
+      const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
+      const initialGame = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER'].includes(reqGame) ? reqGame : 'SNAKE';
+      selectGame(initialGame);
+    }
+
+    function checkAuthOrPromptResume() {
+      const token = localStorage.getItem('customer_token') || sessionStorage.getItem('customer_token');
+      const mobile = localStorage.getItem('customer_mobile');
+
+      if (token || mobile) {
+        updatePlayerIdentityBadge(mobile || 'MyntReal Player', true);
+        loadUserStats();
+      } else {
+        updatePlayerIdentityBadge('Guest', false);
+        promptMobilePopup();
+      }
+    }
+
+    function promptMobilePopup() {
+      const modalEl = document.getElementById('resumeGameModal');
+      if (modalEl) {
+        if (!resumeModalInstance) {
+          resumeModalInstance = new bootstrap.Modal(modalEl);
+        }
+        resumeModalInstance.show();
+        setTimeout(() => {
+          const input = document.getElementById('quickMobileInput');
+          if (input) input.focus();
+        }, 350);
+      }
+    }
+
+    function updatePlayerIdentityBadge(label, isAuthenticated) {
+      const badgeBtn = document.getElementById('btn-player-identity');
+      const badgeText = document.getElementById('player-identity-text');
+      if (!badgeBtn || !badgeText) return;
+
+      if (isAuthenticated) {
+        badgeBtn.className = 'btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-2';
+        badgeText.innerHTML = `<i class="fa-solid fa-user-check text-success"></i> ${label}`;
+        badgeBtn.title = 'Saved & Synced with Account';
+      } else {
+        badgeBtn.className = 'btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-flex align-items-center gap-2';
+        badgeText.innerHTML = `<i class="fa-solid fa-user-clock text-warning"></i> Guest &bull; <span class="text-white text-decoration-underline">Save Progress</span>`;
+        badgeBtn.title = 'Click to save your progress with mobile number';
+      }
+    }
+
+    async function handleQuickResume() {
+      const input = document.getElementById('quickMobileInput');
+      const rawMobile = (input.value || '').trim();
+      const digits = rawMobile.replace(/\D/g, '');
+      const cleanMobile = digits.length > 10 ? digits.slice(-10) : digits;
+
+      if (cleanMobile.length !== 10) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Invalid Mobile Number',
+          text: 'Please enter a valid 10-digit mobile number.',
+          background: '#141f32',
+          color: '#fff',
+          confirmButtonColor: '#f59e0b'
+        });
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-quick-resume');
+      const oldText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving & Syncing...';
+
+      try {
+        const resp = await fetch('/api/v1/games/quick-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile_number: cleanMobile })
+        });
+
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          localStorage.setItem('customer_token', data.token);
+          localStorage.setItem('customer_mobile', data.mobile_number);
+
+          if (resumeModalInstance) {
+            resumeModalInstance.hide();
+          }
+
+          updatePlayerIdentityBadge(data.mobile_number, true);
+          document.getElementById('nav-points-balance').textContent = (data.loyalty_points || 0).toLocaleString();
+
+          if (data.best_scores && activeFramework) {
+            const gameKey = currentGameType.toLowerCase();
+            if (data.best_scores[gameKey]) {
+              activeFramework.bestScore = data.best_scores[gameKey];
+              activeFramework._updateScoreHUD();
+            }
+          }
+
+          // Directly enter into the game with saved progress
+          handleStartGame();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Could Not Sync',
+            text: data.detail || data.message || 'Something went wrong. Please try again.',
+            background: '#141f32',
+            color: '#fff'
+          });
+        }
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Connection Error',
+          text: 'Unable to reach game server. Playing as guest.',
+          background: '#141f32',
+          color: '#fff'
+        });
+        handleSkipGuest();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldText;
+      }
+    }
+
+    function handleSkipGuest() {
+      if (resumeModalInstance) {
+        resumeModalInstance.hide();
+      }
+      updatePlayerIdentityBadge('Guest', false);
+      // Directly enter into the game as guest
+      handleStartGame();
+    }
+
+    function selectGame(type) {
+      currentGameType = type;
+      activeFramework.gameType = type;
+      activeFramework._initStorage();
+      activeFramework._updateScoreHUD();
+
+      // Update Tab Styles
+      document.querySelectorAll('.game-tab-btn').forEach(b => b.classList.remove('active'));
+      if (type === 'SNAKE') document.getElementById('tab-snake').classList.add('active');
+      if (type === 'BLOCK_DROP') document.getElementById('tab-block').classList.add('active');
+      if (type === 'ENDLESS_RUNNER') document.getElementById('tab-runner').classList.add('active');
+
+      // Character picker visibility
+      const charPicker = document.getElementById('runner-char-picker');
+      const previewPanel = document.getElementById('block-drop-preview-panel');
+      if (type === 'ENDLESS_RUNNER') {
+        charPicker.classList.remove('d-none');
+      } else {
+        charPicker.classList.add('d-none');
+      }
+
+      if (type === 'BLOCK_DROP') {
+        previewPanel.classList.remove('d-none');
+      } else {
+        previewPanel.classList.add('d-none');
+      }
+
+      // Update mobile controls visibility
+      document.getElementById('mobile-controls-snake').classList.toggle('d-none', type !== 'SNAKE');
+      document.getElementById('mobile-controls-block').classList.toggle('d-none', type !== 'BLOCK_DROP');
+      document.getElementById('mobile-controls-runner').classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+
+      // Set engine
+      if (type === 'SNAKE') activeFramework.setGameEngine(snakeEngine);
+      if (type === 'BLOCK_DROP') activeFramework.setGameEngine(blockDropEngine);
+      if (type === 'ENDLESS_RUNNER') activeFramework.setGameEngine(runnerEngine);
+
+      // Update Ready Overlay texts
+      const titleEl = document.getElementById('ready-game-title');
+      const descEl = document.getElementById('ready-game-desc');
+      if (type === 'SNAKE') {
+        titleEl.textContent = 'Neon Snake';
+        descEl.textContent = 'Use arrow keys or swipe to guide the snake. Eat food to grow and earn points!';
+      } else if (type === 'BLOCK_DROP') {
+        titleEl.textContent = 'Block Drop';
+        descEl.textContent = 'Use Left/Right to steer, Up to rotate, and Down to soft drop. Clear lines to score!';
+      } else if (type === 'ENDLESS_RUNNER') {
+        titleEl.textContent = 'Endless Runner';
+        descEl.textContent = 'Press Space/Up or tap screen to jump. Double jump over aerial drones & collect stars!';
+      }
+
+      activeFramework._hideAllOverlays();
+      document.getElementById('overlay-ready').classList.remove('d-none');
+
+      // Resize canvas for selected game
+      if (type === 'SNAKE') snakeEngine.resizeCanvas();
+      if (type === 'BLOCK_DROP') blockDropEngine.resizeCanvas();
+      if (type === 'ENDLESS_RUNNER') runnerEngine.resizeCanvas();
+    }
+
+    function selectRunnerCharacter(charId) {
+      document.querySelectorAll('.char-picker-pill').forEach(p => p.classList.remove('active'));
+      const activePill = document.getElementById(`pill-${charId}`);
+      if (activePill) activePill.classList.add('active');
+      activeFramework.setCharacter(charId);
+    }
+
+    function handleStartGame() {
+      activeFramework.startGame();
+    }
+
+    function handleResumeGame() {
+      activeFramework.resumeGame();
+    }
+
+    function handleRestartGame() {
+      activeFramework.restartGame();
+    }
+
+    function handleBackToLobby() {
+      selectGame(currentGameType);
+    }
+
+    // Touch D-Pad Triggers
+    function triggerDpad(dir) {
+      if (snakeEngine) snakeEngine.setDirection(dir);
+    }
+
+    function triggerBlock(action) {
+      if (!blockDropEngine) return;
+      if (action === 'LEFT') blockDropEngine.moveLeft();
+      if (action === 'RIGHT') blockDropEngine.moveRight();
+      if (action === 'ROTATE') blockDropEngine.rotate();
+      if (action === 'DOWN') blockDropEngine.softDrop();
+      if (action === 'DROP') blockDropEngine.hardDrop();
+    }
+
+    function triggerRunnerJump() {
+      if (runnerEngine) runnerEngine.jump();
+    }
+
+    // Audio Controls
+    function toggleSfx() {
+      const active = window.gameAudio ? window.gameAudio.toggleSfx() : false;
+      const btn = document.getElementById('btn-audio-sfx');
+      btn.classList.toggle('btn-outline-info', active);
+      btn.classList.toggle('btn-secondary', !active);
+    }
+
+    function toggleMusic() {
+      const active = window.gameAudio ? window.gameAudio.toggleMusic() : false;
+      const btn = document.getElementById('btn-audio-music');
+      btn.classList.toggle('btn-outline-primary', active);
+      btn.classList.toggle('btn-secondary', !active);
+    }
+
+    // User Points & Stats Loader
+    async function loadUserStats() {
+      try {
+        const token = localStorage.getItem('customer_token') || sessionStorage.getItem('customer_token');
+        if (!token) return;
+
+        const resp = await fetch('/api/v1/games/my-stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          document.getElementById('nav-points-balance').textContent = (data.all_time_points || 0).toLocaleString();
+        }
+      } catch (e) {}
+    }
+
+    // Claim Dialog
+    function openClaimDialog() {
+      const modal = new bootstrap.Modal(document.getElementById('claimModal'));
+      modal.show();
+    }
+
+    async function submitClaimCode() {
+      const input = document.getElementById('claimCodeInput');
+      const code = (input.value || '').trim().toUpperCase();
+      if (!code) {
+        Swal.fire({ icon: 'warning', title: 'Enter Code', text: 'Please enter your reward code.' });
+        return;
+      }
+
+      const token = localStorage.getItem('customer_token') || sessionStorage.getItem('customer_token');
+      if (!token) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Sign In Required',
+          text: 'Please sign in to your MyntReal account to redeem reward codes.',
+          confirmButtonText: 'Go to Login'
+        }).then(r => {
+          if (r.isConfirmed) window.location.href = '/customer/login?redirect=' + encodeURIComponent(window.location.pathname);
+        });
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/v1/games/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ claim_code: code })
+        });
+
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('claimModal')).hide();
+          input.value = '';
+          Swal.fire({
+            icon: 'success',
+            title: 'Reward Redeemed!',
+            text: `${data.credited_points} points added to your balance. New Balance: ${data.new_balance} Pts`
+          });
+          document.getElementById('nav-points-balance').textContent = data.new_balance;
+        } else {
+          Swal.fire({ icon: 'error', title: 'Claim Failed', text: data.detail || data.message || 'Could not claim code.' });
+        }
+      } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Network error. Please try again.' });
+      }
+    }
+
+    // Ledger Modal
+    async function openLedgerModal() {
+      const modal = new bootstrap.Modal(document.getElementById('ledgerModal'));
+      modal.show();
+
+      const tbody = document.getElementById('ledger-table-body');
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Loading points ledger...</td></tr>';
+
+      const token = localStorage.getItem('customer_token') || sessionStorage.getItem('customer_token');
+      if (!token) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-warning">Please sign in to view your ledger.</td></tr>';
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/v1/games/customer-ledger', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.success) {
+          document.getElementById('ledger-modal-balance').textContent = `${data.current_balance} Pts`;
+          if (!data.entries || data.entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No points transactions recorded yet.</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = data.entries.map(e => `
+            <tr>
+              <td><span class="text-white">${fmtDate(e.created_at)}</span></td>
+              <td>
+                <div class="fw-bold text-white">${e.reason_code}</div>
+                <div class="small text-muted">${e.notes || '—'}</div>
+              </td>
+              <td class="text-end text-success fw-bold">${e.points_credit > 0 ? `+${e.points_credit}` : '—'}</td>
+              <td class="text-end text-danger fw-bold">${e.points_debit > 0 ? `-${e.points_debit}` : '—'}</td>
+              <td class="text-end text-warning fw-bold">${e.balance_after}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${data.detail || 'Failed to load ledger.'}</td></tr>`;
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Network error loading ledger.</td></tr>';
+      }
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      } catch (e) { return iso; }
+    }
+  </script>
+</body>
+</html>

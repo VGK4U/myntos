@@ -1793,10 +1793,24 @@
                 <a href="#earnings" class="nav-link-pill" data-i18n="nav_earnings">Career &amp; Earnings</a>
                 <a href="#simulator" class="nav-link-pill" data-i18n="nav_calc">Calculator</a>
                 <a href="#join" class="nav-link-pill" data-i18n="nav_kit">Kit &amp; Join</a>
+                <!-- 🎮 Games Dropdown -->
+                <div class="nav-item-dropdown position-relative">
+                    <a href="/vgk/games" class="nav-link-pill d-inline-flex align-items-center gap-1">
+                        <span>🎮 Games</span> <i class="fas fa-chevron-down ms-1" style="font-size: 0.62rem; opacity: 0.7;"></i>
+                    </a>
+                    <div class="nav-dropdown-menu">
+                        <a href="/vgk/games?game=SNAKE" class="nav-dropdown-item"><i class="fas fa-worm text-warning"></i> <span>1. Golden Snake</span></a>
+                        <a href="/vgk/games?game=BLOCK_DROP" class="nav-dropdown-item"><i class="fas fa-cubes text-primary"></i> <span>2. Block Drop</span></a>
+                        <a href="/vgk/games?game=ENDLESS_RUNNER" class="nav-dropdown-item"><i class="fas fa-person-running text-info"></i> <span>3. Endless Runner</span></a>
+                    </div>
+                </div>
             </div>
 
             <!-- Header Action CTAs (Guaranteed Flex-Shrink-0 & Complete Visibility) -->
             <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+                <a href="/vgk/games" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Play Arcade Games">
+                    <i class="fas fa-gamepad"></i> <span class="d-none d-sm-inline">Games</span>
+                </a>
                 <a href="/customer" class="btn btn-sm btn-outline-success rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Customer Executive Dashboard">
                     <i class="fas fa-user-circle"></i> <span class="d-none d-sm-inline">Customer Login</span>
                 </a>
@@ -1852,8 +1866,16 @@
                     <a href="#simulator" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-calculator text-success me-2"></i> Earnings Calculator</a>
                     <a href="#join" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-box-open text-primary me-2"></i> Executive Welcome Kit</a>
                 </div>
+                <!-- 🎮 Arcade & Games (3 Games Options in Mobile Drawer) -->
+                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">🎮 Arcade &amp; Rewards</div>
+                <div class="d-flex flex-column gap-1 mb-3">
+                    <a href="/vgk/games?game=SNAKE" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-worm text-warning me-2"></i> 1. Golden Snake</a>
+                    <a href="/vgk/games?game=BLOCK_DROP" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-cubes text-primary me-2"></i> 2. Block Drop</a>
+                    <a href="/vgk/games?game=ENDLESS_RUNNER" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-person-running text-info me-2"></i> 3. Endless Runner</a>
+                </div>
                 <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">Quick Actions</div>
                 <div class="d-flex flex-column gap-2 mt-2">
+                    <a href="/vgk/games" class="btn btn-outline-warning w-100 fw-bold py-2"><i class="fas fa-gamepad me-1"></i> Open Arcade &amp; Games Hub</a>
                     <a href="/customer" class="btn btn-outline-success w-100 fw-bold py-2"><i class="fas fa-user-circle me-1"></i> Customer Login &amp; Dashboard</a>
                     <a href="/recharge" class="btn btn-outline-warning w-100 fw-bold py-2"><i class="fas fa-bolt me-1"></i> Recharge &amp; Bill Payments</a>
                     <a href="/vgk/login?tab=signup" class="btn-gold-glow w-100 justify-content-center py-2"><i class="fas fa-user-plus me-1"></i> Join Free Partner</a>

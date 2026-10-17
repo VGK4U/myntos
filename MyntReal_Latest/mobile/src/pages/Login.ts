@@ -837,10 +837,6 @@ export class LoginPage {
             required
           />
         </div>
-            autocapitalize="characters"
-            autocomplete="username"
-          />
-        </div>
 
         <div class="input-group">
           <label class="input-label">Password</label>

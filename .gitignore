@@ -36,3 +36,8 @@ MyntReal_Latest/scratch/*
 temp_check_zip/
 *.tmp*
 zip_files.txt
+*.pdf
+*.xlsx
+*.xls
+start_local.bat
+

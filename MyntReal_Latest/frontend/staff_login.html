@@ -74,21 +74,55 @@
             display: block;
         }
         
+        .login-top-bar {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .login-top-bar {
+                top: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                background: rgba(15, 23, 42, 0.92);
+                backdrop-filter: blur(10px);
+                padding: 10px 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+            }
+            .login-top-bar a, .login-top-bar button {
+                padding: 6px 12px !important;
+                font-size: 0.76rem !important;
+            }
+            body {
+                padding-top: 55px !important;
+            }
+        }
+        
         .input-group {
             position: relative;
         }
         
         .input-group i.input-icon {
             position: absolute;
-            left: 15px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: #666;
+            color: #64748b;
+            font-size: 16px;
             z-index: 10;
+            pointer-events: none;
         }
         
-        .form-control {
-            padding: 12px 15px 12px 45px;
+        .form-control, .input-group .form-control {
+            padding: 12px 48px 12px 50px !important;
             border-radius: 10px;
             border: 2px solid #e0e0e0;
             font-size: 1rem;
@@ -107,9 +141,10 @@
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #666;
+            color: #64748b;
             cursor: pointer;
             z-index: 10;
+            padding: 4px;
         }
         
         .btn-login {
@@ -331,7 +366,7 @@
     </style>
 </head>
 <body>
-<div style="position:fixed;top:16px;right:20px;z-index:9999;display:flex;align-items:center;gap:8px;">
+<div class="login-top-bar">
     <button type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/'" style="background:rgba(0,0,0,0.38);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:8px 16px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .25s ease;">
         <i class="fas fa-arrow-left"></i> Back
     </button>
@@ -729,9 +764,11 @@
                     }
                 }
                 
+                const isRetryable = /timed out|busy|temporarily unavailable|gateway timeout/i.test(userMessage);
                 alertContainer.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>${userMessage}
+                    <div class="alert alert-danger" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                        <div><i class="fas fa-exclamation-circle me-2"></i>${userMessage}</div>
+                        ${isRetryable ? '<button type="button" onclick="handleLogin()" class="btn btn-sm btn-outline-danger" style="font-weight:600;padding:4px 10px;font-size:12px;border-radius:6px;background:#fff;"><i class="fas fa-redo-alt me-1"></i>Retry Now</button>' : ''}
                     </div>
                 `;
                 

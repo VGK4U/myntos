@@ -160,7 +160,7 @@ else:
             "keepalives_idle": 30,
             "keepalives_interval": 10,
             "keepalives_count": 3,
-            "options": "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000",
+            "options": "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000 -c lock_timeout=5000",
         }
         if _resolved_rds_ip:
             _rds_connect_args["hostaddr"] = _resolved_rds_ip
@@ -168,9 +168,9 @@ else:
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=10,             # 10 connections per worker (total 20 conns across 2 workers)
-            max_overflow=5,           # 5 burst overflow (total max 30 conns, safely below RDS 76-conn ceiling)
-            pool_timeout=30,          # 30s timeout to allow bursts without queue timeouts
+            pool_size=14,             # 14 connections per worker (safely handles 4 background scheduler threads + web traffic)
+            max_overflow=6,           # 6 burst overflow (total max 20 conns per worker)
+            pool_timeout=15,          # 15s timeout to fail fast rather than stalling web requests
             pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
             pool_use_lifo=True,
             pool_reset_on_return='rollback',

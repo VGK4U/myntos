@@ -526,7 +526,7 @@ def staff_login(
     def _do_lookup(session):
         from sqlalchemy import text
         try:
-            session.execute(text("SET LOCAL statement_timeout = '15000ms'"))
+            session.execute(text("SET LOCAL statement_timeout = '8000ms'"))
         except Exception:
             pass
 
@@ -600,7 +600,21 @@ def staff_login(
     try:
         employee = _do_lookup(db)
     except Exception as db_exc:
-        # Retry once on a fresh session if initial checkout had a dropped/stale socket
+        import logging
+        _logger = logging.getLogger(__name__)
+        err_str = str(db_exc).lower()
+        # Fast-fail if query timed out or hit lock contention - do NOT queue a second blocking connection!
+        is_timeout = any(k in err_str for k in ("timeout", "canceling statement", "cancelling statement", "lock_timeout", "deadlock"))
+        if is_timeout:
+            _logger.warning(f"[STAFF-AUTH-DB] Query timed out during staff lookup: {db_exc}")
+            try: db.rollback()
+            except Exception: pass
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service is currently busy. Please retry in a few moments.",
+                headers={"Retry-After": "3"}
+            )
+        # Retry once on a fresh session ONLY for non-timeout socket/connection disconnects
         try:
             try: db.rollback()
             except Exception: pass
@@ -613,11 +627,11 @@ def staff_login(
                 except Exception: pass
                 raise
         except Exception as retry_exc:
-            import logging
-            logging.getLogger(__name__).error(f"[STAFF-AUTH-DB] Database connection error during login (after retry): {retry_exc}")
+            _logger.error(f"[STAFF-AUTH-DB] Database connection error during login (after retry): {retry_exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Authentication service temporarily unavailable. Please try again in a moment."
+                detail="Authentication service temporarily unavailable. Please try again in a moment.",
+                headers={"Retry-After": "3"}
             )
     t_lookup_ms = (time.time() - t_lookup_start) * 1000
     

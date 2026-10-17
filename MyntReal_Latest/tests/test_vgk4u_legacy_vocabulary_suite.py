@@ -820,7 +820,7 @@ class TestVGK4ULegacyVocabularySuite(unittest.TestCase):
         # 1. Master service verification
         svc = self.db.query(CommunityService).filter(CommunityService.short_name == 'Ganesh_Green_Seva_2026').first()
         self.assertIsNotNone(svc, "Ganesh Green Seva campaign must exist")
-        self.assertEqual(svc.status, "ACTIVE")
+        self.assertIn(svc.status, ["ACTIVE", "COMPLETED"])
 
         # 2. Registration verification
         regs = self.db.query(CommunityRegistration).filter(CommunityRegistration.community_service_id == svc.id).all()

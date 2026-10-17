@@ -57,17 +57,47 @@
         .login-subtitle { margin: 0; color: rgba(255,255,255,0.85); font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; }
         .login-body { padding: 36px 40px 28px; }
         .form-group { margin-bottom: 22px; }
+        .login-top-bar {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        @media (max-width: 768px) {
+            .login-top-bar {
+                top: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                background: rgba(15, 23, 42, 0.92);
+                backdrop-filter: blur(10px);
+                padding: 10px 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+            }
+            .login-top-bar a, .login-top-bar button {
+                padding: 6px 12px !important;
+                font-size: 0.76rem !important;
+            }
+            body {
+                padding-top: 55px !important;
+            }
+        }
         .form-group label { font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block; font-size: 0.9rem; }
         .input-group { position: relative; }
-        .input-group i.input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #64748b; z-index: 10; }
-        .form-control { padding: 12px 15px 12px 45px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 1rem; transition: all 0.25s; background: #f8fafc; color: #1e293b; }
+        .input-group i.input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 16px; z-index: 10; pointer-events: none; }
+        .form-control, .input-group .form-control { padding: 12px 48px 12px 50px !important; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 1rem; transition: all 0.25s; background: #f8fafc; color: #1e293b; }
         .form-control:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); background: #fff; }
         .form-control.is-invalid { border-color: #ef4444; }
         .form-control.is-valid { border-color: #22c55e; }
         .invalid-feedback { display: none; color: #ef4444; font-size: 0.82rem; margin-top: 5px; }
         .form-control.is-invalid ~ .invalid-feedback { display: block; }
         .password-toggle {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
             background: none; border: none; color: #64748b; cursor: pointer;
             z-index: 1000; pointer-events: auto; padding: 6px; line-height: 1;
         }
@@ -98,7 +128,7 @@
 </head>
 <body>
 
-<div style="position:fixed;top:16px;right:20px;z-index:9999;display:flex;align-items:center;gap:8px;">
+<div class="login-top-bar">
     <button type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/'" style="background:rgba(0,0,0,0.38);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:8px 16px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .25s ease;">
         <i class="fas fa-arrow-left"></i> Back
     </button>

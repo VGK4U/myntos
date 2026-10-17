@@ -92,10 +92,57 @@
             <a href="/catalog/ev-spares/ev-spares-and-chargers">⚙️ EVSpares</a>
           </div>
         </div>
+        <!-- 🎮 Games Menu Dropdown (Desktop & Tablet) -->
+        <div class="dropdown nav-games-dropdown" onclick="this.classList.toggle('active')">
+          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
+            <span style="display:inline-flex;align-items:center;gap:5px;">🎮 Games <span class="dropdown-arrow">▾</span></span>
+          </a>
+          <div class="dropdown-menu">
+            <a href="/customer/games?game=SNAKE">🐍 Neon Snake</a>
+            <a href="/customer/games?game=BLOCK_DROP">🧱 Block Drop</a>
+            <a href="/customer/games?game=ENDLESS_RUNNER">🏃 Endless Runner</a>
+          </div>
+        </div>
         <a href="/hub/contact" class="active-nav">Contact</a>
         <a href="/careers">Careers</a>
+
+        <!-- 📱 Mobile Menu Games Block (3 Options Visible in Mobile Menu Bar) -->
+        <div class="nav-mobile-games-block">
+          <div style="font-size: 11px; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+            🎮 Play &amp; Earn Games
+          </div>
+          <a href="/customer/games?game=SNAKE" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fff; border-radius: 8px; text-decoration: none; color: #0f172a; font-size: 13px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin: 0;">
+            <span style="font-size: 16px;">🐍</span>
+            <div>
+              <div>Neon Snake</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 500;">Eat energy orbs, grow &amp; beat record</div>
+            </div>
+          </a>
+          <a href="/customer/games?game=BLOCK_DROP" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fff; border-radius: 8px; text-decoration: none; color: #0f172a; font-size: 13px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin: 0;">
+            <span style="font-size: 16px;">🧱</span>
+            <div>
+              <div>Block Drop</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 500;">Classic falling puzzle &amp; line clear</div>
+            </div>
+          </a>
+          <a href="/customer/games?game=ENDLESS_RUNNER" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #fff; border-radius: 8px; text-decoration: none; color: #0f172a; font-size: 13px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.04); margin: 0;">
+            <span style="font-size: 16px;">🏃</span>
+            <div>
+              <div>Endless Runner</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 500;">Double jump hazards &amp; collect stars</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="nav-mobile-auth-block">
+          <a href="/landing" class="nav-mobile-login-btn"><i class="fas fa-sign-in-alt"></i> Login / All Portals</a>
+          <a href="/customer" class="nav-mobile-cust-btn"><i class="fas fa-user-circle"></i> Customer Portal</a>
+        </div>
       </nav>
       <div class="header-actions">
+        <a href="/customer/games" class="btn-games-header">
+          🎮 Games
+        </a>
         <a href="/landing" class="btn-login">Login</a>
       </div>
     </div>

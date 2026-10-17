@@ -809,9 +809,9 @@ window.StaffHeader = window.StaffHeader || {
         fetch('/api/v1/community-services/public/active-headers')
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
+                if (data.success && data.services && data.services.length > 0) {
                     // 1. Render active badges
-                    let html = (data.services || []).map(s => {
+                    let html = data.services.map(s => {
                         let themeClass = '';
                         const desc = (s.service_name + ' ' + (s.description || '')).toLowerCase();
                         if (desc.includes('solar') || desc.includes('eco') || desc.includes('green') || desc.includes('electric') || desc.includes('ev')) {
@@ -828,7 +828,7 @@ window.StaffHeader = window.StaffHeader || {
                         `;
                     }).join('');
                     
-                    // 2. Inject live counter badge
+                    // 2. Inject live counter badge ONLY IF active campaigns exist
                     const registeredCountLabel = data.display_registered_label || "18+ Projects Registered";
                     html += `
                         <div class="header-live-counter">
@@ -841,7 +841,7 @@ window.StaffHeader = window.StaffHeader || {
 
                     // 3. Render campaign banner if an active campaign banner exists
                     if (bannerContainer) {
-                        const activeCampaign = (data.services || []).find(s => s.banner_image || (s.banner_images && s.banner_images.length > 0));
+                        const activeCampaign = data.services.find(s => s.banner_image || (s.banner_images && s.banner_images.length > 0));
                         const bannerImg = activeCampaign ? (activeCampaign.banner_image || (activeCampaign.banner_images && activeCampaign.banner_images[0])) : null;
                         if (activeCampaign && bannerImg) {
                             bannerContainer.innerHTML = `
@@ -851,9 +851,16 @@ window.StaffHeader = window.StaffHeader || {
                             bannerContainer.innerHTML = '';
                         }
                     }
+                } else {
+                    badgeContainer.innerHTML = '';
+                    if (bannerContainer) bannerContainer.innerHTML = '';
                 }
             })
-            .catch(err => console.error('Failed to load active community badges:', err));
+            .catch(err => {
+                console.error('Failed to load active community badges:', err);
+                if (badgeContainer) badgeContainer.innerHTML = '';
+                if (bannerContainer) bannerContainer.innerHTML = '';
+            });
     },
 
     updateUserInfo: function() {

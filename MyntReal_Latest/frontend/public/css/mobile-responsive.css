@@ -328,12 +328,36 @@ body {
 .form-control, .form-select {
     border: 1px solid var(--mynt-border) !important;
     border-radius: var(--mynt-radius-sm) !important;
-    padding: 8px 12px !important;
+    padding: 8px 12px;
     font-size: 13px !important;
     color: var(--mynt-navy) !important;
     background-color: #ffffff !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     max-width: 100% !important;
+}
+
+/* DC_INPUT_PADDING_PROTECTION: Preserve clear visibility for inputs with icons/prefixes/toggles */
+.input-group > i.input-icon ~ .form-control,
+.input-group > .input-icon ~ .form-control,
+.input-wrapper > .input-icon ~ .form-control,
+.input-wrap > i.ico ~ input,
+.input-wrap > .ico ~ input,
+.input-group-custom input.with-prefix,
+.login-card .input-group .form-control,
+.login-body .input-group .form-control,
+.login-container .input-group .form-control,
+.portal-wrapper .input-group .form-control {
+    padding-left: 50px !important;
+}
+
+.input-group .password-toggle ~ .form-control,
+.input-group:has(.password-toggle) .form-control,
+.input-group:has(.toggle-password) .form-control,
+.input-wrapper:has(.toggle-password) .form-control,
+.input-wrapper .toggle-password ~ .form-control,
+.password-wrapper input,
+.login-card input[type="password"] {
+    padding-right: 48px !important;
 }
 
 .form-control:focus, .form-select:focus {

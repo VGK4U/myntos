@@ -65,6 +65,7 @@ class SandboxCustomer:
         self.is_active = True
         self.security_pin = data.get("security_pin", "1234")
         self.security_pin_hash = None
+        self.loyalty_points_balance = float(data.get("loyalty_points_balance", 120.0))
 
 
 # ═════════════════════════════════════════════════════════════════════
@@ -965,6 +966,7 @@ def get_customer_dashboard_data(
             "total_transactions": total_tx_count,
             "cashback_claimed": cashback_claimed,
             "cashback_pending": cashback_pending,
+            "loyalty_points_balance": float(getattr(current_customer, "loyalty_points_balance", 0.0) or 0.0),
             "scratch_cards_count": total_scratch_cards,
             "referral_bonus_pct": 50,
             "active_services_count": (1 if recharges else 0) + (1 if utility_bills else 0) + (1 if solar_projects else 0) + (1 if (ev_rows or tickets_rows) else 0) + (1 if training_programs else 0)

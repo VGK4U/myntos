@@ -425,9 +425,6 @@
                 <button type="button" onclick="handleLogout()" class="nav-pill-btn text-danger" style="border-color: rgba(239, 68, 68, 0.3);">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span>
                 </button>
-                <a href="/landing" onclick="sessionStorage.setItem('showLoginSelection', 'true');" class="nav-pill-btn d-none d-md-inline-flex" title="All Logins">
-                    <i class="fa-solid fa-th"></i> <span class="d-none d-lg-inline">All Logins</span>
-                </a>
             </div>
         </div>
     </header>
@@ -454,6 +451,9 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
+                    <a href="/customer/games" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-bold" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1);">
+                        <i class="fa-solid fa-gamepad me-1 text-info"></i> Play & Earn
+                    </a>
                     <button type="button" onclick="selectVerticalTab('cashback')" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-solid fa-gift me-1"></i> Scratch Cards
                     </button>
@@ -484,12 +484,12 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="kpi-card">
+                    <div class="kpi-card" onclick="window.location.href='/customer/games'" style="cursor: pointer;">
                         <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">
-                            <i class="fa-solid fa-receipt"></i>
+                            <i class="fa-solid fa-coins"></i>
                         </div>
-                        <div class="kpi-label">Total Transactions</div>
-                        <div class="kpi-value text-success" id="kpiTransactions">0</div>
+                        <div class="kpi-label">Loyalty Points <i class="fa-solid fa-arrow-up-right-from-square ms-1" style="font-size: 0.65rem;"></i></div>
+                        <div class="kpi-value text-success" id="kpiLoyaltyPoints">0 Pts</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
@@ -801,7 +801,8 @@
         function renderKPIs(k) {
             document.getElementById('kpiTotalSpend').innerText = `₹${(k.total_spend || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
             document.getElementById('kpiCashback').innerText = `₹${(k.cashback_claimed || 0).toFixed(2)}`;
-            document.getElementById('kpiTransactions').innerText = k.total_transactions || 0;
+            const ptsEl = document.getElementById('kpiLoyaltyPoints');
+            if (ptsEl) ptsEl.innerText = `${(k.loyalty_points_balance || 0).toLocaleString()} Pts`;
             document.getElementById('kpiActiveServices').innerText = k.active_services_count || 1;
         }
 

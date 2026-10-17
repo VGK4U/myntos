@@ -60,6 +60,7 @@ from datetime import datetime
 # causes NoReferencedTableError on every write (e.g. sales invoice save).
 from app.models import platform_b2b, platform_b2b_billing  # noqa: F401
 from app.models import income_category  # noqa: F401 — DC_INCOME_CAT_001 (May 2026)
+from app.models import games_and_points  # noqa: F401 — Games, Points & Rewards (Oct 2026)
 
 # Create tables and initialize Redis on startup
 def fix_fk_constraints():
@@ -17947,6 +17948,44 @@ async def serve_customer_dashboard_root():
         if os.path.exists(path):
             return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
     raise HTTPException(status_code=404, detail="Customer dashboard page not found")
+
+
+@app.get("/customer/games", include_in_schema=False)
+@app.get("/customer/games/", include_in_schema=False)
+@app.get("/customer-games", include_in_schema=False)
+@app.get("/customer_games.html", include_in_schema=False)
+async def serve_customer_games_root():
+    """
+    Serve Customer Gaming & Rewards UI (Play & Earn Arcade).
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "customer_games.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "customer_games.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "customer_games.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Customer games page not found")
+
+
+@app.get("/vgk/games", include_in_schema=False)
+@app.get("/vgk/games/", include_in_schema=False)
+@app.get("/vgk-games", include_in_schema=False)
+@app.get("/vgk_games.html", include_in_schema=False)
+async def serve_vgk_games_root():
+    """
+    Serve VGK4U Member Gaming & Points UI.
+    """
+    from fastapi.responses import FileResponse
+    for path in [
+        os.path.join(FRONTEND_PUBLIC_DIR, "vgk_games.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "public", "vgk_games.html"),
+        os.path.join(_WORKSPACE_ROOT, "frontend", "vgk_games.html"),
+    ]:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html", headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="VGK games page not found")
 
 
 @app.get("/recharge", include_in_schema=False)
