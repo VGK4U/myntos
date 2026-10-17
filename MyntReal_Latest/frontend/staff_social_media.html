@@ -452,6 +452,9 @@
 
                     <!-- Fast Action Buttons -->
                     <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button class="btn btn-outline-warning btn-sm fw-bold shadow-sm" onclick="SocialMediaManager.initSandboxDemo()" title="Instant Sandbox Demo (Connect 4 Channels + 15 Posts)">
+                            <i class="fas fa-bolt"></i> 1-Click Demo
+                        </button>
                         <button class="btn btn-brand" onclick="SocialMediaManager.openAIGeneratorModal()">
                             <i class="fas fa-wand-magic-sparkles"></i> AI 30-Day Calendar
                         </button>
@@ -653,6 +656,9 @@
                                     <option value="PUBLISHED">Published</option>
                                     <option value="FAILED">Failed</option>
                                 </select>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="SocialMediaManager.exportCalendarCSV()" title="Export 30-Day schedule to spreadsheet for executive approval">
+                                    <i class="fas fa-file-csv text-success me-1"></i> Export CSV
+                                </button>
                                 <button class="btn btn-sm btn-brand" onclick="SocialMediaManager.openAIGeneratorModal()">
                                     <i class="fas fa-wand-magic-sparkles"></i> AI Generator
                                 </button>
@@ -937,75 +943,146 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Scheduled Date &amp; Time</label>
-                                <input type="datetime-local" class="form-control" id="editScheduledAt" required>
+                                <label class="form-label small fw-bold mb-1">Scheduled Date &amp; Time</label>
+                                <input type="datetime-local" class="form-control form-control-sm" id="editScheduledAt" required onchange="SocialMediaManager.updateLivePreview()">
+                                <div class="d-flex gap-1 mt-1 flex-wrap align-items-center">
+                                    <span class="text-muted" style="font-size: 10px;"><i class="fas fa-clock text-warning"></i> Peak IST:</span>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 10px;" onclick="SocialMediaManager.setOptimalTime('08:45')">LI 8:45 AM</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 10px;" onclick="SocialMediaManager.setOptimalTime('11:30')">X 11:30 AM</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 10px;" onclick="SocialMediaManager.setOptimalTime('13:15')">FB 1:15 PM</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 10px;" onclick="SocialMediaManager.setOptimalTime('19:30')">IG 7:30 PM</button>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Target Channels</label>
                                 <div class="d-flex gap-3 pt-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editChanFB" value="facebook">
+                                        <input class="form-check-input" type="checkbox" id="editChanFB" value="facebook" onchange="SocialMediaManager.updateLivePreview()">
                                         <label class="form-check-label small" for="editChanFB"><i class="fab fa-facebook text-primary"></i> FB</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editChanIG" value="instagram">
+                                        <input class="form-check-input" type="checkbox" id="editChanIG" value="instagram" onchange="SocialMediaManager.updateLivePreview()">
                                         <label class="form-check-label small" for="editChanIG"><i class="fab fa-instagram text-danger"></i> IG</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editChanLI" value="linkedin">
+                                        <input class="form-check-input" type="checkbox" id="editChanLI" value="linkedin" onchange="SocialMediaManager.updateLivePreview()">
                                         <label class="form-check-label small" for="editChanLI"><i class="fab fa-linkedin text-info"></i> LI</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editChanX" value="x">
+                                        <input class="form-check-input" type="checkbox" id="editChanX" value="x" onchange="SocialMediaManager.updateLivePreview()">
                                         <label class="form-check-label small" for="editChanX"><i class="fab fa-x-twitter"></i> X</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- AI Virality & Content Quality Score Meter -->
+                        <div class="card bg-light border-0 p-3 mb-3 rounded-3" id="postScoreContainer">
+                            <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-success" id="postScoreBadge" style="font-size: 11px; padding: 4px 8px;">Score: 88/100</span>
+                                    <span class="small fw-bold text-dark" id="postScoreLabel">🔥 High Virality &amp; Engagement Potential</span>
+                                </div>
+                                <div class="small text-muted" id="postScoreFeedback" style="font-size: 11px;">
+                                    Strong hook • Clear CTA detected • Optimal length
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div id="postScoreProgress" class="progress-bar bg-success" role="progressbar" style="width: 88%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+
                         <!-- Platform-Specific Copy Subtabs -->
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                                 <label class="form-label small fw-bold mb-0">Platform-Tailored Copy</label>
-                                <button type="button" class="btn btn-xs btn-outline-primary" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.regeneratePostCaption()">
-                                    <i class="fas fa-wand-magic-sparkles"></i> AI Re-Write Copy
-                                </button>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <button type="button" class="btn btn-xs btn-outline-success" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.insertWhatsAppCTA()" title="Insert 1-Click WhatsApp Direct Lead Generation Link">
+                                        <i class="fab fa-whatsapp"></i> WhatsApp CTA
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-xs btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" style="font-size: 11px; padding: 3px 8px;">
+                                            <i class="fas fa-masks-theater"></i> Tone Preset
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 12px;">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="SocialMediaManager.applyTonePreset('viral')">🚀 Viral &amp; Hype</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="SocialMediaManager.applyTonePreset('corporate')">👔 Executive B2B</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="SocialMediaManager.applyTonePreset('story')">📖 Compelling Story</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="SocialMediaManager.applyTonePreset('sales')">🎯 High-Conversion Sales</a></li>
+                                        </ul>
+                                    </div>
+                                    <button type="button" class="btn btn-xs btn-outline-warning" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.openViralHookModal()">
+                                        <i class="fas fa-fire"></i> Viral Hooks
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-outline-primary" style="font-size: 11px; padding: 3px 8px;" onclick="SocialMediaManager.regeneratePostCaption()">
+                                        <i class="fas fa-wand-magic-sparkles"></i> AI Re-Write Copy
+                                    </button>
+                                </div>
                             </div>
 
                             <ul class="nav nav-pills platform-subtabs mb-2" id="platformCopyTabs" role="tablist">
                                 <li class="nav-item">
-                                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#copyBase" type="button">Base Copy</button>
+                                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#copyBase" type="button" onclick="SocialMediaManager.updateLivePreview()">Base Copy</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyFB" type="button"><i class="fab fa-facebook me-1"></i> Facebook</button>
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyFB" type="button" onclick="SocialMediaManager.updateLivePreview()"><i class="fab fa-facebook me-1"></i> Facebook</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyIG" type="button"><i class="fab fa-instagram me-1"></i> Instagram</button>
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyIG" type="button" onclick="SocialMediaManager.updateLivePreview()"><i class="fab fa-instagram me-1"></i> Instagram</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyLI" type="button"><i class="fab fa-linkedin me-1"></i> LinkedIn</button>
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyLI" type="button" onclick="SocialMediaManager.updateLivePreview()"><i class="fab fa-linkedin me-1"></i> LinkedIn</button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyX" type="button"><i class="fab fa-x-twitter me-1"></i> X</button>
+                                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#copyX" type="button" onclick="SocialMediaManager.updateLivePreview()"><i class="fab fa-x-twitter me-1"></i> X</button>
+                                </li>
+                                <li class="nav-item ms-auto">
+                                    <button class="nav-link text-primary fw-bold border border-primary-subtle" data-bs-toggle="pill" data-bs-target="#tabLivePreview" type="button" onclick="SocialMediaManager.updateLivePreview()"><i class="fas fa-eye me-1"></i> Live Card Preview</button>
                                 </li>
                             </ul>
 
                             <div class="tab-content">
                                 <div class="tab-pane fade show active" id="copyBase">
-                                    <textarea class="form-control" id="editCaptionBase" rows="4" placeholder="Master message across all channels..."></textarea>
+                                    <textarea class="form-control" id="editCaptionBase" rows="4" placeholder="Master message across all channels..." oninput="SocialMediaManager.updateLivePreview()"></textarea>
                                 </div>
                                 <div class="tab-pane fade" id="copyFB">
-                                    <textarea class="form-control" id="editCaptionFB" rows="4" placeholder="Facebook copy with community hook & link preview..."></textarea>
+                                    <textarea class="form-control" id="editCaptionFB" rows="4" placeholder="Facebook copy with community hook & link preview..." oninput="SocialMediaManager.updateLivePreview()"></textarea>
                                 </div>
                                 <div class="tab-pane fade" id="copyIG">
-                                    <textarea class="form-control" id="editCaptionIG" rows="4" placeholder="Instagram copy with aesthetic hook & curated hashtags..."></textarea>
+                                    <textarea class="form-control" id="editCaptionIG" rows="4" placeholder="Instagram copy with aesthetic hook & curated hashtags..." oninput="SocialMediaManager.updateLivePreview()"></textarea>
                                 </div>
                                 <div class="tab-pane fade" id="copyLI">
-                                    <textarea class="form-control" id="editCaptionLI" rows="4" placeholder="Professional LinkedIn copy with business value & industry hashtags..."></textarea>
+                                    <textarea class="form-control" id="editCaptionLI" rows="4" placeholder="Professional LinkedIn copy with business value & industry hashtags..." oninput="SocialMediaManager.updateLivePreview()"></textarea>
                                 </div>
                                 <div class="tab-pane fade" id="copyX">
-                                    <textarea class="form-control" id="editCaptionX" rows="4" placeholder="Concise punchy copy (Max 280 characters)..." maxlength="280"></textarea>
+                                    <textarea class="form-control" id="editCaptionX" rows="4" placeholder="Concise punchy copy (Max 280 characters)..." maxlength="280" oninput="SocialMediaManager.updateLivePreview()"></textarea>
                                     <div class="small text-muted text-end mt-1"><span id="charCountX">0</span> / 280</div>
+                                </div>
+                                <div class="tab-pane fade" id="tabLivePreview">
+                                    <div id="liveCardPreviewContainer" class="p-3 bg-light rounded-3 border">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Smart Niche Hashtags Cloud -->
+                            <div class="mt-2 p-2 rounded bg-light border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small fw-bold text-muted" style="font-size: 11px;">
+                                        <i class="fas fa-hashtag text-primary me-1"></i> 1-Click Niche Hashtags:
+                                    </span>
+                                    <span class="text-muted" style="font-size: 10px;">Click tag to insert into active copy</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1" id="smartHashtagsCloud">
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#ElectricVehicles')">#ElectricVehicles</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#CleanMobility')">#CleanMobility</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#EVIndia')">#EVIndia</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#RealEstateIndia')">#RealEstateIndia</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#PropertyInvestment')">#PropertyInvestment</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#SolarEnergy')">#SolarEnergy</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#SaveElectricity')">#SaveElectricity</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#BusinessGrowth')">#BusinessGrowth</span>
+                                    <span class="badge bg-white text-dark border px-2 py-1" style="cursor: pointer;" onclick="SocialMediaManager.insertHashtag('#MakeInIndia')">#MakeInIndia</span>
                                 </div>
                             </div>
                         </div>
@@ -1175,6 +1252,28 @@
                             <i class="fas fa-flask"></i> Connect Sandbox
                         </button>
                     </div>
+                </div>
+            </div>
+    <!-- ── MODAL 4: VIRAL HOOKS STUDIO ── -->
+    <div class="modal fade" id="viralHooksModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fas fa-fire text-warning me-2"></i> Viral Hook Studio (2026 Engine)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Choose high-converting psychological hooks crafted for your topic. Click any hook to inject it into your post.
+                    </p>
+                    <div id="viralHooksList" class="d-flex flex-column gap-2">
+                        <!-- Populated dynamically based on topic theme -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

@@ -320,7 +320,11 @@
             ];
 
             grid.innerHTML = platforms.map(p => {
-                const conn = accounts.find(a => a.platform === p.id && a.is_active);
+                const conn = accounts.find(a => {
+                    const platMatch = (a.platform === p.id) || (p.id === 'x' && a.platform === 'twitter') || (p.id === 'twitter' && a.platform === 'x');
+                    const activeMatch = a.status === 'ACTIVE' || a.is_active === true;
+                    return platMatch && activeMatch;
+                });
                 const isConnected = !!conn;
 
                 let actionBtn = '';
@@ -338,6 +342,9 @@
                     `;
                 }
 
+                const handleText = conn ? (conn.account_username || conn.account_name || conn.account_handle || 'Connected') : 'Disconnected';
+                const dateText = conn && (conn.created_at || conn.connected_at) ? new Date(conn.created_at || conn.connected_at).toLocaleDateString() : '';
+
                 return `
                     <div class="col-md-6 col-xl-3">
                         <div class="account-card">
@@ -349,10 +356,10 @@
                                     <div class="fw-bold small">${p.name}</div>
                                     <div class="small ${isConnected ? 'text-success fw-bold' : 'text-muted'}">
                                         <i class="fas fa-circle" style="font-size: 8px;"></i>
-                                        ${isConnected ? (conn.account_handle || 'Connected') : 'Disconnected'}
+                                        ${handleText}
                                     </div>
-                                    ${isConnected && conn.connected_at ? `
-                                        <div class="text-muted" style="font-size: 10px;">Since: ${new Date(conn.connected_at).toLocaleDateString()}</div>
+                                    ${dateText ? `
+                                        <div class="text-muted" style="font-size: 10px;">Since: ${dateText}</div>
                                     ` : ''}
                                 </div>
                             </div>
@@ -374,7 +381,10 @@
             for (const [platform, pillId] of Object.entries(map)) {
                 const el = document.getElementById(pillId);
                 if (el) {
-                    const hasActive = accounts.some(a => a.platform === platform && a.is_active);
+                    const hasActive = accounts.some(a => {
+                        const platMatch = (a.platform === platform) || (platform === 'x' && a.platform === 'twitter') || (platform === 'twitter' && a.platform === 'x');
+                        return platMatch && (a.status === 'ACTIVE' || a.is_active === true);
+                    });
                     if (hasActive) {
                         el.classList.add('active');
                     } else {
@@ -397,8 +407,9 @@
             const platform = document.getElementById('connectPlatform').value;
             try {
                 const res = await this._apiCall('/accounts/connect-url', 'POST', { platform: platform });
-                if (res.auth_url) {
-                    window.open(res.auth_url, '_blank', 'width=600,height=700');
+                const authUrl = res.connect_url || res.auth_url || res.url;
+                if (authUrl) {
+                    window.open(authUrl, '_blank', 'width=600,height=700');
                 } else {
                     alert('Hosted OAuth link generated: ' + (res.message || 'Authorization ready.'));
                 }
@@ -414,7 +425,8 @@
             try {
                 const res = await this._apiCall('/accounts/mock-connect', 'POST', {
                     platform: platform,
-                    account_handle: handle
+                    account_handle: handle,
+                    account_name: `${platform.toUpperCase()} Official Page`
                 });
 
                 bootstrap.Modal.getInstance(document.getElementById('connectAccountModal')).hide();
@@ -423,6 +435,23 @@
                 alert(`Channel ${platform.toUpperCase()} connected successfully in Local Sandbox Mode!`);
             } catch (err) {
                 alert('Mock Connect Error: ' + err.message);
+            }
+        },
+
+        initSandboxDemo: async function() {
+            if (!confirm('This will connect sample mock channels (Facebook, Instagram, LinkedIn, X) and generate an authentic 15-post bi-daily calendar for this company. Proceed?')) {
+                return;
+            }
+            try {
+                const res = await this._apiCall('/sandbox/init-demo', 'POST');
+                await Promise.all([
+                    this.loadOverview(),
+                    this.loadAccounts(),
+                    this.loadCalendar()
+                ]);
+                alert(res.message || 'Sandbox demo initialized successfully!');
+            } catch (err) {
+                alert('Demo Initialization Error: ' + err.message);
             }
         },
 
@@ -682,6 +711,7 @@
 
             const modal = new bootstrap.Modal(document.getElementById('postEditorModal'));
             modal.show();
+            this.updateLivePreview();
         },
 
         _setMediaPreview: function(url) {
@@ -701,11 +731,219 @@
         updateMediaPreviewFromInput: function() {
             const url = document.getElementById('editMediaUrl').value;
             this._setMediaPreview(url);
+            this.updateLivePreview();
         },
 
         removeMedia: function() {
             document.getElementById('editMediaUrl').value = '';
             this._setMediaPreview('');
+            this.updateLivePreview();
+        },
+
+        setOptimalTime: function(timeStr) {
+            const schedInput = document.getElementById('editScheduledAt');
+            if (!schedInput) return;
+            let curVal = schedInput.value;
+            let datePart = '';
+            if (curVal && curVal.includes('T')) {
+                datePart = curVal.split('T')[0];
+            } else {
+                const now = new Date();
+                const pad = num => String(num).padStart(2, '0');
+                datePart = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            }
+            schedInput.value = `${datePart}T${timeStr}`;
+            this.updateLivePreview();
+        },
+
+        openViralHookModal: function() {
+            const title = document.getElementById('editTitle')?.value?.trim() || 'Smart Energy & Mobility Solutions';
+            const hooks = [
+                {
+                    tag: 'Contrarian / Mythbuster',
+                    hook: `Most people think ${title.toLowerCase()} is too complex or costly.\nHere's what the industry doesn't tell you:`
+                },
+                {
+                    tag: 'Direct Question Hook',
+                    hook: `Are you still overlooking the massive savings of ${title.toLowerCase()}?\n3 crucial things every owner needs to check today:`
+                },
+                {
+                    tag: 'The 3-Step Playbook',
+                    hook: `A simple 3-step blueprint for mastering ${title.toLowerCase()} with zero guesswork:`
+                },
+                {
+                    tag: 'Concrete ROI / Math Hook',
+                    hook: `We analyzed 500+ customer implementations of ${title.toLowerCase()}.\nThe concrete financial return surprised us:`
+                }
+            ];
+
+            const listEl = document.getElementById('viralHooksList');
+            if (listEl) {
+                listEl.innerHTML = hooks.map((h, i) => `
+                    <div class="p-3 bg-light rounded-3 border hover-shadow cursor-pointer" style="cursor: pointer; transition: all 0.2s;" onclick="SocialMediaManager.applyViralHook(${i})">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace">${h.tag}</span>
+                            <span class="small text-primary fw-bold">Click to Insert <i class="fas fa-arrow-down-long ms-1"></i></span>
+                        </div>
+                        <div class="small fw-semibold text-dark">${this._escapeHtml(h.hook)}</div>
+                    </div>
+                `).join('');
+            }
+
+            this._currentViralHooks = hooks;
+            const modal = new bootstrap.Modal(document.getElementById('viralHooksModal'));
+            modal.show();
+        },
+
+        applyViralHook: function(hookIndex) {
+            if (!this._currentViralHooks || !this._currentViralHooks[hookIndex]) return;
+            const hookText = this._currentViralHooks[hookIndex].hook;
+
+            const baseCap = document.getElementById('editCaptionBase');
+            if (baseCap) {
+                baseCap.value = `${hookText}\n\n${baseCap.value.trim()}`;
+            }
+            const activePill = document.querySelector('#platformCopyTabs .nav-link.active');
+            const targetPane = activePill ? activePill.getAttribute('data-bs-target') : '#copyBase';
+            if (targetPane && targetPane !== '#copyBase' && targetPane !== '#tabLivePreview') {
+                const subTextarea = document.querySelector(`${targetPane} textarea`);
+                if (subTextarea) {
+                    subTextarea.value = `${hookText}\n\n${subTextarea.value.trim()}`;
+                }
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('viralHooksModal'))?.hide();
+            this.updateLivePreview();
+        },
+
+        updateLivePreview: function() {
+            this.calculatePostScore();
+            const container = document.getElementById('liveCardPreviewContainer');
+            if (!container) return;
+
+            const baseCap = document.getElementById('editCaptionBase')?.value?.trim() || '';
+            const capFB = document.getElementById('editCaptionFB')?.value?.trim() || baseCap;
+            const capIG = document.getElementById('editCaptionIG')?.value?.trim() || baseCap;
+            const capLI = document.getElementById('editCaptionLI')?.value?.trim() || baseCap;
+            const capX = document.getElementById('editCaptionX')?.value?.trim() || baseCap.slice(0, 280);
+            const mediaUrl = document.getElementById('editMediaUrl')?.value?.trim() || '';
+            const compName = this.state.companyName || 'Mynt Real Official';
+
+            const mediaHtml = mediaUrl ? `<div class="mb-2"><img src="${this._escapeHtml(mediaUrl)}" class="rounded w-100" style="max-height: 200px; object-fit: cover;" alt="post media"></div>` : '';
+
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="small fw-bold text-muted"><i class="fas fa-mobile-screen me-1 text-primary"></i> Live Feed Card Simulation</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">Pixel Accurate 2026 UI</span>
+                </div>
+                <div class="row g-3">
+                    <!-- LinkedIn Card -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm border-0 h-100" style="border-radius: 10px; background: #fff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="bg-primary text-white rounded p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="fab fa-linkedin-in"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small text-dark">${this._escapeHtml(compName)}</div>
+                                        <div class="text-muted" style="font-size: 10px;">12,450 followers &bull; Just now &bull; <i class="fas fa-globe-asia"></i></div>
+                                    </div>
+                                </div>
+                                <div class="small text-dark mb-2" style="white-space: pre-line; max-height: 100px; overflow-y: auto;">${this._escapeHtml(capLI || 'Professional copy preview...')}</div>
+                                ${mediaHtml}
+                                <div class="d-flex justify-content-around border-top pt-2 text-muted small" style="font-size: 11px;">
+                                    <span><i class="far fa-thumbs-up me-1"></i> Like</span>
+                                    <span><i class="far fa-comment-dots me-1"></i> Comment</span>
+                                    <span><i class="fas fa-retweet me-1"></i> Repost</span>
+                                    <span><i class="far fa-paper-plane me-1"></i> Send</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instagram Card -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm border-0 h-100" style="border-radius: 10px; background: #fff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">
+                                            <i class="fab fa-instagram"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold small text-dark">${this._escapeHtml(compName.toLowerCase().replace(/\\s+/g, '_'))}</div>
+                                            <div class="text-muted" style="font-size: 10px;">Original audio</div>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-ellipsis text-muted"></i>
+                                </div>
+                                ${mediaHtml}
+                                <div class="d-flex justify-content-between mb-2 text-dark">
+                                    <div class="d-flex gap-3">
+                                        <i class="far fa-heart"></i>
+                                        <i class="far fa-comment"></i>
+                                        <i class="far fa-paper-plane"></i>
+                                    </div>
+                                    <i class="far fa-bookmark"></i>
+                                </div>
+                                <div class="small text-dark" style="white-space: pre-line; max-height: 70px; overflow-y: auto;">
+                                    <strong>${this._escapeHtml(compName.toLowerCase().replace(/\\s+/g, '_'))}</strong> ${this._escapeHtml(capIG || 'Instagram aesthetic caption preview...')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Facebook Card -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm border-0 h-100" style="border-radius: 10px; background: #fff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="fab fa-facebook-f"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small text-dark">${this._escapeHtml(compName)}</div>
+                                        <div class="text-muted" style="font-size: 10px;">Sponsored &bull; <i class="fas fa-earth-americas"></i></div>
+                                    </div>
+                                </div>
+                                <div class="small text-dark mb-2" style="white-space: pre-line; max-height: 90px; overflow-y: auto;">${this._escapeHtml(capFB || 'Facebook post copy preview...')}</div>
+                                ${mediaHtml}
+                                <div class="d-flex justify-content-around border-top pt-2 text-muted small" style="font-size: 11px;">
+                                    <span><i class="far fa-thumbs-up me-1"></i> Like</span>
+                                    <span><i class="far fa-message me-1"></i> Comment</span>
+                                    <span><i class="fas fa-share me-1"></i> Share</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- X / Twitter Card -->
+                    <div class="col-md-6">
+                        <div class="card shadow-sm border-0 h-100" style="border-radius: 10px; background: #fff;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="bg-dark text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                        <i class="fab fa-x-twitter"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small text-dark">${this._escapeHtml(compName)} <i class="fas fa-certificate text-primary" style="font-size: 11px;"></i></div>
+                                        <div class="text-muted" style="font-size: 10px;">@${this._escapeHtml(compName.toLowerCase().replace(/[^a-z0-9]/g, ''))}</div>
+                                    </div>
+                                </div>
+                                <div class="small text-dark mb-2" style="white-space: pre-line; max-height: 90px; overflow-y: auto;">${this._escapeHtml(capX || 'Concise punchy tweet preview...')}</div>
+                                ${mediaHtml}
+                                <div class="d-flex justify-content-around border-top pt-2 text-muted small" style="font-size: 11px;">
+                                    <span><i class="far fa-comment me-1"></i> 18</span>
+                                    <span><i class="fas fa-retweet me-1"></i> 42</span>
+                                    <span><i class="far fa-heart me-1"></i> 156</span>
+                                    <span><i class="far fa-chart-bar me-1"></i> 3.2K</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         },
 
         savePost: async function(shouldApprove = false) {
@@ -1085,9 +1323,183 @@
                 if (p === 'facebook') return `<i class="fab fa-facebook text-primary me-1" title="Facebook"></i>`;
                 if (p === 'instagram') return `<i class="fab fa-instagram text-danger me-1" title="Instagram"></i>`;
                 if (p === 'linkedin') return `<i class="fab fa-linkedin text-info me-1" title="LinkedIn"></i>`;
-                if (p === 'x') return `<i class="fab fa-x-twitter text-dark me-1" title="X"></i>`;
+                if (p === 'x' || p === 'twitter') return `<i class="fab fa-x-twitter text-dark me-1" title="X"></i>`;
                 return '';
             }).join('');
+        },
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 9. Virality Score Meter, WhatsApp CTA, Tone Presets & CSV Export
+        // ─────────────────────────────────────────────────────────────────────
+        calculatePostScore: function() {
+            const baseCap = document.getElementById('editCaptionBase')?.value || '';
+            const activeSubtab = document.querySelector('#platformCopyTabs .nav-link.active')?.getAttribute('data-bs-target');
+            let textToScore = baseCap;
+            if (activeSubtab === '#copyFB') textToScore = document.getElementById('editCaptionFB')?.value || baseCap;
+            if (activeSubtab === '#copyIG') textToScore = document.getElementById('editCaptionIG')?.value || baseCap;
+            if (activeSubtab === '#copyLI') textToScore = document.getElementById('editCaptionLI')?.value || baseCap;
+            if (activeSubtab === '#copyX') textToScore = document.getElementById('editCaptionX')?.value || baseCap;
+
+            textToScore = (textToScore || '').trim();
+            if (!textToScore) {
+                this._renderScoreUI(0, '📝 Draft Empty', 'Type a caption to evaluate virality and quality score.', 'secondary');
+                return 0;
+            }
+
+            let score = 20; // Base score for having content
+            const feedback = [];
+
+            // 1. Hook evaluation (first line / opening characters)
+            const firstLine = textToScore.split('\n')[0] || '';
+            const hasHookKeywords = /(how|why|secret|transform|stop|avoid|discover|roi|save|boost|proven|playbook|ready|\?|!|🔥|🚀|⚡|💡)/i.test(firstLine);
+            if (hasHookKeywords) {
+                score += 25;
+                feedback.push('High-impact hook');
+            } else {
+                score += 10;
+                feedback.push('Add an engaging hook');
+            }
+
+            // 2. Call-To-Action (CTA) check
+            const hasCTA = /(wa\.me|http|www|dm|comment|click|book|contact|call|inquire|visit|link in bio|register|apply)/i.test(textToScore);
+            if (hasCTA) {
+                score += 25;
+                feedback.push('Clear CTA detected');
+            } else {
+                feedback.push('Missing CTA');
+            }
+
+            // 3. Hashtags check
+            const tags = (textToScore.match(/#[a-zA-Z0-9_]+/g) || []);
+            if (tags.length >= 2 && tags.length <= 8) {
+                score += 20;
+                feedback.push(`${tags.length} optimal hashtags`);
+            } else if (tags.length === 0) {
+                score += 5;
+                feedback.push('Add 2-5 hashtags');
+            } else {
+                score += 10;
+                feedback.push('Avoid tag stuffing');
+            }
+
+            // 4. Formatting and readability (paragraphs / linebreaks)
+            if (textToScore.includes('\n') && textToScore.length > 80) {
+                score += 10;
+                feedback.push('Good spacing');
+            }
+
+            score = Math.min(100, Math.max(10, score));
+            const color = score >= 80 ? 'success' : (score >= 60 ? 'warning' : 'danger');
+            const label = score >= 80 ? '🔥 High Virality Potential' : (score >= 60 ? '⚡ Moderate Engagement' : '⚠️ Low Reach Probability');
+
+            this._renderScoreUI(score, label, feedback.join(' • '), color);
+            return score;
+        },
+
+        _renderScoreUI: function(score, label, feedback, color) {
+            const badge = document.getElementById('postScoreBadge');
+            const lbl = document.getElementById('postScoreLabel');
+            const fb = document.getElementById('postScoreFeedback');
+            const bar = document.getElementById('postScoreProgress');
+
+            if (badge) {
+                badge.className = `badge bg-${color}`;
+                badge.innerText = `Score: ${score}/100`;
+            }
+            if (lbl) lbl.innerText = label;
+            if (fb) fb.innerText = feedback;
+            if (bar) {
+                bar.className = `progress-bar bg-${color}`;
+                bar.style.width = `${score}%`;
+            }
+        },
+
+        insertWhatsAppCTA: function() {
+            const defaultNum = '919876543210';
+            const phone = prompt('Enter business WhatsApp number with country code (e.g. 919876543210):', defaultNum);
+            if (!phone) return;
+            const cleanPhone = phone.replace(/[^\d]/g, '');
+            const postTitle = document.getElementById('editTitle')?.value?.trim() || 'this opportunity';
+            const encodedMsg = encodeURIComponent(`Hi! I saw your post regarding "${postTitle}" and would like to know more details.`);
+            const waLink = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+            const ctaBlock = `\n\n📲 Direct WhatsApp Inquiry:\n👉 ${waLink}`;
+
+            this._appendToActiveCaption(ctaBlock);
+            this.updateLivePreview();
+        },
+
+        insertHashtag: function(tag) {
+            this._appendToActiveCaption(` ${tag}`);
+            this.updateLivePreview();
+        },
+
+        _appendToActiveCaption: function(text) {
+            const activeSubtab = document.querySelector('#platformCopyTabs .nav-link.active')?.getAttribute('data-bs-target');
+            let targetEl = document.getElementById('editCaptionBase');
+            if (activeSubtab === '#copyFB') targetEl = document.getElementById('editCaptionFB') || targetEl;
+            if (activeSubtab === '#copyIG') targetEl = document.getElementById('editCaptionIG') || targetEl;
+            if (activeSubtab === '#copyLI') targetEl = document.getElementById('editCaptionLI') || targetEl;
+            if (activeSubtab === '#copyX') targetEl = document.getElementById('editCaptionX') || targetEl;
+
+            if (targetEl) {
+                targetEl.value = (targetEl.value + text).trim();
+            }
+        },
+
+        applyTonePreset: function(tone) {
+            const base = document.getElementById('editCaptionBase')?.value?.trim();
+            if (!base) {
+                alert('Please enter your core message into Base Copy first!');
+                return;
+            }
+
+            let transformed = base;
+            if (tone === 'viral') {
+                transformed = `🚨 READ THIS BEFORE YOU MAKE YOUR NEXT MOVE!\n\n${base}\n\n👇 Drop your thoughts below! Repost if this resonated. 🚀`;
+            } else if (tone === 'corporate') {
+                transformed = `Key Market Insight 📊\n\n${base}\n\nStrategic Leadership Takeaway:\nConsistent execution and technology integration drive measurable scale. What is your team\'s perspective?`;
+            } else if (tone === 'story') {
+                transformed = `A quick reality check from behind the scenes...\n\nMost people think success is sudden, but:\n\n${base}\n\nSmall incremental decisions compound over time. Tag someone who needs to hear this today.`;
+            } else if (tone === 'sales') {
+                transformed = `🎯 Exclusive Opportunity Alert:\n\n${base}\n\n⚡ Limited availability. DM us or reach out via the link below to get started today!`;
+            }
+
+            this._appendToActiveCaption('\n\n' + transformed);
+            this.updateLivePreview();
+        },
+
+        exportCalendarCSV: function() {
+            const posts = this.state.calendarPosts || [];
+            if (posts.length === 0) {
+                alert('No scheduled posts to export. Generate a calendar first!');
+                return;
+            }
+
+            const headers = ['Post ID', 'Scheduled Date (IST)', 'Status', 'Topic / Focus', 'Target Channels', 'Master Caption', 'Media URL'];
+            const rows = posts.map(p => {
+                const dateStr = p.scheduled_at ? new Date(p.scheduled_at).toLocaleString('en-IN') : `Day ${p.day_offset || 1}`;
+                const channels = (p.dispatches || []).map(d => d.platform).join('; ') || 'facebook, instagram, linkedin, x';
+                const clean = text => `"${(text || '').replace(/"/g, '""')}"`;
+                return [
+                    p.id,
+                    clean(dateStr),
+                    p.status,
+                    clean(p.topic_theme),
+                    clean(channels),
+                    clean(p.master_caption),
+                    clean((p.media_urls || []).join('; '))
+                ].join(',');
+            });
+
+            const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            const fileName = `Social_Media_Calendar_${this.state.calendarYear}_${String(this.state.calendarMonth).padStart(2, '0')}.csv`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
 

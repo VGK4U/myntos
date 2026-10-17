@@ -1512,6 +1512,9 @@ class MNRApp {
       case 'staff-tenant-users':
         page = new StaffEmbedPage(this.pageContainer, { url: '/staff/tenant-users', title: 'Staff & Users' });
         break;
+      case 'staff-social-media':
+        page = new StaffEmbedPage(this.pageContainer, { url: '/staff/configuration/social-media', title: 'Social Media Manager' });
+        break;
 
       case 'embed-view':
         page = new StaffEmbedPage(this.pageContainer, routerService.getRouteParams());

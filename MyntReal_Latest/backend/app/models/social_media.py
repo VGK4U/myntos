@@ -197,6 +197,7 @@ class SocialPost(BaseModel):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        res["platform_captions"] = {d.platform: d.tailored_caption for d in (self.dispatches or [])}
         if include_dispatches:
             res["dispatches"] = [d.to_dict() for d in (self.dispatches or [])]
         return res

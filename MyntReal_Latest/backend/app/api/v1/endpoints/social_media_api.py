@@ -55,7 +55,7 @@ def _is_missing_table_error(exc: Exception) -> bool:
 
 
 def _resolve_company_id(ctx: RequestContext, requested_company_id: Optional[int] = None) -> int:
-    if requested_company_id is not None and requested_company_id != ctx.active_company_id:
+    if isinstance(requested_company_id, int) and requested_company_id != ctx.active_company_id:
         assert_company_access(ctx, requested_company_id)
         return requested_company_id
     return ctx.active_company_id
@@ -502,6 +502,8 @@ def update_calendar_settings(
 def get_calendar_posts(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     company_id: Optional[int] = Query(None),
     ctx: RequestContext = Depends(get_request_context),
@@ -514,21 +516,33 @@ def get_calendar_posts(
     try:
         q = db.query(SocialPost).filter(SocialPost.company_id == cid)
 
-        if start_date:
-            try:
-                sd = datetime.fromisoformat(start_date)
-                q = q.filter(SocialPost.scheduled_at >= sd)
-            except Exception:
-                pass
+        month_val = month if isinstance(month, int) else None
+        year_val = year if isinstance(year, int) else None
+        start_date_val = start_date if isinstance(start_date, str) else None
+        end_date_val = end_date if isinstance(end_date, str) else None
 
-        if end_date:
-            try:
-                ed = datetime.fromisoformat(end_date)
-                q = q.filter(SocialPost.scheduled_at <= ed)
-            except Exception:
-                pass
+        if month_val and year_val:
+            import calendar as py_calendar
+            _, last_day = py_calendar.monthrange(year_val, month_val)
+            start_dt = datetime(year_val, month_val, 1, 0, 0, 0)
+            end_dt = datetime(year_val, month_val, last_day, 23, 59, 59)
+            q = q.filter(SocialPost.scheduled_at >= start_dt, SocialPost.scheduled_at <= end_dt)
+        else:
+            if start_date_val:
+                try:
+                    sd = datetime.fromisoformat(start_date_val)
+                    q = q.filter(SocialPost.scheduled_at >= sd)
+                except Exception:
+                    pass
 
-        if status and status.upper() != "ALL":
+            if end_date_val:
+                try:
+                    ed = datetime.fromisoformat(end_date_val)
+                    q = q.filter(SocialPost.scheduled_at <= ed)
+                except Exception:
+                    pass
+
+        if isinstance(status, str) and status.upper() != "ALL":
             q = q.filter(SocialPost.status == status.upper())
 
         posts = q.order_by(SocialPost.scheduled_at.asc()).all()
@@ -580,7 +594,7 @@ def create_single_post(
     ctx: RequestContext = Depends(get_request_context),
     db: Session = Depends(get_db)
 ):
-    """Creates a new ad-hoc draft social post."""
+    """Creates a new ad-hoc draft social post with optional tailored platform copy."""
     _enforce_social_access(ctx)
     post = SocialPost(
         tenant_id=ctx.tenant_id,
@@ -596,9 +610,34 @@ def create_single_post(
         status="DRAFT",
     )
     db.add(post)
+    db.flush()
+
+    if req.platform_captions:
+        for plat, cap in req.platform_captions.items():
+            if not cap:
+                continue
+            conn = db.query(SocialAccountConnection).filter(
+                SocialAccountConnection.company_id == ctx.active_company_id,
+                SocialAccountConnection.platform.in_([plat, "twitter" if plat == "x" else plat])
+            ).first()
+            if conn:
+                disp_key = f"DISP_P{post.id}_C{conn.id}_{plat}_{int(post.scheduled_at.timestamp())}"
+                disp = SocialPostDispatch(
+                    post_id=post.id,
+                    connection_id=conn.id,
+                    platform=plat,
+                    tailored_caption=cap,
+                    tailored_media_urls=post.media_urls or [],
+                    dispatch_key=disp_key,
+                    status="PENDING",
+                    created_at=get_indian_time(),
+                    updated_at=get_indian_time()
+                )
+                db.add(disp)
+
     db.commit()
     db.refresh(post)
-    return {"status": "success", "post": post.to_dict()}
+    return {"status": "success", "post": post.to_dict(include_dispatches=True)}
 
 
 @router.get("/posts/{post_id}")
@@ -639,14 +678,35 @@ def update_post(
 
     for field, val in req.dict(exclude_unset=True).items():
         if field == "platform_captions" and val:
-            # Update tailored captions on dispatches if they exist
             for plat, cap in val.items():
+                if not cap:
+                    continue
                 disp = db.query(SocialPostDispatch).filter(
                     SocialPostDispatch.post_id == post.id,
-                    SocialPostDispatch.platform == plat
+                    SocialPostDispatch.platform.in_([plat, "twitter" if plat == "x" else plat])
                 ).first()
                 if disp:
                     disp.tailored_caption = cap
+                    disp.updated_at = get_indian_time()
+                else:
+                    conn = db.query(SocialAccountConnection).filter(
+                        SocialAccountConnection.company_id == ctx.active_company_id,
+                        SocialAccountConnection.platform.in_([plat, "twitter" if plat == "x" else plat])
+                    ).first()
+                    if conn:
+                        disp_key = f"DISP_P{post.id}_C{conn.id}_{plat}_{int(post.scheduled_at.timestamp())}"
+                        new_disp = SocialPostDispatch(
+                            post_id=post.id,
+                            connection_id=conn.id,
+                            platform=plat,
+                            tailored_caption=cap,
+                            tailored_media_urls=post.media_urls or [],
+                            dispatch_key=disp_key,
+                            status="PENDING",
+                            created_at=get_indian_time(),
+                            updated_at=get_indian_time()
+                        )
+                        db.add(new_disp)
         elif hasattr(post, field) and val is not None:
             setattr(post, field, val)
 
@@ -654,6 +714,76 @@ def update_post(
     db.commit()
     db.refresh(post)
     return {"status": "success", "message": "Post updated successfully.", "post": post.to_dict(include_dispatches=True)}
+
+
+@router.post("/sandbox/init-demo")
+def initialize_sandbox_demo(
+    ctx: RequestContext = Depends(get_request_context),
+    db: Session = Depends(get_db)
+):
+    """Initializes realistic sandbox demo: links mock accounts (FB, IG, LI, X) and generates 15 authentic bi-daily draft posts."""
+    _enforce_social_access(ctx)
+    cid = ctx.active_company_id
+    tid = ctx.tenant_id
+
+    platforms = [
+        {"platform": "facebook", "name": "Facebook Official Page", "handle": "@official_brand"},
+        {"platform": "instagram", "name": "Instagram Business", "handle": "@official_brand_ig"},
+        {"platform": "linkedin", "name": "LinkedIn Corporate", "handle": "@company_hub"},
+        {"platform": "x", "name": "X Official", "handle": "@brand_x"}
+    ]
+    icons = {
+        "facebook": "https://cdn-icons-png.flaticon.com/512/124/124010.png",
+        "instagram": "https://cdn-icons-png.flaticon.com/512/2111/2111463.png",
+        "linkedin": "https://cdn-icons-png.flaticon.com/512/174/174857.png",
+        "twitter": "https://cdn-icons-png.flaticon.com/512/3256/3256013.png",
+        "x": "https://cdn-icons-png.flaticon.com/512/3256/3256013.png"
+    }
+
+    connected_count = 0
+    for p in platforms:
+        plat = p["platform"]
+        existing = db.query(SocialAccountConnection).filter(
+            SocialAccountConnection.company_id == cid,
+            SocialAccountConnection.platform.in_([plat, "twitter" if plat == "x" else plat])
+        ).first()
+        if not existing:
+            acc = SocialAccountConnection(
+                tenant_id=tid,
+                company_id=cid,
+                platform=plat,
+                platform_account_id=f"sandbox_{plat}_{cid}",
+                account_name=p["name"],
+                account_username=p["handle"],
+                profile_image_url=icons.get(plat),
+                provider_profile_id=f"zernio_prof_t{tid}_c{cid}",
+                status="ACTIVE",
+                capabilities=["publish_post", "publish_video", "insights"],
+                last_synced_at=get_indian_time(),
+                created_at=get_indian_time(),
+                updated_at=get_indian_time()
+            )
+            db.add(acc)
+            connected_count += 1
+
+    posts_count = db.query(SocialPost).filter(SocialPost.company_id == cid).count()
+    created_posts = []
+    if posts_count == 0:
+        ai_service = SocialAIService()
+        created_posts = ai_service.generate_monthly_calendar(
+            db=db,
+            company_id=cid,
+            tenant_id=tid,
+            staff_id=ctx.staff_id
+        )
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": f"Sandbox initialized! Connected {connected_count} channels and ready with {len(created_posts)} posts.",
+        "connected_channels": connected_count,
+        "posts_generated": len(created_posts)
+    }
 
 
 @router.delete("/posts/{post_id}")

@@ -32,6 +32,7 @@ export type PageRoute =
   // SaaS Tenant Core Workspace
   | 'staff-my-tenant'
   | 'staff-tenant-users'
+  | 'staff-social-media'
   // Staff Dashboard Section - New
   | 'staff-training-videos'
   | 'staff-employees'
@@ -281,6 +282,7 @@ class RouterService {
     'change-password': { id: 'change-password', title: 'Change Password', icon: 'lock', showInTabs: false, portal: 'staff' },
     'staff-my-tenant': { id: 'staff-my-tenant', title: 'Company Profile', icon: 'briefcase', showInTabs: false, portal: 'staff' },
     'staff-tenant-users': { id: 'staff-tenant-users', title: 'Staff & Users', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-social-media': { id: 'staff-social-media', title: 'Social Media Manager', icon: 'share-2', showInTabs: false, portal: 'staff' },
     // Staff Dashboard Section - New Routes
     'staff-employees': { id: 'staff-employees', title: 'Employees', icon: 'users', showInTabs: false, portal: 'staff' },
     'staff-training-videos': { id: 'staff-training-videos', title: 'Training Videos', icon: 'play-circle', showInTabs: false, portal: 'staff' },
