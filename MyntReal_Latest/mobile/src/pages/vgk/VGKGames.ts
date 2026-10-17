@@ -31,13 +31,13 @@ export class VGKGames {
       <div class="vgk-arcade-mobile" style="padding: 16px; background: #0c0a1a; min-height: 100vh; color: #fff;">
         
         <!-- POINTS BANNER -->
-        <div style="background: linear-gradient(135deg, #1e1b40 0%, #15122b 100%); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="background: linear-gradient(135deg, #1e1b40 0%, #15122b 100%); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
           <div>
             <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">VGK Points Balance</div>
             <div id="vgk-pts-val" style="font-size: 22px; font-weight: 900; color: #f59e0b;">${this.availableBalance.toLocaleString()} Pts</div>
             <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">1 Point for every 1,000 Score</div>
           </div>
-          <a href="/vgk_games.html" style="background: #f59e0b; color: #000; font-weight: 800; font-size: 12px; padding: 8px 16px; border-radius: 50px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <a href="/vgk_games.html" style="background: #f59e0b; color: #000; font-weight: 800; font-size: 12px; padding: 8px 16px; border-radius: 50px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
             <i class="fa-solid fa-gamepad"></i> Play Arcade
           </a>
         </div>
