@@ -608,6 +608,7 @@
             <button class="snav-item" id="snav-bonanza" onclick="showTab('bonanza'); closeSidebar()"><i class="fas fa-trophy"></i>Bonanza Rewards</button>
             <button class="snav-item" id="snav-vendors" onclick="showTab('vendors'); closeSidebar()"><i class="fas fa-store"></i>Vendor Shops</button>
             <button class="snav-item" id="snav-media" onclick="showTab('media'); closeSidebar()"><i class="fas fa-photo-video"></i>Media Hub</button>
+            <a href="/staff/configuration/social-media" class="snav-item" style="text-decoration:none;display:flex;align-items:center;gap:8px;color:#38bdf8"><i class="fas fa-share-nodes"></i>Social Media</a>
             <button class="snav-item" id="snav-orders" onclick="showTab('orders'); closeSidebar()"><i class="fas fa-box"></i>Orders</button>
             <div style="border-top:1px solid rgba(255,255,255,.12);margin:6px 0"></div>
             <button class="snav-item-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
@@ -2392,14 +2393,21 @@
             </style>
 
             <!-- Header -->
-            <div style="display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#1e1b4b 0%,#4338ca 100%);border-radius:14px;padding:18px 22px;margin-bottom:18px">
-                <div style="background:rgba(255,255,255,.18);width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                    <i class="fas fa-photo-video" style="color:#fff;font-size:20px"></i>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(135deg,#1e1b4b 0%,#4338ca 100%);border-radius:14px;padding:18px 22px;margin-bottom:18px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <div style="background:rgba(255,255,255,.18);width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <i class="fas fa-photo-video" style="color:#fff;font-size:20px"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:3px">Media Hub &amp; Social Command Center</div>
+                        <div style="font-size:12.5px;color:rgba(255,255,255,.82)">Videos, publications, and omnichannel AI social media marketing.</div>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:3px">Media Hub</div>
-                    <div style="font-size:12.5px;color:rgba(255,255,255,.82)">Videos, publications, and insights from the MyntReal ecosystem.</div>
-                </div>
+                <a href="/staff/configuration/social-media" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.18);color:#fff;padding:10px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,0.3);transition:all .2s">
+                    <i class="fas fa-share-nodes"></i>
+                    <span>Launch Social Media Manager</span>
+                    <i class="fas fa-arrow-right" style="font-size:11px"></i>
+                </a>
             </div>
 
             <!-- Layout: sidebar + content -->
