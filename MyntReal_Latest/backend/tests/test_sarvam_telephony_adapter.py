@@ -545,3 +545,32 @@ def test_conversational_filler_engine_caching():
     assert "देती हूँ" in hi_female
 
 
+def test_conversational_filler_listening_acknowledgements():
+    """Verify natural listening acknowledgments including hmm, hmm-hmm, avunandi, sarenandi."""
+    from app.services.sarvam_telephony_adapter import ConversationalFillerEngine
+
+    # Telugu active listening acknowledgments
+    te_acks = ConversationalFillerEngine.get_listening_acknowledgements("te", "kavya")
+    assert any("హ్మ్" in a for a in te_acks), "Telugu must include 'హ్మ్...'"
+    assert any("హ్మ్-హ్మ్" in a for a in te_acks), "Telugu must include 'హ్మ్-హ్మ్...'"
+    assert any("అవునండి" in a for a in te_acks), "Telugu must include 'అవునండి...'"
+    assert any("సరేనండి" in a for a in te_acks), "Telugu must include 'సరేనండి...'"
+
+    # Hindi active listening acknowledgments
+    hi_acks = ConversationalFillerEngine.get_listening_acknowledgements("hi", "kavya")
+    assert any("हूँ" in a for a in hi_acks), "Hindi must include 'हूँ...'"
+    assert any("हूँ-हूँ" in a for a in hi_acks), "Hindi must include 'हूँ-हूँ...'"
+    assert any("हाँ जी" in a for a in hi_acks), "Hindi must include 'हाँ जी...'"
+
+    # English active listening acknowledgments
+    en_acks = ConversationalFillerEngine.get_listening_acknowledgements("en", "kavya")
+    assert any("Mm-hmm" in a for a in en_acks), "English must include 'Mm-hmm...'"
+    assert any("Hmm" in a for a in en_acks), "English must include 'Hmm...'"
+
+    # Verify random variant selection works and returns from the acknowledgement list
+    for _ in range(10):
+        rand_te = ConversationalFillerEngine.get_filler_text("te", "kavya", random_variant=True)
+        assert rand_te in te_acks
+
+
+

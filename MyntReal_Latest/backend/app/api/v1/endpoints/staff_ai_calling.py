@@ -1217,16 +1217,22 @@ _FILLER_PHRASES = {
         "Haan ji, ek pal mein batati hoon...",
         "Bilkul, abhi dekhti hoon...",
         "Ji zaroor, ek second...",
+        "Hmm, ji bilkul...",
+        "Hmm-hmm, samajh rahi hoon...",
     ],
     "te": [
-        "Avunu, okka nimisham cheppataanu...",
-        "Sure, oka second...",
+        "Avunandi, okka nimisham cheppataanu...",
+        "Sarenandi, oka second...",
         "Ji, tappakunda cheppataanu...",
+        "Hmm, avunandi...",
+        "Hmm-hmm, sarenandi...",
     ],
     "en": [
         "Sure, just a moment...",
         "Of course, let me check that for you...",
         "Absolutely, one second...",
+        "Mm-hmm, got it...",
+        "Hmm, checking that right now...",
     ],
 }
 _FILLER_CACHE: dict = {
@@ -6798,10 +6804,27 @@ async def webhook_respond(
         poll_url += provider_qs
 
         _filler_say_map = {
-            "hi": ("Haan ji, ek pal mein batata hoon..." if sess_agent_voice != "nova"
-                   else "Haan ji, ek pal mein batati hoon..."),
-            "te": "Avunu, okka nimisham...",
-            "en": "Sure, just a moment...",
+            "hi": _random.choice([
+                "Haan ji, ek pal mein batati hoon...",
+                "Hmm, bilkul ek second...",
+                "Haan ji, zaroor...",
+            ]) if sess_agent_voice == "nova" else _random.choice([
+                "Haan ji, ek pal mein batata hoon...",
+                "Hmm, bilkul ek second...",
+                "Haan ji, zaroor...",
+            ]),
+            "te": _random.choice([
+                "Avunandi, okka kshanam...",
+                "Sarenandi, okka second...",
+                "Hmm, avunandi...",
+                "Avunu, okka nimisham...",
+            ]),
+            "en": _random.choice([
+                "Sure, just a moment...",
+                "Mm-hmm, one second...",
+                "Got it, checking right now...",
+                "Hmm, let me check that...",
+            ]),
         }
         filler_files = _FILLER_CACHE.get(effective_lang, []) if sess_agent_voice == "nova" else []
         if filler_files:
@@ -9504,7 +9527,7 @@ async def plivo_bidirectional_audio_stream(
         stream_start_time = time.time()
 
         # Pre-warm conversational gap filler cache in background for instant zero-latency playback
-        asyncio.create_task(ConversationalFillerEngine.get_or_synthesize_filler(lang, tts_speaker))
+        asyncio.create_task(ConversationalFillerEngine.warm_all_fillers(lang, tts_speaker))
 
         # 2. Handler for customer speech completion
         async def process_customer_turn(user_utterance: str, utterance_lang: Optional[str] = None):

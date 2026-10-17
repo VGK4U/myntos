@@ -91,6 +91,94 @@ class BlockDropGame {
           break;
       }
     });
+
+    // Mouse Pointer & Touch Canvas Controls
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerStartTime = 0;
+    let hasMovedPiece = false;
+
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (!this.isRunning || this.isPaused || !this.currentPiece) return;
+      pointerStartX = e.clientX;
+      pointerStartY = e.clientY;
+      pointerStartTime = performance.now();
+      hasMovedPiece = false;
+
+      // Right click rotates
+      if (e.button === 2) {
+        e.preventDefault();
+        this.rotate();
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!this.isRunning || this.isPaused || !this.currentPiece || pointerStartTime === 0) return;
+      const dx = e.clientX - pointerStartX;
+      const dy = e.clientY - pointerStartY;
+
+      // Drag left/right to move piece horizontally
+      const stepDist = this.tileSize * 0.85;
+      if (Math.abs(dx) > stepDist) {
+        if (dx > 0) this.moveRight();
+        else this.moveLeft();
+        pointerStartX = e.clientX;
+        hasMovedPiece = true;
+      }
+
+      // Drag down to soft drop
+      if (dy > stepDist * 1.4) {
+        this.softDrop();
+        pointerStartY = e.clientY;
+        hasMovedPiece = true;
+      }
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (!this.isRunning || this.isPaused || !this.currentPiece || pointerStartTime === 0) {
+        pointerStartTime = 0;
+        return;
+      }
+      const duration = performance.now() - pointerStartTime;
+      const totalDx = e.clientX - pointerStartX;
+      const totalDy = e.clientY - pointerStartY;
+      pointerStartTime = 0;
+
+      // Tap / click without drag: zone-based control
+      if (!hasMovedPiece && duration < 350 && Math.hypot(totalDx, totalDy) < 20) {
+        const rect = this.canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const relX = clickX / rect.width;
+        const relY = clickY / rect.height;
+
+        if (relY > 0.75) {
+          // Bottom area = soft drop
+          this.softDrop();
+        } else if (relX < 0.35) {
+          // Left third = move left
+          this.moveLeft();
+        } else if (relX > 0.65) {
+          // Right third = move right
+          this.moveRight();
+        } else {
+          // Center / upper area = rotate
+          this.rotate();
+        }
+      }
+    });
+
+    // Mouse wheel down to soft drop, wheel up to rotate
+    this.canvas.addEventListener('wheel', (e) => {
+      if (!this.isRunning || this.isPaused || !this.currentPiece) return;
+      if (e.deltaY > 20) {
+        this.softDrop();
+      } else if (e.deltaY < -20) {
+        this.rotate();
+      }
+    }, { passive: true });
+
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   // Directional actions for mobile/keyboard

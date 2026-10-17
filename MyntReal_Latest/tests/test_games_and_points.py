@@ -243,10 +243,10 @@ class TestGamesAndPointsSuite(unittest.TestCase):
             comp_res = complete_game_session(
                 db=self.db,
                 session_token=token,
-                score=150,
+                score=10000,  # 10,000 score = 10 pts (1 pt per 1,000 score)
                 level=2,
                 lines_cleared=0,
-                items_collected=15,  # 1 milestone (10 food) = 10 pts
+                items_collected=15,
                 distance_travelled=0,
                 duration_seconds=20
             )
@@ -280,9 +280,9 @@ class TestGamesAndPointsSuite(unittest.TestCase):
             comp_res = complete_game_session(
                 db=self.db,
                 session_token=token,
-                score=400,
+                score=20000,  # 20,000 score = 20 pts (1 pt per 1,000 score)
                 level=2,
-                lines_cleared=8,  # 2 milestones (8 lines) = 20 pts (max session cap)
+                lines_cleared=8,
                 items_collected=0,
                 distance_travelled=0,
                 duration_seconds=30
@@ -311,11 +311,11 @@ class TestGamesAndPointsSuite(unittest.TestCase):
             comp_res = complete_game_session(
                 db=self.db,
                 session_token=token,
-                score=550,
+                score=20000,  # 20,000 score = 20 pts (1 pt per 1,000 score)
                 level=1,
                 lines_cleared=0,
                 items_collected=10,
-                distance_travelled=500,  # 2 milestones (250m * 2) = 20 pts
+                distance_travelled=500,
                 duration_seconds=40
             )
 
@@ -360,37 +360,37 @@ class TestGamesAndPointsSuite(unittest.TestCase):
     def test_daily_points_cap_enforcement(self):
         """Verify daily cap (50 points/day) restricts excessive point crediting."""
         with patch("app.services.game_service.POINTS_ISSUANCE_ACTIVE", True):
-            # Session 1: Earn 20 pts
+            # Session 1: Earn 20 pts (20,000 score)
             s1 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-            c1 = complete_game_session(self.db, s1["session_token"], 200, 1, 0, 20, 0, 30)
+            c1 = complete_game_session(self.db, s1["session_token"], 20000, 1, 0, 20, 0, 30)
             self.assertEqual(c1["reward_points"], 20)
 
             # Session 2: Earn 20 pts (Total: 40)
             s2 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-            c2 = complete_game_session(self.db, s2["session_token"], 200, 1, 0, 20, 0, 30)
+            c2 = complete_game_session(self.db, s2["session_token"], 20000, 1, 0, 20, 0, 30)
             self.assertEqual(c2["reward_points"], 20)
 
             # Session 3: Only 10 pts remaining in daily cap (Total: 50)
             s3 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-            c3 = complete_game_session(self.db, s3["session_token"], 200, 1, 0, 20, 0, 30)
+            c3 = complete_game_session(self.db, s3["session_token"], 20000, 1, 0, 20, 0, 30)
             self.assertEqual(c3["reward_points"], 10)  # Capped at remaining 10
 
             # Session 4: Cap reached (0 pts)
             s4 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-            c4 = complete_game_session(self.db, s4["session_token"], 200, 1, 0, 20, 0, 30)
+            c4 = complete_game_session(self.db, s4["session_token"], 20000, 1, 0, 20, 0, 30)
             self.assertEqual(c4["reward_points"], 0)
             self.assertEqual(c4["reward_status"], "NOT_ELIGIBLE")
 
     def test_user_game_stats_aggregation(self):
         """Verify user stats aggregator returns personal bests and history."""
         s1 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-        complete_game_session(self.db, s1["session_token"], 120, 1, 0, 10, 0, 25)
+        complete_game_session(self.db, s1["session_token"], 1200, 1, 0, 10, 0, 25)
 
         s2 = start_game_session(db=self.db, game_type="SNAKE", account_type="CUSTOMER", account_id=self.customer.id)
-        complete_game_session(self.db, s2["session_token"], 250, 2, 0, 20, 0, 35)
+        complete_game_session(self.db, s2["session_token"], 2500, 2, 0, 20, 0, 35)
 
         stats = get_user_game_stats(self.db, "CUSTOMER", self.customer.id)
-        self.assertEqual(stats["best_scores"]["SNAKE"], 250)
+        self.assertEqual(stats["best_scores"]["SNAKE"], 2500)
         self.assertEqual(len(stats["recent_sessions"]), 2)
 
     def test_quick_resume_new_and_existing_customer(self):

@@ -88,9 +88,9 @@
         <a href="/hub">Home</a>
         <a href="/hub/about">About</a>
         <a href="/hub/media">Media</a>
-        <div class="dropdown" onclick="this.classList.toggle('active')">
-          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()" class="nav-recharge-btn">
-            <span class="pulse-icon">⚡</span> Services <span class="dropdown-arrow">▾</span>
+        <div class="dropdown">
+          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
+            <span class="pulse-icon">⚡</span> Recharge &amp; Services <span class="dropdown-arrow">▾</span>
           </a>
           <div class="dropdown-menu">
             <a href="/recharge?service=mobile">📱 Mobile Recharge</a>
@@ -104,7 +104,7 @@
           </div>
         </div>
 
-        <div class="dropdown" onclick="this.classList.toggle('active')">
+        <div class="dropdown">
           <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
             Verticals <span class="dropdown-arrow">▾</span>
           </a>
@@ -119,10 +119,10 @@
           </div>
         </div>
 
-        <!-- 🎮 Games Menu Dropdown (Desktop & Tablet) -->
-        <div class="dropdown nav-games-dropdown" onclick="this.classList.toggle('active')">
+        <!-- 🎮 Play & Earn Menu Dropdown (Desktop & Tablet) -->
+        <div class="dropdown nav-games-dropdown">
           <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
-            <span style="display:inline-flex;align-items:center;gap:5px;">🎮 Games <span class="dropdown-arrow">▾</span></span>
+            <span style="display:inline-flex;align-items:center;gap:5px;">🎮 Play &amp; Earn <span class="dropdown-arrow">▾</span></span>
           </a>
           <div class="dropdown-menu">
             <a href="/customer/games?game=SNAKE">🐍 Neon Snake</a>
@@ -169,9 +169,6 @@
       </nav>
 
       <div class="header-actions">
-        <a href="/customer/games" class="btn-games-header">
-          🎮 Games
-        </a>
         <a href="/customer" class="btn-customer-login" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; padding: 7px 15px; border-radius: 50px; font-weight: 700; font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; margin-right: 8px;">
           Customer Portal
         </a>
@@ -606,12 +603,52 @@ setInterval(nextWhy, 4500);
 </script>
 
 <style>
-/* Foolproof override against cached styles */
-.dropdown .dropdown-menu {
-    display: none !important;
-}
-.dropdown.active .dropdown-menu {
+/* Hub Navigation Dropdown Behavior (Desktop Hover & Mobile Touch) */
+@media (min-width: 999px) {
+  .dropdown {
+    position: relative;
+  }
+  .dropdown .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 34px;
+    left: 0;
+    gap: 8px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.12);
+    padding: 12px;
+    width: 220px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+  }
+  .dropdown .dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+  }
+  .dropdown:hover .dropdown-menu,
+  .dropdown.active .dropdown-menu {
     display: flex !important;
+  }
+  .dropdown:hover .dropdown-arrow,
+  .dropdown.active .dropdown-arrow {
+    transform: rotate(180deg);
+  }
+}
+@media (max-width: 998px) {
+  .dropdown .dropdown-menu {
+    display: none !important;
+  }
+  .dropdown.active .dropdown-menu {
+    display: flex !important;
+  }
+  .dropdown.active .dropdown-arrow {
+    transform: rotate(180deg);
+  }
 }
 
 /* ── Mobile Recharge Header Link Styling ── */
@@ -1574,6 +1611,70 @@ closePromoPopup = function() {
         }
     }
 };
+</script>
+
+<script>
+// DC Protocol: Dropdown mutual-exclusion and hover-exit auto-close handler
+(function initHubDropdowns() {
+    function setupDropdowns() {
+        const dropdowns = document.querySelectorAll('.dropdown');
+        const navLinks = document.querySelectorAll('#navMenu > a, nav a:not(.dropdown-trigger)');
+
+        function closeAllDropdowns(except) {
+            dropdowns.forEach(dd => {
+                if (dd !== except) {
+                    dd.classList.remove('active');
+                }
+            });
+        }
+
+        dropdowns.forEach(dd => {
+            // When mouse enters one dropdown, close any others that might be open
+            dd.addEventListener('mouseenter', () => {
+                closeAllDropdowns(dd);
+            });
+
+            // When mouse leaves a dropdown, remove active state so it closes naturally
+            dd.addEventListener('mouseleave', () => {
+                dd.classList.remove('active');
+            });
+
+            // Handle trigger click / touch toggle
+            const trigger = dd.querySelector('.dropdown-trigger');
+            if (trigger) {
+                trigger.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasActive = dd.classList.contains('active');
+                    closeAllDropdowns();
+                    if (!wasActive) {
+                        dd.classList.add('active');
+                    }
+                });
+            }
+        });
+
+        // When mouse hovers over plain links (Home, About, Media, Contact, Careers), close all dropdowns
+        navLinks.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                closeAllDropdowns();
+            });
+        });
+
+        // Clicking outside closes any open dropdown
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupDropdowns);
+    } else {
+        setupDropdowns();
+    }
+})();
 </script>
 
 <script src="/public/js/website-chatbot.js"></script>

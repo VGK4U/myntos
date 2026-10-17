@@ -937,6 +937,7 @@ class IncomeEntry(BaseModel):
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     deleted_by_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     deleted_at = Column(DateTime, nullable=True)
+    deleted_reason = Column(Text, nullable=True)
 
     # Service Ticket breakdown fields (Spares Fee, Service Fee, Overall Ticket Total)
     spares_amount       = Column(Numeric(15, 2), nullable=True, default=0)

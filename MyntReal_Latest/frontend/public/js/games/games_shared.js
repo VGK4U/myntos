@@ -261,9 +261,18 @@ class GameFramework {
 
   // ── METRIC REPORTING FROM ENGINES ──
   addScore(points) {
+    const prevScore = this.score;
     this.score += points;
     this._saveLocalBest();
     this._updateScoreHUD();
+
+    // Trigger milestone recording and chime when 1,000 score threshold is crossed
+    if (Math.floor(this.score / 1000) > Math.floor(prevScore / 1000)) {
+      this.recordMilestone(this.score);
+      if (window.gameAudio && typeof window.gameAudio.playSuccess === 'function') {
+        window.gameAudio.playSuccess();
+      }
+    }
   }
 
   setItems(count) {
@@ -331,22 +340,12 @@ class GameFramework {
     const progBar = document.getElementById('hud-progress-bar');
     const progLabel = document.getElementById('hud-progress-label');
 
-    if (this.gameType === 'SNAKE') {
-      const step = 10;
-      const progress = (this.itemsCollected % step) / step * 100;
-      if (progBar) progBar.style.width = `${progress}%`;
-      if (progLabel) progLabel.textContent = `${this.itemsCollected} Food Eaten`;
-    } else if (this.gameType === 'BLOCK_DROP') {
-      const step = 4;
-      const progress = (this.linesCleared % step) / step * 100;
-      if (progBar) progBar.style.width = `${progress}%`;
-      if (progLabel) progLabel.textContent = `${this.linesCleared} Lines Cleared`;
-    } else if (this.gameType === 'ENDLESS_RUNNER') {
-      const step = 250;
-      const progress = (this.distanceTravelled % step) / step * 100;
-      if (progBar) progBar.style.width = `${progress}%`;
-      if (progLabel) progLabel.textContent = `${this.distanceTravelled}m Distance`;
-    }
+    const scoreInMilestone = this.score % 1000;
+    const progress = Math.min(100, Math.floor((scoreInMilestone / 1000) * 100));
+    const pointsEarned = Math.floor(this.score / 1000);
+
+    if (progBar) progBar.style.width = `${progress}%`;
+    if (progLabel) progLabel.textContent = `${scoreInMilestone} / 1000 Score (${pointsEarned} Pts)`;
   }
 
   // ── OVERLAYS & UI ──

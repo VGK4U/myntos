@@ -35,6 +35,7 @@ export class VGKGames {
           <div>
             <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">VGK Points Balance</div>
             <div id="vgk-pts-val" style="font-size: 22px; font-weight: 900; color: #f59e0b;">${this.availableBalance.toLocaleString()} Pts</div>
+            <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">1 Point for every 1,000 Score</div>
           </div>
           <a href="/vgk_games.html" style="background: #f59e0b; color: #000; font-weight: 800; font-size: 12px; padding: 8px 16px; border-radius: 50px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-gamepad"></i> Play Arcade

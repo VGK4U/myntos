@@ -4570,6 +4570,27 @@ async def list_bank_ledger_accounts(
         return handle_accounts_error(e)
 
 
+@router.get("/income-entries/deleted")
+async def list_deleted_income_entries(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=500, description="Items per page"),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """List deleted income entries for audit trail."""
+    try:
+        entries, total = IncomeEntryService.list_deleted_income_entries(db, current_user, page, page_size)
+        return JSONResponse(content={
+            "success": True,
+            "income_entries": entries,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        })
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
 @router.get("/income-entries/{entry_id}", response_model=IncomeEntryResponse)
 async def get_income_entry(
     entry_id: int,
@@ -4857,42 +4878,43 @@ async def delete_solar_vendor_ledger_entry(
         return handle_accounts_error(e)
 
 
-@router.get("/income-entries/deleted")
-async def list_deleted_income_entries(
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=500, description="Items per page"),
-    db: Session = Depends(get_db),
-    current_user: StaffEmployee = Depends(get_current_staff_user)
-):
-    """List deleted income entries for audit trail."""
-    try:
-        entries, total = IncomeEntryService.list_deleted_income_entries(db, current_user, page, page_size)
-        return JSONResponse(content={
-            "success": True,
-            "income_entries": entries,
-            "total": total,
-            "page": page,
-            "page_size": page_size
-        })
-    except Exception as e:
-        return handle_accounts_error(e)
-
 
 @router.delete("/income-entries/{entry_id}")
 async def delete_income_entry(
     entry_id: int,
+    reason: Optional[str] = Query(None, description="Reason for deletion"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
     """
     Soft-delete an income entry (sets is_deleted=True, preserves audit trail).
-    DC_INCOME_DELETE_001: Restricted to VGK Mentor (vgk4u) and EA roles only.
+    DC_INCOME_DELETE_001: Allowed for MR10001, MR10025, Subhash, VGK Mentor (vgk4u), EA, key_leadership, and Accounts roles.
     """
     try:
-        IncomeEntryService.delete_income_entry(db, entry_id, current_user)
+        IncomeEntryService.delete_income_entry(db, entry_id, current_user, reason=reason)
         return JSONResponse(content={
             "success": True,
             "message": "Income entry deleted successfully"
+        })
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.post("/income-entries/{entry_id}/restore")
+async def restore_income_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Restore a soft-deleted income entry (sets is_deleted=False).
+    Allowed for MR10001, MR10025, Subhash, VGK Mentor, EA, key_leadership, and Accounts roles.
+    """
+    try:
+        IncomeEntryService.restore_income_entry(db, entry_id, current_user)
+        return JSONResponse(content={
+            "success": True,
+            "message": "Income entry restored successfully"
         })
     except Exception as e:
         return handle_accounts_error(e)

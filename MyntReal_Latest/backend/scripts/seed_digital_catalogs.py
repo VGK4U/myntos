@@ -192,21 +192,21 @@ SEED_CATALOGS_DATA = [
                     "brand_tiers": [
                         {
                             "id": "goldi_navgrun_aps",
-                            "name": "Goldi Solar, Navgrun & APS (Australian Premium Solar)",
+                            "name": "Suryanz Solar (Navgrun & APS), Goldi Solar",
                             "tag": "Best Value Tier • 25-Yr Performance Warranty",
-                            "base_3kw": 199999
+                            "base_3kw": 219999
                         },
                         {
-                            "id": "waaree_adani",
-                            "name": "Waaree / Adani / Vikram Solar / ReNew",
+                            "id": "waaree_vikram",
+                            "name": "Waaree Energies & Vikram Solar",
                             "tag": "India Top Tier-1 Manufacturers • High Efficiency",
-                            "base_3kw": 209999
+                            "base_3kw": 229999
                         },
                         {
-                            "id": "tata_solar",
-                            "name": "TATA Solar",
+                            "id": "tata_adani",
+                            "name": "TATA Solar & Adani Solar",
                             "tag": "Premium Brand Leader • India's Most Trusted",
-                            "base_3kw": 220000
+                            "base_3kw": 239999
                         }
                     ],
                     "pricing_rules": {

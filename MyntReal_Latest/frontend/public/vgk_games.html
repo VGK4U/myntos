@@ -72,13 +72,22 @@
       letter-spacing: 0.5px;
     }
 
+    /* High-Contrast Legibility & Visibility Overrides */
+    .text-muted {
+      color: #cbd5e1 !important; /* High-contrast crisp slate */
+    }
+
+    .small.text-muted {
+      color: #94a3b8 !important;
+    }
+
     /* Game Tab Buttons */
     .vgk-tab-btn {
       background: var(--vgk-card);
       border: 1px solid var(--vgk-border);
       border-radius: 16px;
       padding: 14px 18px;
-      color: var(--text-muted);
+      color: #e2e8f0;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
@@ -86,6 +95,11 @@
       gap: 12px;
       text-align: left;
       flex: 1;
+    }
+
+    .vgk-tab-btn .small {
+      color: #94a3b8 !important;
+      font-weight: 500;
     }
 
     .vgk-tab-btn:hover {
@@ -100,6 +114,10 @@
       border-color: var(--gold);
       color: #fff;
       box-shadow: 0 4px 18px var(--gold-glow);
+    }
+
+    .vgk-tab-btn.active .small {
+      color: #e2e8f0 !important;
     }
 
     .vgk-tab-icon {
@@ -184,12 +202,13 @@
       text-align: center;
     }
 
-    /* Mobile Controls Bar */
+    /* Game Controls Bar (Mouse Pointer on Desktop & Touch on Mobile) */
     .mobile-controls-bar {
-      display: none;
+      display: flex;
       margin-top: 14px;
       gap: 10px;
       justify-content: center;
+      align-items: center;
     }
 
     .dpad-btn {
@@ -205,7 +224,14 @@
       justify-content: center;
       user-select: none;
       touch-action: manipulation;
-      transition: all 0.1s;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .dpad-btn:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold);
+      transform: translateY(-2px);
     }
 
     .dpad-btn:active {
@@ -215,7 +241,8 @@
     }
 
     .btn-action-jump {
-      width: 90px;
+      width: 100%;
+      max-width: 320px;
       height: 58px;
       border-radius: 18px;
       background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
@@ -228,6 +255,13 @@
       justify-content: center;
       gap: 6px;
       box-shadow: 0 4px 14px var(--gold-glow);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action-jump:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--gold-glow);
     }
 
     .btn-action-jump:active {
@@ -235,28 +269,55 @@
     }
 
     .char-picker-pill {
-      background: var(--vgk-card);
-      border: 1px solid var(--vgk-border);
+      background: var(--vgk-surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
       padding: 8px 14px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: var(--text-muted);
+      color: #e2e8f0;
       transition: all 0.2s;
     }
 
     .char-picker-pill.active {
-      background: rgba(245, 158, 11, 0.2);
+      background: rgba(245, 158, 11, 0.25);
       border-color: var(--gold);
       color: #fff;
     }
 
+    .speed-picker-pill {
+      background: var(--vgk-surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .speed-picker-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .speed-picker-pill.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.25);
+    }
+
     @media (max-width: 768px) {
-      .mobile-controls-bar { display: flex; }
       .vgk-tab-btn { padding: 10px 12px; }
       .score-val-current { font-size: 1.45rem; }
     }
@@ -296,7 +357,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
       <div>
         <h1 class="h3 fw-bold mb-1 text-white">VGK Arcade & Bonanza Rewards</h1>
-        <p class="text-muted small mb-0">Partner arcade skill games synced directly to your verified VGK Points balance.</p>
+        <p class="text-muted small mb-0">Partner arcade skill games synced directly to your verified VGK Points balance (<strong>1 Point for every 1,000 Score</strong>).</p>
       </div>
 
       <!-- AUDIO CONTROLS TOGGLES -->
@@ -345,6 +406,38 @@
             <div class="fw-bold text-white">Endless Runner</div>
             <div class="small text-muted">Dodge drones & grab bonanza stars</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1B. SNAKE SPEED SELECTOR -->
+    <div id="snake-speed-picker" class="card p-3 mb-4" style="background: rgba(21, 18, 43, 0.95); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-warning"></i> Serpent Speed &amp; Portal Walls:
+        </span>
+        <span class="badge" style="background: rgba(245, 158, 11, 0.22); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.55); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-infinity me-1"></i> Screen Wrap-Around (Pass Through Walls)
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap gap-2">
+          <div class="speed-picker-pill" id="pill-speed-slow" onclick="setSnakeSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Chill)
+          </div>
+          <div class="speed-picker-pill active" id="pill-speed-normal" onclick="setSnakeSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-warning"></i> Normal (Default)
+          </div>
+          <div class="speed-picker-pill" id="pill-speed-fast" onclick="setSnakeSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Pro)
+          </div>
+          <div class="speed-picker-pill" id="pill-speed-turbo" onclick="setSnakeSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Insane)
+          </div>
+        </div>
+        <div class="small d-flex align-items-center gap-1" style="color: #cbd5e1; font-weight: 600;">
+          <i class="fa-solid fa-arrow-trend-up text-warning"></i>
+          <span>Speed accelerates with each Level (every 15 food items)!</span>
         </div>
       </div>
     </div>
@@ -418,8 +511,8 @@
       <!-- OVERLAY: READY -->
       <div class="game-ui-overlay" id="overlay-ready">
         <div class="mb-3">
-          <div class="h2 fw-bold text-white mb-1" id="ready-game-title">Golden Snake</div>
-          <p class="text-muted small" id="ready-game-desc">Guide the golden serpent, eat glowing energy orbs, and beat your partner record!</p>
+          <div class="h2 fw-bold text-white mb-2" id="ready-game-title">Golden Snake</div>
+          <p class="small mb-0" id="ready-game-desc" style="color: #e2e8f0; font-size: 0.95rem; font-weight: 500; max-width: 480px; margin: 0 auto; line-height: 1.5;">Guide the golden serpent, eat glowing energy orbs, and beat your partner record!</p>
         </div>
         <button type="button" onclick="handleStartGame()" class="btn btn-lg btn-warning text-dark rounded-pill px-5 py-2 fw-bold" style="box-shadow: 0 4px 18px var(--gold-glow);">
           <i class="fa-solid fa-play me-2"></i> Start Arcade Game
@@ -429,7 +522,7 @@
       <!-- OVERLAY: PAUSED -->
       <div class="game-ui-overlay d-none" id="overlay-paused">
         <div class="h2 fw-bold text-warning mb-2"><i class="fa-solid fa-pause me-2"></i> ARCADE PAUSED</div>
-        <p class="text-muted small mb-4">Gameplay is paused. Your session state is preserved.</p>
+        <p class="small mb-4" style="color: #e2e8f0; font-size: 0.95rem;">Gameplay is paused. Your session state is preserved.</p>
         <div class="d-flex gap-3">
           <button type="button" onclick="handleResumeGame()" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold">
             <i class="fa-solid fa-play me-1"></i> Resume
@@ -444,7 +537,7 @@
       <div class="game-ui-overlay d-none" id="overlay-submitting">
         <div class="spinner-border text-warning mb-3" role="status"></div>
         <div class="h5 fw-bold text-white">Verifying Arcade Telemetry...</div>
-        <p class="text-muted small">Validating session integrity and calculating VGK points.</p>
+        <p class="small mb-0" style="color: #e2e8f0;">Validating session integrity and calculating VGK points.</p>
       </div>
 
       <!-- OVERLAY: GAME OVER -->
@@ -502,8 +595,16 @@
 
     <div class="mobile-controls-bar d-none" id="mobile-controls-runner">
       <button type="button" class="btn-action-jump w-100" style="max-width: 320px;" onclick="triggerRunnerJump()">
-        <i class="fa-solid fa-bolt"></i> TAP TO JUMP (DOUBLE JUMP READY)
+        <i class="fa-solid fa-bolt"></i> TAP / CLICK TO JUMP (DOUBLE JUMP READY)
       </button>
+    </div>
+
+    <!-- UNIVERSAL MOUSE & TOUCH HINT -->
+    <div class="text-center mt-3">
+      <span class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e2e8f0; font-size: 0.82rem; font-weight: 500;">
+        <i class="fa-solid fa-gamepad text-warning"></i>
+        <span>Universal Controls: Click/drag with <strong class="text-white">Mouse</strong> on PC or swipe/tap on <strong class="text-white">Touchscreen</strong> &middot; Arrow Keys &amp; On-screen D-Pad also supported</span>
+      </span>
     </div>
 
   </main>
@@ -572,23 +673,42 @@
       const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
       const initialGame = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER'].includes(reqGame) ? reqGame : 'SNAKE';
       selectGame(initialGame);
+
+      const savedSpeed = (snakeEngine && snakeEngine.speedMode) || localStorage.getItem('myntreal_snake_speed') || 'NORMAL';
+      setSnakeSpeed(savedSpeed);
     }
 
     function selectGame(type) {
+      if (snakeEngine && typeof snakeEngine.reset === 'function') snakeEngine.reset();
+      if (blockDropEngine && typeof blockDropEngine.reset === 'function') blockDropEngine.reset();
+      if (runnerEngine && typeof runnerEngine.reset === 'function') runnerEngine.reset();
+      if (activeFramework) {
+        activeFramework.state = 'READY';
+        activeFramework._stopTimer();
+      }
+
       currentGameType = type;
       activeFramework.gameType = type;
       activeFramework._initStorage();
       activeFramework._updateScoreHUD();
+
+      // Update URL query parameter without page reload
+      if (window.history && window.history.replaceState) {
+        const newUrl = `${window.location.pathname}?game=${type}`;
+        window.history.replaceState({ game: type }, '', newUrl);
+      }
 
       document.querySelectorAll('.vgk-tab-btn').forEach(b => b.classList.remove('active'));
       if (type === 'SNAKE') document.getElementById('tab-snake').classList.add('active');
       if (type === 'BLOCK_DROP') document.getElementById('tab-block').classList.add('active');
       if (type === 'ENDLESS_RUNNER') document.getElementById('tab-runner').classList.add('active');
 
+      const speedPicker = document.getElementById('snake-speed-picker');
       const charPicker = document.getElementById('runner-char-picker');
       const previewPanel = document.getElementById('block-drop-preview-panel');
-      charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
-      previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
+      if (speedPicker) speedPicker.classList.toggle('d-none', type !== 'SNAKE');
+      if (charPicker) charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+      if (previewPanel) previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
 
       document.getElementById('mobile-controls-snake').classList.toggle('d-none', type !== 'SNAKE');
       document.getElementById('mobile-controls-block').classList.toggle('d-none', type !== 'BLOCK_DROP');
@@ -602,7 +722,7 @@
       const descEl = document.getElementById('ready-game-desc');
       if (type === 'SNAKE') {
         titleEl.textContent = 'Golden Snake';
-        descEl.textContent = 'Guide the golden serpent, eat glowing energy orbs, and beat your partner record!';
+        descEl.textContent = 'Guide the golden serpent, eat glowing energy orbs, and level up for faster speeds! Pass through walls freely — only colliding with your own body ends the game.';
       } else if (type === 'BLOCK_DROP') {
         titleEl.textContent = 'Block Drop';
         descEl.textContent = 'Place and rotate falling blocks, complete lines, and progress through levels!';
@@ -617,6 +737,15 @@
       if (type === 'SNAKE') snakeEngine.resizeCanvas();
       if (type === 'BLOCK_DROP') blockDropEngine.resizeCanvas();
       if (type === 'ENDLESS_RUNNER') runnerEngine.resizeCanvas();
+    }
+
+    function setSnakeSpeed(mode) {
+      if (snakeEngine && typeof snakeEngine.setSpeedMode === 'function') {
+        snakeEngine.setSpeedMode(mode);
+      }
+      document.querySelectorAll('.speed-picker-pill').forEach(p => p.classList.remove('active'));
+      const activePill = document.getElementById(`pill-speed-${mode.toLowerCase()}`);
+      if (activePill) activePill.classList.add('active');
     }
 
     function selectRunnerCharacter(charId) {

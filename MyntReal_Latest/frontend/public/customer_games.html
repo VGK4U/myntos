@@ -65,13 +65,22 @@
       -webkit-text-fill-color: transparent;
     }
 
+    /* High-Contrast Legibility & Visibility Overrides */
+    .text-muted {
+      color: #cbd5e1 !important; /* High-contrast crisp slate */
+    }
+
+    .small.text-muted {
+      color: #94a3b8 !important;
+    }
+
     /* Game Selector Cards */
     .game-tab-btn {
       background: var(--card-dark);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 14px 18px;
-      color: var(--text-muted);
+      color: #e2e8f0;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
@@ -81,18 +90,27 @@
       flex: 1;
     }
 
+    .game-tab-btn .small {
+      color: #94a3b8 !important;
+      font-weight: 500;
+    }
+
     .game-tab-btn:hover {
       background: var(--card-surface);
-      border-color: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.25);
       color: #fff;
       transform: translateY(-2px);
     }
 
     .game-tab-btn.active {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(56, 189, 248, 0.18) 100%);
       border-color: var(--emerald);
       color: #fff;
       box-shadow: 0 4px 18px var(--emerald-glow);
+    }
+
+    .game-tab-btn.active .small {
+      color: #e2e8f0 !important;
     }
 
     .game-tab-icon {
@@ -177,12 +195,13 @@
       text-align: center;
     }
 
-    /* Mobile Controls Bar */
+    /* Game Controls Bar (Mouse Pointer on Desktop & Touch on Mobile) */
     .mobile-controls-bar {
-      display: none;
+      display: flex;
       margin-top: 14px;
       gap: 10px;
       justify-content: center;
+      align-items: center;
     }
 
     .dpad-btn {
@@ -198,7 +217,14 @@
       justify-content: center;
       user-select: none;
       touch-action: manipulation;
-      transition: all 0.1s;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .dpad-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
     }
 
     .dpad-btn:active {
@@ -208,7 +234,8 @@
     }
 
     .btn-action-jump {
-      width: 90px;
+      width: 100%;
+      max-width: 360px;
       height: 58px;
       border-radius: 18px;
       background: linear-gradient(135deg, var(--emerald) 0%, #059669 100%);
@@ -221,6 +248,13 @@
       justify-content: center;
       gap: 6px;
       box-shadow: 0 4px 14px var(--emerald-glow);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action-jump:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--emerald-glow);
     }
 
     .btn-action-jump:active {
@@ -229,24 +263,53 @@
 
     /* Character Selection Pills */
     .char-picker-pill {
-      background: var(--card-dark);
-      border: 1px solid var(--card-border);
+      background: var(--card-surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
       padding: 8px 14px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: var(--text-muted);
+      color: #e2e8f0;
       transition: all 0.2s;
     }
 
     .char-picker-pill.active {
-      background: rgba(168, 85, 247, 0.2);
-      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.25);
+      border-color: #c084fc;
       color: #fff;
+    }
+
+    /* Snake Speed Selection Pills */
+    .speed-picker-pill {
+      background: var(--card-surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .speed-picker-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .speed-picker-pill.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--emerald);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--emerald-glow);
     }
 
     @media (max-width: 768px) {
@@ -298,7 +361,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
       <div>
         <h1 class="h3 fw-bold mb-1 text-white">Play & Earn Rewards</h1>
-        <p class="text-muted small mb-0">Play casual skill games, beat personal bests, and earn verified loyalty discount points.</p>
+        <p class="text-muted small mb-0">Play casual skill games, beat personal bests, and earn verified loyalty discount points (<strong>1 Point for every 1,000 Score</strong>).</p>
       </div>
 
       <!-- AUDIO CONTROLS TOGGLES -->
@@ -347,6 +410,38 @@
             <div class="fw-bold text-white">Endless Runner</div>
             <div class="small text-muted">Jump hazards & gather stars</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1B. SNAKE SPEED SELECTOR (Visible when Snake selected) -->
+    <div id="snake-speed-picker" class="card p-3 mb-4" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-success"></i> Snake Speed &amp; Portal Walls:
+        </span>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.22); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.55); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-infinity me-1"></i> Screen Wrap-Around (Pass Through Walls)
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap gap-2">
+          <div class="speed-picker-pill" id="pill-speed-slow" onclick="setSnakeSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Chill)
+          </div>
+          <div class="speed-picker-pill active" id="pill-speed-normal" onclick="setSnakeSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-success"></i> Normal (Default)
+          </div>
+          <div class="speed-picker-pill" id="pill-speed-fast" onclick="setSnakeSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Pro)
+          </div>
+          <div class="speed-picker-pill" id="pill-speed-turbo" onclick="setSnakeSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Insane)
+          </div>
+        </div>
+        <div class="small d-flex align-items-center gap-1" style="color: #cbd5e1; font-weight: 600;">
+          <i class="fa-solid fa-arrow-trend-up text-warning"></i>
+          <span>Speed accelerates with each Level (every 15 food items)!</span>
         </div>
       </div>
     </div>
@@ -421,8 +516,8 @@
       <!-- OVERLAY: READY TO PLAY -->
       <div class="game-ui-overlay" id="overlay-ready">
         <div class="mb-3">
-          <div class="h2 fw-bold text-white mb-1" id="ready-game-title">Neon Snake</div>
-          <p class="text-muted small" id="ready-game-desc">Use arrow keys or swipe to guide the snake. Eat food to grow and earn points!</p>
+          <div class="h2 fw-bold text-white mb-2" id="ready-game-title" style="letter-spacing: -0.5px;">Neon Snake</div>
+          <p class="small mb-0" id="ready-game-desc" style="color: #e2e8f0; font-size: 0.95rem; font-weight: 500; max-width: 480px; margin: 0 auto; line-height: 1.5;">Use arrow keys or swipe to guide the snake. Eat food to grow and earn points!</p>
         </div>
         <button type="button" onclick="handleStartGame()" class="btn btn-lg btn-success rounded-pill px-5 py-2 fw-bold" style="box-shadow: 0 4px 18px var(--emerald-glow);">
           <i class="fa-solid fa-play me-2"></i> Start Game
@@ -432,7 +527,7 @@
       <!-- OVERLAY: PAUSED -->
       <div class="game-ui-overlay d-none" id="overlay-paused">
         <div class="h2 fw-bold text-warning mb-2"><i class="fa-solid fa-pause me-2"></i> GAME PAUSED</div>
-        <p class="text-muted small mb-4">Gameplay and timers are frozen. Take your time!</p>
+        <p class="small mb-4" style="color: #e2e8f0; font-size: 0.95rem;">Gameplay and timers are frozen. Take your time!</p>
         <div class="d-flex gap-3">
           <button type="button" onclick="handleResumeGame()" class="btn btn-success rounded-pill px-4 py-2 fw-bold">
             <i class="fa-solid fa-play me-1"></i> Resume
@@ -447,7 +542,7 @@
       <div class="game-ui-overlay d-none" id="overlay-submitting">
         <div class="spinner-border text-info mb-3" role="status"></div>
         <div class="h5 fw-bold text-white">Verifying Anti-Cheat Telemetry...</div>
-        <p class="text-muted small">Saving session and calculating reward eligibility.</p>
+        <p class="small mb-0" style="color: #e2e8f0;">Saving session and calculating reward eligibility.</p>
       </div>
 
       <!-- OVERLAY: GAME OVER -->
@@ -506,8 +601,16 @@
 
     <div class="mobile-controls-bar d-none" id="mobile-controls-runner">
       <button type="button" class="btn-action-jump w-100" style="max-width: 320px;" onclick="triggerRunnerJump()">
-        <i class="fa-solid fa-bolt"></i> TAP TO JUMP (DOUBLE JUMP READY)
+        <i class="fa-solid fa-bolt"></i> TAP / CLICK TO JUMP (DOUBLE JUMP READY)
       </button>
+    </div>
+
+    <!-- UNIVERSAL MOUSE & TOUCH HINT -->
+    <div class="text-center mt-3">
+      <span class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e2e8f0; font-size: 0.82rem; font-weight: 500;">
+        <i class="fa-solid fa-gamepad text-info"></i>
+        <span>Universal Controls: Click/drag with <strong class="text-white">Mouse</strong> on PC or swipe/tap on <strong class="text-white">Touchscreen</strong> &middot; Arrow Keys &amp; On-screen D-Pad also supported</span>
+      </span>
     </div>
 
   </main>
@@ -573,8 +676,10 @@
         </div>
       </div>
     </div>
+  </div>
+
   <!-- RESUME GAME & MOBILE NUMBER POPUP MODAL -->
-  <div class="modal fade" id="resumeGameModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+  <div class="modal fade" id="resumeGameModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-white" style="background: #101826; border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.85);">
         <div class="modal-header border-0 pb-0 pt-4 px-4">
@@ -650,8 +755,26 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       initFramework();
+      initModalBackdropCleaner();
       checkAuthOrPromptResume();
     });
+
+    function initModalBackdropCleaner() {
+      const modalEl = document.getElementById('resumeGameModal');
+      if (modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', () => {
+          sessionStorage.setItem('guest_mode_dismissed', 'true');
+          cleanupModalArtifacts();
+        });
+      }
+    }
+
+    function cleanupModalArtifacts() {
+      document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+    }
 
     function initFramework() {
       const canvas = document.getElementById('game-canvas');
@@ -675,6 +798,10 @@
       const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
       const initialGame = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER'].includes(reqGame) ? reqGame : 'SNAKE';
       selectGame(initialGame);
+
+      // Initialize snake speed setting
+      const savedSpeed = (snakeEngine && snakeEngine.speedMode) || localStorage.getItem('myntreal_snake_speed') || 'NORMAL';
+      setSnakeSpeed(savedSpeed);
     }
 
     function checkAuthOrPromptResume() {
@@ -686,7 +813,10 @@
         loadUserStats();
       } else {
         updatePlayerIdentityBadge('Guest', false);
-        promptMobilePopup();
+        const dismissed = sessionStorage.getItem('guest_mode_dismissed');
+        if (!dismissed) {
+          promptMobilePopup();
+        }
       }
     }
 
@@ -754,10 +884,12 @@
         if (resp.ok && data.success) {
           localStorage.setItem('customer_token', data.token);
           localStorage.setItem('customer_mobile', data.mobile_number);
+          sessionStorage.setItem('guest_mode_dismissed', 'true');
 
           if (resumeModalInstance) {
             resumeModalInstance.hide();
           }
+          cleanupModalArtifacts();
 
           updatePlayerIdentityBadge(data.mobile_number, true);
           document.getElementById('nav-points-balance').textContent = (data.loyalty_points || 0).toLocaleString();
@@ -770,8 +902,15 @@
             }
           }
 
-          // Directly enter into the game with saved progress
-          handleStartGame();
+          Swal.fire({
+            icon: 'success',
+            title: 'Welcome Back!',
+            text: `Progress loaded (${data.loyalty_points || 0} Pts). Choose your game and click Start!`,
+            timer: 2200,
+            showConfirmButton: false,
+            background: '#141f32',
+            color: '#fff'
+          });
         } else {
           Swal.fire({
             icon: 'error',
@@ -797,19 +936,34 @@
     }
 
     function handleSkipGuest() {
+      sessionStorage.setItem('guest_mode_dismissed', 'true');
       if (resumeModalInstance) {
         resumeModalInstance.hide();
       }
+      cleanupModalArtifacts();
       updatePlayerIdentityBadge('Guest', false);
-      // Directly enter into the game as guest
-      handleStartGame();
     }
 
     function selectGame(type) {
+      // Stop and reset any running engine before switching
+      if (snakeEngine && typeof snakeEngine.reset === 'function') snakeEngine.reset();
+      if (blockDropEngine && typeof blockDropEngine.reset === 'function') blockDropEngine.reset();
+      if (runnerEngine && typeof runnerEngine.reset === 'function') runnerEngine.reset();
+      if (activeFramework) {
+        activeFramework.state = 'READY';
+        activeFramework._stopTimer();
+      }
+
       currentGameType = type;
       activeFramework.gameType = type;
       activeFramework._initStorage();
       activeFramework._updateScoreHUD();
+
+      // Update URL query parameter without page reload
+      if (window.history && window.history.replaceState) {
+        const newUrl = `${window.location.pathname}?game=${type}`;
+        window.history.replaceState({ game: type }, '', newUrl);
+      }
 
       // Update Tab Styles
       document.querySelectorAll('.game-tab-btn').forEach(b => b.classList.remove('active'));
@@ -817,20 +971,13 @@
       if (type === 'BLOCK_DROP') document.getElementById('tab-block').classList.add('active');
       if (type === 'ENDLESS_RUNNER') document.getElementById('tab-runner').classList.add('active');
 
-      // Character picker visibility
+      // Speed picker, Character picker & Preview panel visibility
+      const speedPicker = document.getElementById('snake-speed-picker');
       const charPicker = document.getElementById('runner-char-picker');
       const previewPanel = document.getElementById('block-drop-preview-panel');
-      if (type === 'ENDLESS_RUNNER') {
-        charPicker.classList.remove('d-none');
-      } else {
-        charPicker.classList.add('d-none');
-      }
-
-      if (type === 'BLOCK_DROP') {
-        previewPanel.classList.remove('d-none');
-      } else {
-        previewPanel.classList.add('d-none');
-      }
+      if (speedPicker) speedPicker.classList.toggle('d-none', type !== 'SNAKE');
+      if (charPicker) charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+      if (previewPanel) previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
 
       // Update mobile controls visibility
       document.getElementById('mobile-controls-snake').classList.toggle('d-none', type !== 'SNAKE');
@@ -847,7 +994,7 @@
       const descEl = document.getElementById('ready-game-desc');
       if (type === 'SNAKE') {
         titleEl.textContent = 'Neon Snake';
-        descEl.textContent = 'Use arrow keys or swipe to guide the snake. Eat food to grow and earn points!';
+        descEl.textContent = 'Guide the snake, eat food to grow, and level up for faster speeds! Pass through walls freely — only colliding with your own body ends the game.';
       } else if (type === 'BLOCK_DROP') {
         titleEl.textContent = 'Block Drop';
         descEl.textContent = 'Use Left/Right to steer, Up to rotate, and Down to soft drop. Clear lines to score!';
@@ -863,6 +1010,15 @@
       if (type === 'SNAKE') snakeEngine.resizeCanvas();
       if (type === 'BLOCK_DROP') blockDropEngine.resizeCanvas();
       if (type === 'ENDLESS_RUNNER') runnerEngine.resizeCanvas();
+    }
+
+    function setSnakeSpeed(mode) {
+      if (snakeEngine && typeof snakeEngine.setSpeedMode === 'function') {
+        snakeEngine.setSpeedMode(mode);
+      }
+      document.querySelectorAll('.speed-picker-pill').forEach(p => p.classList.remove('active'));
+      const activePill = document.getElementById(`pill-speed-${mode.toLowerCase()}`);
+      if (activePill) activePill.classList.add('active');
     }
 
     function selectRunnerCharacter(charId) {

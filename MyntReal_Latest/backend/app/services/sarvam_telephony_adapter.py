@@ -21,10 +21,12 @@ import base64
 import asyncio
 import time
 import logging
+import random
 import re
 import ssl
 import inspect
 from typing import Optional, Callable, Dict, Any, List, Tuple
+from collections import defaultdict
 from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
@@ -578,15 +580,17 @@ class PlivoBargeInController:
 
 class ConversationalFillerEngine:
     """
-    Provides ultra-low-latency conversational gap filler audio.
+    Provides ultra-low-latency conversational gap filler audio and active listening acknowledgments.
     Synthesizes and caches natural Indic/English verbal acknowledgments:
-      - Telugu: "తప్పకుండా, మీకు ఇప్పుడే పూర్తి వివరాలు తెలియజేస్తాను."
-      - Hindi (Male): "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देता हूँ."
-      - Hindi (Female): "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देती हूँ."
-      - English: "Sure, let me share these details with you right away."
+      - Telugu: "హ్మ్...", "హ్మ్-హ్మ్...", "అవునండి...", "సరేనండి...", "హ్మ్, అవునండి...", "సరేనండి, ఒక్క క్షణం...", "తప్పకుండా, మీకు ఇప్పుడే పూర్తి వివరాలు తెలియజేస్తాను."
+      - Hindi (Male): "हूँ...", "हूँ-हूँ...", "हाँ जी...", "जी बिल्कुल...", "हूँ, ज़रूर जी...", "हाँ जी, एक पल...", "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देता हूँ."
+      - Hindi (Female): "हूँ...", "हूँ-हूँ...", "हाँ जी...", "जी बिल्कुल...", "हूँ, ज़रूर जी...", "हाँ जी, एक पल...", "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देती हूँ."
+      - English: "Mm-hmm...", "Hmm...", "Yes, got it...", "Sure, one moment...", "Hmm, let me check that...", "Understood, checking that right now...", "Sure, let me share these details with you right away."
     Streams immediately to Plivo while LLM reasons and retrieves catalogue knowledge.
     """
     _CACHE: Dict[Tuple[str, str], List[str]] = {}
+    _PHRASE_CACHE: Dict[Tuple[str, str, str], List[str]] = {}
+    _VARIATION_CACHE: Dict[Tuple[str, str], List[List[str]]] = defaultdict(list)
     _LOCK: Optional[asyncio.Lock] = None
 
     FILLER_TEXTS: Dict[Tuple[str, str], str] = {
@@ -598,30 +602,105 @@ class ConversationalFillerEngine:
         ("en", "kavya"): "Sure, let me share these details with you right away.",
     }
 
+    LISTENING_ACKNOWLEDGEMENTS: Dict[Tuple[str, str], List[str]] = {
+        ("te", "shubh"): [
+            "హ్మ్...",
+            "హ్మ్-హ్మ్...",
+            "అవునండి...",
+            "సరేనండి...",
+            "హ్మ్, అవునండి...",
+            "సరేనండి, ఒక్క క్షణం...",
+            "తప్పకుండా, మీకు ఇప్పుడే పూర్తి వివరాలు తెలియజేస్తాను.",
+        ],
+        ("te", "kavya"): [
+            "హ్మ్...",
+            "హ్మ్-హ్మ్...",
+            "అవునండి...",
+            "సరేనండి...",
+            "హ్మ్, అవునండి...",
+            "సరేనండి, ఒక్క క్షణం...",
+            "తప్పకుండా, మీకు ఇప్పుడే పూర్తి వివరాలు తెలియజేస్తాను.",
+        ],
+        ("hi", "shubh"): [
+            "हूँ...",
+            "हूँ-हूँ...",
+            "हाँ जी...",
+            "जी बिल्कुल...",
+            "हूँ, ज़रूर जी...",
+            "हाँ जी, एक पल...",
+            "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देता हूँ.",
+        ],
+        ("hi", "kavya"): [
+            "हूँ...",
+            "हूँ-हूँ...",
+            "हाँ जी...",
+            "जी बिल्कुल...",
+            "हूँ, ज़रूर जी...",
+            "हाँ जी, एक पल...",
+            "ज़रूर, मैं आपको अभी इसकी पूरी जानकारी देती हूँ.",
+        ],
+        ("en", "shubh"): [
+            "Mm-hmm...",
+            "Hmm...",
+            "Yes, got it...",
+            "Sure, one moment...",
+            "Hmm, let me check that...",
+            "Understood, checking that right now...",
+            "Sure, let me share these details with you right away.",
+        ],
+        ("en", "kavya"): [
+            "Mm-hmm...",
+            "Hmm...",
+            "Yes, got it...",
+            "Sure, one moment...",
+            "Hmm, let me check that...",
+            "Understood, checking that right now...",
+            "Sure, let me share these details with you right away.",
+        ],
+    }
+
     @classmethod
-    def get_filler_text(cls, lang: str, speaker: str) -> str:
+    def get_filler_text(cls, lang: str, speaker: str, random_variant: bool = False) -> str:
         clean_lang = "te" if "te" in (lang or "").lower() else ("hi" if "hi" in (lang or "").lower() else "en")
         clean_speaker = "shubh" if "shubh" in (speaker or "").lower() else "kavya"
+        if random_variant:
+            options = cls.LISTENING_ACKNOWLEDGEMENTS.get((clean_lang, clean_speaker), [])
+            if options:
+                return random.choice(options)
         return cls.FILLER_TEXTS.get((clean_lang, clean_speaker), "తప్పకుండా, మీకు ఇప్పుడే పూర్తి వివరాలు తెలియజేస్తాను.")
 
     @classmethod
-    async def get_or_synthesize_filler(cls, lang: str, speaker: str) -> List[str]:
+    def get_listening_acknowledgements(cls, lang: str, speaker: str) -> List[str]:
         clean_lang = "te" if "te" in (lang or "").lower() else ("hi" if "hi" in (lang or "").lower() else "en")
         clean_speaker = "shubh" if "shubh" in (speaker or "").lower() else "kavya"
-        cache_key = (clean_lang, clean_speaker)
+        return cls.LISTENING_ACKNOWLEDGEMENTS.get((clean_lang, clean_speaker), [
+            cls.get_filler_text(clean_lang, clean_speaker)
+        ])
 
-        if cache_key in cls._CACHE and cls._CACHE[cache_key]:
-            return cls._CACHE[cache_key]
+    @classmethod
+    async def get_or_synthesize_filler(cls, lang: str, speaker: str, phrase: Optional[str] = None) -> List[str]:
+        clean_lang = "te" if "te" in (lang or "").lower() else ("hi" if "hi" in (lang or "").lower() else "en")
+        clean_speaker = "shubh" if "shubh" in (speaker or "").lower() else "kavya"
+        text_phrase = phrase or cls.get_filler_text(clean_lang, clean_speaker)
+        phrase_key = (clean_lang, clean_speaker, text_phrase)
+        legacy_key = (clean_lang, clean_speaker)
+
+        if phrase_key in cls._PHRASE_CACHE and cls._PHRASE_CACHE[phrase_key]:
+            return cls._PHRASE_CACHE[phrase_key]
+
+        if not phrase and legacy_key in cls._CACHE and cls._CACHE[legacy_key]:
+            return cls._CACHE[legacy_key]
 
         if cls._LOCK is None:
             cls._LOCK = asyncio.Lock()
 
         async with cls._LOCK:
-            if cache_key in cls._CACHE and cls._CACHE[cache_key]:
-                return cls._CACHE[cache_key]
+            if phrase_key in cls._PHRASE_CACHE and cls._PHRASE_CACHE[phrase_key]:
+                return cls._PHRASE_CACHE[phrase_key]
+            if not phrase and legacy_key in cls._CACHE and cls._CACHE[legacy_key]:
+                return cls._CACHE[legacy_key]
 
             sarvam_lang = "te-IN" if clean_lang == "te" else ("hi-IN" if clean_lang == "hi" else "en-IN")
-            text_phrase = cls.get_filler_text(clean_lang, clean_speaker)
             chunks: List[str] = []
 
             tts = SarvamStreamingTTSClient(
@@ -640,12 +719,28 @@ class ConversationalFillerEngine:
             try:
                 await tts.synthesize_streaming(gen(), on_audio)
                 if chunks:
-                    cls._CACHE[cache_key] = chunks
-                    logger.info(f"[FILLER] Cached {len(chunks)} chunks for {cache_key}")
+                    cls._PHRASE_CACHE[phrase_key] = chunks
+                    if not phrase or legacy_key not in cls._CACHE:
+                        cls._CACHE[legacy_key] = chunks
+                    if chunks not in cls._VARIATION_CACHE[legacy_key]:
+                        cls._VARIATION_CACHE[legacy_key].append(chunks)
+                    logger.info(f"[FILLER] Cached {len(chunks)} chunks for {phrase_key}")
             except Exception as e:
-                logger.warning(f"[FILLER] Failed to synthesize filler for {cache_key}: {e}")
+                logger.warning(f"[FILLER] Failed to synthesize filler for {phrase_key}: {e}")
 
-            return chunks
+            return chunks or cls._CACHE.get(legacy_key, [])
+
+    @classmethod
+    async def warm_all_fillers(cls, lang: str, speaker: str):
+        """Pre-warm top listening acknowledgments and conversational gap fillers in background."""
+        clean_lang = "te" if "te" in (lang or "").lower() else ("hi" if "hi" in (lang or "").lower() else "en")
+        clean_speaker = "shubh" if "shubh" in (speaker or "").lower() else "kavya"
+        phrases = cls.get_listening_acknowledgements(clean_lang, clean_speaker)
+        for p in phrases[:4]:
+            try:
+                await cls.get_or_synthesize_filler(clean_lang, clean_speaker, phrase=p)
+            except Exception as _we:
+                logger.debug(f"[FILLER-WARM] Background warm warning for '{p}': {_we}")
 
     @classmethod
     async def play_filler_chunk_stream(
@@ -654,12 +749,30 @@ class ConversationalFillerEngine:
         speaker: str,
         emit_func: Callable[[str], Any],
         is_interrupted_func: Callable[[], bool],
+        phrase: Optional[str] = None,
     ):
-        """Streams filler audio chunks with small yield intervals allowing interruption."""
-        chunks = await cls.get_or_synthesize_filler(lang, speaker)
+        """Streams filler audio chunks with small yield intervals allowing interruption.
+        Picks natural listening acknowledgments ('హ్మ్...', 'హ్మ్-హ్మ్...', 'అవునండి...', 'సరేనండి...')
+        to establish active human presence."""
+        clean_lang = "te" if "te" in (lang or "").lower() else ("hi" if "hi" in (lang or "").lower() else "en")
+        clean_speaker = "shubh" if "shubh" in (speaker or "").lower() else "kavya"
+        legacy_key = (clean_lang, clean_speaker)
+
+        chunks: List[str] = []
+        if phrase:
+            chunks = await cls.get_or_synthesize_filler(clean_lang, clean_speaker, phrase=phrase)
+        elif legacy_key in cls._VARIATION_CACHE and cls._VARIATION_CACHE[legacy_key]:
+            chunks = random.choice(cls._VARIATION_CACHE[legacy_key])
+        else:
+            var_phrase = cls.get_filler_text(clean_lang, clean_speaker, random_variant=True)
+            chunks = await cls.get_or_synthesize_filler(clean_lang, clean_speaker, phrase=var_phrase)
+
+        if not chunks:
+            chunks = await cls.get_or_synthesize_filler(clean_lang, clean_speaker)
+
         for chunk in chunks:
             if is_interrupted_func():
                 break
             await emit_func(chunk)
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.12)
 

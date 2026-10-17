@@ -106,16 +106,13 @@ class EndlessRunnerGame {
       }
     });
 
-    // Touch / click anywhere on canvas jumps
-    this.canvas.addEventListener('touchstart', (e) => {
-      if (!this.isRunning || this.isPaused) return;
-      this.jump();
-    }, { passive: true });
-
-    this.canvas.addEventListener('mousedown', (e) => {
+    // Touch / mouse pointer anywhere on canvas jumps
+    this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.isRunning || this.isPaused) return;
       this.jump();
     });
+
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   jump() {

@@ -226,6 +226,7 @@ font-size:12px;
 transition:.3s;
 }
 
+.dropdown:hover .dropdown-arrow,
 .dropdown.active .dropdown-arrow{
 transform:rotate(180deg);
 }
@@ -243,6 +244,16 @@ width:210px;
 display:none;
 flex-direction:column;
 border:1px solid rgba(0,0,0,0.05);
+z-index:1000;
+}
+
+.dropdown-menu::before{
+content:'';
+position:absolute;
+top:-14px;
+left:0;
+right:0;
+height:14px;
 }
 
 .dropdown-menu a{
@@ -256,6 +267,7 @@ background:#f1f5f9;
 transform:translateX(4px);
 }
 
+.dropdown:hover .dropdown-menu,
 .dropdown.active .dropdown-menu{
 display:flex;
 }
@@ -370,6 +382,10 @@ position:relative;
 box-shadow:none;
 display:none;
 width:100%;
+}
+
+.dropdown:hover .dropdown-menu{
+display:none;
 }
 
 .dropdown.active .dropdown-menu{

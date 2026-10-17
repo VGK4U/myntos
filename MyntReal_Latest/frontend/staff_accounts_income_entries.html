@@ -163,6 +163,30 @@
         .confirm-choice input[type=radio] { display: none; }
         .conf-section { display: none; }
         .conf-section.active { display: block; }
+
+        /* Sticky Action Column & Quick Buttons */
+        .data-table th:last-child, .data-table td:last-child {
+            position: sticky;
+            right: 0;
+            background: white;
+            z-index: 2;
+            box-shadow: -3px 0 6px rgba(0,0,0,0.06);
+        }
+        .data-table thead th:last-child {
+            background: #f9fafb;
+            z-index: 3;
+        }
+        .row-rejected td:last-child { background: #fef2f2; }
+        .row-estimated td:last-child { background: #fffbeb; }
+        .btn-action-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .btn-action-icon:hover {
+            transform: scale(1.15);
+        }
     </style>
 </head>
 <body>
@@ -175,9 +199,14 @@
                 <h1 style="font-size: 22px; font-weight: 700; color: #1f2937; margin: 0;">Income Entries</h1>
                 <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0 0;">SFMS income tracking with CRM auto-sync</p>
             </div>
-            <button class="btn-primary-custom" onclick="openCreateModal()">
-                <i class="fas fa-plus me-1"></i>New Income Entry
-            </button>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn" id="topBtnDeletedTab" onclick="switchTab('deleted')" style="padding: 8px 14px; border: 1px solid #dc2626; background: #fff; color: #dc2626; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;" onmouseover="this.style.background='#dc2626';this.style.color='#fff';" onmouseout="this.style.background='#fff';this.style.color='#dc2626';">
+                    <i class="fas fa-trash-alt"></i>Deleted Transactions <span id="topDeletedBadge" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;">0</span>
+                </button>
+                <button class="btn-primary-custom" onclick="openCreateModal()">
+                    <i class="fas fa-plus me-1"></i>New Income Entry
+                </button>
+            </div>
         </div>
 
         <div class="summary-cards" id="summaryCards">
@@ -292,7 +321,7 @@
             <button class="tab-btn" data-tab="estimations" onclick="switchTab('estimations')" style="color:#b45309;"><i class="fas fa-calculator me-1"></i>Estimations</button>
             <button class="tab-btn" data-tab="solarvendor" onclick="switchTab('solarvendor')" style="color:#0369a1;"><i class="fas fa-solar-panel me-1"></i>Solar Vendor Ledger</button>
             <button class="tab-btn" data-tab="execDash" onclick="switchTab('execDash')" style="color:#7c3aed;"><i class="fas fa-chart-pie me-1"></i>Executive Dashboard</button>
-            <button class="tab-btn" data-tab="deleted" onclick="switchTab('deleted')" style="color:#dc2626;"><i class="fas fa-trash-alt me-1"></i>Deleted Transactions</button>
+            <button class="tab-btn" data-tab="deleted" onclick="switchTab('deleted')" style="color:#dc2626;font-weight:700;"><i class="fas fa-trash-alt me-1"></i>Deleted Transactions <span id="tabDeletedBadge" style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">0</span></button>
         </div>
 
         <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
@@ -456,18 +485,74 @@
 
         function canRejectEntries() {
             if (!currentUserData) return false;
-            const role = (currentUserData.emp_role_code || currentUserData.role_code || '').toLowerCase();
+            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
+            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
+            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
             const designation = (currentUserData.designation || '').toUpperCase();
-            const allowedRoles = new Set(['vgk4u', 'ea', 'accounts', 'executive_assistant', 'executive assistant']);
-            return allowedRoles.has(role) || designation.includes('MENTOR');
+            const allowedRoles = new Set(['vgk4u', 'ea', 'accounts', 'executive_assistant', 'executive assistant', 'key_leadership', 'admin']);
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowedRoles.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
         }
 
         function canDeleteEntries() {
             if (!currentUserData) return false;
             const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
+            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
             const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
-            const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'accounts', 'accounts_staff', 'accounts_manager']);
-            return empCode === 'MR10001' || allowed.has(role);
+            const designation = (currentUserData.designation || '').toUpperCase().trim();
+            const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin']);
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
+        }
+
+        function canEditEntries() {
+            if (!currentUserData) return false;
+            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
+            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
+            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
+            const designation = (currentUserData.designation || '').toUpperCase().trim();
+            const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin']);
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
+        }
+
+        function esc(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function fmtDateShort(d) {
+            if (!d) return '—';
+            try {
+                const dt = new Date(d);
+                if (isNaN(dt.getTime())) return String(d);
+                return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch(e) { return String(d); }
+        }
+
+        function fmtDateTime(d) {
+            if (!d) return '—';
+            try {
+                const dt = new Date(d);
+                if (isNaN(dt.getTime())) return String(d);
+                return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            } catch(e) { return String(d); }
+        }
+
+        async function updateDeletedBadgeCount() {
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/deleted?page=1&page_size=1');
+                if (r.ok) {
+                    const data = await r.json();
+                    const count = data.total != null ? data.total : (data.income_entries || []).length;
+                    const topBadge = document.getElementById('topDeletedBadge');
+                    const tabBadge = document.getElementById('tabDeletedBadge');
+                    if (topBadge) topBadge.textContent = count;
+                    if (tabBadge) tabBadge.textContent = count;
+                }
+            } catch(e) {}
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -481,6 +566,7 @@
             } catch(e) {}
             await Promise.all([loadCompanies(), loadSourceTypes(), loadFilterCategories('')]);
             await loadIncomes();
+            updateDeletedBadgeCount();
         });
 
         async function loadCompanies() {
@@ -672,33 +758,84 @@
             const el = document.getElementById('tab-deleted');
             el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
             try {
-                const r = await staffFetch(API_BASE + '/income-entries/deleted');
+                const r = await staffFetch(API_BASE + '/income-entries/deleted?page=1&page_size=100');
                 const data = await r.json();
                 const entries = data.income_entries || [];
+                const total = data.total != null ? data.total : entries.length;
+                
+                // Update badge counts
+                const topBadge = document.getElementById('topDeletedBadge');
+                const tabBadge = document.getElementById('tabDeletedBadge');
+                if (topBadge) topBadge.textContent = total;
+                if (tabBadge) tabBadge.textContent = total;
+
                 if (!entries.length) {
-                    el.innerHTML = '<div class="empty-state"><i class="fas fa-trash-restore"></i><h3>No Deleted Income Entries</h3><p>Deleted transactions will appear here for audit history.</p></div>';
+                    el.innerHTML = '<div class="empty-state"><i class="fas fa-trash-restore" style="font-size:36px;color:#9ca3af;margin-bottom:12px;"></i><h3>No Deleted Income Entries</h3><p>Any deleted transactions will be preserved here permanently with who deleted them and audit reasons.</p></div>';
                     return;
                 }
-                let html = `<div class="table-responsive card"><table class="custom-table">
-                    <thead><tr>
-                        <th>Entry #</th><th>Date</th><th>Customer / Payer</th><th>Amount (₹)</th><th>Company</th><th>Mode</th><th>Deleted By</th><th>Deleted At</th>
-                    </tr></thead><tbody>`;
+                let html = `<div class="card" style="box-shadow:0 1px 3px rgba(0,0,0,0.08);border-radius:10px;overflow:hidden;">
+                    <div class="card-header" style="background:#fef2f2;border-bottom:1px solid #fee2e2;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-weight:700;color:#991b1b;"><i class="fas fa-trash-alt me-2" style="color:#dc2626;"></i>Deleted Transactions Audit Log</span>
+                        <span style="font-size:13px;font-weight:600;color:#b91c1c;">${total} deleted ${total === 1 ? 'record' : 'records'}</span>
+                    </div>
+                    <div class="table-container" style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead><tr>
+                            <th>Entry #</th>
+                            <th>Date</th>
+                            <th>Customer / Payer</th>
+                            <th>Amount</th>
+                            <th>Company</th>
+                            <th>Mode</th>
+                            <th>Deleted By</th>
+                            <th>Deleted At</th>
+                            <th>Deletion Reason</th>
+                            <th style="text-align:center;">Actions</th>
+                        </tr></thead><tbody>`;
                 entries.forEach(e => {
+                    const safeEntry = esc(e.entry_number || e.id);
+                    const safeEntryEsc = (e.entry_number || e.id).toString().replace(/'/g, "\\'");
+                    const deletedByName = e.deleted_by_name || 'System / Administrator';
+                    const deletedByEmp = e.deleted_by_emp_code ? `(${e.deleted_by_emp_code})` : '';
+                    const reason = e.deleted_reason || '—';
+                    
                     html += `<tr>
-                        <td><strong>${esc(e.entry_number)}</strong></td>
-                        <td>${e.income_date ? fmtDateShort(e.income_date) : '—'}</td>
-                        <td>${esc(e.payer_name || e.lead_name || '—')}</td>
-                        <td><strong>₹${fmt(e.amount)}</strong></td>
-                        <td>${esc(e.company_name || '—')}</td>
-                        <td>${esc(e.payment_mode || '—')}</td>
-                        <td>${esc(e.deleted_by_name || '—')} ${e.deleted_by_emp_code ? '(' + esc(e.deleted_by_emp_code) + ')' : ''}</td>
-                        <td>${e.deleted_at ? fmtDateShort(e.deleted_at) : '—'}</td>
+                        <td><code style="font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;">${safeEntry}</code></td>
+                        <td style="white-space:nowrap;">${e.income_date ? fmtDateShort(e.income_date) : '—'}</td>
+                        <td><strong>${esc(e.payer_name || e.lead_name || '—')}</strong></td>
+                        <td class="amount" style="color:#dc2626;font-weight:700;">${fmt(e.amount)}</td>
+                        <td><small>${esc(e.company_name || '—')}</small></td>
+                        <td><span class="badge bg-secondary" style="font-size:10px;">${esc(e.payment_mode || '—')}</span></td>
+                        <td><span style="font-weight:600;color:#1f2937;"><i class="fas fa-user-times me-1" style="color:#dc2626;"></i>${esc(deletedByName)}</span> <small style="color:#6b7280;">${esc(deletedByEmp)}</small></td>
+                        <td style="white-space:nowrap;font-size:12px;color:#4b5563;"><i class="far fa-clock me-1"></i>${fmtDateTime(e.deleted_at)}</td>
+                        <td><span style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-size:11px;color:#374151;display:inline-block;max-width:240px;word-break:break-word;">${esc(reason)}</span></td>
+                        <td style="text-align:center;white-space:nowrap;">
+                            ${canDeleteEntries() ? `<button class="btn btn-sm btn-outline-success" onclick="restoreIncome(${e.id}, '${safeEntryEsc}')" style="padding:4px 10px;font-size:11px;border-radius:5px;cursor:pointer;border:1px solid #059669;color:#059669;background:#fff;font-weight:600;" onmouseover="this.style.background='#059669';this.style.color='#fff';" onmouseout="this.style.background='#fff';this.style.color='#059669';" title="Restore entry back to active list"><i class="fas fa-undo me-1"></i>Restore</button>` : '—'}
+                        </td>
                     </tr>`;
                 });
-                html += `</tbody></table></div>`;
+                html += `</tbody></table></div></div>`;
                 el.innerHTML = html;
             } catch(err) {
-                el.innerHTML = '<div class="alert alert-danger" style="margin:20px">Error loading deleted transactions</div>';
+                console.error('Error loading deleted tab:', err);
+                el.innerHTML = '<div class="alert alert-danger" style="margin:20px"><i class="fas fa-exclamation-triangle me-2"></i>Error loading deleted transactions: ' + esc(err.message) + '</div>';
+            }
+        }
+
+        async function restoreIncome(id, entryNumber) {
+            if (!confirm(`Restore deleted entry ${entryNumber} back to active income entries?`)) return;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id + '/restore', { method: 'POST' });
+                const data = await r.json();
+                if (data.success) {
+                    alert(`Entry ${entryNumber} restored successfully!`);
+                    await loadIncomes();
+                    renderDeletedTab();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to restore entry'));
+                }
+            } catch(e) {
+                alert('Failed to restore entry: ' + e.message);
             }
         }
 
@@ -769,40 +906,42 @@
 
         function statusActions(inc) {
             const s = inc.status;
+            let btns = '';
+            if (canEditEntries()) {
+                btns += '<button class="btn-action btn-edit" onclick="openEditModal('+inc.id+')" title="Edit complete transaction details" style="border-color:#2563eb;color:#2563eb;font-weight:600;"><i class="fas fa-pencil-alt me-1"></i>Edit</button> ';
+            }
             if (s === 'REJECTED') {
-                return '<span style="color:#9ca3af;font-size:11px;"><i class="fas fa-ban me-1"></i>Rejected</span>';
-            }
-            let btns = '<button class="btn-action btn-edit" onclick="openEditModal('+inc.id+')" title="Edit destination & details"><i class="fas fa-pencil-alt"></i></button> ';
-            if (s === 'PENDING') {
-                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
-                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
-                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button>';
+                btns += '<span style="color:#9ca3af;font-size:11px;margin-right:4px;"><i class="fas fa-ban me-1"></i>Rejected</span> ';
+            } else if (s === 'PENDING') {
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button> ';
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button> ';
+                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button> ';
             } else if (s === 'ESTIMATED') {
-                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm Now</button>';
-                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm Now</button> ';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button> ';
             } else if (s === 'CONFIRMED') {
-                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
-                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button> ';
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button> ';
             } else if (s === 'EXCEPTION_TALLY') {
-                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
-                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
-                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button> ';
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button> ';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button> ';
             } else if (s === 'ADJUSTMENT') {
-                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
-                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
-                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button> ';
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button> ';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button> ';
             } else if (s === 'TALLY_DONE') {
-                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
-                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button>';
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button> ';
+                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button> ';
             }
-            if (canRejectEntries()) {
+            if (canRejectEntries() && s !== 'REJECTED') {
                 const safeEntry = (inc.entry_number || inc.id).toString().replace(/'/g, "\\'");
                 const safePayer = (inc.lead_name || inc.payer_name || '-').toString().replace(/'/g, "\\'");
-                btns += '<button class="btn-action btn-reject" onclick="rejectIncome('+inc.id+',\''+safeEntry+'\','+parseFloat(inc.amount||0)+',\''+safePayer+'\')" title="Reject this entry"><i class="fas fa-times-circle"></i> Reject</button>';
+                btns += '<button class="btn-action btn-reject" onclick="rejectIncome('+inc.id+',\''+safeEntry+'\','+parseFloat(inc.amount||0)+',\''+safePayer+'\')" title="Reject this entry"><i class="fas fa-times-circle me-1"></i>Reject</button> ';
             }
             if (canDeleteEntries()) {
                 const safeEntry2 = (inc.entry_number || inc.id).toString().replace(/'/g, "\\'");
-                btns += '<button class="btn-action" style="border-color:#dc2626;color:#dc2626;background:white;" onmouseover="this.style.background=\'#dc2626\';this.style.color=\'white\';" onmouseout="this.style.background=\'white\';this.style.color=\'#dc2626\';" onclick="deleteIncome('+inc.id+',\''+safeEntry2+'\')" title="Delete this entry"><i class="fas fa-trash-alt"></i> Delete</button>';
+                btns += '<button class="btn-action" style="border-color:#dc2626;color:#dc2626;background:white;font-weight:600;" onmouseover="this.style.background=\'#dc2626\';this.style.color=\'white\';" onmouseout="this.style.background=\'white\';this.style.color=\'#dc2626\';" onclick="deleteIncome('+inc.id+',\''+safeEntry2+'\')" title="Delete this entry and move to Deleted Transactions tab"><i class="fas fa-trash-alt me-1"></i>Delete</button>';
             }
             return btns;
         }
@@ -832,17 +971,29 @@
         }
 
         async function deleteIncome(id, entryNumber) {
-            const inc = filteredIncomes.find(i => i.id === id) || {};
-            const msg = 'Delete income entry ' + entryNumber + ' for ' + fmt(inc.amount || 0) + '?\n\nThis entry will be removed from the list. The data is preserved for audit purposes.\n\nThis action cannot be undone.';
-            if (!confirm(msg)) return;
+            const inc = filteredIncomes.find(i => i.id === id) || allIncomes.find(i => i.id === id) || {};
+            const payer = inc.lead_name || inc.payer_name || 'Customer';
+            const amountStr = fmt(inc.amount || 0);
+
+            const confirmPrompt = `Delete Income Entry ${entryNumber} for ${amountStr} (${payer})?\n\n• The record will be safely soft-deleted from active lists\n• It will be archived in the 'Deleted Transactions' tab with full audit trail\n\nPlease enter the reason for deletion:`;
+            
+            const reason = prompt(confirmPrompt, "Entry correction / cancelled by Subhash / Administrator");
+            if (reason === null) return; // User cancelled
+            
             try {
-                const r = await staffFetch(API_BASE + '/income-entries/' + id, { method: 'DELETE' });
+                const url = `${API_BASE}/income-entries/${id}?reason=${encodeURIComponent(reason || 'Deleted by user')}`;
+                const r = await staffFetch(url, { method: 'DELETE' });
                 const data = await r.json();
                 if (data.success) {
                     allIncomes = allIncomes.filter(i => i.id !== id);
                     filteredIncomes = filteredIncomes.filter(i => i.id !== id);
                     renderAll();
-                    alert('Entry ' + entryNumber + ' deleted successfully.');
+                    updateDeletedBadgeCount();
+                    
+                    const goToDeleted = confirm(`Entry ${entryNumber} (${amountStr}) deleted successfully and recorded in Deleted Transactions.\n\nClick OK to open the 'Deleted Transactions' tab now.`);
+                    if (goToDeleted) {
+                        switchTab('deleted');
+                    }
                 } else {
                     alert('Error: ' + (data.message || 'Failed to delete entry'));
                 }
@@ -919,8 +1070,22 @@
                     ? '<span class="badge bg-info text-dark" style="font-size:10px;">'+inc.revenue_category_name+'</span>'
                     : (inc.income_source_name ? '<span class="badge bg-secondary text-white" style="font-size:10px;">'+inc.income_source_name+'</span>' : '-');
                 const updStaff = inc.updated_by_name ? (inc.updated_by_emp_code ? inc.updated_by_name + ' (' + inc.updated_by_emp_code + ')' : inc.updated_by_name) : '-';
+                const safeEntryCode = esc(inc.entry_number || inc.id);
+                const safeEntryEsc = (inc.entry_number || inc.id).toString().replace(/'/g, "\\'");
+                let quickActions = '';
+                if (canEditEntries() || canDeleteEntries()) {
+                    quickActions = '<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle;">';
+                    if (canEditEntries()) {
+                        quickActions += '<button type="button" class="btn-action-icon" onclick="openEditModal('+inc.id+')" title="Edit Entry #'+safeEntryCode+'" style="border:none;background:#eff6ff;color:#2563eb;padding:2px 5px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-pencil-alt"></i></button>';
+                    }
+                    if (canDeleteEntries()) {
+                        quickActions += '<button type="button" class="btn-action-icon" onclick="deleteIncome('+inc.id+',\''+safeEntryEsc+'\')" title="Delete Entry #'+safeEntryCode+'" style="border:none;background:#fef2f2;color:#dc2626;padding:2px 5px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-trash-alt"></i></button>';
+                    }
+                    quickActions += '</span>';
+                }
+
                 rows += '<tr class="'+(isRejected ? 'row-rejected' : isEstimated ? 'row-estimated' : '')+'">' +
-                    '<td><code style="font-size:11px;">'+(inc.entry_number || inc.id)+'</code></td>' +
+                    '<td style="white-space:nowrap;"><code style="font-size:11px;font-weight:600;">'+safeEntryCode+'</code>'+quickActions+'</td>' +
                     '<td style="white-space:nowrap;">'+fmtD(inc.income_date)+'</td>' +
                     '<td><small>'+(inc.company_name || '-')+'</small></td>' +
                     '<td>'+catBadge+'</td>' +
@@ -2475,6 +2640,31 @@
         let editAllCompanies = [];
         let editAllEmployees = [];
 
+        async function onEditCompanyChange() {
+            const compId = document.getElementById('editCompanyId').value;
+            await loadEditCategories(compId);
+        }
+
+        async function loadEditCategories(companyId, selectedCatId) {
+            const sel = document.getElementById('editCategoryId');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">None / Default</option>';
+            if (!companyId) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/revenue-categories?company_id=${companyId}&active_only=true`);
+                if (r.ok) {
+                    const data = await r.json();
+                    (data.categories || []).forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = c.category_name;
+                        if (selectedCatId && (c.id === selectedCatId || c.category_name === selectedCatId)) o.selected = true;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch(e) { console.error('Error loading edit categories:', e); }
+        }
+
         async function openEditModal(id) {
             editingEntryId = id;
             try {
@@ -2484,28 +2674,47 @@
                 const entry = d.income_entry || d;
 
                 document.getElementById('editEntryNum').textContent = entry.entry_number || id;
-                document.getElementById('editAmount').textContent = fmt(entry.amount);
-                const editDtEl = document.getElementById('editIncomeDate');
-                if (editDtEl) editDtEl.value = entry.income_date ? entry.income_date.slice(0,10) : '';
-                document.getElementById('editPayMode').textContent = entry.payment_mode || '-';
-                document.getElementById('editStatus').textContent = entry.status || '-';
+                document.getElementById('editStatusBadge').innerHTML = statusBadge(entry.status, entry.confirmation_type);
+                
+                // Form fields
+                document.getElementById('editIncomeDate').value = entry.income_date ? entry.income_date.slice(0,10) : '';
+                document.getElementById('editAmountInput').value = parseFloat(entry.amount) || '';
+                document.getElementById('editPaymentMode').value = (entry.payment_mode || 'BANK').toUpperCase();
+                document.getElementById('editPaymentType').value = (entry.payment_type || '').toUpperCase();
+                document.getElementById('editPayerName').value = entry.payer_name || entry.lead_name || '';
+                document.getElementById('editPaymentRef').value = entry.payment_reference || '';
+                document.getElementById('editNarration').value = entry.narration || '';
 
-                // Load companies if not cached
+                // Populate Company dropdown
                 if (!editAllCompanies.length) {
                     const cr = await staffFetch(API_BASE + '/companies');
                     if (cr.ok) { const cd = await cr.json(); editAllCompanies = cd.companies || cd.data || []; }
                 }
-                const compSel = document.getElementById('editDestCompany');
-                compSel.innerHTML = '<option value="">Select Company Account</option>';
+                const compSel = document.getElementById('editCompanyId');
+                compSel.innerHTML = '<option value="">Select Company</option>';
+                editAllCompanies.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = c.company_name || c.name;
+                    if (entry.company_id === c.id) o.selected = true;
+                    compSel.appendChild(o);
+                });
+
+                // Populate Categories for this company
+                await loadEditCategories(entry.company_id, entry.revenue_category_id);
+
+                // Populate Destination Company
+                const destCompSel = document.getElementById('editDestCompany');
+                destCompSel.innerHTML = '<option value="">Select Company Account</option>';
                 editAllCompanies.forEach(function(c) {
                     const opt = document.createElement('option');
                     opt.value = c.id;
                     opt.textContent = c.company_name + (c.bank_name ? ' — ' + c.bank_name : '');
                     if (entry.destination_company_id === c.id) opt.selected = true;
-                    compSel.appendChild(opt);
+                    destCompSel.appendChild(opt);
                 });
 
-                // Load employees if not cached
+                // Populate Employees
                 if (!editAllEmployees.length) {
                     const er = await staffFetch('/api/v1/staff/tasks/assignable-employees?limit=500');
                     if (er.ok) { const ed = await er.json(); editAllEmployees = ed.employees || []; }
@@ -2520,11 +2729,14 @@
                     empSel.appendChild(opt);
                 });
 
-                // Set destination type
+                // Set destination type radio
                 const destType = entry.destination_type || '';
-                document.querySelector('input[name="editDestType"][value="COMPANY_ACCOUNT"]').checked = destType === 'COMPANY_ACCOUNT';
-                document.querySelector('input[name="editDestType"][value="EMPLOYEE"]').checked = destType === 'EMPLOYEE';
-                document.querySelector('input[name="editDestType"][value=""]').checked = !destType;
+                const rComp = document.querySelector('input[name="editDestType"][value="COMPANY_ACCOUNT"]');
+                const rEmp = document.querySelector('input[name="editDestType"][value="EMPLOYEE"]');
+                const rNone = document.querySelector('input[name="editDestType"][value=""]');
+                if (destType === 'COMPANY_ACCOUNT' && rComp) rComp.checked = true;
+                else if (destType === 'EMPLOYEE' && rEmp) rEmp.checked = true;
+                else if (rNone) rNone.checked = true;
                 onEditDestTypeChange();
 
                 if (destType === 'EMPLOYEE' && entry.destination_employee_id) {
@@ -2534,7 +2746,7 @@
                 document.getElementById('editDestModal').classList.add('active');
             } catch(e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to load entry details');
+                alert('Failed to load entry details: ' + e.message);
             }
         }
 
@@ -2569,15 +2781,37 @@
             const destCompId = destType === 'COMPANY_ACCOUNT' ? (parseInt(document.getElementById('editDestCompany').value) || null) : null;
             const destEmpId = destType === 'EMPLOYEE' ? (parseInt(document.getElementById('editDestEmployee').value) || null) : null;
 
-            if (destType === 'COMPANY_ACCOUNT' && !destCompId) { alert('Please select a company account'); return; }
-            if (destType === 'EMPLOYEE' && !destEmpId) { alert('Please select an employee'); return; }
+            if (destType === 'COMPANY_ACCOUNT' && !destCompId) { alert('Please select a destination company account'); return; }
+            if (destType === 'EMPLOYEE' && !destEmpId) { alert('Please select a destination employee'); return; }
 
-            const payload = {};
             const editDt = document.getElementById('editIncomeDate')?.value;
-            if (editDt) payload.income_date = editDt;
-            if (destType !== null) { payload.destination_type = destType || null; }
-            if (destCompId !== null) payload.destination_company_id = destCompId;
-            if (destEmpId !== null) payload.destination_employee_id = destEmpId;
+            const editAmt = parseFloat(document.getElementById('editAmountInput')?.value);
+            const editComp = parseInt(document.getElementById('editCompanyId')?.value);
+            const editCat = parseInt(document.getElementById('editCategoryId')?.value) || null;
+            const editMode = document.getElementById('editPaymentMode')?.value;
+            const editType = document.getElementById('editPaymentType')?.value || null;
+            const editPayer = document.getElementById('editPayerName')?.value.trim() || null;
+            const editRef = document.getElementById('editPaymentRef')?.value.trim() || null;
+            const editNarr = document.getElementById('editNarration')?.value.trim() || null;
+
+            if (!editDt) { alert('Income date is required'); return; }
+            if (isNaN(editAmt) || editAmt <= 0) { alert('Please enter a valid amount greater than 0'); return; }
+            if (!editComp) { alert('Please select an associated company'); return; }
+
+            const payload = {
+                income_date: editDt,
+                amount: editAmt,
+                company_id: editComp,
+                revenue_category_id: editCat,
+                payment_mode: editMode,
+                payment_type: editType,
+                payer_name: editPayer,
+                payment_reference: editRef,
+                narration: editNarr,
+                destination_type: destType || null,
+                destination_company_id: destCompId,
+                destination_employee_id: destEmpId
+            };
 
             try {
                 const r = await staffFetch(API_BASE + '/income-entries/' + editingEntryId, {
@@ -2587,14 +2821,15 @@
                 });
                 if (r.ok) {
                     closeModal('editDestModal');
-                    loadIncomes();
+                    await loadIncomes();
+                    alert('Income entry updated successfully!');
                 } else {
                     const err = await r.json().catch(() => ({}));
-                    alert(err.detail || err.message || 'Failed to save');
+                    alert(err.detail || err.message || 'Failed to save changes');
                 }
             } catch(e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
-                alert('Failed to save changes');
+                alert('Failed to save changes: ' + e.message);
             }
         }
 
@@ -2955,26 +3190,89 @@
         </div>
     </div>
 
-    <!-- Edit Destination Modal -->
+    <!-- Edit Income Entry Modal -->
     <div class="modal-overlay" id="editDestModal">
-        <div class="modal-container" style="max-width:520px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+        <div class="modal-container" style="max-width:620px; max-height:92vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-pencil-alt me-2"></i>Edit Income Entry</h5>
+                <h5 class="modal-title"><i class="fas fa-pencil-alt me-2" style="color:#2563eb;"></i>Edit Income Entry</h5>
                 <button class="modal-close" onclick="closeModal('editDestModal')">&times;</button>
             </div>
             <div class="modal-body">
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="editEntryNum"></div></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="editAmount"></div></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">INCOME DATE</div><input type="date" id="editIncomeDate" style="font-size:12px;padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;width:100%;"></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">MODE</div><div style="font-size:13px;" id="editPayMode"></div></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">STATUS</div><div style="font-size:13px;" id="editStatus"></div></div>
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <div><span style="font-size:11px;color:#166534;font-weight:700;">ENTRY NUMBER:</span> <code style="font-size:13px;font-weight:800;color:#15803d;margin-left:4px;" id="editEntryNum"></code></div>
+                    <div><span style="font-size:11px;color:#166534;font-weight:700;">STATUS:</span> <span id="editStatusBadge" style="margin-left:4px;"></span></div>
                 </div>
 
-                <hr class="section-divider">
+                <div class="form-row" style="margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Income Date *</label>
+                        <input type="date" id="editIncomeDate" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Amount (₹) *</label>
+                        <input type="number" id="editAmountInput" step="0.01" min="0" required placeholder="Amount in ₹">
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Associated Company *</label>
+                        <select id="editCompanyId" onchange="onEditCompanyChange()">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Revenue Category</label>
+                        <select id="editCategoryId">
+                            <option value="">None / Default</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Payment Mode *</label>
+                        <select id="editPaymentMode">
+                            <option value="UPI">UPI</option>
+                            <option value="CASH">Cash</option>
+                            <option value="BANK">Bank Transfer</option>
+                            <option value="NEFT">NEFT</option>
+                            <option value="RTGS">RTGS</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="DD">Demand Draft</option>
+                            <option value="CARD">Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Payment Type (Accounting)</label>
+                        <select id="editPaymentType">
+                            <option value="">Auto / Default</option>
+                            <option value="BANK">BANK</option>
+                            <option value="CASH">CASH</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom:12px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Customer / Payer Name</label>
+                        <input type="text" id="editPayerName" placeholder="Customer or Payer Name">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Payment Reference / Cheque # / UTR</label>
+                        <input type="text" id="editPaymentRef" placeholder="UTR, Cheque #, Transaction ID">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Narration / Remarks</label>
+                    <textarea id="editNarration" rows="2" placeholder="Notes, descriptions or remarks..."></textarea>
+                </div>
+
+                <hr class="section-divider" style="margin:14px 0;">
 
                 <div class="form-group">
-                    <label>Destination Type</label>
+                    <label style="font-weight:700;color:#1e3a8a;"><i class="fas fa-route me-1"></i>Destination Routing</label>
                     <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
                         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;">
                             <input type="radio" name="editDestType" value="" onchange="onEditDestTypeChange()"> Unassigned
@@ -3020,7 +3318,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('editDestModal')">Cancel</button>
-                <button class="btn btn-success" onclick="saveEditEntry()"><i class="fas fa-save me-1"></i>Save Changes</button>
+                <button class="btn btn-success" onclick="saveEditEntry()" style="background:#059669;border-color:#059669;color:#fff;font-weight:600;"><i class="fas fa-save me-1"></i>Save Changes</button>
             </div>
         </div>
     </div>

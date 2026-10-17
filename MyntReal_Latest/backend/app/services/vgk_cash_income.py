@@ -101,6 +101,17 @@ def _resolve_category_slug(db: Session, lead) -> str:
     return 'solar'
 
 
+def is_payment_confirmed(db: Session, lead) -> bool:
+    """
+    DC-STRICT-COMM-GATE-2026: Return True only when customer payment is 100% confirmed
+    (deal_value_balance <= 0 or deal_value_received >= deal_value_total > 0).
+    """
+    _dvr_val = float(getattr(lead, 'deal_value_received', 0) or 0)
+    _total_val = float(getattr(lead, 'deal_value_total', 0) or 0)
+    _bal_val = float(getattr(lead, 'deal_value_balance', 0) or 0) if getattr(lead, 'deal_value_balance', None) is not None else (_total_val - _dvr_val)
+    return (_bal_val <= 0 and _dvr_val > 0) or (_dvr_val >= _total_val and _total_val > 0)
+
+
 def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
     """
     Generate VGK4U Universal Waterfall Commission DRAFT entries for leads created >= 2026-09-08.

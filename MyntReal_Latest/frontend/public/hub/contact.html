@@ -81,6 +81,21 @@
         <a href="/hub/about">About</a>
         <a href="/hub/media">Media</a>
         <div class="dropdown">
+          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
+            <span class="pulse-icon">⚡</span> Recharge &amp; Services <span class="dropdown-arrow">▾</span>
+          </a>
+          <div class="dropdown-menu">
+            <a href="/recharge?service=mobile">📱 Mobile Recharge</a>
+            <a href="/recharge?service=postpaid">📞 Postpaid Bill</a>
+            <a href="/recharge?service=dth">📺 DTH Recharge</a>
+            <a href="/recharge?service=electricity">💡 Electricity</a>
+            <a href="/recharge?service=fastag">🚗 FASTag</a>
+            <a href="/recharge?service=gas">🔥 Gas Cylinder</a>
+            <a href="/recharge?service=insurance">🛡️ Insurance/LIC</a>
+            <a href="/recharge?service=googleplay">🎮 Google Play</a>
+          </div>
+        </div>
+        <div class="dropdown">
           <a href="#" class="dropdown-trigger">Verticals <span class="dropdown-arrow">▾</span></a>
           <div class="dropdown-menu">
             <a href="/catalog/industrial-hub/industrial-hub-franchise">🏢 Myntreal Hub (Franchise)</a>
@@ -92,10 +107,10 @@
             <a href="/catalog/ev-spares/ev-spares-and-chargers">⚙️ EVSpares</a>
           </div>
         </div>
-        <!-- 🎮 Games Menu Dropdown (Desktop & Tablet) -->
-        <div class="dropdown nav-games-dropdown" onclick="this.classList.toggle('active')">
+        <!-- 🎮 Play & Earn Menu Dropdown (Desktop & Tablet) -->
+        <div class="dropdown nav-games-dropdown">
           <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
-            <span style="display:inline-flex;align-items:center;gap:5px;">🎮 Games <span class="dropdown-arrow">▾</span></span>
+            <span style="display:inline-flex;align-items:center;gap:5px;">🎮 Play &amp; Earn <span class="dropdown-arrow">▾</span></span>
           </a>
           <div class="dropdown-menu">
             <a href="/customer/games?game=SNAKE">🐍 Neon Snake</a>
@@ -140,9 +155,6 @@
         </div>
       </nav>
       <div class="header-actions">
-        <a href="/customer/games" class="btn-games-header">
-          🎮 Games
-        </a>
         <a href="/landing" class="btn-login">Login</a>
       </div>
     </div>
@@ -503,6 +515,63 @@ function showStatus(msg, type){
   s.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+</script>
+
+<script>
+// DC Protocol: Dropdown mutual-exclusion and hover-exit auto-close handler
+(function initHubDropdowns() {
+    function setupDropdowns() {
+        const dropdowns = document.querySelectorAll('.dropdown');
+        const navLinks = document.querySelectorAll('#navMenu > a, nav a:not(.dropdown-trigger)');
+
+        function closeAllDropdowns(except) {
+            dropdowns.forEach(dd => {
+                if (dd !== except) {
+                    dd.classList.remove('active');
+                }
+            });
+        }
+
+        dropdowns.forEach(dd => {
+            dd.addEventListener('mouseenter', () => {
+                closeAllDropdowns(dd);
+            });
+            dd.addEventListener('mouseleave', () => {
+                dd.classList.remove('active');
+            });
+            const trigger = dd.querySelector('.dropdown-trigger');
+            if (trigger) {
+                trigger.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasActive = dd.classList.contains('active');
+                    closeAllDropdowns();
+                    if (!wasActive) {
+                        dd.classList.add('active');
+                    }
+                });
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                closeAllDropdowns();
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupDropdowns);
+    } else {
+        setupDropdowns();
+    }
+})();
 </script>
 
 <script src="/public/js/website-chatbot.js"></script>

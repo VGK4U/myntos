@@ -48,7 +48,7 @@ from app.schemas.staff_accounts import (
     StockItemMasterCreate, StockItemMasterUpdate,
     PricingConfigurationCreate, PricingConfigurationUpdate,
     PriceCalculationPreview, PriceCalculationRequest,
-    IncomeEntryCreate, IncomeEntryUpdate, IncomeEntryStatusUpdate
+    IncomeEntryCreate, IncomeEntryUpdate, IncomeEntryStatusUpdate, IncomeEntryResponse
 )
 from datetime import timezone
 import pytz
@@ -90,11 +90,14 @@ def is_accounts_supreme_employee(employee) -> bool:
 
     if role_code in ('vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'key_leadership'):
         return True
-    # DC-ACCT-ACCESS-001: MR10001 (VGK4U Mentor) always has supreme access
-    if getattr(employee, 'emp_code', '') == 'MR10001':
+    # DC-ACCT-ACCESS-001: MR10001 (VGK4U Mentor) and MR10025 (Subhash Kumar Kari) always have supreme access
+    if getattr(employee, 'emp_code', '') in ('MR10001', 'MR10025'):
         return True
-    # DC-ACCT-ACCESS-001: Any MENTOR designation has supreme access
-    if 'MENTOR' in (getattr(employee, 'designation', '') or '').upper():
+    if 'subhash' in (getattr(employee, 'full_name', '') or '').lower():
+        return True
+    # DC-ACCT-ACCESS-001: Any MENTOR or LEADERSHIP designation has supreme access
+    _desig = (getattr(employee, 'designation', '') or '').upper()
+    if 'MENTOR' in _desig or 'LEADERSHIP' in _desig:
         return True
     # Primary department named like Accounts/Finance
     primary_dept = getattr(employee, 'department', None)
@@ -179,11 +182,14 @@ def is_accounts_allowed_employee(employee) -> bool:
         return False
     if is_accounts_allowed_role(employee.role.role_code):
         return True
-    # DC-ACCT-ACCESS-001: MR10001 (VGK4U Mentor) always has full accounts access
-    if getattr(employee, 'emp_code', '') == 'MR10001':
+    # DC-ACCT-ACCESS-001: MR10001 (VGK4U Mentor) and MR10025 (Subhash Kumar Kari) always have full accounts access
+    if getattr(employee, 'emp_code', '') in ('MR10001', 'MR10025'):
         return True
-    # DC-ACCT-ACCESS-001: Any MENTOR designation grants full accounts access
-    if 'MENTOR' in (getattr(employee, 'designation', '') or '').upper():
+    if 'subhash' in (getattr(employee, 'full_name', '') or '').lower():
+        return True
+    # DC-ACCT-ACCESS-001: Any MENTOR or LEADERSHIP designation grants full accounts access
+    _desig = (getattr(employee, 'designation', '') or '').upper()
+    if 'MENTOR' in _desig or 'LEADERSHIP' in _desig:
         return True
     # DC-ACCT-ACCESS-001: Primary department = Accounts/Finance grants access
     primary_dept = getattr(employee, 'department', None)
@@ -3443,9 +3449,18 @@ class IncomeEntryService:
         if not entry:
             raise AccountsNotFoundError(f"Income entry with ID {entry_id} not found")
         
-        # DC Protocol (Mar 25, 2026): Allow editing of PENDING and CONFIRMED entries.
-        # Only block truly terminal statuses: TALLY_DONE (already reconciled) and CANCELLED.
-        if entry.status in ('TALLY_DONE', 'CANCELLED'):
+        # DC Protocol (Mar 25, 2026 / Oct 2026): Allow editing of PENDING and CONFIRMED entries.
+        # Subhash / MR10001 / supreme accounts staff can edit entries across all statuses.
+        emp_code = (getattr(employee, 'emp_code', '') or '').strip().upper()
+        emp_name = (getattr(employee, 'full_name', '') or '').lower().strip()
+        role_code = (getattr(getattr(employee, 'role', None), 'role_code', '') or '').lower().strip()
+        is_supreme_editor = (
+            emp_code in ('MR10001', 'MR10025') or
+            'subhash' in emp_name or
+            role_code in ('vgk4u', 'ea', 'executive_assistant', 'key_leadership') or
+            is_accounts_supreme_employee(employee)
+        )
+        if not is_supreme_editor and entry.status in ('TALLY_DONE', 'CANCELLED'):
             raise AccountsValidationError(
                 f"Cannot update income entry with status '{entry.status}'. Tally Done and Cancelled entries cannot be modified."
             )
@@ -4151,20 +4166,29 @@ class IncomeEntryService:
             _log.getLogger(__name__).warning(f"[DC-ESTIMATIONS] estimate stock post failed IE {income_entry.id}: {_e}")
 
     @staticmethod
-    def delete_income_entry(db: Session, entry_id: int, employee: StaffEmployee) -> bool:
+    def delete_income_entry(db: Session, entry_id: int, employee: StaffEmployee, reason: Optional[str] = None) -> bool:
         """
         Soft-delete an income entry (sets is_deleted=True).
-        DC_INCOME_DELETE_001: Restricted to VGK Mentor (vgk4u) and EA roles only.
+        DC_INCOME_DELETE_001: Allowed for MR10001, MR10025, Subhash, VGK Mentor (vgk4u), EA, key_leadership, and Accounts roles.
         Preserves financial audit trail — data is never permanently removed.
         """
-        emp_code = (employee.emp_code or '').strip().upper()
-        role_code = ''
-        if employee.role:
-            role_code = (employee.role.role_code or '').lower().strip()
-        allowed_roles = {'vgk4u', 'ea', 'executive_assistant', 'accounts', 'accounts_staff', 'accounts_manager'}
-        if emp_code != 'MR10001' and role_code not in allowed_roles:
+        emp_code = (getattr(employee, 'emp_code', '') or '').strip().upper()
+        emp_name = (getattr(employee, 'full_name', '') or '').lower().strip()
+        role_code = (getattr(getattr(employee, 'role', None), 'role_code', '') or '').lower().strip()
+        designation = (getattr(employee, 'designation', '') or '').upper()
+
+        allowed_roles = {'vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin'}
+        is_allowed = (
+            emp_code in ('MR10001', 'MR10025') or
+            'subhash' in emp_name or
+            role_code in allowed_roles or
+            is_accounts_supreme_employee(employee) or
+            'MENTOR' in designation or
+            'LEADERSHIP' in designation
+        )
+        if not is_allowed:
             raise AccountsRBACError(
-                "Access denied. Only Accounts role, EA, VGK Mentor, or MR10001 can delete income entries."
+                "Access denied. Only Accounts role, EA, VGK Mentor, Subhash, or MR10001 can delete income entries."
             )
 
         entry = db.query(IncomeEntry).filter(
@@ -4179,6 +4203,7 @@ class IncomeEntryService:
         entry.is_deleted = True
         entry.deleted_by_id = employee.id
         entry.deleted_at = now
+        entry.deleted_reason = reason or "Deleted by user"
         entry.updated_at = now
 
         db.commit()
@@ -4190,8 +4215,65 @@ class IncomeEntryService:
             entity_type="IncomeEntry",
             entity_id=entry.id,
             old_values={"is_deleted": False},
-            new_values={"is_deleted": True},
-            description=f"Soft-deleted income entry: {entry.entry_number}"
+            new_values={"is_deleted": True, "deleted_reason": entry.deleted_reason},
+            description=f"Soft-deleted income entry: {entry.entry_number}. Reason: {entry.deleted_reason}"
+        )
+
+        return True
+
+    @staticmethod
+    def restore_income_entry(db: Session, entry_id: int, employee: StaffEmployee) -> bool:
+        """
+        Restore a soft-deleted income entry (sets is_deleted=False).
+        Allowed for MR10001, MR10025, Subhash, VGK Mentor, EA, key_leadership, and Accounts roles.
+        """
+        emp_code = (getattr(employee, 'emp_code', '') or '').strip().upper()
+        emp_name = (getattr(employee, 'full_name', '') or '').lower().strip()
+        role_code = (getattr(getattr(employee, 'role', None), 'role_code', '') or '').lower().strip()
+        designation = (getattr(employee, 'designation', '') or '').upper()
+
+        allowed_roles = {'vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin'}
+        is_allowed = (
+            emp_code in ('MR10001', 'MR10025') or
+            'subhash' in emp_name or
+            role_code in allowed_roles or
+            is_accounts_supreme_employee(employee) or
+            'MENTOR' in designation or
+            'LEADERSHIP' in designation
+        )
+        if not is_allowed:
+            raise AccountsRBACError(
+                "Access denied. Only Accounts role, EA, VGK Mentor, Subhash, or MR10001 can restore income entries."
+            )
+
+        entry = db.query(IncomeEntry).filter(
+            IncomeEntry.id == entry_id,
+            IncomeEntry.is_deleted == True
+        ).first()
+
+        if not entry:
+            raise AccountsNotFoundError(f"Deleted income entry with ID {entry_id} not found")
+
+        now = get_indian_time()
+        prev_reason = entry.deleted_reason
+        entry.is_deleted = False
+        entry.deleted_by_id = None
+        entry.deleted_at = None
+        entry.deleted_reason = None
+        entry.updated_by_id = employee.id
+        entry.updated_at = now
+
+        db.commit()
+
+        log_accounts_audit(
+            db=db,
+            employee_id=employee.id,
+            action="RESTORE_INCOME_ENTRY",
+            entity_type="IncomeEntry",
+            entity_id=entry.id,
+            old_values={"is_deleted": True, "deleted_reason": prev_reason},
+            new_values={"is_deleted": False},
+            description=f"Restored deleted income entry: {entry.entry_number}"
         )
 
         return True
@@ -4201,7 +4283,7 @@ class IncomeEntryService:
         db: Session,
         employee: StaffEmployee,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 50
     ):
         validate_accounts_access(employee)
         query = db.query(IncomeEntry).filter(IncomeEntry.is_deleted == True)
@@ -4209,17 +4291,36 @@ class IncomeEntryService:
         entries = query.order_by(IncomeEntry.deleted_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
         
         from app.models.staff import StaffEmployee as SE
+        from app.models.staff_accounts import AssociatedCompany
+        from app.models.crm import CRMLead
+        
         deleted_by_ids = list({e.deleted_by_id for e in entries if e.deleted_by_id})
         staff_map = {}
         if deleted_by_ids:
             staffs = db.query(SE).filter(SE.id.in_(deleted_by_ids)).all()
             staff_map = {s.id: {"name": s.full_name, "emp_code": s.emp_code} for s in staffs}
             
+        comp_ids = list({e.company_id for e in entries if e.company_id})
+        comp_map = {}
+        if comp_ids:
+            comps = db.query(AssociatedCompany).filter(AssociatedCompany.id.in_(comp_ids)).all()
+            comp_map = {c.id: (c.company_name or c.company_code) for c in comps}
+            
+        lead_ids = list({e.lead_id for e in entries if e.lead_id})
+        lead_map = {}
+        if lead_ids:
+            leads = db.query(CRMLead).filter(CRMLead.id.in_(lead_ids)).all()
+            lead_map = {l.id: l.name for l in leads}
+            
         result = []
         for e in entries:
             d = IncomeEntryResponse.model_validate(e).model_dump(mode='json')
             d['deleted_by_name'] = staff_map.get(e.deleted_by_id, {}).get('name') if e.deleted_by_id else None
             d['deleted_by_emp_code'] = staff_map.get(e.deleted_by_id, {}).get('emp_code') if e.deleted_by_id else None
+            d['company_name'] = comp_map.get(e.company_id)
+            d['lead_name'] = lead_map.get(e.lead_id) or e.payer_name
+            d['payer_name'] = e.payer_name or lead_map.get(e.lead_id)
+            d['deleted_reason'] = getattr(e, 'deleted_reason', None)
             result.append(d)
             
         return result, total

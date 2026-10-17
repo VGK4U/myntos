@@ -121,7 +121,12 @@
         body.lang-hi { font-family: 'Noto Sans Devanagari', 'Plus Jakarta Sans', sans-serif; }
         body.lang-ta { font-family: 'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif; }
 
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-mono {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            letter-spacing: -0.01em;
+        }
         .fw-black { font-weight: 900; }
 
         /* ── TOP UTILITY STRIP ── */
@@ -526,8 +531,10 @@
 
         /* ── VALUE READOUT DISPLAY BADGES ── */
         .sim-val-display {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 900;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            font-weight: 800;
             font-size: 1.45rem;
             color: #f59e0b;
             background: rgba(245, 158, 11, 0.12);
@@ -1180,9 +1187,12 @@
         }
         .sim-val-display {
             font-size: clamp(2rem, 3.5vw, 2.8rem);
-            font-weight: 900;
+            font-weight: 800;
             color: #fbbf24;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            letter-spacing: -0.02em;
         }
         .sim-result-card {
             background: rgba(255, 255, 255, 0.06);
@@ -1193,8 +1203,11 @@
         }
         .sim-res-val {
             font-size: 1.5rem;
-            font-weight: 900;
-            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            letter-spacing: -0.01em;
             margin-top: 4px;
         }
 
@@ -1478,7 +1491,9 @@
         .vgk-lightbox-counter {
             color: #f59e0b;
             font-size: 0.85rem;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
             font-weight: 700;
             margin-top: 4px;
         }
@@ -1793,24 +1808,21 @@
                 <a href="#earnings" class="nav-link-pill" data-i18n="nav_earnings">Career &amp; Earnings</a>
                 <a href="#simulator" class="nav-link-pill" data-i18n="nav_calc">Calculator</a>
                 <a href="#join" class="nav-link-pill" data-i18n="nav_kit">Kit &amp; Join</a>
-                <!-- 🎮 Games Dropdown -->
+                <!-- 🎮 Play & Earn Dropdown -->
                 <div class="nav-item-dropdown position-relative">
-                    <a href="/vgk/games" class="nav-link-pill d-inline-flex align-items-center gap-1">
-                        <span>🎮 Games</span> <i class="fas fa-chevron-down ms-1" style="font-size: 0.62rem; opacity: 0.7;"></i>
+                    <a href="/customer/games" class="nav-link-pill d-inline-flex align-items-center gap-1">
+                        <span>🎮 Play &amp; Earn</span> <i class="fas fa-chevron-down ms-1" style="font-size: 0.62rem; opacity: 0.7;"></i>
                     </a>
                     <div class="nav-dropdown-menu">
-                        <a href="/vgk/games?game=SNAKE" class="nav-dropdown-item"><i class="fas fa-worm text-warning"></i> <span>1. Golden Snake</span></a>
-                        <a href="/vgk/games?game=BLOCK_DROP" class="nav-dropdown-item"><i class="fas fa-cubes text-primary"></i> <span>2. Block Drop</span></a>
-                        <a href="/vgk/games?game=ENDLESS_RUNNER" class="nav-dropdown-item"><i class="fas fa-person-running text-info"></i> <span>3. Endless Runner</span></a>
+                        <a href="/customer/games?game=SNAKE" class="nav-dropdown-item"><i class="fas fa-worm text-warning"></i> <span>🐍 Neon Snake</span></a>
+                        <a href="/customer/games?game=BLOCK_DROP" class="nav-dropdown-item"><i class="fas fa-cubes text-primary"></i> <span>🧱 Block Drop</span></a>
+                        <a href="/customer/games?game=ENDLESS_RUNNER" class="nav-dropdown-item"><i class="fas fa-person-running text-info"></i> <span>🏃 Endless Runner</span></a>
                     </div>
                 </div>
             </div>
 
             <!-- Header Action CTAs (Guaranteed Flex-Shrink-0 & Complete Visibility) -->
             <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
-                <a href="/vgk/games" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Play Arcade Games">
-                    <i class="fas fa-gamepad"></i> <span class="d-none d-sm-inline">Games</span>
-                </a>
                 <a href="/customer" class="btn btn-sm btn-outline-success rounded-pill px-2 px-sm-3 py-1 fw-bold d-inline-flex align-items-center gap-1" title="Customer Executive Dashboard">
                     <i class="fas fa-user-circle"></i> <span class="d-none d-sm-inline">Customer Login</span>
                 </a>
@@ -1866,12 +1878,12 @@
                     <a href="#simulator" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-calculator text-success me-2"></i> Earnings Calculator</a>
                     <a href="#join" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-box-open text-primary me-2"></i> Executive Welcome Kit</a>
                 </div>
-                <!-- 🎮 Arcade & Games (3 Games Options in Mobile Drawer) -->
-                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">🎮 Arcade &amp; Rewards</div>
+                <!-- 🎮 Play & Earn Games (3 Options in Mobile Drawer) -->
+                <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">🎮 Play &amp; Earn Games</div>
                 <div class="d-flex flex-column gap-1 mb-3">
-                    <a href="/vgk/games?game=SNAKE" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-worm text-warning me-2"></i> 1. Golden Snake</a>
-                    <a href="/vgk/games?game=BLOCK_DROP" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-cubes text-primary me-2"></i> 2. Block Drop</a>
-                    <a href="/vgk/games?game=ENDLESS_RUNNER" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-person-running text-info me-2"></i> 3. Endless Runner</a>
+                    <a href="/customer/games?game=SNAKE" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-worm text-warning me-2"></i> 🐍 Neon Snake</a>
+                    <a href="/customer/games?game=BLOCK_DROP" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-cubes text-primary me-2"></i> 🧱 Block Drop</a>
+                    <a href="/customer/games?game=ENDLESS_RUNNER" class="mobile-drawer-link" onclick="toggleMobileNav(false)"><i class="fas fa-person-running text-info me-2"></i> 🏃 Endless Runner</a>
                 </div>
                 <div class="small fw-bold text-uppercase text-warning mb-2" style="letter-spacing: 0.08em; font-size: 0.72rem;">Quick Actions</div>
                 <div class="d-flex flex-column gap-2 mt-2">
@@ -1895,7 +1907,7 @@
                 <div class="col-lg-6">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <span class="glowing-pill"><i class="fas fa-bolt"></i> <span data-i18n="hero_badge_free">100% FREE REGISTRATION</span></span>
-                        <span class="badge bg-warning bg-opacity-25 text-warning font-mono px-3 py-1 rounded-pill" data-i18n="pts_badge">₹30,000 WELCOME POINTS</span>
+                        <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-1 rounded-pill fw-bold" data-i18n="pts_badge">₹30,000 WELCOME POINTS</span>
                     </div>
 
                     <h1 class="display-4 fw-black text-white mb-3" style="letter-spacing: -0.02em; line-height: 1.15;" data-i18n="hero_h1">
@@ -2441,7 +2453,7 @@
                 </p>
             </div>
 
-            <div class="row g-4 font-mono mb-4">
+            <div class="row g-4 mb-4">
                 <!-- 1: Member -->
                 <div class="col-lg col-md-4 col-sm-6">
                     <div class="career-step-box">
@@ -2494,193 +2506,491 @@
             </div>
 
             <!-- Official Performance Slabs & Rank Promotion Architecture (Dual-Track Decoupled Standard) -->
-            <div class="mt-5 p-4 p-md-5 rounded-4 border bg-surface-alt shadow-sm">
-                <div class="text-center mb-4">
-                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold mb-2">
-                        <i class="fas fa-layer-group"></i> <span data-i18n="slab_tag">OFFICIAL COMMISSION SLABS &amp; RANK PROMOTIONS</span>
-                    </span>
-                    <h3 class="fw-black text-dark mb-2" data-i18n="slab_h">Direct Producer Slabs &amp; Career Leadership Tiers</h3>
-                    <p class="text-muted mx-auto" style="max-width: 760px;" data-i18n="slab_desc">
+            <style>
+                /* ── Dual-Track Commission Slabs Executive Redesign ── */
+                .slabs-architecture-wrapper {
+                    background: #ffffff;
+                    border-radius: 24px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 12px 40px -10px rgba(15, 23, 42, 0.08);
+                    position: relative;
+                }
+                .slabs-header-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: rgba(37, 99, 235, 0.08);
+                    color: #1d4ed8;
+                    border: 1px solid rgba(37, 99, 235, 0.2);
+                    padding: 6px 18px;
+                    border-radius: 50px;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+                .track-card {
+                    background: #ffffff;
+                    border-radius: 20px;
+                    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                    transition: transform 0.25s ease, box-shadow 0.25s ease;
+                }
+                .track-card:hover {
+                    box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.1);
+                    transform: translateY(-2px);
+                }
+                .track-card-track1 {
+                    border: 1.5px solid #bfdbfe;
+                }
+                .track-card-track2 {
+                    border: 1.5px solid #a7f3d0;
+                }
+                .track-header-track1 {
+                    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+                    color: #ffffff;
+                    padding: 20px 24px;
+                }
+                .track-header-track2 {
+                    background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+                    color: #ffffff;
+                    padding: 20px 24px;
+                }
+                .track-pill-indicator {
+                    background: rgba(255, 255, 255, 0.22);
+                    backdrop-filter: blur(4px);
+                    color: #ffffff;
+                    font-size: 0.68rem;
+                    font-weight: 800;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    display: inline-block;
+                }
+                .track-chip-performance {
+                    background: #fef3c7;
+                    color: #92400e;
+                    border: 1px solid #fde68a;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    padding: 5px 14px;
+                    border-radius: 50px;
+                    letter-spacing: 0.02em;
+                    white-space: nowrap;
+                }
+                .slabs-callout-banner {
+                    background: #fffbeb;
+                    border-bottom: 1px solid #fef3c7;
+                    padding: 12px 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 0.83rem;
+                    color: #92400e;
+                }
+                .slabs-table-custom {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    margin-bottom: 0;
+                }
+                .slabs-table-custom th {
+                    background: #f8fafc;
+                    color: #475569;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.06em;
+                    padding: 14px 18px;
+                    border-bottom: 1px solid #e2e8f0;
+                    text-align: center;
+                }
+                .slabs-table-custom th.text-start {
+                    text-align: left;
+                }
+                .slabs-table-custom td {
+                    padding: 14px 18px;
+                    vertical-align: middle;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 0.88rem;
+                    text-align: center;
+                }
+                .slabs-table-custom td.text-start {
+                    text-align: left;
+                }
+                .slabs-table-custom tbody tr:hover td {
+                    background-color: #f8fafc;
+                }
+                .tier-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    letter-spacing: 0.03em;
+                    margin-right: 8px;
+                }
+                .tier-tag-1 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+                .tier-tag-2 { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+                .tier-tag-3 { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+                .tier-tag-4 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+                .files-badge {
+                    display: inline-block;
+                    padding: 5px 12px;
+                    border-radius: 8px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    color: #334155;
+                    font-weight: 700;
+                    font-size: 0.82rem;
+                    white-space: nowrap;
+                }
+                .files-badge-active {
+                    background: #fffbeb;
+                    border: 1px solid #f59e0b;
+                    color: #b45309;
+                    font-weight: 800;
+                }
+                .comm-badge-rate {
+                    font-size: 1.15rem;
+                    font-weight: 900;
+                    letter-spacing: -0.01em;
+                }
+                .inc-bonus-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 2px 7px;
+                    border-radius: 20px;
+                    background: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    margin-left: 6px;
+                    vertical-align: middle;
+                }
+                .row-tier-core td {
+                    background: rgba(254, 243, 199, 0.35);
+                }
+                .row-tier-core:hover td {
+                    background: rgba(254, 243, 199, 0.5) !important;
+                }
+                .row-pool-highlight td {
+                    background: linear-gradient(90deg, rgba(236, 253, 245, 0.8) 0%, rgba(209, 250, 229, 0.5) 100%) !important;
+                    border-top: 2px solid #a7f3d0 !important;
+                }
+                .card-footer-custom {
+                    background: #f8fafc;
+                    border-top: 1px solid #f1f5f9;
+                    padding: 14px 20px;
+                    display: flex;
+                    align-items: center;
+                    font-size: 0.8rem;
+                    color: #64748b;
+                    font-weight: 500;
+                }
+                .zero-cannibalization-box {
+                    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fff7ed 100%);
+                    border: 1.5px solid #fde68a;
+                    border-radius: 18px;
+                    padding: 22px 24px;
+                    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.08);
+                }
+                .zc-shield-icon {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 14px;
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                    color: #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.35rem;
+                    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+                    flex-shrink: 0;
+                }
+                .rule-feature-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 18px 20px;
+                    height: 100%;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 14px;
+                    transition: all 0.2s ease;
+                }
+                .rule-feature-card:hover {
+                    border-color: #cbd5e1;
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+                }
+                .rule-icon-wrapper {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.15rem;
+                    flex-shrink: 0;
+                }
+                [data-theme="dark"] .slabs-architecture-wrapper {
+                    background: var(--bg-surface, #1e293b);
+                    border-color: var(--border-subtle, #334155);
+                }
+                [data-theme="dark"] .track-card {
+                    background: var(--bg-surface, #1e293b);
+                    border-color: var(--border-subtle, #334155);
+                }
+                [data-theme="dark"] .slabs-table-custom th {
+                    background: rgba(255, 255, 255, 0.04);
+                    color: #94a3b8;
+                    border-bottom-color: rgba(255, 255, 255, 0.08);
+                }
+                [data-theme="dark"] .slabs-table-custom td {
+                    border-bottom-color: rgba(255, 255, 255, 0.05);
+                    color: #e2e8f0;
+                }
+                [data-theme="dark"] .card-footer-custom {
+                    background: rgba(255, 255, 255, 0.02);
+                    border-top-color: rgba(255, 255, 255, 0.05);
+                    color: #94a3b8;
+                }
+                [data-theme="dark"] .rule-feature-card {
+                    background: var(--bg-surface, #1e293b);
+                    border-color: var(--border-subtle, #334155);
+                }
+                [data-theme="dark"] .files-badge {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-color: rgba(255, 255, 255, 0.1);
+                    color: #e2e8f0;
+                }
+            </style>
+
+            <div class="mt-5 p-4 p-md-5 rounded-4 slabs-architecture-wrapper">
+                <div class="text-center mb-5">
+                    <div class="slabs-header-badge mb-3">
+                        <i class="fas fa-layer-group"></i>
+                        <span data-i18n="slab_tag">OFFICIAL COMMISSION SLABS &amp; RANK PROMOTIONS</span>
+                    </div>
+                    <h3 class="fw-black text-dark mb-2 fs-2" data-i18n="slab_h">Direct Producer Slabs &amp; Career Leadership Tiers</h3>
+                    <p class="text-muted mx-auto fs-6" style="max-width: 760px;" data-i18n="slab_desc">
                         Dual-Track Architecture: Your personal commission increases strictly from your self-closed files, while leadership overrides unlock from active direct team members — with 100% Zero Cannibalization!
                     </p>
                 </div>
 
                 <!-- Decoupled 2-Card Layout: Track 1 & Track 2 -->
-                <div class="row g-4 align-items-stretch mb-4 font-mono">
+                <div class="row g-4 align-items-stretch mb-4">
                     <!-- TRACK 1: PERSONAL SALES COMMISSION (SELF PERFORMANCE) -->
                     <div class="col-lg-6">
-                        <div class="card h-100 border-2 border-primary rounded-4 shadow-sm overflow-hidden bg-white">
-                            <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="track-card track-card-track1">
+                            <div class="track-header-track1 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="badge bg-white text-primary fw-bold text-uppercase px-2 py-1 mb-1">Track 1</span>
-                                    <h5 class="fw-black mb-0"><i class="fas fa-user-check me-2"></i>Personal Sales Commission</h5>
+                                    <span class="track-pill-indicator mb-1">Track 1</span>
+                                    <h5 class="fw-black mb-0 text-white d-flex align-items-center gap-2">
+                                        <i class="fas fa-user-check"></i> Personal Sales Commission
+                                    </h5>
                                 </div>
-                                <span class="badge bg-warning text-dark fw-black px-3 py-2 fs-6">Self Performance</span>
+                                <span class="track-chip-performance">Self Performance</span>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="card-body p-0 flex-grow-1">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0 text-center">
-                                        <thead class="table-light">
+                                    <table class="slabs-table-custom">
+                                        <thead>
                                             <tr>
-                                                <th class="text-start ps-4 py-3">Tier Level</th>
-                                                <th class="py-3">Personal Files (1st Paid)</th>
-                                                <th class="py-3 pe-4">Direct Commission %</th>
+                                                <th class="text-start ps-4">Tier Level</th>
+                                                <th>Personal Files (1st Paid)</th>
+                                                <th class="pe-4">Direct Commission %</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge bg-secondary me-2">Tier 1</span> Channel Partner
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-1">Tier 1</span>
+                                                    <span class="fw-bold text-dark">Channel Partner</span>
                                                 </td>
-                                                <td><span class="badge bg-light text-dark border px-3 py-2 fw-bold">1 – 4 Files</span></td>
-                                                <td class="pe-4"><span class="text-primary fw-black fs-5">5.00%</span></td>
-                                            </tr>
-                                            <tr class="table-info bg-opacity-10">
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge bg-info text-dark me-2">Tier 2</span> Senior
-                                                </td>
-                                                <td><span class="badge bg-info text-dark px-3 py-2 fw-bold">5 – 9 Files</span></td>
-                                                <td class="pe-4"><span class="text-success fw-black fs-5">6.50%</span> <span class="badge bg-success ms-1">+1.50%</span></td>
+                                                <td><span class="files-badge">1 – 4 Files</span></td>
+                                                <td class="pe-4"><span class="comm-badge-rate text-primary">5.00%</span></td>
                                             </tr>
                                             <tr>
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge text-white me-2" style="background:#8b5cf6;">Tier 3</span> Extended
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-2">Tier 2</span>
+                                                    <span class="fw-bold text-dark">Senior</span>
                                                 </td>
-                                                <td><span class="badge text-white px-3 py-2 fw-bold" style="background:#8b5cf6;">10 – 15 Files</span></td>
-                                                <td class="pe-4"><span class="fw-black fs-5" style="color:#8b5cf6;">7.50%</span> <span class="badge bg-success ms-1">+2.50%</span></td>
+                                                <td><span class="files-badge">5 – 9 Files</span></td>
+                                                <td class="pe-4">
+                                                    <span class="comm-badge-rate text-success">6.50%</span>
+                                                    <span class="inc-bonus-chip">+1.50%</span>
+                                                </td>
                                             </tr>
-                                            <tr class="table-warning bg-opacity-25">
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge bg-warning text-dark me-2">Tier 4</span> Core
+                                            <tr>
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-3">Tier 3</span>
+                                                    <span class="fw-bold text-dark">Extended</span>
                                                 </td>
-                                                <td><span class="badge bg-warning text-dark px-3 py-2 fw-black">16+ Files</span></td>
-                                                <td class="pe-4"><span class="text-warning fw-black fs-5">8.00%</span> <span class="badge bg-success ms-1">+3.00%</span></td>
+                                                <td><span class="files-badge">10 – 15 Files</span></td>
+                                                <td class="pe-4">
+                                                    <span class="comm-badge-rate" style="color:#7e22ce;">7.50%</span>
+                                                    <span class="inc-bonus-chip">+2.50%</span>
+                                                </td>
+                                            </tr>
+                                            <tr class="row-tier-core">
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-4"><i class="fas fa-star me-1" style="font-size: 0.65rem;"></i>Tier 4</span>
+                                                    <span class="fw-black text-dark">Core</span>
+                                                </td>
+                                                <td><span class="files-badge files-badge-active">16+ Files</span></td>
+                                                <td class="pe-4">
+                                                    <span class="comm-badge-rate text-warning-dark" style="color:#b45309;">8.00%</span>
+                                                    <span class="inc-bonus-chip">+3.00%</span>
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <div class="card-footer bg-light border-0 py-3 px-4">
-                                <div class="d-flex align-items-center text-muted small">
-                                    <i class="fas fa-check-double text-primary me-2"></i>
-                                    <span>Higher slabs unlock upon receiving 1st customer advance &amp; apply automatically to all future files.</span>
-                                </div>
+                            <div class="card-footer-custom">
+                                <i class="fas fa-check-double text-primary me-2"></i>
+                                <span>Higher slabs unlock upon receiving 1st customer advance &amp; apply automatically to all future files.</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- TRACK 2: DIRECT TEAM LEADERSHIP OVERRIDES (TEAM PERFORMANCE) -->
                     <div class="col-lg-6">
-                        <div class="card h-100 border-2 border-success rounded-4 shadow-sm overflow-hidden bg-white">
-                            <div class="card-header bg-success text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="track-card track-card-track2">
+                            <div class="track-header-track2 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <span class="badge bg-white text-success fw-bold text-uppercase px-2 py-1 mb-1">Track 2</span>
-                                    <h5 class="fw-black mb-0"><i class="fas fa-users-cog me-2"></i>Direct Team Leadership Overrides</h5>
+                                    <span class="track-pill-indicator mb-1">Track 2</span>
+                                    <h5 class="fw-black mb-0 text-white d-flex align-items-center gap-2">
+                                        <i class="fas fa-users-cog"></i> Direct Team Leadership Overrides
+                                    </h5>
                                 </div>
-                                <span class="badge bg-warning text-dark fw-black px-3 py-2 fs-6">Direct Team</span>
+                                <span class="track-chip-performance">Direct Team</span>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="p-3 bg-warning bg-opacity-10 border-bottom d-flex align-items-center gap-2">
-                                    <i class="fas fa-info-circle text-warning fs-5"></i>
-                                    <span class="small fw-bold text-dark">
-                                        Active Direct Member = Direct sponsored partner with ≥ 3 files (1st payment received).
-                                    </span>
-                                </div>
+                            <div class="slabs-callout-banner">
+                                <i class="fas fa-info-circle fs-5" style="color: #d97706; flex-shrink: 0;"></i>
+                                <span class="fw-semibold">
+                                    Active Direct Member = Direct sponsored partner with ≥ 3 files (1st payment received).
+                                </span>
+                            </div>
+                            <div class="card-body p-0 flex-grow-1">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0 text-center">
-                                        <thead class="table-light">
+                                    <table class="slabs-table-custom">
+                                        <thead>
                                             <tr>
-                                                <th class="text-start ps-4 py-3">Leadership Level</th>
-                                                <th class="py-3">Active Direct Team</th>
-                                                <th class="py-3 pe-4">Team Overrides %</th>
+                                                <th class="text-start ps-4">Leadership Level</th>
+                                                <th>Active Direct Team</th>
+                                                <th class="pe-4">Team Overrides %</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr class="table-info bg-opacity-10">
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge bg-info text-dark me-2">Level 1</span> Manager Override
+                                            <tr>
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-2">Level 1</span>
+                                                    <span class="fw-bold text-dark">Manager Override</span>
                                                 </td>
-                                                <td><span class="badge bg-light text-dark border px-3 py-2 fw-bold">1 Active Member</span></td>
-                                                <td class="pe-4"><span class="text-info fw-black fs-5">+ 0.50%</span></td>
+                                                <td><span class="files-badge">1 Active Member</span></td>
+                                                <td class="pe-4"><span class="comm-badge-rate" style="color: #0284c7;">+ 0.50%</span></td>
                                             </tr>
                                             <tr>
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge text-white me-2" style="background:#8b5cf6;">Level 2</span> GM Royalties
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-3">Level 2</span>
+                                                    <span class="fw-bold text-dark">GM Royalties</span>
                                                 </td>
-                                                <td><span class="badge text-white px-3 py-2 fw-bold" style="background:#8b5cf6;">5 Active Members</span></td>
-                                                <td class="pe-4"><span class="fw-black fs-5" style="color:#8b5cf6;">+ 1.00%</span></td>
+                                                <td><span class="files-badge">5 Active Members</span></td>
+                                                <td class="pe-4"><span class="comm-badge-rate" style="color: #7c3aed;">+ 1.00%</span></td>
                                             </tr>
-                                            <tr class="table-warning bg-opacity-25">
-                                                <td class="text-start ps-4 fw-bold">
-                                                    <span class="badge bg-warning text-dark me-2">Level 3</span> RM Depth &amp; Lifetime
+                                            <tr>
+                                                <td class="text-start ps-4">
+                                                    <span class="tier-tag tier-tag-4">Level 3</span>
+                                                    <span class="fw-bold text-dark">RM Depth &amp; Lifetime</span>
                                                 </td>
-                                                <td><span class="badge bg-warning text-dark px-3 py-2 fw-black">10 Active Members</span></td>
-                                                <td class="pe-4"><span class="text-warning fw-black fs-5">+ 1.50%</span></td>
+                                                <td><span class="files-badge files-badge-active">10 Active Members</span></td>
+                                                <td class="pe-4"><span class="comm-badge-rate" style="color: #d97706;">+ 1.50%</span></td>
                                             </tr>
-                                            <tr class="table-success bg-opacity-25 fw-bold">
-                                                <td class="text-start ps-4 text-success">
-                                                    <i class="fas fa-crown me-2"></i>Total Overrides Pool
+                                            <tr class="row-pool-highlight">
+                                                <td class="text-start ps-4">
+                                                    <span class="fw-black text-success d-flex align-items-center gap-2">
+                                                        <i class="fas fa-crown text-warning"></i> Total Overrides Pool
+                                                    </span>
                                                 </td>
-                                                <td><span class="badge bg-success text-white px-3 py-2 fw-black">10+ Active</span></td>
-                                                <td class="pe-4"><span class="text-success fw-black fs-5">3.00% Pool</span></td>
+                                                <td><span class="badge bg-success text-white px-3 py-2 fw-black" style="border-radius: 8px;">10+ Active</span></td>
+                                                <td class="pe-4"><span class="comm-badge-rate text-success fs-5" style="color: #047857 !important;">3.00% Pool</span></td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <div class="card-footer bg-light border-0 py-3 px-4">
-                                <div class="d-flex align-items-center text-muted small">
-                                    <i class="fas fa-shield-alt text-success me-2"></i>
-                                    <span>Permanent Rank Lock: No monthly reset, zero demotions, and lifetime override eligibility.</span>
-                                </div>
+                            <div class="card-footer-custom">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <span>Permanent Rank Lock: No monthly reset, zero demotions, and lifetime override eligibility.</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Zero Cannibalization Bottom Banner -->
-                <div class="p-3 p-md-4 rounded-4 border border-2 border-warning bg-warning bg-opacity-10 mb-4">
+                <div class="zero-cannibalization-box mb-4">
                     <div class="d-flex align-items-start gap-3">
-                        <div class="bg-warning text-dark rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; flex-shrink: 0;">
-                            <i class="fas fa-shield-check fs-4"></i>
+                        <div class="zc-shield-icon">
+                            <i class="fas fa-shield-alt"></i>
                         </div>
-                        <div>
-                            <h6 class="fw-black text-dark mb-1">
-                                ZERO CANNIBALIZATION GUARANTEE (DECOUPLED EARNING ARCHITECTURE)
-                            </h6>
-                            <p class="small text-dark mb-0">
-                                A personal producer earning an increased direct commission (6.50%, 7.50%, or 8.00%) is 100% self-earned from company margins and <strong>NEVER reduces, blocks, or absorbs upline leadership overrides (+0.50%, +1.00%, +1.50%)</strong>. Both personal sales and team leadership tracks operate simultaneously and independently!
+                        <div class="flex-grow-1">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <h6 class="fw-black text-dark mb-0 fs-6">
+                                    ZERO CANNIBALIZATION GUARANTEE
+                                </h6>
+                                <span class="badge bg-warning bg-opacity-25 text-dark fw-bold border border-warning border-opacity-50" style="font-size: 0.68rem; letter-spacing: 0.05em;">
+                                    DECOUPLED EARNING ARCHITECTURE
+                                </span>
+                            </div>
+                            <p class="small text-dark mb-0 leading-relaxed" style="color: #475569 !important;">
+                                A personal producer earning an increased direct commission (<strong class="text-dark">6.50%</strong>, <strong class="text-dark">7.50%</strong>, or <strong class="text-dark">8.00%</strong>) is 100% self-earned from company margins and <strong class="text-danger">NEVER reduces, blocks, or absorbs upline leadership overrides (+0.50%, +1.00%, +1.50%)</strong>. Both personal sales and team leadership tracks operate simultaneously and independently!
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <!-- 3 Golden Rules Strip -->
-                <div class="row g-3 pt-3 border-top">
+                <div class="row g-3 pt-2">
                     <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-check-circle text-success fs-5 mt-1"></i>
+                        <div class="rule-feature-card">
+                            <div class="rule-icon-wrapper bg-success bg-opacity-10 text-success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
                             <div>
-                                <strong class="d-block text-dark small" data-i18n="rule1_t">1st Payment Qualification</strong>
-                                <span class="text-muted" style="font-size:0.8rem;" data-i18n="rule1_d">Every deal automatically counts toward your qualifying file count as soon as the 1st customer advance or token is received.</span>
+                                <strong class="d-block text-dark small mb-1" data-i18n="rule1_t">1st Payment Qualification</strong>
+                                <span class="text-muted" style="font-size:0.8rem; line-height: 1.45; display: block;" data-i18n="rule1_d">Every deal automatically counts toward your qualifying file count as soon as the 1st customer advance or token is received.</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-bolt text-warning fs-5 mt-1"></i>
+                        <div class="rule-feature-card">
+                            <div class="rule-icon-wrapper bg-warning bg-opacity-10 text-warning">
+                                <i class="fas fa-bolt"></i>
+                            </div>
                             <div>
-                                <strong class="d-block text-dark small" data-i18n="rule2_t">Future Files Application</strong>
-                                <span class="text-muted" style="font-size:0.8rem;" data-i18n="rule2_d">Once qualified, higher direct commission slabs apply automatically to all future files that receive 1st payment. Past closed payouts remain locked and protected.</span>
+                                <strong class="d-block text-dark small mb-1" data-i18n="rule2_t">Future Files Application</strong>
+                                <span class="text-muted" style="font-size:0.8rem; line-height: 1.45; display: block;" data-i18n="rule2_d">Once qualified, higher direct commission slabs apply automatically to all future files that receive 1st payment. Past closed payouts remain locked and protected.</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="d-flex align-items-start gap-2">
-                            <i class="fas fa-shield-alt text-primary fs-5 mt-1"></i>
+                        <div class="rule-feature-card">
+                            <div class="rule-icon-wrapper bg-primary bg-opacity-10 text-primary">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
                             <div>
-                                <strong class="d-block text-dark small" data-i18n="rule3_t">Permanent Lifetime Lock</strong>
-                                <span class="text-muted" style="font-size:0.8rem;" data-i18n="rule3_d">No demotions, no time limits, and no reset. An active direct member requires at least 3 files with 1st payment received.</span>
+                                <strong class="d-block text-dark small mb-1" data-i18n="rule3_t">Permanent Lifetime Lock</strong>
+                                <span class="text-muted" style="font-size:0.8rem; line-height: 1.45; display: block;" data-i18n="rule3_d">No demotions, no time limits, and no reset. An active direct member requires at least 3 files with 1st payment received.</span>
                             </div>
                         </div>
                     </div>
@@ -2710,7 +3020,7 @@
                                 <span class="sim-val-display" id="simValDisplay">₹2,00,000</span>
                             </div>
                             <input type="range" class="form-range" id="simSlider" min="50000" max="1000000" step="10000" value="200000" oninput="updateSimulator(this.value)">
-                            <div class="d-flex justify-content-between text-white-50 small font-mono">
+                            <div class="d-flex justify-content-between text-white-50 small">
                                 <span data-i18n="sim_preset_1">₹50,000 (1 kW Solar)</span>
                                 <span data-i18n="sim_preset_2">₹5,00,000 (Commercial)</span>
                                 <span data-i18n="sim_preset_3">₹10,00,000 (Mini Plant)</span>
@@ -2861,7 +3171,7 @@
                             <span class="fw-bold text-primary"><i class="fas fa-wallet me-1"></i> <span data-i18n="ins_card_t">Typical Insurance Payout</span></span>
                             <span class="badge bg-success">₹15,000 – ₹30,000</span>
                         </div>
-                        <div class="d-flex justify-content-between text-muted small font-mono">
+                        <div class="d-flex justify-content-between text-muted small">
                             <span data-i18n="ins_card_d">Payout for a ₹1,00,000 Policy</span>
                             <span class="text-success fw-bold" data-i18n="ins_card_s">5 Levels: L1 5% to L5 1.5%</span>
                         </div>
@@ -2946,7 +3256,7 @@
                         <h4 class="fw-black text-dark mb-1" data-i18n="ev_showroom_h">Featured Manthra EV Models (B2C Showroom)</h4>
                         <p class="text-muted small mb-0" data-i18n="ev_showroom_d">Click any model below to view battery-wise on-road prices, specs, and instant booking options.</p>
                     </div>
-                    <span class="badge bg-dark px-3 py-2 font-mono"><i class="fas fa-hand-pointer text-warning me-1"></i> <span data-i18n="ev_click_model">Click Model for Battery Specs</span></span>
+                    <span class="badge bg-dark px-3 py-2"><i class="fas fa-hand-pointer text-warning me-1"></i> <span data-i18n="ev_click_model">Click Model for Battery Specs</span></span>
                 </div>
 
                 <div class="model-scroll-strip">
@@ -2958,7 +3268,7 @@
                         <div class="p-3 d-flex flex-column flex-fill">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-success" data-i18n="ev_badge_popular">POPULAR</span>
-                                <span class="badge bg-dark font-mono" style="color:#84cc16;" data-i18n="ev_badge_sport">Sport Commuter</span>
+                                <span class="badge bg-dark" style="color:#84cc16;" data-i18n="ev_badge_sport">Sport Commuter</span>
                             </div>
                             <h5 class="fw-black text-dark mb-1">Manthra Pro GT</h5>
                             <div class="small text-muted mb-3" data-i18n="ev_spec_progt">Top Speed &lt;25 km/h • 50-100 km Range</div>
@@ -2988,7 +3298,7 @@
                         <div class="p-3 d-flex flex-column flex-fill">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-primary" data-i18n="ev_badge_cargo">HEAVY CARGO</span>
-                                <span class="badge bg-warning text-dark font-mono" data-i18n="ev_badge_200kg">200kg Load</span>
+                                <span class="badge bg-warning text-dark" data-i18n="ev_badge_200kg">200kg Load</span>
                             </div>
                             <h5 class="fw-black text-dark mb-1">Manthra Power Plus</h5>
                             <div class="small text-muted mb-3" data-i18n="ev_spec_powerplus">Reinforced Dual Springs • 50-100 km Range</div>
@@ -3018,7 +3328,7 @@
                         <div class="p-3 d-flex flex-column flex-fill">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-warning text-dark" data-i18n="ev_badge_flagship">URBAN FLAGSHIP</span>
-                                <span class="badge bg-info text-white font-mono" data-i18n="ev_badge_tft">TFT Screen</span>
+                                <span class="badge bg-info text-white" data-i18n="ev_badge_tft">TFT Screen</span>
                             </div>
                             <h5 class="fw-black text-dark mb-1">Manthra M99 Flagship</h5>
                             <div class="small text-muted mb-3" data-i18n="ev_spec_m99">Reverse Assist • 60-100 km Range</div>
@@ -3048,7 +3358,7 @@
                         <div class="p-3 d-flex flex-column flex-fill">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge text-white" style="background:#7c3aed;" data-i18n="ev_badge_retro">RETRO LUXURY</span>
-                                <span class="badge bg-light text-dark font-mono" data-i18n="ev_badge_chrome">Chrome Trim</span>
+                                <span class="badge bg-light text-dark" data-i18n="ev_badge_chrome">Chrome Trim</span>
                             </div>
                             <h5 class="fw-black text-dark mb-1">Manthra Royal Sling</h5>
                             <div class="small text-muted mb-3" data-i18n="ev_spec_royal">Vintage Styling • 60-100 km Range</div>
@@ -3078,7 +3388,7 @@
                         <div class="p-3 d-flex flex-column flex-fill">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-danger" data-i18n="ev_badge_fighter">STREET FIGHTER</span>
-                                <span class="badge bg-dark text-warning font-mono" data-i18n="ev_badge_dualdisc">Dual Disc</span>
+                                <span class="badge bg-dark text-warning" data-i18n="ev_badge_dualdisc">Dual Disc</span>
                             </div>
                             <h5 class="fw-black text-dark mb-1">Manthra Beast Pro</h5>
                             <div class="small text-muted mb-3" data-i18n="ev_spec_beast">CBS Nitrogen Shocks • 60-100 km Range</div>
@@ -3118,7 +3428,7 @@
                                 <span class="fs-3 fw-black text-success font-mono" id="evValDisplay">₹75,000</span>
                             </div>
                             <input type="range" class="form-range" id="evSlider" min="49000" max="120000" step="1000" value="75000" oninput="updateEVCalc(this.value)">
-                            <div class="d-flex justify-content-between text-muted small font-mono">
+                            <div class="d-flex justify-content-between text-muted small">
                                 <span data-i18n="ev_preset_1">₹49,000 (Pro GT)</span>
                                 <span data-i18n="ev_preset_2">₹80,000 (M99 / Royal)</span>
                                 <span data-i18n="ev_preset_3">₹1,20,000 (Beast Max)</span>
@@ -3444,7 +3754,7 @@
                         </div>
 
                         <!-- 2 Pathways to Obtain Kit -->
-                        <div class="row g-3 font-mono">
+                        <div class="row g-3">
                             <div class="col-sm-6">
                                 <div class="p-3 rounded-3 border bg-light">
                                     <div class="small text-muted" data-i18n="kit_opt1_lbl">Option 1: Direct Purchase</div>
@@ -3591,7 +3901,7 @@
             <div class="row g-4 align-items-center mb-4">
                 <div class="col-md-5 text-center">
                     <img id="evModalImg" src="" alt="Model Image" class="img-fluid rounded-4 shadow-sm border mb-2" style="max-height: 240px; object-fit: cover; width: 100%;">
-                    <div class="small text-muted font-mono"><i class="fas fa-shield-alt text-success me-1"></i> <span data-i18n="ev_modal_nonrto">Non-RTO: Zero License Required</span></div>
+                    <div class="small text-muted"><i class="fas fa-shield-alt text-success me-1"></i> <span data-i18n="ev_modal_nonrto">Non-RTO: Zero License Required</span></div>
                 </div>
 
                 <div class="col-md-7">
@@ -3611,14 +3921,14 @@
                         </div>
                         <div class="text-end">
                             <span class="badge bg-success font-mono fs-6 px-3 py-2" id="evModalRangeDisplay">50-60 km</span>
-                            <div class="small text-muted mt-1 font-mono" id="evModalWarrantyDisplay">9 Mo Battery &amp; Charger</div>
+                            <div class="small text-muted mt-1" id="evModalWarrantyDisplay">9 Mo Battery &amp; Charger</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Modal Specs Grid -->
-            <div class="row g-2 mb-4 font-mono small">
+            <div class="row g-2 mb-4 small">
                 <div class="col-6 col-md-3">
                     <div class="p-2 rounded bg-light border text-center">
                         <span class="text-muted d-block" style="font-size: 10.5px;" data-i18n="ev_modal_speed_lbl">Top Speed</span>
@@ -3969,9 +4279,9 @@
                         <strong class="text-dark">${v.name}</strong>
                         <span class="badge ${v.warranty.includes('3 Yrs') ? 'bg-primary' : 'bg-success'}">${v.warranty}</span>
                     </div>
-                    <div class="d-flex justify-content-between text-muted small mt-1 font-mono">
+                    <div class="d-flex justify-content-between text-muted small mt-1">
                         <span>Range: ${v.range}</span>
-                        <strong class="text-success">₹${v.price.toLocaleString('en-IN')}</strong>
+                        <strong class="text-success font-mono">₹${v.price.toLocaleString('en-IN')}</strong>
                     </div>
                 `;
                 btn.onclick = () => selectEVVariant(key, idx);
@@ -5888,7 +6198,7 @@
                 sub.textContent = transSub;
             }
             if (badge && v) {
-                badge.className = `badge ${v.badgeClass} font-mono flex-shrink-0`;
+                badge.className = `badge ${v.badgeClass} flex-shrink-0`;
                 badge.textContent = v.badge;
             }
 

@@ -1966,6 +1966,16 @@ class IncomeEntryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
+    # Soft delete & audit fields
+    is_deleted: Optional[bool] = False
+    deleted_by_id: Optional[int] = None
+    deleted_at: Optional[datetime] = None
+    deleted_reason: Optional[str] = None
+    deleted_by_name: Optional[str] = None
+    deleted_by_emp_code: Optional[str] = None
+    company_name: Optional[str] = None
+    lead_name: Optional[str] = None
+    
     model_config = {"from_attributes": True}
 
 

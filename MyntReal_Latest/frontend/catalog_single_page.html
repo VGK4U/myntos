@@ -1077,6 +1077,35 @@
             color: #ffffff;
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
+        .matrix-discount-box {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px dashed rgba(239, 68, 68, 0.35);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin: 16px 20px 20px 20px;
+        }
+        .matrix-discount-slider {
+            width: 100%;
+            accent-color: #ef4444;
+            cursor: pointer;
+            height: 6px;
+        }
+        .matrix-disc-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .matrix-disc-chip:hover, .matrix-disc-chip.active {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+        }
         .table-responsive-matrix {
             overflow-x: auto;
             scrollbar-width: thin;
@@ -1662,6 +1691,20 @@
             background: var(--primary-gradient) !important;
             color: #ffffff !important;
             border-color: #10b981 !important;
+        }
+        html[data-bs-theme="light"] .matrix-discount-box {
+            background: #fff8f8 !important;
+            border-color: #fca5a5 !important;
+        }
+        html[data-bs-theme="light"] .matrix-disc-chip {
+            background: #ffffff !important;
+            border-color: #fca5a5 !important;
+            color: #dc2626 !important;
+        }
+        html[data-bs-theme="light"] .matrix-disc-chip.active {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            border-color: #dc2626 !important;
         }
         html[data-bs-theme="light"] .matrix-table thead th {
             background: #f1f5f9 !important;
@@ -4534,11 +4577,11 @@
                 { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/goldi-solar.png', tag: 'Tier-1 Solar Brand' },
                 { id: 'navgrun', name: 'Navgrun Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/navgrun-solar.png', tag: 'Best Value Tier' },
                 { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/aps-solar.png', tag: 'Australian Premium Solar' },
-                { id: 'renew', name: 'ReNew Power', tier: 'waaree_adani', logo: '/public/images/brands/renew-solar.png', tag: "India's Clean Energy Major" },
-                { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_adani', logo: '/public/images/brands/waaree-solar.png', tag: "India's #1 Manufacturer" },
-                { id: 'adani', name: 'Adani Solar', tier: 'waaree_adani', logo: '/public/images/brands/adani-solar.png', tag: 'High Efficiency Mono-PERC' },
-                { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_adani', logo: '/public/images/brands/vikram-solar.png', tag: 'Tier-1 High Output' },
-                { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', logo: '/public/images/brands/tata-solar.png', tag: "India's Most Trusted Brand" }
+                { id: 'renew', name: 'ReNew Power', tier: 'waaree_vikram', logo: '/public/images/brands/renew-solar.png', tag: "India's Clean Energy Major" },
+                { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_vikram', logo: '/public/images/brands/waaree-solar.png', tag: "India's #1 Manufacturer" },
+                { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_vikram', logo: '/public/images/brands/vikram-solar.png', tag: 'Tier-1 High Output' },
+                { id: 'adani', name: 'Adani Solar', tier: 'tata_adani', logo: '/public/images/brands/adani-solar.png', tag: 'High Efficiency Mono-PERC' },
+                { id: 'tata', name: 'TATA Solar', tier: 'tata_adani', logo: '/public/images/brands/tata-solar.png', tag: "India's Most Trusted Brand" }
             ];
 
             return `
@@ -4634,14 +4677,14 @@
 
         function renderCalculatorSection(sec, loc, cfg) {
             const brandsQuick = [
+                { id: 'suryanz_aps', name: 'Suryanz APS', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/suryanz-solar.png' },
+                { id: 'suryanz_navgrun', name: 'Suryanz Navgrun', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/suryanz-solar.png' },
                 { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/goldi-solar.png' },
-                { id: 'navgrun', name: 'Navgrun', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/navgrun-solar.png' },
-                { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/aps-solar.png' },
-                { id: 'renew', name: 'ReNew Power', tier: 'waaree_adani', logo: '/public/images/brands/renew-solar.png' },
-                { id: 'waaree', name: 'Waaree', tier: 'waaree_adani', logo: '/public/images/brands/waaree-solar.png' },
-                { id: 'adani', name: 'Adani', tier: 'waaree_adani', logo: '/public/images/brands/adani-solar.png' },
-                { id: 'vikram', name: 'Vikram', tier: 'waaree_adani', logo: '/public/images/brands/vikram-solar.png' },
-                { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', logo: '/public/images/brands/tata-solar.png' }
+                { id: 'renew', name: 'ReNew Power', tier: 'waaree_vikram', logo: '/public/images/brands/renew-solar.png' },
+                { id: 'waaree', name: 'Waaree', tier: 'waaree_vikram', logo: '/public/images/brands/waaree-solar.png' },
+                { id: 'vikram', name: 'Vikram', tier: 'waaree_vikram', logo: '/public/images/brands/vikram-solar.png' },
+                { id: 'adani', name: 'Adani', tier: 'tata_adani', logo: '/public/images/brands/adani-solar.png' },
+                { id: 'tata', name: 'TATA Solar', tier: 'tata_adani', logo: '/public/images/brands/tata-solar.png' }
             ];
 
             return `
@@ -4678,12 +4721,15 @@
                                     </div>
 
                                     <!-- Step 2: Consumption Input -->
-                                    <div class="calc-step-header">
-                                        <i class="fas fa-bolt me-1"></i> Step 2: Monthly Electricity Consumption
+                                    <div class="calc-step-header" id="calcStep2Header">
+                                        <i class="fas fa-solar-panel me-1"></i> Step 2: Plant Capacity or Electricity Consumption
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                                         <div class="calc-metric-switcher">
-                                            <button type="button" class="calc-metric-pill active" id="btnMetricBill" onclick="setMetricType('bill')">
+                                            <button type="button" class="calc-metric-pill active" id="btnMetricKw" onclick="setMetricType('kw')">
+                                                ⚡ Plant Capacity (kW)
+                                            </button>
+                                            <button type="button" class="calc-metric-pill" id="btnMetricBill" onclick="setMetricType('bill')">
                                                 ₹ Monthly Bill
                                             </button>
                                             <button type="button" class="calc-metric-pill" id="btnMetricUnits" onclick="setMetricType('units')">
@@ -4692,13 +4738,13 @@
                                         </div>
                                         <div>
                                             <span class="text-secondary small">Current: </span>
-                                            <span class="fs-4 fw-black" id="calcDisplayMetricVal" style="color: var(--primary); font-weight: 900;">₹3,500</span>
-                                            <span class="text-secondary small" id="calcMetricUnitLabel"> / month</span>
+                                            <span class="fs-4 fw-black" id="calcDisplayMetricVal" style="color: var(--primary); font-weight: 900;">3 kW</span>
+                                            <span class="text-secondary small" id="calcMetricUnitLabel"></span>
                                         </div>
                                     </div>
 
                                     <div class="calc-slider-wrapper">
-                                        <input type="range" class="calc-slider-input" id="calcRangeSlider" min="1000" max="25000" step="500" value="3500" oninput="onSliderChange(this.value)">
+                                        <input type="range" class="calc-slider-input" id="calcRangeSlider" min="0" max="6" step="1" value="2" oninput="onSliderChange(this.value)">
                                     </div>
 
                                     <!-- Quick Preset Pills -->
@@ -4724,29 +4770,38 @@
                                     <!-- Brand Tier Pool Cards -->
                                     <div class="calc-brand-picker">
                                         <div class="calc-brand-option ${calcState.selectedBrand === 'goldi_navgrun_aps' ? 'active' : ''}" id="brandOpt_goldi_navgrun_aps" onclick="selectBrandTier('goldi_navgrun_aps')">
-                                            <div>
-                                                <div class="calc-brand-name">
-                                                    <i class="fas fa-shield-alt text-success me-1"></i> Goldi Solar, Navgrun &amp; APS (Australian Premium Solar)
+                                            <div class="d-flex justify-content-between align-items-center w-100">
+                                                <div>
+                                                    <div class="calc-brand-name">
+                                                        <i class="fas fa-shield-alt text-success me-1"></i> Suryanz Solar (Navgrun &amp; APS), Goldi Solar
+                                                    </div>
+                                                    <small class="text-secondary">Best Value Tier • 25-Yr Performance Warranty • BIS &amp; ALMM Approved</small>
                                                 </div>
-                                                <small class="text-secondary">Best Value Tier • 25-Yr Performance Warranty • BIS &amp; ALMM Approved</small>
+                                                <span class="badge bg-success bg-opacity-25 text-success ms-2 font-mono">₹2,19,999</span>
                                             </div>
                                         </div>
 
-                                        <div class="calc-brand-option ${calcState.selectedBrand === 'waaree_adani' ? 'active' : ''}" id="brandOpt_waaree_adani" onclick="selectBrandTier('waaree_adani')">
-                                            <div>
-                                                <div class="calc-brand-name">
-                                                    <i class="fas fa-star text-info me-1"></i> Waaree / Adani / Vikram Solar / ReNew
+                                        <div class="calc-brand-option ${calcState.selectedBrand === 'waaree_vikram' || calcState.selectedBrand === 'waaree_adani' ? 'active' : ''}" id="brandOpt_waaree_vikram" onclick="selectBrandTier('waaree_vikram')">
+                                            <div class="d-flex justify-content-between align-items-center w-100">
+                                                <div>
+                                                    <div class="calc-brand-name">
+                                                        <i class="fas fa-star text-info me-1"></i> Waaree Energies &amp; Vikram Solar
+                                                    </div>
+                                                    <small class="text-secondary">India's Leading Tier-1 Manufacturers • High Efficiency Mono-PERC</small>
                                                 </div>
-                                                <small class="text-secondary">India's Top Tier-1 Manufacturers • High Efficiency Mono-PERC</small>
+                                                <span class="badge bg-info bg-opacity-25 text-info ms-2 font-mono">₹2,29,999</span>
                                             </div>
                                         </div>
 
-                                        <div class="calc-brand-option ${calcState.selectedBrand === 'tata_solar' ? 'active' : ''}" id="brandOpt_tata_solar" onclick="selectBrandTier('tata_solar')">
-                                            <div>
-                                                <div class="calc-brand-name">
-                                                    <i class="fas fa-crown text-warning me-1"></i> TATA Solar
+                                        <div class="calc-brand-option ${calcState.selectedBrand === 'tata_adani' || calcState.selectedBrand === 'tata_solar' ? 'active' : ''}" id="brandOpt_tata_adani" onclick="selectBrandTier('tata_adani')">
+                                            <div class="d-flex justify-content-between align-items-center w-100">
+                                                <div>
+                                                    <div class="calc-brand-name">
+                                                        <i class="fas fa-crown text-warning me-1"></i> TATA Solar &amp; Adani Solar
+                                                    </div>
+                                                    <small class="text-secondary">India's Most Trusted &amp; Flagship Solar Brands • Premium Quality Tier</small>
                                                 </div>
-                                                <small class="text-secondary">India's Most Trusted Solar Brand • Premium Quality Tier</small>
+                                                <span class="badge bg-warning bg-opacity-25 text-warning ms-2 font-mono">₹2,39,999</span>
                                             </div>
                                         </div>
                                     </div>
@@ -4874,17 +4929,35 @@
                             <div class="matrix-brand-selector">
                                 <span class="text-secondary small fw-bold me-2"><i class="fas fa-filter me-1"></i> Select Brand:</span>
                                 <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'goldi_navgrun_aps' ? 'active' : ''}" id="matrixTab_goldi_navgrun_aps" onclick="setMatrixBrand('goldi_navgrun_aps')">
-                                    Goldi, Navgrun &amp; APS
+                                    Suryanz (Navgrun &amp; APS) &amp; Goldi (₹2,19,999)
                                 </button>
-                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'waaree_adani' ? 'active' : ''}" id="matrixTab_waaree_adani" onclick="setMatrixBrand('waaree_adani')">
-                                    Waaree, Adani &amp; Vikram
+                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'waaree_vikram' || currentMatrixBrand === 'waaree_adani' ? 'active' : ''}" id="matrixTab_waaree_vikram" onclick="setMatrixBrand('waaree_vikram')">
+                                    Waaree &amp; Vikram (₹2,29,999)
                                 </button>
-                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'tata_solar' ? 'active' : ''}" id="matrixTab_tata_solar" onclick="setMatrixBrand('tata_solar')">
-                                    TATA Solar
+                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'tata_adani' || currentMatrixBrand === 'tata_solar' ? 'active' : ''}" id="matrixTab_tata_adani" onclick="setMatrixBrand('tata_adani')">
+                                    TATA &amp; Adani Solar (₹2,39,999)
                                 </button>
                             </div>
 
-                            <!-- 10-Column Responsive Table -->
+                            <!-- Special Discount Drag Bar (0% to 8% Pure Percentage Slider) -->
+                            <div class="matrix-discount-box">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold small" style="color: var(--text-heading, inherit);">
+                                            <i class="fas fa-percent text-danger me-1"></i> Special Promotional Discount (%):
+                                        </span>
+                                        <span class="badge bg-secondary text-white fs-6 px-3 py-1 font-mono shadow-sm" id="matDiscountBadge">0% OFF</span>
+                                    </div>
+                                    <span class="text-secondary small" id="matDiscountSubtext">(Drag slider to apply 0% to 8% promotional discount across all capacities)</span>
+                                </div>
+
+                                <!-- Drag Range Slider (0% to 8%, step 0.1%) -->
+                                <div class="position-relative">
+                                    <input type="range" class="matrix-discount-slider" id="matDiscountSlider" min="0" max="8" step="0.1" value="0" oninput="onMatrixDiscountInput(this.value)">
+                                </div>
+                            </div>
+
+                            <!-- 12-Column Responsive Table with Cost After Discount -->
                             <div class="table-responsive-matrix">
                                 <table class="matrix-table" id="matrixTable">
                                     <thead>
@@ -4893,6 +4966,8 @@
                                             <th>Monthly Generation</th>
                                             <th>Monthly Savings</th>
                                             <th>System Price</th>
+                                            <th>Special Discount</th>
+                                            <th>Cost after discount</th>
                                             <th>PM Surya Ghar Subsidy</th>
                                             <th>Net Customer Investment</th>
                                             <th>Down Payment</th>
@@ -5643,42 +5718,51 @@
 
         /* ── INTERACTIVE CALCULATOR ENGINE ───────────────────────────────── */
         const BROCHURE_CAPACITIES = {
-            1: { kw: 1, units: '100 - 130 Units', savingsText: '₹800 - ₹1,000', baseCost: 90000, subsidy: 30000, downPayment: 10000, loan: 50000, emi5: 1050, emi10: 600, roofSqft: '100 - 120 sq.ft.' },
-            2: { kw: 2, units: '220 - 250 Units', savingsText: '₹1,500 - ₹2,000', baseCost: 170000, subsidy: 60000, downPayment: 15000, loan: 95000, emi5: 1980, emi10: 1140, roofSqft: '180 - 220 sq.ft.' },
-            3: { kw: 3, units: '300 - 375 Units', savingsText: '₹2,500 - ₹3,000', baseCost: 220000, subsidy: 78000, downPayment: 20000, loan: 122000, emi5: 2400, emi10: 1350, roofSqft: '250 - 300 sq.ft.' },
-            4: { kw: 4, units: '380 - 500 Units', savingsText: '₹3,000 - ₹4,100', baseCost: 295000, subsidy: 78000, downPayment: 29500, loan: 187500, emi5: 3720, emi10: 2010, roofSqft: '350 - 400 sq.ft.' },
-            5: { kw: 5, units: '500 - 600 Units', savingsText: '₹4,200 - ₹5,000', baseCost: 360000, subsidy: 78000, downPayment: 36000, loan: 246000, emi5: 4880, emi10: 2590, roofSqft: '450 - 500 sq.ft.' },
-            6: { kw: 6, units: '600 - 710 Units', savingsText: '₹5,000 - ₹6,200', baseCost: 435000, subsidy: 78000, downPayment: 43500, loan: 313500, emi5: 6207, emi10: 3253, roofSqft: '550 - 600 sq.ft.' },
-            10: { kw: 10, units: '1,000 - 1,200 Units', savingsText: '₹10,000 - ₹12,000', baseCost: 620000, subsidy: 78000, downPayment: 62000, loan: 480000, emi5: 9504, emi10: 4902, roofSqft: '900 - 1,000 sq.ft.' }
+            1: { kw: 1, units: '100 - 130 Units', savingsText: '₹800 - ₹1,000', baseCost: 93499, subsidy: 30000, downPayment: 10000, loan: 50000, emi5: 1050, emi10: 600, roofSqft: '100 - 120 sq.ft.' },
+            2: { kw: 2, units: '220 - 250 Units', savingsText: '₹1,500 - ₹2,000', baseCost: 176999, subsidy: 60000, downPayment: 15000, loan: 95000, emi5: 1980, emi10: 1140, roofSqft: '180 - 220 sq.ft.' },
+            3: { kw: 3, units: '300 - 375 Units', savingsText: '₹2,500 - ₹3,000', baseCost: 219999, subsidy: 78000, downPayment: 20000, loan: 122000, emi5: 2400, emi10: 1350, roofSqft: '250 - 300 sq.ft.' },
+            4: { kw: 4, units: '380 - 500 Units', savingsText: '₹3,000 - ₹4,100', baseCost: 308499, subsidy: 78000, downPayment: 29500, loan: 187500, emi5: 3720, emi10: 2010, roofSqft: '350 - 400 sq.ft.' },
+            5: { kw: 5, units: '500 - 600 Units', savingsText: '₹4,200 - ₹5,000', baseCost: 376999, subsidy: 78000, downPayment: 36000, loan: 246000, emi5: 4880, emi10: 2590, roofSqft: '450 - 500 sq.ft.' },
+            6: { kw: 6, units: '600 - 710 Units', savingsText: '₹5,000 - ₹6,200', baseCost: 454999, subsidy: 78000, downPayment: 43500, loan: 313500, emi5: 6207, emi10: 3253, roofSqft: '550 - 600 sq.ft.' },
+            10: { kw: 10, units: '1,000 - 1,200 Units', savingsText: '₹10,000 - ₹12,000', baseCost: 679999, subsidy: 78000, downPayment: 62000, loan: 480000, emi5: 9504, emi10: 4902, roofSqft: '900 - 1,000 sq.ft.' }
         };
 
         const BRAND_3KW_BASES = {
-            'goldi_navgrun_aps': 209999,
-            'navgrun_aps': 209999,
-            'waaree_adani': 219999,
-            'tata_solar': 219999
+            'goldi_navgrun_aps': 219999,
+            'navgrun_aps': 219999,
+            'suryanz_goldi': 219999,
+            'waaree_vikram': 229999,
+            'waaree_adani': 229999,
+            'tata_adani': 239999,
+            'tata_solar': 239999
         };
 
         const BRAND_DATA = {
+            'suryanz_aps': { id: 'suryanz_aps', name: 'Suryanz APS', tier: 'goldi_navgrun_aps', badge: 'Suryanz APS (Tier-1 Modules)' },
+            'suryanz_navgrun': { id: 'suryanz_navgrun', name: 'Suryanz Navgrun', tier: 'goldi_navgrun_aps', badge: 'Suryanz Navgrun (Tier-1 Modules)' },
             'goldi': { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', badge: 'Goldi Solar (Tier-1 Modules)' },
-            'navgrun': { id: 'navgrun', name: 'Navgrun Solar', tier: 'goldi_navgrun_aps', badge: 'Navgrun Solar High-Efficiency' },
-            'aps': { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', badge: 'APS (Australian Premium Solar)' },
-            'waaree': { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_adani', badge: 'Waaree Energies Tier-1' },
-            'adani': { id: 'adani', name: 'Adani Solar', tier: 'waaree_adani', badge: 'Adani Solar High Efficiency' },
-            'vikram': { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_adani', badge: 'Vikram Solar Mono-PERC' },
-            'renew': { id: 'renew', name: 'ReNew Power', tier: 'waaree_adani', badge: 'ReNew Power Clean-Tech' },
-            'tata': { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', badge: 'TATA Power Solar Premium' }
+            'navgrun': { id: 'suryanz_navgrun', name: 'Suryanz Navgrun', tier: 'goldi_navgrun_aps', badge: 'Suryanz Navgrun (Tier-1 Modules)' },
+            'aps': { id: 'suryanz_aps', name: 'Suryanz APS', tier: 'goldi_navgrun_aps', badge: 'Suryanz APS (Tier-1 Modules)' },
+            'suryanz': { id: 'suryanz_aps', name: 'Suryanz APS', tier: 'goldi_navgrun_aps', badge: 'Suryanz APS (Tier-1 Modules)' },
+            'waaree': { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_vikram', badge: 'Waaree Energies Tier-1' },
+            'vikram': { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_vikram', badge: 'Vikram Solar Mono-PERC' },
+            'renew': { id: 'renew', name: 'ReNew Power', tier: 'waaree_vikram', badge: 'ReNew Power Clean-Tech' },
+            'adani': { id: 'adani', name: 'Adani Solar', tier: 'tata_adani', badge: 'Adani Solar High Efficiency' },
+            'tata': { id: 'tata', name: 'TATA Solar', tier: 'tata_adani', badge: 'TATA Power Solar Premium' }
         };
+
+        const KW_OPTIONS = [1, 2, 3, 4, 5, 6, 10];
 
         let calcState = {
             premiseType: 'residential',
-            metricType: 'bill',
-            metricValue: 3500,
+            metricType: 'kw',
+            metricValue: 3,
             selectedBrand: 'goldi_navgrun_aps',
             selectedSpecificBrand: 'goldi'
         };
 
         let currentMatrixBrand = 'goldi_navgrun_aps';
+        let matrixDiscountPct = 0;
 
         function initCalculator() {
             renderCalculatorPresets();
@@ -5694,18 +5778,24 @@
 
             const slider = document.getElementById('calcRangeSlider');
             if (slider) {
-                if (type === 'commercial') {
+                if (calcState.metricType === 'kw') {
+                    if (type === 'commercial' && calcState.metricValue < 4) {
+                        calcState.metricValue = 6;
+                    }
+                    slider.value = KW_OPTIONS.indexOf(calcState.metricValue);
+                } else if (type === 'commercial') {
                     slider.min = '5000';
                     slider.max = '80000';
                     slider.step = '2500';
                     if (calcState.metricValue < 8000) calcState.metricValue = 15000;
+                    slider.value = calcState.metricValue;
                 } else {
                     slider.min = calcState.metricType === 'bill' ? '1000' : '100';
                     slider.max = calcState.metricType === 'bill' ? '25000' : '1500';
                     slider.step = calcState.metricType === 'bill' ? '500' : '25';
                     if (calcState.metricValue > 25000) calcState.metricValue = 3500;
+                    slider.value = calcState.metricValue;
                 }
-                slider.value = calcState.metricValue;
             }
             renderCalculatorPresets();
             updateCalculatorOutput();
@@ -5713,32 +5803,47 @@
 
         function setMetricType(metric) {
             calcState.metricType = metric;
+            const btnKw = document.getElementById('btnMetricKw');
             const btnBill = document.getElementById('btnMetricBill');
             const btnUnits = document.getElementById('btnMetricUnits');
+            if (btnKw) btnKw.classList.toggle('active', metric === 'kw');
             if (btnBill) btnBill.classList.toggle('active', metric === 'bill');
             if (btnUnits) btnUnits.classList.toggle('active', metric === 'units');
 
             const slider = document.getElementById('calcRangeSlider');
             if (slider) {
-                if (metric === 'units') {
+                if (metric === 'kw') {
+                    slider.min = '0';
+                    slider.max = String(KW_OPTIONS.length - 1);
+                    slider.step = '1';
+                    calcState.metricValue = 3;
+                    slider.value = KW_OPTIONS.indexOf(3);
+                } else if (metric === 'units') {
                     slider.min = '100';
                     slider.max = '1500';
                     slider.step = '25';
                     calcState.metricValue = 350;
+                    slider.value = calcState.metricValue;
                 } else {
                     slider.min = '1000';
                     slider.max = '25000';
                     slider.step = '500';
                     calcState.metricValue = 3500;
+                    slider.value = calcState.metricValue;
                 }
-                slider.value = calcState.metricValue;
             }
             renderCalculatorPresets();
             updateCalculatorOutput();
         }
 
         function onSliderChange(val) {
-            calcState.metricValue = parseInt(val, 10);
+            if (calcState.metricType === 'kw') {
+                const idx = Math.min(Math.max(0, parseInt(val, 10) || 0), KW_OPTIONS.length - 1);
+                calcState.metricValue = KW_OPTIONS[idx];
+            } else {
+                calcState.metricValue = parseInt(val, 10);
+            }
+            renderCalculatorPresets();
             updateCalculatorOutput();
         }
 
@@ -5747,7 +5852,26 @@
             if (!container) return;
 
             let presets = [];
-            if (calcState.premiseType === 'commercial') {
+            if (calcState.metricType === 'kw') {
+                if (calcState.premiseType === 'commercial') {
+                    presets = [
+                        { label: '4 kW', val: 4 },
+                        { label: '5 kW', val: 5 },
+                        { label: '6 kW', val: 6 },
+                        { label: '10 kW', val: 10 }
+                    ];
+                } else {
+                    presets = [
+                        { label: '1 kW', val: 1 },
+                        { label: '2 kW', val: 2 },
+                        { label: '3 kW', val: 3 },
+                        { label: '4 kW', val: 4 },
+                        { label: '5 kW', val: 5 },
+                        { label: '6 kW', val: 6 },
+                        { label: '10 kW', val: 10 }
+                    ];
+                }
+            } else if (calcState.premiseType === 'commercial') {
                 presets = [
                     { label: '₹8,000/mo', val: 8000 },
                     { label: '₹15,000/mo', val: 15000 },
@@ -5786,7 +5910,13 @@
         function applyPreset(val) {
             calcState.metricValue = val;
             const slider = document.getElementById('calcRangeSlider');
-            if (slider) slider.value = val;
+            if (slider) {
+                if (calcState.metricType === 'kw') {
+                    slider.value = KW_OPTIONS.indexOf(val);
+                } else {
+                    slider.value = val;
+                }
+            }
             renderCalculatorPresets();
             updateCalculatorOutput();
         }
@@ -5846,7 +5976,9 @@
             const tierToBrand = {
                 'goldi_navgrun_aps': 'goldi',
                 'navgrun_aps': 'goldi',
+                'waaree_vikram': 'waaree',
                 'waaree_adani': 'waaree',
+                'tata_adani': 'tata',
                 'tata_solar': 'tata'
             };
             const brandKey = tierToBrand[tierId] || 'goldi';
@@ -5854,6 +5986,9 @@
         }
 
         function getRecommendedCapacity(isCommercial, metricType, val) {
+            if (metricType === 'kw') {
+                return val || 3;
+            }
             if (isCommercial) {
                 if (val < 15000) return 6;
                 return 10;
@@ -5887,22 +6022,25 @@
             const displayMetricVal = document.getElementById('calcDisplayMetricVal');
             const displayMetricUnit = document.getElementById('calcMetricUnitLabel');
             if (displayMetricVal) {
-                displayMetricVal.textContent = calcState.metricType === 'bill' ? `₹${val.toLocaleString('en-IN')}` : `${val.toLocaleString('en-IN')} kWh`;
+                if (calcState.metricType === 'kw') {
+                    displayMetricVal.textContent = `${val} kW`;
+                } else if (calcState.metricType === 'bill') {
+                    displayMetricVal.textContent = `₹${val.toLocaleString('en-IN')}`;
+                } else {
+                    displayMetricVal.textContent = `${val.toLocaleString('en-IN')} kWh`;
+                }
             }
             if (displayMetricUnit) {
-                displayMetricUnit.textContent = ' / month';
+                displayMetricUnit.textContent = calcState.metricType === 'kw' ? '' : ' / month';
             }
 
             // Brand-tier price calculation
             let basePrice = row.baseCost;
             if (recKw === 3) {
-                basePrice = BRAND_3KW_BASES[calcState.selectedBrand] || 209999;
+                basePrice = BRAND_3KW_BASES[calcState.selectedBrand] || 219999;
             } else {
-                if (calcState.selectedBrand === 'goldi_navgrun_aps' || calcState.selectedBrand === 'navgrun_aps') {
-                    basePrice = Math.round(row.baseCost - (10001 * (recKw / 3)));
-                } else if (calcState.selectedBrand === 'waaree_adani' || calcState.selectedBrand === 'tata_solar') {
-                    basePrice = Math.round(row.baseCost - (1 * (recKw / 3)));
-                }
+                const tierDelta3kw = (BRAND_3KW_BASES[calcState.selectedBrand] || 219999) - 219999;
+                basePrice = roundTo499or999(row.baseCost + (tierDelta3kw * (recKw / 3)));
             }
 
             const mrpPrice = basePrice + 10000;
@@ -6031,11 +6169,14 @@
 
         /* ── OFFICIAL PRICING & FINANCING MATRIX ─────────────────────────── */
         function initMatrix() {
+            updateMatrixDiscountUI();
             updateMatrixTable();
         }
 
         function setMatrixBrand(brandId) {
             if (brandId === 'navgrun_aps') brandId = 'goldi_navgrun_aps';
+            if (brandId === 'waaree_adani') brandId = 'waaree_vikram';
+            if (brandId === 'tata_solar') brandId = 'tata_adani';
             currentMatrixBrand = brandId;
             document.querySelectorAll('.matrix-brand-tab').forEach(b => {
                 b.classList.toggle('active', b.id === `matrixTab_${brandId}`);
@@ -6043,32 +6184,88 @@
             updateMatrixTable();
         }
 
+        function roundTo499or999(val) {
+            if (!val || val <= 0) return 0;
+            return Math.round(val / 500) * 500 - 1;
+        }
+
+        function getBasePrice(kw, tier) {
+            const c = BROCHURE_CAPACITIES[kw];
+            if (kw === 3) {
+                return BRAND_3KW_BASES[tier] || 219999;
+            }
+            const tierDelta3kw = (BRAND_3KW_BASES[tier] || 219999) - 219999;
+            if (tierDelta3kw === 0) {
+                return c.baseCost;
+            }
+            const raw = c.baseCost + (tierDelta3kw * (kw / 3));
+            return roundTo499or999(raw);
+        }
+
+        function onMatrixDiscountInput(val) {
+            matrixDiscountPct = parseFloat(val) || 0;
+            updateMatrixDiscountUI();
+            updateMatrixTable();
+        }
+
+        function applyMatrixDiscount(pct) {
+            matrixDiscountPct = parseFloat(pct) || 0;
+            const slider = document.getElementById('matDiscountSlider');
+            if (slider) slider.value = matrixDiscountPct;
+            updateMatrixDiscountUI();
+            updateMatrixTable();
+        }
+
+        function updateMatrixDiscountUI() {
+            const badge = document.getElementById('matDiscountBadge');
+            if (badge) {
+                if (matrixDiscountPct > 0) {
+                    badge.textContent = `-${matrixDiscountPct}% OFF`;
+                    badge.className = 'badge bg-danger text-white fs-6 px-3 py-1 font-mono shadow-sm';
+                } else {
+                    badge.textContent = '0% OFF';
+                    badge.className = 'badge bg-secondary text-white fs-6 px-3 py-1 font-mono shadow-sm';
+                }
+            }
+            const subtext = document.getElementById('matDiscountSubtext');
+            if (subtext) {
+                subtext.textContent = matrixDiscountPct > 0 
+                    ? `(Applied ${matrixDiscountPct}% promotional discount across all capacities)` 
+                    : `(Drag slider to apply 0% to 8% promotional discount across all capacities)`;
+            }
+        }
+
         function updateMatrixTable() {
             const tbody = document.getElementById('matrixTableBody');
             if (!tbody) return;
 
             const capacities = [1, 2, 3, 4, 5, 6, 10];
+            const pct = matrixDiscountPct || 0;
+
             const rowsHtml = capacities.map(kw => {
                 const bRow = BROCHURE_CAPACITIES[kw];
-                let sysPrice = bRow.baseCost;
+                const basePrice = getBasePrice(kw, currentMatrixBrand);
 
-                if (kw === 3) {
-                    sysPrice = BRAND_3KW_BASES[currentMatrixBrand] || 209999;
-                } else {
-                    if (currentMatrixBrand === 'goldi_navgrun_aps' || currentMatrixBrand === 'navgrun_aps') {
-                        sysPrice = Math.round(bRow.baseCost - (10001 * (kw / 3)));
-                    } else if (currentMatrixBrand === 'waaree_adani' || currentMatrixBrand === 'tata_solar') {
-                        sysPrice = Math.round(bRow.baseCost - (1 * (kw / 3)));
-                    }
+                let costAfterDiscount = basePrice;
+                let effectiveDiscount = 0;
+
+                if (pct > 0) {
+                    costAfterDiscount = Math.round(basePrice * (1 - pct / 100));
+                    effectiveDiscount = basePrice - costAfterDiscount;
                 }
 
                 const subsidy = bRow.subsidy;
-                const netCost = sysPrice - subsidy;
-                const downPayment = Math.round(bRow.downPayment * (sysPrice / bRow.baseCost));
-                const loanAmount = netCost - downPayment;
-                const emi5 = Math.round(bRow.emi5 * (loanAmount / (bRow.baseCost - bRow.subsidy - bRow.downPayment || 1)));
-                const emi10 = Math.round(bRow.emi10 * (loanAmount / (bRow.baseCost - bRow.subsidy - bRow.downPayment || 1)));
+                const netCost = Math.max(0, costAfterDiscount - subsidy);
+                const downPayment = Math.min(netCost, Math.round(bRow.downPayment * (costAfterDiscount / bRow.baseCost)));
+                const loanAmount = Math.max(0, netCost - downPayment);
+                const baseLoan = (bRow.baseCost - bRow.subsidy - bRow.downPayment) || 1;
+                const emi5 = Math.round(bRow.emi5 * (loanAmount / baseLoan));
+                const emi10 = Math.round(bRow.emi10 * (loanAmount / baseLoan));
                 const isRecommended = (kw === 3);
+
+                const discountDisplay = effectiveDiscount > 0
+                    ? `<span class="badge bg-danger bg-opacity-10 text-danger fw-bold font-mono px-2 py-1">-₹${effectiveDiscount.toLocaleString('en-IN')}</span>`
+                    : `<span class="text-muted font-mono">—</span>`;
 
                 return `
                     <tr class="${isRecommended ? 'row-recommended' : ''}">
@@ -6078,9 +6275,11 @@
                         </td>
                         <td>${escapeHtml(bRow.units)}</td>
                         <td style="color: var(--primary); font-weight: 700;">${escapeHtml(bRow.savingsText)}</td>
-                        <td style="font-weight: 700;">₹${sysPrice.toLocaleString('en-IN')}/-</td>
+                        <td style="font-weight: 700;">₹${basePrice.toLocaleString('en-IN')}/-</td>
+                        <td>${discountDisplay}</td>
+                        <td style="font-weight: 700; color: var(--text-heading, #1e293b);">₹${costAfterDiscount.toLocaleString('en-IN')}/-</td>
                         <td style="color: var(--accent); font-weight: 800;">₹${subsidy.toLocaleString('en-IN')}/-</td>
-                        <td style="color: var(--primary); font-weight: 900; font-size: 14.5px;">₹${netCost.toLocaleString('en-IN')}/-</td>
+                        <td><span style="color: var(--primary); font-weight: 900; font-size: 14.5px;">₹${netCost.toLocaleString('en-IN')}/-</span></td>
                         <td>₹${downPayment.toLocaleString('en-IN')}/-</td>
                         <td>₹${loanAmount.toLocaleString('en-IN')}/-</td>
                         <td style="color: var(--primary);">₹${emi5.toLocaleString('en-IN')}/mo</td>

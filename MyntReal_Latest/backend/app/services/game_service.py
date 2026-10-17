@@ -23,25 +23,22 @@ DAILY_POINTS_CAP = 50
 SESSION_EXPIRY_MINUTES = 30
 CODE_EXPIRY_HOURS = 24
 
-# Reward calculation matrices (Points earned per milestone)
+# Reward calculation matrices: Every 1,000 score = 1 point across all games (VGK members and Customers)
 GAME_REWARD_RULES = {
     "SNAKE": {
-        "points_per_milestone": 10,
-        "milestone_interval": 10,  # 10 food = 10 pts, 20 food = 20 pts
-        "max_points_per_session": 20,
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
         "min_seconds_per_food": 0.35,  # Anti-cheat: cannot eat faster than 350ms per food
     },
     "BLOCK_DROP": {
-        "points_per_milestone": 10,
-        "milestone_interval": 4,   # 4 lines = 10 pts, 8 lines = 20 pts
-        "max_points_per_session": 20,
-        "min_seconds_per_line": 1.5,  # Anti-cheat: cannot clear lines faster than 1.5s per line
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_line": 1.5,   # Anti-cheat: cannot clear lines faster than 1.5s per line
     },
     "ENDLESS_RUNNER": {
-        "points_per_milestone": 10,
-        "milestone_interval": 250, # 250m distance = 10 pts, 500m = 20 pts
-        "max_points_per_session": 20,
-        "min_seconds_per_100m": 0.7, # Anti-cheat: cannot sprint faster than 0.7s per 100m
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_100m": 0.7,   # Anti-cheat: cannot sprint faster than 0.7s per 100m
     }
 }
 
@@ -195,26 +192,20 @@ def validate_anti_cheat_physics(
 def calculate_reward_points(
     game_type: str,
     score: int,
-    lines_cleared: int,
-    items_collected: int,
-    distance_travelled: int
+    lines_cleared: int = 0,
+    items_collected: int = 0,
+    distance_travelled: int = 0
 ) -> int:
-    """Calculate reward points according to approved milestone rules."""
+    """Calculate reward points: 1 point for every 1000 score across all games (VGK members and Customers)."""
     rules = GAME_REWARD_RULES.get(game_type, {})
-    max_pts = rules.get("max_points_per_session", 20)
-    pts_per_step = rules.get("points_per_milestone", 10)
-    interval = rules.get("milestone_interval", 10)
+    max_pts = rules.get("max_points_per_session", DAILY_POINTS_CAP)
+    score_step = rules.get("score_per_point", 1000)
 
-    if game_type == "SNAKE":
-        milestones = items_collected // interval
-        return min(milestones * pts_per_step, max_pts)
-    elif game_type == "BLOCK_DROP":
-        milestones = lines_cleared // interval
-        return min(milestones * pts_per_step, max_pts)
-    elif game_type == "ENDLESS_RUNNER":
-        milestones = distance_travelled // interval
-        return min(milestones * pts_per_step, max_pts)
-    return 0
+    if score_step <= 0 or score <= 0:
+        return 0
+
+    points = score // score_step
+    return min(points, max_pts)
 
 
 def complete_game_session(
