@@ -112,10 +112,11 @@ class WhatsAppCanonicalService:
             logger.warning(f"[WA-CANONICAL] Invalid recipient phone '{phone}' — skipping dispatch")
             return {"success": False, "reason": "invalid_phone_number", "status": "failed"}
 
-        # 3. Deduplication Guard
+        # 3. Deduplication Guard (OTPs are strictly exempt from dedup)
+        is_otp = (template_name == "otp" or message_type == "whatsapp_otp" or "otp" in str(template_name).lower())
         dedup_k = idempotency_key or f"{template_name}:{recipient}"
         now_utc = get_indian_time()
-        if dedup_k in _in_memory_dedup:
+        if not is_otp and dedup_k in _in_memory_dedup:
             last_sent = _in_memory_dedup[dedup_k]
             if now_utc - last_sent < timedelta(minutes=_DEDUP_WINDOW_MINUTES):
                 logger.info(f"[WA-CANONICAL] Deduplication hit for '{dedup_k}' — skipping duplicate send")

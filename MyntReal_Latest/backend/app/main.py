@@ -8205,6 +8205,27 @@ def _startup_worker():
     except Exception as _e:
         print(f"[DC_VGK_RATE_FIX_001] ⚠️ {_e}", flush=True)
 
+    # DC_SOLAR_SHOWROOM_RATE_2P5_001: Enforce Solar Showroom Commission rate of 2.50% (was 3.50%).
+    try:
+        with engine.begin() as _c:
+            _v4u_sh = _c.execute(text("""
+                UPDATE vgk4u_category_commission_configs
+                SET showroom_pct = 2.50, updated_at = NOW()
+                WHERE category_slug = 'solar' AND showroom_pct != 2.50
+            """)).rowcount
+            _vtc_sh = _c.execute(text("""
+                UPDATE vgk_team_commission_config v
+                SET showroom_pct = 2.50, updated_at = NOW()
+                FROM signup_categories sc
+                WHERE sc.id = v.category_id
+                  AND sc.name = 'Solar'
+                  AND v.showroom_pct != 2.50
+            """)).rowcount
+            if _v4u_sh > 0 or _vtc_sh > 0:
+                print(f"[DC_SOLAR_SHOWROOM_RATE_2P5_001] ✅ Synchronized Solar Showroom rate to 2.50% (vgk4u: {_v4u_sh}, vgk_team: {_vtc_sh})", flush=True)
+    except Exception as _e:
+        print(f"[DC_SOLAR_SHOWROOM_RATE_2P5_001] ⚠️ {_e}", flush=True)
+
     # DC_INCOME_DELETE_001 (Task #30): Add soft-delete columns to income_entries.
     # Model already has is_deleted, deleted_by_id, deleted_at — ensure they exist in DB.
     try:

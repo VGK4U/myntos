@@ -92,6 +92,14 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
             "referral_bonus_pct": 50,
             "active_services_count": 5
         },
+        "support_system": {
+            "name": "K. Venkata Rao",
+            "type": "partner",
+            "role_label": "Your Support Partner",
+            "phone": "+918585852738",
+            "whatsapp_url": "https://wa.me/918585852738?text=Hello%20MyntReal%20Support",
+            "status": "Active"
+        },
         "recharges": [
             {
                 "id": 901001,
@@ -174,7 +182,35 @@ SANDBOX_PROFILES: Dict[str, Dict[str, Any]] = {
                 "discom": "TSSPDCL",
                 "status": "Commissioned & Net Meter Active",
                 "sanction_date": "2026-08-15T00:00:00",
-                "created_at": "2026-07-10T12:00:00"
+                "created_at": "2026-07-10T12:00:00",
+                "tech_details": {
+                    "panel_make": "Tata Power Solar 545W Mono PERC",
+                    "num_panels": 10,
+                    "panel_serial_numbers": "TPS-2026-08101 to TPS-2026-08110",
+                    "inverter_make": "Growatt 5kW Dual MPPT String Inverter",
+                    "inverter_serial_no": "GW5K-TL-2026-9921",
+                    "installation_date": "2026-08-10"
+                },
+                "documents": [
+                    {
+                        "id": 801,
+                        "doc_label": "DISCOM Sanction Letter",
+                        "doc_type": "sanction_letter",
+                        "file_name": "TSSPDCL_Sanction_USC10928374.pdf"
+                    },
+                    {
+                        "id": 802,
+                        "doc_label": "Net Metering Synchronization Report",
+                        "doc_type": "net_meter_approval",
+                        "file_name": "Net_Meter_Sync_Certificate.pdf"
+                    },
+                    {
+                        "id": 803,
+                        "doc_label": "Subsidy Claim Inspection Clearance",
+                        "doc_type": "subsidy_claim",
+                        "file_name": "MNRE_Subsidy_Approval_Clearance.pdf"
+                    }
+                ]
             }
         ],
         "ev_hub": {
@@ -583,6 +619,70 @@ def create_customer_profile(payload: CustomerProfileCreate, db: Session = Depend
     )
 
 
+@router.get("/check-phone/{phone}")
+def check_customer_phone(phone: str, db: Session = Depends(get_db)):
+    """
+    Check if phone has existing CustomerProfile with PIN,
+    or is an eligible 1+ transaction / Won Plus lead ready for first-time PIN creation.
+    """
+    clean_phone = normalize_phone_10(phone)
+    if not clean_phone or len(clean_phone) != 10:
+        raise HTTPException(status_code=400, detail="Invalid 10-digit mobile number")
+
+    # 1. Sandbox demo profiles
+    if clean_phone in SANDBOX_PROFILES:
+        s_prof = SANDBOX_PROFILES[clean_phone]
+        return {
+            "success": True,
+            "exists": True,
+            "has_pin": True,
+            "customer_name": s_prof.get("customer_name", "Sandbox Customer"),
+            "is_sandbox": True
+        }
+
+    # 2. Existing CustomerProfile with security PIN
+    customer = db.query(CustomerProfile).filter(
+        CustomerProfile.mobile_number.in_([clean_phone, f"91{clean_phone}", f"+91{clean_phone}"]),
+        CustomerProfile.is_active == True
+    ).first()
+
+    if customer and customer.security_pin_hash:
+        return {
+            "success": True,
+            "exists": True,
+            "has_pin": True,
+            "customer_name": customer.customer_name or "Valued Customer"
+        }
+
+    # 3. Check for 1+ transaction in recharge_transactions or lead in crm_leads
+    tx_count = db.execute(text("""
+        SELECT COUNT(id) FROM recharge_transactions
+        WHERE mobile_number IN (:p10, :p91, :pplus91) OR value2 IN (:p10, :p91, :pplus91)
+    """), {"p10": clean_phone, "p91": f"91{clean_phone}", "pplus91": f"+91{clean_phone}"}).scalar() or 0
+
+    lead_row = db.execute(text("""
+        SELECT id, name, status FROM crm_leads
+        WHERE phone LIKE :phone_like
+        ORDER BY created_at DESC LIMIT 1
+    """), {"phone_like": f"%{clean_phone}%"}).fetchone()
+
+    if tx_count > 0 or lead_row:
+        name = (customer.customer_name if customer else None) or (lead_row[1] if lead_row and lead_row[1] else "Valued Customer")
+        return {
+            "success": True,
+            "exists": True,
+            "has_pin": False,
+            "customer_name": name,
+            "is_eligible_lead": True
+        }
+
+    return {
+        "success": True,
+        "exists": False,
+        "has_pin": False
+    }
+
+
 @router.post("/login", response_model=CustomerAuthResponse)
 def customer_login(payload: CustomerLoginRequest, db: Session = Depends(get_db)):
     """
@@ -749,6 +849,7 @@ def get_customer_dashboard_data(
             "success": True,
             "profile": serialize_customer(current_customer),
             "kpi": s_data.get("kpi", {}),
+            "support_system": s_data.get("support_system", {}),
             "recharges": s_data.get("recharges", []),
             "utility_bills": s_data.get("utility_bills", []),
             "scratch_cards": s_data.get("scratch_cards", []),
@@ -855,7 +956,84 @@ def get_customer_dashboard_data(
         for r in cards_rows
     ]
 
-    # 6. Solar Projects Hub
+    # Support System Resolution Waterfall
+    # 1. Lead assigned partner (official_partners) -> check active & not blocked
+    # 2. Lead assigned staff (staff_employees) -> check active & not deleted
+    # 3. Active company support staff or fallback MyntReal Care
+    support_system = None
+    lead_supp = db.execute(text("""
+        SELECT id, associated_partner_id, support_staff_id, field_staff_id
+        FROM crm_leads
+        WHERE phone LIKE :phone_like
+        ORDER BY created_at DESC
+        LIMIT 1
+    """), {"phone_like": phone_like}).fetchone()
+
+    if lead_supp:
+        partner_id = lead_supp[1]
+        staff_id = lead_supp[2] or lead_supp[3]
+        if partner_id:
+            p_row = db.execute(text("""
+                SELECT partner_name, contact_person, phone, whatsapp_number, is_active, is_blocked, member_status
+                FROM official_partners
+                WHERE id = :pid
+            """), {"pid": partner_id}).fetchone()
+            if p_row and p_row[4] and not p_row[5] and (not p_row[6] or str(p_row[6]).lower() != "blocked"):
+                p_name = p_row[0] or p_row[1] or "Assigned Support Partner"
+                support_system = {
+                    "name": p_name,
+                    "type": "partner",
+                    "role_label": "Your Support Partner",
+                    "phone": "+918585852738",
+                    "whatsapp_url": "https://wa.me/918585852738?text=Hello%20MyntReal%20Support",
+                    "status": "Active"
+                }
+
+        if not support_system and staff_id:
+            s_row = db.execute(text("""
+                SELECT full_name, phone, status, is_deleted
+                FROM staff_employees
+                WHERE id = :sid
+            """), {"sid": staff_id}).fetchone()
+            if s_row and (s_row[2] or "").lower() == "active" and not s_row[3]:
+                st_name = s_row[0] or "Assigned Support Partner"
+                support_system = {
+                    "name": st_name,
+                    "type": "staff",
+                    "role_label": "Your Support Partner",
+                    "phone": "+918585852738",
+                    "whatsapp_url": "https://wa.me/918585852738?text=Hello%20MyntReal%20Support",
+                    "status": "Active"
+                }
+
+    if not support_system:
+        act_staff = db.execute(text("""
+            SELECT full_name, phone
+            FROM staff_employees
+            WHERE status = 'active' AND (is_deleted IS NULL OR is_deleted = false)
+            ORDER BY id ASC
+            LIMIT 1
+        """)).fetchone()
+        if act_staff:
+            support_system = {
+                "name": act_staff[0],
+                "type": "staff",
+                "role_label": "Your Support Partner",
+                "phone": "+918585852738",
+                "whatsapp_url": "https://wa.me/918585852738?text=Hello%20MyntReal%20Support",
+                "status": "Active"
+            }
+        else:
+            support_system = {
+                "name": "MyntReal Care",
+                "type": "company_care",
+                "role_label": "Your Support Partner",
+                "phone": "+918585852738",
+                "whatsapp_url": "https://wa.me/918585852738?text=Hello%20MyntReal%20Support",
+                "status": "Active"
+            }
+
+    # 6. Solar Projects Hub (with Dynamic Tech Hardware & Documents)
     solar_rows = db.execute(text("""
         SELECT id, name, looking_for, status, solar_pipeline_status, kw_size, discom, sanction_date, created_at
         FROM crm_leads
@@ -870,8 +1048,50 @@ def get_customer_dashboard_data(
         ORDER BY created_at DESC
         LIMIT 10
     """), {"phone_like": phone_like}).fetchall()
-    solar_projects = [
-        {
+
+    solar_projects = []
+    for r in solar_rows:
+        lead_id = r[0]
+        # Query technical equipment hardware
+        tech_row = db.execute(text("""
+            SELECT panel_make, num_panels, panel_serial_numbers, inverter_make, inverter_serial_no, installation_date
+            FROM crm_solar_lead_tech
+            WHERE lead_id = :lid
+            ORDER BY id DESC LIMIT 1
+        """), {"lid": lead_id}).fetchone()
+
+        tech_details = None
+        if tech_row:
+            p_make, p_num, p_serials, inv_make, inv_serial, inst_date = tech_row
+            if any([p_make, p_num, p_serials, inv_make, inv_serial, inst_date]):
+                tech_details = {
+                    "panel_make": p_make,
+                    "num_panels": p_num,
+                    "panel_serial_numbers": p_serials,
+                    "inverter_make": inv_make,
+                    "inverter_serial_no": inv_serial,
+                    "installation_date": inst_date.isoformat() if hasattr(inst_date, "isoformat") else (str(inst_date) if inst_date else None)
+                }
+
+        # Query project documents
+        doc_rows = db.execute(text("""
+            SELECT id, doc_label, doc_type, file_name, original_name, uploaded_at
+            FROM crm_lead_solar_documents
+            WHERE lead_id = :lid
+            ORDER BY id ASC
+        """), {"lid": lead_id}).fetchall()
+
+        docs_list = []
+        for d in doc_rows:
+            docs_list.append({
+                "id": d[0],
+                "doc_label": d[1] or d[2] or "Solar Document",
+                "doc_type": d[2],
+                "file_name": d[3] or d[4],
+                "uploaded_at": d[5].isoformat() if d[5] else None
+            })
+
+        proj_item = {
             "id": r[0],
             "project_name": r[1] or "Rooftop Solar Project",
             "capacity": f"{r[5]} kW" if r[5] else "Residential Solar",
@@ -880,8 +1100,12 @@ def get_customer_dashboard_data(
             "sanction_date": r[7].isoformat() if r[7] else None,
             "created_at": r[8].isoformat() if r[8] else None
         }
-        for r in solar_rows
-    ]
+        if tech_details:
+            proj_item["tech_details"] = tech_details
+        if docs_list:
+            proj_item["documents"] = docs_list
+
+        solar_projects.append(proj_item)
 
     # 7. EV Vehicle, Battery & Service Tickets Hub
     ev_rows = db.execute(text("""
@@ -971,6 +1195,7 @@ def get_customer_dashboard_data(
             "referral_bonus_pct": 50,
             "active_services_count": (1 if recharges else 0) + (1 if utility_bills else 0) + (1 if solar_projects else 0) + (1 if (ev_rows or tickets_rows) else 0) + (1 if training_programs else 0)
         },
+        "support_system": support_system,
         "recharges": recharges,
         "utility_bills": utility_bills,
         "scratch_cards": scratch_cards_list,

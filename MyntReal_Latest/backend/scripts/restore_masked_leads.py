@@ -15,7 +15,7 @@ import psycopg2
 def main():
     conn_str = os.environ.get(
         "DATABASE_URL",
-        "postgresql://postgres:MyntRealAdmin2026!@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres"
+        os.environ.get("PROD_DATABASE_URL", "postgresql://postgres@localhost:5432/postgres")
     )
     print("Connecting to database...")
     conn = psycopg2.connect(conn_str)

@@ -56,7 +56,7 @@ class CreateOrderRequest(BaseModel):
 @router.post("/create-order")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
     if not razorpay_client:
-        raise HTTPException(status_code=500, detail="Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are missing in the server's .env file.")
+        raise HTTPException(status_code=503, detail="System is working on updates. Please try after some time.")
 
     # 1. Validation: Ensure positive valid amount and valid mobile number
     if not req.amount or req.amount < 10:
@@ -82,7 +82,8 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
             payment_capture='1'
         ))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create Razorpay order: {str(e)}")
+        print(f"Razorpay order creation error: {e}")
+        raise HTTPException(status_code=500, detail="System is working on updates. Please try after some time.")
         
     # 2. Save transaction to DB
     new_tx = RechargeTransaction(
@@ -304,15 +305,15 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             tx.api_status = "Refunded (Operator Failed)"
             db.commit()
             
-            fail_msg = f"❌ Recharge Failed. We could not process your recharge of ₹{int(tx.amount)} for {tx.mobile_number}. A full refund has been initiated to your bank account."
+            fail_msg = f"System is working on updates. Please try after some time. Your recharge payment of ₹{int(tx.amount)} for {tx.mobile_number} has been automatically refunded to your original payment method."
             background_tasks.add_task(notify_user_bg, tx.mobile_number, fail_msg)
         except Exception as refund_err:
             print(f"Razorpay Refund Error: {refund_err}")
             tx.payment_status = "Refund Failed"
             db.commit()
             
-            # FIX: Refund API Failure Edge case notification
-            fail_msg_hard = f"⚠️ Recharge Failed. Your recharge of ₹{int(tx.amount)} failed, but our automatic refund system faced a delay. Please contact VGK support with TXN ID {tx.id} for manual refund processing."
+            # Refund API Failure Edge case notification
+            fail_msg_hard = f"System is working on updates. Please try after some time. Your recharge of ₹{int(tx.amount)} could not be processed and your refund is in progress. Reference TXN ID: {tx.id}."
             background_tasks.add_task(notify_user_bg, tx.mobile_number, fail_msg_hard)
     
     response_payload = {

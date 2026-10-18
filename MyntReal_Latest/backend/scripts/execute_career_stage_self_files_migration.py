@@ -78,7 +78,7 @@ def apply_migration(db_url: str, db_name: str):
 
 if __name__ == '__main__':
     dev_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/myntreal_dev')
-    rds_url = os.environ.get('PROD_DATABASE_URL', 'postgresql://postgres:MyntRealAdmin2026!@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres')
+    rds_url = os.environ.get('PROD_DATABASE_URL', 'postgresql://postgres@localhost:5432/postgres')
 
     print("=== STARTING STAGE-WISE SELF FILES MIGRATION ===")
     

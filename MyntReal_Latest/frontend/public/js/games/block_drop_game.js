@@ -24,7 +24,9 @@ class BlockDropGame {
     this.isPaused = false;
     this.animFrameId = null;
 
-    this.dropInterval = 800; // ms per gravity step
+    this.speedMode = 'NORMAL';
+    this.baseDropInterval = 780;
+    this.dropInterval = 780; // ms per gravity step
     this.lastDropTime = 0;
     this.totalLines = 0;
 
@@ -48,18 +50,33 @@ class BlockDropGame {
     window.addEventListener('resize', () => this.resizeCanvas());
   }
 
+  setSpeedMode(mode) {
+    this.speedMode = mode;
+    if (mode === 'SLOW') {
+      this.baseDropInterval = 1100;
+    } else if (mode === 'FAST') {
+      this.baseDropInterval = 500;
+    } else if (mode === 'TURBO') {
+      this.baseDropInterval = 280;
+    } else {
+      this.baseDropInterval = 780;
+    }
+    const lvl = this.framework ? (this.framework.level || 1) : 1;
+    this.dropInterval = Math.max(120, this.baseDropInterval - ((lvl - 1) * 60));
+  }
+
   resizeCanvas() {
     if (!this.canvas || !this.canvas.parentElement) return;
-    const parentH = Math.min(window.innerHeight * 0.55, 520);
+    const parentH = Math.min(window.innerHeight * 0.48, 420);
     const calculatedTile = Math.floor(parentH / this.rows);
-    this.tileSize = Math.max(16, Math.min(26, calculatedTile));
+    this.tileSize = Math.max(16, Math.min(22, calculatedTile));
 
     this.canvas.width = this.cols * this.tileSize;
     this.canvas.height = this.rows * this.tileSize;
 
     if (this.previewCanvas) {
-      this.previewCanvas.width = 80;
-      this.previewCanvas.height = 80;
+      this.previewCanvas.width = 72;
+      this.previewCanvas.height = 72;
     }
 
     if (!this.isRunning) this._drawIdle();
@@ -261,6 +278,10 @@ class BlockDropGame {
     this.totalLines = 0;
     this.dropInterval = 800;
     this.flashingRows = [];
+    const linesEl = document.getElementById('block-drop-lines-val');
+    if (linesEl) linesEl.textContent = '0';
+    const lvlEl = document.getElementById('block-drop-level-val');
+    if (lvlEl) lvlEl.textContent = '1';
   }
 
   _randomPiece() {
@@ -350,9 +371,14 @@ class BlockDropGame {
       this.totalLines += fullRows.length;
       this.framework.setLines(this.totalLines);
 
+      const linesEl = document.getElementById('block-drop-lines-val');
+      if (linesEl) linesEl.textContent = this.totalLines;
+
       // Level progression every 4 lines cleared
       const lvl = Math.floor(this.totalLines / 4) + 1;
       this.framework.setLevel(lvl);
+      const lvlEl = document.getElementById('block-drop-level-val');
+      if (lvlEl) lvlEl.textContent = lvl;
       this.dropInterval = Math.max(120, 800 - ((lvl - 1) * 70));
 
       if (this.totalLines % 4 === 0) {
@@ -387,7 +413,10 @@ class BlockDropGame {
 
   _handleGameOver() {
     this.isRunning = false;
-    if (window.gameAudio) window.gameAudio.playCollision();
+    if (window.gameAudio) {
+      if (typeof window.gameAudio.stopMusic === 'function') window.gameAudio.stopMusic();
+      window.gameAudio.playCollision();
+    }
     this.framework.gameOver({
       score: this.framework.score,
       linesCleared: this.totalLines,
@@ -468,20 +497,69 @@ class BlockDropGame {
   }
 
   _drawBlock(x, y, size, color) {
+    const pad = 1;
+    const bSize = size - pad * 2;
+    const bx = x + pad;
+    const by = y + pad;
+
+    // Base volumetric block fill
     this.ctx.fillStyle = color;
     this.ctx.beginPath();
-    this.ctx.roundRect(x + 1, y + 1, size - 2, size - 2, 3);
+    this.ctx.roundRect(bx, by, bSize, bSize, 3);
     this.ctx.fill();
 
-    // Top-left highlight bevel
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-    this.ctx.fillRect(x + 2, y + 2, size - 4, 2);
-    this.ctx.fillRect(x + 2, y + 2, 2, size - 4);
+    // 3D Top Bevel (Lighter specular facet)
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(bx, by);
+    this.ctx.lineTo(bx + bSize, by);
+    this.ctx.lineTo(bx + bSize - 4, by + 4);
+    this.ctx.lineTo(bx + 4, by + 4);
+    this.ctx.closePath();
+    this.ctx.fill();
 
-    // Bottom-right shadow bevel
+    // 3D Left Bevel (Mid specular facet)
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(bx, by);
+    this.ctx.lineTo(bx + 4, by + 4);
+    this.ctx.lineTo(bx + 4, by + bSize - 4);
+    this.ctx.lineTo(bx, by + bSize);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // 3D Right Bevel (Dark shadow facet)
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-    this.ctx.fillRect(x + size - 3, y + 2, 2, size - 4);
-    this.ctx.fillRect(x + 2, y + size - 3, size - 4, 2);
+    this.ctx.beginPath();
+    this.ctx.moveTo(bx + bSize, by);
+    this.ctx.lineTo(bx + bSize, by + bSize);
+    this.ctx.lineTo(bx + bSize - 4, by + bSize - 4);
+    this.ctx.lineTo(bx + bSize - 4, by + 4);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // 3D Bottom Bevel (Deep shadow facet)
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.50)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(bx, by + bSize);
+    this.ctx.lineTo(bx + 4, by + bSize - 4);
+    this.ctx.lineTo(bx + bSize - 4, by + bSize - 4);
+    this.ctx.lineTo(bx + bSize, by + bSize);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // Center glossy face with subtle inset gradient
+    const centerGrad = this.ctx.createLinearGradient(bx + 4, by + 4, bx + bSize - 4, by + bSize - 4);
+    centerGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+    centerGrad.addColorStop(1, 'rgba(0, 0, 0, 0.15)');
+    this.ctx.fillStyle = centerGrad;
+    this.ctx.fillRect(bx + 4, by + 4, bSize - 8, bSize - 8);
+
+    // Corner specular gleam
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    this.ctx.beginPath();
+    this.ctx.arc(bx + 5, by + 5, 1.8, 0, Math.PI * 2);
+    this.ctx.fill();
   }
 
   _drawPreview() {
@@ -493,7 +571,7 @@ class BlockDropGame {
     this.previewCtx.fillRect(0, 0, pw, ph);
 
     const m = this.nextPiece.matrix;
-    const pTile = 16;
+    const pTile = 14;
     const offX = Math.floor((pw - (m[0].length * pTile)) / 2);
     const offY = Math.floor((ph - (m.length * pTile)) / 2);
 

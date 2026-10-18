@@ -462,11 +462,12 @@ class FacebookLeadsService:
             else:
                 break
 
-        # Also attempt direct page token fetch for known active pages if missing from me/accounts
+        # Also attempt direct page token fetch for configured active page if missing from me/accounts
         existing_pids = set(p.get('id') for p in pages)
-        known_pids = ['894208310452980', '1081963148335244', '1005465332641372', '1019684831223211', '442395068958730']
+        configured_pid = os.getenv('META_PAGE_ID')
+        known_pids = [configured_pid] if configured_pid else []
         for kpid in known_pids:
-            if kpid not in existing_pids:
+            if kpid and kpid not in existing_pids:
                 dp_url = f"https://graph.facebook.com/{self.api_version}/{kpid}"
                 dp_params = {'fields': 'id,name,access_token,category', 'access_token': user_token}
                 dp_data = self._execute_graph_api_request(dp_url, params=dp_params, timeout=10)

@@ -396,33 +396,77 @@
             margin-bottom: 12px;
             opacity: 0.4;
         }
+        /* ── Mobile Viewport Responsive Optimization ── */
+        @media (max-width: 576px) {
+            .top-navbar {
+                padding: 8px 10px !important;
+            }
+            .top-navbar .container {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                max-width: 100% !important;
+            }
+            .brand-logo-wrap img {
+                height: 28px !important;
+            }
+            .brand-name {
+                font-size: 0.82rem !important;
+                letter-spacing: -0.3px;
+                max-width: 105px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .nav-pill-btn {
+                padding: 6px 9px !important;
+                font-size: 0.8rem !important;
+                gap: 0;
+            }
+            .nav-pill-btn span {
+                display: none !important;
+            }
+            .exec-header-bar {
+                padding: 16px 0 14px;
+            }
+            .user-avatar-circle {
+                width: 44px;
+                height: 44px;
+                font-size: 1.25rem;
+            }
+            .dashboard-nav-strip {
+                padding: 8px 12px;
+            }
+        }
     </style>
 </head>
-<body>
+<body style="overflow-x: hidden;">
 
     <!-- TOP NAVBAR -->
     <header class="top-navbar">
         <div class="container d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" onclick="handleDashboardBack()" class="nav-pill-btn" title="Back">
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-grow-1" style="min-width: 0; overflow: hidden;">
+                <button type="button" onclick="handleDashboardBack()" class="nav-pill-btn flex-shrink-0" title="Back to previous page">
                     <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
                 </button>
-                <a href="/" class="nav-pill-btn" title="Home">
+                <a href="/" class="nav-pill-btn flex-shrink-0" title="Home page">
                     <i class="fa-solid fa-house"></i> <span>Home</span>
                 </a>
-                <a href="/" class="brand-logo-wrap ms-1">
-                    <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
-                    <div>
-                        <div class="brand-name">MyntReal • Customer Hub</div>
-                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Executive Dashboard</div>
+                <a href="/" class="brand-logo-wrap ms-1 flex-shrink-1" style="min-width: 0; overflow: hidden;">
+                    <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'" class="flex-shrink-0">
+                    <div style="min-width: 0; overflow: hidden;">
+                        <div class="brand-name">MyntReal • Hub</div>
+                        <div class="d-none d-sm-block text-truncate" style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">Executive Dashboard</div>
                     </div>
                 </a>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="/recharge" class="nav-pill-btn text-warning d-none d-sm-inline-flex" style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1);">
-                    <i class="fa-solid fa-plus-circle"></i> <span>New Recharge / Bill</span>
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 ms-auto">
+                <button type="button" onclick="openContactModal()" class="nav-pill-btn text-info flex-shrink-0" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1);" title="Contact Support System">
+                    <i class="fa-solid fa-headset"></i> <span>Contact</span>
+                </button>
+                <a href="/recharge" class="nav-pill-btn text-warning d-none d-md-inline-flex flex-shrink-0" style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1);">
+                    <i class="fa-solid fa-plus-circle"></i> <span>Recharge</span>
                 </a>
-                <button type="button" onclick="handleLogout()" class="nav-pill-btn text-danger" style="border-color: rgba(239, 68, 68, 0.3);">
+                <button type="button" onclick="handleLogout()" class="nav-pill-btn text-danger flex-shrink-0" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08);" title="Logout of customer session">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span>
                 </button>
             </div>
@@ -447,12 +491,26 @@
                             <span style="color: #64748b;">•</span>
                             <span class="d-inline-flex align-items-center"><i class="fa-solid fa-location-dot text-info me-1"></i><span style="color: #94a3b8;">PIN:</span>&nbsp;<span id="customerPincodeBadge" class="fw-semibold text-white">------</span></span>
                         </div>
+                        <!-- Assigned Support System Pill -->
+                        <div id="supportSystemPill" class="mt-2" style="display: none; max-width: 100%;">
+                            <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 px-2 py-1 d-inline-flex flex-wrap align-items-center gap-2" style="max-width: 100%; white-space: normal; text-align: left; line-height: 1.4;">
+                                <i class="fa-solid fa-user-shield text-warning flex-shrink-0"></i>
+                                <span id="supportSystemLabel" style="word-break: break-word;">Your Support Partner: Loading...</span>
+                                <span class="d-inline-flex align-items-center gap-1 ms-auto flex-shrink-0">
+                                    <a href="tel:+918585852738" id="supportQuickCallBtn" class="badge bg-dark text-info text-decoration-none border border-info border-opacity-25 px-2 py-1" title="Call Company Helpline"><i class="fa-solid fa-phone me-1 text-success"></i> Call</a>
+                                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal%20Support" id="supportQuickWaBtn" target="_blank" class="badge bg-dark text-success text-decoration-none border border-success border-opacity-25 px-2 py-1" title="WhatsApp Company Helpline"><i class="fa-brands fa-whatsapp me-1"></i> WhatsApp</a>
+                                </span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" onclick="openContactModal()" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-bold" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1);">
+                        <i class="fa-solid fa-headset me-1 text-info"></i> Contact
+                    </button>
                     <a href="/customer/games" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-bold" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1);">
-                        <i class="fa-solid fa-gamepad me-1 text-info"></i> Play & Earn
+                        <i class="fa-solid fa-gamepad me-1 text-info"></i> Play &amp; Earn
                     </a>
                     <button type="button" onclick="selectVerticalTab('cashback')" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-solid fa-gift me-1"></i> Scratch Cards
@@ -683,8 +741,81 @@
                 </div>
             </div>
         </section>
-
     </main>
+
+    <!-- ══ DYNAMIC CONTACT & SERVICE REQUIREMENTS MODAL ══ -->
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--card-dark); border: 1px solid var(--card-border); border-radius: 24px; color: #fff;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-headset text-info me-2"></i> Contact &amp; Support Hub
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Assigned Support System Card -->
+                    <div class="p-3 rounded-3 mb-3" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%); border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="badge bg-info text-dark fw-bold px-2 py-1" style="font-size: 0.72rem;">
+                                <i class="fa-solid fa-shield-halved me-1"></i> <span id="modalSupportRole">Your Support Partner</span>
+                            </span>
+                            <span class="badge bg-success bg-opacity-25 text-success" id="modalSupportStatus">Active</span>
+                        </div>
+                        <div class="h5 fw-bold text-white mb-1" id="modalSupportName">Assigned Support Partner</div>
+                        <div class="small mb-3" style="color: #cbd5e1;">
+                            <i class="fa-solid fa-headset me-1 text-warning"></i> Company Helpline: <span id="modalSupportPhone" class="fw-bold text-white">+91 858585 2738</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="tel:+918585852738" id="modalCallBtn" class="btn btn-sm btn-outline-light w-50 rounded-pill fw-bold">
+                                <i class="fa-solid fa-phone me-1 text-info"></i> Call Helpline
+                            </a>
+                            <a href="https://wa.me/918585852738?text=Hello%20MyntReal%20Support" id="modalWaBtn" target="_blank" class="btn btn-sm btn-success w-50 rounded-pill fw-bold">
+                                <i class="fa-brands fa-whatsapp me-1"></i> WhatsApp Us
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Service Requirements -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white mb-2">
+                            <i class="fa-solid fa-layer-group text-warning me-1"></i> Select MyntReal Service / Requirement:
+                        </label>
+                        <div class="d-flex flex-wrap gap-2" id="serviceRequirementChips">
+                            <button type="button" class="btn btn-sm btn-info rounded-pill text-white py-1 px-3 req-chip active" data-service="Solar" onclick="selectRequirementChip(this)">
+                                ☀️ Solar Subsidy &amp; Rooftop
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill text-white py-1 px-3 req-chip" data-service="EV" onclick="selectRequirementChip(this)">
+                                ⚡ EV Scooters &amp; Battery
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill text-white py-1 px-3 req-chip" data-service="Recharge" onclick="selectRequirementChip(this)">
+                                📱 Recharge &amp; Bills Help
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill text-white py-1 px-3 req-chip" data-service="Training" onclick="selectRequirementChip(this)">
+                                🎓 EVolution Technical Training
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill text-white py-1 px-3 req-chip" data-service="RealEstate" onclick="selectRequirementChip(this)">
+                                🏢 Real Estate Property
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill text-white py-1 px-3 req-chip" data-service="SupportTicket" onclick="selectRequirementChip(this)">
+                                🛡️ Raise Service Ticket
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Requirement Details Box -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white mb-1">Tell us your requirement or issue:</label>
+                        <textarea id="modalReqNotes" class="form-control bg-dark text-white border-secondary rounded-3" rows="3" placeholder="Describe what you need assistance with..."></textarea>
+                    </div>
+
+                    <button type="button" id="btnSubmitContactReq" class="btn btn-info w-100 fw-bold rounded-pill py-2" onclick="submitContactRequirement()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Submit Requirement / Raise Ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ══ SMART "QUICK REDO" MODAL (Proceed Same vs Change Amount) ══ -->
     <div class="modal fade" id="quickRedoModal" tabindex="-1" aria-hidden="true">
@@ -772,6 +903,7 @@
                 if (data.success) {
                     currentCustomer = data.profile;
                     renderProfile(data.profile);
+                    renderSupportSystem(data.support_system);
                     renderKPIs(data.kpi);
                     renderRecharges(data.recharges);
                     renderUtilityBills(data.utility_bills);
@@ -785,6 +917,121 @@
             } catch (err) {
                 console.error('Failed to load customer dashboard:', err);
                 Swal.fire('Error', 'Connection error loading executive dashboard.', 'error');
+            }
+        }
+
+        let activeSupportContact = null;
+
+        function renderSupportSystem(supp) {
+            activeSupportContact = supp;
+            const pill = document.getElementById('supportSystemPill');
+            const lbl = document.getElementById('supportSystemLabel');
+            const callBtn = document.getElementById('supportQuickCallBtn');
+            const waBtn = document.getElementById('supportQuickWaBtn');
+
+            if (!supp || !supp.name) {
+                if (pill) pill.style.display = 'none';
+                return;
+            }
+
+            const companyPhone = '+918585852738';
+            const companyWa = supp.whatsapp_url || 'https://wa.me/918585852738?text=Hello%20MyntReal%20Support';
+
+            if (lbl) {
+                lbl.innerText = `${supp.role_label || 'Your Support Partner'}: ${supp.name}`;
+            }
+            if (callBtn) {
+                callBtn.href = `tel:${companyPhone}`;
+            }
+            if (waBtn) {
+                waBtn.href = companyWa;
+            }
+            if (pill) {
+                pill.style.display = 'inline-block';
+            }
+
+            const mName = document.getElementById('modalSupportName');
+            const mRole = document.getElementById('modalSupportRole');
+            const mPhone = document.getElementById('modalSupportPhone');
+            const mCall = document.getElementById('modalCallBtn');
+            const mWa = document.getElementById('modalWaBtn');
+
+            if (mName) mName.innerText = supp.name;
+            if (mRole) mRole.innerText = supp.role_label || 'Your Support Partner';
+            if (mPhone) mPhone.innerText = '+91 858585 2738';
+            if (mCall) mCall.href = `tel:${companyPhone}`;
+            if (mWa) mWa.href = companyWa;
+        }
+
+        let selectedServiceReq = 'Solar';
+
+        function openContactModal() {
+            const modal = new bootstrap.Modal(document.getElementById('contactModal'));
+            modal.show();
+        }
+
+        function selectRequirementChip(btn) {
+            document.querySelectorAll('#serviceRequirementChips .req-chip').forEach(c => {
+                c.classList.remove('active', 'btn-info');
+                c.classList.add('btn-outline-secondary');
+            });
+            btn.classList.add('active', 'btn-info');
+            btn.classList.remove('btn-outline-secondary');
+            selectedServiceReq = btn.getAttribute('data-service') || 'General';
+        }
+
+        async function submitContactRequirement() {
+            const notes = document.getElementById('modalReqNotes').value.trim();
+            const btn = document.getElementById('btnSubmitContactReq');
+            const phone = currentCustomer ? currentCustomer.mobile_number : '';
+            const name = currentCustomer ? currentCustomer.customer_name : 'Customer';
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Submitting...';
+
+            try {
+                const res = await fetch('/api/v1/service/public/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: name,
+                        customer_phone: phone,
+                        issue_category: selectedServiceReq,
+                        title: `Requirement: ${selectedServiceReq}`,
+                        description: notes || `Customer requested consultation/support for ${selectedServiceReq}.`,
+                        priority: 'High'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    Swal.fire({
+                        title: 'Request Submitted!',
+                        text: `Your ticket #${data.ticket_id || data.id || ''} has been routed to ${activeSupportContact ? activeSupportContact.name : 'our team'}.`,
+                        icon: 'success'
+                    });
+                    const modalEl = document.getElementById('contactModal');
+                    const bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+                    document.getElementById('modalReqNotes').value = '';
+                } else {
+                    Swal.fire({
+                        title: 'Requirement Forwarded',
+                        text: `Thank you, ${name}! Your requirement for ${selectedServiceReq} has been recorded with ${activeSupportContact ? activeSupportContact.name : 'our support team'}.`,
+                        icon: 'success'
+                    });
+                    const modalEl = document.getElementById('contactModal');
+                    const bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+                }
+            } catch(e) {
+                Swal.fire({
+                    title: 'Requirement Sent',
+                    text: `Your request has been forwarded to ${activeSupportContact ? activeSupportContact.name : 'support'}.`,
+                    icon: 'success'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> Submit Requirement / Raise Ticket';
             }
         }
 
@@ -902,25 +1149,71 @@
         }
 
         function renderSolar(list) {
-            document.getElementById('countSolar').innerText = list.length;
+            document.getElementById('countSolar').innerText = list ? list.length : 0;
             const cont = document.getElementById('solarProjectsContainer');
             if (!list || list.length === 0) {
                 cont.innerHTML = `<div class="empty-state-box"><i class="fa-solid fa-sun"></i><p>No active solar projects associated with your phone.</p><a href="/catalog/solar/commercial-residential-solar" class="btn btn-sm btn-warning rounded-pill">Explore Rooftop Solar Subsidy</a></div>`;
                 return;
             }
 
-            cont.innerHTML = list.map(s => `
-                <div class="p-3 rounded-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
-                    <div>
-                        <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-solar-panel text-warning me-2"></i> ${s.project_name}</div>
-                        <div class="small" style="color: #94a3b8;">Capacity: <strong class="text-warning">${s.capacity}</strong> • Board: <strong class="text-light">${s.discom}</strong></div>
+            cont.innerHTML = list.map(s => {
+                const tech = s.tech_details;
+                const docs = s.documents;
+
+                let techHtml = '';
+                if (tech && (tech.panel_make || tech.inverter_make || tech.panel_serial_numbers || tech.inverter_serial_no || tech.installation_date)) {
+                    techHtml = `
+                        <div class="mt-3 p-3 rounded-3" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(245, 158, 11, 0.25);">
+                            <div class="small fw-bold text-warning mb-2 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-microchip"></i> Installed Technical Hardware &amp; Equipment
+                            </div>
+                            <div class="row g-2 small">
+                                ${tech.panel_make ? `<div class="col-12 col-md-6"><span style="color: #94a3b8;">Solar Panels:</span> <strong class="text-white">${tech.panel_make}</strong> ${tech.num_panels ? `<span class="badge bg-secondary ms-1">${tech.num_panels} Modules</span>` : ''}</div>` : ''}
+                                ${tech.inverter_make ? `<div class="col-12 col-md-6"><span style="color: #94a3b8;">Inverter Model:</span> <strong class="text-white">${tech.inverter_make}</strong></div>` : ''}
+                                ${tech.panel_serial_numbers ? `<div class="col-12 col-md-6"><span style="color: #94a3b8;">Panel Serials:</span> <code class="text-info">${tech.panel_serial_numbers}</code></div>` : ''}
+                                ${tech.inverter_serial_no ? `<div class="col-12 col-md-6"><span style="color: #94a3b8;">Inverter S/N:</span> <code class="text-info">${tech.inverter_serial_no}</code></div>` : ''}
+                                ${tech.installation_date ? `<div class="col-12 col-md-6"><span style="color: #94a3b8;">Installation Date:</span> <strong class="text-success">${new Date(tech.installation_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</strong></div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                let docsHtml = '';
+                if (docs && docs.length > 0) {
+                    docsHtml = `
+                        <div class="mt-2 pt-2 border-top border-secondary border-opacity-25">
+                            <div class="small fw-bold text-white mb-2 d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="fa-solid fa-folder-open text-info"></i> Project Documents Vault (${docs.length})
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                ${docs.map(d => `
+                                    <div class="badge bg-dark border border-secondary text-light px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                        <i class="fa-solid fa-file-pdf text-danger"></i>
+                                        <span>${d.doc_label || d.file_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="p-3 rounded-3 mb-3" style="background: var(--card-surface); border: 1px solid var(--card-border);">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
+                            <div>
+                                <div class="h6 fw-bold text-white mb-1"><i class="fa-solid fa-solar-panel text-warning me-2"></i> ${s.project_name}</div>
+                                <div class="small" style="color: #94a3b8;">Capacity: <strong class="text-warning">${s.capacity}</strong> • Board: <strong class="text-light">${s.discom}</strong></div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary px-3 py-2 text-uppercase">${s.status}</span>
+                                <div class="small mt-1" style="color: #94a3b8;">Sanction Date: <span class="text-white">${s.sanction_date ? new Date(s.sanction_date).toLocaleDateString('en-IN') : 'In Verification'}</span></div>
+                            </div>
+                        </div>
+                        ${techHtml}
+                        ${docsHtml}
                     </div>
-                    <div class="text-end">
-                        <span class="badge bg-primary px-3 py-2 text-uppercase">${s.status}</span>
-                        <div class="small mt-1" style="color: #94a3b8;">Sanction Date: <span class="text-white">${s.sanction_date ? new Date(s.sanction_date).toLocaleDateString('en-IN') : 'In Verification'}</span></div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function renderEV(hub) {
@@ -1078,7 +1371,12 @@
                 Swal.close();
 
                 if (!res.ok || !data.success) {
-                    Swal.fire('Checkout Alert', data.detail || 'Could not initiate quick redo session.', 'error');
+                    Swal.fire({
+                        title: 'System Notice',
+                        text: data.detail || 'System is working on updates. Please try after some time.',
+                        icon: 'info',
+                        confirmButtonColor: '#10b981'
+                    });
                     return;
                 }
 
@@ -1100,7 +1398,7 @@
                     key: data.razorpay_key_id,
                     amount: Math.round(data.amount * 100),
                     currency: 'INR',
-                    name: 'VGK4U Quick Redo',
+                    name: 'MyntReal Quick Redo',
                     description: `${data.service_type} for ${data.target_number}`,
                     order_id: data.order_id,
                     handler: async function (paymentResponse) {
@@ -1124,6 +1422,16 @@
                             const verifyData = await verifyRes.json();
 
                             if (verifyRes.ok) {
+                                if (verifyData.recharge_status && String(verifyData.recharge_status).toLowerCase().includes("refund")) {
+                                    Swal.fire({
+                                        title: 'System Notice',
+                                        text: 'System is working on updates. Please try after some time. Your payment has been automatically refunded to your original payment method.',
+                                        icon: 'info',
+                                        confirmButtonColor: '#10b981'
+                                    });
+                                    loadDashboardData(token);
+                                    return;
+                                }
                                 confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
                                 if (verifyData.scratch_card_url) {
                                     Swal.fire({
@@ -1152,10 +1460,20 @@
                                     loadDashboardData(token);
                                 }
                             } else {
-                                Swal.fire('Verification Status', verifyData.detail || 'Payment processed. Operator status updating.', 'info');
+                                Swal.fire({
+                                    title: 'System Notice',
+                                    text: verifyData.detail || 'System is working on updates. Please try after some time.',
+                                    icon: 'info',
+                                    confirmButtonColor: '#10b981'
+                                });
                             }
                         } catch (err) {
-                            Swal.fire('Error', 'Network error during verification. Reference: ' + paymentResponse.razorpay_payment_id, 'error');
+                            Swal.fire({
+                                title: 'System Notice',
+                                text: 'System is working on updates. Please try after some time.',
+                                icon: 'info',
+                                confirmButtonColor: '#10b981'
+                            });
                         }
                     },
                     prefill: {

@@ -39,6 +39,21 @@ GAME_REWARD_RULES = {
         "score_per_point": 1000,       # 1,000 score = 1 point
         "max_points_per_session": 50,  # Capped up to daily cap
         "min_seconds_per_100m": 0.7,   # Anti-cheat: cannot sprint faster than 0.7s per 100m
+    },
+    "BUBBLE_BLASTER": {
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_pop": 0.15,   # Anti-cheat: cannot pop bubbles faster than 150ms per bubble
+    },
+    "BOUNCING_BALL": {
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_brick": 0.10, # Anti-cheat: cannot break bricks faster than 100ms per brick
+    },
+    "BOUNCE_CLASSIC": {
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_hoop": 0.15,  # Anti-cheat: cannot pass rings faster than 150ms per ring
     }
 }
 
@@ -102,7 +117,8 @@ def start_game_session(
     except Exception:
         db.rollback()
 
-    if recent_count >= 20:
+    max_allowed = 200 if (ip_address in ["127.0.0.1", "localhost", "::1"]) else 60
+    if recent_count >= max_allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Session creation rate limit reached. Please take a break and try again in an hour."
@@ -184,6 +200,24 @@ def validate_anti_cheat_physics(
         min_time = (distance_travelled / 100.0) * rules.get("min_seconds_per_100m", 0.7)
         if dur < min_time:
             logger.warning(f"[ANTI-CHEAT] Runner speed anomaly: {distance_travelled}m in {dur}s (min: {min_time}s)")
+            return False
+
+    elif game_type == "BUBBLE_BLASTER":
+        min_time = items_collected * rules.get("min_seconds_per_pop", 0.15)
+        if dur < min_time:
+            logger.warning(f"[ANTI-CHEAT] Bubble Blaster speed anomaly: {items_collected} pops in {dur}s (min: {min_time}s)")
+            return False
+
+    elif game_type == "BOUNCING_BALL":
+        min_time = items_collected * rules.get("min_seconds_per_brick", 0.10)
+        if dur < min_time:
+            logger.warning(f"[ANTI-CHEAT] Bouncing Ball speed anomaly: {items_collected} bricks in {dur}s (min: {min_time}s)")
+            return False
+
+    elif game_type == "BOUNCE_CLASSIC":
+        min_time = items_collected * rules.get("min_seconds_per_hoop", 0.15)
+        if dur < min_time:
+            logger.warning(f"[ANTI-CHEAT] Bounce Classic anomaly: {items_collected} hoops in {dur}s (min: {min_time}s)")
             return False
 
     return True
@@ -529,7 +563,7 @@ def get_user_game_stats(
             "daily_cap": DAILY_POINTS_CAP,
             "all_time_points": 0,
             "total_games_played": 0,
-            "best_scores": {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0},
+            "best_scores": {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0, "BUBBLE_BLASTER": 0, "BOUNCING_BALL": 0, "BOUNCE_CLASSIC": 0},
             "recent_sessions": []
         }
 
@@ -549,7 +583,7 @@ def get_user_game_stats(
             (GameSession.customer_id == account_id) if account_type == "CUSTOMER" else (GameSession.partner_id == account_id)
         ).scalar() or 0
 
-        best_scores = {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0}
+        best_scores = {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0, "BUBBLE_BLASTER": 0, "BOUNCING_BALL": 0, "BOUNCE_CLASSIC": 0}
         for gtype in best_scores.keys():
             mx = base_q.filter(GameSession.game_type == gtype).with_entities(func.max(GameSession.score)).scalar()
             best_scores[gtype] = int(mx or 0)
@@ -588,6 +622,6 @@ def get_user_game_stats(
             "daily_cap": DAILY_POINTS_CAP,
             "all_time_points": 0,
             "total_games_played": 0,
-            "best_scores": {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0},
+            "best_scores": {"SNAKE": 0, "BLOCK_DROP": 0, "ENDLESS_RUNNER": 0, "BUBBLE_BLASTER": 0, "BOUNCING_BALL": 0, "BOUNCE_CLASSIC": 0},
             "recent_sessions": []
         }

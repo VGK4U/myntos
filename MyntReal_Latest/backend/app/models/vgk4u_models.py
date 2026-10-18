@@ -73,7 +73,7 @@ class VGK4UCategoryCommissionConfig(BaseModel):
     sponsor_override_pct = Column(Numeric(5, 2), nullable=False, default=0.00)
     support_journey_pct = Column(Numeric(5, 2), nullable=False, default=0.75)
     support_end_to_end_pct = Column(Numeric(5, 2), nullable=False, default=1.50)
-    showroom_pct = Column(Numeric(5, 2), nullable=False, default=3.50)
+    showroom_pct = Column(Numeric(5, 2), nullable=False, default=2.50)
     unallocated_balance_pct = Column(Numeric(5, 2), nullable=False, default=0.00)
     admin_charge_pct = Column(Numeric(5, 2), nullable=False, default=8.00)
     tds_pct = Column(Numeric(5, 2), nullable=False, default=2.00)

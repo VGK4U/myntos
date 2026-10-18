@@ -1769,7 +1769,17 @@
                 const orderData = await res.json();
 
                 if (!res.ok) {
-                    alert(orderData.detail || 'Failed to initiate order. Please try again.');
+                    const errorMsg = (orderData && orderData.detail) ? orderData.detail : 'System is working on updates. Please try after some time.';
+                    if (window.Swal) {
+                        Swal.fire({
+                            title: 'System Notice',
+                            text: errorMsg,
+                            icon: 'info',
+                            confirmButtonColor: '#10b981'
+                        });
+                    } else {
+                        alert(errorMsg);
+                    }
                     submitBtn.disabled = false;
                     btnText.innerText = 'Proceed to Pay';
                     return;
@@ -1804,6 +1814,18 @@
                             const verifyData = await verifyRes.json();
 
                             if (verifyRes.ok) {
+                                if (verifyData.recharge_status && String(verifyData.recharge_status).toLowerCase().includes("refund")) {
+                                    Swal.fire({
+                                        title: 'System Notice',
+                                        text: 'System is working on updates. Please try after some time. Your payment has been automatically refunded to your original payment method.',
+                                        icon: 'info',
+                                        background: '#141f32',
+                                        color: '#fff',
+                                        confirmButtonColor: '#10b981'
+                                    });
+                                    document.getElementById('universalRechargeForm').reset();
+                                    return;
+                                }
                                 triggerCelebration();
                                 Swal.fire({
                                     title: '🎉 Payment Successful!',
@@ -1840,10 +1862,20 @@
                                 });
                                 document.getElementById('universalRechargeForm').reset();
                             } else {
-                                Swal.fire('Verification Alert', verifyData.detail || 'Payment processed but verification delayed. Our team is tracking it.', 'warning');
+                                Swal.fire({
+                                    title: 'System Notice',
+                                    text: verifyData.detail || 'System is working on updates. Please try after some time.',
+                                    icon: 'info',
+                                    confirmButtonColor: '#10b981'
+                                });
                             }
                         } catch (err) {
-                            Swal.fire('Error', 'Network error verifying payment. Please keep your transaction ID handy.', 'error');
+                            Swal.fire({
+                                title: 'System Notice',
+                                text: 'System is working on updates. Please try after some time.',
+                                icon: 'info',
+                                confirmButtonColor: '#10b981'
+                            });
                         } finally {
                             submitBtn.disabled = false;
                             btnText.innerText = 'Proceed to Pay';

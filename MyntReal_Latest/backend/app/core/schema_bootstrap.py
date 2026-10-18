@@ -2387,7 +2387,7 @@ def bootstrap_canonical_5tier_commission_hierarchy():
     - L3 Extended: 1.00%
     - L4 Core: 0.50%
     - L5 Support: 1.50% (Solar, EV, Training, EV Spares; Real Estate & Insurance based on staff pool)
-    - L6 Showroom: 3.50% (on Solar, triggered at final payment)
+    - L6 Showroom: 2.50% (on Solar, triggered at final payment)
     - Brand Commission: ₹2,000 for qualifying brands (triggered at final payment)
     - Network Pool: 8.00% (5% + 1.5% + 1% + 0.5% = 8.00%)
     """
@@ -2395,7 +2395,7 @@ def bootstrap_canonical_5tier_commission_hierarchy():
     db = SessionLocal()
     try:
         categories = [
-            ('solar',        5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 3.50, 8.00, 'PAYMENT_RECEIVED'),
+            ('solar',        5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 2.50, 8.00, 'PAYMENT_RECEIVED'),
             ('ev',           5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),
             ('etc-training', 5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),
             ('ev-spares',    5.00, 1.50, 1.00, 0.50, 0.00, 1.50, 0.00, 8.00, 'PAYMENT_RECEIVED'),

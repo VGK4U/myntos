@@ -15,8 +15,9 @@ class GameStartRequest(BaseModel):
     @validator("game_type")
     def validate_game_type(cls, v):
         clean = (v or "").strip().upper()
-        if clean not in ["SNAKE", "BLOCK_DROP", "ENDLESS_RUNNER"]:
-            raise ValueError("game_type must be SNAKE, BLOCK_DROP, or ENDLESS_RUNNER")
+        allowed = ["SNAKE", "BLOCK_DROP", "ENDLESS_RUNNER", "BUBBLE_BLASTER", "BOUNCING_BALL", "BOUNCE_CLASSIC"]
+        if clean not in allowed:
+            raise ValueError(f"game_type must be one of: {', '.join(allowed)}")
         return clean
 
 

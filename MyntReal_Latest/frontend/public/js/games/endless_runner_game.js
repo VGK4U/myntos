@@ -2,6 +2,7 @@
  * Game C: Configurable Endless Runner Engine (DC Protocol Oct 2026)
  * Continuous side-scrolling runner with pluggable character configuration,
  * gravity, double-jump physics, ground obstacles, aerial hazards, and collectibles.
+ * Upgraded with relaxed casual speeds and rich 3D colorful aesthetics.
  */
 
 class EndlessRunnerGame {
@@ -11,24 +12,31 @@ class EndlessRunnerGame {
     this.framework = framework;
 
     this.characterId = 'volt_fox';
-    this.character = window.RUNNER_CHARACTERS[this.characterId] || window.RUNNER_CHARACTERS['volt_fox'];
+    this.character = (window.RUNNER_CHARACTERS && window.RUNNER_CHARACTERS[this.characterId]) ||
+      (window.RUNNER_CHARACTERS && window.RUNNER_CHARACTERS['volt_fox']) || {
+        name: 'Volt Fox', width: 36, height: 36,
+        draw: (ctx, x, y) => { ctx.fillStyle = '#f59e0b'; ctx.fillRect(x, y, 36, 36); }
+      };
 
     this.isRunning = false;
     this.isPaused = false;
     this.animFrameId = null;
 
-    // Physics parameters
-    this.gravity = 0.55;
+    // Physics parameters - relaxed, floaty and controllable
+    this.gravity = 0.40;
     this.groundY = 0; // Calculated on resize
     this.playerX = 60;
     this.playerY = 0;
     this.vy = 0;
     this.isGrounded = false;
     this.jumpCount = 0;
-    this.maxJumps = 2; // Double jump support!
+    this.maxJumps = 2; // Double jump support
 
-    this.baseSpeed = 5.0;
-    this.speed = 5.0;
+    // Relaxed chill speeds & Speed modes
+    this.speedMode = 'NORMAL';
+    this.baseSpeed = 2.6;
+    this.maxSpeed = 5.0;
+    this.speed = 2.6;
     this.distance = 0;
     this.coins = 0;
     this.animFrame = 0;
@@ -36,8 +44,8 @@ class EndlessRunnerGame {
     // Obstacles & Collectibles
     this.obstacles = [];
     this.collectibles = [];
-    this.nextObstacleDistance = 250;
-    this.nextCoinDistance = 120;
+    this.nextObstacleDistance = 320;
+    this.nextCoinDistance = 140;
 
     // Parallax background layers
     this.stars = [];
@@ -46,6 +54,24 @@ class EndlessRunnerGame {
     this._bindControls();
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
+  }
+
+  setSpeedMode(mode) {
+    this.speedMode = mode;
+    if (mode === 'SLOW') {
+      this.baseSpeed = 1.8;
+      this.maxSpeed = 3.6;
+    } else if (mode === 'FAST') {
+      this.baseSpeed = 3.6;
+      this.maxSpeed = 6.4;
+    } else if (mode === 'TURBO') {
+      this.baseSpeed = 4.8;
+      this.maxSpeed = 8.0;
+    } else { // NORMAL
+      this.baseSpeed = 2.6;
+      this.maxSpeed = 5.0;
+    }
+    this.speed = this.baseSpeed;
   }
 
   setCharacter(charId) {
@@ -58,12 +84,12 @@ class EndlessRunnerGame {
   resizeCanvas() {
     if (!this.canvas || !this.canvas.parentElement) return;
     const parentWidth = this.canvas.parentElement.clientWidth;
-    const w = Math.min(parentWidth - 24, 680);
-    const h = Math.min(window.innerHeight * 0.48, 380);
+    const w = Math.min(parentWidth - 16, 680);
+    const h = Math.min(window.innerHeight * 0.36, 320);
 
     this.canvas.width = w;
     this.canvas.height = h;
-    this.groundY = h - 60;
+    this.groundY = h - 55;
     this.playerY = this.groundY - this.character.height;
 
     this._initParallax();
@@ -75,7 +101,7 @@ class EndlessRunnerGame {
     const h = this.canvas.height;
 
     // Generate static stars
-    this.stars = Array.from({ length: 30 }, () => ({
+    this.stars = Array.from({ length: 32 }, () => ({
       x: Math.random() * w,
       y: Math.random() * (this.groundY - 80),
       size: Math.random() * 2 + 1,
@@ -101,12 +127,13 @@ class EndlessRunnerGame {
   _bindControls() {
     window.addEventListener('keydown', (e) => {
       if (!this.isRunning || this.isPaused) return;
-      if (['ArrowUp', 'Space', 'KeyW'].includes(e.code)) {
+
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+        e.preventDefault();
         this.jump();
       }
     });
 
-    // Touch / mouse pointer anywhere on canvas jumps
     this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.isRunning || this.isPaused) return;
       this.jump();
@@ -117,7 +144,7 @@ class EndlessRunnerGame {
 
   jump() {
     if (this.jumpCount < this.maxJumps) {
-      this.vy = -11.5;
+      this.vy = -9.0;
       this.isGrounded = false;
       this.jumpCount++;
       if (window.gameAudio) window.gameAudio.playJump();
@@ -160,8 +187,8 @@ class EndlessRunnerGame {
 
     this.obstacles = [];
     this.collectibles = [];
-    this.nextObstacleDistance = 200;
-    this.nextCoinDistance = 100;
+    this.nextObstacleDistance = 320;
+    this.nextCoinDistance = 140;
   }
 
   _loop() {
@@ -176,11 +203,12 @@ class EndlessRunnerGame {
   _update() {
     this.animFrame++;
 
-    // Accelerate runner speed gradually
-    this.speed = Math.min(10.5, this.baseSpeed + (this.distance * 0.0015));
+    // Accelerate runner speed gradually and gently based on speed mode
+    const maxSpd = this.maxSpeed || 5.0;
+    this.speed = Math.min(maxSpd, this.baseSpeed + (this.distance * 0.0005));
 
     // Update distance
-    this.distance += Math.floor(this.speed * 0.25);
+    this.distance += Math.floor(this.speed * 0.22);
     this.framework.setDistance(this.distance);
     this.framework.addScore(1);
 
@@ -204,18 +232,18 @@ class EndlessRunnerGame {
       this.isGrounded = false;
     }
 
-    // Spawn Obstacles
+    // Spawn Obstacles with generous spacing for casual play
     this.nextObstacleDistance -= this.speed;
     if (this.nextObstacleDistance <= 0) {
       this._spawnObstacle();
-      this.nextObstacleDistance = Math.random() * 260 + 200;
+      this.nextObstacleDistance = Math.random() * 280 + 260;
     }
 
     // Spawn Collectibles (Stars)
     this.nextCoinDistance -= this.speed;
     if (this.nextCoinDistance <= 0) {
       this._spawnCollectible();
-      this.nextCoinDistance = Math.random() * 180 + 120;
+      this.nextCoinDistance = Math.random() * 200 + 140;
     }
 
     // Update Obstacles position & collision
@@ -251,16 +279,16 @@ class EndlessRunnerGame {
       const c = this.collectibles[i];
       c.x -= this.speed;
 
-      // Circle to box collision
-      const closeX = Math.max(charBounds.x, Math.min(c.x, charBounds.x + charBounds.w));
-      const closeY = Math.max(charBounds.y, Math.min(c.y, charBounds.y + charBounds.h));
-      const dist = Math.hypot(c.x - closeX, c.y - closeY);
+      const dx = (this.playerX + this.character.width / 2) - c.x;
+      const dy = (this.playerY + this.character.height / 2) - c.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist < c.radius) {
-        if (window.gameAudio) window.gameAudio.playCollect();
+      if (dist < c.radius + this.character.width / 2) {
+        // Collect star!
         this.coins++;
-        this.framework.addScore(25);
-        this.framework.setItems(this.coins);
+        this.framework.addItemsCollected(1);
+        this.framework.addScore(150);
+        if (window.gameAudio) window.gameAudio.playCollect();
         this.collectibles.splice(i, 1);
         continue;
       }
@@ -270,30 +298,36 @@ class EndlessRunnerGame {
       }
     }
 
-    // Parallax update
+    // Move parallax city buildings
     this.cityBuildings.forEach(b => {
-      b.x -= this.speed * 0.3;
+      b.x -= this.speed * 0.25;
       if (b.x + b.w < 0) {
-        b.x = this.canvas.width + Math.random() * 30;
+        b.x = this.canvas.width + Math.random() * 20;
       }
+    });
+
+    // Move stars
+    this.stars.forEach(s => {
+      s.x -= this.speed * 0.08;
+      if (s.x < 0) s.x = this.canvas.width;
     });
   }
 
   _spawnObstacle() {
     const isAerial = Math.random() > 0.65;
     if (isAerial) {
-      // Hovering aerial drone
+      // Hovering aerial 3D drone
       this.obstacles.push({
         type: 'DRONE',
         x: this.canvas.width + 20,
-        y: this.groundY - 75,
+        y: this.groundY - 78,
         w: 32,
         h: 22,
         color: '#f43f5e'
       });
     } else {
-      // Ground energy barrier / spikes
-      const obsHeight = Math.random() > 0.5 ? 36 : 26;
+      // Ground energy barrier / 3D beveled crystal spikes
+      const obsHeight = Math.random() > 0.5 ? 34 : 24;
       this.obstacles.push({
         type: 'GROUND',
         x: this.canvas.width + 20,
@@ -309,14 +343,17 @@ class EndlessRunnerGame {
     this.collectibles.push({
       x: this.canvas.width + 20,
       y: this.groundY - (Math.random() * 80 + 35),
-      radius: 8,
+      radius: 9,
       color: '#fbbf24'
     });
   }
 
   _handleCollision() {
     this.isRunning = false;
-    if (window.gameAudio) window.gameAudio.playCollision();
+    if (window.gameAudio) {
+      if (typeof window.gameAudio.stopMusic === 'function') window.gameAudio.stopMusic();
+      window.gameAudio.playCollision();
+    }
     this.framework.gameOver({
       score: this.framework.score,
       distanceTravelled: this.distance,
@@ -329,38 +366,46 @@ class EndlessRunnerGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Sky Background Gradient
+    // Sky Background 3D Depth Gradient
     const skyGrad = this.ctx.createLinearGradient(0, 0, 0, this.groundY);
-    skyGrad.addColorStop(0, '#090e17');
-    skyGrad.addColorStop(1, '#0f172a');
+    skyGrad.addColorStop(0, '#060a12');
+    skyGrad.addColorStop(0.65, '#0f172a');
+    skyGrad.addColorStop(1, '#1e1b4b');
     this.ctx.fillStyle = skyGrad;
     this.ctx.fillRect(0, 0, w, h);
 
-    // Stars
-    this.ctx.fillStyle = '#94a3b8';
+    // Stars with twinkling
     this.stars.forEach(s => {
-      this.ctx.globalAlpha = s.alpha;
-      this.ctx.fillRect(s.x, s.y, s.size, s.size);
+      this.ctx.fillStyle = '#94a3b8';
+      this.ctx.globalAlpha = s.alpha * (0.8 + Math.sin(this.animFrame * 0.05 + s.x) * 0.2);
+      this.ctx.beginPath();
+      this.ctx.arc(s.x, s.y, s.size * 0.8, 0, Math.PI * 2);
+      this.ctx.fill();
     });
     this.ctx.globalAlpha = 1.0;
 
-    // Distant City Skyline
+    // Distant City Skyline with illuminated 3D depth
     this.cityBuildings.forEach(b => {
       this.ctx.fillStyle = b.color;
       this.ctx.fillRect(b.x, this.groundY - b.h, b.w, b.h);
+
       // Building windows
-      this.ctx.fillStyle = 'rgba(254, 240, 138, 0.25)';
+      this.ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
       for (let wy = this.groundY - b.h + 8; wy < this.groundY - 8; wy += 14) {
         this.ctx.fillRect(b.x + 6, wy, 4, 6);
         if (b.w > 30) this.ctx.fillRect(b.x + 18, wy, 4, 6);
       }
     });
 
-    // Running Ground Platform
-    this.ctx.fillStyle = '#1e293b';
+    // Running Ground 3D Beveled Platform
+    const groundGrad = this.ctx.createLinearGradient(0, this.groundY, 0, h);
+    groundGrad.addColorStop(0, '#1e293b');
+    groundGrad.addColorStop(0.3, '#0f172a');
+    groundGrad.addColorStop(1, '#020617');
+    this.ctx.fillStyle = groundGrad;
     this.ctx.fillRect(0, this.groundY, w, h - this.groundY);
 
-    // Neon Track Border
+    // Glowing 3D Neon Track Rim
     this.ctx.strokeStyle = '#38bdf8';
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
@@ -368,39 +413,64 @@ class EndlessRunnerGame {
     this.ctx.lineTo(w, this.groundY);
     this.ctx.stroke();
 
-    // Moving ground dash stripes
-    this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+    // Secondary neon glow line
+    this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+    this.ctx.lineWidth = 6;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, this.groundY + 2);
+    this.ctx.lineTo(w, this.groundY + 2);
+    this.ctx.stroke();
+
+    // Moving ground dash stripes (isometric perspective)
+    this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
     this.ctx.lineWidth = 2;
-    const offset = (this.animFrame * this.speed) % 30;
-    for (let x = -offset; x < w; x += 30) {
+    const offset = (this.animFrame * this.speed) % 32;
+    for (let x = -offset; x < w; x += 32) {
       this.ctx.beginPath();
-      this.ctx.moveTo(x, this.groundY + 12);
-      this.ctx.lineTo(x + 14, this.groundY + 12);
+      this.ctx.moveTo(x, this.groundY + 14);
+      this.ctx.lineTo(x + 16, this.groundY + 14);
       this.ctx.stroke();
     }
 
-    // Draw Obstacles
+    // Draw Obstacles (3D Spikes and Drones)
     this.obstacles.forEach(obs => {
       if (obs.type === 'DRONE') {
-        // Floating Drone
-        this.ctx.fillStyle = obs.color;
+        // 3D Metallic Hovering Drone
+        const droneGrad = this.ctx.createLinearGradient(obs.x, obs.y, obs.x, obs.y + obs.h);
+        droneGrad.addColorStop(0, '#fda4af');
+        droneGrad.addColorStop(0.5, '#e11d48');
+        droneGrad.addColorStop(1, '#881337');
+        this.ctx.fillStyle = droneGrad;
         this.ctx.beginPath();
         this.ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 6);
         this.ctx.fill();
-        // Rotor blades
+
+        // 3D Specular Highlight on Drone
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.fillRect(obs.x + 3, obs.y + 2, obs.w - 6, 2);
+
+        // Spinning Rotor Blades
         const rotorAngle = Math.sin(this.animFrame * 0.8) * 8;
-        this.ctx.strokeStyle = '#fda4af';
+        this.ctx.strokeStyle = '#38bdf8';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(obs.x - 4, obs.y + rotorAngle);
         this.ctx.lineTo(obs.x + obs.w + 4, obs.y - rotorAngle);
         this.ctx.stroke();
-        // Visor
-        this.ctx.fillStyle = '#ffe4e6';
-        this.ctx.fillRect(obs.x + 6, obs.y + 6, 8, 4);
+
+        // Cyber Visor Eye
+        this.ctx.fillStyle = '#67e8f9';
+        this.ctx.shadowColor = '#06b6d4';
+        this.ctx.shadowBlur = 6;
+        this.ctx.fillRect(obs.x + 8, obs.y + 7, 10, 5);
+        this.ctx.shadowBlur = 0;
       } else {
-        // Ground Barrier
-        this.ctx.fillStyle = obs.color;
+        // 3D Volumetric Ground Crystal Spikes
+        const spikeGrad = this.ctx.createLinearGradient(obs.x, obs.y, obs.x + obs.w, obs.y + obs.h);
+        spikeGrad.addColorStop(0, '#f87171');
+        spikeGrad.addColorStop(0.5, '#dc2626');
+        spikeGrad.addColorStop(1, '#7f1d1d');
+        this.ctx.fillStyle = spikeGrad;
         this.ctx.beginPath();
         this.ctx.moveTo(obs.x, obs.y + obs.h);
         this.ctx.lineTo(obs.x + obs.w / 2, obs.y);
@@ -408,31 +478,67 @@ class EndlessRunnerGame {
         this.ctx.closePath();
         this.ctx.fill();
 
-        // Pulsing warning tip
+        // 3D Left Bevel Highlight
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(obs.x, obs.y + obs.h);
+        this.ctx.lineTo(obs.x + obs.w / 2, obs.y);
+        this.ctx.lineTo(obs.x + obs.w / 2, obs.y + obs.h);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Glowing pulsing core
         this.ctx.fillStyle = '#fef08a';
         this.ctx.beginPath();
-        this.ctx.arc(obs.x + obs.w / 2, obs.y + 4, 3, 0, Math.PI * 2);
+        this.ctx.arc(obs.x + obs.w / 2, obs.y + 5, 3.5, 0, Math.PI * 2);
         this.ctx.fill();
       }
     });
 
-    // Draw Collectible Stars
+    // Draw Collectible 3D Gold Coins
     this.collectibles.forEach(c => {
-      const pulse = Math.sin(this.animFrame * 0.15) * 2;
-      this.ctx.fillStyle = c.color;
-      this.ctx.shadowColor = 'rgba(251, 191, 36, 0.8)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.beginPath();
-      this.ctx.arc(c.x, c.y, c.radius + pulse, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.shadowBlur = 0;
+      const bob = Math.sin(this.animFrame * 0.1) * 3;
+      const cy = c.y + bob;
 
-      // Inner sparkle
-      this.ctx.fillStyle = '#fffbeb';
+      // 3D Spherical Gold Coin
+      const coinGrad = this.ctx.createRadialGradient(
+        c.x - c.radius * 0.3,
+        cy - c.radius * 0.3,
+        1,
+        c.x,
+        cy,
+        c.radius
+      );
+      coinGrad.addColorStop(0, '#fffbeb');
+      coinGrad.addColorStop(0.3, '#fde047');
+      coinGrad.addColorStop(0.7, '#f59e0b');
+      coinGrad.addColorStop(1, '#78350f');
+      this.ctx.fillStyle = coinGrad;
       this.ctx.beginPath();
-      this.ctx.arc(c.x, c.y, (c.radius + pulse) * 0.4, 0, Math.PI * 2);
+      this.ctx.arc(c.x, cy, c.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Specular gleam
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      this.ctx.beginPath();
+      this.ctx.arc(c.x - c.radius * 0.35, cy - c.radius * 0.35, c.radius * 0.3, 0, Math.PI * 2);
       this.ctx.fill();
     });
+
+    // Player Ground Drop Shadow (3D depth)
+    const shadowScale = Math.max(0.3, 1 - ((this.groundY - (this.playerY + this.character.height)) / 120));
+    this.ctx.fillStyle = `rgba(0, 0, 0, ${0.45 * shadowScale})`;
+    this.ctx.beginPath();
+    this.ctx.ellipse(
+      this.playerX + this.character.width / 2,
+      this.groundY + 3,
+      (this.character.width * 0.5) * shadowScale,
+      4 * shadowScale,
+      0,
+      0,
+      Math.PI * 2
+    );
+    this.ctx.fill();
 
     // Draw Configurable Player Character
     const playerState = this.isGrounded ? 'RUNNING' : 'JUMPING';

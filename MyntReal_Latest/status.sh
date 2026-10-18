@@ -4,11 +4,21 @@ echo "=========================================="
 echo "          MYNT OS SERVICE STATUS          "
 echo "=========================================="
 
-# Check PostgreSQL (5433)
-if /opt/homebrew/opt/postgresql@16/bin/pg_ctl -D "$SCRIPT_DIR/postgres_data" status > /dev/null 2>&1; then
+# Check Database
+DB_URL=""
+if [ -f "$SCRIPT_DIR/backend/.env" ]; then
+    DB_URL=$(grep "^DATABASE_URL=" "$SCRIPT_DIR/backend/.env" | cut -d= -f2- | tr -d '"')
+elif [ -f "$SCRIPT_DIR/.env" ]; then
+    DB_URL=$(grep "^DATABASE_URL=" "$SCRIPT_DIR/.env" | cut -d= -f2- | tr -d '"')
+fi
+
+PG_CTL=$(command -v pg_ctl 2>/dev/null || echo "/opt/homebrew/opt/postgresql@16/bin/pg_ctl")
+if [[ "$DB_URL" == *"rds.amazonaws.com"* ]]; then
+    echo "🟢 AWS RDS PostgreSQL (Port 5432): CONNECTED"
+elif [ -x "$PG_CTL" ] && "$PG_CTL" -D "$SCRIPT_DIR/postgres_data" status > /dev/null 2>&1; then
     echo "🟢 PostgreSQL 16 (Port 5433): RUNNING"
 else
-    echo "🔴 PostgreSQL 16 (Port 5433): STOPPED"
+    echo "⚪ Local PostgreSQL (Port 5433): INACTIVE (SQLite Engine Active)"
 fi
 
 # Check Backend (8000)

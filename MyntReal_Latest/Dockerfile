@@ -30,11 +30,11 @@ COPY backend/whatsapp-group-bot/package.json backend/whatsapp-group-bot/package.
 COPY backend/whatsapp-group-bot/package-lock.json backend/whatsapp-group-bot/package-lock.json
 
 # Install Python dependencies with pre-compiled wheels
-RUN pip install --no-cache-dir --prefer-binary -r backend/requirements.txt
+RUN pip install --no-cache-dir --prefer-binary --default-timeout=120 -r backend/requirements.txt
 
 # Install Node.js production dependencies for frontend and whatsapp bot
-RUN cd frontend && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
-RUN cd backend/whatsapp-group-bot && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
+RUN cd frontend && npm install --omit=dev --no-audit --no-fund
+RUN cd backend/whatsapp-group-bot && npm install --omit=dev --no-audit --no-fund
 
 # Copy application source code
 COPY . .

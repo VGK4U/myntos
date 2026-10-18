@@ -818,7 +818,7 @@ class TestVGK4UAuthoritativeImplementation(unittest.TestCase):
     # SCENARIO 25: Solar Financial Pool and Support Additions
     # =========================================================================
     def test_25_solar_financial_pool_and_support_additions(self):
-        """Solar category enforces max network pool == 9.00%, support up to +1.50%, showroom +3.50%, total gross ceiling == 14.00%."""
+        """Solar category enforces max network pool == 9.00%, support up to +1.50%, showroom +2.50%, total gross ceiling == 13.00%."""
         cfg = VGK4UWaterfallEngine.get_category_config(self.db, 'solar', 'v2_sep2026')
         self.assertIsNotNone(cfg)
         self.assertEqual(Decimal(str(cfg.max_network_pool_pct)), Decimal('9.00'))
@@ -828,14 +828,14 @@ class TestVGK4UAuthoritativeImplementation(unittest.TestCase):
         self.assertEqual(Decimal(str(cfg.rm_diff_pct)), Decimal('0.50'))
         self.assertEqual(Decimal(str(cfg.support_journey_pct)), Decimal('0.75'))
         self.assertEqual(Decimal(str(cfg.support_end_to_end_pct)), Decimal('1.50'))
-        self.assertEqual(Decimal(str(cfg.showroom_pct)), Decimal('3.50'))
+        self.assertEqual(Decimal(str(cfg.showroom_pct)), Decimal('2.50'))
 
         gross_ceiling = (
             Decimal(str(cfg.max_network_pool_pct))
             + Decimal(str(cfg.support_end_to_end_pct))
             + Decimal(str(cfg.showroom_pct))
         )
-        self.assertEqual(gross_ceiling, Decimal('14.00'))
+        self.assertEqual(gross_ceiling, Decimal('13.00'))
 
     # =========================================================================
     # SCENARIO 26: All Support Cases (Self, Non-Staff Field+Full, Field-Only, Staff)

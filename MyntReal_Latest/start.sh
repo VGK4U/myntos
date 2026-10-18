@@ -19,6 +19,15 @@ export ENVIRONMENT="${ENVIRONMENT:-production}"
 export NODE_ENV="${NODE_ENV:-production}"
 export ALLOW_PROD_DB_ACCESS="1"
 
+# Load production credentials from .env if present
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    echo "Loading production credentials from .env..."
+    export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+elif [ -f "$SCRIPT_DIR/backend/.env" ]; then
+    echo "Loading production credentials from backend/.env..."
+    export $(grep -v '^#' "$SCRIPT_DIR/backend/.env" | xargs)
+fi
+
 # Verify critical environment variables
 echo ""
 echo "Checking environment variables..."

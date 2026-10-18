@@ -14,3 +14,10 @@ You are an AI coding assistant working on the VGK4U codebase. You must strictly 
    - You must wrap them in `if (typeof window !== 'undefined') { ... }` or place them inside `useEffect` hooks.
 
 4. **MEMORY AWARENESS:** The AWS production server is a monolithic instance with limited RAM. Do not silently bundle memory-heavy background processes (like Headless Chrome/Puppeteer bots) into the main API startup script without warning the user about Out-Of-Memory (OOM) risks.
+
+5. **STRICT AWS DEPLOYMENT ZIP SANITIZATION & ZERO CREDENTIAL LEAKAGE (MANDATORY ENFORCEMENT):**
+   - Whenever creating or updating deployment zips (`deployment.zip`, `MyntReal_AWS_Deploy.zip`), the zip MUST be 100% sanitized.
+   - NEVER bundle `.env`, `.env.*`, `backend/.env`, `credentials.json`, `id_rsa`, `.pem`, or `.key` files.
+   - NEVER generate or bundle `.ebextensions/01_env.config` (avoids AWS CloudFormation 4096-byte limit and credential logging).
+   - All production credentials must only be configured in AWS Elastic Beanstalk Environment Properties, decoupled from the zip file.
+   - All deployment build scripts must perform an automated post-packaging security scan to ensure 0 secret leaks.

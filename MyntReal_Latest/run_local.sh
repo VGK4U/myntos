@@ -20,9 +20,9 @@ else
 fi
 
 # Always use local PostgreSQL for local development to prevent AWS RDS network timeouts
-export DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
-export PROD_DATABASE_URL="postgresql://127.0.0.1:5433/myntreal_dev"
-echo "Using local database: $DATABASE_URL"
+export DATABASE_URL="${DATABASE_URL:-postgresql://127.0.0.1:5433/myntreal_dev}"
+export PROD_DATABASE_URL="${PROD_DATABASE_URL:-postgresql://127.0.0.1:5433/myntreal_dev}"
+echo "Using database: $DATABASE_URL"
 
 if [ -z "$SECRET_KEY" ]; then
     export SECRET_KEY="dev-secret-key-123"

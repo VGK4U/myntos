@@ -5,7 +5,7 @@ Test Suite: Canonical 5-Tier Commission Hierarchy & Final Payment Triggers
 - L3 Extended: 1.0%
 - L4 Core: 0.5%
 - L5 Support: 1.5% (Solar, EV, Training, EV Spares; Real Estate & Insurance based on staff pool)
-- L6 Showroom: 3.5% on Solar (triggers along with final payment)
+- L6 Showroom: 2.5% on Solar (triggers along with final payment)
 - Brand Commission: ₹2,000 based on selected brands (triggers along with final payment)
 """
 
@@ -85,7 +85,7 @@ class TestCanonical5TierCommissionSuite(unittest.TestCase):
             self.assertEqual(Decimal(str(cfg.support_end_to_end_pct)), Decimal('1.50'), f"L5 Support mismatch for {slug}")
             self.assertEqual(Decimal(str(cfg.max_network_pool_pct)), Decimal('8.00'), f"Network pool mismatch for {slug}")
             if slug == 'solar':
-                self.assertEqual(Decimal(str(cfg.showroom_pct)), Decimal('3.50'), "Solar Showroom mismatch")
+                self.assertEqual(Decimal(str(cfg.showroom_pct)), Decimal('2.50'), "Solar Showroom mismatch")
             if slug in ('real-dreams', 'insurance'):
                 self.assertEqual(cfg.earning_basis_type, 'COMMISSION_RECEIVED')
             else:
@@ -234,7 +234,7 @@ class TestCanonical5TierCommissionSuite(unittest.TestCase):
         self.assertEqual(Decimal(str(b_entry.commission_amount)), Decimal('2000.00'))
 
     def test_04_solar_showroom_triggers_only_at_final_payment(self):
-        """TEST 4: Showroom commission (3.5%) is omitted from Stage 2 DVR advances and reserved for final commission."""
+        """TEST 4: Showroom commission (2.5%) is omitted from Stage 2 DVR advances and reserved for final commission."""
         db = self.db
         lead_id = 99883
 

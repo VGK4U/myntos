@@ -30,24 +30,30 @@ fi
 
 # DC Protocol (ARCHITECTURAL FIX - Sep 2026): Enforce local DB isolation for local supervisor
 # NEVER connect to production RDS from local development daemon
-export ENVIRONMENT="development"
-export ALLOW_PROD_DB_ACCESS="0"
-export ALLOW_LOCAL_WHATSAPP_SOCKET="false"
-export DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/myntreal_dev"
-export PROD_DATABASE_URL="$DATABASE_URL"
+export ENVIRONMENT="${ENVIRONMENT:-development}"
+export ALLOW_PROD_DB_ACCESS="${ALLOW_PROD_DB_ACCESS:-0}"
+export ALLOW_LOCAL_WHATSAPP_SOCKET="${ALLOW_LOCAL_WHATSAPP_SOCKET:-false}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/myntreal_dev}"
+export PROD_DATABASE_URL="${PROD_DATABASE_URL:-$DATABASE_URL}"
 export RUN_STARTUP_MIGRATIONS="0"
 export RUN_EXPLICIT_MIGRATIONS="0"
 export SKIP_MODULE_MIGRATIONS="1"
 export SECRET_KEY="${SECRET_KEY:-dev-secret-key-123}"
 export AI_AUDIO_DIR="$PROJECT_DIR/tmp_ai_audio"
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 PYTHON_BIN="$PROJECT_DIR/venv/bin/python"
 if [ ! -f "$PYTHON_BIN" ]; then
     PYTHON_BIN=$(which python3 2>/dev/null || which python 2>/dev/null || echo "python3")
 fi
 
-NODE_BIN=$(which node 2>/dev/null || echo "/opt/homebrew/bin/node")
+if [ -x "$HOME/.local/bin/node" ]; then
+    NODE_BIN="$HOME/.local/bin/node"
+elif command -v node >/dev/null 2>&1; then
+    NODE_BIN="$(command -v node)"
+else
+    NODE_BIN="/opt/homebrew/bin/node"
+fi
 
 # Global Child PIDs
 NODE_PID=""
@@ -145,7 +151,7 @@ start_frontend() {
 }
 
 start_whatsapp() {
-    if [ -d "$PROJECT_DIR/backend/whatsapp-group-bot" ]; then
+    if [ -d "$PROJECT_DIR/backend/whatsapp-group-bot" ] && [ -d "$PROJECT_DIR/backend/whatsapp-group-bot/node_modules" ]; then
         local existing_pid=$(lsof -nP -i :5002 -sTCP:LISTEN -t 2>/dev/null | head -1)
         if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
             WA_PID="$existing_pid"

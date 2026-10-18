@@ -96,9 +96,10 @@ def check_workflows():
         issues.append("Backend offline")
     
     try:
-        result = requests.get("http://127.0.0.1:5000/", timeout=5)
+        frontend_port = os.getenv("PORT", "5001" if sys.platform == "darwin" else "5000")
+        result = requests.get(f"http://127.0.0.1:{frontend_port}/", timeout=5)
         if result.status_code == 200:
-            print_pass("Frontend server responding on port 5000")
+            print_pass(f"Frontend server responding on port {frontend_port}")
         else:
             print_fail(f"Frontend returned status {result.status_code}")
             issues.append("Frontend error")

@@ -74,4 +74,18 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
   - **Git & GitHub Safeguard**: All `.env`, `backend/.env`, `frontend/.env`, `.env.local`, `.env.production`, and build archives (`*.zip`) MUST remain strictly in `.gitignore`. NEVER stage or commit `.env` files or secret credentials to Git/GitHub repositories.
   - **No Secrets in Client Bundles**: Web, `/mobile`, Android, and iOS client-side assets MUST NOT expose private backend credentials. All file operations and external API requests requiring credentials MUST route securely through backend services.
 
+---
+
+### 8. STRICT AWS DEPLOYMENT ZIP SANITIZATION & ZERO CREDENTIAL LEAKAGE (MANDATORY ENFORCEMENT)
+- **Rule**: Whenever generating or packaging deployment zip archives (`deployment.zip`, `MyntReal_AWS_Deploy.zip`), the zip MUST be 100% sanitized and completely free of any `.env` files, `.ebextensions/01_env.config`, or raw secrets.
+- **Enforcement Directives**:
+  1. **Strictly Exclude `.env` & Secrets**: `.env`, `.env.*`, `backend/.env`, `frontend/.env`, `credentials.json`, `id_rsa`, `.pem`, and `.key` files MUST NEVER be included in any deployment zip.
+  2. **Do NOT Bundle `01_env.config`**: Never generate `.ebextensions/01_env.config` in deployment archives. This prevents exceeding the AWS CloudFormation 4096-byte hard limit and prevents credentials from leaking into AWS CloudTrail / CloudFormation event logs.
+  3. **AWS Console / EB Environment Variable Decoupling**: All production secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DATABASE_URL`, `PROD_DATABASE_URL`, `RAZORPAY_*`, `GITHUB_TOKEN`, etc.) are maintained strictly in Elastic Beanstalk Environment Properties via the AWS Console or AWS CLI, never in the zip file.
+  4. **No Hardcoded Credentials in Scripts**: All migration or reconciliation scripts in `backend/scripts/` must read environment variables dynamically (`os.environ.get("PROD_DATABASE_URL")`) with safe fallbacks, never hardcoded RDS passwords.
+  5. **Mandatory Post-Packaging Security Audit**: Every deployment packaging tool (`build_aws_zip.py`) MUST perform an automated audit pass over the completed zip archive:
+     - Verify 0 instances of `.env`, `01_env.config`, `.pem`, `.key`, `Secrets`, or private credentials.
+     - Deep-scan text files for credential signatures (`AWS_SECRET_ACCESS_KEY`, `ghp_`, RDS passwords).
+     - Abort immediately with a fatal `SecurityError` if any violation is detected.
+
 

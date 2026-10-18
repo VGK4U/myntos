@@ -24,18 +24,18 @@ class SnakeGame {
     this.isRunning = false;
     this.isPaused = false;
 
-    // Speed configuration (base interval and floor per mode)
+    // Speed configuration (significantly relaxed for smooth mobile & casual play)
     this.baseIntervalMap = {
-      SLOW: 140,
-      NORMAL: 105,
-      FAST: 75,
-      TURBO: 50
+      SLOW: 280,
+      NORMAL: 200,
+      FAST: 140,
+      TURBO: 95
     };
     this.minFloorMap = {
-      SLOW: 70,
-      NORMAL: 45,
-      FAST: 32,
-      TURBO: 24
+      SLOW: 180,
+      NORMAL: 120,
+      FAST: 85,
+      TURBO: 60
     };
 
     let savedSpeed = 'NORMAL';
@@ -53,12 +53,12 @@ class SnakeGame {
   }
 
   calcInterval() {
-    const base = this.baseIntervalMap[this.speedMode] || 105;
-    const minFloor = this.minFloorMap[this.speedMode] || 45;
+    const base = this.baseIntervalMap[this.speedMode] || 200;
+    const minFloor = this.minFloorMap[this.speedMode] || 120;
     const foodCount = Math.max(0, this.snake ? this.snake.length - 3 : 0);
     const lvl = Math.floor(foodCount / 15) + 1;
-    // Speed increases progressively based on level: each level (every 15 foods) accelerates speed
-    const speedUp = (lvl - 1) * 7 + (foodCount % 15) * 0.45;
+    // Gradual, gentle acceleration that never gets uncontrollably fast
+    const speedUp = (lvl - 1) * 3 + (foodCount % 15) * 0.2;
     return Math.max(minFloor, base - speedUp);
   }
 
@@ -75,7 +75,8 @@ class SnakeGame {
   resizeCanvas() {
     if (!this.canvas || !this.canvas.parentElement) return;
     const parentWidth = this.canvas.parentElement.clientWidth;
-    const size = Math.min(parentWidth - 24, 440);
+    const maxH = Math.min(window.innerHeight * 0.42, 360);
+    const size = Math.min(parentWidth - 20, maxH, 420);
     this.canvas.width = size;
     this.canvas.height = size;
     this.tileSize = size / this.gridSize;
@@ -327,7 +328,10 @@ class SnakeGame {
 
   _handleCollision() {
     this.isRunning = false;
-    if (window.gameAudio) window.gameAudio.playCollision();
+    if (window.gameAudio) {
+      if (typeof window.gameAudio.stopMusic === 'function') window.gameAudio.stopMusic();
+      window.gameAudio.playCollision();
+    }
     this._createParticleBurst(
       this.snake[0].x * this.tileSize,
       this.snake[0].y * this.tileSize,

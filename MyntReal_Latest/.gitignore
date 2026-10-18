@@ -26,3 +26,4 @@ scratch/
 **/public_storage/
 backend/app/uploads/
 .ebextensions/01_env.config
+tmp_ai_audio/

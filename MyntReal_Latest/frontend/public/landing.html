@@ -2075,7 +2075,17 @@
               const orderData = await res.json();
 
               if(!res.ok) {
-                  alert(orderData.detail || "Failed to create order");
+                  const errorMsg = (orderData && orderData.detail) ? orderData.detail : "System is working on updates. Please try after some time.";
+                  if (typeof Swal !== 'undefined') {
+                      Swal.fire({
+                          title: 'System Notice',
+                          text: errorMsg,
+                          icon: 'info',
+                          confirmButtonColor: '#10b981'
+                      });
+                  } else {
+                      alert(errorMsg);
+                  }
                   btn.innerHTML = 'Proceed to Pay';
                   btn.disabled = false;
                   return;
@@ -2134,10 +2144,20 @@
                               // Optional: Reset form
                               document.getElementById('rechargeForm').reset();
                           } else {
-                              Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');
+                              Swal.fire({
+                                  title: 'System Notice',
+                                  text: verifyData.detail || 'System is working on updates. Please try after some time.',
+                                  icon: 'info',
+                                  confirmButtonColor: '#10b981'
+                              });
                           }
                       } catch(err) {
-                          Swal.fire('Error', 'Error verifying payment.', 'error');
+                          Swal.fire({
+                              title: 'System Notice',
+                              text: 'System is working on updates. Please try after some time.',
+                              icon: 'info',
+                              confirmButtonColor: '#10b981'
+                          });
                       }
                   },
                   "prefill": {

@@ -106,6 +106,11 @@ class GameFramework {
     this._updateScoreHUD();
     this._showLoading("Initializing Secure Session...");
 
+    // Synchronously awaken WebAudio context while user gesture token is active
+    if (window.gameAudio && typeof window.gameAudio.unlock === 'function') {
+      window.gameAudio.unlock();
+    }
+
     try {
       // Call backend to create verified game session
       const resp = await fetch('/api/v1/games/start', {
@@ -273,6 +278,21 @@ class GameFramework {
         window.gameAudio.playSuccess();
       }
     }
+  }
+
+  addItemsCollected(count = 1) {
+    this.itemsCollected += count;
+    this._updateScoreHUD();
+  }
+
+  addLinesCleared(count = 1) {
+    this.linesCleared += count;
+    this._updateScoreHUD();
+  }
+
+  addDistance(meters) {
+    this.distanceTravelled += meters;
+    this._updateScoreHUD();
   }
 
   setItems(count) {

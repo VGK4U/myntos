@@ -1459,27 +1459,39 @@ def _naturalise_tts_text(text: str, language: str = "hi") -> str:
 
 def _ffmpeg_to_mulaw(raw_path: str, filepath: str) -> None:
     """Convert any PCM WAV to G.711 µ-law 8kHz mono — the native PSTN codec."""
-    import subprocess
-    result = subprocess.run(
-        [
-            "ffmpeg", "-y", "-i", raw_path,
-            "-af", "loudnorm=I=-16:TP=-2:LRA=11",  # gentle loudness, natural dynamics
-            "-ar", "8000",                           # 8 kHz — G.711 standard
-            "-ac", "1",                              # mono
-            "-acodec", "pcm_mulaw",                  # G.711 µ-law
-            filepath,
-        ],
-        capture_output=True, timeout=20,
-    )
-    try:
-        os.remove(raw_path)
-    except Exception:
-        pass
-    if result.returncode != 0 or not os.path.exists(filepath):
+    import subprocess, shutil
+    if shutil.which("ffmpeg"):
         try:
-            os.rename(raw_path, filepath)
-        except Exception:
-            pass
+            result = subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", raw_path,
+                    "-af", "loudnorm=I=-16:TP=-2:LRA=11",  # gentle loudness, natural dynamics
+                    "-ar", "8000",                           # 8 kHz — G.711 standard
+                    "-ac", "1",                              # mono
+                    "-acodec", "pcm_mulaw",                  # G.711 µ-law
+                    filepath,
+                ],
+                capture_output=True, timeout=20,
+            )
+            if result.returncode == 0 and os.path.exists(filepath):
+                try:
+                    os.remove(raw_path)
+                except Exception:
+                    pass
+                return
+        except Exception as e:
+            logger.warning(f"[AUDIO] ffmpeg conversion failed, falling back: {e}")
+
+    # Fallback when ffmpeg is not installed or failed
+    try:
+        if os.path.exists(raw_path):
+            shutil.copyfile(raw_path, filepath)
+            try:
+                os.remove(raw_path)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"[AUDIO] Failed to write fallback audio file: {e}")
 
 
 def _google_tts(text: str, language: str, is_male: bool = False) -> bytes | None:
@@ -1640,7 +1652,42 @@ def _generate_tts(
     if max_candidates:
         return _get_static_fallback_audio(language, "greeting")
 
-    # ── Attempt 2: OpenAI TTS fallback (if configured) ─────────────────────────
+    # ── Attempt 2: Sarvam TTS fallback for Indian languages ───────────────────
+    sarvam_key = get_sarvam_api_key()
+    if sarvam_key:
+        try:
+            import httpx as _httpx, base64 as _base64
+            sarvam_lang = "te-IN" if language == "te" else ("hi-IN" if language == "hi" else "en-IN")
+            sarvam_speaker = "priya" if not is_male_persona else "aditya"
+            resp = _httpx.post(
+                "https://api.sarvam.ai/text-to-speech",
+                headers={"api-subscription-key": sarvam_key, "Content-Type": "application/json"},
+                json={
+                    "inputs": [clean_text[:450]],
+                    "target_language_code": sarvam_lang,
+                    "speaker": sarvam_speaker,
+                    "pitch": 0,
+                    "pace": 1.0,
+                    "loudness": 1.5,
+                    "speech_sample_rate": 8000,
+                    "enable_preprocessing": True,
+                    "model": "bulbul:v3"
+                },
+                timeout=12,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                audios = data.get("audios", [])
+                if audios:
+                    audio_bytes = _base64.b64decode(audios[0])
+                    with open(raw_path, "wb") as f:
+                        f.write(audio_bytes)
+                    _ffmpeg_to_mulaw(raw_path, filepath)
+                    return filename
+        except Exception as sarvam_err:
+            logger.warning(f"[AI-CALLING] Sarvam TTS fallback failed: {sarvam_err}")
+
+    # ── Attempt 3: OpenAI TTS fallback (if configured) ─────────────────────────
     if openai_key:
         try:
             import httpx as _httpx
@@ -1659,7 +1706,7 @@ def _generate_tts(
         except Exception as oai_err:
             logger.warning(f"[AI-CALLING] OpenAI TTS fallback failed: {oai_err}")
 
-    # ── Attempt 3: Safe static pre-rendered fallback (Zero Polly Telugu/Hindi) ───
+    # ── Attempt 4: Safe static pre-rendered fallback (Zero Polly Telugu/Hindi) ───
     return _get_static_fallback_audio(language, "greeting")
 
 

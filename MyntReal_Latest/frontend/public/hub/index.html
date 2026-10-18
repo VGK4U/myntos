@@ -1302,7 +1302,17 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
         const orderData = await res.json();
 
         if(!res.ok) {
-            alert(orderData.detail || "Failed to create order");
+            const errorMsg = (orderData && orderData.detail) ? orderData.detail : "System is working on updates. Please try after some time.";
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'System Notice',
+                    text: errorMsg,
+                    icon: 'info',
+                    confirmButtonColor: '#10b981'
+                });
+            } else {
+                alert(errorMsg);
+            }
             btn.innerHTML = 'Proceed to Pay';
             btn.disabled = false;
             return;
@@ -1359,11 +1369,11 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                             });
                         } else if(rStatus.includes("failed") || rStatus.includes("refund")) {
                             await Swal.fire({
-                                title: 'Recharge Failed ❌',
-                                html: 'The operator network is temporarily down or the plan is invalid.<br><br><b>A full refund has been instantly initiated</b> to your bank account. It will reflect in 3-5 days.<br><br><small style="color: #64748b;">A WhatsApp notification has been sent to your number.</small>',
-                                icon: 'error',
+                                title: 'System Notice',
+                                html: 'System is working on updates. Please try after some time.<br><br><b>A full refund has been automatically initiated</b> to your bank account.<br><br><small style="color: #64748b;">A WhatsApp confirmation has been sent to your number.</small>',
+                                icon: 'info',
                                 confirmButtonText: 'Understood',
-                                confirmButtonColor: '#ef4444'
+                                confirmButtonColor: '#10b981'
                             });
                         } else {
                             await Swal.fire({
@@ -1377,12 +1387,22 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
                         
                         document.getElementById('hubRechargeForm').reset();
                     } else {
-                        Swal.fire('Error', verifyData.detail || "Payment verification failed", 'error');
+                        Swal.fire({
+                            title: 'System Notice',
+                            text: verifyData.detail || "System is working on updates. Please try after some time.",
+                            icon: 'info',
+                            confirmButtonColor: '#10b981'
+                        });
                     }
                 } catch(err) {
                     btn.innerHTML = 'Proceed to Pay';
                     btn.disabled = false;
-                    Swal.fire('Error', 'Error verifying payment.', 'error');
+                    Swal.fire({
+                        title: 'System Notice',
+                        text: 'System is working on updates. Please try after some time.',
+                        icon: 'info',
+                        confirmButtonColor: '#10b981'
+                    });
                 }
             },
             "prefill": {

@@ -1183,11 +1183,10 @@ def send_lead_welcome(
                     MessageLog.current_status.in_(['sent', 'delivered']),
                     MessageLog.mobile_number.like(f"%{clean_phone_10}"),
                     or_(
-                        MessageLog.message_type.like('%welcome%'),
-                        MessageLog.message_type.like('%thankyou%'),
-                        MessageLog.message_body.like('%Welcome to%'),
-                        MessageLog.message_body.like('%ధన్యవాదాలు%'),
-                        MessageLog.message_body.like('%స్వాగతం%')
+                        MessageLog.message_type.like('%lead_welcome%'),
+                        MessageLog.message_type.like('%welcome_general%'),
+                        MessageLog.message_type.like('%welcome_solar%'),
+                        MessageLog.message_type.like('%welcome_walkin%')
                     )
                 ).first()
 

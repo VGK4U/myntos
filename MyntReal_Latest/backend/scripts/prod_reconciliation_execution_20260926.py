@@ -38,7 +38,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-PROD_DB_URL = "postgresql://postgres:MyntRealAdmin2026!@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres"
+PROD_DB_URL = os.environ.get("PROD_DATABASE_URL", "postgresql://postgres@localhost:5432/postgres")
 
 def run_reconciliation():
     print("=" * 80)

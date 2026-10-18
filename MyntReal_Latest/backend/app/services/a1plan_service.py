@@ -222,9 +222,10 @@ def roffer_check(mobile: str, operator_code: Optional[str] = None) -> Dict[str, 
 
     username, pwd = get_credentials()
     if not username or not pwd:
+        logger.warning("A1PlanAPI credentials not configured in settings.")
         return {
             "success": False,
-            "error": "A1PlanAPI credentials not configured in settings.",
+            "error": "System is working on updates. Please try after some time.",
             "offers": []
         }
 
@@ -287,7 +288,7 @@ def roffer_check(mobile: str, operator_code: Optional[str] = None) -> Dict[str, 
         logger.error(f"rofferCheck exception: {e}")
         err_res = {
             "success": False,
-            "error": f"Error reaching R-Offer gateway: {str(e)}",
+            "error": "System is working on updates. Please try after some time.",
             "offers": []
         }
         _roffer_cache[cache_key] = (now, err_res)
@@ -316,9 +317,10 @@ def plan_fetch(operator_code: str, circle_code: str = DEFAULT_CIRCLE_CODE) -> Di
 
     username, pwd = get_credentials()
     if not username or not pwd:
+        logger.warning("A1PlanAPI credentials not configured in settings.")
         return {
             "success": False,
-            "error": "A1PlanAPI credentials not configured in settings.",
+            "error": "System is working on updates. Please try after some time.",
             "categories": {},
             "plans": []
         }
@@ -397,7 +399,7 @@ def plan_fetch(operator_code: str, circle_code: str = DEFAULT_CIRCLE_CODE) -> Di
         logger.error(f"planFetch exception: {e}")
         err_res = {
             "success": False,
-            "error": f"Error reaching plan gateway: {str(e)}",
+            "error": "System is working on updates. Please try after some time.",
             "categories": {},
             "plans": []
         }

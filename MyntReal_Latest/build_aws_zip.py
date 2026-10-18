@@ -5,6 +5,9 @@ import shutil
 import hashlib
 from pathlib import Path
 
+class SecurityError(Exception):
+    pass
+
 def create_zip():
     source_dir = Path(__file__).resolve().parent
     root_dir = source_dir.parent
@@ -34,7 +37,10 @@ def create_zip():
         'MNR_Staff_System_Reimplementation_Plan.docx', 'curl_out.txt', 'git_push.log',
         'git_res.txt', 'flake8_errors.txt', 'test_output.txt', 'node.log', 'uvicorn.log',
         'servers.log', 'nohup.out', 'fetch.err', 'fetch.out', 'verify_e2e_readiness.py',
-        'check_imports.py', '.antigravity_deploy_lock'
+        'check_imports.py', '.antigravity_deploy_lock',
+        '.env', '.env.local', '.env.production', '.env.development', '.env.staging',
+        '.env.test', '.env.backup', 'credentials', 'credentials.json', 'id_rsa', 'id_ed25519',
+        'build_aws_zip.py', 'build_zip_fix_yaml.py'
     }
 
     print(f"[PACKAGING] Packaging Canonical Slim AWS Deploy Zip (< 50MB) from: {source_dir}")
@@ -67,7 +73,7 @@ def create_zip():
                 rel_path = file_path.relative_to(source_dir)
                 rel_str = str(rel_path).replace("\\", "/")
 
-                if file in exclude_files:
+                if file in exclude_files or file == '.env' or file.startswith('.env.') or file.endswith('.env') or file.endswith(('.key', '.pem', '.secret', '.token')):
                     continue
 
                 # Always keep production APK files
@@ -93,6 +99,7 @@ def create_zip():
                 if file.endswith('.sql') and 'backend/migrations' not in rel_str:
                     continue
 
+                # Strictly exclude dotfiles except required deployment configs
                 if file.startswith('.') and file not in ['.dockerignore', '.ebextensions', '.platform']:
                     continue
 
@@ -121,26 +128,44 @@ def create_zip():
                 except Exception as err:
                     print(f"Warning skipping file {rel_str}: {err}")
 
-        # Dynamically inject environment variables into .ebextensions/01_env.config
-        env_path = source_dir / 'backend' / '.env'
-        if not env_path.exists():
-            env_path = source_dir / '.env'
+        # Verify .ebextensions/01_env.config is NOT included (AWS 4096-byte limit & secret leak prevention)
+        if '.ebextensions/01_env.config' in zf.namelist():
+            config_bytes = len(zf.read('.ebextensions/01_env.config'))
+            print(f"[VERIFY] .ebextensions/01_env.config size: {config_bytes} bytes (AWS Limit: 4096 bytes)")
+            if config_bytes > 4096:
+                raise ValueError(f"CRITICAL: .ebextensions/01_env.config ({config_bytes} bytes) exceeds AWS 4096-byte limit!")
+        else:
+            print("[SECURITY] .ebextensions/01_env.config is not bundled (protecting AWS CloudFormation option settings).")
 
-        if env_path.exists():
-            env_config_lines = ["option_settings:", "  aws:elasticbeanstalk:application:environment:"]
-            with open(env_path, 'r', encoding='utf-8') as env_file:
-                for line in env_file:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        k, v = line.split('=', 1)
-                        k = k.strip()
-                        v = v.strip().strip('\'"')
-                        if k != "SECRET_KEY":  # Secret key set in EB console directly
-                            env_config_lines.append(f"    {k}: \"{v}\"")
+    # Post-packaging Automated Security Audit
+    print("\n[SECURITY AUDIT] Scanning deployment bundle for sensitive data and credentials...")
+    forbidden_file_patterns = ['.env', 'credentials.json', 'id_rsa', 'id_ed25519', '.pem', '.key', 'Secrets']
+    suspicious_patterns = [
+        b'AWS_SECRET_ACCESS_KEY=',
+        b'ghp_',
+        b'Admin2026!'
+    ]
 
-            env_config_content = '\n'.join(env_config_lines) + '\n'
-            zf.writestr('.ebextensions/01_env.config', env_config_content)
-            print(f"[SUCCESS] Injected environment variables into .ebextensions/01_env.config")
+    with zipfile.ZipFile(deploy_zip_path, 'r') as verify_zf:
+        names = verify_zf.namelist()
+        for name in names:
+            # Check filename
+            for pattern in forbidden_file_patterns:
+                if pattern in name:
+                    raise SecurityError(f"CRITICAL SECURITY VIOLATION: Forbidden file '{name}' found in deployment zip!")
+            
+            # Deep scan text files for credential leaks
+            if any(name.endswith(ext) for ext in ['.py', '.sh', '.json', '.js', '.config', '.conf', '.txt']):
+                try:
+                    content = verify_zf.read(name)
+                    for bad in suspicious_patterns:
+                        if bad in content:
+                            raise SecurityError(f"CRITICAL SECURITY VIOLATION: Raw credential detected in '{name}' inside deployment zip!")
+                except Exception as ex:
+                    if "CRITICAL SECURITY VIOLATION" in str(ex):
+                        raise
+
+    print("[SECURITY AUDIT PASSED] 0 sensitive files (.env, keys, tokens) found. Deployment package is 100% sanitized for AWS.")
 
     compressed_size = deploy_zip_path.stat().st_size
     print(f"[SUCCESS] Canonical Deploy Zip created successfully!")

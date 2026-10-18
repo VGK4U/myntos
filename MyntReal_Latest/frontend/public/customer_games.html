@@ -161,16 +161,16 @@
 
     /* Game Stage Arena */
     .game-arena-wrapper {
-      background: #04070e;
-      border: 1px solid var(--card-border);
+      background: radial-gradient(circle at 50% 25%, #1e293b 0%, #0f172a 60%, #070b14 100%);
+      border: 1px solid rgba(56, 189, 248, 0.25);
       border-radius: 20px;
       position: relative;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-      min-height: 380px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), inset 0 0 35px rgba(15, 23, 42, 0.6);
+      min-height: 360px;
     }
 
     #game-canvas {
@@ -312,6 +312,46 @@
       box-shadow: 0 2px 10px var(--emerald-glow);
     }
 
+    .speed-picker-pill.active-blue {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .speed-picker-pill.active-red {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+    }
+
+    .speed-picker-pill.active-amber {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
+    }
+
+    .speed-picker-pill.active-purple {
+      background: rgba(217, 70, 239, 0.25);
+      border-color: #d946ef;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(217, 70, 239, 0.4);
+    }
+
+    .speed-picker-pill.active-cyan {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .custom-speed-slider {
+      cursor: pointer;
+      height: 6px;
+    }
+
     /* Mobile Responsive Layout & Alignment Overhauls */
     html, body {
       max-width: 100vw;
@@ -381,72 +421,72 @@
         display: none !important;
       }
       #snake-speed-picker, #runner-char-picker {
-        padding: 12px 10px !important;
-        margin-bottom: 14px !important;
+        padding: 8px 10px !important;
+        margin-bottom: 10px !important;
       }
       .speed-picker-pill, .char-picker-pill {
         flex: 1 1 calc(50% - 6px);
         justify-content: center;
         text-align: center;
-        padding: 7px 6px;
-        font-size: 0.78rem;
+        padding: 5px 6px;
+        font-size: 0.76rem;
       }
       .hud-panel {
-        padding: 10px 8px;
+        padding: 8px 6px;
         border-radius: 14px;
-        margin-bottom: 14px !important;
+        margin-bottom: 10px !important;
       }
       .score-metric-box {
-        padding: 4px;
+        padding: 2px 4px;
       }
       .score-label {
-        font-size: 0.64rem;
+        font-size: 0.62rem;
         letter-spacing: 0.2px;
         white-space: nowrap;
       }
       .score-val-current {
-        font-size: 1.4rem;
+        font-size: 1.25rem;
       }
       .score-val-best {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
       }
       .game-arena-wrapper {
         min-height: auto;
-        padding: 6px;
+        padding: 8px 6px;
         border-radius: 16px;
       }
       #game-canvas {
-        max-height: 50vh;
+        max-height: 48vh;
         object-fit: contain;
       }
       .mobile-controls-bar {
         display: flex;
         justify-content: center;
         gap: 8px;
-        margin-top: 10px;
-        padding: 4px 0;
+        margin-top: 8px;
+        padding: 2px 0;
       }
       .dpad-btn {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        font-size: 1.15rem;
-      }
-      #mobile-controls-block {
-        gap: 5px;
-      }
-      #mobile-controls-block .dpad-btn {
         width: 44px;
         height: 44px;
+        border-radius: 12px;
+        font-size: 1.05rem;
+      }
+      #mobile-controls-block {
+        gap: 6px;
+      }
+      #mobile-controls-block .dpad-btn {
+        width: 42px;
+        height: 42px;
         font-size: 0.95rem;
         flex: 1;
-        max-width: 52px;
+        max-width: 50px;
       }
       .btn-action-jump {
         max-width: 100% !important;
-        height: 48px;
-        font-size: 0.85rem;
-        border-radius: 14px;
+        height: 44px;
+        font-size: 0.82rem;
+        border-radius: 12px;
         margin: 0 4px;
       }
       .game-ui-overlay {
@@ -470,31 +510,37 @@
   <!-- TOP NAVBAR -->
   <header class="top-navbar">
     <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <a href="/customer/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-2 px-sm-3 py-1" title="Back to Dashboard">
-          <i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline ms-1">Dashboard</span>
+      <div class="d-flex align-items-center gap-1 gap-sm-2 flex-grow-1" style="min-width: 0; overflow: hidden;">
+        <button type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/customer/dashboard'" class="btn btn-sm btn-outline-secondary rounded-pill px-2 px-sm-3 py-1 flex-shrink-0" title="Back">
+          <i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline ms-1">Back</span>
+        </button>
+        <a href="/" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 flex-shrink-0" title="Home page">
+          <i class="fa-solid fa-house"></i>
         </a>
-        <div class="brand-logo-text">
-          Mynt<span class="brand-logo-accent">Real</span> <span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8;">Arcade</span>
+        <a href="/customer/dashboard" class="btn btn-sm btn-outline-info rounded-pill px-2 px-sm-3 py-1 flex-shrink-0 d-none d-md-inline-flex" title="Customer Dashboard">
+          <i class="fa-solid fa-gauge-high"></i> <span class="ms-1">Dashboard</span>
+        </a>
+        <div class="brand-logo-text ms-1 text-truncate">
+          Mynt<span class="brand-logo-accent">Real</span> <span style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">Arcade</span>
         </div>
       </div>
 
-      <div class="d-flex align-items-center gap-1 gap-sm-2 ms-auto">
+      <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 ms-auto">
         <!-- Loyalty Balance Pill -->
-        <button type="button" onclick="openLedgerModal()" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-flex align-items-center gap-1 gap-sm-2">
+        <button type="button" onclick="openLedgerModal()" class="btn btn-sm btn-outline-warning rounded-pill px-2 px-sm-3 py-1 fw-bold d-flex align-items-center gap-1" title="View Loyalty Points">
           <i class="fa-solid fa-coins text-warning"></i>
           <span><span id="nav-points-balance">0</span><span class="d-none d-sm-inline"> Pts</span></span>
         </button>
 
         <!-- Player Identity / Guest Save Progress Button -->
-        <button type="button" id="btn-player-identity" onclick="promptMobilePopup()" class="btn btn-sm btn-outline-info rounded-pill px-2 px-sm-3 py-1 fw-bold d-flex align-items-center gap-1 gap-sm-2" title="Click to sync your high scores & rewards with mobile number">
+        <button type="button" id="btn-player-identity" onclick="promptMobilePopup()" class="btn btn-sm btn-outline-info rounded-pill px-2 px-sm-3 py-1 fw-bold d-flex align-items-center gap-1" title="Click to sync your high scores & rewards with mobile number">
           <i class="fa-solid fa-mobile-screen"></i>
-          <span id="player-identity-text"><span class="d-none d-md-inline">Guest Mode &bull; </span>Save<span class="d-none d-sm-inline"> Progress</span></span>
+          <span id="player-identity-text"><span class="d-none d-md-inline">Guest &bull; </span>Save<span class="d-none d-sm-inline"> Progress</span></span>
         </button>
 
         <!-- Claim Code Button -->
         <button type="button" onclick="openClaimDialog()" class="btn btn-sm btn-success rounded-pill px-2 px-sm-3 py-1 fw-bold" title="Redeem Single-Use Claim Code">
-          <i class="fa-solid fa-gift"></i> <span class="d-none d-sm-inline ms-1">Claim Code</span>
+          <i class="fa-solid fa-gift"></i> <span class="d-none d-sm-inline ms-1">Claim</span>
         </button>
       </div>
     </div>
@@ -521,9 +567,9 @@
       </div>
     </div>
 
-    <!-- 1. GAME SELECTOR CARDS -->
-    <div class="row g-2 g-md-3 mb-3">
-      <div class="col-4 col-md-4">
+    <!-- 1. GAME SELECTOR CARDS (6 3D ARCADE GAMES) -->
+    <div class="row row-cols-3 row-cols-md-6 g-2 mb-3" id="game-selection-grid">
+      <div class="col">
         <div class="game-tab-btn active" id="tab-snake" onclick="selectGame('SNAKE')">
           <div class="game-tab-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">
             <i class="fa-solid fa-worm"></i>
@@ -535,7 +581,7 @@
         </div>
       </div>
 
-      <div class="col-4 col-md-4">
+      <div class="col">
         <div class="game-tab-btn" id="tab-block" onclick="selectGame('BLOCK_DROP')">
           <div class="game-tab-icon" style="background: rgba(56, 189, 248, 0.2); color: var(--cyan);">
             <i class="fa-solid fa-cubes"></i>
@@ -547,7 +593,7 @@
         </div>
       </div>
 
-      <div class="col-4 col-md-4">
+      <div class="col">
         <div class="game-tab-btn" id="tab-runner" onclick="selectGame('ENDLESS_RUNNER')">
           <div class="game-tab-icon" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">
             <i class="fa-solid fa-person-running"></i>
@@ -558,20 +604,56 @@
           </div>
         </div>
       </div>
+
+      <div class="col">
+        <div class="game-tab-btn" id="tab-bubble" onclick="selectGame('BUBBLE_BLASTER')">
+          <div class="game-tab-icon" style="background: rgba(217, 70, 239, 0.2); color: #d946ef;">
+            <i class="fa-solid fa-soap"></i>
+          </div>
+          <div class="w-100 text-truncate">
+            <div class="fw-bold text-white">Bubble Blaster</div>
+            <div class="small text-muted">Aim, match-3 &amp; pop</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="game-tab-btn" id="tab-bouncing" onclick="selectGame('BOUNCING_BALL')">
+          <div class="game-tab-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+            <i class="fa-solid fa-baseball"></i>
+          </div>
+          <div class="w-100 text-truncate">
+            <div class="fw-bold text-white">Bouncing Ball</div>
+            <div class="small text-muted">Paddle &amp; smash bricks</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="game-tab-btn" id="tab-bounce-classic" onclick="selectGame('BOUNCE_CLASSIC')">
+          <div class="game-tab-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+            <i class="fa-solid fa-circle-dot"></i>
+          </div>
+          <div class="w-100 text-truncate">
+            <div class="fw-bold text-white">Red Bounce</div>
+            <div class="small text-muted">Nokia hoop classic</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 1B. SNAKE SPEED SELECTOR (Visible when Snake selected) -->
     <div id="snake-speed-picker" class="card p-3 mb-4" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px;">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
-          <i class="fa-solid fa-gauge-high me-1 text-success"></i> Snake Speed &amp; Portal Walls:
+          <i class="fa-solid fa-gauge-high me-1 text-success"></i> Snake Speed Bar &amp; Portal Walls:
         </span>
         <span class="badge" style="background: rgba(16, 185, 129, 0.22); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.55); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
           <i class="fa-solid fa-infinity me-1"></i> Screen Wrap-Around (Pass Through Walls)
         </span>
       </div>
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
           <div class="speed-picker-pill" id="pill-speed-slow" onclick="setSnakeSpeed('SLOW')">
             <i class="fa-solid fa-shield-cat text-info"></i> Slow (Chill)
           </div>
@@ -585,14 +667,48 @@
             <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Insane)
           </div>
         </div>
-        <div class="small d-flex align-items-center gap-1" style="color: #cbd5e1; font-weight: 600;">
-          <i class="fa-solid fa-arrow-trend-up text-warning"></i>
-          <span>Speed accelerates with each Level (every 15 food items)!</span>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-success me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-snake-speed" min="1" max="4" value="2" step="1" oninput="updateSnakeSpeedFromSlider(this.value)" style="accent-color: #10b981;">
+          <span class="badge bg-secondary font-monospace" id="label-snake-speed">NORMAL</span>
         </div>
       </div>
     </div>
 
-    <!-- 2. RUNNER CHARACTER SELECTOR (Visible only when Runner selected) -->
+    <!-- 2A. RUNNER SPEED SELECTOR (Visible when Runner selected) -->
+    <div id="runner-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-info"></i> Endless Runner Speed Bar:
+        </span>
+        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.45); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-bolt me-1"></i> Double Jump Ready (Tap Twice)
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-runner-slow" onclick="setRunnerSpeed('SLOW')">
+            <i class="fa-solid fa-person-walking text-info"></i> Slow (Chill)
+          </div>
+          <div class="speed-picker-pill active-blue" id="pill-runner-normal" onclick="setRunnerSpeed('NORMAL')">
+            <i class="fa-solid fa-person-running text-success"></i> Normal (Default)
+          </div>
+          <div class="speed-picker-pill" id="pill-runner-fast" onclick="setRunnerSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Pro)
+          </div>
+          <div class="speed-picker-pill" id="pill-runner-turbo" onclick="setRunnerSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Insane)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-info me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-runner-speed" min="1" max="4" value="2" step="1" oninput="updateRunnerSpeedFromSlider(this.value)" style="accent-color: #38bdf8;">
+          <span class="badge bg-secondary font-monospace" id="label-runner-speed">NORMAL</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2B. RUNNER CHARACTER SELECTOR (Visible only when Runner selected) -->
     <div id="runner-char-picker" class="card bg-dark border-secondary p-3 mb-4 d-none">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <span class="small fw-bold text-uppercase text-muted"><i class="fa-solid fa-user-astronaut me-1 text-info"></i> Choose Your Playable Character:</span>
@@ -610,6 +726,138 @@
         </div>
         <div class="char-picker-pill" id="pill-cyber_duck" onclick="selectRunnerCharacter('cyber_duck')">
           <i class="fa-solid fa-feather text-success"></i> Cyber Duck
+        </div>
+      </div>
+    </div>
+
+    <!-- 2C. RED BOUNCE SPEED SELECTOR (Visible when Bounce selected) -->
+    <div id="bounce-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-danger"></i> Red Bounce Speed Bar &amp; Rebound:
+        </span>
+        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.45); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-ring me-1"></i> Collect all 6 Hoops to Unlock Exit Door
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-bounce-slow" onclick="setBounceSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Precise)
+          </div>
+          <div class="speed-picker-pill active-red" id="pill-bounce-normal" onclick="setBounceSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-warning"></i> Normal (Classic Nokia)
+          </div>
+          <div class="speed-picker-pill" id="pill-bounce-fast" onclick="setBounceSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-danger"></i> Fast (Speedrun)
+          </div>
+          <div class="speed-picker-pill" id="pill-bounce-turbo" onclick="setBounceSpeed('TURBO')">
+            <i class="fa-solid fa-fire text-danger"></i> Turbo (Sonic)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-danger me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-bounce-speed" min="1" max="4" value="2" step="1" oninput="updateBounceSpeedFromSlider(this.value)" style="accent-color: #ef4444;">
+          <span class="badge bg-secondary font-monospace" id="label-bounce-speed">NORMAL</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2D. BOUNCING BALL SPEED SELECTOR (Visible when Bouncing Ball selected) -->
+    <div id="ball-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-warning"></i> Bouncing Ball Launch Speed Bar:
+        </span>
+        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-angles-up me-1"></i> Angle-Dependent Paddle Ricochets
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-ball-slow" onclick="setBallSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Chill Paddle)
+          </div>
+          <div class="speed-picker-pill active-amber" id="pill-ball-normal" onclick="setBallSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-warning"></i> Normal (Arcade)
+          </div>
+          <div class="speed-picker-pill" id="pill-ball-fast" onclick="setBallSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-danger"></i> Fast (Pro Reflexes)
+          </div>
+          <div class="speed-picker-pill" id="pill-ball-turbo" onclick="setBallSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Hyper)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-warning me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-ball-speed" min="1" max="4" value="2" step="1" oninput="updateBallSpeedFromSlider(this.value)" style="accent-color: #f59e0b;">
+          <span class="badge bg-secondary font-monospace" id="label-ball-speed">NORMAL</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2E. BLOCK DROP SPEED SELECTOR (Visible when Block Drop selected) -->
+    <div id="block-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-info"></i> Block Drop Fall Speed Bar:
+        </span>
+        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.45); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-layer-group me-1"></i> Line Clears &amp; Hard Drops
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-block-slow" onclick="setBlockSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Chill)
+          </div>
+          <div class="speed-picker-pill active-cyan" id="pill-block-normal" onclick="setBlockSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-info"></i> Normal (Arcade)
+          </div>
+          <div class="speed-picker-pill" id="pill-block-fast" onclick="setBlockSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Pro)
+          </div>
+          <div class="speed-picker-pill" id="pill-block-turbo" onclick="setBlockSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Insane)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-info me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-block-speed" min="1" max="4" value="2" step="1" oninput="updateBlockSpeedFromSlider(this.value)" style="accent-color: #38bdf8;">
+          <span class="badge bg-secondary font-monospace" id="label-block-speed">NORMAL</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2F. BUBBLE BLASTER SPEED SELECTOR (Visible when Bubble Blaster selected) -->
+    <div id="bubble-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(217, 70, 239, 0.35); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1" style="color: #d946ef;"></i> Bubble Blaster Launch Velocity:
+        </span>
+        <span class="badge" style="background: rgba(217, 70, 239, 0.2); color: #f0abfc; border: 1px solid rgba(217, 70, 239, 0.45); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-soap me-1"></i> Match-3 Pop &amp; Hexagonal Stagger
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-bubble-slow" onclick="setBubbleSpeed('SLOW')">
+            <i class="fa-solid fa-shield-cat text-info"></i> Slow (Aim Assist)
+          </div>
+          <div class="speed-picker-pill active-purple" id="pill-bubble-normal" onclick="setBubbleSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt" style="color: #d946ef;"></i> Normal (Arcade)
+          </div>
+          <div class="speed-picker-pill" id="pill-bubble-fast" onclick="setBubbleSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Snappy)
+          </div>
+          <div class="speed-picker-pill" id="pill-bubble-turbo" onclick="setBubbleSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Hyper)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders me-1" style="color: #d946ef;"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-bubble-speed" min="1" max="4" value="2" step="1" oninput="updateBubbleSpeedFromSlider(this.value)" style="accent-color: #d946ef;">
+          <span class="badge bg-secondary font-monospace" id="label-bubble-speed">NORMAL</span>
         </div>
       </div>
     </div>
@@ -651,12 +899,27 @@
 
     <!-- 4. MAIN GAME ARENA -->
     <div class="game-arena-wrapper" id="game-container">
-      <canvas id="game-canvas" width="400" height="400"></canvas>
+      <div id="arena-stage-layout" class="d-flex align-items-center justify-content-center w-100 h-100" style="gap: 10px; position: relative; z-index: 5;">
+        <canvas id="game-canvas" width="400" height="400"></canvas>
 
-      <!-- Preview Canvas for Block Drop -->
-      <div id="block-drop-preview-panel" class="d-none" style="position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
-        <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px;">NEXT</div>
-        <canvas id="preview-canvas" width="80" height="80"></canvas>
+        <!-- Dedicated Side HUD for Block Drop -->
+        <div id="block-drop-side-hud" class="d-none" style="width: 86px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 12px; padding: 6px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <div style="font-size: 0.65rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">NEXT</div>
+            <canvas id="preview-canvas" width="72" height="72" style="border-radius: 8px;"></canvas>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 6px; text-align: center;">
+            <div style="font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">LINES</div>
+            <div id="block-drop-lines-val" style="font-size: 1.15rem; font-weight: 900; color: #10b981; line-height: 1.1;">0</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 6px; text-align: center;">
+            <div style="font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">LEVEL</div>
+            <div id="block-drop-level-val" style="font-size: 1.15rem; font-weight: 900; color: #f59e0b; line-height: 1.1;">1</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-warning w-100 fw-bold py-2 rounded-3" style="font-size: 0.72rem; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);" onclick="triggerBlock('DROP')">
+            <i class="fa-solid fa-angles-down"></i><br>DROP
+          </button>
+        </div>
       </div>
 
       <!-- OVERLAY: READY TO PLAY -->
@@ -674,12 +937,15 @@
       <div class="game-ui-overlay d-none" id="overlay-paused">
         <div class="h2 fw-bold text-warning mb-2"><i class="fa-solid fa-pause me-2"></i> GAME PAUSED</div>
         <p class="small mb-4" style="color: #e2e8f0; font-size: 0.95rem;">Gameplay and timers are frozen. Take your time!</p>
-        <div class="d-flex gap-3">
+        <div class="d-flex flex-wrap justify-content-center gap-2">
           <button type="button" onclick="handleResumeGame()" class="btn btn-success rounded-pill px-4 py-2 fw-bold">
             <i class="fa-solid fa-play me-1"></i> Resume
           </button>
           <button type="button" onclick="handleRestartGame()" class="btn btn-outline-danger rounded-pill px-4 py-2 fw-bold">
             <i class="fa-solid fa-rotate-right me-1"></i> Restart
+          </button>
+          <button type="button" onclick="handleExitGame()" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-bold">
+            <i class="fa-solid fa-door-open me-1"></i> Exit
           </button>
         </div>
       </div>
@@ -749,6 +1015,51 @@
       <button type="button" class="btn-action-jump w-100" style="max-width: 320px;" onclick="triggerRunnerJump()">
         <i class="fa-solid fa-bolt"></i> TAP / CLICK TO JUMP (DOUBLE JUMP READY)
       </button>
+    </div>
+
+    <!-- Bubble Blaster Mobile Touch Bar -->
+    <div class="mobile-controls-bar d-none" id="mobile-controls-bubble">
+      <div class="d-flex align-items-center justify-content-center gap-2 w-100" style="max-width: 420px;">
+        <button type="button" class="btn btn-outline-info rounded-pill px-3 py-2 fw-bold" onclick="triggerBubbleAim('LEFT')">
+          <i class="fa-solid fa-arrow-left me-1"></i> Aim Left
+        </button>
+        <button type="button" class="btn btn-warning rounded-pill px-3 py-2 fw-bold" onclick="triggerBubbleSwap()" style="box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);">
+          <i class="fa-solid fa-repeat me-1"></i> Swap Next
+        </button>
+        <button type="button" class="btn btn-outline-info rounded-pill px-3 py-2 fw-bold" onclick="triggerBubbleAim('RIGHT')">
+          Aim Right <i class="fa-solid fa-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bouncing Ball Mobile Touch Bar -->
+    <div class="mobile-controls-bar d-none" id="mobile-controls-ball">
+      <div class="d-flex align-items-center justify-content-center gap-2 w-100" style="max-width: 420px;">
+        <button type="button" class="dpad-btn" onclick="triggerBallPaddle('LEFT')" style="width: 58px; height: 50px;">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button type="button" class="btn btn-success rounded-pill px-3 py-2 fw-bold flex-grow-1" onclick="triggerBallLaunch()" style="box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);">
+          <i class="fa-solid fa-rocket me-1"></i> Launch Ball
+        </button>
+        <button type="button" class="dpad-btn" onclick="triggerBallPaddle('RIGHT')" style="width: 58px; height: 50px;">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Red Bounce (Nokia Inspired) Mobile Touch Bar -->
+    <div class="mobile-controls-bar d-none" id="mobile-controls-bounce">
+      <div class="d-flex align-items-center justify-content-center gap-2 w-100" style="max-width: 420px;">
+        <button type="button" class="dpad-btn" onpointerdown="triggerBounceMove('LEFT', true)" onpointerup="triggerBounceMove('LEFT', false)" style="width: 58px; height: 50px;">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button type="button" class="btn btn-danger rounded-pill px-3 py-2 fw-bold flex-grow-1" onclick="triggerSuperBounce()" style="box-shadow: 0 2px 12px rgba(239, 68, 68, 0.45); font-size: 0.88rem;">
+          <i class="fa-solid fa-angles-up me-1"></i> SUPER BOUNCE
+        </button>
+        <button type="button" class="dpad-btn" onpointerdown="triggerBounceMove('RIGHT', true)" onpointerup="triggerBounceMove('RIGHT', false)" style="width: 58px; height: 50px;">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
     </div>
 
     <!-- UNIVERSAL MOUSE & TOUCH HINT -->
@@ -890,14 +1201,29 @@
   <script src="/public/js/games/snake_game.js"></script>
   <script src="/public/js/games/block_drop_game.js"></script>
   <script src="/public/js/games/endless_runner_game.js"></script>
+  <script src="/public/js/games/bubble_blaster_game.js"></script>
+  <script src="/public/js/games/bouncing_ball_game.js"></script>
+  <script src="/public/js/games/bounce_classic_game.js"></script>
 
   <script>
     let activeFramework = null;
     let snakeEngine = null;
     let blockDropEngine = null;
     let runnerEngine = null;
+    let bubbleEngine = null;
+    let ballEngine = null;
+    let bounceEngine = null;
     let currentGameType = 'SNAKE';
     let resumeModalInstance = null;
+
+    // Mobile & browser audio unlock on initial touch/click
+    ['touchstart', 'touchend', 'mousedown', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        if (window.gameAudio && typeof window.gameAudio.unlock === 'function') {
+          window.gameAudio.unlock();
+        }
+      }, { passive: true });
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
       initFramework();
@@ -936,18 +1262,37 @@
       snakeEngine = new SnakeGame(canvas, activeFramework);
       blockDropEngine = new BlockDropGame(canvas, previewCanvas, activeFramework);
       runnerEngine = new EndlessRunnerGame(canvas, activeFramework);
+      bubbleEngine = new BubbleBlasterGame(canvas, activeFramework);
+      ballEngine = new BouncingBallGame(canvas, activeFramework);
+      bounceEngine = new BounceClassicGame(canvas, activeFramework);
 
       activeFramework.setGameEngine(snakeEngine);
 
-      // Check URL query parameters (e.g. ?game=BLOCK_DROP or ?game=ENDLESS_RUNNER)
+      // Check URL query parameters (e.g. ?game=BUBBLE_BLASTER, ?game=BOUNCING_BALL, ?game=BOUNCE_CLASSIC)
       const urlParams = new URLSearchParams(window.location.search);
       const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
-      const initialGame = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER'].includes(reqGame) ? reqGame : 'SNAKE';
+      const allowedGames = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER', 'BUBBLE_BLASTER', 'BOUNCING_BALL', 'BOUNCE_CLASSIC'];
+      const initialGame = allowedGames.includes(reqGame) ? reqGame : 'SNAKE';
       selectGame(initialGame);
 
-      // Initialize snake speed setting
-      const savedSpeed = (snakeEngine && snakeEngine.speedMode) || localStorage.getItem('myntreal_snake_speed') || 'NORMAL';
-      setSnakeSpeed(savedSpeed);
+      // Initialize speed settings for all games
+      const savedSnakeSpeed = localStorage.getItem('myntreal_snake_speed') || 'NORMAL';
+      setSnakeSpeed(savedSnakeSpeed);
+
+      const savedRunnerSpeed = localStorage.getItem('myntreal_runner_speed') || 'NORMAL';
+      setRunnerSpeed(savedRunnerSpeed);
+
+      const savedBounceSpeed = localStorage.getItem('myntreal_bounce_speed') || 'NORMAL';
+      setBounceSpeed(savedBounceSpeed);
+
+      const savedBallSpeed = localStorage.getItem('myntreal_ball_speed') || 'NORMAL';
+      setBallSpeed(savedBallSpeed);
+
+      const savedBlockSpeed = localStorage.getItem('myntreal_block_speed') || 'NORMAL';
+      setBlockSpeed(savedBlockSpeed);
+
+      const savedBubbleSpeed = localStorage.getItem('myntreal_bubble_speed') || 'NORMAL';
+      setBubbleSpeed(savedBubbleSpeed);
     }
 
     function checkAuthOrPromptResume() {
@@ -1091,10 +1436,16 @@
     }
 
     function selectGame(type) {
-      // Stop and reset any running engine before switching
+      // Stop background music and reset any running engine before switching
+      if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+        window.gameAudio.stopMusic();
+      }
       if (snakeEngine && typeof snakeEngine.reset === 'function') snakeEngine.reset();
       if (blockDropEngine && typeof blockDropEngine.reset === 'function') blockDropEngine.reset();
       if (runnerEngine && typeof runnerEngine.reset === 'function') runnerEngine.reset();
+      if (bubbleEngine && typeof bubbleEngine.reset === 'function') bubbleEngine.reset();
+      if (ballEngine && typeof ballEngine.reset === 'function') ballEngine.reset();
+      if (bounceEngine && typeof bounceEngine.reset === 'function') bounceEngine.reset();
       if (activeFramework) {
         activeFramework.state = 'READY';
         activeFramework._stopTimer();
@@ -1116,37 +1467,66 @@
       if (type === 'SNAKE') document.getElementById('tab-snake').classList.add('active');
       if (type === 'BLOCK_DROP') document.getElementById('tab-block').classList.add('active');
       if (type === 'ENDLESS_RUNNER') document.getElementById('tab-runner').classList.add('active');
+      if (type === 'BUBBLE_BLASTER') document.getElementById('tab-bubble').classList.add('active');
+      if (type === 'BOUNCING_BALL') document.getElementById('tab-bouncing').classList.add('active');
+      if (type === 'BOUNCE_CLASSIC') document.getElementById('tab-bounce-classic').classList.add('active');
 
-      // Speed picker, Character picker & Preview panel visibility
-      const speedPicker = document.getElementById('snake-speed-picker');
+      // Speed pickers, Character picker & Side HUD visibility
+      const snakeSpeed = document.getElementById('snake-speed-picker');
+      const runnerSpeed = document.getElementById('runner-speed-picker');
+      const bounceSpeed = document.getElementById('bounce-speed-picker');
+      const ballSpeed = document.getElementById('ball-speed-picker');
+      const blockSpeed = document.getElementById('block-speed-picker');
+      const bubbleSpeed = document.getElementById('bubble-speed-picker');
       const charPicker = document.getElementById('runner-char-picker');
-      const previewPanel = document.getElementById('block-drop-preview-panel');
-      if (speedPicker) speedPicker.classList.toggle('d-none', type !== 'SNAKE');
+      const sideHud = document.getElementById('block-drop-side-hud');
+
+      if (snakeSpeed) snakeSpeed.classList.toggle('d-none', type !== 'SNAKE');
+      if (runnerSpeed) runnerSpeed.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+      if (bounceSpeed) bounceSpeed.classList.toggle('d-none', type !== 'BOUNCE_CLASSIC');
+      if (ballSpeed) ballSpeed.classList.toggle('d-none', type !== 'BOUNCING_BALL');
+      if (blockSpeed) blockSpeed.classList.toggle('d-none', type !== 'BLOCK_DROP');
+      if (bubbleSpeed) bubbleSpeed.classList.toggle('d-none', type !== 'BUBBLE_BLASTER');
       if (charPicker) charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
-      if (previewPanel) previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
+      if (sideHud) sideHud.classList.toggle('d-none', type !== 'BLOCK_DROP');
 
       // Update mobile controls visibility
       document.getElementById('mobile-controls-snake').classList.toggle('d-none', type !== 'SNAKE');
       document.getElementById('mobile-controls-block').classList.toggle('d-none', type !== 'BLOCK_DROP');
       document.getElementById('mobile-controls-runner').classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
+      document.getElementById('mobile-controls-bubble').classList.toggle('d-none', type !== 'BUBBLE_BLASTER');
+      document.getElementById('mobile-controls-ball').classList.toggle('d-none', type !== 'BOUNCING_BALL');
+      document.getElementById('mobile-controls-bounce').classList.toggle('d-none', type !== 'BOUNCE_CLASSIC');
 
       // Set engine
       if (type === 'SNAKE') activeFramework.setGameEngine(snakeEngine);
       if (type === 'BLOCK_DROP') activeFramework.setGameEngine(blockDropEngine);
       if (type === 'ENDLESS_RUNNER') activeFramework.setGameEngine(runnerEngine);
+      if (type === 'BUBBLE_BLASTER') activeFramework.setGameEngine(bubbleEngine);
+      if (type === 'BOUNCING_BALL') activeFramework.setGameEngine(ballEngine);
+      if (type === 'BOUNCE_CLASSIC') activeFramework.setGameEngine(bounceEngine);
 
       // Update Ready Overlay texts
       const titleEl = document.getElementById('ready-game-title');
       const descEl = document.getElementById('ready-game-desc');
       if (type === 'SNAKE') {
         titleEl.textContent = 'Neon Snake';
-        descEl.textContent = 'Guide the snake, eat food to grow, and level up for faster speeds! Pass through walls freely — only colliding with your own body ends the game.';
+        descEl.textContent = 'Guide the snake, eat food to grow, and level up! Pass through walls freely — only colliding with your own body ends the game.';
       } else if (type === 'BLOCK_DROP') {
         titleEl.textContent = 'Block Drop';
         descEl.textContent = 'Use Left/Right to steer, Up to rotate, and Down to soft drop. Clear lines to score!';
       } else if (type === 'ENDLESS_RUNNER') {
         titleEl.textContent = 'Endless Runner';
         descEl.textContent = 'Press Space/Up or tap screen to jump. Double jump over aerial drones & collect stars!';
+      } else if (type === 'BUBBLE_BLASTER') {
+        titleEl.textContent = 'Bubble Blaster 3D';
+        descEl.textContent = 'Drag or click to aim, bounce off walls, and match 3 or more 3D glossy bubbles to burst them! Clear floating clusters for massive combos.';
+      } else if (type === 'BOUNCING_BALL') {
+        titleEl.textContent = 'Bouncing Ball 3D';
+        descEl.textContent = 'Steer your glowing futuristic paddle, ricochet the chrome ball, smash colorful 3D bricks, and grab falling powerup capsules!';
+      } else if (type === 'BOUNCE_CLASSIC') {
+        titleEl.textContent = 'Red Bounce 3D';
+        descEl.textContent = 'Inspired by the Nokia classic! Steer the bouncy red rubber ball, pass through all golden hoops, dodge sharp spikes, and reach the glowing exit warp.';
       }
 
       activeFramework._hideAllOverlays();
@@ -1156,15 +1536,133 @@
       if (type === 'SNAKE') snakeEngine.resizeCanvas();
       if (type === 'BLOCK_DROP') blockDropEngine.resizeCanvas();
       if (type === 'ENDLESS_RUNNER') runnerEngine.resizeCanvas();
+      if (type === 'BUBBLE_BLASTER') bubbleEngine.resizeCanvas();
+      if (type === 'BOUNCING_BALL') ballEngine.resizeCanvas();
+      if (type === 'BOUNCE_CLASSIC') bounceEngine.resizeCanvas();
     }
+
+    // ── GAME SPEED SYSTEM & SLIDERS ──
+    const SPEED_INDEX_MAP = { 1: 'SLOW', 2: 'NORMAL', 3: 'FAST', 4: 'TURBO' };
+    const SPEED_MODE_MAP = { 'SLOW': 1, 'NORMAL': 2, 'FAST': 3, 'TURBO': 4 };
 
     function setSnakeSpeed(mode) {
       if (snakeEngine && typeof snakeEngine.setSpeedMode === 'function') {
         snakeEngine.setSpeedMode(mode);
       }
-      document.querySelectorAll('.speed-picker-pill').forEach(p => p.classList.remove('active'));
-      const activePill = document.getElementById(`pill-speed-${mode.toLowerCase()}`);
-      if (activePill) activePill.classList.add('active');
+      localStorage.setItem('myntreal_snake_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-speed-${m}`);
+        if (p) p.classList.toggle('active', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-snake-speed');
+      const label = document.getElementById('label-snake-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateSnakeSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setSnakeSpeed(mode);
+    }
+
+    function setRunnerSpeed(mode) {
+      if (runnerEngine && typeof runnerEngine.setSpeedMode === 'function') {
+        runnerEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_runner_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-runner-${m}`);
+        if (p) p.classList.toggle('active-blue', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-runner-speed');
+      const label = document.getElementById('label-runner-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateRunnerSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setRunnerSpeed(mode);
+    }
+
+    function setBounceSpeed(mode) {
+      if (bounceEngine && typeof bounceEngine.setSpeedMode === 'function') {
+        bounceEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_bounce_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-bounce-${m}`);
+        if (p) p.classList.toggle('active-red', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-bounce-speed');
+      const label = document.getElementById('label-bounce-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateBounceSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setBounceSpeed(mode);
+    }
+
+    function setBallSpeed(mode) {
+      if (ballEngine && typeof ballEngine.setSpeedMode === 'function') {
+        ballEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_ball_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-ball-${m}`);
+        if (p) p.classList.toggle('active-amber', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-ball-speed');
+      const label = document.getElementById('label-ball-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateBallSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setBallSpeed(mode);
+    }
+
+    function setBlockSpeed(mode) {
+      if (blockDropEngine && typeof blockDropEngine.setSpeedMode === 'function') {
+        blockDropEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_block_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-block-${m}`);
+        if (p) p.classList.toggle('active-cyan', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-block-speed');
+      const label = document.getElementById('label-block-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateBlockSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setBlockSpeed(mode);
+    }
+
+    function setBubbleSpeed(mode) {
+      if (bubbleEngine && typeof bubbleEngine.setSpeedMode === 'function') {
+        bubbleEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_bubble_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-bubble-${m}`);
+        if (p) p.classList.toggle('active-purple', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-bubble-speed');
+      const label = document.getElementById('label-bubble-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateBubbleSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
+      setBubbleSpeed(mode);
     }
 
     function selectRunnerCharacter(charId) {
@@ -1175,6 +1673,9 @@
     }
 
     function handleStartGame() {
+      if (window.gameAudio && typeof window.gameAudio.unlock === 'function') {
+        window.gameAudio.unlock();
+      }
       activeFramework.startGame();
     }
 
@@ -1186,7 +1687,29 @@
       activeFramework.restartGame();
     }
 
+    function handleExitGame() {
+      if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+        window.gameAudio.stopMusic();
+      }
+      if (snakeEngine && typeof snakeEngine.reset === 'function') snakeEngine.reset();
+      if (blockDropEngine && typeof blockDropEngine.reset === 'function') blockDropEngine.reset();
+      if (runnerEngine && typeof runnerEngine.reset === 'function') runnerEngine.reset();
+      if (bubbleEngine && typeof bubbleEngine.reset === 'function') bubbleEngine.reset();
+      if (ballEngine && typeof ballEngine.reset === 'function') ballEngine.reset();
+      if (bounceEngine && typeof bounceEngine.reset === 'function') bounceEngine.reset();
+      if (activeFramework) {
+        activeFramework.state = 'READY';
+        activeFramework._stopTimer();
+        activeFramework._hideAllOverlays();
+      }
+      const readyOverlay = document.getElementById('overlay-ready');
+      if (readyOverlay) readyOverlay.classList.remove('d-none');
+    }
+
     function handleBackToLobby() {
+      if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+        window.gameAudio.stopMusic();
+      }
       selectGame(currentGameType);
     }
 
@@ -1207,6 +1730,62 @@
     function triggerRunnerJump() {
       if (runnerEngine) runnerEngine.jump();
     }
+
+    function triggerBubbleAim(dir) {
+      if (!bubbleEngine) return;
+      if (dir === 'LEFT') {
+        bubbleEngine.aimAngle = Math.max(-Math.PI + 0.18, bubbleEngine.aimAngle - 0.12);
+      } else if (dir === 'RIGHT') {
+        bubbleEngine.aimAngle = Math.min(-0.18, bubbleEngine.aimAngle + 0.12);
+      }
+    }
+
+    function triggerBubbleSwap() {
+      if (bubbleEngine) bubbleEngine.swapBubbles();
+    }
+
+    function triggerBallPaddle(dir) {
+      if (!ballEngine) return;
+      if (dir === 'LEFT') ballEngine.moveLeft();
+      if (dir === 'RIGHT') ballEngine.moveRight();
+    }
+
+    function triggerBallLaunch() {
+      if (ballEngine) ballEngine._launchStationaryBall();
+    }
+
+    function triggerBounceMove(dir, active) {
+      if (!bounceEngine) return;
+      if (dir === 'LEFT') bounceEngine.moveLeft(active);
+      if (dir === 'RIGHT') bounceEngine.moveRight(active);
+    }
+
+    function triggerSuperBounce() {
+      if (bounceEngine && typeof bounceEngine.superBounce === 'function') {
+        bounceEngine.superBounce();
+      }
+    }
+
+    // Stop music on page navigation / unload
+    window.addEventListener('beforeunload', () => {
+      if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+        window.gameAudio.stopMusic();
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+        window.gameAudio.stopMusic();
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (window.gameAudio && typeof window.gameAudio.stopMusic === 'function') {
+          window.gameAudio.stopMusic();
+        }
+      }
+    });
 
     // Audio Controls
     function toggleSfx() {
