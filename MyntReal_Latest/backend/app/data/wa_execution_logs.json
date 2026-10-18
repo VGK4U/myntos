@@ -1,5 +1,34 @@
 [
   {
+    "id": "log_4c5080bd",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "19 Oct 2026, 03:30:01 AM IST",
+    "iso_timestamp": "2026-10-19T03:30:01.332422",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_0f29332e",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -14147,26 +14176,6 @@
           "error": "WhatsApp Group Bot service is currently offline on port 5002 (HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-group-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\"))). Please start the WhatsApp Bot daemon on the server."
         }
       ]
-    }
-  },
-  {
-    "id": "log_46de2845",
-    "job_id": "wa_daily_morning_wish",
-    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "23 Sep 2026, 09:28:38 AM IST",
-    "iso_timestamp": "2026-09-23T09:28:38.454755",
-    "target_summary": "Configured Targets",
-    "targets": [],
-    "sent_count": 5,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "total_eligible": 5,
-      "sent_count": 5,
-      "skipped_count": 0
     }
   }
 ]
