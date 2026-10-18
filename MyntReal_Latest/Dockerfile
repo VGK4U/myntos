@@ -29,7 +29,7 @@ COPY backend/whatsapp-group-bot/package.json backend/whatsapp-group-bot/package.
 COPY backend/whatsapp-group-bot/package-lock.json backend/whatsapp-group-bot/package-lock.json
 
 # Cache buster ensures AWS Docker daemon never uses stale cached layers
-ARG BUILD_ID=v2.4.54-184-fresh
+ARG BUILD_ID=v2.4.54-185-shoutout-fix
 
 # Install Python dependencies with pre-compiled wheels
 RUN pip install --no-cache-dir --prefer-binary --default-timeout=120 -r backend/requirements.txt

@@ -147,16 +147,13 @@ def get_upload_dir() -> Path:
 
 def build_media_response(media: FeedbackMedia) -> MediaResponse:
     """Build MediaResponse with normalized path, approval status, and visibility.
-    DC Protocol: Serve compressed file when background compression completed — smaller
-    files load significantly faster on mobile / slow connections.
+    DC Protocol: Always serve durable S3 file_path as authoritative source of truth.
+    Compressed files in local storage are ephemeral in containerized cloud deployments.
     """
-    has_compressed = getattr(media, 'has_compressed', False)
-    compressed_path = getattr(media, 'compressed_path', None)
-    processing_status = getattr(media, 'processing_status', None)
-    if has_compressed and compressed_path and processing_status == 'completed':
-        effective_path = compressed_path
-    else:
-        effective_path = media.file_path
+    # DC Protocol: Primary media path from durable S3 storage
+    effective_path = media.file_path
+    if not effective_path and getattr(media, 'compressed_path', None):
+        effective_path = media.compressed_path
     return MediaResponse(
         id=media.id,
         file_path=normalize_media_path(effective_path),

@@ -328,6 +328,16 @@ def process_universal_compression_job(job_id: int):
                 logger.info(f"[DC PROTOCOL] Moved compressed file: {compressed_path.name} → {deterministic_filename}")
                 compressed_path = final_compressed_path
             
+            # DC PROTOCOL: Upload compressed file to S3 Object Storage for durability across container instances
+            try:
+                from app.services.s3_storage import s3_storage_service
+                s3_compressed_key = f"{table_name}/compressed/{deterministic_filename}"
+                with open(final_compressed_path, "rb") as f_comp:
+                    s3_storage_service.upload_file(s3_compressed_key, f_comp.read(), content_type=mime_type)
+                logger.info(f"[DC PROTOCOL] ✅ Uploaded compressed file to S3: {s3_compressed_key}")
+            except Exception as e_s3:
+                logger.warning(f"[DC PROTOCOL] Could not upload compressed file to S3: {e_s3}")
+            
             # DC PROTOCOL: Update record with compressed data using raw SQL (table-agnostic)
             update_sql = text(f"""
                 UPDATE {table_name}

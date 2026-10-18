@@ -18296,6 +18296,35 @@ async def serve_storage_file(request: Request, file_path: str):
                 if _doc_row and _doc_row[0] and _doc_row[0] != 'pending' and '.' in _doc_row[0]:
                     alt_key = f"kyc_documents/{_doc_row[0]}"
                     file_data = storage_service.download_file(alt_key)
+
+                # DC-FEEDBACK-FALLBACK: Fallback for feedback_media if compressed or alternate path requested
+                if file_data is None and ('feedback' in clean_p or 'compressed' in clean_p):
+                    _clean_name = clean_p.split('/')[-1]
+                    _record_id = _clean_name.split('_')[0] if '_' in _clean_name and _clean_name.split('_')[0].isdigit() else None
+                    _fm_row = None
+                    if _record_id:
+                        _fm_row = _s_db.execute(text(
+                            "SELECT file_path FROM feedback_media WHERE id = :mid LIMIT 1"
+                        ), {"mid": int(_record_id)}).fetchone()
+                    if not _fm_row:
+                        _fm_row = _s_db.execute(text(
+                            "SELECT file_path FROM feedback_media WHERE compressed_path ILIKE :p LIMIT 1"
+                        ), {"p": f"%{_clean_name}%"}).fetchone()
+                    if _fm_row and _fm_row[0] and _fm_row[0] != 'pending':
+                        alt_media_key = _fm_row[0]
+                        file_data = storage_service.download_file(alt_media_key)
+                        if file_data is not None:
+                            lp_alt = alt_media_key.lower()
+                            if lp_alt.endswith(('.jpg', '.jpeg')):
+                                content_type = "image/jpeg"
+                            elif lp_alt.endswith('.png'):
+                                content_type = "image/png"
+                            elif lp_alt.endswith('.gif'):
+                                content_type = "image/gif"
+                            elif lp_alt.endswith('.webp'):
+                                content_type = "image/webp"
+                            elif lp_alt.endswith('.mp4'):
+                                content_type = "video/mp4"
             finally:
                 _s_db.close()
         except Exception:

@@ -1694,7 +1694,7 @@
             if (isImg) {
                 mediaHTML = '<div style="position:relative;margin-bottom:8px;cursor:zoom-in" onclick="vgkOpenLightbox(\'' + ann.id + '\', 0)">' +
                     '<img src="' + escHtml(m.file_path) + '" class="ann-media" loading="lazy" ' +
-                    'onerror="this.onerror=null;if(this.src.indexOf(\'private/\')!==-1){this.src=this.src.replace(\'private/\',\'\');}else{this.parentElement.innerHTML=\'<div class=\\\'ann-text-badge\\\'><i class=\\\'fas fa-bullhorn\\\' style=\\\'font-size:1.3rem;margin-right:7px;color:rgba(255,255,255,.7)\\\'></i>VGK4U SHOUTOUT</div>\';}">' + badge +
+                    'onerror="if(this.src.indexOf(\'private/\')!==-1){this.src=this.src.replace(\'private/\',\'\');}else if(this.src.indexOf(\'compressed/\')!==-1){this.src=this.src.replace(\'compressed/\',\'\');}else{this.onerror=null;this.parentElement.innerHTML=\'<div class=\\\'ann-text-badge\\\'><i class=\\\'fas fa-bullhorn\\\' style=\\\'font-size:1.3rem;margin-right:7px;color:rgba(255,255,255,.7)\\\'></i>VGK4U SHOUTOUT</div>\';}">' + badge +
                     '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);border-radius:6px;padding:3px 8px;font-size:11px;color:#fff;display:flex;align-items:center;gap:4px;pointer-events:none;backdrop-filter:blur(3px)"><i class="fas fa-search-plus"></i> View</div>' +
                     '</div>';
             } else if (isVid) {
