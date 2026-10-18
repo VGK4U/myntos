@@ -98,6 +98,8 @@ def create_zip():
                     continue
                 if file.endswith('.sql') and 'backend/migrations' not in rel_str:
                     continue
+                if rel_str == 'frontend/package-lock.json':
+                    continue
 
                 # Strictly exclude dotfiles except required deployment configs
                 if file.startswith('.') and file not in ['.dockerignore', '.ebextensions', '.platform']:
