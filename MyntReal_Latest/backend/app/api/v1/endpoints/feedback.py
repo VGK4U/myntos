@@ -130,6 +130,14 @@ class AnnouncementResponse(BaseModel):
 
 # ===== Helper Functions =====
 
+_PUBLIC_ANNOUNCEMENTS_CACHE = {}
+_PUBLIC_ANNOUNCEMENTS_CACHE_TTL = 60.0  # 60 seconds
+
+def invalidate_public_announcements_cache():
+    """DC Protocol: Explicitly invalidate public announcements in-memory cache"""
+    global _PUBLIC_ANNOUNCEMENTS_CACHE
+    _PUBLIC_ANNOUNCEMENTS_CACHE.clear()
+
 def get_upload_dir() -> Path:
     """Get or create uploads directory"""
     upload_dir = Path("uploads/feedback")
@@ -730,14 +738,14 @@ async def submit_staff_announcement(
     # Save files
     if submission_type != "text" and files:
         for idx, file in enumerate(files):
-            # Create media record
-            media_status = MediaStatus.APPROVED if is_supreme else MediaStatus.PENDING
+            # Create media record - All staff announcements/shoutouts are auto-approved for login & dashboard
+            media_status = MediaStatus.APPROVED
             media = FeedbackMedia(
                 submission_id=submission.id,
                 file_path="pending",
                 file_type=file.content_type or "application/octet-stream",
                 media_status=media_status,
-                is_visible=is_supreme
+                is_visible=True
             )
             db.add(media)
             db.flush()
@@ -921,6 +929,12 @@ async def approve_submission(
     submission.approved_by = current_user.id
     submission.is_visible = True  # Default to visible when approved
     
+    # Auto-approve all associated media files that are not rejected
+    for m in (submission.media_files or []):
+        if getattr(m, 'media_status', None) != MediaStatus.REJECTED:
+            m.media_status = MediaStatus.APPROVED
+            m.is_visible = True
+
     # Create approval record
     approval = FeedbackApproval(
         submission_id=submission_id,
@@ -932,6 +946,7 @@ async def approve_submission(
     db.add(approval)
     
     db.commit()
+    invalidate_public_announcements_cache()
     
     return {
         "message": "Submission approved successfully",
@@ -1050,6 +1065,7 @@ async def approve_media(
     
     # Update media status
     media.media_status = MediaStatus.APPROVED
+    media.is_visible = True
     media.decided_by = current_user.id
     media.decided_at = datetime.now()
     media.decision_comment = comment
@@ -1074,6 +1090,7 @@ async def approve_media(
     recalculate_submission_status(submission, db)
     
     db.commit()
+    invalidate_public_announcements_cache()
     
     return {
         "message": "Media approved successfully",
@@ -1845,16 +1862,6 @@ async def share_announcement(
     return {"message": "Share tracked", "shares": announcement.shares_count}
 
 
-# ===== Public Announcements Endpoint (No Auth Required) =====
-
-_PUBLIC_ANNOUNCEMENTS_CACHE = {}
-_PUBLIC_ANNOUNCEMENTS_CACHE_TTL = 60.0  # 60 seconds
-
-def invalidate_public_announcements_cache():
-    """DC Protocol: Explicitly invalidate public announcements in-memory cache"""
-    global _PUBLIC_ANNOUNCEMENTS_CACHE
-    _PUBLIC_ANNOUNCEMENTS_CACHE.clear()
-
 _PUBLIC_CATEGORIES_CACHE = (0.0, [])
 _PUBLIC_CATEGORIES_CACHE_TTL = 120.0  # 120 seconds
 
@@ -1989,7 +1996,7 @@ def get_public_announcements(
 
             approved_media = [
                 build_media_response(m) for m in ann.media_files 
-                if m.media_status == MediaStatus.APPROVED
+                if (m.media_status == MediaStatus.APPROVED or (ann.status == SubmissionStatus.APPROVED and getattr(m, 'media_status', None) != MediaStatus.REJECTED))
             ]
 
             display_datetime = ann.approved_at or ann.last_reviewed_at or ann.submitted_at
@@ -2423,6 +2430,7 @@ async def delete_announcement(
     # Delete submission (cascades to media and approvals via ORM)
     db.delete(submission)
     db.commit()
+    invalidate_public_announcements_cache()
     
     return {
         "message": "Announcement deleted successfully",
@@ -2644,6 +2652,7 @@ async def soft_delete_announcement(
         db.add(audit_log)
         
         db.commit()
+        invalidate_public_announcements_cache()
         
         return {
             "success": True,
@@ -2837,6 +2846,7 @@ async def hard_delete_announcement(
         # Permanently delete submission (cascades to media and approvals)
         db.delete(submission)
         db.commit()
+        invalidate_public_announcements_cache()
         
         return {
             "success": True,

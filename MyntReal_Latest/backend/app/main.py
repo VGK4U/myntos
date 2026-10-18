@@ -18308,6 +18308,7 @@ async def serve_storage_file(request: Request, file_path: str):
         local_storage_root = Path(__file__).parent.parent.parent / "frontend" / "storage"
         backend_storage_root = Path(__file__).parent.parent / "storage"
         rel_upload_path = clean_file_path[len("uploads/"):] if clean_file_path.startswith("uploads/") else clean_file_path
+        media_backup_root = Path(__file__).parent.parent.parent / "media_backup"
         
         local_candidates = [
             backend_storage_root / clean_file_path,
@@ -18316,6 +18317,7 @@ async def serve_storage_file(request: Request, file_path: str):
             local_storage_root / clean_file_path,
             local_storage_root / "private" / clean_file_path,
             local_storage_root / "public" / clean_file_path,
+            media_backup_root / clean_file_path,
             Path(UPLOADS_DIR) / rel_upload_path,
             Path(UPLOADS_DIR) / clean_file_path,
             Path(__file__).parent.parent / "uploads" / rel_upload_path,
@@ -18326,6 +18328,7 @@ async def serve_storage_file(request: Request, file_path: str):
             local_candidates.extend([
                 backend_storage_root / unpref,
                 local_storage_root / unpref,
+                media_backup_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
             ])
         elif clean_file_path.startswith("public/"):
@@ -18333,6 +18336,7 @@ async def serve_storage_file(request: Request, file_path: str):
             local_candidates.extend([
                 backend_storage_root / unpref,
                 local_storage_root / unpref,
+                media_backup_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
             ])
 

@@ -87,21 +87,9 @@ if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ] && [ -d "$SCRIPT_DI
     echo "WhatsApp Bot Supervisor PID: $WA_PID"
 fi
 
-# Wait for FastAPI Backend (port 8000) to finish warming up before opening frontend traffic.
-# This guarantees that the internal reverse proxy never returns 502/504 errors on autoscale instances.
+# Start Frontend Server on port 5000 immediately to satisfy AWS ALB /health checks
 echo ""
-echo "Waiting for FastAPI Backend (port 8000) to be ready..."
-for i in {1..30}; do
-  if curl -s -f http://127.0.0.1:8000/api/v1/health >/dev/null 2>&1; then
-    echo "✅ Backend is healthy and ready on port 8000 after ${i}s."
-    break
-  fi
-  sleep 1
-done
-
-# Start Frontend Server on port 5000 with supervisor loop
-echo ""
-echo "Starting Frontend Server on port ${PORT:-5000}..."
+echo "Starting Frontend Server on port ${PORT:-5000} immediately for AWS health checks..."
 cd "$SCRIPT_DIR/frontend"
 echo "======================================"
 echo "Startup complete - serving traffic"

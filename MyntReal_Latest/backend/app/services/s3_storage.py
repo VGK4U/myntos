@@ -93,6 +93,7 @@ class S3StorageService:
 
         # Document category prefixes for bare filenames or alternate directory conventions
         for cat in [
+            "feedback_media", "earner_cards", "feedback",
             "solar_docs", "kyc_documents", "invoices", "quotations", 
             "receipts", "documents", "crm_documents", "ev_docs", 
             "insurance_docs", "bank_docs", "staff_docs", "media", "announcements",

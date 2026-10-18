@@ -3212,14 +3212,14 @@
     ]
   },
   "2026-10-18": {
-    "timestamp_ist": "2026-10-18 11:35:11",
+    "timestamp_ist": "2026-10-18 13:30:01",
     "date_str": "18 October 2026",
-    "time_str": "11:35 AM",
+    "time_str": "01:30 PM",
     "total_calls": 0,
     "total_talk_seconds": 0,
     "total_talk_formatted": "00h 00m 00s",
     "missed_calls": 0,
-    "new_leads": 10,
+    "new_leads": 11,
     "leaderboard": [
       {
         "handled_by": "Ms. Anusha Moyyi",

@@ -94,7 +94,7 @@ def create_zip():
                 ]):
                     continue
 
-                if file.endswith(('.zip', '.sqlite', '.db', '.dump', '.log', '.pyc')):
+                if file.endswith(('.zip', '.sqlite', '.db', '.db-shm', '.db-wal', '.dump', '.log', '.pyc', '.wav')):
                     continue
                 if file.endswith('.sql') and 'backend/migrations' not in rel_str:
                     continue

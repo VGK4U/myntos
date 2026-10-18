@@ -10227,7 +10227,7 @@
                 const posterAttr = firstMedia.thumbnail_url ? ` poster="${escHtml(firstMedia.thumbnail_url)}"` : '';
                 mediaBlock = `<div style="position:relative;background:#000">${badge}<video style="width:100%;max-height:260px;display:block;background:#000" controls playsinline muted preload="metadata"${posterAttr} onloadedmetadata="this.currentTime=0.001"><source src="${escHtml(safeSrc)}" type="${escHtml(firstMedia.file_type||'video/mp4')}"></video></div>`;
             } else {
-                mediaBlock = `<div style="position:relative;background:#f3f4f6">${badge}<img src="${escHtml(firstMedia.file_path)}" style="width:100%;max-height:260px;object-fit:cover;display:block" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+                mediaBlock = `<div style="position:relative;background:#f3f4f6">${badge}<img src="${escHtml(firstMedia.file_path)}" style="width:100%;max-height:260px;object-fit:cover;display:block" loading="lazy" onerror="this.onerror=null;if(this.src.indexOf('private/')!==-1){this.src=this.src.replace('private/','');}else{this.parentElement.innerHTML='<div style=\\'width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;gap:8px\\'>📣 <span>VGK4U Shoutout</span></div>';}"></div>`;
             }
         }
         const dlBtn = _dlUrl

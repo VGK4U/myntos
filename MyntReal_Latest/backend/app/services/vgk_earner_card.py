@@ -687,6 +687,7 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
         return existing2[0]
 
     desc_with_ref = description + f' [entry_id:{entry_id}]'
+    sub_type = 'PHOTO' if card_storage_key else 'TEXT'
     result = db.execute(text("""
         INSERT INTO feedback_submissions
           (category_id, submission_type, title, description, status,
@@ -694,13 +695,13 @@ def _publish_shoutout(db, entry_id: int, category_id: int, system_uid: str,
            approved_by, approved_media_count, rejected_media_count,
            shares_count, views_count, display_order, target_destination)
         VALUES
-          (:cat, 'TEXT', :title, :desc, 'APPROVED',
+          (:cat, :stype, :title, :desc, 'APPROVED',
            true, :vto, :uid, :now, :now,
            'VGK-SYS', 1, 0,
            0, 0, NULL, 'shoutout')
         RETURNING id
     """), {
-        'cat': category_id, 'title': title, 'desc': desc_with_ref,
+        'cat': category_id, 'stype': sub_type, 'title': title, 'desc': desc_with_ref,
         'uid': system_uid, 'now': now, 'vto': visible_to,
     })
     db.flush()
