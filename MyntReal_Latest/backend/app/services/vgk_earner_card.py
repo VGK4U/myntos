@@ -1328,7 +1328,7 @@ def _do_celebration(db, entry_id: int):
     # B. Compute overall earnings
     try:
         paid_sum_row = db.execute(text("""
-            SELECT COALESCE(SUM(commission_amount), 0)
+            SELECT COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0)
             FROM vgk_cash_income_entries
             WHERE partner_id = :pid AND status = 'PAID'
         """), {'pid': partner_id}).fetchone()
@@ -1383,7 +1383,7 @@ def _do_celebration(db, entry_id: int):
     senior_partner_id = None
     parent_row = db.execute(text("""
         SELECT p.id, p.partner_name, 
-               (SELECT COALESCE(SUM(commission_amount), 0) 
+               (SELECT COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0) 
                 FROM vgk_cash_income_entries 
                 WHERE partner_id = p.id AND status = 'PAID' AND level != 1)
         FROM official_partners p
@@ -1491,7 +1491,7 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
 
     # 1. Fetch entries
     entries = db.execute(text("""
-        SELECT id, entry_number, partner_id, source_lead_id, level, kind, commission_amount, status, income_date, notes
+        SELECT id, entry_number, partner_id, source_lead_id, level, kind, commission_amount, status, income_date, notes, COALESCE(advance_adjusted_amount, 0)::float AS advance_adjusted_amount
         FROM vgk_cash_income_entries
         WHERE id IN :eids AND partner_id = :pid
     """), {'eids': tuple(entry_ids), 'pid': partner_id}).fetchall()
@@ -1519,7 +1519,7 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
         }
 
     # 3. Calculate Batch Aggregates
-    batch_gross = sum(float(e.commission_amount or 0) for e in entries)
+    batch_gross = sum(max(0.0, float(e.commission_amount or 0) - float(getattr(e, 'advance_adjusted_amount', 0) or 0)) for e in entries)
     min_id = min(e.id for e in entries)
     max_id = max(e.id for e in entries)
     
@@ -1571,7 +1571,7 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
 
     # 5. Fetch Overall Earnings
     ov_row = db.execute(text("""
-        SELECT COALESCE(SUM(commission_amount), 0)
+        SELECT COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0)
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid AND status = 'PAID'
     """), {'pid': partner_id}).fetchone()
@@ -1581,8 +1581,8 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
     photo_bytes = _get_kyc_photo_bytes(db, partner_id)
 
     # 7. Build Batch Earner Card Payload
-    todays_stage1_advance = sum(float(e.commission_amount or 0) for e in entries if e.kind in ('ADVANCE', 'DVR_ADVANCE'))
-    todays_extra_comm = sum(float(e.commission_amount or 0) for e in entries if e.kind not in ('ADVANCE', 'DVR_ADVANCE'))
+    todays_stage1_advance = sum(max(0.0, float(e.commission_amount or 0) - float(getattr(e, 'advance_adjusted_amount', 0) or 0)) for e in entries if e.kind in ('ADVANCE', 'DVR_ADVANCE'))
+    todays_extra_comm = sum(max(0.0, float(e.commission_amount or 0) - float(getattr(e, 'advance_adjusted_amount', 0) or 0)) for e in entries if e.kind not in ('ADVANCE', 'DVR_ADVANCE'))
     
     payload = {
         "winner_title": designation.upper() if designation else "PROUD WINNER",

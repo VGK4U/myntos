@@ -284,6 +284,7 @@ api_router.include_router(pingme.router, tags=["VGK Assistant"])
 api_router.include_router(vgk_team.router,        prefix="/vgk", tags=["VGK Team"])
 api_router.include_router(vgk_auth.router,        prefix="/vgk", tags=["VGK Auth"])
 api_router.include_router(vgk_cash_income.router, prefix="/vgk", tags=["VGK Cash Income"])
+api_router.include_router(vgk_cash_income.router, tags=["VGK Cash Income Direct"])
 api_router.include_router(vgk_gallery.router,     tags=["VGK Gallery"])
 
 # VGK Vendor Master System (DC Protocol Mar 2026)

@@ -90,6 +90,7 @@ class VGKCashIncomeEntry(BaseModel):
     paid_cash_staff_id     = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
     skip_reason            = Column(Text, nullable=True)
     ledger_posted          = Column(Boolean, nullable=False, default=False)
+    skip_tds_admin         = Column(Boolean, nullable=False, default=False)
 
     created_at             = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at             = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
@@ -148,6 +149,7 @@ class VGKCashIncomeEntry(BaseModel):
             'paid_cash_staff_id':      self.paid_cash_staff_id,
             'skip_reason':             self.skip_reason,
             'ledger_posted':           bool(self.ledger_posted),
+            'skip_tds_admin':          bool(self.skip_tds_admin),
             'cancelled_reason':        self.cancelled_reason,
             'adjustment_ref_entry_id': self.adjustment_ref_entry_id,
             'adjustment_reason':       self.adjustment_reason,

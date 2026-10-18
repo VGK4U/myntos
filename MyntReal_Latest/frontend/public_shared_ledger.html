@@ -47,11 +47,56 @@
             margin-bottom: 20px;
             overflow: hidden;
         }
+        
+        /* Summary KPI Cards / Data Labels */
+        .kpi-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 14px 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+        .kpi-sub {
+            font-size: 11.5px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .text-indigo { color: #4f46e5 !important; }
+        .text-warning-dark { color: #d97706 !important; }
+        .text-slate { color: #334155 !important; }
+
+        /* Table Styling */
         .table-custom {
             font-size: 13px;
             margin-bottom: 0;
         }
-        .table-custom th {
+        .table-custom thead tr#headerRow th {
             background: #f1f5f9;
             color: #475569;
             font-weight: 700;
@@ -60,13 +105,60 @@
             letter-spacing: 0.5px;
             padding: 12px 10px;
             white-space: nowrap;
-            border-bottom: 2px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .table-custom thead tr.table-totals-row th {
+            position: sticky;
+            top: 40px;
+            z-index: 9;
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 800;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 2px solid #64748b;
+            padding: 9px 10px;
+            white-space: nowrap;
+            font-size: 12.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .table-custom th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .table-custom th.sortable:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .table-custom th.sorted-asc,
+        .table-custom th.sorted-desc {
+            background: #e0e7ff;
+            color: #3730a3;
+            border-bottom: 2px solid #4f46e5;
+        }
+        .sort-icon {
+            font-size: 11px;
+            opacity: 0.5;
+            transition: opacity 0.15s ease;
+        }
+        .table-custom th.sortable:hover .sort-icon {
+            opacity: 1;
+        }
+        .table-custom th.sorted-asc .sort-icon,
+        .table-custom th.sorted-desc .sort-icon {
+            opacity: 1;
+            color: #4f46e5;
         }
         .table-custom td {
             padding: 11px 10px;
             vertical-align: middle;
             white-space: nowrap;
         }
+        
+        /* Badges */
         .badge-kind {
             background: #ede9fe;
             color: #6d28d9;
@@ -81,6 +173,8 @@
             font-weight: 700;
             padding: 3px 8px;
             border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
         }
         .badge-status-pending {
             background: #ffedd5;
@@ -88,7 +182,35 @@
             font-weight: 700;
             padding: 3px 8px;
             border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
         }
+        .badge-status-stage1 {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .badge-status-cancelled {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        tr.row-cancelled {
+            background-color: #fef2f2 !important;
+            color: #991b1b;
+        }
+        tr.row-cancelled td {
+            opacity: 0.75;
+        }
+
         .expired-card {
             background: #fff1f2;
             border: 1px solid #fecdd3;
@@ -97,12 +219,73 @@
             padding: 40px 20px;
             text-align: center;
         }
+        .bg-indigo-subtle { background-color: #e0e7ff !important; }
+        .text-indigo { color: #4338ca !important; }
+        .border-indigo-subtle { border-color: #c7d2fe !important; }
+        .bg-purple-subtle { background-color: #f3e8ff !important; }
+        .text-purple { color: #7e22ce !important; }
+        .border-purple-subtle { border-color: #e9d5ff !important; }
+        .income-type-mini {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .income-type-mini:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        }
+
+        /* Mobile Viewport Optimizations (<= 576px) */
+        @media (max-width: 576px) {
+            .header-bar {
+                padding: 14px 0;
+                margin-bottom: 14px;
+            }
+            .header-bar h4 {
+                font-size: 1.15rem;
+            }
+            .kpi-card {
+                padding: 10px 12px;
+            }
+            .kpi-label {
+                font-size: 10px;
+                gap: 4px;
+            }
+            .kpi-value {
+                font-size: 18px;
+            }
+            .kpi-sub {
+                font-size: 10px;
+            }
+            .income-type-mini {
+                padding: 8px 10px;
+            }
+            .income-type-mini .fw-bold {
+                font-size: 11px !important;
+            }
+            .table-custom th, .table-custom td {
+                padding: 8px 8px;
+                font-size: 11.5px;
+            }
+            .table-custom thead tr.table-totals-row th {
+                top: 36px;
+                padding: 7px 8px;
+                font-size: 11.5px;
+            }
+            .card-custom {
+                border-radius: 12px;
+                margin-bottom: 14px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="header-bar">
-        <div class="container-fluid px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="container-fluid px-2 px-sm-3 px-md-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h4 class="mb-0 font-weight-bold"><i class="fas fa-chart-line text-warning me-2"></i> VGK4U Channel Partners</h4>
                 <small class="text-white-50">Shared Income Ledger & Payment Breakdown</small>
@@ -115,7 +298,7 @@
         </div>
     </div>
 
-    <div class="container-fluid px-4">
+    <div class="container-fluid px-2 px-sm-3 px-md-4">
         <!-- Expired Link Alert (Hidden by default) -->
         <div id="expiredView" class="expired-card d-none">
             <i class="fas fa-exclamation-triangle fa-3x mb-3 text-danger"></i>
@@ -126,6 +309,7 @@
 
         <!-- Active Ledger Content -->
         <div id="ledgerView" class="d-none">
+            <!-- Header Meta Info -->
             <div class="card-custom p-3 mb-3 bg-white">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -138,34 +322,224 @@
                 </div>
             </div>
 
+            <!-- Member Overview & Rank / Team / Login Card -->
+            <div class="card-custom p-3 mb-3 bg-white" id="memberOverviewCard">
+                <div class="row g-3 align-items-center">
+                    <div class="col-lg-8 col-12">
+                        <div class="d-flex align-items-start gap-3 flex-wrap">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-4 flex-shrink-0" style="width: 52px; height: 52px;" id="memberAvatar">
+                                CP
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <h5 class="fw-bold mb-0 text-dark" id="memberName">Channel Partner</h5>
+                                    <code class="px-2 py-0.5 bg-light text-primary border rounded fw-bold" id="memberCode">—</code>
+                                    <span class="badge bg-primary text-white px-2.5 py-1" id="memberRankBadge"><i class="fas fa-crown text-warning me-1"></i> Channel Partner</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 flex-wrap text-muted small mb-2">
+                                    <span><i class="fas fa-certificate text-warning me-1"></i> <strong id="memberQualFiles" class="text-dark">0</strong> Qualifying Files</span>
+                                    <span><i class="fas fa-percentage text-success me-1"></i> <strong id="memberRate" class="text-dark">5.00%</strong> Base Rate</span>
+                                    <span><i class="fas fa-phone text-secondary me-1"></i> <span id="memberPhone">—</span></span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle px-2.5 py-1.5 font-weight-bold">
+                                        <i class="fas fa-users me-1"></i> Downline Team: <strong id="memberTotalTeam">0</strong> Members
+                                    </span>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1.5 font-weight-bold">
+                                        <i class="fas fa-sitemap me-1"></i> Direct Frontline: <strong id="memberDirectTeam">0</strong> Active
+                                    </span>
+                                </div>
+                                <!-- Advances Tracking (Only shown if member availed advances) -->
+                                <div class="d-none align-items-center gap-2 flex-wrap mt-2 pt-2 border-top" id="memberAdvancesSection">
+                                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 10.5px; letter-spacing: 0.5px;"><i class="fas fa-hand-holding-dollar text-warning-dark me-1"></i> Advances:</span>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 font-weight-bold" title="Total advances issued to partner">
+                                        Given: <strong id="memberAdvGiven">₹0</strong>
+                                    </span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 font-weight-bold" title="Total advances cleared/recovered">
+                                        Cleared: <strong id="memberAdvCleared">₹0</strong>
+                                    </span>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 font-weight-bold" title="Outstanding pending advance balance">
+                                        Pending: <strong id="memberAdvPending">₹0</strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-12">
+                        <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column justify-content-between">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold text-dark small"><i class="fas fa-shield-alt text-primary me-1"></i> VGK4U Member Portal</span>
+                                <span class="badge bg-success-subtle text-success">Live &amp; Secure</span>
+                            </div>
+                            <p class="text-muted mb-2" style="font-size: 11.5px; line-height: 1.4;">
+                                Log in to your official VGK4U portal to track real-time leads, request payouts &amp; view full earnings history.
+                            </p>
+                            <div>
+                                <a href="/vgk/login" target="_blank" class="btn btn-sm btn-primary w-100 fw-bold shadow-sm">
+                                    <i class="fas fa-sign-in-alt me-1"></i> Go to Member Login <i class="fas fa-external-link-alt ms-1 small"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leads Generated Bucketwise Section -->
+            <div class="card-custom p-3 mb-3 bg-white" id="leadsBucketCard">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <div class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.5px;">
+                        <i class="fas fa-filter text-primary me-1"></i> Leads Generated — Bucketwise Pipeline
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small">
+                        <span class="text-muted">Total: <strong id="leadsTotalCount" class="text-dark">0</strong></span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Won/Active: <strong id="leadsWonCount">0</strong></span>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Lost: <strong id="leadsLostCount">0</strong></span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 pt-1" id="leadsBucketContainer">
+                    <span class="text-muted small">Loading pipeline buckets...</span>
+                </div>
+            </div>
+
+            <!-- Team Income Earned — Income Type-Wise Data Labels -->
+            <div class="card-custom p-3 mb-3 bg-white" id="incomeTypeCard">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.5px;">
+                        <i class="fas fa-coins text-warning me-1"></i> Income Earned — By Income Type
+                    </div>
+                    <small class="text-muted">Gross Breakdown</small>
+                </div>
+                <div class="row g-2" id="incomeByTypeContainer">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Summary KPI Data Labels / Metric Summary Cards (Without Net Payout) -->
+            <div class="row g-2 g-md-3 mb-3" id="kpiCardsContainer">
+                <div class="col-6 col-md-6 col-xl-3">
+                    <div class="kpi-card">
+                        <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Total Gross</div>
+                        <div class="kpi-value text-indigo" id="kpiGrossEarned">₹0</div>
+                        <div class="kpi-sub d-none d-sm-block">Total Commission Calculated</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-6 col-xl-3">
+                    <div class="kpi-card">
+                        <div class="kpi-label"><i class="fas fa-hand-holding-dollar text-warning-dark"></i> Advance Ded.</div>
+                        <div class="kpi-value text-warning-dark" id="kpiAdvanceDeductions">₹0</div>
+                        <div class="kpi-sub d-none d-sm-block" id="kpiAdvanceSub">Stage 1 &amp; Stage 2 Advances</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-6 col-xl-3">
+                    <div class="kpi-card">
+                        <div class="kpi-label"><i class="fas fa-scale-balanced text-primary"></i> Balance Gross</div>
+                        <div class="kpi-value text-primary" id="kpiBalanceGross">₹0</div>
+                        <div class="kpi-sub d-none d-sm-block">Gross minus Early Advances</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-6 col-xl-3">
+                    <div class="kpi-card">
+                        <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
+                        <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
+                        <div class="kpi-sub" id="kpiCancelledExcluded">Cancelled Excluded</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer-Wise Filters & Toolbar -->
+            <div class="card-custom p-3 mb-3 bg-white">
+                <div class="row g-2 align-items-center">
+                    <!-- Customer Filter -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user me-1 text-primary"></i> Customer / Member</label>
+                        <select id="filterCustomer" class="form-select form-select-sm">
+                            <option value="ALL">All Customers</option>
+                        </select>
+                    </div>
+                    <!-- Status Filter -->
+                    <div class="col-md-2 col-sm-6" id="statusFilterCol">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-tags me-1 text-info"></i> Status</label>
+                        <select id="filterStatus" class="form-select form-select-sm">
+                            <option value="ALL">All Statuses</option>
+                            <option value="PAID">Paid / Released</option>
+                            <option value="STAGE1_APPROVED">Stage 1 Approved</option>
+                            <option value="PENDING">Pending</option>
+                        </select>
+                    </div>
+                    <!-- Real-time Search -->
+                    <div class="col-md-4 col-sm-12">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1 text-secondary"></i> Search Entries</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="filterSearch" class="form-control" placeholder="Search customer, entry #, kind, location...">
+                            <button class="btn btn-outline-secondary" type="button" id="btnClearSearch" title="Clear search"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <!-- Avoid Cancelled Switch & Reset -->
+                    <div class="col-md-3 col-sm-12 d-flex align-items-center justify-content-between justify-content-md-end gap-3 pt-md-3 mt-1">
+                        <div class="form-check form-switch mb-0" title="Avoid cancelled transactions in table and metric cards">
+                            <input class="form-check-input" type="checkbox" id="toggleAvoidCancelled" checked>
+                            <label class="form-check-label small fw-bold text-danger" for="toggleAvoidCancelled" id="toggleAvoidCancelledLabel">
+                                Hide Cancelled (<span id="cancelledCountBadge">0</span>)
+                            </label>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" id="btnResetFilters" type="button">
+                            <i class="fas fa-redo-alt me-1"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                <!-- Filter Status Strip -->
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small text-muted">
+                    <div>
+                        <span id="entriesFilterInfo">Showing all entries</span>
+                        <span id="cancelledNoticeBadge" class="badge bg-danger-subtle text-danger ms-2">
+                            <i class="fas fa-ban me-1"></i> Cancelled transactions excluded
+                        </span>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted"><i class="fas fa-sort me-1"></i> Click column header to sort</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ledger Table with Sticky Totals Row Above Data Rows -->
             <div class="card-custom">
-                <div class="table-responsive">
+                <div class="d-flex d-md-none align-items-center justify-content-between px-3 py-2 bg-light border-bottom text-muted" style="font-size: 11px;">
+                    <span><i class="fas fa-arrows-left-right text-primary me-1"></i> Swipe table horizontally</span>
+                    <span class="badge bg-secondary-subtle text-secondary border">19 Columns</span>
+                </div>
+                <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table class="table table-custom table-hover align-middle mb-0" id="ledgerTable">
                         <thead>
                             <tr id="headerRow">
-                                <th>Submit Date</th>
-                                <th>Trigger Date</th>
-                                <th>Payment Date</th>
-                                <th>Entry #</th>
-                                <th>Level / Role</th>
-                                <th>Customer / Member</th>
-                                <th>Entry Kind</th>
-                                <th>Deal Value ₹</th>
-                                <th>Calc %</th>
-                                <th>Gross ₹</th>
-                                <th>Stage 1 Adv.</th>
-                                <th>Stage 2 Adv.</th>
-                                <th>Advance Paid ₹</th>
-                                <th>Balance Gross ₹</th>
-                                <th>Admin (8%)</th>
-                                <th>TDS (2%)</th>
-                                <th>Net (90%)</th>
-                                <th id="thStatus">Status</th>
+                                <th class="sortable" data-col="submit_date" data-type="date">Submit Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="trigger_date" data-type="date">Trigger Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="payment_date" data-type="date">Payment Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="entry_number" data-type="text">Entry # <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="level_label" data-type="text">Level / Role <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="client_name" data-type="text">Customer / Member <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="display_kind" data-type="text">Entry Kind <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="deal_value" data-type="number">Deal Value ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="received_value" data-type="number">Received Value ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="commission_pct" data-type="number">Calc % <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="commission_amount" data-type="number">Gross ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="stage1_adv" data-type="number">Stage 1 Adv. <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="stage2_adv" data-type="number">Stage 2 Adv. <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="advance_paid" data-type="number">Advance Paid ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="balance_gross" data-type="number">Balance Gross ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="admin_charges" data-type="number">Admin (8%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="tds_amount" data-type="number">TDS (2%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="net_payout" data-type="number">Net (90%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                <th class="sortable" data-col="status" data-type="text" id="thStatus">Status <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                            </tr>
+                            <!-- Totals Row with Totals for All Value Columns -->
+                            <tr id="totalsHeaderRow" class="table-totals-row">
+                                <!-- Populated dynamically based on filtered active rows -->
                             </tr>
                         </thead>
                         <tbody id="tableBody">
                             <tr>
-                                <td colspan="18" class="text-center py-4 text-muted">
+                                <td colspan="19" class="text-center py-4 text-muted">
                                     <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading income ledger...
                                 </td>
                             </tr>
@@ -183,6 +557,11 @@
         const token = urlParams.get('token');
         const code = codeFromPath || urlParams.get('code') || urlParams.get('c');
         let countdownTimer = null;
+
+        // Global dataset and state
+        let allLedgerData = [];
+        let showStatusColumn = true;
+        let currentSort = { col: 'submit_date', dir: 'desc' };
 
         async function loadSharedLedger() {
             let apiUri = '';
@@ -238,6 +617,16 @@
             countdownTimer = setInterval(updateDisplay, 1000);
         }
 
+        function escHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function renderLedger(payload) {
             document.getElementById('expiredView').classList.add('d-none');
             document.getElementById('ledgerView').classList.remove('d-none');
@@ -245,44 +634,429 @@
             document.getElementById('targetTitle').textContent = payload.target_name || "VGK Channel Partners Ledger";
             document.getElementById('metaInfo').textContent = `Total Entries: ${payload.total_rows} | Option: ${payload.show_status ? 'Status Column Visible' : 'Status Column Hidden'}`;
 
-            const showStatus = payload.show_status;
-            if (!showStatus) {
-                document.getElementById('thStatus').style.display = 'none';
-            }
+            // Populate Member Summary (Rank, Team Under Him, Leads Bucketwise)
+            const ms = payload.member_summary || {};
+            if (ms.partner_name || ms.partner_code) {
+                document.getElementById('memberName').textContent = ms.partner_name || payload.target_name || "Channel Partner";
+                document.getElementById('memberCode').textContent = ms.partner_code || "—";
+                const initials = (ms.partner_name || 'CP').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('memberAvatar').textContent = initials;
+                document.getElementById('memberRankBadge').innerHTML = `<i class="fas fa-crown text-warning me-1"></i> ${escHtml(ms.rank || 'Senior')} Rank`;
+                document.getElementById('memberQualFiles').textContent = ms.own_qualifying_files != null ? ms.own_qualifying_files : '—';
+                document.getElementById('memberRate').textContent = ms.effective_rate != null ? Number(ms.effective_rate).toFixed(2) + '%' : '5.00%';
+                document.getElementById('memberPhone').textContent = ms.phone || '—';
 
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+                const team = ms.team || {};
+                document.getElementById('memberTotalTeam').textContent = team.total_team || 0;
+                document.getElementById('memberDirectTeam').textContent = team.direct_team || 0;
 
-            if (!payload.data || payload.data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="18" class="text-center py-4 text-muted">No income breakdown entries found for this report.</td></tr>`;
-                return;
-            }
+                const leads = ms.leads || {};
+                document.getElementById('leadsTotalCount').textContent = leads.total || 0;
+                document.getElementById('leadsWonCount').textContent = leads.won_active || 0;
+                document.getElementById('leadsLostCount').textContent = leads.lost || 0;
 
-            payload.data.forEach(row => {
-                const tr = document.createElement('tr');
-                const displayKind = row.display_kind || row.entry_kind_label || row.kind || 'Income';
+                const bCont = document.getElementById('leadsBucketContainer');
+                bCont.innerHTML = '';
+                const buckets = leads.buckets || [];
+                if (buckets.length === 0) {
+                    bCont.innerHTML = '<span class="text-muted small">No leads pipeline stages recorded.</span>';
+                } else {
+                    buckets.forEach(b => {
+                        const isLost = (b.stage || '').toLowerCase() === 'lost';
+                        const bStyle = isLost 
+                            ? 'background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;'
+                            : 'background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b;';
+                        const countBadgeStyle = isLost
+                            ? 'background: #dc2626; color: #fff;'
+                            : 'background: #4f46e5; color: #fff;';
+                        bCont.innerHTML += `
+                            <div style="${bStyle} padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                                <span>${escHtml(b.stage)}</span>
+                                <span style="${countBadgeStyle} padding: 2px 7px; border-radius: 12px; font-size: 11px; font-weight: 700;">${b.count}</span>
+                            </div>
+                        `;
+                    });
+                }
 
-                let statusBadge = '—';
-                if (showStatus) {
-                    const st = (row.status || '').toUpperCase();
-                    if (st === 'PAID' || st === 'RELEASED') {
-                        statusBadge = `<span class="badge-status-paid"><i class="fas fa-check-circle me-1"></i>${st}</span>`;
-                    } else if (st === 'STAGE1_APPROVED') {
-                        statusBadge = `<span class="badge bg-info text-dark font-weight-bold">STAGE 1 APPROVED</span>`;
+                // Advances Tracking (Only shown if member availed advances)
+                const adv = ms.advances || {};
+                const advSection = document.getElementById('memberAdvancesSection');
+                if (advSection) {
+                    if (adv.availed && adv.total_given > 0) {
+                        advSection.classList.remove('d-none');
+                        advSection.classList.add('d-flex');
+                        document.getElementById('memberAdvGiven').textContent = '₹' + Math.round(adv.total_given).toLocaleString('en-IN');
+                        document.getElementById('memberAdvCleared').textContent = '₹' + Math.round(adv.total_cleared).toLocaleString('en-IN');
+                        document.getElementById('memberAdvPending').textContent = '₹' + Math.round(adv.total_pending).toLocaleString('en-IN');
                     } else {
-                        statusBadge = `<span class="badge-status-pending"><i class="fas fa-clock me-1"></i>${st}</span>`;
+                        advSection.classList.add('d-none');
+                        advSection.classList.remove('d-flex');
+                    }
+                }
+            }
+
+            showStatusColumn = Boolean(payload.show_status);
+            if (!showStatusColumn) {
+                const thStatus = document.getElementById('thStatus');
+                if (thStatus) thStatus.style.display = 'none';
+                const statusCol = document.getElementById('statusFilterCol');
+                if (statusCol) statusCol.classList.add('d-none');
+            }
+
+            allLedgerData = payload.data || [];
+
+            // Count cancelled rows
+            const cancelledCount = allLedgerData.filter(r => (r.status || '').toUpperCase() === 'CANCELLED').length;
+            document.getElementById('cancelledCountBadge').textContent = cancelledCount;
+
+            // Populate Customer Filter Dropdown
+            populateCustomerDropdown(allLedgerData);
+
+            // Wire up interactive toolbar & sort listeners
+            setupEventListeners();
+
+            // Run initial render
+            applyFiltersAndRender();
+        }
+
+        function populateCustomerDropdown(data) {
+            const customerMap = {};
+            data.forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const cName = (r.client_name || r.member_name || '').trim();
+                if (!cName) return;
+                if (!customerMap[cName]) {
+                    customerMap[cName] = { total: 0, active: 0 };
+                }
+                customerMap[cName].total++;
+                if (!isCancelled) customerMap[cName].active++;
+            });
+
+            const selectEl = document.getElementById('filterCustomer');
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="ALL">All Customers (${Object.keys(customerMap).length})</option>`;
+
+            Object.keys(customerMap).sort((a,b) => a.localeCompare(b)).forEach(cName => {
+                const opt = document.createElement('option');
+                opt.value = cName;
+                const stats = customerMap[cName];
+                opt.textContent = `${cName} (${stats.active} active)`;
+                selectEl.appendChild(opt);
+            });
+
+            if (currentVal && customerMap[currentVal]) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        let listenersInitialized = false;
+        function setupEventListeners() {
+            if (listenersInitialized) return;
+            listenersInitialized = true;
+
+            // Header sort clicks
+            document.querySelectorAll('#headerRow th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = th.getAttribute('data-col');
+                    const colType = th.getAttribute('data-type');
+                    if (currentSort.col === col) {
+                        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.col = col;
+                        currentSort.dir = (colType === 'number' || colType === 'date') ? 'desc' : 'asc';
+                    }
+                    applyFiltersAndRender();
+                });
+            });
+
+            // Filter controls
+            document.getElementById('filterCustomer').addEventListener('change', () => applyFiltersAndRender());
+            document.getElementById('filterStatus').addEventListener('change', () => applyFiltersAndRender());
+            document.getElementById('filterSearch').addEventListener('input', () => applyFiltersAndRender());
+            document.getElementById('btnClearSearch').addEventListener('click', () => {
+                document.getElementById('filterSearch').value = '';
+                applyFiltersAndRender();
+            });
+            document.getElementById('toggleAvoidCancelled').addEventListener('change', () => applyFiltersAndRender());
+            document.getElementById('btnResetFilters').addEventListener('click', () => resetAllFilters());
+        }
+
+        function resetAllFilters() {
+            document.getElementById('filterCustomer').value = 'ALL';
+            document.getElementById('filterStatus').value = 'ALL';
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('toggleAvoidCancelled').checked = true;
+            currentSort = { col: 'submit_date', dir: 'desc' };
+            applyFiltersAndRender();
+        }
+
+        function getSortValue(row, col) {
+            if (col === 'submit_date') return row.submit_date || '';
+            if (col === 'trigger_date') return row.trigger_date || row.income_date || '';
+            if (col === 'payment_date') return row.payment_date || '';
+            if (col === 'entry_number') return row.entry_number || '';
+            if (col === 'level_label') return row.level_label || ('L' + (row.level || ''));
+            if (col === 'client_name') return (row.client_name || row.member_name || '').toLowerCase();
+            if (col === 'display_kind') return (row.display_kind || row.entry_kind_label || row.kind || '').toLowerCase();
+            if (col === 'status') return (row.status || '').toLowerCase();
+            return Number(row[col]) || 0;
+        }
+
+        function applyFiltersAndRender() {
+            const avoidCancelled = document.getElementById('toggleAvoidCancelled').checked;
+            const selectedCustomer = document.getElementById('filterCustomer').value;
+            const selectedStatus = document.getElementById('filterStatus').value;
+            const searchQuery = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+
+            // 1. Filter rows
+            let filtered = allLedgerData.filter(row => {
+                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
+                if (avoidCancelled && isCancelled) {
+                    return false;
+                }
+
+                if (selectedCustomer !== 'ALL') {
+                    const rowCust = (row.client_name || row.member_name || '').trim();
+                    if (rowCust !== selectedCustomer) return false;
+                }
+
+                if (selectedStatus !== 'ALL') {
+                    const rowStatus = (row.status || '').toUpperCase();
+                    if (selectedStatus === 'STAGE1_APPROVED') {
+                        if (rowStatus !== 'STAGE1_APPROVED') return false;
+                    } else if (selectedStatus === 'PAID') {
+                        if (rowStatus !== 'PAID' && rowStatus !== 'RELEASED') return false;
+                    } else if (selectedStatus === 'PENDING') {
+                        if (rowStatus === 'PAID' || rowStatus === 'RELEASED' || rowStatus === 'STAGE1_APPROVED' || rowStatus === 'CANCELLED') return false;
+                    } else if (rowStatus !== selectedStatus) {
+                        return false;
                     }
                 }
 
+                if (searchQuery) {
+                    const matchStr = [
+                        row.client_name,
+                        row.member_name,
+                        row.entry_number,
+                        row.display_kind,
+                        row.kind,
+                        row.level_label,
+                        row.location,
+                        row.payment_utr,
+                        row.submit_date
+                    ].filter(Boolean).join(' ').toLowerCase();
+
+                    if (!matchStr.includes(searchQuery)) return false;
+                }
+
+                return true;
+            });
+
+            // 2. Compute Totals for All Value Columns
+            let sumDeal = 0;
+            let sumRecv = 0;
+            let sumGross = 0;
+            let sumStg1 = 0;
+            let sumStg2 = 0;
+            let sumAdvPaid = 0;
+            let sumBal = 0;
+            let sumAdmin = 0;
+            let sumTds = 0;
+            let sumNet = 0;
+
+            filtered.forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                if (!isCancelled) {
+                    sumDeal += Number(r.deal_value) || 0;
+                    sumRecv += Number(r.received_value) || 0;
+                    sumGross += Number(r.commission_amount) || 0;
+                    sumStg1 += Number(r.stage1_adv) || 0;
+                    sumStg2 += Number(r.stage2_adv) || 0;
+                    sumAdvPaid += Number(r.advance_paid) || 0;
+                    sumBal += Number(r.balance_gross) || 0;
+                    sumAdmin += Number(r.admin_charges) || 0;
+                    sumTds += Number(r.tds_amount) || 0;
+                    sumNet += Number(r.net_payout) || 0;
+                }
+            });
+
+            // 3. Update Summary Data Labels (Gross Earned, Advances, Balance Gross, Active Records)
+            document.getElementById('kpiGrossEarned').textContent = '₹' + Math.round(sumGross).toLocaleString('en-IN');
+            document.getElementById('kpiAdvanceDeductions').textContent = '₹' + Math.round(sumAdvPaid).toLocaleString('en-IN');
+            document.getElementById('kpiBalanceGross').textContent = '₹' + Math.round(sumBal).toLocaleString('en-IN');
+            document.getElementById('kpiActiveRecords').textContent = filtered.length;
+
+            const cancelledCountInFiltered = filtered.filter(r => (r.status || '').toUpperCase() === 'CANCELLED').length;
+            if (avoidCancelled) {
+                document.getElementById('kpiCancelledExcluded').innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-ban me-1"></i>Cancelled Excluded</span>`;
+                document.getElementById('cancelledNoticeBadge').classList.remove('d-none');
+            } else {
+                document.getElementById('kpiCancelledExcluded').innerHTML = `<span class="text-warning fw-bold">${cancelledCountInFiltered} Cancelled Shown</span>`;
+                document.getElementById('cancelledNoticeBadge').classList.add('d-none');
+            }
+
+            document.getElementById('entriesFilterInfo').textContent = `Showing ${filtered.length} of ${allLedgerData.length} total entries`;
+
+            // 3b. Update Income Earned — By Income Type Data Labels
+            const incCont = document.getElementById('incomeByTypeContainer');
+            if (incCont) {
+                const typeMap = {};
+                filtered.forEach(r => {
+                    const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                    if (isCancelled && avoidCancelled) return;
+                    const kLabel = r.display_kind || r.entry_kind_label || r.kind || 'Commission';
+                    if (!typeMap[kLabel]) {
+                        typeMap[kLabel] = { type: kLabel, count: 0, gross: 0, advance: 0, balance: 0, net: 0 };
+                    }
+                    typeMap[kLabel].count++;
+                    if (!isCancelled) {
+                        typeMap[kLabel].gross += Number(r.commission_amount) || 0;
+                        typeMap[kLabel].advance += Number(r.advance_paid) || 0;
+                        typeMap[kLabel].balance += Number(r.balance_gross) || 0;
+                        typeMap[kLabel].net += Number(r.net_payout) || 0;
+                    }
+                });
+
+                const typeKeys = Object.keys(typeMap);
+                if (typeKeys.length === 0) {
+                    incCont.innerHTML = '<div class="col-12 text-muted small p-2">No income entries match the selected filter.</div>';
+                } else {
+                    incCont.innerHTML = typeKeys.map(k => {
+                        const item = typeMap[k];
+                        return `
+                            <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                <div class="income-type-mini">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-dark text-truncate" style="font-size: 11.5px;" title="${escHtml(item.type)}">${escHtml(item.type)}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary" style="font-size: 10px;">${item.count}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <small class="text-muted" style="font-size: 10.5px;">Gross Earned:</small>
+                                        <strong class="text-indigo" style="font-size: 13px; font-weight: 800;">₹${Math.round(item.gross).toLocaleString('en-IN')}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 4. Update Table Top Totals Row (with totals for ALL value columns)
+            const totalsRow = document.getElementById('totalsHeaderRow');
+            if (filtered.length === 0) {
+                totalsRow.innerHTML = '';
+            } else {
+                totalsRow.innerHTML = `
+                    <th><span class="badge bg-dark px-2 py-1"><i class="fas fa-calculator me-1"></i>TOTAL</span></th>
+                    <th>—</th>
+                    <th>—</th>
+                    <th class="font-monospace text-primary fw-bold">${filtered.length} Entries</th>
+                    <th>—</th>
+                    <th>—</th>
+                    <th>—</th>
+                    <th class="fw-bold text-dark">₹${Math.round(sumDeal).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-dark">₹${Math.round(sumRecv).toLocaleString('en-IN')}</th>
+                    <th class="text-center">—</th>
+                    <th class="fw-bold text-indigo">₹${Math.round(sumGross).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-dark">₹${Math.round(sumStg1).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-dark">₹${Math.round(sumStg2).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-warning-dark">₹${Math.round(sumAdvPaid).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-primary">₹${Math.round(sumBal).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-muted">₹${Math.round(sumAdmin).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-muted">₹${(sumTds % 1 === 0 ? sumTds : sumTds.toFixed(1)).toLocaleString('en-IN')}</th>
+                    <th class="fw-bold text-success">₹${Math.round(sumNet).toLocaleString('en-IN')}</th>
+                    ${showStatusColumn ? `<th>—</th>` : ''}
+                `;
+            }
+
+            // 5. Sort rows
+            filtered.sort((a, b) => {
+                let va = getSortValue(a, currentSort.col);
+                let vb = getSortValue(b, currentSort.col);
+                let cmp = 0;
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    cmp = va - vb;
+                } else {
+                    cmp = String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' });
+                }
+                return currentSort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            // 6. Update Header Sort Classes & Icons
+            document.querySelectorAll('#headerRow th.sortable').forEach(th => {
+                const col = th.getAttribute('data-col');
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) {
+                    icon.className = 'fas fa-sort ms-1 sort-icon';
+                }
+                if (col === currentSort.col) {
+                    th.classList.add(currentSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    if (icon) {
+                        icon.className = `fas fa-sort-${currentSort.dir === 'asc' ? 'up' : 'down'} ms-1 text-primary sort-icon`;
+                    }
+                }
+            });
+
+            // 7. Render Table Rows
+            renderTableRows(filtered);
+        }
+
+        function renderTableRows(rows) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const colSpan = showStatusColumn ? 19 : 18;
+
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${colSpan}" class="text-center py-5 text-muted">
+                            <i class="fas fa-filter fa-2x text-muted mb-2 d-block"></i>
+                            No entries match your filter or search criteria.
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-link" onclick="resetAllFilters()">Reset all filters</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                const displayKind = row.display_kind || row.entry_kind_label || row.kind || 'Income';
+                const st = (row.status || '').toUpperCase();
+                const isCancelled = st === 'CANCELLED';
+
+                if (isCancelled) {
+                    tr.classList.add('row-cancelled');
+                }
+
+                let statusBadge = '—';
+                if (showStatusColumn) {
+                    if (isCancelled) {
+                        statusBadge = `<span class="badge-status-cancelled"><i class="fas fa-ban me-1"></i>CANCELLED</span>`;
+                    } else if (st === 'PAID' || st === 'RELEASED') {
+                        statusBadge = `<span class="badge-status-paid"><i class="fas fa-check-circle me-1"></i>${st}</span>`;
+                    } else if (st === 'STAGE1_APPROVED') {
+                        statusBadge = `<span class="badge-status-stage1"><i class="fas fa-check me-1"></i>STAGE 1 APPROVED</span>`;
+                    } else {
+                        statusBadge = `<span class="badge-status-pending"><i class="fas fa-clock me-1"></i>${st || 'PENDING'}</span>`;
+                    }
+                }
+
+                // 19 properly mapped columns exactly matching the 19 table headers
                 tr.innerHTML = `
                     <td>${row.submit_date || '—'}</td>
                     <td>${row.trigger_date || row.income_date || '—'}</td>
                     <td>${row.payment_date || '—'}</td>
                     <td class="font-monospace text-primary fw-bold">${row.entry_number || '—'}</td>
-                    <td><span class="badge bg-secondary">${row.level_label || 'L' + row.level}</span></td>
+                    <td><span class="badge bg-secondary">${row.level_label || ('L' + row.level)}</span></td>
                     <td class="fw-bold">${row.client_name || row.member_name || '—'}</td>
                     <td><span class="badge-kind">${displayKind}</span></td>
                     <td>₹${(row.deal_value || 0).toLocaleString('en-IN')}</td>
+                    <td>₹${(row.received_value || 0).toLocaleString('en-IN')}</td>
                     <td>${row.commission_pct || 0}%</td>
                     <td class="fw-bold text-dark">₹${(row.commission_amount || 0).toLocaleString('en-IN')}</td>
                     <td>${row.stage1_adv ? '₹' + row.stage1_adv.toLocaleString('en-IN') : '—'}</td>
@@ -292,7 +1066,7 @@
                     <td class="text-muted">₹${(row.admin_charges || 0).toLocaleString('en-IN')}</td>
                     <td class="text-muted">₹${(row.tds_amount || 0).toLocaleString('en-IN')}</td>
                     <td class="fw-bold text-success">₹${(row.net_payout || 0).toLocaleString('en-IN')}</td>
-                    ${showStatus ? `<td>${statusBadge}</td>` : ''}
+                    ${showStatusColumn ? `<td>${statusBadge}</td>` : ''}
                 `;
                 tbody.appendChild(tr);
             });

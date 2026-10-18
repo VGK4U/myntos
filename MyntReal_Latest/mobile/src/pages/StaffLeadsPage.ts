@@ -1302,6 +1302,24 @@ export class StaffLeadsPage {
               <label>Notes</label>
               <textarea id="newDealNotes" class="form-textarea" rows="2" placeholder="Deal notes..."></textarea>
             </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#059669;">
+                <input type="checkbox" id="newDealAllPaymentsReceived" style="width:18px;height:18px;accent-color:#059669;">
+                <span>All Payments Received (Trigger Final Commission)</span>
+              </label>
+              <small style="display:block;color:#6b7280;font-size:11px;margin-top:2px;">
+                Marks deal as 100% paid and triggers Option B balance commission across partner levels (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%).
+              </small>
+            </div>
+            <div class="form-group" id="newDealReleaseSupportBrandWrap" style="display:none;margin-left:26px;background:#f0fdf4;padding:8px 12px;border-radius:6px;border:1px solid #bbf7d0;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#166534;font-size:12px;">
+                <input type="checkbox" id="newDealReleaseSupportBrand" checked style="width:16px;height:16px;accent-color:#166534;">
+                <span>Release Support (L5) &amp; Brand Incomes as well</span>
+              </label>
+              <small style="display:block;color:#15803d;font-size:11px;margin-top:2px;">
+                Also triggers/releases Field Support and Solar Brand commissions for this deal.
+              </small>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" id="cancelAddDealBtn">Cancel</button>
@@ -1364,6 +1382,24 @@ export class StaffLeadsPage {
             <div class="form-group">
               <label>Notes</label>
               <textarea id="txnNotes" class="form-textarea" rows="2" placeholder="Transaction notes..."></textarea>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#059669;">
+                <input type="checkbox" id="txnAllPaymentsReceived" style="width:18px;height:18px;accent-color:#059669;">
+                <span>All Payments Received (Trigger Final Commission)</span>
+              </label>
+              <small style="display:block;color:#6b7280;font-size:11px;margin-top:2px;">
+                Marks deal as 100% paid and triggers Option B balance commission across partner levels (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%).
+              </small>
+            </div>
+            <div class="form-group" id="txnReleaseSupportBrandWrap" style="display:none;margin-left:26px;background:#f0fdf4;padding:8px 12px;border-radius:6px;border:1px solid #bbf7d0;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#166534;font-size:12px;">
+                <input type="checkbox" id="txnReleaseSupportBrand" checked style="width:16px;height:16px;accent-color:#166534;">
+                <span>Release Support (L5) &amp; Brand Incomes as well</span>
+              </label>
+              <small style="display:block;color:#15803d;font-size:11px;margin-top:2px;">
+                Also triggers/releases Field Support and Solar Brand commissions for this deal.
+              </small>
             </div>
           </div>
           <div class="modal-footer">
@@ -1515,10 +1551,18 @@ export class StaffLeadsPage {
     document.getElementById('closeAddDealModal')?.addEventListener('click', () => this.hideModal('addDealModal'));
     document.getElementById('cancelAddDealBtn')?.addEventListener('click', () => this.hideModal('addDealModal'));
     document.getElementById('saveAddDealBtn')?.addEventListener('click', () => this.saveNewDeal());
+    document.getElementById('newDealAllPaymentsReceived')?.addEventListener('change', (e) => {
+      const wrap = document.getElementById('newDealReleaseSupportBrandWrap');
+      if (wrap) wrap.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none';
+    });
 
     document.getElementById('closeAddTxnModal')?.addEventListener('click', () => this.hideModal('addTxnModal'));
     document.getElementById('cancelAddTxnBtn')?.addEventListener('click', () => this.hideModal('addTxnModal'));
     document.getElementById('saveAddTxnBtn')?.addEventListener('click', () => this.saveNewTransaction());
+    document.getElementById('txnAllPaymentsReceived')?.addEventListener('change', (e) => {
+      const wrap = document.getElementById('txnReleaseSupportBrandWrap');
+      if (wrap) wrap.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none';
+    });
 
     document.getElementById('searchInput')?.addEventListener('input', (e) => {
       this.searchQuery = (e.target as HTMLInputElement).value.toLowerCase();
@@ -2143,9 +2187,27 @@ export class StaffLeadsPage {
           <span class="info-value">${lead.source || 'Direct'}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Created</span>
+          <span class="info-label">Lead Date</span>
           <span class="info-value">${new Date(lead.created_at).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
         </div>
+        ${lead.first_payment_received_date ? `
+          <div class="info-row">
+            <span class="info-label">1st Payment</span>
+            <span class="info-value" style="font-weight:700;color:#059669">${new Date(lead.first_payment_received_date).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })} ✓</span>
+          </div>
+        ` : ''}
+        ${lead.submit_date ? `
+          <div class="info-row">
+            <span class="info-label">Submitted</span>
+            <span class="info-value">${new Date(lead.submit_date).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          </div>
+        ` : ''}
+        ${lead.complete_date ? `
+          <div class="info-row">
+            <span class="info-label">Completed</span>
+            <span class="info-value" style="font-weight:700;color:#1e3a5f">${new Date(lead.complete_date).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          </div>
+        ` : ''}
         ${lead.email ? `
           <div class="info-row">
             <span class="info-label">Email</span>
@@ -2225,7 +2287,10 @@ export class StaffLeadsPage {
       <div class="deals-revenue-section card">
         <div class="section-header-row">
           <h5>💰 Deals & Revenue</h5>
-          <button class="btn btn-sm btn-outline" id="addDealBtnDetail">+ Deal</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" id="allPaymentsReceivedDealBtn" style="background:#059669;color:white;font-weight:600;border:none;border-radius:6px;font-size:11px;padding:4px 8px;" title="Trigger Final Commission for All Deals">✓ All Paid</button>
+            <button class="btn btn-sm btn-outline" id="addDealBtnDetail">+ Deal</button>
+          </div>
         </div>
         <div class="revenue-summary">
           <div class="rev-stat">
@@ -2247,7 +2312,12 @@ export class StaffLeadsPage {
               <div class="deal-card">
                 <div class="deal-card-header">
                   <span class="deal-code">${d.deal_code || 'N/A'}</span>
-                  <span class="deal-status-badge ${d.status}">${d.status}</span>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="deal-status-badge ${d.status}">${d.status}</span>
+                    ${(d.deal_value_balance || 0) <= 0
+                      ? '<span style="background:#ecfdf5;color:#059669;font-weight:700;font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid #a7f3d0">✓ 100% Paid</span>'
+                      : `<button class="btn btn-sm deal-all-paid-btn" data-deal-id="${d.id}" style="background:#059669;color:white;font-weight:600;border:none;border-radius:6px;font-size:10px;padding:2px 6px;cursor:pointer;" title="Mark this Deal as All Payments Received">✓ All Paid</button>`}
+                  </div>
                 </div>
                 <div class="deal-card-body">
                   <span class="deal-cat">${d.category_name || 'Uncategorized'}</span>
@@ -2263,7 +2333,10 @@ export class StaffLeadsPage {
       <div class="transactions-section card">
         <div class="section-header-row">
           <h5>💳 Transactions</h5>
-          <button class="btn btn-sm btn-outline" id="addTxnBtnDetail">+ Payment</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" id="allPaymentsReceivedBtnDetail" style="background:#059669;color:white;font-weight:600;border:none;border-radius:6px;font-size:11px;padding:4px 8px;" title="Trigger Final Commission">✓ All Paid</button>
+            <button class="btn btn-sm btn-outline" id="addTxnBtnDetail">+ Payment</button>
+          </div>
         </div>
         ${this.leadTransactions.length > 0 ? `
           <div class="txn-list">
@@ -2456,7 +2529,17 @@ export class StaffLeadsPage {
     document.getElementById('deleteLeadBtn')?.addEventListener('click', () => this.showModal('deleteModal'));
 
     document.getElementById('addDealBtnDetail')?.addEventListener('click', () => this.showAddDealModal());
+    document.getElementById('allPaymentsReceivedDealBtn')?.addEventListener('click', () => this.triggerAllPaymentsReceived());
     document.getElementById('addTxnBtnDetail')?.addEventListener('click', () => this.showAddTransactionModal());
+    document.getElementById('allPaymentsReceivedBtnDetail')?.addEventListener('click', () => this.triggerAllPaymentsReceived());
+
+    body.querySelectorAll('.deal-all-paid-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dealId = btn.getAttribute('data-deal-id');
+        if (dealId) this.triggerDealAllPaymentsReceived(parseInt(dealId));
+      });
+    });
 
     document.querySelectorAll('.play-recording-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -3325,6 +3408,12 @@ export class StaffLeadsPage {
     (document.getElementById('newDealValue') as HTMLInputElement).value = '';
     (document.getElementById('newDealDate') as HTMLInputElement).value = new Date().toISOString().split('T')[0];
     (document.getElementById('newDealNotes') as HTMLTextAreaElement).value = '';
+    const dealAllRcv = document.getElementById('newDealAllPaymentsReceived') as HTMLInputElement;
+    if (dealAllRcv) dealAllRcv.checked = false;
+    const dealSbWrap = document.getElementById('newDealReleaseSupportBrandWrap');
+    if (dealSbWrap) dealSbWrap.style.display = 'none';
+    const dealSb = document.getElementById('newDealReleaseSupportBrand') as HTMLInputElement;
+    if (dealSb) dealSb.checked = true;
     this.showModal('addDealModal');
   }
 
@@ -3344,6 +3433,12 @@ export class StaffLeadsPage {
     (document.getElementById('txnMode') as HTMLSelectElement).value = 'cash';
     (document.getElementById('txnReference') as HTMLInputElement).value = '';
     (document.getElementById('txnNotes') as HTMLTextAreaElement).value = '';
+    const allRcv = document.getElementById('txnAllPaymentsReceived') as HTMLInputElement;
+    if (allRcv) allRcv.checked = false;
+    const txnSbWrap = document.getElementById('txnReleaseSupportBrandWrap');
+    if (txnSbWrap) txnSbWrap.style.display = 'none';
+    const txnSb = document.getElementById('txnReleaseSupportBrand') as HTMLInputElement;
+    if (txnSb) txnSb.checked = true;
     this.showModal('addTxnModal');
   }
 
@@ -3354,6 +3449,8 @@ export class StaffLeadsPage {
     const dealValue = parseFloat((document.getElementById('newDealValue') as HTMLInputElement).value) || 0;
     const dealDate = (document.getElementById('newDealDate') as HTMLInputElement).value;
     const notes = (document.getElementById('newDealNotes') as HTMLTextAreaElement).value.trim();
+    const allPaymentsReceived = (document.getElementById('newDealAllPaymentsReceived') as HTMLInputElement)?.checked || false;
+    const releaseSupportBrand = (document.getElementById('newDealReleaseSupportBrand') as HTMLInputElement)?.checked ?? true;
 
     if (!categoryId) {
       alert('Please select a revenue category');
@@ -3368,14 +3465,30 @@ export class StaffLeadsPage {
       const response = await apiService.post(`/crm/leads/${this.selectedLead.id}/deals?company_id=${companyId}`, {
         revenue_category_id: parseInt(categoryId),
         deal_value_total: dealValue,
-        deal_value_received: 0,
+        deal_value_received: allPaymentsReceived ? dealValue : 0,
         deal_date: dealDate || null,
         notes: notes || null,
-        company_id: companyId
+        company_id: companyId,
+        all_payments_received: allPaymentsReceived,
+        release_support_brand: releaseSupportBrand
       });
 
       if (response.success !== false) {
-        alert('Deal created!');
+        let msg = 'Deal created!';
+        if ((response.data as any)?.option_b_commission) {
+          const ob = (response.data as any).option_b_commission;
+          msg += `\n\nAll Payments Received Processed (Option B):\n` +
+                 `• Status: ${ob.status || 'Success'}\n` +
+                 `• Commission Entries: ${ob.entries_created?.length || 0}\n` +
+                 `• Total Triggered Gross: ₹${(ob.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+          if (ob.entries_created && ob.entries_created.length > 0) {
+            msg += '\nDetails:';
+            ob.entries_created.forEach((e: any) => {
+              msg += `\n- L${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')}`;
+            });
+          }
+        }
+        alert(msg);
         this.hideModal('addDealModal');
         await this.loadLeads();
         await this.showLeadDetails(this.selectedLead.id);
@@ -3389,6 +3502,56 @@ export class StaffLeadsPage {
     }
   }
 
+  private async triggerDealAllPaymentsReceived(dealId: number): Promise<void> {
+    if (!this.selectedLead) return;
+
+    const deal = (this.leadDeals || []).find(d => d.id === dealId);
+    const dealCode = deal?.deal_code || `Deal #${dealId}`;
+    const dealVal = deal?.deal_value_total || 0;
+
+    const confirmed = confirm(
+      `Mark ${dealCode} (₹${(dealVal || 0).toLocaleString('en-IN')}) as ALL PAYMENTS RECEIVED?\n\n` +
+      `This will execute Option B:\n` +
+      `1. Mark ${dealCode} as 100% paid (Balance: ₹0)\n` +
+      `2. Compute full waterfall commission (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%)\n` +
+      `3. Trigger remaining balance commissions\n` +
+      `4. Reconcile unadjusted solar advances to ADJUSTED`
+    );
+    if (!confirmed) return;
+
+    const releaseSB = confirm(
+      `Release Support (L5) and Solar Brand Incomes as well?\n\n` +
+      `Click OK to release Field Support & Brand commissions.\n` +
+      `Click Cancel to release standard waterfall commissions only.`
+    );
+
+    const companyId = this.getLeadCompanyId();
+    try {
+      const response = await apiService.post(`/crm/deals/${dealId}/all-payments-received?company_id=${companyId}&release_support_brand=${releaseSB}`, {});
+      if (response.success !== false) {
+        const d = response.data as any;
+        let msg = `${dealCode} marked All Payments Received!\n\n` +
+                  `Status: ${d?.status || 'Success'}\n` +
+                  `Deal Value: ₹${(d?.deal_value_total || 0).toLocaleString('en-IN')}\n` +
+                  `Entries Created: ${d?.entries_created?.length || 0}\n` +
+                  `Total Triggered Gross: ₹${(d?.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+        if (d?.entries_created && d.entries_created.length > 0) {
+          msg += '\n\nCommission Entries:';
+          d.entries_created.forEach((e: any) => {
+            msg += `\n• Level ${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')}`;
+          });
+        }
+        alert(msg);
+        await this.loadLeads();
+        await this.showLeadDetails(this.selectedLead.id);
+      } else {
+        alert(response.error || 'Failed to trigger all payments received for deal');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error triggering all payments received for deal');
+    }
+  }
+
   private async saveNewTransaction(): Promise<void> {
     if (!this.selectedLead) return;
 
@@ -3399,6 +3562,8 @@ export class StaffLeadsPage {
     const dealId = (document.getElementById('txnDeal') as HTMLSelectElement).value;
     const reference = (document.getElementById('txnReference') as HTMLInputElement).value.trim();
     const notes = (document.getElementById('txnNotes') as HTMLTextAreaElement).value.trim();
+    const allPaymentsReceived = (document.getElementById('txnAllPaymentsReceived') as HTMLInputElement)?.checked || false;
+    const releaseSupportBrand = (document.getElementById('txnReleaseSupportBrand') as HTMLInputElement)?.checked ?? true;
 
     if (!amount || amount <= 0) {
       alert('Please enter a valid amount');
@@ -3421,13 +3586,29 @@ export class StaffLeadsPage {
         payment_mode: txnMode,
         reference_number: reference || null,
         notes: notes || null,
-        deal_id: dealId ? parseInt(dealId) : null
+        deal_id: dealId ? parseInt(dealId) : null,
+        all_payments_received: allPaymentsReceived,
+        release_support_brand: releaseSupportBrand
       };
 
       const response = await apiService.post(`/crm/leads/${this.selectedLead.id}/transactions?company_id=${companyId}`, payload);
 
       if (response.success !== false) {
-        alert((response.data as any)?.message || response.error || 'Transaction recorded!');
+        let successMsg = (response.data as any)?.message || response.error || 'Transaction recorded!';
+        if ((response.data as any)?.option_b_commission) {
+          const ob = (response.data as any).option_b_commission;
+          successMsg += `\n\nAll Payments Received Processed (Option B):\n` +
+                        `• Status: ${ob.status || 'Success'}\n` +
+                        `• Commission Entries: ${ob.entries_created?.length || 0}\n` +
+                        `• Total Triggered Gross: ₹${(ob.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+          if (ob.entries_created && ob.entries_created.length > 0) {
+            successMsg += '\nDetails:';
+            ob.entries_created.forEach((e: any) => {
+              successMsg += `\n- L${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')}`;
+            });
+          }
+        }
+        alert(successMsg);
         this.hideModal('addTxnModal');
         await this.loadLeads();
         await this.showLeadDetails(this.selectedLead.id);
@@ -3438,6 +3619,52 @@ export class StaffLeadsPage {
       alert(error.message || 'Failed to record transaction');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Record Transaction'; }
+    }
+  }
+
+  private async triggerAllPaymentsReceived(): Promise<void> {
+    if (!this.selectedLead) return;
+
+    const confirmed = confirm(
+      'Are you sure you want to mark ALL payments as received for this lead?\n\n' +
+      'This will execute Option B:\n' +
+      '1. Set lead payment status to Received and balance to ₹0\n' +
+      '2. Compute full waterfall commission (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%) on the deal total\n' +
+      '3. Deduct prior advances/commissions and trigger remaining balance commissions\n' +
+      '4. Reconcile unadjusted solar advances to ADJUSTED'
+    );
+    if (!confirmed) return;
+
+    const releaseSB = confirm(
+      `Release Support (L5) and Solar Brand Incomes as well?\n\n` +
+      `Click OK to release Field Support & Brand commissions.\n` +
+      `Click Cancel to release standard waterfall commissions only.`
+    );
+
+    const companyId = this.getLeadCompanyId();
+    try {
+      const response = await apiService.post(`/crm/leads/${this.selectedLead.id}/all-payments-received?company_id=${companyId}&release_support_brand=${releaseSB}`, {});
+      if (response.success !== false) {
+        const d = response.data as any;
+        let msg = `All Payments Received processed successfully!\n\n` +
+                  `Status: ${d?.status || 'Success'}\n` +
+                  `Deal Value: ₹${(d?.deal_value_total || 0).toLocaleString('en-IN')}\n` +
+                  `Entries Created: ${d?.entries_created?.length || 0}\n` +
+                  `Total Triggered Gross: ₹${(d?.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+        if (d?.entries_created && d.entries_created.length > 0) {
+          msg += '\n\nCommission Entries:';
+          d.entries_created.forEach((e: any) => {
+            msg += `\n• Level ${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')} (Net ₹${(e.net_payable || 0).toLocaleString('en-IN')})`;
+          });
+        }
+        alert(msg);
+        await this.loadLeads();
+        await this.showLeadDetails(this.selectedLead.id);
+      } else {
+        alert(response.error || 'Failed to trigger all payments received');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error triggering all payments received');
     }
   }
 }

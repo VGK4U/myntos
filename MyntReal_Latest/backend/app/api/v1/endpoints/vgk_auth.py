@@ -2821,6 +2821,43 @@ def vgk_dashboard_summary(
         l3_count = next((r["count"] for r in team_levels if r["level"] == 3), 0)
         l1_direct = l2_count  # Keep for backward compatibility
 
+    # 4c. Leads bucketwise details
+    lead_rows_b = db.execute(sa_text("""
+        SELECT status, solar_pipeline_status, COUNT(*) as cnt
+        FROM crm_leads WHERE id IN (
+            SELECT id FROM crm_leads WHERE associated_partner_id=:pid
+            UNION
+            SELECT id FROM crm_leads WHERE vgk_field_support_id=:pid
+            UNION
+            SELECT source_lead_id FROM vgk_team_income_entries WHERE partner_id=:pid AND level>=2 AND source_lead_id IS NOT NULL
+            UNION
+            SELECT id FROM crm_leads WHERE team_senior_partner_id=:pid OR team_extended_partner_id=:pid OR team_core_partner_id=:pid
+            UNION
+            SELECT id FROM crm_leads WHERE source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR)
+        )
+        GROUP BY status, solar_pipeline_status
+    """), {"pid": pid}).fetchall()
+    b_map = {
+        'subsidy_pending': 'Subsidy Pending',
+        'dcr_pending': 'DCR Pending',
+        'balance_pending': 'Balance Pending',
+        'eb_cust': 'EB Customer Verification',
+        'pending_with_bank': 'Pending with Bank',
+        'won': 'Won / Processing',
+        'installed': 'Installed',
+        'completed': 'Completed'
+    }
+    buckets_dict = {}
+    for lr in lead_rows_b:
+        st, pipe, cnt = lr[0], lr[1], int(lr[2])
+        if (st or '').lower() == 'lost':
+            b_name = 'Lost'
+        else:
+            raw_b = pipe or st or 'In Pipeline'
+            b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
+        buckets_dict[b_name] = buckets_dict.get(b_name, 0) + cnt
+    lead_buckets_list = [{"stage": k, "count": v} for k, v in buckets_dict.items()]
+
     # ── 5. Upline ──────────────────────────────────────────────────────────────
     upline_info = None
     if current_member.parent_partner_id:
@@ -2945,6 +2982,12 @@ def vgk_dashboard_summary(
         "commission_rate_pct": 5.0,
     }]
 
+    from app.services.vgk_cash_income import get_partner_advance_summary
+    adv_summary = get_partner_advance_summary(db, pid)
+    adv_given = float(adv_summary.get("total_advance_given", 0.0) if adv_summary else 0.0)
+    adv_cleared = float(adv_summary.get("total_advance_recovered", 0.0) if adv_summary else 0.0)
+    adv_pending = float(adv_summary.get("outstanding_advance_balance", 0.0) if adv_summary else 0.0)
+
     return {
         "success": True,
         "member": {
@@ -2957,6 +3000,12 @@ def vgk_dashboard_summary(
             "vgk_activated_at": current_member.vgk_activated_at.isoformat() if current_member.vgk_activated_at else None,
             "is_loyal_coupon": getattr(current_member, 'is_loyal_coupon', False),
             "created_at": current_member.created_at.isoformat() if current_member.created_at else None,
+        },
+        "advances": {
+            "total_given": adv_given,
+            "total_cleared": adv_cleared,
+            "total_pending": adv_pending,
+            "availed": bool(adv_given > 0)
         },
         "rank_position": rank_pos,
         "vgk4u_career_status": vgk4u_status,
@@ -2978,7 +3027,7 @@ def vgk_dashboard_summary(
             "recent": recent_pts_list,
         },
         "team":    {"total": total_team, "l1_direct": l1_direct, "l2": l2_count, "l3": l3_count, "levels": team_levels},
-        "leads":   {"total": leads_total,   "new": leads_new,  "converted": leads_converted},
+        "leads":   {"total": leads_total,   "new": leads_new,  "converted": leads_converted, "buckets": lead_buckets_list},
         "orders":  {"total": orders_total,  "pending": orders_pend},
         "tickets": {"total": tickets_total, "open": tickets_open},
         "upline":  upline_info,

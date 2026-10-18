@@ -61,8 +61,8 @@ tbody tr:hover { background: rgba(124,58,237,.1); }
 .st-line { width: 20px; height: 2px; background: rgba(255,255,255,.1); flex-shrink: 0; }
 .st-line.done { background: #7c3aed; }
 /* Side drawer */
-.side-panel { position: fixed; top: 0; right: -480px; width: 480px; height: 100vh; background: #16213e; border-left: 1px solid rgba(255,255,255,.1); box-shadow: -4px 0 20px rgba(0,0,0,.4); z-index: 1000; transition: right .3s; overflow-y: auto; }
-.side-panel.open { right: 0; }
+.side-panel { position: fixed; top: 0; right: 0; width: 480px; max-width: 95vw; height: 100vh; background: #16213e; border-left: 1px solid rgba(255,255,255,.1); box-shadow: -4px 0 20px rgba(0,0,0,.4); z-index: 1000; transform: translateX(110%); transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1), visibility .3s; overflow-y: auto; visibility: hidden; pointer-events: none; }
+.side-panel.open { transform: translateX(0); visibility: visible; pointer-events: auto; }
 .side-panel-header { padding: 18px 20px; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; display: flex; justify-content: space-between; align-items: center; }
 .side-panel-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
 .side-panel-body { padding: 20px; }

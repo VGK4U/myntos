@@ -931,20 +931,26 @@ function setDateFilter(preset) {
 function calcRowMetrics(r){
   if(!r) return { grossAmt: 0, advPaid: 0, balGross: 0, adminVal: 0, tdsVal: 0, netVal: 0 };
   const grossAmt = parseFloat(r.commission_amount || 0);
-  const advPaid  = parseFloat(r.advance_paid || ((r.stage1_adv || 0) + (r.stage2_adv || 0)) || 0);
+  const advPaid  = parseFloat(r.advance_adjusted_amount || r.advance_paid || ((r.stage1_adv || 0) + (r.stage2_adv || 0)) || 0);
   const balGross = (r.balance_gross !== undefined && r.balance_gross !== null)
     ? parseFloat(r.balance_gross)
     : Math.max(0, grossAmt - advPaid);
 
   let adminVal = 0, tdsVal = 0, netVal = 0;
-  if(advPaid > 0){
+  if (r.admin_charges !== undefined && r.admin_charges !== null && r.tds_amount !== undefined && r.tds_amount !== null) {
+    adminVal = parseFloat(r.admin_charges);
+    tdsVal   = parseFloat(r.tds_amount);
+    netVal   = (r.net_payout !== undefined && r.net_payout !== null)
+      ? parseFloat(r.net_payout)
+      : Math.max(0, parseFloat((balGross - adminVal - tdsVal).toFixed(2)));
+  } else if(advPaid > 0){
     adminVal = parseFloat((balGross * 0.08).toFixed(2));
     tdsVal   = parseFloat(((balGross - adminVal) * 0.02).toFixed(2));
     netVal   = Math.max(0, parseFloat((balGross - adminVal - tdsVal).toFixed(2)));
   } else {
-    adminVal = r.admin_charges ? parseFloat(r.admin_charges) : parseFloat((balGross * 0.08).toFixed(2));
-    tdsVal   = r.tds_amount ? parseFloat(r.tds_amount) : parseFloat(((balGross - adminVal) * 0.02).toFixed(2));
-    netVal   = (r.net_payout !== undefined && r.net_payout !== null && r.net_payout > 0)
+    adminVal = (r.admin_charges !== undefined && r.admin_charges !== null) ? parseFloat(r.admin_charges) : parseFloat((balGross * 0.08).toFixed(2));
+    tdsVal   = (r.tds_amount !== undefined && r.tds_amount !== null) ? parseFloat(r.tds_amount) : parseFloat(((balGross - adminVal) * 0.02).toFixed(2));
+    netVal   = (r.net_payout !== undefined && r.net_payout !== null)
       ? parseFloat(r.net_payout)
       : Math.max(0, parseFloat((balGross - adminVal - tdsVal).toFixed(2)));
   }
@@ -1328,7 +1334,7 @@ async function openPostShoutoutModal(){
     const r = ROWS.find(x => x.id === id);
     if(r){
       if(r.partner_name) partners.add(r.partner_name);
-      totGross += parseFloat(r.commission_amount || 0);
+      totGross += parseFloat((r.balance_gross !== undefined && r.balance_gross !== null) ? r.balance_gross : Math.max(0, (parseFloat(r.commission_amount || 0) || 0) - (parseFloat(r.advance_adjusted_amount || 0) || 0)));
       const st = (r.status || '').toUpperCase();
       if(st !== 'PAID' && st !== 'STAGE1_APPROVED'){
         nonPaidCount++;
@@ -1899,7 +1905,7 @@ Do you want to PROCEED (skip the cap and mark as paid) or HOLD?`;
           return;
         }
       } else {
-        throw new Error(d.detail || d.error || 'Action failed');
+        throw new Error(d.detail || d.message || d.error || 'Action failed');
       }
     }
     

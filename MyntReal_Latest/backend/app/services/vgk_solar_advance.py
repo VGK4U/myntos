@@ -76,6 +76,98 @@ def _next_advance_number(db: Session) -> str:
     return f'{prefix}-{seq:04d}'
 
 
+def get_partner_solar_advance_eligibility(db: Session, partner_id: int, lead_id: Optional[int] = None) -> dict:
+    """
+    DC-ADV-POLICY-202610:
+    Calculates partner advance eligibility per strict business rules:
+      1. Maximum 2 advances per Ground Source member in total (Option A).
+      2. Advance #1: eligible on member's 1st qualified file.
+      3. File #2: skipped (no advance).
+      4. Advance #2: eligible on member's 3rd qualified file.
+      5. File #4+: capped at 2 advances.
+      6. Requires customer 1st payment received (deal_value_received > 0 or first_payment_received_date) (Option B).
+    """
+    try:
+        from app.models.crm import CRMLead
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first() if lead_id else None
+
+        # 1. Past L1 advances count (excluding cancelled/recovered)
+        past_adv_count = db.execute(text("""
+            SELECT COUNT(*) FROM vgk_solar_cibil_advances
+            WHERE partner_id = :pid AND level = 1 AND kind = 'ADVANCE'
+              AND status NOT IN ('CANCELLED', 'RECOVERED')
+              AND (:lid IS NULL OR lead_id != :lid)
+        """), {'pid': partner_id, 'lid': lead_id}).scalar() or 0
+
+        if past_adv_count >= 2:
+            return {
+                'eligible': False,
+                'is_cap_reached': True,
+                'is_file_2_skipped': False,
+                'past_advances_count': past_adv_count,
+                'file_seq': None,
+                'reason': f'Maximum advances (2) reached for member ({past_adv_count} on record)'
+            }
+
+        # 2. Sequence among member's solar files
+        member_leads = db.execute(text("""
+            SELECT id FROM crm_leads
+            WHERE ((source_ref_id = :pids AND source_ref_type IN ('partner', 'vgk_partner'))
+                   OR associated_partner_id = :pid
+                   OR mnr_handler_id = :pids)
+              AND category_id = 6
+              AND solar_pipeline_status NOT IN ('not_interested', 'cancelled', 'different_vendor', 'bank_not_interested')
+            ORDER BY COALESCE(submit_date, created_at::date, '2000-01-01'::date) ASC, created_at ASC, id ASC
+        """), {'pids': str(partner_id), 'pid': partner_id}).fetchall()
+
+        lead_ids = [r.id for r in member_leads]
+        file_seq = (lead_ids.index(lead_id) + 1) if (lead_id and lead_id in lead_ids) else (len(lead_ids) + 1 if not lead_id else 1)
+
+        # File #2 is skipped per policy
+        if file_seq == 2:
+            return {
+                'eligible': False,
+                'is_cap_reached': False,
+                'is_file_2_skipped': True,
+                'past_advances_count': past_adv_count,
+                'file_seq': file_seq,
+                'reason': 'File #2 skipped per advance policy (2nd advance eligible on File #3)'
+            }
+
+        # 3. Check customer 1st payment (Option B)
+        has_first_pmt = False
+        if lead:
+            has_first_pmt = (float(getattr(lead, 'deal_value_received', 0) or 0) > 0) or bool(getattr(lead, 'first_payment_received_date', None))
+            if not has_first_pmt:
+                _txn = db.execute(text("SELECT id FROM crm_lead_transactions WHERE lead_id = :lid AND amount > 0 LIMIT 1"), {'lid': lead.id}).fetchone()
+                if _txn:
+                    has_first_pmt = True
+
+        if lead and not has_first_pmt:
+            return {
+                'eligible': False,
+                'is_cap_reached': False,
+                'is_file_2_skipped': False,
+                'has_first_payment': False,
+                'past_advances_count': past_adv_count,
+                'file_seq': file_seq,
+                'reason': 'Customer 1st payment pending (Advance requires 1st payment received)'
+            }
+
+        return {
+            'eligible': True,
+            'is_cap_reached': False,
+            'is_file_2_skipped': False,
+            'has_first_payment': has_first_pmt,
+            'past_advances_count': past_adv_count,
+            'file_seq': file_seq,
+            'reason': 'Eligible for advance'
+        }
+    except Exception as e:
+        logger.warning(f"[VGK-SOLAR-ADV] get_partner_solar_advance_eligibility failed: {e}")
+        return {'eligible': True, 'reason': 'Error checking eligibility, falling back to permissive'}
+
+
 def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = False, notes: str = None) -> dict:
     """
     Called whenever solar_pipeline_status or CIBIL fields change on a lead.
@@ -103,8 +195,8 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
         l1_partner_id = None
         if lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id and lead.source_ref_id.isdigit():
             l1_partner_id = int(lead.source_ref_id)
-        elif lead.mnr_handler_id:
-            l1_partner_id = lead.mnr_handler_id
+        elif lead.mnr_handler_id and str(lead.mnr_handler_id).isdigit():
+            l1_partner_id = int(lead.mnr_handler_id)
         else:
             l1_partner_id = lead.associated_partner_id
 
@@ -127,6 +219,12 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
             is_cibil_valid = ((score or 0) >= CIBIL_MIN_SCORE)
             if not is_cibil_valid:
                 return {'created': False, 'reason': f'CIBIL score below {CIBIL_MIN_SCORE} (got {score}) — Stage 1 advance deferred until Stage 2 DVR'}
+
+        # DC-ADV-POLICY-202610: Enforce Member Advance Policy (Option B, Max 2, File 1 & File 3 only)
+        if not bypass_cibil:
+            el = get_partner_solar_advance_eligibility(db, l1_partner_id, lead_id=lead_id)
+            if not el.get('eligible', True):
+                return {'created': False, 'reason': el.get('reason'), 'policy_info': el}
 
         now = _get_ist()
         created_numbers = []
@@ -474,12 +572,7 @@ def process_payment_stage2_advance(
 
         # 4. Lead & Partner Eligibility
         lead = db.execute(text("""
-            SELECT id, company_id, category_id, associated_partner_id,
-                   team_senior_partner_id, team_extended_partner_id, team_core_partner_id,
-                   vgk_field_support_id, deal_value_total, deal_value_received,
-                   deal_value_balance, solar_value, deal_value, remaining_stage1_advance,
-                   solar_pipeline_status, first_dvr_confirmed_at,
-                   COALESCE(company_supported, TRUE) AS company_supported
+            SELECT *
             FROM crm_leads WHERE id = :lid
         """), {'lid': lead_id}).fetchone()
 
@@ -755,7 +848,7 @@ def process_payment_stage2_advance(
 
             # L1 proposed & actual recovery (capped at L1 remaining and L1 Stage 2 gross)
             if rem_s1_l1 > 0:
-                if is_final_payment:
+                if is_final_payment or is_dhamaka_100pct_l1:
                     proposed_adj_l1 = rem_s1_l1
                 else:
                     proposed_adj_l1 = (orig_s1_l1 * payment_ratio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -919,6 +1012,28 @@ def process_payment_stage2_advance(
                     created_numbers.extend(_s1_res['entry_numbers'])
         except Exception as _s1_err:
             logger.warning(f'[STAGE2-ADV] Stage 1 deferred catch-up failed for lead {lead_id}: {_s1_err}')
+
+        # DC-EXTRA-COMM-FIRSTPAY-001: Trigger 'first_payment' triggers for active campaigns (Extra Commission, Award/Gift, Cash Bonus)
+        if is_first_pmt:
+            _fresh_lead = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': lead_id}).fetchone()
+            _eff_lead = _fresh_lead or lead
+            try:
+                from app.services.vgk_extra_commission import apply_extra_commission_if_active as _ec_first_pay
+                _ec_first_pay(db, _eff_lead, 'first_payment')
+            except Exception as _ec_err:
+                logger.warning(f'[STAGE2-ADV] Extra Commission first_payment hook failed for lead {lead_id}: {_ec_err}')
+
+            try:
+                from app.services.vgk_award_trigger import apply_award_gift_trigger_if_active as _at_first_pay
+                _at_first_pay(db, _eff_lead, 'first_payment')
+            except Exception as _at_err:
+                logger.warning(f'[STAGE2-ADV] Award first_payment hook failed for lead {lead_id}: {_at_err}')
+
+            try:
+                from app.services.vgk_cash_bonus_trigger import apply_cash_bonus_trigger_if_active as _cb_first_pay
+                _cb_first_pay(db, _eff_lead, 'first_payment')
+            except Exception as _cb_err:
+                logger.warning(f'[STAGE2-ADV] Cash Bonus first_payment hook failed for lead {lead_id}: {_cb_err}')
 
         db.commit()
         logger.info(

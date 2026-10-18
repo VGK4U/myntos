@@ -137,7 +137,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     stats_query = text("""
         SELECT 
             COUNT(DISTINCT p.id) AS active_earning_partners,
-            COALESCE(SUM(e.commission_amount), 0) AS total_gross_earned,
+            COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))), 0) AS total_gross_earned,
             COALESCE(SUM(l.deal_value_total), 0) AS total_pipeline_opportunity
         FROM official_partners p
         LEFT JOIN vgk_cash_income_entries e ON (e.partner_id = p.id AND e.status != 'CANCELLED')

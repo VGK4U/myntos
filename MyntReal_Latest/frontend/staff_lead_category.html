@@ -1364,15 +1364,143 @@ function buildDetailPanel(l) {
   const v=x=>x?`<span class="val">${esc(String(x))}</span>`:`<span class="val empty">—</span>`;
   const addr=[l.address,l.area,l.city,l.state,l.pincode].filter(Boolean).join(', ');
   const mapsBtn=(l.google_maps_link||l.latitude||addr)?`<button type="button" onclick="event.stopPropagation();openLeadMapModal('${l.id}')" class="maps-btn" style="border:none;cursor:pointer"><i class="fas fa-map-marker-alt"></i> Location Options</button>`:`<span style="color:#d1d5db;font-size:10px;font-style:italic">No maps link</span>`;
+  const leadDt = l.created_at || l.lead_date;
+  const leadDtFmt = leadDt ? fmtDateShort(leadDt) : null;
+  const leadDtFull = leadDt ? (new Date(leadDt).toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})) : '';
+  const pmtDt = l.first_payment_received_date;
+  const pmtDtFmt = pmtDt ? fmtDateShort(pmtDt) : null;
   let html=`<div class="detail-panel"><div class="detail-grid">`;
-  html+=`<div class="detail-section"><h6><i class="fas fa-users me-1"></i>Handlers</h6>
-    <div class="detail-field"><div class="lbl">Support/Telecaller</div><div>${v(l.telecaller_name||l.telecaller_emp_code)}</div></div>
-    <div class="detail-field"><div class="lbl">Showroom/Field</div><div>${v(l.field_staff_name||l.field_staff_emp_code)}</div></div>
-    <div class="detail-field"><div class="lbl">Ground Source</div><div>${l.source_ref_name?`<span style="font-size:11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:1px 6px;color:#0284c7">[${esc(l.source_ref_type||'')}] ${esc(l.source_ref_name)}</span>`:v(l.mnr_handler_id)}</div></div>
-    <div class="detail-field"><div class="lbl">Field Support</div><div>${(l.field_support_ref_name||(l.adi_guru_id?(l.adi_guru_name||l.adi_guru_id):null))?`<span style="font-size:11px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:4px;padding:1px 6px;color:#7c3aed">[${esc(l.field_support_ref_type||l.adi_guru_id?'mnr':'')}] ${esc(l.field_support_ref_name||(l.adi_guru_name||l.adi_guru_id))}</span>`:'—'}</div></div>
-    <div class="detail-field"><div class="lbl">Technical</div><div>${v(l.technical_name)}</div></div>
-    <div class="detail-field"><div class="lbl">Owner</div><div>${v(l.primary_owner_name||l.primary_owner_employee_id)}</div></div>
-    <div class="detail-field"><div class="lbl">Source Details</div><div>${v(l.source_details)}</div></div>
+  html+=`<div class="detail-section" style="min-width:275px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+      <h6 style="margin:0"><i class="fas fa-users me-1"></i>Handlers <span style="font-size:8.5px;color:#0284c7;font-weight:700;background:#e0f2fe;padding:1px 5px;border-radius:3px;margin-left:4px">L1–L6</span></h6>
+      <button type="button" class="btn btn-sm" onclick="event.stopPropagation();openEditModal(${l.id})" style="font-size:9.5px;padding:1px 7px;border-radius:4px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:600;cursor:pointer"><i class="fas fa-pen"></i> Edit</button>
+    </div>`;
+
+  const _renderConfirmBadge = (st, hasHandler) => {
+    if (st === true || st === 'true') {
+      return `<span style="background:#d1fae5;color:#065f46;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Support Confirmed"><i class="fas fa-check" style="font-size:8px"></i> Confirmed</span>`;
+    }
+    if (st === false || st === 'false') {
+      return `<span style="background:#fee2e2;color:#991b1b;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Support Rejected"><i class="fas fa-times" style="font-size:8px"></i> Rejected</span>`;
+    }
+    if (hasHandler) {
+      return `<span style="background:#fef3c7;color:#92400e;font-size:8.5px;font-weight:600;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Confirmation Pending"><i class="fas fa-clock" style="font-size:8px"></i> Pending</span>`;
+    }
+    return '';
+  };
+
+  const _fmtHandlerLevel = (lvl, lbl, name, id, type, isAuto, confirmVal, extraBadge) => {
+    const hasVal = Boolean(name || id);
+    const lvlBadge = `<span style="display:inline-block;min-width:22px;text-align:center;padding:1px 4px;border-radius:3px;background:#e0f2fe;color:#0369a1;font-weight:800;font-size:9px;margin-right:4px">${lvl}</span>`;
+    const lblHtml = `<div class="lbl" style="display:inline-flex;align-items:center">${lvlBadge}<span>${lbl}</span></div>`;
+    if (!hasVal) {
+      return `<div class="detail-field">${lblHtml}<div class="val empty">—</div></div>`;
+    }
+    let valItems = [];
+    if (type) {
+      valItems.push(`<span style="font-size:9.5px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:3px;padding:0 4px;color:#0284c7;font-weight:600">[${esc(type)}]</span>`);
+    }
+    if (name) {
+      valItems.push(`<span style="font-weight:600;color:#1e293b">${esc(name)}</span>`);
+    }
+    if (id && (!name || !String(name).includes(String(id)))) {
+      valItems.push(`<span style="font-size:9.5px;color:#64748b;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:0 4px;border-radius:3px">#${esc(String(id))}</span>`);
+    }
+    if (isAuto) {
+      valItems.push(`<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:8.5px;font-weight:700;padding:0 3px;border-radius:3px" title="Auto-resolved upline">AUTO</span>`);
+    }
+    if (extraBadge) {
+      valItems.push(extraBadge);
+    }
+    const cfm = _renderConfirmBadge(confirmVal, hasVal);
+    if (cfm) {
+      valItems.push(cfm);
+    }
+    return `<div class="detail-field">${lblHtml}<div class="val" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;text-align:right">${valItems.join(' ')}</div></div>`;
+  };
+
+  const _fmtStaffHandler = (lbl, name, codeOrId, confirmVal, extraInfo) => {
+    const hasVal = Boolean(name || codeOrId);
+    const lblHtml = `<div class="lbl">${lbl}</div>`;
+    if (!hasVal) {
+      return `<div class="detail-field">${lblHtml}<div class="val empty">—</div></div>`;
+    }
+    let valItems = [];
+    if (name) {
+      valItems.push(`<span style="font-weight:600;color:#1e293b">${esc(name)}</span>`);
+    }
+    if (codeOrId && (!name || !String(name).includes(String(codeOrId)))) {
+      valItems.push(`<span style="font-size:9.5px;color:#64748b;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:0 4px;border-radius:3px">${esc(String(codeOrId))}</span>`);
+    }
+    if (extraInfo) {
+      valItems.push(extraInfo);
+    }
+    const cfm = _renderConfirmBadge(confirmVal, hasVal);
+    if (cfm) {
+      valItems.push(cfm);
+    }
+    return `<div class="detail-field">${lblHtml}<div class="val" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;text-align:right">${valItems.join(' ')}</div></div>`;
+  };
+
+  // Resolve L1: Source
+  const _l1Name = l.source_ref_name || (l.guru_id ? (l.guru_name || l.guru_id) : (l.mnr_handler_id || ''));
+  const _l1Id = l.source_ref_id || l.guru_id || l.mnr_handler_id || '';
+  const _l1Type = l.source_ref_type || (l.guru_id ? 'guru' : (l.mnr_handler_id ? 'mnr' : ''));
+  const _l1Confirm = l.guru_supported;
+
+  // Resolve L2: Senior
+  const _l2Name = l.team_senior_name || l.guru_name || '';
+  const _l2Id = l.team_senior_partner_id || (l.team_senior_name ? '' : (l.guru_id || ''));
+  const _l2Type = l.team_senior_partner_id ? 'partner' : (l.guru_id ? ((String(l.guru_id).startsWith('VGK'))?'vgk':'mnr') : (l.team_senior_name ? 'partner' : ''));
+  const _l2Auto = Boolean(l.team_senior_partner_id || l.guru_id || l.team_senior_name || l.guru_name);
+  const _l2Confirm = l.z_guru_supported !== undefined ? l.z_guru_supported : l.guru_supported;
+
+  // Resolve L3: Extended
+  const _l3Name = l.team_extended_name || l.z_guru_name || l.adi_guru_name || '';
+  const _l3Id = l.team_extended_partner_id || (l.team_extended_name ? '' : (l.z_guru_id || l.adi_guru_id || ''));
+  const _l3Type = l.team_extended_partner_id ? 'partner' : (l.z_guru_id ? ((String(l.z_guru_id).startsWith('VGK'))?'vgk':'mnr') : (l.adi_guru_id ? 'mnr' : (l.team_extended_name ? 'partner' : '')));
+  const _l3Auto = Boolean(l.team_extended_partner_id || l.z_guru_id || l.adi_guru_id || l.team_extended_name || l.z_guru_name);
+  const _l3Confirm = l.adi_guru_supported !== undefined ? l.adi_guru_supported : l.z_guru_supported;
+
+  // Resolve L4: Core
+  const _l4Name = l.team_core_name || l.core_name || '';
+  const _l4Id = l.team_core_partner_id || (l.team_core_name ? '' : (l.core_id || ''));
+  const _l4Type = l.team_core_partner_id ? 'partner' : (l.core_id ? 'mnr' : (l.team_core_name ? 'partner' : ''));
+  const _l4Auto = Boolean(l.team_core_partner_id || l.core_id || l.team_core_name || l.core_name);
+  const _l4Confirm = l.core_supported;
+
+  // Resolve L5: Support
+  const _l5Name = l.field_support_ref_name || l.support_staff_name || (l.adi_guru_name && !l.team_extended_name ? l.adi_guru_name : '');
+  const _l5Id = l.field_support_ref_id || l.support_staff_id || (l.adi_guru_id && !l.team_extended_partner_id ? l.adi_guru_id : '');
+  const _l5Type = l.field_support_ref_type || (l.support_staff_id ? 'staff' : (l.field_support_ref_id ? 'ref' : ''));
+  const _l5Company = l.company_supported !== undefined ? (l.company_supported !== false ? '<span style="font-size:8.5px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:0 4px;border-radius:3px;font-weight:600" title="Company Supported (50% L5)">Company Supp (50%)</span>' : '<span style="font-size:8.5px;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:0 4px;border-radius:3px;font-weight:600" title="Non-supported (100% L5)">100% L5</span>') : null;
+  const _l5Confirm = l.field_support_supported !== undefined ? l.field_support_supported : l.showroom_supported;
+
+  // Resolve L6: Showroom
+  const _l6Name = l.showroom_vgk_name || l.field_staff_name || l.associated_partner_name || '';
+  const _l6Id = l.showroom_vgk_id || l.field_staff_emp_code || (l.field_staff_id ? '#' + l.field_staff_id : '') || l.associated_partner_id || '';
+  const _l6Type = l.showroom_vgk_id ? 'partner_vgk' : (l.field_staff_id ? 'staff' : (l.associated_partner_id ? 'partner' : ''));
+  const _l6Confirm = l.showroom_supported;
+
+  // Additional roles
+  const _teleCode = l.telecaller_emp_code ? l.telecaller_emp_code : (l.telecaller_id ? '#' + l.telecaller_id : '');
+  const _tech1Code = l.technical_staff1_id ? '#' + l.technical_staff1_id : '';
+  const _tech2Code = l.technical_id ? '#' + l.technical_id : '';
+
+  html+=`
+    <div class="detail-field"><div class="lbl">Lead Date</div><div title="${esc(leadDtFull)}" style="font-weight:700;color:#1e3a5f">${v(leadDtFmt)}</div></div>
+    ${_fmtHandlerLevel('L1', 'Source', _l1Name, _l1Id, _l1Type, false, _l1Confirm, null)}
+    ${_fmtHandlerLevel('L2', 'Senior', _l2Name, _l2Id, _l2Type, _l2Auto, _l2Confirm, null)}
+    ${_fmtHandlerLevel('L3', 'Extended', _l3Name, _l3Id, _l3Type, _l3Auto, _l3Confirm, null)}
+    ${_fmtHandlerLevel('L4', 'Core', _l4Name, _l4Id, _l4Type, _l4Auto, _l4Confirm, null)}
+    ${_fmtHandlerLevel('L5', 'Support', _l5Name, _l5Id, _l5Type, false, _l5Confirm, _l5Company)}
+    ${_fmtHandlerLevel('L6', 'Showroom', _l6Name, _l6Id, _l6Type, false, _l6Confirm, null)}
+    <div style="margin:5px 0 4px;border-top:1px dashed #e2e8f0"></div>
+    ${_fmtStaffHandler('Support/Telecaller', l.telecaller_name, _teleCode, l.telecaller_supported, null)}
+    ${l.technical_staff1_name ? _fmtStaffHandler('Technical Staff 1', l.technical_staff1_name, _tech1Code, null, null) : ''}
+    ${_fmtStaffHandler('Technical', l.technical_name, _tech2Code, l.technical_supported, null)}
+    ${_fmtStaffHandler('Primary Owner', l.primary_owner_name, l.primary_owner_employee_id, null, null)}
+    ${l.source_details ? `<div class="detail-field"><div class="lbl">Source Details</div><div>${v(l.source_details)}</div></div>` : ''}
   </div>`;
   html+=`<div class="detail-section"><h6><i class="fas fa-map-marker-alt me-1"></i>Address</h6>
     <div class="detail-field"><div class="lbl">Full</div><div class="val" style="white-space:normal">${addr||'—'}</div></div>
@@ -1388,6 +1516,8 @@ function buildDetailPanel(l) {
   if(CFG.isSolar){
     html+=`<div class="detail-section"><h6 style="color:#d97706"><i class="fas fa-solar-panel me-1"></i>Solar</h6>
       <div class="detail-field"><div class="lbl">App No</div><div style="font-family:monospace;color:#d97706;font-weight:700">${v(l.application_no)}</div></div>
+      <div class="detail-field"><div class="lbl">Submitted</div><div>${v(l.submit_date?fmtDateShort(l.submit_date):null)}</div></div>
+      <div class="detail-field"><div class="lbl">1st Payment</div><div style="font-weight:700;color:#065f46">${v(pmtDtFmt)}</div></div>
       <div class="detail-field"><div class="lbl">Accepted</div><div>${v(l.accepted_date?fmtDateShort(l.accepted_date):null)}</div></div>
       <div class="detail-field"><div class="lbl">Stage</div><div>${l.solar_pipeline_status?`<span class="pipeline-badge ps-${l.solar_pipeline_status}">${PIPELINE_LABELS[l.solar_pipeline_status]||l.solar_pipeline_status}</span>`:'—'}</div></div>
       <div class="detail-field"><div class="lbl">Material</div><div>${v(l.material_reach_date?fmtDateShort(l.material_reach_date):null)}</div></div>

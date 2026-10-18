@@ -197,6 +197,19 @@ td.etc-cell-edit:hover{background:rgba(99,102,241,.06) !important;}
 .detail-field .val{color:#1f2937;font-weight:500;text-align:right;word-break:break-word}
 .detail-field .val.empty{color:#d1d5db;font-style:italic}
 .maps-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:5px;background:#d1fae5;color:#065f46;font-size:10px;font-weight:600;text-decoration:none}
+/* Stage Lifecycle & Milestone Stepper */
+.stage-milestone-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;overflow-x:auto;gap:6px}
+.stage-step-node{display:flex;flex-direction:column;align-items:center;min-width:82px;text-align:center;flex:1;position:relative}
+.stage-step-node:not(:last-child)::after{content:'';position:absolute;top:13px;left:calc(50% + 15px);width:calc(100% - 30px);height:2px;background:#e2e8f0;z-index:0}
+.stage-step-node.done:not(:last-child)::after{background:#10b981}
+.stage-step-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;margin-bottom:4px;z-index:1;background:#e2e8f0;color:#94a3b8;transition:all .15s}
+.stage-step-node.done .stage-step-icon{background:#10b981;color:#fff;box-shadow:0 0 0 2px #d1fae5}
+.stage-step-node.active .stage-step-icon{background:#0284c7;color:#fff;box-shadow:0 0 0 2px #bae6fd}
+.stage-step-label{font-size:9.5px;font-weight:600;color:#334155;white-space:nowrap}
+.stage-step-date{font-size:9px;color:#059669;font-weight:700;margin-top:2px;white-space:nowrap}
+.stage-step-date.pending{color:#94a3b8;font-weight:400;font-style:italic}
+.stage-sub-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px}
+.stage-sub-card h7{font-size:9.5px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:5px;margin:0 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px}
 
 /* Pagination */
 .pagination-bar{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;border-top:1px solid #f0f0f0}
@@ -1080,7 +1093,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
         <div class="form-section-title" style="color:#0891b2;border-bottom-color:#a5f3fc"><i class="fas fa-network-wired me-1"></i>Team Assignment</div>
         <div class="form-grid g3" style="margin-bottom:8px">
           <div class="form-group" style="position:relative">
-            <label>Source</label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L1</span>Source</label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_src_search" placeholder="Search MNR / Partner / Staff..." oninput="efNetSearch('src')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearSrc()"><i class="fas fa-times"></i></button>
@@ -1090,7 +1103,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_src_selected" class="mt-1"></div>
           </div>
           <div class="form-group" id="ef_guru_row" style="display:none;position:relative">
-            <label>Senior <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L2</span>Senior <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_guru_search" placeholder="Auto-filled — type to override..." oninput="efNetSearch('guru')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearGuru()"><i class="fas fa-times"></i></button>
@@ -1100,7 +1113,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_guru_selected" class="mt-1"></div>
           </div>
           <div class="form-group" id="ef_z_guru_row" style="display:none;position:relative">
-            <label>Extended <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L3</span>Extended <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_z_guru_search" placeholder="Auto-filled — type to override..." oninput="efNetSearch('z_guru')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearZGuru()"><i class="fas fa-times"></i></button>
@@ -1110,7 +1123,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_z_guru_selected" class="mt-1"></div>
           </div>
           <div class="form-group" id="ef_core_row" style="display:none;position:relative">
-            <label>Core <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L4</span>Core <span class="text-muted" style="font-size:11px">(Auto / Search)</span></label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_core_search" placeholder="Auto-filled — type to override..." oninput="efNetSearch('core')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearCore()"><i class="fas fa-times"></i></button>
@@ -1121,7 +1134,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_core_selected" class="mt-1"></div>
           </div>
           <div class="form-group" style="position:relative">
-            <label>Field Support</label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L5</span>Support (Field Support)</label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_fs_search" placeholder="Search MNR / Partner / Staff..." oninput="efNetSearch('fs')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearFs()"><i class="fas fa-times"></i></button>
@@ -1159,7 +1172,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <div id="ef_tele_selected" class="mt-1"></div>
           </div>
           <div class="form-group" style="position:relative">
-            <label>Showroom <span class="text-muted" style="font-size:11px">(Staff / Partner)</span></label>
+            <label><span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-right:4px">L6</span>Showroom <span class="text-muted" style="font-size:11px">(Staff / Partner)</span></label>
             <div class="input-group mb-1">
               <input type="text" class="form-control" id="ef_showroom_search" placeholder="Search staff or partner..." oninput="efNetSearch('showroom')">
               <button class="btn btn-outline-secondary btn-sm" type="button" onclick="efClearShowroom()"><i class="fas fa-times"></i></button>
@@ -2111,13 +2124,13 @@ function switchTab(key) {
         <th>Comments</th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
-        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-        <th>Senior</th>
-        <th>Extended</th>
-        <th>Core</th>
-        <th>Field Supp</th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
+        <th title="L2: Senior Upliner">L2: Senior</th>
+        <th title="L3: Extended Upliner">L3: Extended</th>
+        <th title="L4: Core Upliner">L4: Core</th>
+        <th title="L5: Field Support">L5: Support</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
         <th>Tech Staff 2</th>` : ''}
@@ -2165,10 +2178,10 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('priority')">Priority<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
-        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-        <th>Field Supp</th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
+        <th title="L5: Field Support">L5: Support</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
         <th>Tech Staff 2</th>` : ''}
@@ -2202,10 +2215,10 @@ function switchTab(key) {
         <th>B2B Stage</th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')">Showroom (Field)<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
-        <th class="sortable" onclick="sortByCol('source_ref_name')">Ground Source<span class="sort-icon"></span></th>
-        <th>Field Supp</th>
+        <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
+        <th title="L5: Field Support">L5: Support</th>
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
         <th>Tech Staff 2</th>` : ''}
@@ -2653,34 +2666,38 @@ function renderLeadsTable(leads) {
 
 // ── Expand row ────────────────────────────────────────────────────────────
 function toggleExpand(leadId) {
-  const tbody = document.getElementById('leadsTableBody');
-  const row = tbody.querySelector(`tr.lead-row[data-id="${leadId}"]`);
-  if (!row) return;
-  const btn = document.getElementById('exp_'+leadId);
-  if (expandedRow && expandedRow.dataset.parentId==leadId) {
-    expandedRow.remove(); expandedRow=null;
-    btn?.classList.remove('open'); btn && (btn.innerHTML='<i class="fas fa-chevron-down"></i>');
-    return;
+  try {
+    const tbody = document.getElementById('leadsTableBody');
+    const row = tbody.querySelector(`tr.lead-row[data-id="${leadId}"]`);
+    if (!row) return;
+    const btn = document.getElementById('exp_'+leadId);
+    if (expandedRow && expandedRow.dataset.parentId==leadId) {
+      expandedRow.remove(); expandedRow=null;
+      btn?.classList.remove('open'); btn && (btn.innerHTML='<i class="fas fa-chevron-down"></i>');
+      return;
+    }
+    if (expandedRow) {
+      const ob=document.getElementById('exp_'+expandedRow.dataset.parentId);
+      ob?.classList.remove('open'); ob && (ob.innerHTML='<i class="fas fa-chevron-down"></i>');
+      expandedRow.remove(); expandedRow=null;
+    }
+    const l = _leadsCache.find(x=>x.id==leadId);
+    if (!l) return;
+    const cols = _isRestrictedFreelancer
+      ? (activeTab==='solar'?16:7)
+      : (activeTab==='solar'?37:17);
+    const dr = document.createElement('tr');
+    dr.className='detail-row'; dr.dataset.parentId=leadId;
+    dr.innerHTML=`<td colspan="${cols}">${buildDetailPanel(l)}</td>`;
+    row.after(dr); expandedRow=dr;
+    btn?.classList.add('open'); btn && (btn.innerHTML='<i class="fas fa-chevron-up"></i>');
+    // Async-load VGK support section after panel is in DOM
+    setTimeout(() => { try { loadVgkSupportForLead(leadId); } catch(e){ console.warn(e); } }, 50);
+    // DC_CIBIL_ADVANCE_001: Async-load CIBIL advance status for solar leads
+    setTimeout(() => { try { loadDetailAdvanceStatus(leadId); } catch(e){ console.warn(e); } }, 80);
+  } catch (err) {
+    console.error('toggleExpand error:', err);
   }
-  if (expandedRow) {
-    const ob=document.getElementById('exp_'+expandedRow.dataset.parentId);
-    ob?.classList.remove('open'); ob && (ob.innerHTML='<i class="fas fa-chevron-down"></i>');
-    expandedRow.remove(); expandedRow=null;
-  }
-  const l = _leadsCache.find(x=>x.id==leadId);
-  if (!l) return;
-  const cols = _isRestrictedFreelancer
-    ? (activeTab==='solar'?16:7)
-    : (activeTab==='solar'?37:17);
-  const dr = document.createElement('tr');
-  dr.className='detail-row'; dr.dataset.parentId=leadId;
-  dr.innerHTML=`<td colspan="${cols}">${buildDetailPanel(l)}</td>`;
-  row.after(dr); expandedRow=dr;
-  btn?.classList.add('open'); btn && (btn.innerHTML='<i class="fas fa-chevron-up"></i>');
-  // Async-load VGK support section after panel is in DOM
-  setTimeout(() => loadVgkSupportForLead(leadId), 50);
-  // DC_CIBIL_ADVANCE_001: Async-load CIBIL advance status for solar leads
-  setTimeout(() => loadDetailAdvanceStatus(leadId), 80);
 }
 
 function buildDetailPanel(l) {
@@ -2692,22 +2709,192 @@ function buildDetailPanel(l) {
     : `<span style="color:#d1d5db;font-size:10px;font-style:italic">No maps link</span>`;
   const isSolar = activeTab==='solar';
 
+  const leadDt = l.created_at || l.lead_date;
+  const leadDtFmt = leadDt ? fmtDateShort(leadDt) : null;
+  const leadDtFull = leadDt ? (new Date(leadDt).toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})) : '';
+
+  // 1st Payment & stage helpers
+  const pmtDt = l.first_payment_received_date;
+  const pmtDtFmt = pmtDt ? fmtDateShort(pmtDt) : null;
+  const recVal = parseFloat(l.deal_value_received || 0);
+  const pmtDateBadge = pmtDtFmt
+    ? `<span style="background:#d1fae5;color:#065f46;font-weight:700;padding:1px 6px;border-radius:4px;font-size:10px"><i class="fas fa-check-circle me-1"></i>${pmtDtFmt}</span>`
+    : (recVal > 0
+      ? `<span style="background:#fef3c7;color:#92400e;font-weight:600;padding:1px 6px;border-radius:4px;font-size:10px">Deal Rec: ₹${fmtVal(recVal)}</span>`
+      : `<span class="val empty">Pending</span>`);
+
+  const dvrBadge = l.first_dvr_confirmed_at
+    ? `<span style="color:#059669;font-weight:700;font-size:10px"><i class="fas fa-check-circle me-1"></i>${fmtDateShort(l.first_dvr_confirmed_at)}</span>`
+    : `<span class="val empty">—</span>`;
+
+  const sub = l.subsidy_status || '';
+  const subB = sub ? `<span class="subsidy-badge ss-${sub}">${(typeof SUBSIDY_LABELS !== 'undefined' && SUBSIDY_LABELS[sub]) || sub}</span>` : '—';
+  const cibilScoreColor = l.cibil_score >= 650 ? '#059669' : l.cibil_score ? '#d97706' : '#9ca3af';
+
+  let stageDays = null;
+  if (l.solar_pipeline_status_updated_at) {
+    try {
+      const sDt = new Date(l.solar_pipeline_status_updated_at); sDt.setHours(0,0,0,0);
+      const nw = new Date(); nw.setHours(0,0,0,0);
+      stageDays = Math.max(0, Math.floor((nw - sDt) / 86400000));
+    } catch(_) {}
+  }
+  const stageDaysChip = stageDays !== null
+    ? (()=>{
+        const col = stageDays<=7?'#059669':stageDays<=30?'#d97706':stageDays<=60?'#ea580c':'#dc2626';
+        const bg  = stageDays<=7?'#f0fdf4':stageDays<=30?'#fffbeb':stageDays<=60?'#fff7ed':'#fef2f2';
+        return `<span style="display:inline-block;padding:1px 7px;border-radius:8px;background:${bg};color:${col};font-size:10px;font-weight:700">${stageDays}d in stage</span>`;
+      })()
+    : '';
+
+  const curStageName = isSolar
+    ? (l.solar_pipeline_status ? (PIPELINE_LABELS[l.solar_pipeline_status] || l.solar_pipeline_status.replace(/_/g,' ')) : 'New')
+    : (activeTab === 'ev-b2b' && l.ev_b2b_stage ? (B2B_STAGE_LABELS[l.ev_b2b_stage] || l.ev_b2b_stage) : (STATUS_LABELS[l.status] || l.status || 'New'));
+
+  const curStageBadge = isSolar && l.solar_pipeline_status
+    ? `<span class="pipeline-badge ps-${l.solar_pipeline_status}">${esc(curStageName)}</span>`
+    : `<span class="status-badge s-${(l.status||'new').toLowerCase()}">${esc(curStageName)}</span>`;
+
   let html=`<div class="detail-panel"><div class="detail-grid">`;
   html+=`<div class="detail-section"><h6><i class="fas fa-user"></i> Contact</h6>
+    <div class="detail-field"><div class="lbl">Lead Date</div><div title="${esc(leadDtFull)}" style="font-weight:700;color:#1e3a5f">${v(leadDtFmt)}</div></div>
     <div class="detail-field"><div class="lbl">Email</div><div>${v(l.email)}</div></div>
     <div class="detail-field"><div class="lbl">Alt Phone</div><div>${v(l.alternate_phone)}</div></div>
     <div class="detail-field"><div class="lbl">Source</div><div>${v(l.source)}</div></div>
     <div class="detail-field"><div class="lbl">Source Details</div><div>${v(l.source_details)}</div></div>
     <div class="detail-field"><div class="lbl">Tags</div><div>${v(l.tags)}</div></div>
   </div>`;
-  html+=`<div class="detail-section"><h6><i class="fas fa-users"></i> Handlers</h6>
-    <div class="detail-field"><div class="lbl">Support/Telecaller</div><div>${v(l.telecaller_name||l.telecaller_emp_code)}</div></div>
-    <div class="detail-field"><div class="lbl">Showroom/Field</div><div>${v(l.field_staff_name||l.field_staff_emp_code)}</div></div>
-    <div class="detail-field"><div class="lbl">Ground Source</div><div>${l.source_ref_name?`<span style="font-size:11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:1px 6px;color:#0284c7">[${esc(l.source_ref_type||'')}] ${esc(l.source_ref_name)}</span>`:v(l.mnr_handler_id)}</div></div>
-    <div class="detail-field"><div class="lbl">Field Support</div><div>${l.field_support_ref_name?`<span style="font-size:11px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:4px;padding:1px 6px;color:#7c3aed">[${esc(l.field_support_ref_type||'')}] ${esc(l.field_support_ref_name)}</span>`:'—'}</div></div>
-    <div class="detail-field"><div class="lbl">Technical</div><div>${v(l.technical_name)}</div></div>
-    <div class="detail-field"><div class="lbl">Primary Owner</div><div>${v(l.primary_owner_name||l.primary_owner_employee_id)}</div></div>
-    <div class="detail-field"><div class="lbl">Partner</div><div>${v(l.partner_name)}</div></div>
+  html+=`<div class="detail-section" style="min-width:275px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+      <h6 style="margin:0"><i class="fas fa-users"></i> Handlers <span style="font-size:8.5px;color:#0284c7;font-weight:700;background:#e0f2fe;padding:1px 5px;border-radius:3px;margin-left:4px">L1–L6</span></h6>
+      <button type="button" class="btn btn-sm" onclick="event.stopPropagation();openEditModal(${l.id})" style="font-size:9.5px;padding:1px 7px;border-radius:4px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:600;cursor:pointer"><i class="fas fa-pen"></i> Edit</button>
+    </div>`;
+
+  const _renderConfirmBadge = (st, hasHandler) => {
+    if (st === true || st === 'true') {
+      return `<span style="background:#d1fae5;color:#065f46;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Support Confirmed"><i class="fas fa-check" style="font-size:8px"></i> Confirmed</span>`;
+    }
+    if (st === false || st === 'false') {
+      return `<span style="background:#fee2e2;color:#991b1b;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Support Rejected"><i class="fas fa-times" style="font-size:8px"></i> Rejected</span>`;
+    }
+    if (hasHandler) {
+      return `<span style="background:#fef3c7;color:#92400e;font-size:8.5px;font-weight:600;padding:1px 5px;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="Confirmation Pending"><i class="fas fa-clock" style="font-size:8px"></i> Pending</span>`;
+    }
+    return '';
+  };
+
+  const _fmtHandlerLevel = (lvl, lbl, name, id, type, isAuto, confirmVal, extraBadge) => {
+    const hasVal = Boolean(name || id);
+    const lvlBadge = `<span style="display:inline-block;min-width:22px;text-align:center;padding:1px 4px;border-radius:3px;background:#e0f2fe;color:#0369a1;font-weight:800;font-size:9px;margin-right:4px">${lvl}</span>`;
+    const lblHtml = `<div class="lbl" style="display:inline-flex;align-items:center">${lvlBadge}<span>${lbl}</span></div>`;
+    if (!hasVal) {
+      return `<div class="detail-field">${lblHtml}<div class="val empty">—</div></div>`;
+    }
+    let valItems = [];
+    if (type) {
+      valItems.push(`<span style="font-size:9.5px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:3px;padding:0 4px;color:#0284c7;font-weight:600">[${esc(type)}]</span>`);
+    }
+    if (name) {
+      valItems.push(`<span style="font-weight:600;color:#1e293b">${esc(name)}</span>`);
+    }
+    if (id && (!name || !String(name).includes(String(id)))) {
+      valItems.push(`<span style="font-size:9.5px;color:#64748b;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:0 4px;border-radius:3px">#${esc(String(id))}</span>`);
+    }
+    if (isAuto) {
+      valItems.push(`<span style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:8.5px;font-weight:700;padding:0 3px;border-radius:3px" title="Auto-resolved upline">AUTO</span>`);
+    }
+    if (extraBadge) {
+      valItems.push(extraBadge);
+    }
+    const cfm = _renderConfirmBadge(confirmVal, hasVal);
+    if (cfm) {
+      valItems.push(cfm);
+    }
+    return `<div class="detail-field">${lblHtml}<div class="val" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;text-align:right">${valItems.join(' ')}</div></div>`;
+  };
+
+  const _fmtStaffHandler = (lbl, name, codeOrId, confirmVal, extraInfo) => {
+    const hasVal = Boolean(name || codeOrId);
+    const lblHtml = `<div class="lbl">${lbl}</div>`;
+    if (!hasVal) {
+      return `<div class="detail-field">${lblHtml}<div class="val empty">—</div></div>`;
+    }
+    let valItems = [];
+    if (name) {
+      valItems.push(`<span style="font-weight:600;color:#1e293b">${esc(name)}</span>`);
+    }
+    if (codeOrId && (!name || !String(name).includes(String(codeOrId)))) {
+      valItems.push(`<span style="font-size:9.5px;color:#64748b;font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:0 4px;border-radius:3px">${esc(String(codeOrId))}</span>`);
+    }
+    if (extraInfo) {
+      valItems.push(extraInfo);
+    }
+    const cfm = _renderConfirmBadge(confirmVal, hasVal);
+    if (cfm) {
+      valItems.push(cfm);
+    }
+    return `<div class="detail-field">${lblHtml}<div class="val" style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;text-align:right">${valItems.join(' ')}</div></div>`;
+  };
+
+  // Resolve L1: Source
+  const _l1Name = l.source_ref_name || (l.guru_id ? (l.guru_name || l.guru_id) : (l.mnr_handler_id || ''));
+  const _l1Id = l.source_ref_id || l.guru_id || l.mnr_handler_id || '';
+  const _l1Type = l.source_ref_type || (l.guru_id ? 'guru' : (l.mnr_handler_id ? 'mnr' : ''));
+  const _l1Confirm = l.guru_supported;
+
+  // Resolve L2: Senior
+  const _l2Name = l.team_senior_name || l.guru_name || '';
+  const _l2Id = l.team_senior_partner_id || (l.team_senior_name ? '' : (l.guru_id || ''));
+  const _l2Type = l.team_senior_partner_id ? 'partner' : (l.guru_id ? ((String(l.guru_id).startsWith('VGK'))?'vgk':'mnr') : (l.team_senior_name ? 'partner' : ''));
+  const _l2Auto = Boolean(l.team_senior_partner_id || l.guru_id || l.team_senior_name || l.guru_name);
+  const _l2Confirm = l.z_guru_supported !== undefined ? l.z_guru_supported : l.guru_supported;
+
+  // Resolve L3: Extended
+  const _l3Name = l.team_extended_name || l.z_guru_name || l.adi_guru_name || '';
+  const _l3Id = l.team_extended_partner_id || (l.team_extended_name ? '' : (l.z_guru_id || l.adi_guru_id || ''));
+  const _l3Type = l.team_extended_partner_id ? 'partner' : (l.z_guru_id ? ((String(l.z_guru_id).startsWith('VGK'))?'vgk':'mnr') : (l.adi_guru_id ? 'mnr' : (l.team_extended_name ? 'partner' : '')));
+  const _l3Auto = Boolean(l.team_extended_partner_id || l.z_guru_id || l.adi_guru_id || l.team_extended_name || l.z_guru_name);
+  const _l3Confirm = l.adi_guru_supported !== undefined ? l.adi_guru_supported : l.z_guru_supported;
+
+  // Resolve L4: Core
+  const _l4Name = l.team_core_name || l.core_name || '';
+  const _l4Id = l.team_core_partner_id || (l.team_core_name ? '' : (l.core_id || ''));
+  const _l4Type = l.team_core_partner_id ? 'partner' : (l.core_id ? 'mnr' : (l.team_core_name ? 'partner' : ''));
+  const _l4Auto = Boolean(l.team_core_partner_id || l.core_id || l.team_core_name || l.core_name);
+  const _l4Confirm = l.core_supported;
+
+  // Resolve L5: Support
+  const _l5Name = l.field_support_ref_name || l.support_staff_name || (l.adi_guru_name && !l.team_extended_name ? l.adi_guru_name : '');
+  const _l5Id = l.field_support_ref_id || l.support_staff_id || (l.adi_guru_id && !l.team_extended_partner_id ? l.adi_guru_id : '');
+  const _l5Type = l.field_support_ref_type || (l.support_staff_id ? 'staff' : (l.field_support_ref_id ? 'ref' : ''));
+  const _l5Company = l.company_supported !== undefined ? (l.company_supported !== false ? '<span style="font-size:8.5px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:0 4px;border-radius:3px;font-weight:600" title="Company Supported (50% L5)">Company Supp (50%)</span>' : '<span style="font-size:8.5px;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:0 4px;border-radius:3px;font-weight:600" title="Non-supported (100% L5)">100% L5</span>') : null;
+  const _l5Confirm = l.field_support_supported !== undefined ? l.field_support_supported : l.showroom_supported;
+
+  // Resolve L6: Showroom
+  const _l6Name = l.showroom_vgk_name || l.field_staff_name || l.associated_partner_name || '';
+  const _l6Id = l.showroom_vgk_id || l.field_staff_emp_code || (l.field_staff_id ? '#' + l.field_staff_id : '') || l.associated_partner_id || '';
+  const _l6Type = l.showroom_vgk_id ? 'partner_vgk' : (l.field_staff_id ? 'staff' : (l.associated_partner_id ? 'partner' : ''));
+  const _l6Confirm = l.showroom_supported;
+
+  // Additional roles
+  const _teleCode = l.telecaller_emp_code ? l.telecaller_emp_code : (l.telecaller_id ? '#' + l.telecaller_id : '');
+  const _tech1Code = l.technical_staff1_id ? '#' + l.technical_staff1_id : '';
+  const _tech2Code = l.technical_id ? '#' + l.technical_id : '';
+
+  html+=`
+    ${_fmtHandlerLevel('L1', 'Source', _l1Name, _l1Id, _l1Type, false, _l1Confirm, null)}
+    ${_fmtHandlerLevel('L2', 'Senior', _l2Name, _l2Id, _l2Type, _l2Auto, _l2Confirm, null)}
+    ${_fmtHandlerLevel('L3', 'Extended', _l3Name, _l3Id, _l3Type, _l3Auto, _l3Confirm, null)}
+    ${_fmtHandlerLevel('L4', 'Core', _l4Name, _l4Id, _l4Type, _l4Auto, _l4Confirm, null)}
+    ${_fmtHandlerLevel('L5', 'Support', _l5Name, _l5Id, _l5Type, false, _l5Confirm, _l5Company)}
+    ${_fmtHandlerLevel('L6', 'Showroom', _l6Name, _l6Id, _l6Type, false, _l6Confirm, null)}
+    <div style="margin:5px 0 4px;border-top:1px dashed #e2e8f0"></div>
+    ${_fmtStaffHandler('Support/Telecaller', l.telecaller_name, _teleCode, l.telecaller_supported, null)}
+    ${l.technical_staff1_name ? _fmtStaffHandler('Technical Staff 1', l.technical_staff1_name, _tech1Code, null, null) : ''}
+    ${_fmtStaffHandler('Technical', l.technical_name, _tech2Code, l.technical_supported, null)}
+    ${_fmtStaffHandler('Primary Owner', l.primary_owner_name, l.primary_owner_employee_id, null, null)}
+    ${l.community_name ? _fmtStaffHandler('Community Member', l.community_name, l.community_id ? '#' + l.community_id : '', null, null) : ''}
+    ${_fmtStaffHandler('Partner / Vendor', l.partner_name, l.vendor_code ? 'Code: ' + l.vendor_code : '', null, l.vendor_status ? `<span style="font-size:9px;background:#f3f4f6;padding:1px 4px;border-radius:3px">${esc(l.vendor_status)}</span>` : null)}
   </div>`;
   html+=`<div class="detail-section"><h6><i class="fas fa-map-marker-alt"></i> Address</h6>
     <div class="detail-field"><div class="lbl">Full</div><div class="val" style="white-space:normal">${addr||'—'}</div></div>
@@ -2725,16 +2912,15 @@ function buildDetailPanel(l) {
     <div class="detail-field"><div class="lbl">Branch</div><div>${v(l.bank_branch)}</div></div>
   </div>`;
   if(isSolar){
-    const sub=l.subsidy_status||'';
-    const subB=sub?`<span class="subsidy-badge ss-${sub}">${SUBSIDY_LABELS[sub]||sub}</span>`:'—';
     const assoc=l.existing_association||'';
     const assocB=assoc&&assoc!=='none'?`<span class="assoc-badge assoc-${assoc}">${assoc}</span>`:'—';
     const cibilBadge = l.cibil_confirmed
       ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">✓ Confirmed</span>`
       : `<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">Unconfirmed</span>`;
-    const cibilScoreColor = l.cibil_score >= 650 ? '#059669' : l.cibil_score ? '#d97706' : '#9ca3af';
     html+=`<div class="detail-section"><h6 style="color:#d97706"><i class="fas fa-solar-panel"></i> Solar</h6>
       <div class="detail-field"><div class="lbl">App No</div><div style="font-family:monospace;color:#d97706;font-weight:700">${v(l.application_no)}</div></div>
+      <div class="detail-field"><div class="lbl">Submitted</div><div>${v(l.submit_date?fmtDateShort(l.submit_date):null)}</div></div>
+      <div class="detail-field"><div class="lbl">1st Payment</div><div>${pmtDateBadge}</div></div>
       <div class="detail-field"><div class="lbl">Accepted</div><div>${v(l.accepted_date?fmtDateShort(l.accepted_date):null)}</div></div>
       <div class="detail-field"><div class="lbl">Stage</div><div>${l.solar_pipeline_status?`<span class="pipeline-badge ps-${l.solar_pipeline_status}">${PIPELINE_LABELS[l.solar_pipeline_status]||l.solar_pipeline_status}</span>`:'—'}</div></div>
       <div class="detail-field"><div class="lbl">Subsidy</div><div>${subB}</div></div>
@@ -2774,6 +2960,95 @@ function buildDetailPanel(l) {
     <div class="detail-field"><div class="lbl">Comments</div><div class="val" style="white-space:normal">${l.recent_comments||'—'}</div></div>
   </div>`;
 
+  // Stage-Wise Lifecycle Dates & 1st Payment Details Section
+  const cibilText = l.cibil_score
+    ? `<span style="font-weight:700;color:${cibilScoreColor}">${l.cibil_score}</span> ${l.cibil_confirmed ? '<span style="color:#059669;font-size:9.5px;font-weight:700">✓ Confirmed</span>' : '<span style="color:#991b1b;font-size:9.5px">Unconfirmed</span>'}${l.cibil_score_updated_at ? ' (' + fmtDateShort(l.cibil_score_updated_at) + ')' : ''}`
+    : `<span class="val empty">—</span>`;
+
+  const steps = isSolar ? [
+    { label: '1. Lead Inward', icon: 'fa-user-plus', date: leadDtFmt, done: Boolean(leadDt), active: false },
+    { label: '2. 1st Payment', icon: 'fa-rupee-sign', date: pmtDtFmt || (recVal > 0 ? '₹' + fmtVal(recVal) : null), done: Boolean(pmtDt || recVal > 0), active: l.solar_pipeline_status === 'first_payment_received' },
+    { label: '3. Submitted', icon: 'fa-file-invoice', date: l.submit_date ? fmtDateShort(l.submit_date) : null, done: Boolean(l.submit_date), active: l.solar_pipeline_status === 'application_submitted' },
+    { label: '4. Accepted', icon: 'fa-check-double', date: l.accepted_date ? fmtDateShort(l.accepted_date) : null, done: Boolean(l.accepted_date), active: l.solar_pipeline_status === 'pending_with_bank' },
+    { label: '5. Sanction', icon: 'fa-landmark', date: l.sanction_date ? fmtDateShort(l.sanction_date) : null, done: Boolean(l.sanction_date), active: false },
+    { label: '6. Material', icon: 'fa-truck', date: l.material_reach_date ? fmtDateShort(l.material_reach_date) : null, done: Boolean(l.material_reach_date), active: false },
+    { label: '7. Installed', icon: 'fa-solar-panel', date: l.installation_date ? fmtDateShort(l.installation_date) : null, done: Boolean(l.installation_date || l.solar_pipeline_status === 'installed'), active: l.solar_pipeline_status === 'installation_pending' },
+    { label: '8. Completed', icon: 'fa-flag-checkered', date: (l.complete_date || l.actual_close_date) ? fmtDateShort(l.complete_date || l.actual_close_date) : null, done: Boolean(l.complete_date || l.actual_close_date || l.solar_pipeline_status === 'completed' || l.status === 'completed'), active: l.solar_pipeline_status === 'completed' }
+  ] : [
+    { label: '1. Lead Inward', icon: 'fa-user-plus', date: leadDtFmt, done: Boolean(leadDt), active: false },
+    { label: '2. 1st Payment', icon: 'fa-rupee-sign', date: pmtDtFmt || (recVal > 0 ? '₹' + fmtVal(recVal) : null), done: Boolean(pmtDt || recVal > 0), active: false },
+    { label: '3. Stage: ' + curStageName, icon: 'fa-tasks', date: l.updated_at ? fmtDateShort(l.updated_at) : null, done: true, active: true },
+    { label: '4. Completed', icon: 'fa-flag-checkered', date: (l.complete_date || l.actual_close_date) ? fmtDateShort(l.complete_date || l.actual_close_date) : null, done: Boolean(l.complete_date || l.actual_close_date || l.status === 'completed' || l.status === 'won'), active: (l.status === 'completed' || l.status === 'won') }
+  ];
+
+  const stepperHtml = `<div class="stage-milestone-bar">` + steps.map(s => {
+    const cls = s.done ? 'done' : (s.active ? 'active' : 'pending');
+    const dtHtml = s.date
+      ? `<div class="stage-step-date" title="${esc(s.date)}">${esc(s.date)}</div>`
+      : `<div class="stage-step-date pending">Pending</div>`;
+    return `<div class="stage-step-node ${cls}">
+      <div class="stage-step-icon"><i class="fas ${s.icon}"></i></div>
+      <div class="stage-step-label">${s.label}</div>
+      ${dtHtml}
+    </div>`;
+  }).join('') + `</div>`;
+
+  html+=`<div class="detail-section" style="grid-column:1/-1;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #f1f5f9;padding-bottom:7px;margin-bottom:10px">
+      <h6 style="margin:0;font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px">
+        <i class="fas fa-calendar-check" style="font-size:12px;color:#0284c7"></i> Stage-Wise Lifecycle Dates & 1st Payment Details
+      </h6>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:#64748b;font-weight:600">Current Stage:</span>
+        ${curStageBadge}
+        ${stageDaysChip}
+      </div>
+    </div>
+
+    ${stepperHtml}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">
+      <div class="stage-sub-card">
+        <h7><i class="fas fa-hand-holding-usd" style="color:#059669"></i> Intake & 1st Payment</h7>
+        <div class="detail-field"><div class="lbl">Lead Date</div><div title="${esc(leadDtFull)}" style="font-weight:700;color:#1e3a5f">${v(leadDtFmt)}</div></div>
+        <div class="detail-field"><div class="lbl">1st Payment Date</div><div>${pmtDateBadge}</div></div>
+        <div class="detail-field"><div class="lbl">Payment Received</div><div style="font-weight:700;color:${recVal>0?'#065f46':'#6b7280'}">${recVal>0?'₹'+fmtVal(recVal):'—'}</div></div>
+        <div class="detail-field"><div class="lbl">1st DVR Confirmed</div><div>${dvrBadge}</div></div>
+        <div class="detail-field"><div class="lbl">Deal Total (Quoted)</div><div style="font-weight:600">${l.deal_value_total?'₹'+fmtVal(l.deal_value_total):'—'}</div></div>
+      </div>
+
+      <div class="stage-sub-card">
+        <h7><i class="fas fa-university" style="color:#2563eb"></i> Submission & Bank</h7>
+        <div class="detail-field"><div class="lbl">Submitted Date</div><div style="font-weight:600">${v(l.submit_date?fmtDateShort(l.submit_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Accepted Date</div><div style="font-weight:600">${v(l.accepted_date?fmtDateShort(l.accepted_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Sanction Date</div><div>${v(l.sanction_date?fmtDateShort(l.sanction_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Loan Bank</div><div style="font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.loan_bank||'')}">${v(l.loan_bank)}</div></div>
+        <div class="detail-field"><div class="lbl">Bank Branch</div><div style="max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.bank_branch||'')}">${v(l.bank_branch)}</div></div>
+        <div class="detail-field"><div class="lbl">CIBIL Status</div><div>${cibilText}</div></div>
+        <div class="detail-field" id="stage-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>
+      </div>
+
+      <div class="stage-sub-card">
+        <h7><i class="fas fa-tools" style="color:#d97706"></i> Execution & Site Work</h7>
+        <div class="detail-field"><div class="lbl">Material Reach</div><div>${v(l.material_reach_date?fmtDateShort(l.material_reach_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Installation Date</div><div>${v(l.installation_date?fmtDateShort(l.installation_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Current Stage</div><div>${curStageBadge}</div></div>
+        <div class="detail-field"><div class="lbl">Stage Updated</div><div>${v(l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Time at Stage</div><div>${stageDaysChip || '—'}</div></div>
+        <div class="detail-field"><div class="lbl">Subsidy Status</div><div>${subB}</div></div>
+      </div>
+
+      <div class="stage-sub-card">
+        <h7><i class="fas fa-flag-checkered" style="color:#7c3aed"></i> Completion & Schedules</h7>
+        <div class="detail-field"><div class="lbl">Complete Date</div><div style="font-weight:700;color:#1e3a5f">${v((l.complete_date||l.actual_close_date)?fmtDateShort(l.complete_date||l.actual_close_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Expected Close</div><div>${v(l.expected_close_date?fmtDateShort(l.expected_close_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Next Follow-up</div><div>${v(l.next_followup_date?fmtDateShort(l.next_followup_date):null)}</div></div>
+        <div class="detail-field"><div class="lbl">Last Touchpoint</div><div>${v(l.last_contact_date?fmtDateShort(l.last_contact_date):(l.updated_at?fmtDateShort(l.updated_at):null))}</div></div>
+        <div class="detail-field"><div class="lbl">Insurance</div><div>${_insuranceBadge(l)}</div></div>
+      </div>
+    </div>
+  </div>`;
+
   // VGK4U Support Confirmation — full-width section, async loaded
   html+=`<div class="detail-section" style="grid-column:1/-1" id="vgk-supp-${l.id}">
     <h6 style="color:#7c3aed"><i class="fas fa-shield-alt me-1"></i>VGK4U Support Confirmation <span style="font-size:9px;font-weight:400;opacity:.7">(L2 Senior / L3 Extended)</span></h6>
@@ -2794,18 +3069,87 @@ const ADV_STATUS_COLORS = {
 };
 async function loadDetailAdvanceStatus(leadId) {
   const el = document.getElementById('det-adv-' + leadId);
-  if (!el) return;
-  const valDiv = el.querySelector('div:last-child');
+  const stageAdvEl = document.getElementById('stage-adv-' + leadId);
+  if (!el && !stageAdvEl) return;
+  const valDiv = el ? el.querySelector('div:last-child') : null;
   try {
     const r = await staffFetch('/api/v1/crm/leads/' + leadId + '/solar-advance');
-    if (!r.ok) { valDiv.textContent = '—'; return; }
+    if (!r.ok) {
+      if (valDiv) valDiv.textContent = '—';
+      if (stageAdvEl) { const sv = stageAdvEl.querySelector('div:last-child'); if (sv) sv.textContent = '—'; }
+      return;
+    }
     const d = await r.json();
-    if (!d.found) { valDiv.textContent = '—'; return; }
-    const sc = ADV_STATUS_COLORS[d.status] || { bg:'#f3f4f6', color:'#374151', label:d.status };
-    const entryNo = d.entry_number ? `<span style="font-size:10px;color:#6b7280;margin-left:6px">${esc(d.entry_number)}</span>` : '';
-    const amt = d.advance_amount ? ` · ₹${Number(d.advance_amount).toLocaleString('en-IN')}` : '';
-    valDiv.innerHTML = `<span style="background:${sc.bg};color:${sc.color};padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:700">${sc.label}${amt}</span>${entryNo}`;
-  } catch(e) { valDiv.textContent = '—'; }
+    if (!d.found) {
+      let notFoundHtml = '—';
+      if (d.is_file_2_skipped) {
+        notFoundHtml = '<span style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700" title="File #2 skipped per policy (2nd advance on File #3)"><i class="fas fa-forward me-1"></i>Skipped (File #2)</span>';
+      } else if (d.is_cap_reached) {
+        notFoundHtml = '<span style="background:#f1f5f9;color:#6b7280;border:1px solid #e2e8f0;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700" title="Member reached maximum 2 advances"><i class="fas fa-ban me-1"></i>Cap Reached (Max 2)</span>';
+      } else if (d.reason) {
+        notFoundHtml = `<span style="background:#fffbeb;color:#92400e;border:1px solid #fef3c7;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600" title="${esc(d.reason)}">${esc(d.reason)}</span>`;
+      }
+      if (valDiv) valDiv.innerHTML = notFoundHtml;
+      if (stageAdvEl) { const sv = stageAdvEl.querySelector('div:last-child'); if (sv) sv.innerHTML = notFoundHtml; }
+      return;
+    }
+
+    let innerHtml = '';
+    if (d.advances && d.advances.length > 0) {
+      const items = d.advances.map(a => {
+        const sc = ADV_STATUS_COLORS[a.status] || { bg:'#f3f4f6', color:'#374151', label:a.status };
+        const lvlTag = a.level === 1 ? 'L1 Ground' : (a.level === 2 ? 'L2 Senior' : 'L' + a.level);
+        const pName = a.partner_name ? ` · ${esc(a.partner_name)}` : '';
+        const amt = a.advance_amount ? `₹${Number(a.advance_amount).toLocaleString('en-IN')}` : '';
+        return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:3px">
+          <span style="font-size:9.5px;font-weight:700;color:#1e3a5f">${lvlTag}:</span>
+          <span style="background:${sc.bg};color:${sc.color};padding:1px 6px;border-radius:10px;font-size:9.5px;font-weight:700">${amt} (${sc.label})</span>
+          <span style="font-size:9px;color:#6b7280">${esc(a.entry_number)}${pName}</span>
+        </div>`;
+      }).join('');
+
+      const hasPending = d.advances.some(a => a.status === 'PENDING');
+      const relBtn = hasPending ? `
+        <button type="button" onclick="event.stopPropagation();triggerReleaseAdvance(${leadId})" class="btn" style="background:#059669;color:#fff;border:none;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;box-shadow:0 1px 2px rgba(0,0,0,.08)">
+          <i class="fas fa-hand-holding-usd me-1"></i> Release Advance
+        </button>` : '';
+
+      innerHtml = `<div>${items}</div>${relBtn}`;
+    } else {
+      const sc = ADV_STATUS_COLORS[d.status] || { bg:'#f3f4f6', color:'#374151', label:d.status };
+      const entryNo = d.entry_number ? `<span style="font-size:10px;color:#6b7280;margin-left:6px">${esc(d.entry_number)}</span>` : '';
+      const amt = d.advance_amount ? ` · ₹${Number(d.advance_amount).toLocaleString('en-IN')}` : '';
+      innerHtml = `<span style="background:${sc.bg};color:${sc.color};padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:700">${sc.label}${amt}</span>${entryNo}`;
+    }
+
+    if (valDiv) valDiv.innerHTML = innerHtml;
+    if (stageAdvEl) {
+      const sv = stageAdvEl.querySelector('div:last-child');
+      if (sv) sv.innerHTML = innerHtml;
+    }
+  } catch(e) {
+    if (valDiv) valDiv.textContent = '—';
+    if (stageAdvEl) { const sv = stageAdvEl.querySelector('div:last-child'); if (sv) sv.textContent = '—'; }
+  }
+}
+
+async function triggerReleaseAdvance(leadId) {
+  if (!confirm('Release CIBIL advance to partner wallet(s)?')) return;
+  try {
+    const r = await staffFetch('/api/v1/crm/leads/' + leadId + '/solar-advance/release', {
+      method: 'POST'
+    });
+    const d = await r.json();
+    if (r.ok && d.success) {
+      if (window.showToast) showToast('Advance released successfully!', 'success');
+      loadDetailAdvanceStatus(leadId);
+    } else {
+      if (window.showToast) showToast(d.detail || d.error || 'Failed to release advance', 'error');
+      else alert(d.detail || d.error || 'Failed to release advance');
+    }
+  } catch(e) {
+    if (window.showToast) showToast('Network error releasing advance', 'error');
+  }
 }
 
 // DC_CIBIL_ADVANCE_001: Load advance status for the edit modal

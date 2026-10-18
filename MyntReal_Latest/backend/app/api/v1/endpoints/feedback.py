@@ -604,6 +604,12 @@ async def upload_video_thumbnail(
 # DC Protocol (Jan 23, 2026): Supreme Staff Announcement Creation with Auto-Approval
 SUPREME_STAFF_TYPES = ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U_EA', 'vgk4u', 'vgk4u_supreme', 'rvz_supreme']
 
+# DC-DEDUP-LOCK-001: Thread-safe in-flight registry to prevent concurrent race condition duplicates (double clicks)
+import threading
+import time
+_SUBMISSION_IN_FLIGHT_LOCK = threading.Lock()
+_SUBMISSION_IN_FLIGHT_REGISTRY = {}  # norm_title -> timestamp
+
 @router.post("/staff/submit")
 @router.post("/submit-staff-announcement")
 async def submit_staff_announcement(
@@ -696,14 +702,37 @@ async def submit_staff_announcement(
     now_utc = datetime.now(timezone.utc)
     today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # DC-DEDUP-LOCK-001: Thread-safe in-flight lock to catch simultaneous/rapid multi-clicks within 20 seconds
+    norm_title = (title or '').strip().lower()
+    current_ts = time.time()
+    with _SUBMISSION_IN_FLIGHT_LOCK:
+        # Prune entries older than 120s
+        to_del = [k for k, t in _SUBMISSION_IN_FLIGHT_REGISTRY.items() if current_ts - t > 120]
+        for k in to_del:
+            del _SUBMISSION_IN_FLIGHT_REGISTRY[k]
+
+        if not force and norm_title in _SUBMISSION_IN_FLIGHT_REGISTRY:
+            elapsed = current_ts - _SUBMISSION_IN_FLIGHT_REGISTRY[norm_title]
+            if elapsed < 20:
+                logger.warning(f"[ANNOUNCEMENT-DEDUP] Suppressed concurrent duplicate submission for title: '{title}' ({elapsed:.1f}s ago)")
+                return {
+                    "success": True,
+                    "duplicate": True,
+                    "message": "Announcement submission is already being processed or was just posted. Duplicate suppressed.",
+                    "status": "stopped"
+                }
+        _SUBMISSION_IN_FLIGHT_REGISTRY[norm_title] = current_ts
+
     # Duplicate Guard: Prevent duplicate announcements created on the same day if still active
+    from sqlalchemy import func
     existing_dup = db.query(FeedbackSubmission).filter(
-        FeedbackSubmission.title == title,
+        func.lower(func.trim(FeedbackSubmission.title)) == norm_title,
         FeedbackSubmission.submitted_at >= today_start,
         FeedbackSubmission.is_deleted == False
     ).first()
     if existing_dup and (existing_dup.expires_at is None or existing_dup.expires_at > now_utc):
         if not force:
+            logger.info(f"[ANNOUNCEMENT-DEDUP] Announcement with title '{title}' already exists today (ID: {existing_dup.id}). Suppressing duplicate.")
             return {
                 "success": True,
                 "duplicate": True,

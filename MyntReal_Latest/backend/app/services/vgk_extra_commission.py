@@ -226,8 +226,13 @@ def apply_extra_commission_if_active(
 
                     _sp = db.begin_nested()
                     try:
-                        entry_no = _next_entry_number(db, company_id)
-                        _inc_date = (lead.submit_date.date() if hasattr(lead.submit_date, 'date') else lead.submit_date) if getattr(lead, 'submit_date', None) else now_ist.date()
+                        if trigger_event == 'first_payment':
+                            _raw_dt = getattr(lead, 'first_payment_received_date', None) or getattr(lead, 'first_dvr_confirmed_at', None) or now_ist.date()
+                        elif trigger_event == 'file_completed':
+                            _raw_dt = getattr(lead, 'installation_date', None) or getattr(lead, 'complete_date', None) or now_ist.date()
+                        else:
+                            _raw_dt = getattr(lead, 'submit_date', None) or now_ist.date()
+                        _inc_date = (_raw_dt.date() if hasattr(_raw_dt, 'date') else _raw_dt) if _raw_dt else now_ist.date()
 
                         vci_id = db.execute(text("""
                             INSERT INTO vgk_cash_income_entries

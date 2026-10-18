@@ -370,9 +370,14 @@ export class CategoryLeadsMasterPage {
           ${this.currentTab === 'solar' ? `
             <div><strong style="color:#cbd5e1;">Insurance:</strong> <span style="color:${insColor}; font-weight:700;">${insLabel}</span>${lead.insurance_policy_no ? ` <span style="font-family:monospace; color:#cbd5e1;">(${lead.insurance_policy_no})</span>` : ''}</div>
           ` : ''}
-          ${handler ? `
-            <div><strong style="color:#cbd5e1;">Handler:</strong> <span style="color:#e2e8f0;">${handler}</span></div>
-          ` : ''}
+
+          <!-- L1 to L6 Handlers Section -->
+          <div style="margin-top:6px; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:6px 8px;">
+            <div style="font-size:10px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+              <i class="fas fa-users" style="font-size:9px;"></i> Handlers (L1–L6)
+            </div>
+            ${this.renderMobileHandlerLevels(lead)}
+          </div>
         </div>
 
         <!-- Action Buttons: Softphone Call, WhatsApp, Universal History -->
@@ -389,6 +394,85 @@ export class CategoryLeadsMasterPage {
         </div>
       </div>
     `;
+  }
+
+  private renderMobileHandlerLevels(lead: LeadItem): string {
+    const levels: { lvl: string; label: string; name: string; id: string; type: string; isAuto?: boolean; confirmed?: boolean | null }[] = [];
+
+    // L1: Source
+    const l1Name = lead.source_ref_name || lead.guru_name || lead.mnr_handler_id || '';
+    const l1Id = lead.source_ref_id || lead.guru_id || lead.mnr_handler_id || '';
+    const l1Type = lead.source_ref_type || (lead.guru_id ? 'guru' : (lead.mnr_handler_id ? 'mnr' : ''));
+    if (l1Name || l1Id) {
+      levels.push({ lvl: 'L1', label: 'Source', name: l1Name, id: String(l1Id), type: l1Type, confirmed: lead.guru_supported });
+    }
+
+    // L2: Senior
+    const l2Name = lead.team_senior_name || lead.guru_name || '';
+    const l2Id = lead.team_senior_partner_id || (lead.team_senior_name ? '' : (lead.guru_id || ''));
+    if (l2Name || l2Id) {
+      levels.push({ lvl: 'L2', label: 'Senior', name: l2Name, id: String(l2Id), type: lead.team_senior_partner_id ? 'partner' : 'upliner', isAuto: true, confirmed: lead.z_guru_supported });
+    }
+
+    // L3: Extended
+    const l3Name = lead.team_extended_name || lead.z_guru_name || lead.adi_guru_name || '';
+    const l3Id = lead.team_extended_partner_id || (lead.team_extended_name ? '' : (lead.z_guru_id || lead.adi_guru_id || ''));
+    if (l3Name || l3Id) {
+      levels.push({ lvl: 'L3', label: 'Extended', name: l3Name, id: String(l3Id), type: lead.team_extended_partner_id ? 'partner' : 'upliner', isAuto: true, confirmed: lead.adi_guru_supported });
+    }
+
+    // L4: Core
+    const l4Name = lead.team_core_name || lead.core_name || '';
+    const l4Id = lead.team_core_partner_id || (lead.team_core_name ? '' : (lead.core_id || ''));
+    if (l4Name || l4Id) {
+      levels.push({ lvl: 'L4', label: 'Core', name: l4Name, id: String(l4Id), type: lead.team_core_partner_id ? 'partner' : 'upliner', isAuto: true, confirmed: lead.core_supported });
+    }
+
+    // L5: Support
+    const l5Name = lead.field_support_ref_name || lead.support_staff_name || lead.adi_guru_name || '';
+    const l5Id = lead.field_support_ref_id || lead.support_staff_id || lead.adi_guru_id || '';
+    if (l5Name || l5Id) {
+      levels.push({ lvl: 'L5', label: 'Support', name: l5Name, id: String(l5Id), type: lead.field_support_ref_type || (lead.support_staff_id ? 'staff' : ''), confirmed: lead.field_support_supported });
+    }
+
+    // L6: Showroom
+    const l6Name = lead.showroom_vgk_name || lead.field_staff_name || lead.associated_partner_name || '';
+    const l6Id = lead.showroom_vgk_id || lead.field_staff_emp_code || lead.field_staff_id || lead.associated_partner_id || '';
+    if (l6Name || l6Id) {
+      levels.push({ lvl: 'L6', label: 'Showroom', name: l6Name, id: String(l6Id), type: lead.showroom_vgk_id ? 'partner_vgk' : (lead.field_staff_id ? 'staff' : 'partner'), confirmed: lead.showroom_supported });
+    }
+
+    // Telecaller
+    if (lead.telecaller_name || lead.telecaller_emp_code) {
+      levels.push({ lvl: 'Staff', label: 'Telecaller', name: lead.telecaller_name || '', id: lead.telecaller_emp_code || '', type: 'staff', confirmed: lead.telecaller_supported });
+    }
+
+    if (levels.length === 0) {
+      return `<div style="font-size:10px; color:#64748b; font-style:italic;">No handlers assigned</div>`;
+    }
+
+    return levels.map(item => {
+      const cfmBadge = item.confirmed === true
+        ? `<span style="background:#064e3b; color:#34d399; font-size:8px; font-weight:700; padding:1px 4px; border-radius:3px;">✓ Confirmed</span>`
+        : item.confirmed === false
+        ? `<span style="background:#7f1d1d; color:#f87171; font-size:8px; font-weight:700; padding:1px 4px; border-radius:3px;">✗ Rejected</span>`
+        : `<span style="background:#78350f; color:#fde68a; font-size:8px; padding:1px 4px; border-radius:3px;">⏳ Pending</span>`;
+
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; padding:2px 0; border-bottom:1px solid #1e293b;">
+          <span style="color:#94a3b8; display:flex; align-items:center; gap:3px; flex-shrink:0;">
+            <span style="background:#0369a1; color:#ffffff; font-weight:800; font-size:8.5px; padding:0 3px; border-radius:2px;">${item.lvl}</span>
+            <span>${item.label}:</span>
+          </span>
+          <span style="color:#e2e8f0; font-weight:600; text-align:right; display:flex; align-items:center; gap:3px; flex-wrap:wrap; justify-content:flex-end;">
+            ${item.type ? `<span style="color:#38bdf8; font-size:9px;">[${item.type}]</span>` : ''}
+            <span>${item.name || ('#' + item.id)}</span>
+            ${item.isAuto ? `<span style="background:#1e3a8a; color:#93c5fd; font-size:8px; padding:0 3px; border-radius:2px;">AUTO</span>` : ''}
+            ${cfmBadge}
+          </span>
+        </div>
+      `;
+    }).join('');
   }
 
   private attachEventListeners(): void {

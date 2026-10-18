@@ -1119,6 +1119,8 @@ class TransactionCreate(BaseModel):
     receipt_filename: Optional[str] = None
     revenue_category_id: Optional[int] = None
     deal_id: Optional[int] = None
+    all_payments_received: Optional[bool] = False
+    release_support_brand: Optional[bool] = True
 
 
 class TransactionValidate(BaseModel):
@@ -7402,16 +7404,23 @@ def master_leads(
         for _u in db.query(User).filter(User.id.in_(list(_mnr_lookup))).all():
             mnr_name_map[_u.id] = _u.name or _u.id
 
-    # Transaction count per lead (batch)
+    # Transaction count and earliest payment date per lead (batch)
     import math as _math2
     from sqlalchemy import func as _sqlf
     txn_count_map = {}
+    txn_first_pmt_map = {}
     solar_docs_count_map = {}
     if lead_ids_list := [l.id for l in leads]:
-        for row in db.query(CRMLeadTransaction.lead_id, _sqlf.count(CRMLeadTransaction.id).label('cnt')).filter(
+        for row in db.query(
+            CRMLeadTransaction.lead_id,
+            _sqlf.count(CRMLeadTransaction.id).label('cnt'),
+            _sqlf.min(CRMLeadTransaction.transaction_date).label('first_dt')
+        ).filter(
             CRMLeadTransaction.lead_id.in_(lead_ids_list)
         ).group_by(CRMLeadTransaction.lead_id).all():
             txn_count_map[row.lead_id] = row.cnt
+            if row.first_dt:
+                txn_first_pmt_map[row.lead_id] = row.first_dt.isoformat() if hasattr(row.first_dt, 'isoformat') else str(row.first_dt)
         # Solar docs uploaded count per lead (batch)
         for row in db.execute(text(
             "SELECT lead_id, COUNT(*) AS cnt FROM crm_lead_solar_documents WHERE lead_id = ANY(:ids) GROUP BY lead_id"
@@ -7421,6 +7430,8 @@ def master_leads(
     leads_data = []
     for lead in leads:
         d = lead.to_dict()
+        if not d.get('first_payment_received_date') and lead.id in txn_first_pmt_map:
+            d['first_payment_received_date'] = txn_first_pmt_map[lead.id]
         d['category_name'] = cat_map.get(lead.category_id)
         d['company_name']  = co_map.get(lead.company_id)
         # Primary owner
@@ -12615,10 +12626,16 @@ def update_lead(
                 _base = Decimal(str(_l5_row.earning_basis_amount or _l5_row.confirmed_final_value or _l5_row.deal_value_total or 0))
                 if _base > Decimal('0.00'):
                     _new_pct = Decimal('0.75') if _new_cs else Decimal('1.50')
-                    _new_amt = (_base * (_new_pct / Decimal('100'))).quantize(Decimal('0.01'))
-                    _new_adm = (_new_amt * Decimal('0.08')).quantize(Decimal('0.01'))
-                    _new_tds = ((_new_amt - _new_adm) * Decimal('0.02')).quantize(Decimal('0.01'))
-                    _new_net = _new_amt - _new_adm - _new_tds
+                    _new_amt = (_base * (_new_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    _is_skip = getattr(_l5_row, 'skip_tds_admin', False)
+                    if _is_skip:
+                        _new_adm = Decimal('0.00')
+                        _new_tds = Decimal('0.00')
+                        _new_net = _new_amt
+                    else:
+                        _new_adm = (_new_amt * Decimal('0.08')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        _new_tds = (_new_amt * Decimal('0.02')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        _new_net = max(Decimal('0.00'), _new_amt - _new_adm - _new_tds)
                     db.execute(text("""
                         UPDATE vgk_cash_income_entries
                         SET commission_pct = :pct, commission_amount = :amt,
@@ -15144,9 +15161,9 @@ def create_lead_deal(
         deal_value_total=_dvt,
         deal_value_excl_tax=_dvexcl,
         deal_tax_rate=_tax_rate,
-        deal_value_received=deal_data.get('deal_value_received', 0),
-        deal_value_balance=max(0, _dvt - (deal_data.get('deal_value_received', 0) or 0)),
-        status='active',
+        deal_value_received=_dvt if deal_data.get('all_payments_received') else deal_data.get('deal_value_received', 0),
+        deal_value_balance=0.0 if deal_data.get('all_payments_received') else max(0, _dvt - (deal_data.get('deal_value_received', 0) or 0)),
+        status='completed' if deal_data.get('all_payments_received') else deal_data.get('status', 'active'),
         notes=deal_data.get('notes'),
         deal_source_id=deal_data.get('deal_source_id') or None,
         deal_referrer_id=deal_data.get('deal_referrer_id') or None,
@@ -15162,7 +15179,25 @@ def create_lead_deal(
     _update_lead_aggregate_deal_values(db, lead_id)
     db.commit()
 
-    return {'success': True, 'message': 'Deal created', 'deal': deal.to_dict()}
+    opt_b_result = None
+    if deal_data.get('all_payments_received'):
+        try:
+            from app.services.vgk_cash_income import trigger_all_payments_received_commission
+            opt_b_result = trigger_all_payments_received_commission(
+                db=db,
+                lead_id=lead_id,
+                company_id=lead.company_id,
+                current_employee_id=current_employee.id,
+                force_received_sync=True,
+                release_support_brand=bool(deal_data.get('release_support_brand', True))
+            )
+        except Exception as e:
+            logger.error(f"[DC-OPTION-B] Error triggering Option B on deal create for lead #{lead_id}: {e}", exc_info=True)
+
+    res = {'success': True, 'message': 'Deal created', 'deal': deal.to_dict()}
+    if opt_b_result:
+        res['option_b_commission'] = opt_b_result
+    return res
 
 
 @router.put("/deals/{deal_id}")
@@ -15239,7 +15274,14 @@ def update_lead_deal(
                 pass
         else:
             deal.close_date = None
-    deal.deal_value_balance = max(0, (deal.deal_value_total or 0) - (deal.deal_value_received or 0))
+
+    all_pmts_rcvd = bool(deal_data.get('all_payments_received'))
+    if all_pmts_rcvd:
+        deal.deal_value_received = deal.deal_value_total
+        deal.deal_value_balance = 0.0
+        deal.status = 'completed'
+    else:
+        deal.deal_value_balance = max(0, (deal.deal_value_total or 0) - (deal.deal_value_received or 0))
 
     db.commit()
     db.refresh(deal)
@@ -15247,33 +15289,86 @@ def update_lead_deal(
     _update_lead_aggregate_deal_values(db, deal.lead_id)
     db.commit()
 
-    return {'success': True, 'message': 'Deal updated', 'deal': deal.to_dict()}
+    opt_b_result = None
+    if all_pmts_rcvd:
+        try:
+            from app.services.vgk_cash_income import trigger_all_payments_received_commission
+            opt_b_result = trigger_all_payments_received_commission(
+                db=db,
+                lead_id=deal.lead_id,
+                company_id=lead.company_id,
+                current_employee_id=current_employee.id,
+                force_received_sync=True,
+                release_support_brand=bool(deal_data.get('release_support_brand', True))
+            )
+        except Exception as e:
+            logger.error(f"[DC-OPTION-B] Error triggering Option B on deal update for deal #{deal_id}: {e}", exc_info=True)
+
+    res = {'success': True, 'message': 'Deal updated', 'deal': deal.to_dict()}
+    if opt_b_result:
+        res['option_b_commission'] = opt_b_result
+    return res
+
+
+@router.post("/deals/{deal_id}/all-payments-received")
+def mark_deal_all_payments_received(
+    deal_id: int,
+    company_id: Optional[int] = Query(None, description="Company ID for authorization"),
+    release_support_brand: bool = Query(True, description="Also trigger Field Support and Solar Brand incomes"),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-DEAL-OPTION-B-TRIGGER:
+    Mark this specific deal as All Payments Received (100% paid) and trigger Option B commissions.
+    """
+    deal = db.query(CRMLeadDeal).filter(CRMLeadDeal.id == deal_id).first()
+    if not deal or not deal.lead_id:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    lead = get_authorized_lead(db, deal.lead_id, current_employee, for_mutation=True)
+    if company_id is not None and (company_id != lead.company_id or (deal.company_id and deal.company_id != company_id)):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    deal.deal_value_received = deal.deal_value_total
+    deal.deal_value_balance = 0.0
+    deal.status = 'completed'
+    db.commit()
+    db.refresh(deal)
+
+    _update_lead_aggregate_deal_values(db, deal.lead_id)
+    db.commit()
+
+    from app.services.vgk_cash_income import trigger_all_payments_received_commission
+    try:
+        res = trigger_all_payments_received_commission(
+            db=db,
+            lead_id=lead.id,
+            company_id=lead.company_id,
+            current_employee_id=current_employee.id,
+            force_received_sync=True,
+            release_support_brand=release_support_brand
+        )
+        res['deal'] = deal.to_dict()
+        return res
+    except Exception as e:
+        logger.error(f"[DC-OPTION-B] Error triggering Option B for deal #{deal.id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process Option B: {str(e)}")
 
 
 def _update_lead_aggregate_deal_values(db, lead_id):
-    deals = db.query(CRMLeadDeal).filter(CRMLeadDeal.lead_id == lead_id, CRMLeadDeal.status == 'active').all()
+    deals = db.query(CRMLeadDeal).filter(CRMLeadDeal.lead_id == lead_id, CRMLeadDeal.status != 'cancelled').all()
     lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     if lead:
         lead.deal_value_total = sum(d.deal_value_total or 0 for d in deals)
         lead.deal_value_excl_tax = sum(d.deal_value_excl_tax or d.deal_value_total or 0 for d in deals)
-        # DC-DEAL-AGG-001 (Jun 2026): derive received from validated transactions — source of truth.
-        # Previously used sum(d.deal_value_received) which was always 0 (deals were never updated
-        # from transactions), silently resetting lead received to ₹0 on every deal edit.
         _agg_validated_sum = db.query(
             func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
         ).filter(
             CRMLeadTransaction.lead_id == lead_id,
             CRMLeadTransaction.validation_status == 'validated'
         ).scalar() or 0
-        lead.deal_value_received = _agg_validated_sum
-        lead.deal_value_balance = max(0, lead.deal_value_total - lead.deal_value_received)
-        if deals:
-            lead.deal_tax_rate = deals[0].deal_tax_rate or 0
-            if (lead.status or '').lower() != 'completed':
-                lead.status = 'won'
-        # DC-DEAL-PER-DEAL-RECV-001 (Jul 2026): update per-deal received/balance from validated
-        # transactions linked to each deal via deal_id. Transactions without a deal_id are
-        # attributed to the lead aggregate only (not to any specific deal).
+        
         for d in deals:
             _deal_recv = db.query(
                 func.coalesce(func.sum(CRMLeadTransaction.amount), 0)
@@ -15281,8 +15376,20 @@ def _update_lead_aggregate_deal_values(db, lead_id):
                 CRMLeadTransaction.deal_id == d.id,
                 CRMLeadTransaction.validation_status == 'validated'
             ).scalar() or 0
-            d.deal_value_received = _deal_recv
-            d.deal_value_balance = max(0, (d.deal_value_total or 0) - _deal_recv)
+            if d.status == 'completed' or (d.deal_value_balance == 0 and (d.deal_value_received or 0) >= (d.deal_value_total or 0)):
+                d.deal_value_received = d.deal_value_total
+                d.deal_value_balance = 0.0
+            else:
+                d.deal_value_received = _deal_recv
+                d.deal_value_balance = max(0, (d.deal_value_total or 0) - _deal_recv)
+
+        deals_recv_sum = sum(d.deal_value_received or 0 for d in deals)
+        lead.deal_value_received = max(_agg_validated_sum, deals_recv_sum)
+        lead.deal_value_balance = max(0, lead.deal_value_total - lead.deal_value_received)
+        if deals:
+            lead.deal_tax_rate = deals[0].deal_tax_rate or 0
+            if (lead.status or '').lower() != 'completed' and (lead.status or '').lower() != 'won':
+                lead.status = 'won'
 
         db.flush()
         # DC-DEAL-AGG-DVR-001: Trigger Stage 2 / DVR advance if solar lead has validated payment
@@ -15600,16 +15707,34 @@ def create_transaction(
         db.refresh(new_txn)
         income_entry_result = {"success": False, "message": str(e)}
 
+    opt_b_result = None
+    if getattr(txn_data, 'all_payments_received', False):
+        try:
+            from app.services.vgk_cash_income import trigger_all_payments_received_commission
+            opt_b_result = trigger_all_payments_received_commission(
+                db=db,
+                lead_id=lead.id,
+                company_id=lead.company_id,
+                current_employee_id=current_employee.id,
+                force_received_sync=True,
+                release_support_brand=bool(getattr(txn_data, 'release_support_brand', True))
+            )
+        except Exception as _obe:
+            logger.error(f"[DC-OPTION-B] Failed to trigger Option B for lead #{lead.id}: {_obe}", exc_info=True)
+
     txn_dict = new_txn.to_dict()
     
     message = 'Transaction recorded successfully'
     if income_entry_result and income_entry_result.get("success"):
         message += f' | Income entry #{income_entry_result.get("entry_number")} auto-created'
+    if opt_b_result and opt_b_result.get("success"):
+        message += f' | All Payments Received: {opt_b_result.get("created_count", 0)} balance entries triggered'
     
     return {
         'success': True,
         'message': message,
-        'data': txn_dict
+        'data': txn_dict,
+        'option_b_result': opt_b_result
     }
 
 
@@ -15674,7 +15799,60 @@ def update_transaction(
     db.commit()
     db.refresh(txn)
 
-    return {'success': True, 'message': 'Transaction updated', 'data': txn.to_dict()}
+    opt_b_result = None
+    if txn_data.get('all_payments_received'):
+        try:
+            from app.services.vgk_cash_income import trigger_all_payments_received_commission
+            opt_b_result = trigger_all_payments_received_commission(
+                db=db,
+                lead_id=lead.id,
+                company_id=lead.company_id,
+                current_employee_id=current_employee.id,
+                force_received_sync=True,
+                release_support_brand=bool(txn_data.get('release_support_brand', True))
+            )
+        except Exception as _obe:
+            logger.error(f"[DC-OPTION-B] Failed to trigger Option B for lead #{lead.id} on update: {_obe}", exc_info=True)
+
+    msg = 'Transaction updated'
+    if opt_b_result and opt_b_result.get("success"):
+        msg += f' | All Payments Received: {opt_b_result.get("created_count", 0)} balance entries triggered'
+
+    return {'success': True, 'message': msg, 'data': txn.to_dict(), 'option_b_result': opt_b_result}
+
+
+@router.post("/leads/{lead_id}/all-payments-received")
+def mark_lead_all_payments_received(
+    lead_id: int,
+    company_id: int = Query(..., description="Company ID for DC Protocol"),
+    release_support_brand: bool = Query(True, description="Also trigger Field Support and Solar Brand incomes"),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-OPTION-B-TRIGGER:
+    Mark all payments received for this lead and trigger remaining commission balance (Option B)
+    across all eligible partner levels (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%).
+    """
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+    if company_id is not None and lead.company_id != company_id:
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    from app.services.vgk_cash_income import trigger_all_payments_received_commission
+    try:
+        res = trigger_all_payments_received_commission(
+            db=db,
+            lead_id=lead.id,
+            company_id=lead.company_id,
+            current_employee_id=current_employee.id,
+            force_received_sync=True,
+            release_support_brand=release_support_brand
+        )
+        return res
+    except Exception as e:
+        logger.error(f"[DC-OPTION-B] Error triggering Option B for lead #{lead.id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process Option B: {str(e)}")
+
 
 
 @router.post("/transactions/{txn_id}/upload-receipt")
@@ -21789,12 +21967,13 @@ _SOLAR_LEAD_PATCHABLE = {
     "sanction_date", "discom_reg_no", "latitude", "longitude",
     "grid_phase", "loan_bank", "bank_branch", "bank_account_number",
     "application_no", "submit_date", "complete_date", "installation_date",
+    "first_payment_received_date",
     "insurance_status", "insurance_policy_no", "insurance_company",
     "insurance_start_date", "insurance_expiry_date",
     "insurance_sum_insured", "insurance_premium", "insurance_notes",
 }
 
-_SOLAR_DATE_FIELDS = {"sanction_date", "submit_date", "complete_date", "installation_date", "insurance_start_date", "insurance_expiry_date"}
+_SOLAR_DATE_FIELDS = {"sanction_date", "submit_date", "complete_date", "installation_date", "first_payment_received_date", "insurance_start_date", "insurance_expiry_date"}
 
 def _normalize_solar_date_value(val: Any) -> Optional[date]:
     """
@@ -22938,28 +23117,74 @@ def get_solar_advance(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Staff: view the CIBIL advance record for a solar lead."""
+    """Staff: view the CIBIL advance record(s) for a solar lead."""
     lead = get_authorized_lead(db, lead_id, current_employee)
 
-    row = db.execute(text("""
+    rows = db.execute(text("""
         SELECT a.id, a.entry_number, a.advance_amount, a.status,
                a.stage_at_eligibility, a.cibil_score_at_check,
                a.wallet_before_release, a.wallet_after_release,
                a.released_at, a.released_by_id,
                a.recovery_amount, a.recovery_reason, a.recovered_at,
                a.adjustment_amount, a.adjustment_entry_id, a.adjusted_at,
-               a.notes, a.created_at,
+               a.notes, a.created_at, a.level, a.kind,
                p.partner_name, p.partner_code,
                l.cibil_confirmed, l.cibil_score, l.solar_pipeline_status
         FROM vgk_solar_cibil_advances a
         JOIN crm_leads l ON l.id = a.lead_id
         LEFT JOIN official_partners p ON p.id = a.partner_id
         WHERE a.lead_id = :lid
-        LIMIT 1
-    """), {'lid': lead.id}).fetchone()
+        ORDER BY a.level ASC, a.id ASC
+    """), {'lid': lead.id}).fetchall()
 
-    if not row:
-        return {'found': False, 'message': 'No advance record for this lead'}
+    if not rows:
+        l1_pid = None
+        if lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id and str(lead.source_ref_id).isdigit():
+            l1_pid = int(lead.source_ref_id)
+        elif lead.mnr_handler_id and str(lead.mnr_handler_id).isdigit():
+            l1_pid = int(lead.mnr_handler_id)
+        else:
+            l1_pid = lead.associated_partner_id
+
+        policy_info = None
+        if l1_pid:
+            try:
+                from app.services.vgk_solar_advance import get_partner_solar_advance_eligibility
+                policy_info = get_partner_solar_advance_eligibility(db, l1_pid, lead_id=lead.id)
+            except Exception:
+                pass
+
+        return {
+            'found': False,
+            'message': (policy_info.get('reason') if policy_info else 'No advance record for this lead'),
+            'reason': policy_info.get('reason') if policy_info else None,
+            'is_file_2_skipped': policy_info.get('is_file_2_skipped') if policy_info else False,
+            'is_cap_reached': policy_info.get('is_cap_reached') if policy_info else False,
+            'file_seq': policy_info.get('file_seq') if policy_info else None,
+            'past_advances_count': policy_info.get('past_advances_count') if policy_info else 0,
+        }
+
+    row = next((r for r in rows if getattr(r, 'level', 1) == 1), rows[0])
+
+    advances_list = []
+    for r in rows:
+        advances_list.append({
+            'id': r.id,
+            'entry_number': r.entry_number,
+            'advance_amount': float(r.advance_amount or 0),
+            'status': r.status,
+            'level': getattr(r, 'level', 1),
+            'kind': getattr(r, 'kind', 'ADVANCE'),
+            'stage_at_eligibility': r.stage_at_eligibility,
+            'cibil_score_at_check': r.cibil_score_at_check,
+            'released_at': r.released_at.isoformat() if r.released_at else None,
+            'partner_name': r.partner_name,
+            'partner_code': r.partner_code,
+            'notes': r.notes,
+            'created_at': r.created_at.isoformat() if r.created_at else None,
+        })
+
+    total_amount = sum(float(r.advance_amount or 0) for r in rows)
 
     return {
         'found': True,
@@ -22984,36 +23209,56 @@ def get_solar_advance(
         'lead_cibil_confirmed': row.cibil_confirmed,
         'lead_cibil_score': row.cibil_score,
         'lead_solar_pipeline_status': row.solar_pipeline_status,
+        'advances': advances_list,
+        'total_advance_amount': total_amount,
     }
 
 
 @router.post("/leads/{lead_id}/solar-advance/release")
 def release_solar_advance(
     lead_id: int,
+    level: Optional[int] = Query(None, description="1 for L1, 2 for L2, or omit for all pending"),
     notes: Optional[str] = None,
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Staff: release the ₹1,000 CIBIL advance to the VGK member's wallet."""
+    """Staff: release the CIBIL advance(s) to the VGK member's wallet."""
     lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     from app.services.vgk_solar_advance import release_advance
-    result = release_advance(db, lead.id, released_by_id=current_employee.id, notes=notes)
-    if not result.get('success'):
-        raise HTTPException(status_code=400, detail=result.get('error', 'Release failed'))
+    levels_to_release = [level] if level in (1, 2) else [1, 2]
+    results = []
 
-    advance_row = result.get('_advance_row')
-    if advance_row is not None:
-        try:
-            from app.services.vgk_cash_income import record_solar_advance_as_income_row
-            _mir = record_solar_advance_as_income_row(db, advance_row, released_by_id=current_employee.id)
-            db.commit()
-            result['income_entry'] = _mir
-            logger.info(f'[VGK-SOLAR-HOOK] advance#{advance_row.id} mirrored → income entry {_mir.get("entry_number")}')
-        except Exception as _se:
-            logger.warning(f'[VGK-SOLAR-HOOK] income mirror failed for lead#{lead.id} (non-fatal): {_se}')
+    for lv in levels_to_release:
+        adv = db.execute(text(
+            "SELECT id, status FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND level = :lv AND kind = 'ADVANCE'"
+        ), {'lid': lead.id, 'lv': lv}).fetchone()
+        if not adv:
+            continue
+        if adv.status in ('RELEASED', 'PAID'):
+            continue
+        res = release_advance(db, lead.id, released_by_id=current_employee.id, notes=notes, _level=lv)
+        results.append(res)
+        advance_row = res.get('_advance_row')
+        if advance_row is not None:
+            try:
+                from app.services.vgk_cash_income import record_solar_advance_as_income_row
+                _mir = record_solar_advance_as_income_row(db, advance_row, released_by_id=current_employee.id)
+                db.commit()
+                res['income_entry'] = _mir
+                logger.info(f'[VGK-SOLAR-HOOK] advance#{advance_row.id} mirrored → income entry {_mir.get("entry_number")}')
+            except Exception as _se:
+                logger.warning(f'[VGK-SOLAR-HOOK] income mirror failed for lead#{lead.id} level#{lv}: {_se}')
 
-    return result
+    if not results:
+        any_adv = db.execute(text(
+            "SELECT status FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND kind = 'ADVANCE' LIMIT 1"
+        ), {'lid': lead.id}).fetchone()
+        if any_adv and any_adv.status in ('RELEASED', 'PAID'):
+            return {'success': True, 'message': 'Advances are already released'}
+        return {'success': False, 'error': 'No pending advance found to release'}
+
+    return {'success': True, 'released_count': len(results), 'details': results}
 
 
 @router.post("/leads/{lead_id}/solar-advance/recover")

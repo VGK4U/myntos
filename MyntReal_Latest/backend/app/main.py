@@ -8277,6 +8277,7 @@ def _startup_worker():
                 ("paid_cash_staff_id", "INTEGER"),
                 ("skip_reason",        "TEXT"),
                 ("ledger_posted",      "BOOLEAN DEFAULT FALSE"),
+                ("skip_tds_admin",     "BOOLEAN DEFAULT FALSE"),
             ]
             _added = 0
             for _col, _dtype in _vgk_uni_cols:

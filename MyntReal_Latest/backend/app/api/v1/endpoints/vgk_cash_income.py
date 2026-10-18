@@ -165,8 +165,11 @@ def _enrich_entry_bulk(
     else:
         d['stage1_adv']    = 0.0
         d['stage2_adv']    = 0.0
-        d['advance_paid']  = 0.0
-        d['balance_gross'] = float(entry.commission_amount or 0)
+        adv_adj            = float(getattr(entry, 'advance_adjusted_amount', 0) or 0.0)
+        d['advance_adjusted_amount'] = adv_adj
+        d['advance_paid']  = adv_adj
+        gross_amt          = float(entry.commission_amount or 0)
+        d['balance_gross'] = max(0.0, round(gross_amt - adv_adj, 2))
 
     return d
 
@@ -314,6 +317,7 @@ def issue_direct_advance_endpoint(
     cash_staff_id: Optional[int] = Body(None, embed=True),
     payment_utr: Optional[str] = Body(None, embed=True),
     notes: Optional[str] = Body(None, embed=True),
+    advance_date: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
@@ -334,7 +338,8 @@ def issue_direct_advance_endpoint(
         bank_ledger_id=bank_ledger_id,
         cash_staff_id=cash_staff_id,
         payment_utr=payment_utr,
-        notes=notes
+        notes=notes,
+        advance_date=advance_date
     )
     if not res.get('success'):
         raise HTTPException(status_code=400, detail=res.get('error', 'Failed to issue advance'))
@@ -450,17 +455,17 @@ def get_member_downline_team_entries(
         entries = ie_result.get("data", [])
         
         non_can = [e for e in entries if e.get("status") != 'CANCELLED']
-        tot_gross = sum(e.get("commission_amount", 0) for e in non_can)
+        tot_gross = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can)
         tot_deal = sum(e.get("deal_value", 0) for e in non_can)
         tot_net = sum(e.get("net_payout", 0) for e in non_can)
         
-        l0_bonus = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 0 or e.get("kind") in ('SLAB_BONUS', 'EXTRA_COMMISSION', 'ADVANCE', 'DVR_ADVANCE'))
-        l1_source = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 1 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
-        l2_senior = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 2 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
-        l3_extended = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 3)
-        l4_core = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 4)
-        l5_support = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 5)
-        l6_showroom = sum(e.get("commission_amount", 0) for e in non_can if e.get("level") == 6)
+        l0_bonus = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 0 or e.get("kind") in ('SLAB_BONUS', 'EXTRA_COMMISSION', 'ADVANCE', 'DVR_ADVANCE'))
+        l1_source = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 1 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
+        l2_senior = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 2 and e.get("kind") not in ('ADVANCE', 'DVR_ADVANCE', 'EXTRA_COMMISSION', 'SLAB_BONUS'))
+        l3_extended = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 3)
+        l4_core = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 4)
+        l5_support = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 5)
+        l6_showroom = sum(e.get("balance_gross", e.get("commission_amount", 0)) for e in non_can if e.get("level") == 6)
         
         installed_files = db.query(CRMLead).filter(
             or_(
@@ -533,20 +538,20 @@ def member_cash_income(
     #   Total Released  = RELEASED + PAID  (physically paid out)
     summary = db.execute(text("""
         SELECT
-            SUM(commission_amount)                                                                       AS gross_total,
-            SUM(CASE WHEN status='PENDING'        THEN commission_amount ELSE 0 END)                     AS pending_total,
-            SUM(CASE WHEN status='STAGE1_APPROVED' THEN commission_amount ELSE 0 END)                    AS stage1_approved_total,
-            SUM(CASE WHEN status IN ('RELEASED','PAID') THEN commission_amount  ELSE 0 END)               AS released_total,
+            SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)))                                                                       AS gross_total,
+            SUM(CASE WHEN status='PENDING'        THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)                     AS pending_total,
+            SUM(CASE WHEN status='STAGE1_APPROVED' THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)                    AS stage1_approved_total,
+            SUM(CASE WHEN status IN ('RELEASED','PAID') THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))  ELSE 0 END)               AS released_total,
             SUM(CASE WHEN status IN ('RELEASED','PAID') THEN admin_charges + tds_amount ELSE 0 END)      AS total_deductions,
-            SUM(CASE WHEN status='DRAFT'          THEN commission_amount ELSE 0 END)                     AS draft_total,
+            SUM(CASE WHEN status='DRAFT'          THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)                     AS draft_total,
             COUNT(*)                                                                                     AS total_entries,
             -- VGK4U 6-Stream Categorization (Phase 4)
-            SUM(CASE WHEN kind = 'COMMISSION' AND level = 1 THEN commission_amount ELSE 0 END)           AS personal_producer_total,
-            SUM(CASE WHEN (kind = 'COMMISSION' AND level IN (2, 3, 4)) OR kind = 'SENIOR_COMM' THEN commission_amount ELSE 0 END) AS team_differential_total,
-            SUM(CASE WHEN kind = 'COMMISSION' AND level IN (5, 7) THEN commission_amount ELSE 0 END)   AS support_total,
-            SUM(CASE WHEN kind = 'COMMISSION' AND level = 6 THEN commission_amount ELSE 0 END)           AS showroom_total,
-            SUM(CASE WHEN kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE') THEN commission_amount ELSE 0 END) AS stage_advances_total,
-            SUM(CASE WHEN kind IN ('SLAB_BONUS', 'EXTRA_COMMISSION', 'BRAND_COMMISSION') THEN commission_amount ELSE 0 END) AS stage_bonuses_total
+            SUM(CASE WHEN kind = 'COMMISSION' AND level = 1 THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)           AS personal_producer_total,
+            SUM(CASE WHEN (kind = 'COMMISSION' AND level IN (2, 3, 4)) OR kind = 'SENIOR_COMM' THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END) AS team_differential_total,
+            SUM(CASE WHEN kind = 'COMMISSION' AND level IN (5, 7) THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)   AS support_total,
+            SUM(CASE WHEN kind = 'COMMISSION' AND level = 6 THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END)           AS showroom_total,
+            SUM(CASE WHEN kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE') THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END) AS stage_advances_total,
+            SUM(CASE WHEN kind IN ('SLAB_BONUS', 'EXTRA_COMMISSION', 'BRAND_COMMISSION') THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END) AS stage_bonuses_total
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid AND status != 'CANCELLED'
     """), {'pid': partner_id}).fetchone()
@@ -1379,7 +1384,7 @@ def unified_list(
         summary = db.execute(text("""
             SELECT e.status, e.kind,
               COUNT(*) AS cnt,
-              COALESCE(SUM(e.commission_amount),0) AS gross,
+              COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))), 0) AS gross,
               COALESCE(SUM(e.admin_charges),0)     AS admin,
               COALESCE(SUM(e.tds_amount),0)        AS tds,
               COALESCE(SUM(e.net_payout),0)        AS net
@@ -1392,7 +1397,7 @@ def unified_list(
             SELECT
               status, kind,
               COUNT(*) AS cnt,
-              COALESCE(SUM(commission_amount),0) AS gross,
+              COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0) AS gross,
               COALESCE(SUM(admin_charges),0)     AS admin,
               COALESCE(SUM(tds_amount),0)        AS tds,
               COALESCE(SUM(net_payout),0)        AS net
@@ -1556,8 +1561,21 @@ def unified_action(
     _is_subash  = _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subash' in _emp_name
     _is_mr10001 = _emp_code == 'MR10001'
 
+    _has_addl_accounts = False
+    try:
+        from app.models.staff import StaffEmployeeDepartment, StaffDepartment
+        _addl = db.query(StaffDepartment.name, StaffDepartment.id).join(
+            StaffEmployeeDepartment, StaffEmployeeDepartment.department_id == StaffDepartment.id
+        ).filter(StaffEmployeeDepartment.employee_id == current_employee.id).all()
+        for (_aname, _aid) in _addl:
+            if _aid in (15, 16) or 'account' in (_aname or '').lower() or 'finance' in (_aname or '').lower():
+                _has_addl_accounts = True
+                break
+    except Exception:
+        pass
+
     is_privileged = is_super or _is_mr10001 or _is_subash or role in ('key_leadership', 'ea', 'executive_admin', 'admin', 'vgk4u')
-    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept or getattr(current_employee, 'department_id', None) == 15
+    can_accounts = is_privileged or 'account' in dept or 'finance' in dept or 'store' in dept or getattr(current_employee, 'department_id', None) in (15, 16) or _has_addl_accounts
     can_stage1   = is_privileged or can_accounts or _is_anushka or _is_nandana
     can_pay      = is_privileged or can_accounts or _is_subash or _is_mr10001 or _is_nandana or 'finance' in dept or 'bank' in dept
 
@@ -1699,7 +1717,7 @@ def unified_action(
                 if not inner.get('success'):
                     if inner.get('error') == 'CAPPED_WARNING':
                         return inner
-                    raise HTTPException(status_code=400, detail=inner.get('error', 'Mark-paid failed'))
+                    raise HTTPException(status_code=400, detail=inner.get('message') or inner.get('error', 'Mark-paid failed'))
                 if skipped_states:
                     entry.skip_reason = (entry.skip_reason or '') + ' | ' + '; '.join(skipped_states)
                 result = inner
@@ -2920,6 +2938,326 @@ def get_vgk4u_staff_configs(
         "personal_prod_tiers": prod_configs,
         "category_configs": category_configs,
     }
+
+
+@router.post('/staff/vgk/cash-income/{entry_id}/toggle-skip-tds-admin')
+def toggle_skip_tds_admin(
+    entry_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-SKIP-TDS-ADMIN-2026:
+    Toggle Skip TDS / Admin deductions for an income entry.
+    Restricted to:
+      1. MR10001 (Super Admin / MD)
+      2. Accounts Department staff
+      3. Nandana staff (MN10009, MN10010, or name matching nandana)
+    When skip_tds_admin is True:
+      - Admin charges (8%) = 0
+      - TDS amount (2%) = 0
+      - Net payout = Balance Gross
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+
+    _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip().upper()
+    _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
+    dept = str(getattr(current_employee, 'department', '') or getattr(current_employee, 'department_name', '') or '').lower()
+    dept_id = getattr(current_employee, 'department_id', None)
+    role = str(getattr(current_employee, 'role_code', '') or getattr(current_employee, 'role', '') or '').lower()
+    st = str(getattr(current_employee, 'staff_type', '') or '').lower()
+
+    is_super = role in ('superadmin', 'super_admin', 'director', 'managing_director') or 'supreme' in st or 'key_leadership' in role
+    _is_mr10001 = _emp_code == 'MR10001'
+    _is_nandana = _emp_code in ('MN10009', 'MN10010') or 'nandana' in _emp_name
+    can_accounts = is_super or 'account' in dept or 'finance' in dept or dept_id == 15 or _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subas' in _emp_name
+
+    if not (_is_mr10001 or can_accounts or _is_nandana):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission Denied: Only MR10001, Accounts Department, and Nandana are authorized to skip TDS/Admin charges."
+        )
+
+    skip_flag = bool(payload.get('skip_tds_admin', False))
+
+    entry = db.query(VGKCashIncomeEntry).filter(VGKCashIncomeEntry.id == entry_id).first()
+    if not entry:
+        vsca_row = db.execute(text("SELECT id FROM vgk_solar_cibil_advances WHERE id = :id"), {"id": entry_id}).fetchone()
+        if not vsca_row:
+            raise HTTPException(status_code=404, detail=f"Income entry #{entry_id} not found")
+        db.execute(text("UPDATE vgk_solar_cibil_advances SET skip_tds_admin = :skip WHERE id = :id"), {"skip": skip_flag, "id": entry_id})
+        db.commit()
+        return {
+            "success": True,
+            "entry_id": entry_id,
+            "skip_tds_admin": skip_flag,
+            "message": f"TDS/Admin deduction {'SKIPPED' if skip_flag else 'RESTORED'} for advance #{entry_id}"
+        }
+
+    entry.skip_tds_admin = skip_flag
+    gross_amt = Decimal(str(entry.commission_amount or 0))
+    adv_adj = Decimal(str(entry.advance_adjusted_amount or 0))
+    bal_gross = max(Decimal('0.00'), gross_amt - adv_adj)
+
+    if skip_flag:
+        entry.admin_charges = Decimal('0.00')
+        entry.tds_amount = Decimal('0.00')
+        entry.net_payout = bal_gross
+        skip_tag = f"[TDS/Admin Skipped by {_emp_code or _emp_name}]"
+        if skip_tag not in (entry.skip_reason or ''):
+            entry.skip_reason = ((entry.skip_reason or '') + f" | {skip_tag}").strip(' |')
+    else:
+        admin_amt = (bal_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        tds_amt = (bal_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        net_amt = max(Decimal('0.00'), bal_gross - admin_amt - tds_amt)
+        entry.admin_charges = admin_amt
+        entry.tds_amount = tds_amt
+        entry.net_payout = net_amt
+
+    try:
+        db.execute(text("SAVEPOINT sp_audit_skip"))
+        db.execute(text("""
+            INSERT INTO staff_audit_log (employee_id, action, resource_type, resource_id, ip_address)
+            VALUES (:eid, :ac, 'VGK_CASH_INCOME', :rid, '127.0.0.1')
+        """), {
+            'eid': current_employee.id,
+            'ac': f"VGK-INCOME-{'SKIP' if skip_flag else 'RESTORE'}-TDS-ADMIN",
+            'rid': entry.id,
+        })
+        db.execute(text("RELEASE SAVEPOINT sp_audit_skip"))
+    except Exception:
+        try: db.execute(text("ROLLBACK TO SAVEPOINT sp_audit_skip"))
+        except: pass
+
+    db.commit()
+    db.refresh(entry)
+
+    return {
+        "success": True,
+        "entry_id": entry.id,
+        "entry_number": entry.entry_number,
+        "skip_tds_admin": bool(entry.skip_tds_admin),
+        "balance_gross": float(bal_gross),
+        "admin_charges": float(entry.admin_charges),
+        "tds_amount": float(entry.tds_amount),
+        "net_payout": float(entry.net_payout),
+        "message": f"TDS/Admin deduction {'SKIPPED (0% charges applied)' if skip_flag else 'RESTORED (8% Admin + 2% TDS)'} for {entry.entry_number}"
+    }
+
+
+@router.post('/staff/vgk/cash-income/{entry_id}/toggle-all-commissions')
+def toggle_all_commissions(
+    entry_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-ALL-COMMISSIONS-TOGGLE-2026:
+    Toggle All Commissions (Field Support L5 & Solar Brand Incomes) for a Final Commission entry's lead.
+    Restricted to MR10001, Accounts Department, and Nandana staff.
+    """
+    _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip().upper()
+    _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
+    dept = str(getattr(current_employee, 'department', '') or getattr(current_employee, 'department_name', '') or '').lower()
+    dept_id = getattr(current_employee, 'department_id', None)
+    role = str(getattr(current_employee, 'role_code', '') or getattr(current_employee, 'role', '') or '').lower()
+    st = str(getattr(current_employee, 'staff_type', '') or '').lower()
+
+    is_super = role in ('superadmin', 'super_admin', 'director', 'managing_director') or 'supreme' in st or 'key_leadership' in role
+    _is_mr10001 = _emp_code == 'MR10001'
+    _is_nandana = _emp_code in ('MN10009', 'MN10010') or 'nandana' in _emp_name
+    can_accounts = is_super or 'account' in dept or 'finance' in dept or dept_id == 15 or _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subas' in _emp_name
+
+    if not (_is_mr10001 or can_accounts or _is_nandana):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission Denied: Only MR10001, Accounts Department, and Nandana are authorized to toggle All Commissions."
+        )
+
+    release_flag = bool(payload.get('all_commissions', True))
+    lead_id = payload.get('lead_id')
+
+    entry = db.query(VGKCashIncomeEntry).filter(VGKCashIncomeEntry.id == entry_id).first()
+    if not entry and not lead_id:
+        raise HTTPException(status_code=404, detail=f"Income entry #{entry_id} not found")
+
+    target_lead_id = lead_id or (entry.source_lead_id if entry else None)
+    if not target_lead_id:
+        raise HTTPException(status_code=400, detail="Cannot toggle commissions: No associated lead found.")
+
+    target_lead_id = int(target_lead_id)
+
+    from app.models.crm import CRMLead
+    lead = db.query(CRMLead).filter(CRMLead.id == target_lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail=f"Lead #{target_lead_id} not found")
+
+    company_id = getattr(entry, 'company_id', None) or getattr(lead, 'company_id', 4) or 4
+
+    if release_flag:
+        from app.services.vgk_cash_income import trigger_all_payments_received_commission
+        res = trigger_all_payments_received_commission(
+            db=db,
+            lead_id=target_lead_id,
+            company_id=company_id,
+            current_employee_id=getattr(current_employee, 'id', None),
+            release_support_brand=True
+        )
+        db.commit()
+        return {
+            "success": True,
+            "entry_id": entry_id,
+            "lead_id": target_lead_id,
+            "all_commissions_released": True,
+            "message": f"All Commissions (Support L5 & Solar Brand) RELEASED for Lead #{target_lead_id}"
+        }
+    else:
+        # Cancel pending/draft Support (L5) and Brand entries for this lead
+        sb_entries = db.query(VGKCashIncomeEntry).filter(
+            VGKCashIncomeEntry.source_lead_id == target_lead_id,
+            VGKCashIncomeEntry.status.in_(['PENDING', 'DRAFT']),
+            (VGKCashIncomeEntry.level.in_([5, 11]) | (VGKCashIncomeEntry.kind == 'BRAND_COMMISSION'))
+        ).all()
+        for sbe in sb_entries:
+            sbe.status = 'CANCELLED'
+            sbe.cancelled_reason = f"Cancelled via All Commissions toggle by {_emp_code or _emp_name}"
+        db.commit()
+        return {
+            "success": True,
+            "entry_id": entry_id,
+            "lead_id": target_lead_id,
+            "all_commissions_released": False,
+            "message": f"Support & Brand commissions CANCELLED for Lead #{target_lead_id}"
+        }
+
+
+@router.post('/staff/vgk/cash-income/{entry_id}/toggle-company-support')
+def toggle_company_support(
+    entry_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC-COMPANY-SUPPORT-TOGGLE-2026:
+    Toggle Company Support flag for a Final Commission entry's lead.
+    Restricted to MR10001, Accounts Department, and Nandana staff.
+    When checked (company_supported=True):
+      - Field Support L5 commission = 0.75%
+    When unchecked (company_supported=False):
+      - Field Support L5 commission = 1.50%
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+
+    _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip().upper()
+    _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
+    dept = str(getattr(current_employee, 'department', '') or getattr(current_employee, 'department_name', '') or '').lower()
+    dept_id = getattr(current_employee, 'department_id', None)
+    role = str(getattr(current_employee, 'role_code', '') or getattr(current_employee, 'role', '') or '').lower()
+    st = str(getattr(current_employee, 'staff_type', '') or '').lower()
+
+    is_super = role in ('superadmin', 'super_admin', 'director', 'managing_director') or 'supreme' in st or 'key_leadership' in role
+    _is_mr10001 = _emp_code == 'MR10001'
+    _is_nandana = _emp_code in ('MN10009', 'MN10010') or 'nandana' in _emp_name
+    can_accounts = is_super or 'account' in dept or 'finance' in dept or dept_id == 15 or _emp_code == 'MR10025' or 'subhash' in _emp_name or 'subas' in _emp_name
+
+    if not (_is_mr10001 or can_accounts or _is_nandana):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission Denied: Only MR10001, Accounts Department, and Nandana are authorized to toggle Company Support."
+        )
+
+    comp_supp_flag = bool(payload.get('company_supported', True))
+    lead_id = payload.get('lead_id')
+
+    entry = db.query(VGKCashIncomeEntry).filter(VGKCashIncomeEntry.id == entry_id).first()
+    if not entry and not lead_id:
+        raise HTTPException(status_code=404, detail=f"Income entry #{entry_id} not found")
+
+    target_lead_id = lead_id or (entry.source_lead_id if entry else None)
+    if not target_lead_id:
+        raise HTTPException(status_code=400, detail="Cannot toggle Company Support: No associated lead found.")
+
+    target_lead_id = int(target_lead_id)
+
+    from app.models.crm import CRMLead
+    lead = db.query(CRMLead).filter(CRMLead.id == target_lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail=f"Lead #{target_lead_id} not found")
+
+    # Update lead company_supported flag in DB
+    lead.company_supported = comp_supp_flag
+
+    # Recalculate any active (unpaid) Level 5 Field Support commission entries for this lead
+    unpaid_l5_entries = db.query(VGKCashIncomeEntry).filter(
+        VGKCashIncomeEntry.source_lead_id == target_lead_id,
+        VGKCashIncomeEntry.level == 5,
+        VGKCashIncomeEntry.kind.in_(['COMMISSION', 'EXTRA_COMMISSION', 'SENIOR_COMM']),
+        VGKCashIncomeEntry.status.notin_(['PAID', 'CANCELLED'])
+    ).all()
+
+    if entry and entry.level == 5 and entry not in unpaid_l5_entries and entry.status not in ('PAID', 'CANCELLED'):
+        unpaid_l5_entries.append(entry)
+
+    new_pct = Decimal('0.75') if comp_supp_flag else Decimal('1.50')
+
+    recalculated_entries = []
+    for l5_ent in unpaid_l5_entries:
+        base_val = Decimal(str(l5_ent.earning_basis_amount or l5_ent.confirmed_final_value or l5_ent.deal_value_total or getattr(lead, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 0))
+        if base_val <= Decimal('0.00'):
+            base_val = Decimal(str(getattr(entry, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 200000.0))
+        
+        canonical_gross = (base_val * new_pct / Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        prior_adv = Decimal(str(l5_ent.advance_adjusted_amount or 0))
+        bal_gross = max(Decimal('0.00'), canonical_gross - prior_adv)
+
+        l5_ent.commission_pct = new_pct
+        l5_ent.commission_amount = canonical_gross
+
+        if getattr(l5_ent, 'skip_tds_admin', False):
+            l5_ent.admin_charges = Decimal('0.00')
+            l5_ent.tds_amount = Decimal('0.00')
+            l5_ent.net_payout = bal_gross
+        else:
+            adm = (bal_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            tds = (bal_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            l5_ent.admin_charges = adm
+            l5_ent.tds_amount = tds
+            l5_ent.net_payout = max(Decimal('0.00'), bal_gross - adm - tds)
+
+        l5_ent.notes = f"Option B: Field Support (L5) Settlement [company_supported={comp_supp_flag}, rate={float(new_pct)}%]"
+        recalculated_entries.append(l5_ent.id)
+
+    try:
+        db.execute(text("SAVEPOINT sp_audit_cs"))
+        db.execute(text("""
+            INSERT INTO staff_audit_log (employee_id, action, resource_type, resource_id, ip_address)
+            VALUES (:eid, :ac, 'CRM_LEAD', :rid, '127.0.0.1')
+        """), {
+            'eid': current_employee.id,
+            'ac': f"CRM-LEAD-COMPANY-SUPPORT-{'ENABLE' if comp_supp_flag else 'DISABLE'}",
+            'rid': target_lead_id,
+        })
+        db.execute(text("RELEASE SAVEPOINT sp_audit_cs"))
+    except Exception:
+        try: db.execute(text("ROLLBACK TO SAVEPOINT sp_audit_cs"))
+        except: pass
+
+    db.commit()
+
+    return {
+        "success": True,
+        "entry_id": entry_id,
+        "lead_id": target_lead_id,
+        "company_supported": comp_supp_flag,
+        "effective_pct": float(new_pct),
+        "recalculated_entries": recalculated_entries,
+        "message": f"Company Support {'ENABLED (0.75% Field Support)' if comp_supp_flag else 'DISABLED (1.5% Field Support)'} for Lead #{target_lead_id}"
+    }
+
+
 
 
 

@@ -52,6 +52,20 @@
         .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
         .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
         .data-table tr:hover { background: #f9fafb; }
+        .data-table th.actions-col, .data-table td.actions-col {
+            position: sticky;
+            right: 0;
+            background: #ffffff;
+            box-shadow: -3px 0 6px rgba(0,0,0,0.06);
+            z-index: 2;
+        }
+        .data-table th.actions-col {
+            background: #f9fafb;
+            z-index: 3;
+        }
+        .data-table tr:hover td.actions-col {
+            background: #f9fafb;
+        }
         
         .amount { font-weight: 600; font-family: monospace; }
         .amount.negative { color: #ef4444; }
@@ -406,7 +420,7 @@
                                         <th style="text-align:center;" title="Include in formal financial ledger (P&L / Cash Ledger)">In Ledger</th>
                                         <th style="text-align:center;" title="External Party Transaction">External</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="expenseTable">
@@ -576,7 +590,7 @@
                                         <th style="text-align:center;" title="Include in formal financial ledger">In Ledger</th>
                                         <th style="text-align:center;" title="External Party Transaction">External</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="teamExpenseTable"></tbody>
@@ -1048,6 +1062,7 @@
         let fundAllocations = [];
         let allVendors = [];
         let _expenseEmployees = [];   // DC_EXP_BEHALF_001: cached employee list for behalf-of selector
+        let _allActiveEmployees = []; // cached all active employees list
         let _canCreateOnBehalf = false;
         let _entryLookup = {};
         let _cachedMainCategories = [];
@@ -1056,6 +1071,40 @@
         let _teamPage = 1, _teamTotalPages = 1;
         let _qfPreset = { my: 'overall', team: 'overall', consolidated: 'overall' };
 
+        function checkAccountsAccess() {
+            if (window._hasAccountsAccess === true) return true;
+            try {
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
+                const role = (userData.role_name || userData.role || '').toLowerCase();
+                const dept = (userData.department_name || userData.department || '').toLowerCase();
+                const desig = (userData.designation || '').toLowerCase();
+                const fullName = (userData.full_name || userData.name || '').toLowerCase();
+
+                // High privilege & Key leadership codes
+                if (['MR10001', 'MR10016', 'MR10025'].includes(loggedCode) || userData.id === 1) return true;
+                if (fullName.includes('subhash')) return true;
+                if (['vgk mentor', 'vgk4u supreme', 'vgk4u', 'executive assistant', 'ea', 'executive admin', 'key leadership'].some(r => role.includes(r))) return true;
+                if (['mentor', 'leadership'].some(d => desig.includes(d))) return true;
+
+                // Accounts & Finance dept/role
+                if (['accounts', 'finance', 'vea'].some(r => role.includes(r) || desig.includes(r))) return true;
+                if (userData.department_id === 16 || ['accounts', 'finance'].some(d => dept.includes(d))) return true;
+
+                // Additional departments
+                if (Array.isArray(userData.additional_departments)) {
+                    for (const ad of userData.additional_departments) {
+                        const adName = (ad.department_name || ad.name || (ad.department && ad.department.name) || '').toLowerCase();
+                        const adId = ad.department_id || (ad.department && ad.department.id);
+                        if (adId === 16 || ['accounts', 'finance'].some(d => adName.includes(d))) return true;
+                    }
+                }
+            } catch (e) {
+                console.warn('checkAccountsAccess error:', e);
+            }
+            return false;
+        }
+
         async function initExpensePage() {
             if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
             StaffHeader.inject('Expense Entries', 'fas fa-receipt');
@@ -1063,18 +1112,14 @@
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
             updateHeaderUserInfo();
 
-            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
-            const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
-            const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
-                || ['MR10001', 'MR10016'].includes(loggedCode);
-            const hasAccountsAccess = hasFullAccess
-                || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
-                || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+            const hasAccountsAccess = checkAccountsAccess();
             window._hasAccountsAccess = hasAccountsAccess;
             window._isSupremeViewer = hasAccountsAccess;
             if (hasAccountsAccess) {
-                document.getElementById('btnOpeningBal').style.display = '';
-                document.getElementById('tabConsolidated').style.display = '';
+                const btnOB = document.getElementById('btnOpeningBal');
+                if (btnOB) btnOB.style.display = '';
+                const tabC = document.getElementById('tabConsolidated');
+                if (tabC) tabC.style.display = '';
             }
 
             document.getElementById('formDate').valueAsDate = new Date();
@@ -1300,7 +1345,7 @@
                                     style="cursor:pointer;width:15px;height:15px;accent-color:#0284c7;">
                             </td>
                             <td>${statusLabel}</td>
-                            <td style="white-space:nowrap;">${getActionButtons(exp)}</td>
+                            <td class="actions-col" style="white-space:nowrap;">${getActionButtons(exp)}</td>
                         </tr>
                     `;
                 }).join('');
@@ -1438,8 +1483,141 @@
             }
         }
         
+        function _populateCompaniesList(companies) {
+            ['filterCompany', 'formCompany', 'consoCompany', 'teamFilterCompany', 'transferCompany', 'editExpCompany'].forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const firstOption = select.options[0];
+                select.innerHTML = '';
+                if (firstOption) select.appendChild(firstOption);
+                
+                (companies || []).forEach(company => {
+                    const option = document.createElement('option');
+                    option.value = company.id;
+                    option.textContent = company.company_name || company.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function _populateCategoriesList(categories) {
+            const mainCats = (categories || []).filter(c => c.is_active !== false);
+            _cachedMainCategories = mainCats;
+            ['filterCategory', 'formCategory'].forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const firstOption = select.options[0];
+                select.innerHTML = '';
+                if (firstOption) select.appendChild(firstOption);
+                
+                mainCats.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    option.dataset.subs = JSON.stringify(cat.sub_categories || []);
+                    select.appendChild(option);
+                });
+            });
+            
+            const formCat = document.getElementById('formCategory');
+            if (formCat && !formCat._hasSubListener) {
+                formCat._hasSubListener = true;
+                formCat.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const subSelect = document.getElementById('formSubCategory');
+                    if (!subSelect) return;
+                    subSelect.innerHTML = '<option value="">Select Sub-Category</option>';
+                    
+                    if (selectedOption && selectedOption.dataset.subs) {
+                        try {
+                            const subs = JSON.parse(selectedOption.dataset.subs);
+                            subs.filter(s => s.is_active !== false).forEach(sub => {
+                                const option = document.createElement('option');
+                                option.value = sub.id;
+                                option.textContent = sub.name;
+                                subSelect.appendChild(option);
+                            });
+                        } catch(e){}
+                    }
+                });
+            }
+        }
+
+        function _populateAllocationsList(allocList) {
+            fundAllocations = allocList || [];
+            const select = document.getElementById('formFundAllocation');
+            if (!select) return;
+            while (select.options.length > 1) select.remove(1);
+            
+            fundAllocations.forEach(alloc => {
+                const remainingBalance = alloc.balance_remaining ?? (alloc.amount - (alloc.balance_used || 0));
+                if (remainingBalance > 0) {
+                    const option = document.createElement('option');
+                    option.value = alloc.id;
+                    option.textContent = `#${alloc.id} - ${alloc.company_name || ''} (Balance: ${formatCurrency(remainingBalance)})`;
+                    option.dataset.balance = remainingBalance;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function _populateEditEmpSelect(list) {
+            const sel = document.getElementById('editExpEmployee');
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">— Select Employee —</option>' +
+                (list || []).map(e => {
+                    const dept = e.department ? ` · ${e.department}` : '';
+                    return `<option value="${e.id}">${e.full_name || '#'+e.id} (${e.emp_code || ''})${dept}</option>`;
+                }).join('');
+            if (currentVal) sel.value = currentVal;
+        }
+
+        function _applyEmployeesData(employees) {
+            _allActiveEmployees = employees || [];
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const myId = userData.id;
+            _expenseEmployees = _allActiveEmployees.filter(e => e.id !== myId);
+            _canCreateOnBehalf = _expenseEmployees.length > 0;
+            _populateEmpSelect(_expenseEmployees);
+            _populateTeamFilterEmployees(_allActiveEmployees);
+            _populateEditEmpSelect(_allActiveEmployees);
+            if (_allActiveEmployees.length > 0) {
+                const tabConso = document.getElementById('tabConsolidated');
+                if (tabConso) tabConso.style.display = '';
+                _populateConsoCompanies();
+            }
+        }
+
         async function loadBootstrap() {
-            // Load dropdown metadata sequentially to prevent PostgreSQL connection checkout storms
+            try {
+                const bResp = await staffFetch(`${API_BASE}/expense-entries/bootstrap`);
+                if (bResp.ok) {
+                    const bData = await bResp.json();
+                    if (bData.is_accounts_allowed !== undefined) {
+                        window._hasAccountsAccess = !!bData.is_accounts_allowed;
+                        window._isSupremeViewer = !!bData.is_accounts_allowed;
+                        if (window._hasAccountsAccess) {
+                            const btnOB = document.getElementById('btnOpeningBal');
+                            if (btnOB) btnOB.style.display = '';
+                            const tabC = document.getElementById('tabConsolidated');
+                            if (tabC) tabC.style.display = '';
+                        }
+                    }
+                    if (bData.companies) _populateCompaniesList(bData.companies);
+                    if (bData.categories) _populateCategoriesList(bData.categories);
+                    if (bData.vendors) {
+                        allVendors = bData.vendors || [];
+                        populateVendorDropdown(allVendors);
+                    }
+                    if (bData.allocations) _populateAllocationsList(bData.allocations);
+                    if (bData.employees) _applyEmployeesData(bData.employees);
+                    return;
+                }
+            } catch(bErr) {
+                console.warn('Bootstrap fetch fallback to sequential loaders:', bErr);
+            }
+
             try {
                 await loadCompanies();
                 await loadCategories();
@@ -1456,22 +1634,7 @@
                 const response = await staffFetch(`${API_BASE}/companies`);
                 if (response.ok) {
                     const data = await response.json();
-                    const companies = data.companies || [];
-                    
-                    ['filterCompany', 'formCompany', 'consoCompany', 'teamFilterCompany', 'transferCompany', 'editExpCompany'].forEach(id => {
-                        const select = document.getElementById(id);
-                        if (!select) return;
-                        const firstOption = select.options[0];
-                        select.innerHTML = '';
-                        if (firstOption) select.appendChild(firstOption);
-                        
-                        companies.forEach(company => {
-                            const option = document.createElement('option');
-                            option.value = company.id;
-                            option.textContent = company.company_name || company.name;
-                            select.appendChild(option);
-                        });
-                    });
+                    _populateCompaniesList(data.companies || []);
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
@@ -1484,42 +1647,7 @@
                 const response = await staffFetch(`${API_BASE}/expense-categories/main`);
                 if (response.ok) {
                     const data = await response.json();
-                    const categories = data.categories || [];
-                    
-                    // API returns main categories with nested sub_categories array
-                    const mainCats = categories.filter(c => c.is_active !== false);
-                    _cachedMainCategories = mainCats;
-                    ['filterCategory', 'formCategory'].forEach(id => {
-                        const select = document.getElementById(id);
-                        const firstOption = select.options[0];
-                        select.innerHTML = '';
-                        select.appendChild(firstOption);
-                        
-                        mainCats.forEach(cat => {
-                            const option = document.createElement('option');
-                            option.value = cat.id;
-                            option.textContent = cat.name;
-                            // sub_categories is the nested array from the API response
-                            option.dataset.subs = JSON.stringify(cat.sub_categories || []);
-                            select.appendChild(option);
-                        });
-                    });
-                    
-                    document.getElementById('formCategory').addEventListener('change', function() {
-                        const selectedOption = this.options[this.selectedIndex];
-                        const subSelect = document.getElementById('formSubCategory');
-                        subSelect.innerHTML = '<option value="">Select Sub-Category</option>';
-                        
-                        if (selectedOption.dataset.subs) {
-                            const subs = JSON.parse(selectedOption.dataset.subs);
-                            subs.filter(s => s.is_active !== false).forEach(sub => {
-                                const option = document.createElement('option');
-                                option.value = sub.id;
-                                option.textContent = sub.name;
-                                subSelect.appendChild(option);
-                            });
-                        }
-                    });
+                    _populateCategoriesList(data.categories || []);
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
@@ -1563,21 +1691,7 @@
                 const response = await staffFetch(`${API_BASE}/fund-allocations?status=CONFIRMED&to_employee_id=${empId}&page_size=100`);
                 if (response.ok) {
                     const data = await response.json();
-                    fundAllocations = data.allocations || [];
-                    const select = document.getElementById('formFundAllocation');
-                    // Keep the first "None" option, clear the rest
-                    while (select.options.length > 1) select.remove(1);
-                    
-                    fundAllocations.forEach(alloc => {
-                        const remainingBalance = alloc.balance_remaining ?? (alloc.amount - (alloc.balance_used || 0));
-                        if (remainingBalance > 0) {
-                            const option = document.createElement('option');
-                            option.value = alloc.id;
-                            option.textContent = `#${alloc.id} - ${alloc.company_name} (Balance: ${formatCurrency(remainingBalance)})`;
-                            option.dataset.balance = remainingBalance;
-                            select.appendChild(option);
-                        }
-                    });
+                    _populateAllocationsList(data.allocations || []);
                 }
             } catch (e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
@@ -1766,7 +1880,7 @@
                     <td>${inLedgerHtml}</td>
                     <td>${externalHtml}</td>
                     <td>${statusLabel}</td>
-                    <td>${getActionButtons(exp)}</td>
+                    <td class="actions-col" style="white-space:nowrap;">${getActionButtons(exp)}</td>
                 </tr>`;
             }).join('');
             
@@ -1827,13 +1941,9 @@
             if (realId) _entryLookup[realId] = exp;
 
             const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
-            const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
             const isCreator = exp.created_by_id === userData.id;
-            const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
-                || ['MR10001', 'MR10016'].includes(loggedCode);
-            const hasAccountsAccess = hasFullAccess
-                || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
-                || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+            const hasAccountsAccess = checkAccountsAccess();
+            const hasFullAccess = hasAccountsAccess;
 
             let buttons = '';
 
@@ -1971,23 +2081,7 @@
                 const r = await staffFetch(`${API_BASE}/expense-behalf-employees`);
                 if (!r.ok) return;
                 const d = await r.json();
-                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
-                const myId = userData.id;
-                // Cache full list; exclude self (self is always the "— Myself —" default option)
-                _expenseEmployees = (d.employees || []).filter(e => e.id !== myId);
-                if (_expenseEmployees.length === 0) { _canCreateOnBehalf = false; return; }
-                _canCreateOnBehalf = true;
-                _populateEmpSelect(_expenseEmployees);
-                // DC_TEAM_EMP_FILTER_001: Populate team-view member filter from full list
-                _populateTeamFilterEmployees(d.employees || []);
-                // Any user with at least one behalf employee gets the Consolidated tab
-                // (privileged users get all active staff; reporting managers get their direct reports)
-                const isPrivileged = (d.employees || []).length > 0;
-                if (isPrivileged) {
-                    const tabConso = document.getElementById('tabConsolidated');
-                    if (tabConso) tabConso.style.display = '';
-                    _populateConsoCompanies();
-                }
+                _applyEmployeesData(d.employees || []);
             } catch(err) {
                 console.warn('DC_EXP_BEHALF_001: Could not load employee list', err);
             }
@@ -2097,7 +2191,7 @@
                 const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
                 const loggedInEmpCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
                 const isMr10001 = loggedInEmpCode === 'MR10001';
-                const isSupremeViewer = isMr10001 || loggedInEmpCode === 'MR10016' || !!window._hasAccountsAccess || (window.staffAuth && window.staffAuth.isSupreme && window.staffAuth.isSupreme());
+                const isSupremeViewer = isMr10001 || loggedInEmpCode === 'MR10016' || loggedInEmpCode === 'MR10025' || checkAccountsAccess() || (window.staffAuth && window.staffAuth.isSupreme && window.staffAuth.isSupreme());
                 const rows = rawRows.filter(r => {
                     if (onlyWithIn && (Number(r.total_in || 0) <= 0 && Number(r.draft_in || 0) <= 0)) {
                         return false;
@@ -2517,7 +2611,7 @@
                             <td style="padding:8px 10px;">${inLedgerHtml}</td>
                             <td style="padding:8px 10px;">${externalHtml}</td>
                             <td style="padding:8px 10px;">${statusLabel}</td>
-                            <td style="padding:8px 10px;white-space:nowrap;">${getActionButtons(exp)}</td>
+                            <td class="actions-col" style="padding:8px 10px;white-space:nowrap;">${getActionButtons(exp)}</td>
                         </tr>
                     `;
                 }).join('');
@@ -3277,12 +3371,9 @@
 
                 // Inject quick-action buttons inside view panel
                 const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
-                const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
                 const isCreator = e.created_by_id === userData.id;
-                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name)
-                    || ['MR10001', 'MR10016'].includes(loggedCode);
-                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r))
-                    || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+                const hasAccountsAccess = checkAccountsAccess();
+                const hasFullAccess = hasAccountsAccess;
                 const actDiv = document.getElementById('viewExpActions');
 
                 // DC-EXPENSE-EDIT-001: Accounts Department & MR10001 can edit at ALL levels/statuses
@@ -3467,7 +3558,7 @@
         let _teamBalEmpsLoaded = false;
 
         async function initTeamBalLookup() {
-            if (!window._hasAccountsAccess) return;
+            if (!checkAccountsAccess()) return;
             const card = document.getElementById('teamBalLookupCard');
             card.style.display = '';
             if (_teamBalEmpsLoaded) return;
@@ -3602,12 +3693,7 @@
                 const d = await r.json();
                 const exp = d.expense_entry || d;
 
-                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
-                const loggedCode = (userData.emp_code || userData.employee_code || '').trim().toUpperCase();
-                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name)
-                    || ['MR10001', 'MR10016'].includes(loggedCode);
-                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r))
-                    || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+                const hasAccountsAccess = checkAccountsAccess();
 
                 document.getElementById('editExpId').textContent = '#' + (exp.entry_number || exp.id);
                 document.getElementById('editExpStatus').textContent = exp.status || '-';
@@ -3635,14 +3721,34 @@
                 if (tdsCb) tdsCb.checked = !!exp.tds_applicable;
                 document.getElementById('editExpTdsAmount').value = exp.tds_amount != null ? exp.tds_amount : '0.00';
 
-                // Show in ledger
+                // Show in ledger & External
                 const ledgerCb = document.getElementById('editExpShowInLedger');
                 if (ledgerCb) ledgerCb.checked = !!exp.show_in_ledger;
+
+                const extCb = document.getElementById('editExpIsExternal');
+                if (extCb) extCb.checked = !!exp.is_external;
 
                 document.getElementById('editExpNotes').value = exp.narration || exp.notes || exp.description || '';
 
                 // Populate categories
                 populateEditCategories(exp.main_category_id, exp.sub_category_id);
+
+                // Employee Assignment (Accounts & MR10001)
+                const empGroup = document.getElementById('editExpEmployeeGroup');
+                const empSelect = document.getElementById('editExpEmployee');
+                if (empGroup && empSelect) {
+                    if (hasAccountsAccess) {
+                        empGroup.style.display = 'block';
+                        empSelect.disabled = false;
+                        _populateEditEmpSelect(_allActiveEmployees.length ? _allActiveEmployees : _expenseEmployees);
+                        if (exp.created_by_id) {
+                            empSelect.value = String(exp.created_by_id);
+                        }
+                    } else {
+                        empGroup.style.display = 'none';
+                        empSelect.disabled = true;
+                    }
+                }
 
                 // Entry status field for Accounts / MR10001
                 const statusSelect = document.getElementById('editExpStatusSelect');
@@ -3686,6 +3792,10 @@
             const tds_applicable = document.getElementById('editExpTdsApplicable')?.checked || false;
             const tds_amount = parseFloat(document.getElementById('editExpTdsAmount')?.value) || 0;
             const show_in_ledger = document.getElementById('editExpShowInLedger')?.checked || false;
+            const is_external = document.getElementById('editExpIsExternal')?.checked || false;
+
+            const empSelect = document.getElementById('editExpEmployee');
+            const created_by_id = (empSelect && !empSelect.disabled && empSelect.value) ? parseInt(empSelect.value) : null;
 
             const notes = document.getElementById('editExpNotes').value;
             const statusSelect = document.getElementById('editExpStatusSelect');
@@ -3710,10 +3820,12 @@
                 tds_applicable,
                 tds_amount,
                 show_in_ledger,
+                is_external,
                 narration: notes,
                 notes: notes
             };
             if (status) payload.status = status;
+            if (created_by_id) payload.created_by_id = created_by_id;
 
             try {
                 const r = await staffFetch(API_BASE + '/expense-entries/' + editExpenseId + '/edit', {
@@ -3723,8 +3835,12 @@
                 });
                 if (r.ok) {
                     document.getElementById('editExpModal').classList.remove('active');
-                    loadExpenses();
+                    if (typeof loadExpenses === 'function') loadExpenses();
                     if (typeof loadTeamExpenses === 'function') loadTeamExpenses(_teamPage || 1);
+                    if (typeof loadUnifiedEmployeeLedger === 'function') {
+                        const targetId = document.getElementById('unifiedEmpSelect')?.value;
+                        if (targetId) loadUnifiedEmployeeLedger(targetId);
+                    }
                 } else {
                     const err = await r.json().catch(() => ({}));
                     alert(err.detail || 'Failed to save changes');
@@ -4393,6 +4509,24 @@
                     <span id="editExpPrivilegeNotice" style="font-size:11px;color:#b45309;font-weight:600;"><i class="fas fa-user-shield me-1"></i>Accounts / MR10001 Full Edit Mode</span>
                 </div>
 
+                <!-- Section: Employee Assignment (Accounts & MR10001 only) -->
+                <div id="editExpEmployeeGroup" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+                    <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-user-tag"></i> Recorded For / Assigned Staff Member (Accounts & MR10001 Privilege)
+                    </div>
+                    <div class="form-row" style="margin-bottom:0;">
+                        <div class="form-group" style="margin-bottom:0;flex:1;">
+                            <label style="color:#1e3a8a;font-weight:600;">Staff Member Account</label>
+                            <select id="editExpEmployee" style="width:100%;background:#ffffff;border:1px solid #93c5fd;font-weight:500;">
+                                <option value="">— Select Employee —</option>
+                            </select>
+                            <small style="color:#3b82f6;font-size:11px;display:block;margin-top:4px;">
+                                <i class="fas fa-sync-alt me-1"></i>Reassigning updates the passbook and running balance for both employees immediately.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Section: Company & Expense Date -->
                 <div class="form-row">
                     <div class="form-group">
@@ -4448,9 +4582,12 @@
                             </label>
                             <input type="number" id="editExpTdsAmount" step="0.01" min="0" placeholder="TDS Amount (₹)" oninput="updateEditNetAmt()">
                         </div>
-                        <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;padding-top:22px;">
-                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;font-weight:600;">
+                        <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;padding-top:22px;gap:18px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b;font-weight:600;" title="Include in financial cash/bank ledger">
                                 <input type="checkbox" id="editExpShowInLedger" style="width:auto;margin:0;transform:scale(1.15);"> Show in Fund Ledger
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#0369a1;font-weight:600;" title="Direct vendor/company payout - not out of employee pocket">
+                                <input type="checkbox" id="editExpIsExternal" style="width:auto;margin:0;transform:scale(1.15);"> External Party
                             </label>
                         </div>
                     </div>

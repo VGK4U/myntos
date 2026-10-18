@@ -205,10 +205,91 @@ tbody tr:hover td.td-sticky-num { background: #faf5ff; }
 .pagination { display: flex; gap: 6px; align-items: center; padding: 14px 18px; justify-content: flex-end; border-top: 1px solid #f0f0f0; }
 .page-btn { padding: 5px 12px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
 .page-btn.active { background: #7c3aed; color: white; border-color: #7c3aed; }
-.side-panel { position: fixed; top: 0; right: -440px; width: 440px; height: 100vh; background: white; box-shadow: -4px 0 20px rgba(0,0,0,.12); z-index: 1000; transition: right .3s; display: flex; flex-direction: column; overflow: hidden; }
-.side-panel.open { right: 0; }
-.side-panel-header { padding: 18px 20px; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-.side-panel-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
+/* Side Panel Drawer & Backdrop (DC-VGK-DRAWER-FIX-001) */
+.side-panel-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1040;
+  opacity: 0;
+  transition: opacity .25s ease;
+  cursor: pointer;
+}
+.side-panel-backdrop.active {
+  display: block;
+  opacity: 1;
+}
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 460px;
+  max-width: 95vw;
+  height: 100vh;
+  background: white;
+  box-shadow: -6px 0 25px rgba(0,0,0,.16);
+  z-index: 1050;
+  transform: translateX(110%);
+  transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1), visibility .28s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.side-panel.open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+.side-panel-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.side-panel-header h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.sp-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .15s ease;
+  padding: 0;
+}
+.sp-close-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+.sp-close-btn:active {
+  transform: scale(0.95);
+}
 .side-panel-body { padding: 18px; flex: 1; overflow-y: auto; }
 .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
 .info-row .lbl { color: #6b7280; font-weight: 600; }
@@ -1609,23 +1690,26 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
 </div><!-- /content-area -->
 
-<!-- Side Panel -->
+<!-- Side Panel Backdrop (DC-VGK-DRAWER-FIX-001) -->
+<div class="side-panel-backdrop" id="sidePanelBackdrop" onclick="closeAllSidePanels()"></div>
+
+<!-- Side Panel (Channel Partner Details) -->
 <div class="side-panel" id="sidePanel">
   <div class="side-panel-header">
     <h4 id="sidePanelTitle">Channel Partner Details</h4>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
       <button onclick="openFullViewModal()" id="fullViewBtn" title="Full View — see complete team tree" style="background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.4);color:white;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;cursor:pointer;display:none"><i class="fas fa-expand-alt me-1"></i>Full View</button>
-      <button onclick="closeSidePanel()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+      <button type="button" class="sp-close-btn" onclick="closeSidePanel()" title="Close Panel (Esc)" aria-label="Close panel"><i class="fas fa-times"></i></button>
     </div>
   </div>
   <div class="side-panel-body" id="sidePanelBody"></div>
 </div>
 
 <!-- Freelancer Side Panel -->
-<div class="side-panel" id="freelancerSidePanel" style="width:480px;max-width:95vw">
+<div class="side-panel" id="freelancerSidePanel">
   <div class="side-panel-header" style="background:linear-gradient(135deg,#0284c7,#0369a1)">
     <h4 id="flSidePanelTitle"><i class="fas fa-user-tag me-2"></i>Freelancer Details</h4>
-    <button onclick="closeFreelancerSidePanel()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+    <button type="button" class="sp-close-btn" onclick="closeFreelancerSidePanel()" title="Close Panel (Esc)" aria-label="Close panel"><i class="fas fa-times"></i></button>
   </div>
   <div class="side-panel-body" id="flSidePanelBody" style="padding:18px">
     <div style="text-align:center;padding:40px;color:#94a3b8">Loading details...</div>
@@ -2607,6 +2691,363 @@ function _canMarkIncomePaid() {
 
     return false;
 }
+
+// DC-SKIP-TDS-ADMIN-AUTH-001: Allowed only for MR10001, Accounts department, and Nandana
+function _canSkipTdsAdmin() {
+    if (!_staffMe) return false;
+    const code = (_staffMe.emp_code || '').toUpperCase().trim();
+    const dept = String(_staffMe.department || _staffMe.department_name || '').toLowerCase();
+    const name = (_staffMe.full_name || _staffMe.name || _staffMe.first_name || '').toLowerCase();
+    const deptId = _staffMe.department_id;
+    const role = String(_staffMe.role_code || _staffMe.role || '').toLowerCase();
+    const st = String(_staffMe.staff_type || '').toLowerCase();
+
+    // 1. MR10001 / Key Leadership / Super Admin
+    if (code === 'MR10001' || st.includes('supreme') || role.includes('key_leadership') || role.includes('superadmin') || role.includes('director')) return true;
+
+    // 2. Nandana Staff (MN10009, MN10010, or name matching nandana)
+    if (code === 'MN10009' || code === 'MN10010' || name.includes('nandana')) return true;
+
+    // 3. Accounts department / Finance / Store
+    if (dept.includes('account') || dept.includes('finance') || deptId === 15 || code === 'MR10025' || name.includes('subhash') || name.includes('subas')) return true;
+
+    return false;
+}
+
+window.toggleSkipTdsAdmin = async function(entryId, skip, entryNum, partnerId, leadId) {
+    try {
+        const res = await staffFetch(`${API}/vgk/staff/vgk/cash-income/${entryId}/toggle-skip-tds-admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skip_tds_admin: skip })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || `TDS/Admin ${skip ? 'SKIPPED' : 'RESTORED'} for ${entryNum}`, 'success');
+            // Update Member Detail cache if present
+            const mCache = window._meDetailCache || (typeof _meDetailCache !== 'undefined' ? _meDetailCache : null);
+            if (mCache && partnerId && mCache[partnerId]) {
+                const itm = mCache[partnerId].find(x => x.id === entryId);
+                if (itm) {
+                    itm.skip_tds_admin = skip;
+                    const bGross = (itm.balance_gross !== undefined && itm.balance_gross !== null) ? parseFloat(itm.balance_gross) : parseFloat(itm.commission_amount || 0);
+                    itm.admin_charges = skip ? 0 : (data.admin_charges !== undefined ? data.admin_charges : Math.round(bGross * 0.08));
+                    itm.tds_amount = skip ? 0 : (data.tds_amount !== undefined ? data.tds_amount : Math.round(bGross * 0.02));
+                    itm.net_payout = skip ? bGross : (data.net_payout !== undefined ? data.net_payout : Math.max(0, Math.round(bGross - itm.admin_charges - itm.tds_amount)));
+                }
+            }
+            // Update Lead Detail cache if present
+            const lvCache = window._lvDetailCache || (typeof _lvDetailCache !== 'undefined' ? _lvDetailCache : null);
+            if (lvCache) {
+                const targetLids = leadId ? [leadId] : Object.keys(lvCache);
+                targetLids.forEach(lid => {
+                    const lEntries = lvCache[lid];
+                    if (Array.isArray(lEntries)) {
+                        const itm = lEntries.find(x => x.id === entryId);
+                        if (itm) {
+                            itm.skip_tds_admin = skip;
+                            const bGross = (itm.balance_gross !== undefined && itm.balance_gross !== null) ? parseFloat(itm.balance_gross) : parseFloat(itm.commission_amount || 0);
+                            itm.admin_charges = skip ? 0 : (data.admin_charges !== undefined ? data.admin_charges : Math.round(bGross * 0.08));
+                            itm.tds_amount = skip ? 0 : (data.tds_amount !== undefined ? data.tds_amount : Math.round(bGross * 0.02));
+                            itm.net_payout = skip ? bGross : (data.net_payout !== undefined ? data.net_payout : Math.max(0, Math.round(bGross - itm.admin_charges - itm.tds_amount)));
+                            if (typeof _lvRenderDetail === 'function') {
+                                _lvRenderDetail(lid, lEntries);
+                            }
+                        }
+                    }
+                });
+            }
+            if (typeof _renderMeDetailTable === 'function' && partnerId) {
+                _renderMeDetailTable(partnerId);
+            }
+            if (typeof window.updateMemberSummaryRowAndKpis === 'function' && partnerId) {
+                window.updateMemberSummaryRowAndKpis(partnerId);
+            }
+        } else {
+            alert(data.detail || data.error || 'Failed to update TDS/Admin setting');
+            if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+        }
+    } catch (err) {
+        console.error('Error toggling skip TDS/Admin:', err);
+        alert('Error updating TDS/Admin setting: ' + err.message);
+        if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+    }
+};
+
+window.updateMemberSummaryRowAndKpis = function(partnerId) {
+    if (!partnerId) return;
+    const dataList = window._iedCurrentData || [];
+    const m = dataList.find(x => x.id === partnerId);
+    if (!m) return;
+    
+    const entries = (_meDetailCache && _meDetailCache[partnerId]) || [];
+    const activeEntries = entries.filter(e => e.status !== 'CANCELLED');
+    
+    // Recalculate metrics for this member
+    let l0 = 0, l1 = 0, l2 = 0, l3 = 0, l4 = 0, l5 = 0, l6 = 0;
+    let gross = 0, net = 0, rcv = 0, pnd = 0;
+    
+    activeEntries.forEach(e => {
+        const commAmt = parseFloat(e.commission_amount || 0);
+        const advAdj = parseFloat(e.advance_adjusted_amount || 0);
+        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) 
+            ? parseFloat(e.balance_gross) 
+            : Math.max(0, commAmt - advAdj);
+        const isExtra = (e.kind === 'EXTRA_COMMISSION');
+        const lvl = parseInt(e.level || 1);
+        
+        gross += balGross;
+        
+        if (!isExtra) {
+            if (lvl === 1 || lvl === 6) l1 += balGross;
+            else if (lvl === 2) l2 += balGross;
+            else if (lvl === 3) l3 += balGross;
+            else if (lvl === 4) l4 += balGross;
+            else if (lvl === 5) l5 += balGross;
+            else if (lvl === 0) l0 += balGross;
+        } else {
+            l0 += balGross;
+        }
+        
+        // Calculate Net
+        let netAmt = 0;
+        if (e.skip_tds_admin) {
+            netAmt = balGross;
+        } else if (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0) {
+            netAmt = parseFloat(e.net_payout);
+        } else {
+            const adm = (e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(balGross * 0.08);
+            const tds = (e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(balGross * 0.02);
+            netAmt = Math.max(0, balGross - adm - tds);
+        }
+        net += netAmt;
+        
+        const isPaid = (e.status === 'PAID' || e.status === 'RELEASED');
+        if (isPaid) {
+            rcv += netAmt;
+        } else if (['DRAFT', 'PENDING', 'STAGE1_APPROVED'].includes(e.status)) {
+            pnd += netAmt;
+        }
+    });
+    
+    m.l0_bonus = l0;
+    m.l1_source = l1;
+    m.l2_senior = l2;
+    m.l3_extended = l3;
+    m.l4_core = l4;
+    m.l5_support = l5;
+    m.gross_earned = gross;
+    m.net_earning = net;
+    m.received = rcv;
+    m.pending = pnd;
+    m.pending_amount = pnd;
+    
+    // Update the row DOM elements directly for smooth zero-flicker update:
+    const rowEl = document.getElementById('ied-row-' + partnerId);
+    if (rowEl) {
+        const cells = rowEl.children;
+        const _lvlInr = v => v > 0 ? `<span style="font-weight:700">${_meInr(v)}</span>` : `<span style="color:#e5e7eb">—</span>`;
+        if (cells.length >= 17) {
+            cells[6].innerHTML = _lvlInr(l0);
+            cells[7].innerHTML = _lvlInr(l1);
+            cells[8].innerHTML = _lvlInr(l2);
+            cells[9].innerHTML = _lvlInr(l3);
+            cells[10].innerHTML = _lvlInr(l4);
+            cells[11].innerHTML = _lvlInr(l5);
+            cells[13].innerHTML = gross > 0 ? _meInr(gross) : '<span style="color:#d1d5db">—</span>';
+            cells[14].innerHTML = net > 0 ? _meInr(net) : '—';
+            cells[14].style.color = net > 0 ? '#059669' : '#d1d5db';
+            cells[15].innerHTML = rcv > 0 ? _meInr(rcv) : '—';
+            cells[15].style.color = rcv > 0 ? '#059669' : '#9ca3af';
+            cells[16].innerHTML = pnd > 0 ? _meInr(pnd) : '—';
+            cells[16].style.color = pnd > 0 ? '#d97706' : '#9ca3af';
+        }
+    }
+    
+    // Update the table TOTAL row (first row of iedBody)
+    const totalsRow = document.querySelector('#iedBody tr');
+    if (totalsRow && totalsRow.children.length >= 17) {
+        const tRows = window._iedCurrentData || [];
+        const tL5 = tRows.reduce((s, r) => s + (r.l5_support || 0), 0);
+        const tGross = tRows.reduce((s, r) => s + (r.gross_earned || 0), 0);
+        const tNet = tRows.reduce((s, r) => s + (r.net_earning !== undefined ? r.net_earning : 0), 0);
+        const tRcv = tRows.reduce((s, r) => s + (r.received || 0), 0);
+        const tPending = tRows.reduce((s, r) => s + (r.pending !== undefined ? r.pending : 0), 0);
+        
+        totalsRow.children[9].innerHTML = tL5 > 0 ? _meInr(tL5) : '—';
+        totalsRow.children[11].innerHTML = _meInr(tGross);
+        totalsRow.children[12].innerHTML = _meInr(tNet);
+        totalsRow.children[13].innerHTML = _meInr(tRcv);
+        totalsRow.children[14].innerHTML = tPending > 0 ? _meInr(tPending) : '—';
+    }
+    
+    // Re-render KPI cards
+    if (typeof _iedRenderKpis === 'function') {
+        _iedRenderKpis(window._iedCurrentData, window._iedTotalCount || window._iedCurrentData.length);
+    }
+};
+
+window.refreshMeSubEntries = async function(partnerId) {
+    if (!partnerId) return;
+    try {
+        const activeStage = (document.getElementById('iedStageFilter')?.value || document.getElementById('meStageFilter')?.value || '').trim();
+        const meDf = (document.getElementById('iedDateFrom')?.value || document.getElementById('meDateFrom')?.value || '').trim();
+        const meDt = (document.getElementById('iedDateTo')?.value || document.getElementById('meDateTo')?.value || '').trim();
+        let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + partnerId + '&_t=' + Date.now();
+        if(activeStage) detailUrl += '&status=' + encodeURIComponent(activeStage);
+        if(meDf) detailUrl += '&date_from=' + encodeURIComponent(meDf);
+        if(meDt) detailUrl += '&date_to='   + encodeURIComponent(meDt);
+        const r = await staffFetch(detailUrl);
+        const d = await r.json();
+        if (d.success && d.data) {
+            if (typeof _meDetailCache !== 'undefined') _meDetailCache[partnerId] = d.data;
+            if (window._meDetailCache) window._meDetailCache[partnerId] = d.data;
+            if (typeof _renderMeDetailTable === 'function') _renderMeDetailTable(partnerId);
+            if (typeof window.updateMemberSummaryRowAndKpis === 'function') window.updateMemberSummaryRowAndKpis(partnerId);
+        }
+    } catch(e) {
+        console.error('Error refreshing member entries:', e);
+    }
+};
+
+window.refreshLvSubEntries = async function(lid) {
+    if (!lid) return;
+    try {
+        const stage = document.getElementById('lvStageFilter')?.value || '';
+        const dateFrom = document.getElementById('lvDateFrom')?.value || '';
+        const dateTo = document.getElementById('lvDateTo')?.value || '';
+        const params = new URLSearchParams({ lead_id: lid });
+        const hideVgk = document.getElementById('lvHideVgkSupport')?.checked !== false;
+        params.set('hide_vgk_support', hideVgk ? 'true' : 'false');
+        if(stage) params.set('status', stage);
+        if(dateFrom) params.set('date_from', dateFrom);
+        if(dateTo) params.set('date_to', dateTo);
+        const r = await staffFetch('/api/v1/vgk/dashboard/lead-income-members?' + params.toString());
+        const d = await r.json();
+        if (d.success && d.data) {
+            if (typeof _lvDetailCache !== 'undefined') _lvDetailCache[lid] = d.data;
+            if (window._lvDetailCache) window._lvDetailCache[lid] = d.data;
+            if (typeof _lvRenderDetail === 'function') _lvRenderDetail(lid, d.data);
+        }
+    } catch(e) {
+        console.error('Error refreshing lead entries:', e);
+    }
+};
+
+window.toggleAllCommissions = async function(entryId, release, entryNum, partnerId, leadId) {
+    try {
+        const res = await staffFetch(`${API}/vgk/staff/vgk/cash-income/${entryId}/toggle-all-commissions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ all_commissions: release, lead_id: leadId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || `All Commissions ${release ? 'RELEASED' : 'CANCELLED'} for ${entryNum}`, 'success');
+            
+            // Invalidate/refresh member detail cache to reflect newly released/cancelled Support & Brand rows
+            if (partnerId) {
+                const mCache = window._meDetailCache || (typeof _meDetailCache !== 'undefined' ? _meDetailCache : null);
+                if (mCache && mCache[partnerId]) {
+                    mCache[partnerId].forEach(x => {
+                        if (x.source_lead_id === leadId || x.id === entryId) {
+                            x.all_commissions_released = release;
+                        }
+                    });
+                }
+                if (typeof window.refreshMeSubEntries === 'function') {
+                    await window.refreshMeSubEntries(partnerId);
+                } else if (typeof _renderMeDetailTable === 'function') {
+                    _renderMeDetailTable(partnerId);
+                }
+                if (typeof window.updateMemberSummaryRowAndKpis === 'function') {
+                    window.updateMemberSummaryRowAndKpis(partnerId);
+                }
+            }
+
+            // Invalidate/refresh lead detail cache if present
+            const lvCache = window._lvDetailCache || (typeof _lvDetailCache !== 'undefined' ? _lvDetailCache : null);
+            if (lvCache && leadId) {
+                if (lvCache[leadId]) {
+                    lvCache[leadId].forEach(x => {
+                        x.all_commissions_released = release;
+                    });
+                }
+                if (typeof window.refreshLvSubEntries === 'function') {
+                    await window.refreshLvSubEntries(leadId);
+                } else if (typeof _lvRenderDetail === 'function' && lvCache[leadId]) {
+                    _lvRenderDetail(leadId, lvCache[leadId]);
+                }
+            }
+        } else {
+            const errMsg = data.detail || data.message || data.error || (Array.isArray(data.errors) ? data.errors.join(', ') : 'Failed to toggle All Commissions');
+            alert(errMsg);
+            if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+        }
+    } catch (err) {
+        console.error('Error toggling All Commissions:', err);
+        alert('Error updating All Commissions: ' + (err.message || 'Network error'));
+        if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+    }
+};
+
+window.toggleCompanySupport = async function(entryId, compSupported, entryNum, partnerId, leadId) {
+    try {
+        const res = await staffFetch(`${API}/vgk/staff/vgk/cash-income/${entryId}/toggle-company-support`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ company_supported: compSupported, lead_id: leadId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || `Company Support ${compSupported ? 'ENABLED (0.75%)' : 'DISABLED (1.5%)'} for ${entryNum}`, 'success');
+            
+            // Invalidate/refresh member detail cache
+            if (partnerId) {
+                const mCache = window._meDetailCache || (typeof _meDetailCache !== 'undefined' ? _meDetailCache : null);
+                if (mCache && mCache[partnerId]) {
+                    mCache[partnerId].forEach(x => {
+                        if (x.source_lead_id === leadId || x.id === entryId) {
+                            x.company_supported = compSupported;
+                        }
+                    });
+                }
+                if (typeof window.refreshMeSubEntries === 'function') {
+                    await window.refreshMeSubEntries(partnerId);
+                } else if (typeof _renderMeDetailTable === 'function') {
+                    _renderMeDetailTable(partnerId);
+                }
+                if (typeof window.updateMemberSummaryRowAndKpis === 'function') {
+                    window.updateMemberSummaryRowAndKpis(partnerId);
+                }
+            }
+
+            // Invalidate/refresh lead detail cache if present
+            const lvCache = window._lvDetailCache || (typeof _lvDetailCache !== 'undefined' ? _lvDetailCache : null);
+            if (lvCache && leadId) {
+                if (lvCache[leadId]) {
+                    lvCache[leadId].forEach(x => {
+                        x.company_supported = compSupported;
+                    });
+                }
+                if (typeof window.refreshLvSubEntries === 'function') {
+                    await window.refreshLvSubEntries(leadId);
+                } else if (typeof _lvRenderDetail === 'function' && lvCache[leadId]) {
+                    _lvRenderDetail(leadId, lvCache[leadId]);
+                }
+            }
+        } else {
+            const errMsg = data.detail || data.message || data.error || (Array.isArray(data.errors) ? data.errors.join(', ') : 'Failed to toggle Company Support');
+            alert(errMsg);
+            if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+        }
+    } catch (err) {
+        console.error('Error toggling Company Support:', err);
+        alert('Error updating Company Support: ' + (err.message || 'Network error'));
+        if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+    }
+};
+
 async function _initStaffMe() {
     try {
         const r = await staffFetch(API + '/staff/auth/me');
@@ -3153,15 +3594,23 @@ async function submitAddFreelancer() {
 function closeFreelancerSidePanel() {
   const panel = document.getElementById('freelancerSidePanel');
   if (panel) panel.classList.remove('open');
+  const sp = document.getElementById('sidePanel');
+  if (!sp || !sp.classList.contains('open')) {
+    const bd = document.getElementById('sidePanelBackdrop');
+    if (bd) bd.classList.remove('active');
+  }
 }
 
 async function viewFreelancerDetails(flId) {
+  closeSidePanel();
   const panel = document.getElementById('freelancerSidePanel');
   const body = document.getElementById('flSidePanelBody');
   const title = document.getElementById('flSidePanelTitle');
   if (!panel || !body) return;
 
   panel.classList.add('open');
+  const bd = document.getElementById('sidePanelBackdrop');
+  if (bd) bd.classList.add('active');
   body.innerHTML = `<div style="text-align:center;padding:50px 20px;color:#64748b">
     <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#0284c7"></i>
     <div style="font-weight:600">Loading Freelancer Record…</div>
@@ -3846,6 +4295,7 @@ const _ME_STATUS_LABEL = {
 };
 const _meExpanded  = new Set();
 const _meDetailCache = {};   // partnerId → raw rows array
+window._meDetailCache = _meDetailCache;
 let _meSortBy  = 'received';
 let _meSortDir = 'desc';
 
@@ -4229,6 +4679,8 @@ async function loadIncomeDash(pg=1){
       return;
     }
     _iedLoaded = true;
+    window._iedCurrentData = d.data || [];
+    window._iedTotalCount = d.total || 0;
     _iedRenderKpis(d.data, d.total);
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
@@ -4503,9 +4955,9 @@ function _updateParentRowFromEntries(partnerId, rows, isIed){
   if(isIed){
     const lvlSum  = lv => nonCan.filter(e=>e.level===lv).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
     const gross   = nonCan.reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
-    const net     = Math.round(gross * 0.90);
-    const received= rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0);
-    const pending = Math.round(rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e)=>s+(parseFloat(e.commission_amount)||0),0) * 0.90);
+    const net     = nonCan.reduce((s,e)=>s+(e.net_payout !== undefined && e.net_payout !== null ? parseFloat(e.net_payout) : Math.round((parseFloat(e.commission_amount)||0)*0.90)),0);
+    const received= rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e)=>s+(e.net_payout !== undefined && e.net_payout !== null ? parseFloat(e.net_payout) : Math.round((parseFloat(e.commission_amount)||0)*0.90)),0);
+    const pending = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e)=>s+(e.net_payout !== undefined && e.net_payout !== null ? parseFloat(e.net_payout) : Math.round((parseFloat(e.commission_amount)||0)*0.90)),0);
     if(cells[6])  cells[6].innerHTML  = _li(lvlSum(0));
     if(cells[7])  cells[7].innerHTML  = _li(lvlSum(1));
     if(cells[8])  cells[8].innerHTML  = _li(lvlSum(2));
@@ -4698,6 +5150,7 @@ function _renderMeDetailTable(partnerId){
 
     const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
     const totDealVal      = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
+    const totRcvVal       = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.received_value||(e.commission_pct>0?Math.round(e.commission_amount/(e.commission_pct/100)):e.calc_base)||0)),0);
     const totStg1         = rows.reduce((s,e)=>{
       if (e.status === 'CANCELLED') return s;
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -4741,7 +5194,7 @@ function _renderMeDetailTable(partnerId){
       const isDvr = (_k === 'DVR_ADVANCE');
       const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      const adm = (e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08);
+      const adm = e.skip_tds_admin ? 0 : ((e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08));
       return s + adm;
     }, 0);
     const totTds          = rows.reduce((s,e)=>{
@@ -4753,13 +5206,11 @@ function _renderMeDetailTable(partnerId){
       const isDvr = (_k === 'DVR_ADVANCE');
       const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      const tds = (e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02);
+      const tds = e.skip_tds_admin ? 0 : ((e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02));
       return s + tds;
     }, 0);
     const totNet          = Math.max(0, totBalGross - totAdmin - totTds);
     const totRcvNet       = rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e) => {
-      const net = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0) ? parseFloat(e.net_payout) : null;
-      if (net !== null) return s + net;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -4767,13 +5218,14 @@ function _renderMeDetailTable(partnerId){
       const isDvr = (_k === 'DVR_ADVANCE');
       const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      const adm = Math.round(bal * 0.08);
-      const tds = Math.round(bal * 0.02);
+      if (e.skip_tds_admin) return s + bal;
+      const net = (e.net_payout !== undefined && e.net_payout !== null) ? parseFloat(e.net_payout) : null;
+      if (net !== null) return s + net;
+      const adm = (e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08);
+      const tds = (e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02);
       return s + Math.max(0, Math.round(bal - adm - tds));
     }, 0);
     const totPendingNet   = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e) => {
-      const net = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0) ? parseFloat(e.net_payout) : null;
-      if (net !== null) return s + net;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -4781,8 +5233,11 @@ function _renderMeDetailTable(partnerId){
       const isDvr = (_k === 'DVR_ADVANCE');
       const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
       const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-      const adm = Math.round(bal * 0.08);
-      const tds = Math.round(bal * 0.02);
+      if (e.skip_tds_admin) return s + bal;
+      const net = (e.net_payout !== undefined && e.net_payout !== null) ? parseFloat(e.net_payout) : null;
+      if (net !== null) return s + net;
+      const adm = (e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08);
+      const tds = (e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02);
       return s + Math.max(0, Math.round(bal - adm - tds));
     }, 0);
     const totalAll        = allRows.length;
@@ -4824,10 +5279,14 @@ function _renderMeDetailTable(partnerId){
           ${TH('Trigger Date', 'date')}
           ${TH('Payment Date', 'payment_date')}
           ${TH('Entry #', 'entry_number')}
+          <th style="padding:7px 10px;text-align:center;color:#7c3aed;font-weight:700;font-size:10.5px;text-transform:uppercase;white-space:nowrap;background:#ede9fe" title="Skip TDS (2%) & Admin (8%) charges">Skip TDS/Admin</th>
+          <th style="padding:7px 10px;text-align:center;color:#059669;font-weight:700;font-size:10.5px;text-transform:uppercase;white-space:nowrap;background:#ede9fe" title="Release Support (L5) & Solar Brand Incomes as well">All Commissions</th>
+          <th style="padding:7px 10px;text-align:center;color:#0284c7;font-weight:700;font-size:10.5px;text-transform:uppercase;white-space:nowrap;background:#ede9fe" title="Company Support (Checked: 0.75% Field Support | Unchecked: 1.5% Field Support)">Company Support</th>
           ${TH('Level / Role', 'level', 'center')}
           ${TH('Customer Name', 'name')}
           ${TH('Entry Kind', 'kind', 'center')}
           ${TH('Deal Value ₹', 'deal_value', 'right', 'color:#4b5563')}
+          ${TH('Received Value ₹', 'received_value', 'right', 'color:#4b5563')}
           ${TH('Calc %', '', 'center', 'color:#4b5563')}
           ${TH('Gross ₹', 'gross', 'right')}
           ${TH('Stage 1 Adv.', '', 'right', 'color:#d97706')}
@@ -4843,7 +5302,7 @@ function _renderMeDetailTable(partnerId){
       </thead>
       <tbody>
       ${(() => {
-        if (!rows.length) return '<tr><td colspan="19" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>';
+        if (!rows.length) return '<tr><td colspan="23" style="padding:20px;text-align:center;color:#9ca3af;font-size:12px"><i class="fas fa-search me-1"></i>No entries match the filter.</td></tr>';
         
         // Group rows by lead / customer to compute lead-wise sub-totals
         const leadGroupMap = {};
@@ -4866,7 +5325,7 @@ function _renderMeDetailTable(partnerId){
           const group = leadGroupMap[key];
           const gEntries = group.entries;
 
-          let subDealVal = 0, subGross = 0, subStg1 = 0, subStg2 = 0, subLostDed = 0, subAdvPaid = 0, subBalGross = 0;
+          let subDealVal = 0, subRcvVal = 0, subGross = 0, subStg1 = 0, subStg2 = 0, subLostDed = 0, subAdvPaid = 0, subBalGross = 0;
           let leadDealValueRecorded = false;
 
           const entryRowsHtml = gEntries.map(e => {
@@ -4874,13 +5333,17 @@ function _renderMeDetailTable(partnerId){
             const lvlC = _lvlColor[e.level]||'#6b7280';
             const lvlLabelText = _lvLvlLabel[e.level] || (e.level ? 'L'+e.level : '—');
             const kindLabelText = _getIncomeTypeLabel(e.kind, e.community_id, e.community_event_name, e.level, e.display_kind || e.entry_kind_label);
-            
             const _k = String(e.kind || 'COMMISSION').toUpperCase();
             const isComm   = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
+            const isFinalCommission = (e.level !== 5 && !_k.includes('BRAND') && (kindLabelText === 'Final Comm.' || kindLabelText === 'Final Commission' || _k === 'COMMISSION' || _k === 'SENIOR_COMM' || String(e.display_kind || '').toLowerCase().includes('final')));
+            const isAllComm = Boolean(e.all_commissions_released || e.all_commissions || e.release_support_brand);
+            const isCompSupp = (e.company_supported !== undefined && e.company_supported !== null) ? Boolean(e.company_supported) : true;
+            const isCompSuppEligible = Boolean(e.source_lead_id || e.lead_id) && (isFinalCommission || e.level === 5 || _k === 'COMMISSION' || _k === 'SENIOR_COMM' || _k === 'EXTRA_COMMISSION');
             const isDvr    = (_k === 'DVR_ADVANCE');
             const dealVal  = parseFloat(e.deal_value || e.base_value || 0);
             const commPct  = parseFloat(e.commission_pct || 0);
             const grossAmt = parseFloat(e.commission_amount || 0);
+            const rcvVal   = parseFloat(e.received_value || (commPct > 0 ? Math.round(grossAmt / (commPct / 100)) : (e.calc_base || 0)) || 0);
             
             // Advance recovery: for COMMISSION, read prior stage1/stage2 advances; for DVR_ADVANCE, read advance_adjusted_amount
             const stg1Adv  = isComm ? parseFloat(e.stage1_adv || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
@@ -4899,21 +5362,22 @@ function _renderMeDetailTable(partnerId){
               : ((isComm || isDvr) ? Math.max(0, grossAmt - (isComm ? (stg1Adv + stg2Adv) : stg1Adv) - lostDedAmt) : Math.max(0, grossAmt - lostDedAmt));
 
             // Authoritative stored backend values
-            let adminVal = (e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0)
-              ? parseFloat(e.admin_charges)
-              : Math.round(balGross * 0.08);
-            let tdsVal   = (e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0)
-              ? parseFloat(e.tds_amount)
-              : Math.round(balGross * 0.02);
-            let netVal   = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0)
-              ? parseFloat(e.net_payout)
-              : Math.max(0, Math.round(balGross - adminVal - tdsVal));
+            let adminVal = e.skip_tds_admin
+              ? 0
+              : ((e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(balGross * 0.08));
+            let tdsVal   = e.skip_tds_admin
+              ? 0
+              : ((e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(balGross * 0.02));
+            let netVal   = e.skip_tds_admin
+              ? balGross
+              : ((e.net_payout !== undefined && e.net_payout !== null) ? parseFloat(e.net_payout) : Math.max(0, Math.round(balGross - adminVal - tdsVal)));
 
             if (e.status !== 'CANCELLED') {
               if (!leadDealValueRecorded && dealVal > 0) {
                 subDealVal += dealVal;
                 leadDealValueRecorded = true;
               }
+              subRcvVal += rcvVal;
               subGross += grossAmt;
               subStg1 += stg1Adv;
               subStg2 += stg2Adv;
@@ -4923,6 +5387,7 @@ function _renderMeDetailTable(partnerId){
             }
 
             const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
+            const rcvValHtml   = rcvVal > 0 ? _meInr(rcvVal) : '—';
             const commPctHtml  = commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—';
             const stg1Html     = (isComm || isDvr) ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
             const stg2Html     = isComm ? (stg2Adv > 0 ? _meInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
@@ -4955,6 +5420,54 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
               <td style="padding:7px 10px;color:${e.status==='PAID'?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}${utrCellSub}</td>
               <td style="padding:7px 10px;font-family:monospace;color:#1f2937;font-size:11px">${e.entry_number||'—'}</td>
+              <td style="padding:7px 10px;text-align:center;white-space:nowrap">
+                ${e.status === 'PAID' ? (
+                  e.skip_tds_admin 
+                    ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Skipped</span>` 
+                    : `<span style="color:#d1d5db;font-size:11px">—</span>`
+                ) : (
+                  _canSkipTdsAdmin() ? `
+                    <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${e.skip_tds_admin ? '#7c3aed' : '#6b7280'}" title="${e.skip_tds_admin ? 'TDS & Admin skipped (0% deduction applied)' : 'Click to skip TDS & Admin deductions'}">
+                      <input type="checkbox" ${e.skip_tds_admin ? 'checked' : ''} onchange="toggleSkipTdsAdmin(${e.id}, this.checked, '${e.entry_number || e.id}', ${partnerId}, ${e.source_lead_id || 'null'})" style="cursor:pointer;accent-color:#7c3aed;width:14px;height:14px">
+                      <span style="${e.skip_tds_admin ? 'color:#7c3aed;font-weight:700' : ''}">${e.skip_tds_admin ? 'Skipped' : 'Skip'}</span>
+                    </label>
+                  ` : (e.skip_tds_admin ? `
+                    <span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Skipped</span>
+                  ` : `<span style="color:#d1d5db;font-size:11px">—</span>`)
+                )}
+              </td>
+              <td style="padding:7px 10px;text-align:center;white-space:nowrap">
+                ${isFinalCommission ? (
+                  e.status === 'PAID' ? (
+                    isAllComm 
+                      ? `<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Released</span>` 
+                      : `<span style="color:#d1d5db;font-size:11px">—</span>`
+                  ) : (
+                    _canSkipTdsAdmin() ? `
+                      <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${isAllComm ? '#059669' : '#6b7280'}" title="${isAllComm ? 'Support & Brand commissions released' : 'Click to release Support (L5) & Solar Brand Incomes as well'}">
+                        <input type="checkbox" ${isAllComm ? 'checked' : ''} onchange="toggleAllCommissions(${e.id}, this.checked, '${e.entry_number || e.id}', ${partnerId}, ${e.source_lead_id || 'null'})" style="cursor:pointer;accent-color:#059669;width:14px;height:14px">
+                        <span style="${isAllComm ? 'color:#059669;font-weight:700' : ''}">${isAllComm ? 'Released' : 'Release'}</span>
+                      </label>
+                    ` : (isAllComm ? `
+                      <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Released</span>
+                    ` : `<span style="color:#d1d5db;font-size:11px">—</span>`)
+                  )
+                ) : `<span style="color:#d1d5db;font-size:11px">—</span>`}
+              </td>
+              <td style="padding:7px 10px;text-align:center;white-space:nowrap">
+                ${isCompSuppEligible ? (
+                  e.status === 'PAID' ? (
+                    `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">${isCompSupp ? '0.75%' : '1.5%'}</span>`
+                  ) : (
+                    _canSkipTdsAdmin() ? `
+                      <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${isCompSupp ? '#0284c7' : '#6b7280'}" title="${isCompSupp ? 'Company Supported (0.75% Field Support)' : 'Full Field Support (1.5% Field Support)'}">
+                        <input type="checkbox" ${isCompSupp ? 'checked' : ''} onchange="toggleCompanySupport(${e.id}, this.checked, '${e.entry_number || e.id}', ${partnerId}, ${e.source_lead_id || 'null'})" style="cursor:pointer;accent-color:#0284c7;width:14px;height:14px">
+                        <span style="${isCompSupp ? 'color:#0284c7;font-weight:700' : ''}">${isCompSupp ? '0.75%' : '1.5%'}</span>
+                      </label>
+                    ` : `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">${isCompSupp ? '0.75%' : '1.5%'}</span>`
+                  )
+                ) : `<span style="color:#d1d5db;font-size:11px">—</span>`}
+              </td>
               <td style="padding:7px 10px;text-align:center">
                 <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlC}22;color:${lvlC}">${lvlLabelText}</span>
               </td>
@@ -4963,6 +5476,7 @@ function _renderMeDetailTable(partnerId){
                 <span style="font-size:10px;padding:2px 6px;border-radius:6px;background:#f3f4f6;color:#6b7280;font-weight:500">${kindLabelText}</span>
               </td>
               <td style="padding:7px 10px;text-align:right;color:#4b5563;font-weight:600">${dealValHtml}</td>
+              <td style="padding:7px 10px;text-align:right;color:#4b5563;font-weight:600">${rcvValHtml}</td>
               <td style="padding:7px 10px;text-align:center;color:#4b5563;font-weight:600">${commPctHtml}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${grossAmt>0?_meInr(grossAmt):'—'}</td>
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${stg1Html}</td>
@@ -4970,24 +5484,28 @@ function _renderMeDetailTable(partnerId){
               <td style="padding:7px 10px;text-align:right;color:#dc2626;font-weight:600">${lostDedHtml}</td>
               <td style="padding:7px 10px;text-align:right;color:#d97706;font-weight:600">${advPaidHtml}</td>
               <td style="padding:7px 10px;text-align:right;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
-              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+              <td style="padding:7px 10px;text-align:right;color:#d97706">${adminVal>0?_meInr(adminVal):(balGross>0?'<span style="color:#059669;font-size:11px;font-weight:700">₹0</span>':'—')}</td>
+              <td style="padding:7px 10px;text-align:right;color:#dc2626">${tdsVal>0?_meInr(tdsVal):(balGross>0?'<span style="color:#059669;font-size:11px;font-weight:700">₹0</span>':'—')}</td>
               <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${netVal>0?_meInr(netVal):'—'}</td>
               <td style="padding:7px 10px;text-align:center">${statusCellHtml}</td>
             </tr>`;
           }).join('');
 
-          const subAdmin = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+((e.admin_charges!==undefined&&e.admin_charges!==null&&parseFloat(e.admin_charges)>0)?parseFloat(e.admin_charges):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.08)),0);
-          const subTds   = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+((e.tds_amount!==undefined&&e.tds_amount!==null&&parseFloat(e.tds_amount)>0)?parseFloat(e.tds_amount):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.02)),0);
-          const subNet   = Math.max(0, subBalGross - subAdmin - subTds);
+          const subAdmin = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+(e.skip_tds_admin ? 0 : ((e.admin_charges!==undefined&&e.admin_charges!==null)?parseFloat(e.admin_charges):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.08))),0);
+          const subTds   = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>s+(e.skip_tds_admin ? 0 : ((e.tds_amount!==undefined&&e.tds_amount!==null)?parseFloat(e.tds_amount):Math.round(((e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):subBalGross)*0.02))),0);
+          const subNet   = gEntries.filter(e=>e.status!=='CANCELLED').reduce((s,e)=>{
+            const b = (e.balance_gross!==undefined&&e.balance_gross!==null)?parseFloat(e.balance_gross):0;
+            return s + (e.skip_tds_admin ? b : ((e.net_payout!==undefined&&e.net_payout!==null)?parseFloat(e.net_payout):Math.max(0, b - ((e.admin_charges!==undefined&&e.admin_charges!==null)?parseFloat(e.admin_charges):Math.round(b*0.08)) - ((e.tds_amount!==undefined&&e.tds_amount!==null)?parseFloat(e.tds_amount):Math.round(b*0.02)))));
+          },0);
 
           const subtotalRowHtml = `<tr style="background:#f5f3ff;border-top:1.5px dashed #c4b5fd;border-bottom:2px solid #ddd6fe;font-weight:800">
-            <td colspan="5" style="padding:6px 10px;text-align:left;color:#5b21b6;font-size:11px">
+            <td colspan="8" style="padding:6px 10px;text-align:left;color:#5b21b6;font-size:11px">
               <i class="fas fa-calculator me-1" style="color:#7c3aed"></i>Subtotal for ${group.client_name} (${gEntries.length} ${gEntries.length === 1 ? 'entry' : 'entries'})
             </td>
             <td style="padding:6px 10px;color:#4c1d95;font-weight:800;font-size:11.5px">${group.client_name}</td>
             <td style="padding:6px 10px;text-align:center"><span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px">LEAD SUB-TOTAL</span></td>
             <td style="padding:6px 10px;text-align:right;color:#4b5563">${subDealVal > 0 ? _meInr(subDealVal) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#4b5563">${subRcvVal > 0 ? _meInr(subRcvVal) : '—'}</td>
             <td style="padding:6px 10px;text-align:center;color:#9ca3af">—</td>
             <td style="padding:6px 10px;text-align:right;color:#4c1d95;font-weight:800">${subGross > 0 ? _meInr(subGross) : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subStg1 > 0 ? _meInr(subStg1) : '—'}</td>
@@ -4995,8 +5513,8 @@ function _renderMeDetailTable(partnerId){
             <td style="padding:6px 10px;text-align:right;color:#dc2626">${subLostDed > 0 ? `-${_meInr(subLostDed)}` : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdvPaid > 0 ? _meInr(subAdvPaid) : '—'}</td>
             <td style="padding:6px 10px;text-align:right;color:#2563eb">${subBalGross > 0 ? _meInr(subBalGross) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : '—'}</td>
-            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : '—'}</td>
+            <td style="padding:6px 10px;text-align:right;color:#d97706">${subAdmin > 0 ? _meInr(subAdmin) : (subBalGross > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
+            <td style="padding:6px 10px;text-align:right;color:#dc2626">${subTds > 0 ? _meInr(subTds) : (subBalGross > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
             <td style="padding:6px 10px;text-align:right;color:#059669;font-weight:900">${subNet > 0 ? _meInr(subNet) : '—'}</td>
             <td></td>
           </tr>`;
@@ -5007,8 +5525,9 @@ function _renderMeDetailTable(partnerId){
       </tbody>
       <tfoot>
         <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #bbf7d0">
-          <td colspan="7" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
+          <td colspan="10" style="padding:8px 10px;color:#374151;font-size:12px">TOTAL (${rows.length} entries)</td>
           <td style="padding:8px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
+          <td style="padding:8px 10px;text-align:right;color:#4b5563">${totRcvVal>0?_meInr(totRcvVal):'—'}</td>
           <td></td>
           <td style="padding:8px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totStg1>0?_meInr(totStg1):'—'}</td>
@@ -5016,8 +5535,8 @@ function _renderMeDetailTable(partnerId){
           <td style="padding:8px 10px;text-align:right;color:#dc2626">${(totLostDed||0)>0?`-${_meInr(totLostDed)}`:'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#d97706">${totAdvPaid>0?_meInr(totAdvPaid):'—'}</td>
           <td style="padding:8px 10px;text-align:right;color:#2563eb">${_meInr(totBalGross)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#d97706">${_meInr(totAdmin)}</td>
-          <td style="padding:8px 10px;text-align:right;color:#dc2626">${_meInr(totTds)}</td>
+          <td style="padding:8px 10px;text-align:right;color:#d97706">${totAdmin > 0 ? _meInr(totAdmin) : (totBalGross > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
+          <td style="padding:8px 10px;text-align:right;color:#dc2626">${totTds > 0 ? _meInr(totTds) : (totBalGross > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
           <td style="padding:8px 10px;text-align:right;color:#059669;font-weight:900">${_meInr(totNet)}</td>
           <td></td>
         </tr>
@@ -5372,7 +5891,7 @@ function _lvDetailRowHtml(lid, entries){
   });
 
   if(!filtered.length){
-    return `<tr id="lvDetail_${lid}"><td colspan="13" style="padding:12px 20px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px">No entries match the current filter.</td></tr>`;
+    return `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:12px 20px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px">No entries match the current filter.</td></tr>`;
   }
 
   const isAsc = !!window._lvSortAsc[lid];
@@ -5441,9 +5960,14 @@ function _lvDetailRowHtml(lid, entries){
 
     const isComm      = (_k === 'COMMISSION' || _k === 'SENIOR_COMM');
     const isDvr       = (_k === 'DVR_ADVANCE');
-    const dealVal     = parseFloat(e.deal_value || e.base_value || 0);
+    const isFinalCommission = (lvl !== 5 && !isBrand && (kindBadge === 'Final Comm.' || kindBadge === 'Final Commission' || _k === 'COMMISSION' || _k === 'SENIOR_COMM' || String(e.display_kind || '').toLowerCase().includes('final')));
+    const isAllComm   = Boolean(e.all_commissions_released || e.all_commissions || e.release_support_brand);
+    const isCompSupp   = (e.company_supported !== undefined && e.company_supported !== null) ? Boolean(e.company_supported) : true;
+    const isCompSuppEligible = Boolean(lid || e.source_lead_id) && (isFinalCommission || lvl === 5 || _k === 'COMMISSION' || _k === 'SENIOR_COMM' || _k === 'EXTRA_COMMISSION');
+    const dealVal     = parseFloat(e.deal_value || e.deal_value_total || e.base_value || 0);
     const commPct     = parseFloat(e.commission_pct || calcPct || 0);
     const grossAmt    = parseFloat(e.commission_amount || 0);
+    const rcvVal      = parseFloat(e.received_value || (commPct > 0 ? Math.round(grossAmt / (commPct / 100)) : (e.calc_base || 0)) || 0);
     const stg1Adv     = (isComm || isDvr) ? parseFloat(e.stage1_adv || (isDvr ? e.advance_adjusted_amount : 0) || 0) : 0;
     const stg2Adv     = isComm ? parseFloat(e.stage2_adv || 0) : 0;
     const lostLeadDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
@@ -5451,17 +5975,18 @@ function _lvDetailRowHtml(lid, entries){
     const balGross    = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid - lostLeadDed);
 
     const baseForDeductions = balGross;
-    let adminVal = (e.admin_charge !== undefined && e.admin_charge !== null && parseFloat(e.admin_charge) > 0)
-      ? parseFloat(e.admin_charge)
-      : ((e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(baseForDeductions * 0.08));
-    let tdsVal   = (e.tds_deduction !== undefined && e.tds_deduction !== null && parseFloat(e.tds_deduction) > 0)
-      ? parseFloat(e.tds_deduction)
-      : ((e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(baseForDeductions * 0.02));
-    let netVal   = (e.net_payout !== undefined && e.net_payout !== null && parseFloat(e.net_payout) > 0)
-      ? parseFloat(e.net_payout)
-      : Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal));
+    let adminVal = e.skip_tds_admin
+      ? 0
+      : ((e.admin_charge !== undefined && e.admin_charge !== null) ? parseFloat(e.admin_charge) : ((e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : Math.round(baseForDeductions * 0.08)));
+    let tdsVal   = e.skip_tds_admin
+      ? 0
+      : ((e.tds_deduction !== undefined && e.tds_deduction !== null) ? parseFloat(e.tds_deduction) : ((e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(baseForDeductions * 0.02)));
+    let netVal   = e.skip_tds_admin
+      ? baseForDeductions
+      : ((e.net_payout !== undefined && e.net_payout !== null) ? parseFloat(e.net_payout) : Math.max(0, Math.round(baseForDeductions - adminVal - tdsVal)));
 
     const dealValHtml  = dealVal > 0 ? _meInr(dealVal) : '—';
+    const rcvValHtml   = rcvVal > 0 ? _meInr(rcvVal) : '—';
     const commPctHtml  = isBrand ? '<span style="color:#9ca3af;font-size:10px">Flat</span>' : (commPct > 0 ? (commPct.toFixed(2).replace(/\.00$/,'') + '%') : '—');
     const stg1Html     = (isComm || isDvr) ? (stg1Adv > 0 ? _meInr(stg1Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
     const stg2Html     = isComm ? (stg2Adv > 0 ? _meInr(stg2Adv) : '—') : '<span style="color:#9ca3af;font-size:10px">N/A</span>';
@@ -5478,6 +6003,54 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px;font-size:11px;color:#111827;font-weight:600;white-space:nowrap">${(e.trigger_date||e.income_date)?fmtDate(e.trigger_date||e.income_date):'<span style="color:#d1d5db">—</span>'}</td>
       <td style="padding:8px 10px;font-size:11px;color:${resolvedPmtDate?'#059669':'#6b7280'};white-space:nowrap">${pmtCellHtml}</td>
       <td style="padding:8px 10px;font-size:11px;color:#6b7280;font-family:monospace">${e.entry_number||'—'}</td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+        ${e.status === 'PAID' ? (
+          e.skip_tds_admin 
+            ? `<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Skipped</span>`
+            : `<span style="color:#d1d5db;font-size:11px">—</span>`
+        ) : (
+          _canSkipTdsAdmin() ? `
+            <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${e.skip_tds_admin ? '#7c3aed' : '#6b7280'}" title="${e.skip_tds_admin ? 'TDS & Admin skipped (0% deduction applied)' : 'Click to skip TDS & Admin deductions'}">
+              <input type="checkbox" ${e.skip_tds_admin ? 'checked' : ''} onchange="toggleSkipTdsAdmin(${e.id}, this.checked, '${e.entry_number || e.id}', ${e.partner_id || 'null'}, ${lid})" style="cursor:pointer;accent-color:#7c3aed;width:14px;height:14px">
+              <span style="${e.skip_tds_admin ? 'color:#7c3aed;font-weight:700' : ''}">${e.skip_tds_admin ? 'Skipped' : 'Skip'}</span>
+            </label>
+          ` : (e.skip_tds_admin ? `
+            <span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Skipped</span>
+          ` : `<span style="color:#d1d5db;font-size:11px">—</span>`)
+        )}
+      </td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+        ${isFinalCommission ? (
+          e.status === 'PAID' ? (
+            isAllComm 
+              ? `<span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Released</span>`
+              : `<span style="color:#d1d5db;font-size:11px">—</span>`
+          ) : (
+            _canSkipTdsAdmin() ? `
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${isAllComm ? '#059669' : '#6b7280'}" title="${isAllComm ? 'Support & Brand commissions released' : 'Click to release Support (L5) & Solar Brand Incomes as well'}">
+                <input type="checkbox" ${isAllComm ? 'checked' : ''} onchange="toggleAllCommissions(${e.id}, this.checked, '${e.entry_number || e.id}', ${e.partner_id || 'null'}, ${lid})" style="cursor:pointer;accent-color:#059669;width:14px;height:14px">
+                <span style="${isAllComm ? 'color:#059669;font-weight:700' : ''}">${isAllComm ? 'Released' : 'Release'}</span>
+              </label>
+            ` : (isAllComm ? `
+              <span class="badge" style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Released</span>
+            ` : `<span style="color:#d1d5db;font-size:11px">—</span>`)
+          )
+        ) : `<span style="color:#d1d5db;font-size:11px">—</span>`}
+      </td>
+      <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+        ${isCompSuppEligible ? (
+          e.status === 'PAID' ? (
+            `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">${isCompSupp ? '0.75%' : '1.5%'}</span>`
+          ) : (
+            _canSkipTdsAdmin() ? `
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:0;font-size:11px;font-weight:600;color:${isCompSupp ? '#0284c7' : '#6b7280'}" title="${isCompSupp ? 'Company Supported (0.75% Field Support)' : 'Full Field Support (1.5% Field Support)'}">
+                <input type="checkbox" ${isCompSupp ? 'checked' : ''} onchange="toggleCompanySupport(${e.id}, this.checked, '${e.entry_number || e.id}', ${e.partner_id || 'null'}, ${lid})" style="cursor:pointer;accent-color:#0284c7;width:14px;height:14px">
+                <span style="${isCompSupp ? 'color:#0284c7;font-weight:700' : ''}">${isCompSupp ? '0.75%' : '1.5%'}</span>
+              </label>
+            ` : `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">${isCompSupp ? '0.75%' : '1.5%'}</span>`
+          )
+        ) : `<span style="color:#d1d5db;font-size:11px">—</span>`}
+      </td>
       <td style="padding:8px 10px;text-align:center">
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${lvlColor}22;color:${lvlColor}">${_lvLvlLabel[lvl]||('L'+lvl)}</span>
       </td>
@@ -5490,6 +6063,7 @@ function _lvDetailRowHtml(lid, entries){
         ${commBadgeHtml}
       </td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#4b5563;font-weight:600">${dealValHtml}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#4b5563;font-weight:600">${rcvValHtml}</td>
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#4b5563;font-weight:600">${commPctHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#374151;font-size:12px">${grossAmt>0?_meInr(grossAmt):'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${stg1Html}</td>
@@ -5497,8 +6071,8 @@ function _lvDetailRowHtml(lid, entries){
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626;font-weight:600">${lostDedHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706;font-weight:600">${advPaidHtml}</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#2563eb;font-weight:700">${balGrossHtml}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):'—'}</td>
-      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#d97706">${adminVal>0?_meInr(adminVal):(balGross>0?'<span style="color:#059669;font-weight:700">₹0</span>':'—')}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#dc2626">${tdsVal>0?_meInr(tdsVal):(balGross>0?'<span style="color:#059669;font-weight:700">₹0</span>':'—')}</td>
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:#059669;font-size:12px">${netVal>0?_meInr(netVal):'—'}</td>
       <td style="padding:8px 10px;text-align:center">
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stColor};color:#fff">${stLabel}</span>
@@ -5511,10 +6085,14 @@ function _lvDetailRowHtml(lid, entries){
     <td style="padding:6px 10px;cursor:pointer;user-select:none;color:#4c1d95" onclick="toggleLvSubSort(${lid})" title="Click to toggle sort order">Trigger Date <i class="fas fa-sort-${isAsc?'up':'down'}" style="font-size:9px;margin-left:2px"></i></td>
     <td style="padding:6px 10px">Payment Date</td>
     <td style="padding:6px 10px">Entry #</td>
+    <td style="padding:6px 10px;text-align:center;color:#7c3aed" title="Skip TDS (2%) & Admin (8%) charges">Skip TDS/Admin</td>
+    <td style="padding:6px 10px;text-align:center;color:#059669" title="Release Support (L5) & Solar Brand Incomes as well">All Commissions</td>
+    <td style="padding:6px 10px;text-align:center;color:#0284c7" title="Company Support (Checked: 0.75% Field Support | Unchecked: 1.5% Field Support)">Company Support</td>
     <td style="padding:6px 10px;text-align:center">Level / Role</td>
     <td style="padding:6px 10px">Member</td>
     <td style="padding:6px 10px;text-align:center">Entry Kind</td>
     <td style="padding:6px 10px;text-align:right">Deal Value ₹</td>
+    <td style="padding:6px 10px;text-align:right">Received Value ₹</td>
     <td style="padding:6px 10px;text-align:center">Calc %</td>
     <td style="padding:6px 10px;text-align:right">Gross ₹</td>
     <td style="padding:6px 10px;text-align:right;color:#d97706">Stage 1 Adv.</td>
@@ -5530,6 +6108,8 @@ function _lvDetailRowHtml(lid, entries){
 
   const totGross    = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
   const totDealVal  = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
+  const totRcvVal   = filtered.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.received_value||(e.commission_pct>0?Math.round(e.commission_amount/(e.commission_pct/100)):e.calc_base)||0)),0);
+
   const totStg1     = filtered.reduce((s,e)=>{
     if (e.status === 'CANCELLED') return s;
     const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -5573,9 +6153,9 @@ function _lvDetailRowHtml(lid, entries){
     const isDvr = (_k === 'DVR_ADVANCE');
     const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
     const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-    const adm = (e.admin_charge !== undefined && e.admin_charge !== null && parseFloat(e.admin_charge) > 0)
+    const adm = (e.admin_charge !== undefined && e.admin_charge !== null)
       ? parseFloat(e.admin_charge)
-      : ((e.admin_charges !== undefined && e.admin_charges !== null && parseFloat(e.admin_charges) > 0) ? parseFloat(e.admin_charges) : Math.round(bal * 0.08));
+      : ((e.admin_charges !== undefined && e.admin_charges !== null) ? parseFloat(e.admin_charges) : (e.skip_tds_admin ? 0 : Math.round(bal * 0.08)));
     return s + adm;
   }, 0);
   const totTds      = filtered.reduce((s,e)=>{
@@ -5587,9 +6167,9 @@ function _lvDetailRowHtml(lid, entries){
     const isDvr = (_k === 'DVR_ADVANCE');
     const adv = isC ? parseFloat(e.advance_paid || 0) : (isDvr ? parseFloat(e.advance_adjusted_amount || e.stage1_adv || 0) : 0);
     const bal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, gross - adv - lostDed);
-    const tds = (e.tds_deduction !== undefined && e.tds_deduction !== null && parseFloat(e.tds_deduction) > 0)
+    const tds = (e.tds_deduction !== undefined && e.tds_deduction !== null)
       ? parseFloat(e.tds_deduction)
-      : ((e.tds_amount !== undefined && e.tds_amount !== null && parseFloat(e.tds_amount) > 0) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02));
+      : ((e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : (e.skip_tds_admin ? 0 : Math.round(bal * 0.02)));
     return s + tds;
   }, 0);
   const totNet      = Math.max(0, totBalGross - totAdmin - totTds);
@@ -5609,8 +6189,9 @@ function _lvDetailRowHtml(lid, entries){
       <table style="width:100%;min-width:1450px;border-collapse:collapse;font-size:12px">
         ${subHead}${rows}
         <tr style="background:#f0f0fb;font-weight:700">
-          <td colspan="7" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
+          <td colspan="10" style="padding:7px 10px;font-size:11px;color:#7c3aed">${filtered.length} entr${filtered.length===1?'y':'ies'}</td>
           <td style="padding:7px 10px;text-align:right;color:#4b5563">${totDealVal>0?_meInr(totDealVal):'—'}</td>
+          <td style="padding:7px 10px;text-align:right;color:#4b5563">${totRcvVal>0?_meInr(totRcvVal):'—'}</td>
           <td></td>
           <td style="padding:7px 10px;text-align:right;color:#374151">${_meInr(totGross)}</td>
           <td style="padding:7px 10px;text-align:right;color:#d97706">${totStg1>0?_meInr(totStg1):'—'}</td>
@@ -6688,7 +7269,11 @@ function closeFullViewModal() {
 }
 
 async function openSidePanel(id) {
-  document.getElementById('sidePanel').classList.add('open');
+  closeFreelancerSidePanel();
+  const panel = document.getElementById('sidePanel');
+  if (panel) panel.classList.add('open');
+  const bd = document.getElementById('sidePanelBackdrop');
+  if (bd) bd.classList.add('active');
   document.getElementById('fullViewBtn').style.display = 'none';
   _spMember = null; _spTreeData = null;
   document.getElementById('sidePanelBody').innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>';
@@ -7689,7 +8274,52 @@ async function staffBankReject(memberId) {
   } catch(e) { showToast('Error rejecting bank details', 'error'); }
 }
 
-function closeSidePanel() { document.getElementById('sidePanel').classList.remove('open'); }
+function closeSidePanel() {
+  const panel = document.getElementById('sidePanel');
+  if (panel) panel.classList.remove('open');
+  const flPanel = document.getElementById('freelancerSidePanel');
+  if (!flPanel || !flPanel.classList.contains('open')) {
+    const bd = document.getElementById('sidePanelBackdrop');
+    if (bd) bd.classList.remove('active');
+  }
+}
+
+function closeAllSidePanels() {
+  closeSidePanel();
+  closeFreelancerSidePanel();
+}
+
+// Global Escape Key Listener for Drawers and Modals (DC-VGK-DRAWER-FIX-001)
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    const fv = document.getElementById('fullViewModal');
+    if (fv && fv.style.display !== 'none' && fv.style.display !== '') {
+      closeFullViewModal();
+      return;
+    }
+    const addFlModal = document.getElementById('addFreelancerModal');
+    if (addFlModal && addFlModal.classList.contains('open')) {
+      closeAddFreelancerModal();
+      return;
+    }
+    const editFlModal = document.getElementById('editFreelancerModal');
+    if (editFlModal && editFlModal.classList.contains('open')) {
+      closeEditFreelancerModal();
+      return;
+    }
+    const addModal = document.getElementById('addModal');
+    if (addModal && addModal.classList.contains('open')) {
+      closeAddModal();
+      return;
+    }
+    const resetModal = document.getElementById('resetModal');
+    if (resetModal && resetModal.classList.contains('open')) {
+      closeResetModal();
+      return;
+    }
+    closeAllSidePanels();
+  }
+});
 function openAddModal() {
   document.getElementById('addModal').classList.add('open');
   // [DC-VGK-STAFF-REG-001] Pre-fill registering emp code from logged-in staff identity
@@ -9226,6 +9856,7 @@ async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
   modal.style.display = 'flex';
+  window._postTotalTodayUserEdited = false;
   
   const spinner = document.getElementById('posterSpinner');
   spinner.style.display = 'flex';
@@ -9375,9 +10006,9 @@ async function generateMemberPoster(partnerId) {
     const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
     const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
     
-    // Inherit date filter range from main page filters (#meDateFrom & #meDateTo)
-    const mainDateFrom = (document.getElementById('meDateFrom')?.value || '').trim();
-    const mainDateTo   = (document.getElementById('meDateTo')?.value || '').trim();
+    // Inherit date filter range from main page filters (#iedDateFrom, #meDateFrom, #lvDateFrom)
+    const mainDateFrom = (document.getElementById('iedDateFrom')?.value || document.getElementById('meDateFrom')?.value || document.getElementById('lvDateFrom')?.value || '').trim();
+    const mainDateTo   = (document.getElementById('iedDateTo')?.value || document.getElementById('meDateTo')?.value || document.getElementById('lvDateTo')?.value || '').trim();
     
     let initFrom = mainDateFrom;
     let initTo   = mainDateTo;
@@ -9445,9 +10076,14 @@ async function generateMemberPoster(partnerId) {
         if (e.level === 5 || e.is_field_support || String(e.vgk_field_support_id) === String(targetPid)) {
           activeLeadPendingMap[lid].isSupport = true;
         }
-        const amt = parseFloat(e.commission_amount || 0);
+        const grossAmt = parseFloat(e.commission_amount || 0);
+        const advAdj = parseFloat(e.advance_adjusted_amount || 0);
+        const lostDed = parseFloat(e.lost_lead_deduction || 0);
+        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+          ? parseFloat(e.balance_gross)
+          : Math.max(0, grossAmt - advAdj - lostDed);
         if (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'STAGE1_APPROVED' || e.status === 'STAGE2_APPROVED' || e.status === 'VERIFIED') {
-          activeLeadPendingMap[lid].paid += amt;
+          activeLeadPendingMap[lid].paid += balGross;
         }
         if (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && e.level === 1) {
           activeLeadPendingMap[lid].hasFinalComm = true;
@@ -9493,12 +10129,18 @@ async function generateMemberPoster(partnerId) {
     if (prevCelebrationTitleEl) {
       prevCelebrationTitleEl.textContent = '🎉 👑 CONGRATULATIONS 👑 🎉';
     }
-    // Overall Earning: Total cumulative earnings irrespective of level
+    // Overall Earning: Total cumulative earnings irrespective of level (Net Gross - Canonical Option 1)
     const allTimeSum = entries.reduce((sum, e) => {
       if (e.status === 'CANCELLED') return sum;
       if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
       if (e.id && String(e.id).startsWith('VSCA-')) return sum;
-      return sum + (parseFloat(e.commission_amount || e.amount || 0) || 0);
+      const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
+      const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
+      const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
+      const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+        ? parseFloat(e.balance_gross)
+        : Math.max(0, gross - advAdj - lostDed);
+      return sum + balGross;
     }, 0);
     const overallVal = (allTimeSum > 0) ? allTimeSum : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0)));
     setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
@@ -9525,16 +10167,26 @@ async function generateMemberPoster(partnerId) {
         const val = se.potential_overall_earning || se.commission_amount || 0;
         if (!srUniquePot[key] || val > srUniquePot[key]) srUniquePot[key] = val;
         if (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE') {
-          srAdvPaidTotal += parseFloat(se.commission_amount || 0);
+          const sGross = parseFloat(se.commission_amount || 0);
+          const sAdv = parseFloat(se.advance_adjusted_amount || 0);
+          const sLost = parseFloat(se.lost_lead_deduction || 0);
+          const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+          srAdvPaidTotal += sBal;
         }
       }
     });
-    // Overall Earning: Total cumulative earnings across all valid commission entries
+    // Overall Earning: Total cumulative earnings across all valid commission entries (Net Gross)
     const srAllTimeSum = srEntries.reduce((sum, e) => {
       if (e.status === 'CANCELLED') return sum;
       if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
       if (e.id && String(e.id).startsWith('VSCA-')) return sum;
-      return sum + (parseFloat(e.commission_amount || e.amount || 0) || 0);
+      const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
+      const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
+      const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
+      const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+        ? parseFloat(e.balance_gross)
+        : Math.max(0, gross - advAdj - lostDed);
+      return sum + balGross;
     }, 0);
     const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
     const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
@@ -9627,6 +10279,16 @@ async function generateMemberPoster(partnerId) {
       }
     }
     
+    const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+    setChecked('payTypeStage1', true);
+    setChecked('payTypeStage2Adv', true);
+    setChecked('payTypeFinalComm', true);
+    setChecked('payTypeSupport', true);
+    setChecked('payTypeBrand', true);
+    setChecked('payTypeBonanza', true);
+    setChecked('payTypeExtra', true);
+    setChecked('payTypeAward', true);
+
     if (document.getElementById('postThemePreset')) document.getElementById('postThemePreset').value = 'celebration_graphic';
     changeThemePreset();
     recalculateTodayPayout();
@@ -9649,10 +10311,12 @@ function _meFormatInr(v) {
 }
 
 function changePayoutDateRange() {
+  window._postTotalTodayUserEdited = false;
   recalculateTodayPayout();
 }
 
 function setPosterPresetPeriod(period) {
+  window._postTotalTodayUserEdited = false;
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   let fromStr = todayStr;
@@ -9691,140 +10355,95 @@ function setPosterPresetPeriod(period) {
   recalculateTodayPayout();
 }
 
-function recalculateTodayPayout() {
+function recalculateTodayPayout(resetUserEdited = false) {
+  if (resetUserEdited) {
+    window._postTotalTodayUserEdited = false;
+  }
   const showStage1    = document.getElementById('payTypeStage1')?.checked ?? true;
   const showStage2Adv = document.getElementById('payTypeStage2Adv')?.checked ?? true;
   const showFinalComm = document.getElementById('payTypeFinalComm')?.checked ?? true;
+  const showSupport   = document.getElementById('payTypeSupport')?.checked ?? showFinalComm;
   const showBrand     = document.getElementById('payTypeBrand')?.checked ?? true;
   const showBonanza   = document.getElementById('payTypeBonanza')?.checked ?? true;
   const showExtra     = document.getElementById('payTypeExtra')?.checked ?? true;
   const showAward     = document.getElementById('payTypeAward')?.checked ?? true;
-  
+
   const entries = window._currentEntries || [];
   const dateFrom = (document.getElementById('postPayoutDateFrom')?.value || '').trim();
   const dateTo = (document.getElementById('postPayoutDateTo')?.value || '').trim();
-  
-  const fmtDate = dStr => {
-    if (!dStr) return '';
-    try {
-      const [y, m, d] = dStr.split('-');
-      return `${d}/${m}/${y}`;
-    } catch(e) { return dStr; }
-  };
-  
-  let periodLabel = '';
-  let isSingleDay = false;
-  if (dateFrom && dateTo && dateFrom === dateTo) {
-    periodLabel = fmtDate(dateFrom);
-    isSingleDay = true;
-  } else if (dateFrom && dateTo) {
-    periodLabel = `${fmtDate(dateFrom)} — ${fmtDate(dateTo)}`;
-  } else if (dateFrom) {
-    periodLabel = `From ${fmtDate(dateFrom)}`;
-  } else if (dateTo) {
-    periodLabel = `Up to ${fmtDate(dateTo)}`;
-  } else {
-    periodLabel = 'All Time';
-  }
 
-  let stage1Amt = 0;
-  let stage2AdvAmt = 0;
-  let finalCommBalGrossAmt = 0;
-  let finalCommAdvPaidAmt = 0;
-  let brandAmt = 0;
-  let bonanzaAmt = 0;
-  let extraAmt = 0;
-  let awardAmt = 0;
-  let seniorTodayAmt = 0;
-  let activePeriodCount = 0;
-  
+  const todayIsoStr = new Date().toISOString().split('T')[0];
+  const isSingleDay = Boolean(dateFrom && dateTo && dateFrom === dateTo);
+  const isToday = isSingleDay && (dateFrom === todayIsoStr);
+  window._posterIsSingleDay = isSingleDay;
+  window._posterIsToday = isToday;
+  window._posterPeriodTitleText = isToday ? "Today's Earning" : (isSingleDay ? "Single Day Earning" : "This Period Earning");
+  window._posterPeriodPayoutText = isToday ? "Today's Payout" : (isSingleDay ? "Single Day Payout" : "This Period Payout");
+
+  let stage1Amt = 0, stage2AdvAmt = 0;
+  let supportAmt = 0;
+  let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
+  let commByLevel = {};
+  const finalCommLeadIds = new Set();
+
+  // All partner income entries calculation for the selected date context
   entries.forEach(e => {
-    if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-      const d = e.income_date;
-      if (dateFrom && d < dateFrom) return;
-      if (dateTo && d > dateTo) return;
-      
-      activePeriodCount++;
-      const grossAmt = parseFloat(e.commission_amount || 0);
-      const advPaid = parseFloat(e.advance_paid || 0);
-      const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, grossAmt - advPaid);
+    if (e.status !== 'CANCELLED') {
+      const incD = (e.income_date && e.income_date !== 'None') ? String(e.income_date).slice(0, 10) : '';
+      const trigD = (e.trigger_date && e.trigger_date !== 'None') ? String(e.trigger_date).slice(0, 10) : '';
+      const createD = (e.created_at && e.created_at !== 'None') ? String(e.created_at).slice(0, 10) : '';
+      const pmtD = (e.payment_date && e.payment_date !== 'None') ? String(e.payment_date).slice(0, 10) : '';
 
+      let inDateRange = true;
+      if (dateFrom && dateTo) {
+        inDateRange = (incD && incD >= dateFrom && incD <= dateTo) ||
+                      (trigD && trigD >= dateFrom && trigD <= dateTo) ||
+                      (createD && createD >= dateFrom && createD <= dateTo) ||
+                      (pmtD && pmtD >= dateFrom && pmtD <= dateTo);
+      } else if (dateFrom) {
+        inDateRange = (incD && incD >= dateFrom) || (trigD && trigD >= dateFrom) || (createD && createD >= dateFrom) || (pmtD && pmtD >= dateFrom);
+      } else if (dateTo) {
+        inDateRange = (incD && incD <= dateTo) || (trigD && trigD <= dateTo) || (createD && createD <= dateTo) || (pmtD && pmtD <= dateTo);
+      }
+
+      if (!inDateRange) return;
+
+      const grossAmt = parseFloat(e.commission_amount || e.amount || 0);
+      const advAdj = parseFloat(e.advance_adjusted_amount || 0);
+      const lostDed = parseFloat(e.lost_lead_deduction || 0);
+      const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+        ? parseFloat(e.balance_gross)
+        : Math.max(0, grossAmt - advAdj - lostDed);
       const k = (e.kind || '').toUpperCase();
       const typeStr = (e.income_type || '').toLowerCase();
-      
+
       if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
-        stage1Amt += grossAmt;
+        stage1Amt += balGross;
       } else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) {
-        stage2AdvAmt += grossAmt;
+        stage2AdvAmt += balGross;
       } else if (k === 'BRAND_COMMISSION' || typeStr.includes('brand')) {
-        brandAmt += grossAmt;
+        brandAmt += balGross;
       } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab')) {
-        bonanzaAmt += grossAmt;
+        bonanzaAmt += balGross;
       } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
-        extraAmt += grossAmt;
+        extraAmt += balGross;
       } else if (k === 'AWARD' || k === 'INCENTIVE' || k === 'ROYALTY' || typeStr.includes('award') || typeStr.includes('incentive')) {
-        awardAmt += grossAmt;
+        awardAmt += balGross;
+      } else if (e.level === 5 || (e.level_label || '').toLowerCase().includes('support')) {
+        supportAmt += balGross;
+        if (e.source_lead_id) finalCommLeadIds.add(e.source_lead_id);
       } else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
-        finalCommBalGrossAmt += balGross;
-        finalCommAdvPaidAmt += advPaid;
+        const lvl = e.level || 1;
+        const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 2 ? 'L2 Senior Referrer Comm' : `L${lvl} Commission`));
+        if (!commByLevel[lbl]) commByLevel[lbl] = 0;
+        commByLevel[lbl] += balGross;
+        if (e.source_lead_id) finalCommLeadIds.add(e.source_lead_id);
       }
     }
   });
 
-  const seniorEntries = window._seniorEntries || [];
-  seniorEntries.forEach(se => {
-    if (se.status !== 'CANCELLED') {
-      const d = (se.income_date || se.created_at || '').slice(0, 10);
-      if (d && d !== 'None') {
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
-      }
-      const sGross = parseFloat(se.commission_amount || 0);
-      const sAdv = parseFloat(se.advance_paid || 0);
-      const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
-      seniorTodayAmt += (sBal > 0 ? sBal : sGross);
-    }
-  });
-
-  if (seniorTodayAmt === 0) {
-    entries.forEach(e => {
-      if (e.status !== 'CANCELLED') {
-        const d = (e.income_date || e.created_at || '').slice(0, 10);
-        if (d && d !== 'None') {
-          if (dateFrom && d < dateFrom) return;
-          if (dateTo && d > dateTo) return;
-        }
-        if (e.level === 2 || (e.kind || '').toUpperCase() === 'SENIOR_COMM') {
-          const sGross = parseFloat(e.commission_amount || 0);
-          const sAdv = parseFloat(e.advance_paid || 0);
-          const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
-          seniorTodayAmt += (sBal > 0 ? sBal : sGross);
-        }
-      }
-    });
-  }
-  
   let breakupItems = [];
   let total = 0;
-  
-  let commByLevel = {};
-  entries.forEach(e => {
-    if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-      const d = e.income_date;
-      if (dateFrom && d < dateFrom) return;
-      if (dateTo && d > dateTo) return;
-      const k = (e.kind || '').toUpperCase();
-      if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
-        const lvl = e.level || 1;
-        const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 2 ? 'L2 Senior Referrer Payout' : `L${lvl} Commission`));
-        const grossAmt = parseFloat(e.commission_amount || 0);
-        const advPaid = parseFloat(e.advance_paid || 0);
-        if (!commByLevel[lbl]) commByLevel[lbl] = { gross: 0, adv: 0 };
-        commByLevel[lbl].gross += grossAmt;
-        commByLevel[lbl].adv += advPaid;
-      }
-    }
-  });
 
   if (showStage1 && stage1Amt > 0) {
     breakupItems.push(`Stage 1 Advance: ₹${_meFormatInr(stage1Amt)}/-`);
@@ -9834,26 +10453,20 @@ function recalculateTodayPayout() {
     breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
     total += stage2AdvAmt;
   }
-  let totalAdvPaid = stage1Amt + stage2AdvAmt;
-  let totalGrossComm = 0;
   if (showFinalComm && Object.keys(commByLevel).length > 0) {
-    for (const [lbl, val] of Object.entries(commByLevel)) {
-      if (val.gross > 0) {
-        totalGrossComm += val.gross;
-        totalAdvPaid += val.adv;
-        breakupItems.push(`${lbl}: ₹${_meFormatInr(val.gross)}/-`);
-        total += val.gross;
+    for (const [lbl, amt] of Object.entries(commByLevel)) {
+      if (amt > 0) {
+        breakupItems.push(`${lbl}: ₹${_meFormatInr(amt)}/-`);
+        total += amt;
       }
     }
-  } else if (showFinalComm && finalCommBalGrossAmt > 0) {
-    const fullCommGross = finalCommBalGrossAmt + finalCommAdvPaidAmt;
-    totalGrossComm += fullCommGross;
-    totalAdvPaid += finalCommAdvPaidAmt;
-    breakupItems.push(`Commission Payout: ₹${_meFormatInr(fullCommGross)}/-`);
-    total += fullCommGross;
+  }
+  if (showSupport && supportAmt > 0) {
+    breakupItems.push(`Field Support (L5): ₹${_meFormatInr(supportAmt)}/-`);
+    total += supportAmt;
   }
   if (showBrand && brandAmt > 0) {
-    breakupItems.push(`Brand Incentive: ₹${_meFormatInr(brandAmt)}/-`);
+    breakupItems.push(`Brand Commission: ₹${_meFormatInr(brandAmt)}/-`);
     total += brandAmt;
   }
   if (showBonanza && bonanzaAmt > 0) {
@@ -9868,54 +10481,75 @@ function recalculateTodayPayout() {
     breakupItems.push(`Award Incentive: ₹${_meFormatInr(awardAmt)}/-`);
     total += awardAmt;
   }
-  
+
   if (breakupItems.length === 0) {
     breakupItems.push("No Payouts for Selected Date");
   }
-  
+
+  // Calculate prior advances already paid on previous dates for the leads in this final payout
+  let totalPriorAdvPaid = 0;
+  if (finalCommLeadIds.size > 0) {
+    entries.forEach(e => {
+      if (e.status !== 'CANCELLED' && finalCommLeadIds.has(e.source_lead_id)) {
+        const isPriorDate = !dateFrom || (e.income_date && e.income_date < dateFrom);
+        const isAdvKind = (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE');
+        if (isPriorDate && isAdvKind && (e.status === 'PAID' || Boolean(e.paid_at))) {
+          const advBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, (parseFloat(e.commission_amount || 0) || 0) - (parseFloat(e.advance_adjusted_amount || 0) || 0));
+          totalPriorAdvPaid += advBal;
+        }
+      }
+    });
+  }
+
   const payingGross = total;
-  
+
   const postTodayPayoutEl = document.getElementById('postTodayPayout');
   if (postTodayPayoutEl) postTodayPayoutEl.value = breakupItems.map(s => s.replace(/<[^>]*>/g, '')).join(' | ');
-  
+
   const postTotalTodayEl = document.getElementById('postTotalToday');
-  if (postTotalTodayEl) postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
-  
-  const postBonusDescEl = document.getElementById('postBonusDesc');
-  if (postBonusDescEl) postBonusDescEl.value = 'Active breakups (' + periodLabel + ')';
-  
+  if (postTotalTodayEl && !window._postTotalTodayUserEdited) {
+    postTotalTodayEl.value = '₹' + _meFormatInr(payingGross) + '/-';
+  }
+
+  // Senior Partner Today Earning calculation from window._seniorEntries for date range
+  seniorTodayAmt = 0;
+  if (window._seniorEntries && window._seniorEntries.length) {
+    window._seniorEntries.forEach(se => {
+      if (se.status !== 'CANCELLED') {
+        const sd = (se.income_date || se.created_at || '').slice(0, 10);
+        if (sd && sd !== 'None') {
+          if (dateFrom && sd < dateFrom) return;
+          if (dateTo && sd > dateTo) return;
+        }
+        const sGross = parseFloat(se.commission_amount || se.amount || 0);
+        const sAdv = parseFloat(se.advance_adjusted_amount || se.advance_paid || 0);
+        const sLost = parseFloat(se.lost_lead_deduction || 0);
+        const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+        seniorTodayAmt += sBal;
+      }
+    });
+  }
+
   const postSeniorToday = document.getElementById('postSeniorToday');
   if (postSeniorToday) {
     postSeniorToday.value = '₹' + _meFormatInr(seniorTodayAmt) + '/-';
   }
-  
-  const prevTitle = document.getElementById('prevTodayTitle');
-  if (prevTitle) {
-    prevTitle.textContent = "TODAY'S PAYOUT";
-  }
-  
-  const prevLabelText = document.getElementById('prevTodayLabelText');
-  if (prevLabelText) {
-    prevLabelText.textContent = "Today's Earning";
-  }
-  
-  window._currentTotalAdvPaid = totalAdvPaid;
+
+  window._currentTotalAdvPaid = totalPriorAdvPaid;
   const prevTotalTodayEl = document.getElementById('prevTotalToday');
-  if (prevTotalTodayEl) {
-    prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross) + '/-';
-  }
+  if (prevTotalTodayEl) prevTotalTodayEl.textContent = '₹' + _meFormatInr(payingGross) + '/-';
 
   const prevAlreadyPaidEl = document.getElementById('prevAlreadyPaidText');
   if (prevAlreadyPaidEl) {
-    if (totalAdvPaid > 0) {
-      prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalAdvPaid)}/-)`;
+    if (totalPriorAdvPaid > 0) {
+      prevAlreadyPaidEl.textContent = `(Already Paid: ₹${_meFormatInr(totalPriorAdvPaid)}/-)`;
       prevAlreadyPaidEl.style.display = 'block';
     } else {
       prevAlreadyPaidEl.style.display = 'none';
+      prevAlreadyPaidEl.textContent = '';
     }
   }
-  
-  const prevBonusDescEl = document.getElementById('prevBonusDesc');
+
   updatePoster();
 }
 
@@ -10485,9 +11119,17 @@ window.updateDispatchStatus = function(id, status, msg) {
 };
 
 async function shareDefaultChannel() {
+  if (window._isDefaultSharingInProgress) {
+    console.warn('[POSTER-SHARE] Share dispatch already in progress. Ignoring duplicate click.');
+    return;
+  }
+  window._isDefaultSharingInProgress = true;
   console.log('[MYNTOS SHARE DEBUG] shareDefaultChannel invoked');
   const container = document.getElementById('posterCanvasWrapper');
-  if(!container) return;
+  if(!container) {
+    window._isDefaultSharingInProgress = false;
+    return;
+  }
 
   const shareDetails = getPosterShareDetails();
   const partnerName = shareDetails.partnerName;
@@ -10709,6 +11351,10 @@ async function shareDefaultChannel() {
 
   } catch(err) {
     console.error('Share Default error:', err);
+  } finally {
+    setTimeout(() => {
+      window._isDefaultSharingInProgress = false;
+    }, 3000);
   }
 }
 
@@ -10892,6 +11538,12 @@ function onPostExpiryChange() {
 }
 
 async function submitPostToPortal() {
+  if (window._isPortalSubmitting) {
+    console.warn('[PORTAL-POST] Submit already in progress. Ignoring duplicate click.');
+    return;
+  }
+  window._isPortalSubmitting = true;
+
   const titleInput = document.getElementById('postPortalTitle');
   const descInput = document.getElementById('postPortalDescription');
   const expirySelect = document.getElementById('postExpirySelect');
@@ -10901,8 +11553,16 @@ async function submitPostToPortal() {
   const btnSubmitText = document.getElementById('btnConfirmPostPortalText');
   const btnCancel = document.getElementById('btnCancelPostPortal');
 
+  if (btnSubmit) btnSubmit.disabled = true;
+  if (btnCancel) btnCancel.disabled = true;
+  if (btnSubmitText) btnSubmitText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+
   const title = (titleInput ? titleInput.value : '').trim();
   if (!title) {
+    window._isPortalSubmitting = false;
+    if (btnSubmit) btnSubmit.disabled = false;
+    if (btnCancel) btnCancel.disabled = false;
+    if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
     if (statusDiv) {
       statusDiv.style.display = 'block';
       statusDiv.style.background = '#fef2f2';
@@ -10965,6 +11625,10 @@ async function submitPostToPortal() {
   }
 
   if (!blob) {
+    window._isPortalSubmitting = false;
+    if (btnSubmit) btnSubmit.disabled = false;
+    if (btnCancel) btnCancel.disabled = false;
+    if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
     if (statusDiv) {
       statusDiv.style.display = 'block';
       statusDiv.style.background = '#fef2f2';
@@ -10974,10 +11638,6 @@ async function submitPostToPortal() {
     return;
   }
 
-  // Set loading UI
-  if (btnSubmit) btnSubmit.disabled = true;
-  if (btnCancel) btnCancel.disabled = true;
-  if (btnSubmitText) btnSubmitText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…';
   if (statusDiv) {
     statusDiv.style.display = 'block';
     statusDiv.style.background = '#eff6ff';
@@ -10999,7 +11659,7 @@ async function submitPostToPortal() {
     formData.append('expires_at', expiresAtIso);
   }
   formData.append('visible_to', 'vgk');
-  formData.append('force', 'true');
+  // DC-DEDUP-LOCK-001: Do not pass force: 'true' so same-day duplicates are caught and prevented
   formData.append('files', blob, `${cleanPartnerName}_Achievement.png`);
 
   const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token');
@@ -11015,6 +11675,20 @@ async function submitPostToPortal() {
 
     if (!res.ok || (!data.success && data.status !== 'success')) {
       throw new Error(data.detail || data.message || 'Failed to submit announcement');
+    }
+
+    if (data && data.duplicate) {
+      if (statusDiv) {
+        statusDiv.style.background = '#fef3c7';
+        statusDiv.style.color = '#92400e';
+        statusDiv.innerHTML = '⏸️ <strong>Already Published Today:</strong> This shoutout is already active on the Login Screen. Duplicate prevented.';
+      }
+      if (typeof toast === 'function') toast('⏸️ Already published today — duplicate suppressed', 'info');
+      else alert('⏸️ Shoutout is already published and live on the login screen slideshow today!');
+      setTimeout(() => {
+        closePostToPortalModal();
+      }, 1500);
+      return;
     }
 
     if (statusDiv) {
@@ -11040,9 +11714,13 @@ async function submitPostToPortal() {
       statusDiv.textContent = '❌ ' + (err.message || 'Error publishing post');
     }
     if (typeof toast === 'function') toast('Error publishing: ' + err.message, 'error');
-    if (btnSubmit) btnSubmit.disabled = false;
-    if (btnCancel) btnCancel.disabled = false;
-    if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
+  } finally {
+    setTimeout(() => {
+      window._isPortalSubmitting = false;
+      if (btnSubmit) btnSubmit.disabled = false;
+      if (btnCancel) btnCancel.disabled = false;
+      if (btnSubmitText) btnSubmitText.textContent = 'Publish to Portal';
+    }, 2000);
   }
 }
 
@@ -11437,12 +12115,19 @@ function shareGenMsgPoster() {
 window.shareGenMsgPoster = shareGenMsgPoster;
 
 async function shareGenMsgDefaultChannel() {
+  if (window._isGenMsgSharingInProgress) {
+    console.warn('[GEN-MSG-SHARE] Broadcast already in progress. Ignoring duplicate click.');
+    return;
+  }
+  window._isGenMsgSharingInProgress = true;
+
   const text = (document.getElementById('genMsgText')?.value || '').trim();
   const imgData = window._genMsgUploadedImage?.dataUrl || null;
   const imgBlob = window._genMsgUploadedImage?.blob || null;
   const members = window._genMsgSelectedMembers || [];
 
   if (!text && !imgData) {
+    window._isGenMsgSharingInProgress = false;
     alert('Please enter a broadcast message or attach an image before broadcasting.');
     return;
   }
@@ -11652,6 +12337,10 @@ async function shareGenMsgDefaultChannel() {
     }
   } catch(genErr) {
     updateStatus('group_vgk_gen', 'error', 'Bot Offline or Not in Group');
+  } finally {
+    setTimeout(() => {
+      window._isGenMsgSharingInProgress = false;
+    }, 3000);
   }
 }
 window.shareGenMsgDefaultChannel = shareGenMsgDefaultChannel;
@@ -12298,8 +12987,8 @@ function _renderCommDetailTable(partnerId) {
         <td style="padding:7px 10px;text-align:right;color:#1e40af;font-weight:600">${e.deal_value > 0 ? _meInr(e.deal_value) : '—'}</td>
         <td style="padding:7px 10px;text-align:right;color:#7c3aed;font-weight:700">${e.commission_pct > 0 ? e.commission_pct + '%' : '—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#374151">${e.commission_amount > 0 ? _meInr(e.commission_amount) : '—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#d97706">${e.admin_charges > 0 ? _meInr(e.admin_charges) : '—'}</td>
-        <td style="padding:7px 10px;text-align:right;color:#dc2626">${e.tds_amount > 0 ? _meInr(e.tds_amount) : '—'}</td>
+        <td style="padding:7px 10px;text-align:right;color:#d97706">${e.admin_charges > 0 ? _meInr(e.admin_charges) : (e.commission_amount > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
+        <td style="padding:7px 10px;text-align:right;color:#dc2626">${e.tds_amount > 0 ? _meInr(e.tds_amount) : (e.commission_amount > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#059669">${e.net_payout > 0 ? _meInr(e.net_payout) : '—'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#d97706">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.commission_amount) : '<span style="color:#d1d5db">—</span>'}</td>
         <td style="padding:7px 10px;text-align:right;font-weight:700;color:#b45309">${_pendSet.has(e.status) && e.commission_amount > 0 ? _meInr(e.net_payout > 0 ? e.net_payout : e.commission_amount * 0.9) + '<span style="font-size:9px;color:#d97706;margin-left:2px">' + (e.net_payout > 0 ? '' : '~') + '</span>' : '<span style="color:#d1d5db">—</span>'}</td>
@@ -12508,25 +13197,28 @@ function _renderCommDetailTable(partnerId) {
                 <label style="font-size:10px;font-weight:650;color:#374151;display:block;margin-bottom:4px">PAYMENT TYPES (BREAKUP OPTIONS)</label>
                 <div style="display:flex;flex-direction:column;gap:5px;background:#f3f4f6;padding:8px;border-radius:6px;border:1px solid #e5e7eb">
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 1 Advance
+                    <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Stage 1 Advance
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeStage2Adv" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Advance
+                    <input type="checkbox" id="payTypeStage2Adv" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Stage 2 Advance
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeFinalComm" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Payout (Final Comm.)
+                    <input type="checkbox" id="payTypeFinalComm" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Stage 2 Payout (Final Comm.)
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeBrand" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Brand Commission
+                    <input type="checkbox" id="payTypeSupport" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Field Support (L5)
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Bonanza
+                    <input type="checkbox" id="payTypeBrand" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Brand Commission
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Extra Commission
+                    <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Bonanza
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeAward" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Award / Incentive
+                    <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Extra Commission
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeAward" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Award / Incentive
                   </label>
                 </div>
               </div>
@@ -14158,7 +14850,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<script src="/public/js/poster-modal-core.js?v=20260913_1825"></script>
+<script src="/public/js/poster-modal-core.js?v=20261018_2145"></script>
 
 <!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
 <script>
@@ -14377,6 +15069,9 @@ function openAddMemberAdvanceModal(partnerId, partnerName, partnerCode) {
   document.getElementById('advMemberSearch').value = '';
   document.getElementById('advSelectedPartnerId').value = '';
   document.getElementById('advSelectedMemberCard').style.display = 'none';
+  const todayStr = new Date().toISOString().split('T')[0];
+  const advDateEl = document.getElementById('advDate');
+  if (advDateEl) advDateEl.value = todayStr;
   document.getElementById('advGrossAmount').value = '';
   document.getElementById('advPaymentUtr').value = '';
   document.getElementById('advNotes').value = '';
@@ -14401,26 +15096,29 @@ function closeAddAdvModal() {
 }
 
 async function onAdvMemberSearchInput() {
-  const q = document.getElementById('advMemberSearch').value.trim().toLowerCase();
+  const q = document.getElementById('advMemberSearch').value.trim();
   const drop = document.getElementById('advMemberDrop');
   if (!q) { drop.style.display = 'none'; return; }
 
   try {
-    const r = await fetch('/api/v1/vgk-team/members?per_page=15&search=' + encodeURIComponent(q), {
-      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-    });
+    const r = await staffFetch('/api/v1/vgk/members/search?active_only=false&purpose=advance&q=' + encodeURIComponent(q));
     const d = await r.json();
-    const members = d.members || d.data || [];
+    const members = d.data || d.members || [];
     if (members.length === 0) {
       drop.innerHTML = '<div style="padding:10px;font-size:12px;color:#6b7280;text-align:center">No matching members found</div>';
     } else {
-      drop.innerHTML = members.map(p => `
-        <div onclick="selectAdvMember(${p.id}, '${(p.full_name||p.name||'').replace(/'/g, "\\'")}', '${p.partner_code||''}')"
+      drop.innerHTML = members.map(p => {
+        const pName = p.partner_name || p.full_name || p.name || p.partner_code || 'Member';
+        const pCode = p.partner_code || '';
+        const pPhone = p.phone || '';
+        const escName = pName.replace(/'/g, "\\'");
+        return `
+        <div onclick="selectAdvMember(${p.id}, '${escName}', '${pCode}')"
              style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0fdf4"
              onmouseenter="this.style.background='#f0fdf4'" onmouseleave="this.style.background=''">
-          <strong>${p.full_name || p.name || p.partner_code}</strong> <small style="color:#6b7280">(${p.partner_code || ''})</small>
+          <strong>${pName}</strong> <small style="color:#6b7280">(${pCode}) ${pPhone ? '· ' + pPhone : ''}</small>
         </div>
-      `).join('');
+      `;}).join('');
     }
     drop.style.display = 'block';
   } catch (e) {
@@ -14439,9 +15137,7 @@ async function selectAdvMember(id, name, code) {
   document.getElementById('advSelectedMemberCard').style.display = 'block';
 
   try {
-    const r = await fetch('/api/v1/staff/vgk/partner-advance-summary/' + id, {
-      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-    });
+    const r = await staffFetch('/api/v1/vgk/staff/vgk/partner-advance-summary/' + id);
     const d = await r.json();
     if (r.ok && d.success) {
       document.getElementById('advMemberBalTxt').textContent = '₹' + Number(d.outstanding_advance_balance || 0).toLocaleString('en-IN');
@@ -14456,6 +15152,7 @@ async function selectAdvMember(id, name, code) {
 async function submitDirectAdvance() {
   const partnerId = parseInt(document.getElementById('advSelectedPartnerId').value || '0');
   const gross = parseFloat(document.getElementById('advGrossAmount').value || '0');
+  const advDate = (document.getElementById('advDate')?.value || '').trim();
   const kind = document.getElementById('advCategory').value || 'ADVANCE';
   const payMode = document.getElementById('advPaymentMode').value || 'BANK';
   const utr = document.getElementById('advPaymentUtr').value.trim();
@@ -14463,20 +15160,21 @@ async function submitDirectAdvance() {
 
   if (!partnerId) { alert('Please search and select a member first'); return; }
   if (!gross || gross <= 0) { alert('Please enter a valid advance amount'); return; }
+  if (!advDate) { alert('Please select a valid advance date'); return; }
 
   const goBtn = document.getElementById('btnIssueAdvGo');
   goBtn.disabled = true;
 
   try {
-    const r = await fetch('/api/v1/staff/vgk/issue-direct-advance', {
+    const r = await staffFetch('/api/v1/vgk/staff/vgk/issue-direct-advance', {
       method: 'POST',
       headers: { 
-        'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''), 
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({
         partner_id: partnerId,
         gross_amount: gross,
+        advance_date: advDate,
         kind: kind,
         payment_mode: payMode,
         payment_utr: utr,
@@ -14519,13 +15217,13 @@ async function _openMarkPaidModal(partnerId, entry) {
   }
 
   const gross = parseFloat(entry.commission_amount || 0);
-  const net = (entry.net_payout !== undefined && entry.net_payout !== null && parseFloat(entry.net_payout) > 0)
+  const net = (entry.net_payout !== undefined && entry.net_payout !== null)
     ? parseFloat(entry.net_payout)
     : Math.round(gross * 0.90);
-  const admin = (entry.admin_charges !== undefined && entry.admin_charges !== null && parseFloat(entry.admin_charges) > 0)
+  const admin = (entry.admin_charges !== undefined && entry.admin_charges !== null)
     ? parseFloat(entry.admin_charges)
     : Math.round(gross * 0.08);
-  const tds = (entry.tds_amount !== undefined && entry.tds_amount !== null && parseFloat(entry.tds_amount) > 0)
+  const tds = (entry.tds_amount !== undefined && entry.tds_amount !== null)
     ? parseFloat(entry.tds_amount)
     : Math.round(gross * 0.02);
 
@@ -14761,9 +15459,16 @@ window._submitMarkPaid = _submitMarkPaid;
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
+        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase"><i class="fas fa-calendar-alt me-1" style="color:#059669"></i>Advance Date</label>
+        <input type="date" id="advDate" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
+      </div>
+      <div>
         <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Gross Advance Amount (₹)</label>
         <input type="number" id="advGrossAmount" placeholder="e.g. 10000" step="100" min="1" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
       </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
         <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Advance Category</label>
         <select id="advCategory" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
@@ -14773,9 +15478,6 @@ window._submitMarkPaid = _submitMarkPaid;
           <option value="BRAND_ADVANCE">Brand Advance</option>
         </select>
       </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
         <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">Payment Mode</label>
         <select id="advPaymentMode" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
@@ -14783,10 +15485,11 @@ window._submitMarkPaid = _submitMarkPaid;
           <option value="CASH">Cash Disbursement</option>
         </select>
       </div>
-      <div>
-        <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">UTR / Ref Number</label>
-        <input type="text" id="advPaymentUtr" placeholder="Enter transaction reference / UTR" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
-      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label style="font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase">UTR / Ref Number</label>
+      <input type="text" id="advPaymentUtr" placeholder="Enter transaction reference / UTR" style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px">
     </div>
 
     <div style="margin-bottom:14px">

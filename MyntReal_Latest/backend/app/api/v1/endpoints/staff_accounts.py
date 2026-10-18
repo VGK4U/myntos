@@ -8149,7 +8149,10 @@ async def get_expense_entries_bootstrap(
             "categories": cat_list,
             "vendors": vendor_list,
             "allocations": alloc_list,
-            "employees": emp_list
+            "employees": emp_list,
+            "is_accounts_allowed": is_accounts_allowed_employee(current_user),
+            "current_user_emp_code": getattr(current_user, 'emp_code', ''),
+            "current_user_id": current_user.id
         })
     except Exception as e:
         return handle_accounts_error(e)
@@ -8443,6 +8446,19 @@ async def edit_expense_entry_endpoint(
 
         update_fields = data.model_dump(exclude_unset=True) if data else {}
 
+        old_values = {
+            "amount": float(entry.amount) if entry.amount is not None else 0.0,
+            "status": entry.status,
+            "company_id": entry.company_id,
+            "created_by_id": entry.created_by_id,
+            "expense_date": str(entry.expense_date) if entry.expense_date else None,
+            "vendor_name": entry.vendor_name,
+            "main_category_id": entry.main_category_id,
+            "sub_category_id": entry.sub_category_id,
+            "show_in_ledger": entry.show_in_ledger,
+            "is_external": entry.is_external
+        }
+
         # Handle notes alias -> narration
         if 'notes' in update_fields:
             n_val = update_fields.pop('notes')
@@ -8454,7 +8470,6 @@ async def edit_expense_entry_endpoint(
             new_status = update_fields.pop('status')
             if is_privileged and new_status and new_status != entry.status:
                 entry.status = new_status
-                from datetime import datetime as _dt
                 if new_status == 'PAID':
                     entry.is_paid = True
                     if not entry.paid_at:
@@ -8469,6 +8484,23 @@ async def edit_expense_entry_endpoint(
                 elif new_status in ('DRAFT', 'SUBMITTED'):
                     entry.is_paid = False
 
+        # Only Accounts / MR10001 can change the employee assignment
+        if 'created_by_id' in update_fields:
+            new_emp_id = update_fields.pop('created_by_id')
+            if is_privileged and new_emp_id and new_emp_id != entry.created_by_id:
+                entry.created_by_id = new_emp_id
+
+        # If entry was already posted to ledger, check if amounts/company/date/vendor changed
+        ledger_needs_repost = False
+        if entry.ledger_updated and entry.show_in_ledger and entry.status in ('APPROVED', 'PAID'):
+            if any(k in update_fields for k in ('amount', 'gst_amount', 'tds_amount', 'company_id', 'expense_date', 'vendor_name')):
+                try:
+                    LedgerPostingService.post_expense_approved(db, entry, current_user.id, is_reversal=True)
+                    entry.ledger_updated = False
+                    ledger_needs_repost = True
+                except Exception as _rev_err:
+                    _logger.warning(f"[EXP-EDIT-LEDGER-REV] Could not reverse previous posting: {_rev_err}")
+
         for field, value in update_fields.items():
             if hasattr(entry, field):
                 setattr(entry, field, value)
@@ -8480,11 +8512,54 @@ async def edit_expense_entry_endpoint(
             tds_amt = entry.tds_amount or Decimal('0.00')
             entry.net_amount = amt + gst_amt - tds_amt
 
-        from datetime import datetime as _dt
+        # Re-post ledger if necessary
+        if ledger_needs_repost and entry.show_in_ledger and entry.status in ('APPROVED', 'PAID'):
+            try:
+                LedgerPostingService.post_expense_approved(db, entry, current_user.id, is_reversal=False)
+                entry.ledger_updated = True
+            except Exception as _post_err:
+                _logger.warning(f"[EXP-EDIT-LEDGER-POST] Could not post updated ledger: {_post_err}")
+
         entry.updated_at = get_indian_time()
+
+        # Audit logging for accounts compliance
+        new_values = {
+            "amount": float(entry.amount) if entry.amount is not None else 0.0,
+            "status": entry.status,
+            "company_id": entry.company_id,
+            "created_by_id": entry.created_by_id,
+            "expense_date": str(entry.expense_date) if entry.expense_date else None,
+            "vendor_name": entry.vendor_name,
+            "main_category_id": entry.main_category_id,
+            "sub_category_id": entry.sub_category_id,
+            "show_in_ledger": entry.show_in_ledger,
+            "is_external": entry.is_external
+        }
+        try:
+            log_accounts_audit(
+                db=db,
+                employee_id=current_user.id,
+                action="EDIT_EXPENSE_ENTRY",
+                entity_type="ExpenseEntry",
+                entity_id=entry.id,
+                old_values=old_values,
+                new_values=new_values,
+                description=f"Expense entry {entry.entry_number} edited by {emp_code}"
+            )
+        except Exception as _audit_err:
+            _logger.warning(f"[EXP-EDIT-AUDIT] Could not log audit: {_audit_err}")
+
         db.commit()
         db.refresh(entry)
-        return JSONResponse(content={"success": True, "message": "Expense entry updated", "entry_id": entry.id, "status": entry.status, "amount": float(entry.amount)})
+        return JSONResponse(content={
+            "success": True, 
+            "message": "Expense entry updated", 
+            "entry_id": entry.id, 
+            "status": entry.status, 
+            "amount": float(entry.amount) if entry.amount is not None else 0.0,
+            "net_amount": float(entry.net_amount) if entry.net_amount is not None else 0.0,
+            "created_by_id": entry.created_by_id
+        })
     except Exception as e:
         return handle_accounts_error(e)
 

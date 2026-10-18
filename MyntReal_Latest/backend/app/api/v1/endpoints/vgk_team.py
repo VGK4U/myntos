@@ -385,10 +385,21 @@ def search_vgk_members(
     db: Session = Depends(get_db)
 ):
     """Search VGK members, staff, and influencers — used by CRM dropdowns and signup referrals."""
+    from fastapi.params import Query as QueryParam
+    q_val = "" if isinstance(q, QueryParam) or not q else str(q).strip()
+    term = f"%{q_val}%" if q_val else ""
+    
+    if isinstance(active_only, QueryParam):
+        is_active_only = False
+    elif isinstance(active_only, str):
+        is_active_only = active_only.strip().lower() in ('true', '1', 'yes')
+    else:
+        is_active_only = bool(active_only)
+
+    p_norm = "" if isinstance(purpose, QueryParam) or not purpose else str(purpose).strip().lower()
+
     results_list = []
     seen_codes = set()
-    term = f"%{q.strip()}%" if q.strip() else ""
-    p_norm = (purpose or "").strip().lower()
 
     # 1. Query OfficialPartner (VGK Members)
     query_partners = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
@@ -402,14 +413,14 @@ def search_vgk_members(
     elif p_norm in ('referrer', 'sponsor', 'upline', 'vgk_member'):
         # Freelancers cannot sponsor, refer, act as uplines, or be returned as standard VGK members
         query_partners = query_partners.filter(or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER'))
-    elif p_norm == 'ground_source':
-        # Ground Source attribution supports BOTH Channel Partners and Freelancers
+    elif p_norm in ('ground_source', 'advance', 'all'):
+        # Both Channel Partners and Freelancers are eligible
         pass
     else:
         # Default / unspecified: default to standard VGK Channel Partners (exclude Freelancers)
         query_partners = query_partners.filter(or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER'))
 
-    if active_only or p_norm == 'freelancer_support':
+    if is_active_only or p_norm == 'freelancer_support':
         query_partners = query_partners.filter(OfficialPartner.is_active == True)
     if term:
         query_partners = query_partners.filter(or_(
@@ -6387,7 +6398,8 @@ def member_earnings_dashboard(
         try:
             combined_sql = (
                 "SELECT e.partner_id, e.status, e.level, e.source_lead_id, e.commission_amount, e.net_payout, "
-                "       (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) AS is_installed "
+                "       (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) AS is_installed, "
+                "       COALESCE(e.advance_adjusted_amount, 0)::float AS adv_adj "
                 "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) "
                 + date_sql + (" " + status_sql if status_val else "")
@@ -6398,14 +6410,15 @@ def member_earnings_dashboard(
             _l1_files_set = {}
             _inst_files_set = {}
 
-            for pid_raw, st, lv_raw, lead_id, comm_amt, net_p, is_inst in combined_rows:
+            for pid_raw, st, lv_raw, lead_id, comm_amt, net_p, is_inst, adv_adj in combined_rows:
                 pid = int(pid_raw)
+                bal_amt = max(0.0, float(comm_amt or 0) - float(adv_adj or 0))
                 # 1. inc_map by status
                 if pid not in inc_map:
                     inc_map[pid] = {}
                 st_entry = inc_map[pid].setdefault(st, {"count": 0, "amount": 0.0, "net_amount": 0.0})
                 st_entry["count"] += 1
-                st_entry["amount"] += float(comm_amt or 0)
+                st_entry["amount"] += bal_amt
                 st_entry["net_amount"] += float(net_p or 0)
 
                 # 2. Non-cancelled metrics
@@ -6415,7 +6428,7 @@ def member_earnings_dashboard(
                         lvl_map[pid] = {}
                     lv_entry = lvl_map[pid].setdefault(lv, {"count": 0, "amount": 0.0, "net_amount": 0.0})
                     lv_entry["count"] += 1
-                    lv_entry["amount"] += float(comm_amt or 0)
+                    lv_entry["amount"] += bal_amt
                     lv_entry["net_amount"] += float(net_p or 0)
 
                     if lead_id is not None:
@@ -6554,7 +6567,7 @@ def member_earnings_dashboard(
             p_info = {r[0]: {"code": r[1], "name": r[2], "phone": r[3], "logo_path": r[4]} for r in p_rows}
             
             p_inc_rows = db.execute(text(
-                "SELECT e.partner_id, COALESCE(SUM(e.commission_amount),0) AS gross "
+                "SELECT e.partner_id, COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))), 0) AS gross "
                 "FROM vgk_cash_income_entries e "
                 "WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
                 "GROUP BY e.partner_id"
@@ -6641,7 +6654,11 @@ def member_earnings_dashboard(
     if member_ids:
         try:
             _me_sql = (
-                "SELECT e.partner_id, e.status, e.kind, e.level, e.source_lead_id, COALESCE(e.commission_amount,0)::float as gross, COALESCE(e.net_payout,0)::float as net, e.id "
+                "SELECT e.partner_id, e.status, e.kind, e.level, e.source_lead_id, "
+                "COALESCE(e.commission_amount,0)::float as gross, "
+                "COALESCE(e.net_payout,0)::float as net, "
+                "e.id, "
+                "COALESCE(e.advance_adjusted_amount, 0)::float as adv_adj "
                 "FROM vgk_cash_income_entries e " + cust_join_sql +
                 " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
                 + date_sql + (" " + status_sql if status_val else "")
@@ -6651,14 +6668,19 @@ def member_earnings_dashboard(
                 pid = int(r[0])
                 if pid not in raw_member_entries_map:
                     raw_member_entries_map[pid] = []
+                _g = float(r[5] or 0)
+                _adv = float(r[8] or 0)
+                _bal_g = max(0.0, _g - _adv)
                 raw_member_entries_map[pid].append({
                     "id": int(r[7]),
                     "status": r[1],
                     "kind": (r[2] or '').upper(),
                     "level": r[3],
                     "source_lead_id": r[4],
-                    "gross": float(r[5] or 0),
-                    "net": float(r[6] or 0)
+                    "gross": _g,
+                    "net": float(r[6] or 0),
+                    "adv_adj": _adv,
+                    "bal_gross": _bal_g
                 })
         except Exception:
             pass
@@ -6720,8 +6742,8 @@ def member_earnings_dashboard(
         pts_balance  = float(m.vgk_points_balance or 0)
         inc = inc_map.get(m.id, {})
         m_entries = raw_member_entries_map.get(m.id, [])
-        gross    = sum(e["gross"] for e in m_entries)
-        received = sum(e["gross"] for e in m_entries if e["status"] in ("RELEASED", "PAID"))
+        gross    = sum(e["bal_gross"] for e in m_entries)
+        received = sum(e["bal_gross"] for e in m_entries if e["status"] in ("RELEASED", "PAID"))
         
         pending_amt = 0.0
         net_earning = 0.0
@@ -6953,7 +6975,7 @@ def fetch_member_income_entries_data(
         _extra_where += f" AND ({' OR '.join(_cond_parts)})"
     try:
         rows = db.execute(text(
-            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, e.company_id, e.payment_utr, "
+            "SELECT e.id, e.entry_number, e.status, e.kind, e.level, e.company_id, e.payment_utr, e.notes, e.created_at::text AS created_at, "
             "  COALESCE(e.income_date::text, e.created_at::date::text, e.confirmed_at::date::text) AS entry_date, "
             "  COALESCE(e.commission_pct, 0)::float        AS commission_pct, "
             "  COALESCE(e.commission_amount, 0)::float     AS commission_amount, "
@@ -6965,10 +6987,11 @@ def fetch_member_income_entries_data(
             "  e.category_id, "
             "  COALESCE(e.solar_value, 0)::float           AS solar_value_entry, "
             "  COALESCE(e.confirmed_final_value, 0)::float AS cfv_raw, "
-            "  COALESCE(e.deal_value_total, 0)::float      AS dvt_raw "
+            "  COALESCE(e.deal_value_total, 0)::float      AS dvt_raw, "
+            "  COALESCE(e.skip_tds_admin, false)::boolean  AS skip_tds_admin "
             "FROM vgk_cash_income_entries e "
             "LEFT JOIN crm_leads l ON e.source_lead_id = l.id "
-            f"WHERE e.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)){_extra_where} "
+            f"WHERE e.partner_id = :pid AND e.source_lead_id IS NOT NULL AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)){_extra_where} "
             "ORDER BY e.created_at DESC"
         ), _extra_params).fetchall()
     except Exception as exc:
@@ -7010,7 +7033,8 @@ def fetch_member_income_entries_data(
                 "  NULL::integer          AS category_id, "
                 "  0::float               AS solar_value_entry, "
                 "  0::float               AS cfv_raw, "
-                "  0::float               AS dvt_raw "
+                "  0::float               AS dvt_raw, "
+                "  COALESCE(a.skip_tds_admin, false)::boolean AS skip_tds_admin "
                 "FROM vgk_solar_cibil_advances a "
                 "LEFT JOIN crm_leads l ON a.lead_id = l.id "
                 "WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)) "
@@ -7090,7 +7114,8 @@ def fetch_member_income_entries_data(
                 "  NULL::text AS payment_utr, "
                 "  0::float AS solar_value_entry, "
                 "  0::float AS cfv_raw, "
-                "  0::float AS dvt_raw "
+                "  0::float AS dvt_raw, "
+                "  false::boolean AS skip_tds_admin "
                 "FROM bonanza_progress bp "
                 "JOIN bonanza b ON bp.bonanza_id = b.id "
                 "LEFT JOIN bonanza_extra_commission_log becl "
@@ -7122,7 +7147,8 @@ def fetch_member_income_entries_data(
                 "  COALESCE(solar_value, 0)::float AS solar_value, "
                 "  COALESCE(deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
                 "  COALESCE(deal_value_total, 0)::float AS deal_value_total, "
-                "  category_id, solar_brand_id, vgk_field_support_id, kw_size::text AS kw_size "
+                "  category_id, solar_brand_id, vgk_field_support_id, kw_size::text AS kw_size, "
+                "  COALESCE(company_supported, true) AS company_supported "
                 "FROM crm_leads WHERE id = ANY(:ids)"
             ), {"ids": lead_ids}).fetchall()
             lead_info = {r.id: {
@@ -7142,6 +7168,7 @@ def fetch_member_income_entries_data(
                 "solar_brand_id": r.solar_brand_id,
                 "vgk_field_support_id": r.vgk_field_support_id,
                 "kw_size": str(r.kw_size or "").strip(),
+                "company_supported": bool(r.company_supported if r.company_supported is not None else True),
             } for r in lr}
         except Exception:
             try: db.rollback()
@@ -7234,6 +7261,22 @@ def fetch_member_income_entries_data(
         except Exception:
             pass
 
+    # Batch-resolve which leads have Support (L5) or Brand commissions created
+    all_comm_leads = set()
+    if lead_ids:
+        try:
+            int_lids = [int(x) for x in lead_ids if x is not None]
+            ac_rows = db.execute(text("""
+                SELECT DISTINCT source_lead_id
+                FROM vgk_cash_income_entries
+                WHERE source_lead_id = ANY(:lids)
+                  AND status != 'CANCELLED'
+                  AND (level = 5 OR level = 11 OR kind = 'BRAND_COMMISSION')
+            """), {"lids": int_lids}).fetchall()
+            all_comm_leads = {int(r[0]) for r in ac_rows if r[0] is not None}
+        except Exception:
+            pass
+
     # Compute lost lead advance deductions for partner across all income entries
     lost_ded_map = {}
     try:
@@ -7302,7 +7345,7 @@ def fetch_member_income_entries_data(
 
     def _build_row(r, is_vsca: bool = False, is_bp: bool = False):
         _li    = lead_info.get(r.source_lead_id) if r.source_lead_id else None
-        client = _li["name"]   if _li else None
+        client = _li["name"] if _li else "—"
         mobile = _li["mobile"] if _li else None
         
         # Fallback resolution for location (city -> area -> state)
@@ -7322,6 +7365,8 @@ def fetch_member_income_entries_data(
             commission_base = round(float(r.commission_amount) / _pct * 100, 2)
         else:
             commission_base = _dvr if _dvr > 0 else _dt
+        _true_deal_val = float((_li.get("deal_value_total") if _li else 0.0) or (_dt if _dt > 0 else commission_base))
+        _rcv_val = commission_base if _pct > 0 else (_dvr if _dvr > 0 else 0.0)
         _lvl_int = int(r.level) if r.level is not None else None
 
         # Resolve potential overall earning (DC-POTENTIAL-EARN-001)
@@ -7434,7 +7479,12 @@ def fetch_member_income_entries_data(
         admin_charges = float(r.admin_charges or 0.0)
         tds_amount = float(r.tds_amount or 0.0)
         net_payout = float(r.net_payout or 0.0)
-        if admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
+        _skip_tds = bool(getattr(r, 'skip_tds_admin', False))
+        if _skip_tds:
+            admin_charges = 0.0
+            tds_amount = 0.0
+            net_payout = bal_gross
+        elif admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
             admin_charges = round(bal_gross * 0.08, 2)
             tds_amount = round(bal_gross * 0.02, 2)
             net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
@@ -7451,6 +7501,8 @@ def fetch_member_income_entries_data(
         
         def format_kind_label(k: str, seq: int = 1) -> str:
             k_upper = (k or '').strip().upper()
+            if getattr(r, 'source_lead_id', None) is None and k_upper in ('ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE'):
+                return 'Direct Advance'
             if k_upper in ('ADVANCE', 'STAGE1_ADVANCE'):
                 return 'Stage 1 Advance'
             if k_upper in ('DVR_ADVANCE', 'STAGE2_ADVANCE'):
@@ -7475,11 +7527,14 @@ def fetch_member_income_entries_data(
             "display_kind":      display_kind_str,
             "entry_kind_label":  display_kind_str,
             "level":             _lvl_int,
-            "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else "—",
+            "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else ("Direct" if getattr(r, 'source_lead_id', None) is None else "—"),
             "income_date":       r.entry_date,
             "trigger_date":      r.entry_date,
-            "payment_date":      pmt_date,
-            "deal_value":        commission_base,
+            "created_at":        (str(r.created_at)[:10] if getattr(r, 'created_at', None) else str(r.entry_date)),
+            "payment_date":      pmt_date or (r.entry_date if is_paid_st else None),
+            "deal_value":        _true_deal_val,
+            "deal_value_total":  _true_deal_val,
+            "received_value":    _rcv_val,
             "calc_base":         commission_base,
             "commission_pct":    float(r.commission_pct),
             "commission_amount": gross_amt,
@@ -7493,10 +7548,13 @@ def fetch_member_income_entries_data(
             "admin_charges":     admin_charges,
             "tds_amount":        tds_amount,
             "net_payout":        net_payout,
+            "skip_tds_admin":    _skip_tds,
+            "all_commissions_released": (r.source_lead_id in all_comm_leads) if r.source_lead_id else False,
+            "company_supported": bool(_li["company_supported"]) if (_li and "company_supported" in _li) else True,
             "client_name":       client,
             "client_mobile":     mobile,
             "location":          location,
-            "submit_date":       _li["submit_date"]   if _li else None,
+            "submit_date":       _li["submit_date"] if _li else r.entry_date,
             "first_payment_received_date": _li["first_payment_received_date"] if _li else None,
             "complete_date":     _li["complete_date"]  if _li else None,
             "solar_pipeline_status": _li.get("solar_pipeline_status") if _li else None,
@@ -7642,15 +7700,15 @@ def lead_earnings_dashboard(
                 cl.submit_date::text  AS submit_date,
                 cl.complete_date::text AS complete_date,
                 cl.category_id,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED'), 0)::float          AS gross_earned,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status IN ('RELEASED','PAID')), 0)::float  AS received,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 0), 0)::float AS l0_bonus,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level IN (1,6)), 0)::float AS l1_source,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 2), 0)::float AS l2_senior,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 3), 0)::float AS l3_extended,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 4), 0)::float AS l4_core,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 5), 0)::float AS l5_support,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind = 'EXTRA_COMMISSION'), 0)::float AS ec_bonus,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED'), 0)::float          AS gross_earned,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status IN ('RELEASED','PAID')), 0)::float  AS received,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 0), 0)::float AS l0_bonus,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level IN (1,6)), 0)::float AS l1_source,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 2), 0)::float AS l2_senior,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 3), 0)::float AS l3_extended,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 4), 0)::float AS l4_core,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 5), 0)::float AS l5_support,
+                COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))) FILTER (WHERE e.status != 'CANCELLED' AND e.kind = 'EXTRA_COMMISSION'), 0)::float AS ec_bonus,
                 COUNT(*)            FILTER (WHERE e.status != 'CANCELLED')::integer AS total_files,
                 COUNT(DISTINCT e.partner_id) FILTER (WHERE e.status != 'CANCELLED')::integer AS member_count
             FROM vgk_cash_income_entries e
@@ -7677,7 +7735,7 @@ def lead_earnings_dashboard(
         if date_from: _sw += " AND e.created_at::date >= :df"; _sp['df'] = date_from
         if date_to:   _sw += " AND e.created_at::date <= :dt"; _sp['dt'] = date_to
         s_rows = db.execute(text(
-            f"SELECT e.source_lead_id, e.status, COUNT(*), COALESCE(SUM(e.commission_amount),0)::float "
+            f"SELECT e.source_lead_id, e.status, COUNT(*), COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))), 0)::float "
             f"FROM vgk_cash_income_entries e "
             f"JOIN official_partners op ON op.id = e.partner_id "
             f"WHERE {_sw} GROUP BY e.source_lead_id, e.status"
@@ -7797,9 +7855,11 @@ def lead_income_members_detail(
             "  COALESCE(e.net_payout,0)::float        AS net_payout, "
             "  COALESCE(e.admin_charges,0)::float     AS admin_charges, "
             "  COALESCE(e.tds_amount,0)::float        AS tds_amount, "
+            "  COALESCE(e.skip_tds_admin, false)      AS skip_tds_admin, "
             "  op.partner_code, op.partner_name, "
             "  cl.submit_date::text AS submit_date, "
             "  cl.community_id, "
+            "  COALESCE(cl.company_supported, true) AS company_supported, "
             "  cs.service_name AS community_event_name "
             "FROM vgk_cash_income_entries e "
             "JOIN official_partners op ON op.id = e.partner_id "
@@ -7811,6 +7871,19 @@ def lead_income_members_detail(
         ), _p).fetchall()
     except Exception as exc:
         return {"success": False, "error": str(exc), "data": []}
+
+    # Batch-resolve if this lead has Support (L5) or Brand commissions created
+    has_all_comm = False
+    try:
+        ac_cnt = db.execute(text("""
+            SELECT 1 FROM vgk_cash_income_entries
+            WHERE source_lead_id = :lid AND status != 'CANCELLED'
+              AND (level = 5 OR level = 11 OR kind = 'BRAND_COMMISSION')
+            LIMIT 1
+        """), {"lid": lead_id}).fetchone()
+        has_all_comm = bool(ac_cnt)
+    except Exception:
+        pass
 
     # Batch-resolve prior advances for this lead grouped by (partner_id, level)
     adv_map: dict = {}
@@ -7921,18 +7994,26 @@ def lead_income_members_detail(
             adv_paid   = adv_adjusted
 
         bal_gross = max(0.0, round(amt - (adv_paid if _kind_upper == 'COMMISSION' else adv_adjusted), 2))
+        _skip_tds = bool(getattr(r, "skip_tds_admin", False))
 
         # Authoritative stored backend values
-        admin_charges = float(r.admin_charges or 0.0)
-        tds_amount = float(r.tds_amount or 0.0)
-        net_payout = float(r.net_payout or 0.0)
-        if admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
-            admin_charges = round(bal_gross * 0.08, 2)
-            tds_amount = round(bal_gross * 0.02, 2)
-            net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
+        if _skip_tds:
+            admin_charges = 0.0
+            tds_amount = 0.0
+            net_payout = bal_gross
+        else:
+            admin_charges = float(r.admin_charges or 0.0)
+            tds_amount = float(r.tds_amount or 0.0)
+            net_payout = float(r.net_payout or 0.0)
+            if admin_charges == 0.0 and tds_amount == 0.0 and net_payout == 0.0 and bal_gross > 0:
+                admin_charges = round(bal_gross * 0.08, 2)
+                tds_amount = round(bal_gross * 0.02, 2)
+                net_payout = max(0.0, round(bal_gross - admin_charges - tds_amount, 2))
 
         # Deal value vs calc basis
         basis_val = float(r.deal_value_received_val) if r.deal_value_received_val > 0 else bv
+        true_deal_val = float(r.deal_value_total_val) if r.deal_value_total_val > 0 else (bv if bv > 0 else basis_val)
+        rcv_val = round(amt / (pct / 100), 2) if pct > 0 else (basis_val if basis_val > 0 else 0.0)
 
         res_data.append({
             "id":                int(r.id),
@@ -7947,9 +8028,11 @@ def lead_income_members_detail(
             "trigger_date":      r.trigger_date,
             "payment_date":      r.payment_date,
             "commission_pct":    pct,
-            "deal_value":        basis_val if (_kind_upper == 'DVR_ADVANCE' and basis_val > 0) else (float(r.deal_value_total_val) if r.deal_value_total_val > 0 else bv),
-            "base_value":        basis_val,
-            "calc_base":         basis_val,
+            "deal_value":        true_deal_val,
+            "deal_value_total":  true_deal_val,
+            "received_value":    rcv_val,
+            "base_value":        rcv_val,
+            "calc_base":         rcv_val,
             "commission_amount": amt,
             "advance_adjusted_amount": adv_adjusted,
             "stage1_adv":        stage1_adv,
@@ -7959,6 +8042,10 @@ def lead_income_members_detail(
             "net_payout":        net_payout,
             "admin_charges":     admin_charges,
             "tds_amount":        tds_amount,
+            "skip_tds_admin":    _skip_tds,
+            "all_commissions_released": has_all_comm,
+            "company_supported": bool(r.company_supported if r.company_supported is not None else True),
+            "source_lead_id":    lead_id,
             "partner_code":      r.partner_code,
             "partner_name":      r.partner_name,
             "community_id":      int(r.community_id) if r.community_id is not None else None,
@@ -8387,7 +8474,7 @@ def vgk_top_partners_leaderboard_table(
 
     # Bulk fetch current month income
     cm_income_rows = db.execute(text(
-        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "SELECT partner_id, COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0) "
         "FROM vgk_cash_income_entries "
         "WHERE status != 'CANCELLED' "
         "  AND COALESCE(income_date, created_at::date) >= :cm_start "
@@ -8397,7 +8484,7 @@ def vgk_top_partners_leaderboard_table(
 
     # Bulk fetch overall confirmed payout/earnings
     overall_income_rows = db.execute(text(
-        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "SELECT partner_id, COALESCE(SUM(GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0))), 0) "
         "FROM vgk_cash_income_entries "
         "WHERE status != 'CANCELLED' "
         "GROUP BY partner_id"
@@ -8423,7 +8510,7 @@ def vgk_top_partners_leaderboard_table(
             team_income_params["catid"] = int(category_id)
 
     team_income_sql = f"""
-        SELECT e.partner_id, COALESCE(SUM(e.commission_amount), 0)
+        SELECT e.partner_id, COALESCE(SUM(GREATEST(0, e.commission_amount - COALESCE(e.advance_adjusted_amount, 0))), 0)
         FROM vgk_cash_income_entries e
         LEFT JOIN crm_leads l ON l.id = e.source_lead_id
         WHERE {" AND ".join(team_income_where)}
@@ -9438,6 +9525,152 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
         from pytz import timezone
         exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone('Asia/Kolkata'))
 
+        # Build comprehensive member summary (Rank, Team Under Him, Leads Bucketwise, Income by Type)
+        member_summary = None
+        summary_pid = partner_id
+        if not summary_pid and lead_id:
+            try:
+                lr = db.execute(text("SELECT associated_partner_id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
+                if lr and lr[0]:
+                    summary_pid = lr[0]
+            except Exception:
+                pass
+
+        if summary_pid:
+            try:
+                from app.services.vgk4u_career_service import VGK4UCareerService
+                career_status = VGK4UCareerService.get_partner_career_status(db, summary_pid) or {}
+            except Exception:
+                career_status = {}
+
+            p_info = db.execute(text("""
+                SELECT partner_code, partner_name, phone, 
+                       vgk4u_current_designation, vgk4u_own_qualifying_files, current_position
+                FROM official_partners WHERE id = :pid
+            """), {"pid": summary_pid}).fetchone()
+
+            p_code = (p_info[0] or '').strip() if p_info else ''
+            p_name = (p_info[1] or '').strip() if p_info else ''
+            p_phone = (p_info[2] or '').strip() if p_info else ''
+            rank_name = career_status.get("career_designation") or (p_info[3] if p_info else None) or "Channel Partner"
+            own_files = int(career_status.get("own_qualifying_files") or (p_info[4] if p_info else 0) or 0)
+            rate_pct = float(career_status.get("effective_personal_producer_rate") or 5.0)
+
+            # Team counts
+            direct_team = db.execute(text("SELECT COUNT(*) FROM official_partners WHERE parent_partner_id = :pid"), {"pid": summary_pid}).scalar() or 0
+            try:
+                level_rows = db.execute(text("""
+                    WITH RECURSIVE downline AS (
+                        SELECT id, parent_partner_id, 1 AS level
+                        FROM official_partners
+                        WHERE parent_partner_id = :pid
+                        UNION ALL
+                        SELECT p.id, p.parent_partner_id, d.level + 1
+                        FROM official_partners p
+                        JOIN downline d ON p.parent_partner_id = d.id
+                    )
+                    SELECT level, count(*) as count
+                    FROM downline
+                    GROUP BY level
+                    ORDER BY level
+                """), {"pid": summary_pid}).fetchall()
+                total_team = sum(r[1] for r in level_rows) or direct_team
+            except Exception:
+                total_team = direct_team
+
+            # Leads bucketwise
+            lead_rows = db.execute(text("""
+                SELECT 
+                    status, 
+                    solar_pipeline_status, 
+                    COUNT(*) as cnt
+                FROM crm_leads 
+                WHERE associated_partner_id = :pid 
+                   OR vgk_field_support_id = :pid
+                   OR team_senior_partner_id = :pid 
+                   OR team_extended_partner_id = :pid 
+                   OR team_core_partner_id = :pid
+                   OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR))
+                GROUP BY status, solar_pipeline_status
+            """), {"pid": summary_pid}).fetchall()
+
+            buckets = {}
+            total_leads = 0
+            won_leads = 0
+            lost_leads = 0
+            b_map = {
+                'subsidy_pending': 'Subsidy Pending',
+                'dcr_pending': 'DCR Pending',
+                'balance_pending': 'Balance Pending',
+                'eb_cust': 'EB Customer Verification',
+                'pending_with_bank': 'Pending with Bank',
+                'won': 'Won / Processing',
+                'installed': 'Installed',
+                'completed': 'Completed'
+            }
+            for lr in lead_rows:
+                st, pipe, cnt = lr[0], lr[1], int(lr[2])
+                total_leads += cnt
+                if (st or '').lower() == 'lost':
+                    lost_leads += cnt
+                    b_name = 'Lost'
+                else:
+                    won_leads += cnt
+                    raw_b = pipe or st or 'In Pipeline'
+                    b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
+                buckets[b_name] = buckets.get(b_name, 0) + cnt
+
+            bucket_list = [{"stage": k, "count": v} for k, v in buckets.items()]
+
+            # Income by type aggregation from non-cancelled entries
+            type_agg = {}
+            for r in rows:
+                if (r.get("status") or "").upper() == "CANCELLED":
+                    continue
+                k = r.get("display_kind") or r.get("kind") or "Commission"
+                if k not in type_agg:
+                    type_agg[k] = {"type": k, "count": 0, "gross": 0.0, "advance": 0.0, "balance": 0.0, "net": 0.0}
+                type_agg[k]["count"] += 1
+                type_agg[k]["gross"] += float(r.get("commission_amount") or 0.0)
+                type_agg[k]["advance"] += float(r.get("advance_paid") or 0.0)
+                type_agg[k]["balance"] += float(r.get("balance_gross") or 0.0)
+                type_agg[k]["net"] += float(r.get("net_payout") or 0.0)
+
+            income_by_type = list(type_agg.values())
+
+            from app.services.vgk_cash_income import get_partner_advance_summary
+            adv_summary = get_partner_advance_summary(db, summary_pid)
+            adv_given = float(adv_summary.get("total_advance_given", 0.0) if adv_summary else 0.0)
+            adv_cleared = float(adv_summary.get("total_advance_recovered", 0.0) if adv_summary else 0.0)
+            adv_pending = float(adv_summary.get("outstanding_advance_balance", 0.0) if adv_summary else 0.0)
+
+            member_summary = {
+                "partner_id": summary_pid,
+                "partner_code": p_code,
+                "partner_name": p_name,
+                "phone": p_phone,
+                "rank": rank_name,
+                "own_qualifying_files": own_files,
+                "effective_rate": rate_pct,
+                "advances": {
+                    "total_given": adv_given,
+                    "total_cleared": adv_cleared,
+                    "total_pending": adv_pending,
+                    "availed": bool(adv_given > 0)
+                },
+                "team": {
+                    "total_team": total_team,
+                    "direct_team": direct_team
+                },
+                "leads": {
+                    "total": total_leads,
+                    "won_active": won_leads,
+                    "lost": lost_leads,
+                    "buckets": bucket_list
+                },
+                "income_by_type": income_by_type
+            }
+
         return {
             "success": True,
             "expired": False,
@@ -9447,6 +9680,7 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
             "expires_at": exp_dt.strftime('%Y-%m-%d %H:%M:%S IST'),
             "ttl_seconds_remaining": max(0, exp_ts - now_ts),
             "total_rows": len(rows),
+            "member_summary": member_summary,
             "data": rows
         }
     except Exception as e:

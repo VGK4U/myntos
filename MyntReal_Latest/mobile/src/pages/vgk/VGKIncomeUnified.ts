@@ -21,10 +21,13 @@ interface UnifiedRow {
   deal_value_received?: number | null;
   commission_pct?: number | null;
   commission_amount: number;
+  balance_gross?: number | null;
+  advance_adjusted_amount?: number | null;
   admin_charges: number;
   tds_amount: number;
   net_payout: number;
   status: string;
+  skip_tds_admin?: boolean;
   partner_points_balance?: number | null;
   available_actions: string[];
   company_id: number;
@@ -311,11 +314,14 @@ export class VGKIncomeUnified {
     for (const r of this.rows) {
       const key = r.status === 'Payout Completed' ? 'PAID' : r.status === 'Stage1Approved' ? 'STAGE1_APPROVED' : (r.status || 'DRAFT');
       if (!agg[key]) agg[key] = { count: 0, gross: 0, net: 0 };
+      const rGross = (r.balance_gross !== undefined && r.balance_gross !== null)
+        ? Number(r.balance_gross)
+        : Math.max(0, Number(r.commission_amount || 0) - Number(r.advance_adjusted_amount || 0));
       agg[key].count++;
-      agg[key].gross += Number(r.commission_amount || 0);
+      agg[key].gross += rGross;
       agg[key].net += Number(r.net_payout || 0);
       if (key !== 'CANCELLED') {
-        totalGross += Number(r.commission_amount || 0);
+        totalGross += rGross;
         totalNet += Number(r.net_payout || 0);
       }
     }
@@ -437,12 +443,16 @@ export class VGKIncomeUnified {
       const dKey = this.getDateKey(rawDt);
       const dateDisplay = this.fmtDate(rawDt);
 
+      const rGross = (r.balance_gross !== undefined && r.balance_gross !== null)
+        ? Number(r.balance_gross)
+        : Math.max(0, Number(r.commission_amount || 0) - Number(r.advance_adjusted_amount || 0));
+
       if (!dateMap[dKey]) {
         dateMap[dKey] = { dateDisplay, count: 0, net: 0, gross: 0, partners: {} };
       }
       dateMap[dKey].count++;
       dateMap[dKey].net += Number(r.net_payout || 0);
-      dateMap[dKey].gross += Number(r.commission_amount || 0);
+      dateMap[dKey].gross += rGross;
 
       const pCode = r.partner_code || '';
       const pName = r.partner_name || pCode || 'Unassigned';
@@ -453,7 +463,7 @@ export class VGKIncomeUnified {
       }
       dateMap[dKey].partners[pKey].count++;
       dateMap[dKey].partners[pKey].net += Number(r.net_payout || 0);
-      dateMap[dKey].partners[pKey].gross += Number(r.commission_amount || 0);
+      dateMap[dKey].partners[pKey].gross += rGross;
       dateMap[dKey].partners[pKey].entries.push(r);
     }
 
@@ -558,7 +568,10 @@ export class VGKIncomeUnified {
     return `
       <div style="background:#fff;border-radius:8px;border:1px solid #e5e7eb;border-left:4px solid #059669;padding:10px 12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-family:monospace;font-weight:700;font-size:12px;color:#111827">${this.escape(r.entry_number)}</div>
+          <div style="display:inline-flex;align-items:center;gap:6px">
+            <span style="font-family:monospace;font-weight:700;font-size:12px;color:#111827">${this.escape(r.entry_number)}</span>
+            ${r.skip_tds_admin ? '<span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:#ede9fe;color:#7c3aed">Skip TDS/Admin</span>' : ''}
+          </div>
           <span style="border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;${kindStyle}">
             ${this.escape(r.kind)} ${r.level ? 'L' + r.level : ''}
           </span>
@@ -580,11 +593,11 @@ export class VGKIncomeUnified {
           </div>
           <div>
             <span style="color:#6b7280">Admin:</span>
-            <span style="color:#d97706">${r.admin_charges ? this.fmt(r.admin_charges) : '—'}</span>
+            <span style="color:#d97706">${(r.admin_charges !== undefined && r.admin_charges !== null && r.admin_charges > 0) ? this.fmt(r.admin_charges) : (Number(r.commission_amount) > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</span>
           </div>
           <div>
             <span style="color:#6b7280">TDS:</span>
-            <span style="color:#dc2626">${r.tds_amount ? this.fmt(r.tds_amount) : '—'}</span>
+            <span style="color:#dc2626">${(r.tds_amount !== undefined && r.tds_amount !== null && r.tds_amount > 0) ? this.fmt(r.tds_amount) : (Number(r.commission_amount) > 0 ? '<span style="color:#059669;font-weight:700">₹0</span>' : '—')}</span>
           </div>
         </div>
 
@@ -846,7 +859,7 @@ export class VGKIncomeUnified {
         (document.getElementById('actModalOverlay') as HTMLElement).style.display = 'none';
         this.loadData();
       } else {
-        alert('Action failed: ' + (res.error || 'Unknown error'));
+        alert('Action failed: ' + (res.message || res.detail || res.error || 'Unknown error'));
       }
     } catch (err) {
       alert('Action error: ' + (err as any)?.message);

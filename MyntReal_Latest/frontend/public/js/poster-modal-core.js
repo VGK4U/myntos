@@ -84,25 +84,28 @@
                 <label style="font-size:10.5px;font-weight:700;color:#065f46;display:block;margin-bottom:4px">INCLUDE IN TODAY'S PAYOUT:</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 1 Adv
+                    <input type="checkbox" id="payTypeStage1" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Stage 1 Adv
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeStage2Adv" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Stage 2 Adv
+                    <input type="checkbox" id="payTypeStage2Adv" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Stage 2 Adv
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeFinalComm" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Final Comm
+                    <input type="checkbox" id="payTypeFinalComm" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Final Comm
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeBrand" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Brand Inc
+                    <input type="checkbox" id="payTypeSupport" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Field Support
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Bonanza
+                    <input type="checkbox" id="payTypeBrand" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Brand Inc
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Extra Comm
+                    <input type="checkbox" id="payTypeBonanza" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Bonanza
                   </label>
                   <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-                    <input type="checkbox" id="payTypeAward" checked onchange="recalculateTodayPayout()" style="accent-color:#059669"> Award
+                    <input type="checkbox" id="payTypeExtra" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Extra Comm
+                  </label>
+                  <label style="font-size:10.5px;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+                    <input type="checkbox" id="payTypeAward" checked onchange="recalculateTodayPayout(true)" style="accent-color:#059669"> Award
                   </label>
                 </div>
               </div>
@@ -423,6 +426,7 @@
 
   async function generateMemberPoster(partnerId) {
     ensurePosterModalDOM();
+    window._postTotalTodayUserEdited = false;
     const modal = document.getElementById('posterModal');
     if (!modal) return;
     modal.style.display = 'flex';
@@ -533,9 +537,14 @@
           if (e.level === 5 || e.is_field_support === true || String(e.vgk_field_support_id) === String(targetPid) || String(e.vgk_field_support_id) === String(m.id)) {
             activeLeadPendingMap[lid].isSupport = true;
           }
-          const amt = parseFloat(e.commission_amount || 0);
+          const grossAmt = parseFloat(e.commission_amount || 0);
+          const advAdj = parseFloat(e.advance_adjusted_amount || 0);
+          const lostDed = parseFloat(e.lost_lead_deduction || 0);
+          const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+            ? parseFloat(e.balance_gross)
+            : Math.max(0, grossAmt - advAdj - lostDed);
           if (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'STAGE1_APPROVED' || e.status === 'STAGE2_APPROVED' || e.status === 'VERIFIED') {
-            activeLeadPendingMap[lid].paid += amt;
+            activeLeadPendingMap[lid].paid += balGross;
           }
           if (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && (e.level === 1 || e.level === 6)) {
             activeLeadPendingMap[lid].hasFinalComm = true;
@@ -561,8 +570,8 @@
       const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
       const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
 
-      const mainDateFrom = (document.getElementById('meDateFrom')?.value || '').trim();
-      const mainDateTo   = (document.getElementById('meDateTo')?.value || '').trim();
+      const mainDateFrom = (document.getElementById('iedDateFrom')?.value || document.getElementById('meDateFrom')?.value || document.getElementById('lvDateFrom')?.value || '').trim();
+      const mainDateTo   = (document.getElementById('iedDateTo')?.value || document.getElementById('meDateTo')?.value || document.getElementById('lvDateTo')?.value || '').trim();
 
       let initFrom = mainDateFrom;
       let initTo   = mainDateTo;
@@ -638,12 +647,18 @@
         prevCelebrationTitleEl.textContent = `🎉 👑 CONGRATULATIONS 👑 🎉`;
       }
 
-      // Overall Earning: Total cumulative earnings irrespective of level
+      // Overall Earning: Total cumulative earnings irrespective of level (Net Gross - Canonical Option 1)
       const allTimeSum = entries.reduce((sum, e) => {
         if (e.status === 'CANCELLED') return sum;
         if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
         if (e.id && String(e.id).startsWith('VSCA-')) return sum;
-        return sum + (parseFloat(e.commission_amount || e.amount || 0) || 0);
+        const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
+        const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
+        const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
+        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+          ? parseFloat(e.balance_gross)
+          : Math.max(0, gross - advAdj - lostDed);
+        return sum + balGross;
       }, 0);
       const overallVal = (allTimeSum > 0) ? allTimeSum : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0)));
       setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
@@ -678,16 +693,26 @@
           const val = se.potential_overall_earning || se.commission_amount || 0;
           if (!srUniquePot[key] || val > srUniquePot[key]) srUniquePot[key] = val;
           if (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE') {
-            srAdvPaidTotal += parseFloat(se.commission_amount || 0);
+            const sGross = parseFloat(se.commission_amount || 0);
+            const sAdv = parseFloat(se.advance_adjusted_amount || 0);
+            const sLost = parseFloat(se.lost_lead_deduction || 0);
+            const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+            srAdvPaidTotal += sBal;
           }
         }
       });
-      // Overall Earning: Total cumulative earnings across all valid commission entries
+      // Overall Earning: Total cumulative earnings across all valid commission entries (Net Gross)
       const srAllTimeSum = srEntries.reduce((sum, e) => {
         if (e.status === 'CANCELLED') return sum;
         if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
         if (e.id && String(e.id).startsWith('VSCA-')) return sum;
-        return sum + (parseFloat(e.commission_amount || e.amount || 0) || 0);
+        const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
+        const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
+        const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
+        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+          ? parseFloat(e.balance_gross)
+          : Math.max(0, gross - advAdj - lostDed);
+        return sum + balGross;
       }, 0);
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
       const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
@@ -710,9 +735,10 @@
           const dStr = (se.income_date || se.created_at || '').slice(0, 10);
           if (dStr === todayIso) {
             const sGross = parseFloat(se.commission_amount || 0);
-            const sAdv = parseFloat(se.advance_paid || 0);
-            const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv);
-            srTodayAmt += (sBal > 0 ? sBal : sGross);
+            const sAdv = parseFloat(se.advance_adjusted_amount || se.advance_paid || 0);
+            const sLost = parseFloat(se.lost_lead_deduction || 0);
+            const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+            srTodayAmt += sBal;
           }
         }
       });
@@ -722,9 +748,10 @@
             const dStr = (e.income_date || e.created_at || '').slice(0, 10);
             if (dStr === todayIso) {
               const sGross = parseFloat(e.commission_amount || 0);
-              const sAdv = parseFloat(e.advance_paid || 0);
-              const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv);
-              srTodayAmt += (sBal > 0 ? sBal : sGross);
+              const sAdv = parseFloat(e.advance_adjusted_amount || e.advance_paid || 0);
+              const sLost = parseFloat(e.lost_lead_deduction || 0);
+              const sBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+              srTodayAmt += sBal;
             }
           }
         });
@@ -751,6 +778,7 @@
       setChecked('payTypeStage1', true);
       setChecked('payTypeStage2Adv', true);
       setChecked('payTypeFinalComm', true);
+      setChecked('payTypeSupport', true);
       setChecked('payTypeBrand', true);
       setChecked('payTypeBonanza', true);
       setChecked('payTypeExtra', true);
@@ -792,6 +820,7 @@
   }
 
   function changePayoutDateRange() {
+    window._postTotalTodayUserEdited = false;
     recalculateTodayPayout();
   }
 
@@ -835,10 +864,14 @@
     recalculateTodayPayout();
   }
 
-  function recalculateTodayPayout() {
+  function recalculateTodayPayout(resetUserEdited = false) {
+    if (resetUserEdited) {
+      window._postTotalTodayUserEdited = false;
+    }
     const showStage1    = document.getElementById('payTypeStage1')?.checked ?? true;
     const showStage2Adv = document.getElementById('payTypeStage2Adv')?.checked ?? true;
     const showFinalComm = document.getElementById('payTypeFinalComm')?.checked ?? true;
+    const showSupport   = document.getElementById('payTypeSupport')?.checked ?? showFinalComm;
     const showBrand     = document.getElementById('payTypeBrand')?.checked ?? true;
     const showBonanza   = document.getElementById('payTypeBonanza')?.checked ?? true;
     const showExtra     = document.getElementById('payTypeExtra')?.checked ?? true;
@@ -883,38 +916,62 @@
     }
 
     let stage1Amt = 0, stage2AdvAmt = 0;
+    let supportAmt = 0;
     let brandAmt = 0, bonanzaAmt = 0, extraAmt = 0, awardAmt = 0, seniorTodayAmt = 0;
     let commByLevel = {};
     const finalCommLeadIds = new Set();
 
     // All partner income entries calculation for the selected date context
     entries.forEach(e => {
-      if (e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None') {
-        const d = e.income_date;
-        if (dateFrom && d < dateFrom) return;
-        if (dateTo && d > dateTo) return;
+      if (e.status !== 'CANCELLED') {
+        const incD = (e.income_date && e.income_date !== 'None') ? String(e.income_date).slice(0, 10) : '';
+        const trigD = (e.trigger_date && e.trigger_date !== 'None') ? String(e.trigger_date).slice(0, 10) : '';
+        const createD = (e.created_at && e.created_at !== 'None') ? String(e.created_at).slice(0, 10) : '';
+        const pmtD = (e.payment_date && e.payment_date !== 'None') ? String(e.payment_date).slice(0, 10) : '';
+
+        let inDateRange = true;
+        if (dateFrom && dateTo) {
+          inDateRange = (incD && incD >= dateFrom && incD <= dateTo) ||
+                        (trigD && trigD >= dateFrom && trigD <= dateTo) ||
+                        (createD && createD >= dateFrom && createD <= dateTo) ||
+                        (pmtD && pmtD >= dateFrom && pmtD <= dateTo);
+        } else if (dateFrom) {
+          inDateRange = (incD && incD >= dateFrom) || (trigD && trigD >= dateFrom) || (createD && createD >= dateFrom) || (pmtD && pmtD >= dateFrom);
+        } else if (dateTo) {
+          inDateRange = (incD && incD <= dateTo) || (trigD && trigD <= dateTo) || (createD && createD <= dateTo) || (pmtD && pmtD <= dateTo);
+        }
+
+        if (!inDateRange) return;
 
         const grossAmt = parseFloat(e.commission_amount || e.amount || 0);
+        const advAdj = parseFloat(e.advance_adjusted_amount || 0);
+        const lostDed = parseFloat(e.lost_lead_deduction || 0);
+        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
+          ? parseFloat(e.balance_gross)
+          : Math.max(0, grossAmt - advAdj - lostDed);
         const k = (e.kind || '').toUpperCase();
         const typeStr = (e.income_type || '').toLowerCase();
 
         if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
-          stage1Amt += grossAmt;
+          stage1Amt += balGross;
         } else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) {
-          stage2AdvAmt += grossAmt;
+          stage2AdvAmt += balGross;
         } else if (k === 'BRAND_COMMISSION' || typeStr.includes('brand')) {
-          brandAmt += grossAmt;
+          brandAmt += balGross;
         } else if (k === 'SLAB_BONUS' || typeStr.includes('bonanza') || typeStr.includes('slab')) {
-          bonanzaAmt += grossAmt;
+          bonanzaAmt += balGross;
         } else if (k === 'EXTRA_COMMISSION' || typeStr.includes('extra')) {
-          extraAmt += grossAmt;
+          extraAmt += balGross;
         } else if (k === 'AWARD' || k === 'INCENTIVE' || k === 'ROYALTY' || typeStr.includes('award') || typeStr.includes('incentive')) {
-          awardAmt += grossAmt;
+          awardAmt += balGross;
+        } else if (e.level === 5 || (e.level_label || '').toLowerCase().includes('support')) {
+          supportAmt += balGross;
+          if (e.source_lead_id) finalCommLeadIds.add(e.source_lead_id);
         } else if (k === 'COMMISSION' || k === 'SENIOR_COMM') {
           const lvl = e.level || 1;
-          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 5 ? 'Field Support Comm' : (lvl === 2 ? 'L2 Senior Referrer Comm' : `L${lvl} Commission`)));
+          const lbl = e.level_label || (lvl === 1 ? 'L1 Ground Source Comm' : (lvl === 2 ? 'L2 Senior Referrer Comm' : `L${lvl} Commission`));
           if (!commByLevel[lbl]) commByLevel[lbl] = 0;
-          commByLevel[lbl] += grossAmt;
+          commByLevel[lbl] += balGross;
           if (e.source_lead_id) finalCommLeadIds.add(e.source_lead_id);
         }
       }
@@ -938,6 +995,10 @@
           total += amt;
         }
       }
+    }
+    if (showSupport && supportAmt > 0) {
+      breakupItems.push(`Field Support (L5): ₹${_meFormatInr(supportAmt)}/-`);
+      total += supportAmt;
     }
     if (showBrand && brandAmt > 0) {
       breakupItems.push(`Brand Commission: ₹${_meFormatInr(brandAmt)}/-`);
@@ -968,7 +1029,8 @@
           const isPriorDate = !dateFrom || (e.income_date && e.income_date < dateFrom);
           const isAdvKind = (e.kind === 'ADVANCE' || e.kind === 'DVR_ADVANCE');
           if (isPriorDate && isAdvKind && (e.status === 'PAID' || Boolean(e.paid_at))) {
-            totalPriorAdvPaid += parseFloat(e.commission_amount || 0);
+            const advBal = (e.balance_gross !== undefined && e.balance_gross !== null) ? parseFloat(e.balance_gross) : Math.max(0, (parseFloat(e.commission_amount || 0) || 0) - (parseFloat(e.advance_adjusted_amount || 0) || 0));
+            totalPriorAdvPaid += advBal;
           }
         }
       });
@@ -994,7 +1056,11 @@
             if (dateFrom && sd < dateFrom) return;
             if (dateTo && sd > dateTo) return;
           }
-          seniorTodayAmt += parseFloat(se.commission_amount || se.amount || 0);
+          const sGross = parseFloat(se.commission_amount || se.amount || 0);
+          const sAdv = parseFloat(se.advance_adjusted_amount || se.advance_paid || 0);
+          const sLost = parseFloat(se.lost_lead_deduction || 0);
+          const sBal = (se.balance_gross !== undefined && se.balance_gross !== null) ? parseFloat(se.balance_gross) : Math.max(0, sGross - sAdv - sLost);
+          seniorTodayAmt += sBal;
         }
       });
     }
@@ -1651,9 +1717,15 @@
   }
 
   async function shareDefaultChannel() {
+    if (window._isDefaultSharingInProgress) {
+      console.warn('[POSTER-SHARE] Share dispatch already in progress. Ignoring duplicate click.');
+      return;
+    }
+    window._isDefaultSharingInProgress = true;
     console.log('[MYNTOS SHARE DEBUG] 1. shareDefaultChannel triggered');
     const container = document.getElementById('posterCanvasWrapper');
     if (!container) {
+      window._isDefaultSharingInProgress = false;
       console.warn('[MYNTOS SHARE DEBUG] posterCanvasWrapper not found');
       return;
     }
@@ -1919,12 +1991,23 @@
       if (spinner) spinner.style.display = 'none';
       console.warn("Share default dispatch error:", err);
       dispatchTargets.forEach(t => updateDispatchStatus(t.id, 'error', 'Dispatch Error'));
+    } finally {
+      if (spinner) spinner.style.display = 'none';
+      setTimeout(() => {
+        window._isDefaultSharingInProgress = false;
+      }, 3000);
     }
   }
 
   async function postPosterAnnouncement() {
+    if (window._isPosterAnnouncementSubmitting) {
+      console.warn('[POSTER-ANNOUNCEMENT] Already submitting announcement, ignoring duplicate click.');
+      return;
+    }
+    window._isPosterAnnouncementSubmitting = true;
     const container = document.getElementById('posterCanvasWrapper');
     if (!container) {
+      window._isPosterAnnouncementSubmitting = false;
       if (typeof toast === 'function') toast('Poster preview not ready', 'error');
       else alert('Poster preview not ready');
       return;
@@ -1983,6 +2066,11 @@
       if (spinner) spinner.style.display = 'none';
       console.error('Post Announcement error:', err);
       alert('Failed to post announcement: ' + err.message);
+    } finally {
+      if (spinner) spinner.style.display = 'none';
+      setTimeout(() => {
+        window._isPosterAnnouncementSubmitting = false;
+      }, 3000);
     }
   }
 

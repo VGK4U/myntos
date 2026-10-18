@@ -3020,6 +3020,7 @@ class ExpenseEntryUpdate(BaseModel):
 
     show_in_ledger: Optional[bool] = None
     is_external: Optional[bool] = None
+    created_by_id: Optional[int] = None
 
 
 class ExpenseEntrySubmit(BaseModel):

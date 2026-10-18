@@ -342,6 +342,9 @@ class CRMLeadEditor {
                                                 <span class="badge bg-primary" title="Aggregate Total">Total: ₹<span id="ule_dealAggregateTotal">0</span></span>
                                                 <span class="badge bg-success" title="Aggregate Received">Received: ₹<span id="ule_dealAggregateReceived">0</span></span>
                                                 <span class="badge bg-secondary" title="Aggregate Balance">Balance: ₹<span id="ule_dealAggregateBalance">0</span></span>
+                                                <button class="btn btn-outline-success btn-sm fw-bold" type="button" onclick="window.crmLeadEditor.triggerAllPaymentsReceived()" title="Mark all deals & payments received & trigger final commissions">
+                                                    <i class="fas fa-check-double me-1"></i>All Payments Received
+                                                </button>
                                                 <button class="btn btn-primary btn-sm" type="button" onclick="window.crmLeadEditor.toggleAddDealForm()">
                                                     <i class="fas fa-plus me-1"></i>Add Deal
                                                 </button>
@@ -379,6 +382,28 @@ class CRMLeadEditor {
                                                 <div class="col-md-3 d-flex gap-1">
                                                     <button class="btn btn-success btn-sm flex-grow-1" onclick="window.crmLeadEditor.saveDeal()"><i class="fas fa-check me-1"></i>Save</button>
                                                     <button class="btn btn-outline-secondary btn-sm" onclick="window.crmLeadEditor.toggleAddDealForm()"><i class="fas fa-times"></i></button>
+                                                </div>
+                                                <div class="col-12 mt-2">
+                                                    <div class="form-check form-switch p-2 bg-white rounded border">
+                                                        <input class="form-check-input ms-0 me-2" type="checkbox" id="ule_dealAllPaymentsReceived" onchange="const el=document.getElementById('ule_dealReleaseSupportBrandWrap'); if(el) el.style.display=this.checked?'block':'none';">
+                                                        <label class="form-check-label fw-bold text-success small" for="ule_dealAllPaymentsReceived">
+                                                            <i class="fas fa-check-double me-1"></i>All Payments Received (Trigger Final Commission for this Deal)
+                                                        </label>
+                                                        <div class="text-muted small ms-4">
+                                                            Marks this deal as 100% paid and triggers Option B balance commission across partner levels (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%).
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 mt-1" id="ule_dealReleaseSupportBrandWrap" style="display: none;">
+                                                    <div class="form-check form-switch p-2 bg-light rounded border border-primary-subtle ms-3">
+                                                        <input class="form-check-input ms-0 me-2" type="checkbox" id="ule_dealReleaseSupportBrand" checked>
+                                                        <label class="form-check-label fw-bold text-primary small" for="ule_dealReleaseSupportBrand">
+                                                            <i class="fas fa-hand-holding-usd me-1"></i>Release Support (L5) &amp; Brand Incomes as well
+                                                        </label>
+                                                        <div class="text-muted small ms-4">
+                                                            Also triggers and releases Field Support (L5) and Solar Brand commission entries for this deal/lead.
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -422,6 +447,9 @@ class CRMLeadEditor {
                                                 <span class="badge bg-warning text-dark" title="Pending Validation">
                                                     <i class="fas fa-clock me-1"></i>Pending: ₹<span id="ule_financePending">0</span>
                                                 </span>
+                                                <button class="btn btn-outline-success btn-sm fw-bold" type="button" onclick="window.crmLeadEditor.triggerAllPaymentsReceived()" title="Mark all payments received & trigger final partner commissions">
+                                                    <i class="fas fa-check-double me-1"></i>All Payments Received
+                                                </button>
                                                 <button class="btn btn-primary btn-sm" type="button" onclick="window.crmLeadEditor.openAddTransactionModal()">
                                                     <i class="fas fa-plus me-1"></i>Add
                                                 </button>
@@ -606,12 +634,68 @@ class CRMLeadEditor {
                                 <label class="form-label">Reference / Notes</label>
                                 <input type="text" class="form-control" id="ule_txnReference" placeholder="Transaction reference or notes">
                             </div>
+                            <div class="col-12">
+                                <div class="form-check form-switch p-2 bg-light rounded border">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="ule_txnAllPaymentsReceived" onchange="const el=document.getElementById('ule_txnReleaseSupportBrandWrap'); if(el) el.style.display=this.checked?'block':'none';">
+                                    <label class="form-check-label fw-bold text-success" for="ule_txnAllPaymentsReceived">
+                                        <i class="fas fa-check-double me-1"></i>All Payments Received (Trigger Final Commission)
+                                    </label>
+                                    <div class="text-muted small ms-4">
+                                        Marks deal as 100% paid and triggers Option B balance commission across partner levels (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%).
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-1" id="ule_txnReleaseSupportBrandWrap" style="display: none;">
+                                <div class="form-check form-switch p-2 bg-white rounded border border-primary-subtle ms-3">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="ule_txnReleaseSupportBrand" checked>
+                                    <label class="form-check-label fw-bold text-primary small" for="ule_txnReleaseSupportBrand">
+                                        <i class="fas fa-hand-holding-usd me-1"></i>Release Support (L5) &amp; Brand Incomes as well
+                                    </label>
+                                    <div class="text-muted small ms-4">
+                                        Also triggers and releases Field Support (L5) and Solar Brand commission entries for this deal/lead.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="window.crmLeadEditor.saveTransaction()">
                             <i class="fas fa-save me-1"></i>Save Transaction
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Option B / All Payments Received Confirmation Modal with Release Support & Brand Checkbox -->
+        <div class="modal fade" id="ule_allPaidConfirmModal" tabindex="-1" style="z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-success text-white py-2">
+                        <h6 class="modal-title" id="ule_allPaidModalTitle">
+                            <i class="fas fa-check-double me-2"></i>Trigger Final Commission
+                        </h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-3">
+                        <input type="hidden" id="ule_allPaidTargetType" value="lead">
+                        <input type="hidden" id="ule_allPaidTargetId" value="">
+                        <div id="ule_allPaidMessage" class="small mb-3 text-dark"></div>
+                        <div class="form-check form-switch p-3 bg-light rounded border border-success-subtle mb-2">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" id="ule_allPaidReleaseSupportBrand" checked>
+                            <label class="form-check-label fw-bold text-success" for="ule_allPaidReleaseSupportBrand">
+                                <i class="fas fa-hand-holding-usd me-1"></i>Release Support (L5) &amp; Brand Incomes as well
+                            </label>
+                            <div class="text-muted small ms-4 mt-1">
+                                When enabled, this will also trigger and release Field Support (L5) and Solar Brand commission entries for this deal/lead.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success btn-sm fw-bold" onclick="window.crmLeadEditor.confirmExecuteAllPaymentsReceived()">
+                            <i class="fas fa-check-circle me-1"></i>Confirm &amp; Release Commissions
                         </button>
                     </div>
                 </div>
@@ -1566,6 +1650,12 @@ class CRMLeadEditor {
             document.getElementById('ule_dealValueInput').value = '';
             document.getElementById('ule_dealDateInput').value = '';
             document.getElementById('ule_dealNotesInput').value = '';
+            const allRcvEl = document.getElementById('ule_dealAllPaymentsReceived');
+            if (allRcvEl) allRcvEl.checked = false;
+            const sbWrap = document.getElementById('ule_dealReleaseSupportBrandWrap');
+            if (sbWrap) sbWrap.style.display = 'none';
+            const sbEl = document.getElementById('ule_dealReleaseSupportBrand');
+            if (sbEl) sbEl.checked = true;
         } else {
             section.style.display = 'none';
             document.getElementById('ule_editDealId').value = '';
@@ -1621,12 +1711,16 @@ class CRMLeadEditor {
         const companyId = document.getElementById('ule_companyId').value;
         if (!leadId || !companyId) { alert('No lead selected'); return; }
 
+        const dealAllRcv = document.getElementById('ule_dealAllPaymentsReceived')?.checked || false;
+        const dealRelSB  = document.getElementById('ule_dealReleaseSupportBrand')?.checked !== false;
         const payload = {
             company_id: parseInt(dealCompanyId),
             revenue_category_id: parseInt(categoryId),
             deal_value_total: dealValue,
             deal_date: dealDate,
-            notes: dealNotes
+            notes: dealNotes,
+            all_payments_received: dealAllRcv,
+            release_support_brand: dealRelSB
         };
 
         try {
@@ -1637,7 +1731,7 @@ class CRMLeadEditor {
             } else {
                 url = `${this.apiBasePath}/leads/${leadId}/deals?company_id=${companyId}`;
                 method = 'POST';
-                payload.deal_value_received = 0;
+                payload.deal_value_received = dealAllRcv ? dealValue : 0;
             }
             const response = await fetch(url, {
                 method, ...this.authOptions,
@@ -1646,10 +1740,29 @@ class CRMLeadEditor {
             });
             const data = await response.json();
             if (data.success) {
-                alert(editDealId ? 'Deal updated successfully' : 'Deal created successfully');
+                let msg = editDealId ? 'Deal updated successfully!' : 'Deal created successfully!';
+                if (data.option_b_commission) {
+                    const ob = data.option_b_commission;
+                    msg += `\n\nAll Payments Received Processed (Option B):\n` +
+                           `• Status: ${ob.status || 'Success'}\n` +
+                           `• Commission Entries: ${ob.entries_created?.length || 0}\n` +
+                           `• Total Triggered Gross: ₹${(ob.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+                    if (ob.entries_created && ob.entries_created.length > 0) {
+                        msg += '\nDetails:';
+                        ob.entries_created.forEach(e => {
+                            msg += `\n- L${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')}`;
+                        });
+                    }
+                }
+                alert(msg);
                 document.getElementById('ule_addDealFormSection').style.display = 'none';
                 document.getElementById('ule_editDealId').value = '';
+                const allRcvEl = document.getElementById('ule_dealAllPaymentsReceived');
+                if (allRcvEl) allRcvEl.checked = false;
+                const sbWrap = document.getElementById('ule_dealReleaseSupportBrandWrap');
+                if (sbWrap) sbWrap.style.display = 'none';
                 this.loadLeadDeals(leadId);
+                this.loadTransactions(leadId, companyId);
             } else { alert(data.detail || 'Failed to save deal'); }
         } catch (e) { console.error('Failed to save deal:', e); alert('Failed to save deal'); }
     }
@@ -1660,6 +1773,12 @@ class CRMLeadEditor {
         const section = document.getElementById('ule_addDealFormSection');
         section.style.display = 'block';
         document.getElementById('ule_editDealId').value = deal.id;
+        const allRcvEl = document.getElementById('ule_dealAllPaymentsReceived');
+        const sbWrap = document.getElementById('ule_dealReleaseSupportBrandWrap');
+        if (allRcvEl) {
+            allRcvEl.checked = ((deal.deal_value_balance || 0) <= 0 && (deal.deal_value_total || 0) > 0);
+            if (sbWrap) sbWrap.style.display = allRcvEl.checked ? 'block' : 'none';
+        }
         this.populateDealCompanyDropdown();
         setTimeout(() => {
             document.getElementById('ule_dealCompanySelect').value = deal.company_id || '';
@@ -1688,10 +1807,72 @@ class CRMLeadEditor {
             this.leadDeals = data.deals || [];
             if (this.leadDeals.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-2">No deals yet. Click "Add Deal" to create one.</td></tr>'; }
             else {
-                tbody.innerHTML = this.leadDeals.map((deal, idx) => `<tr><td class="fw-medium"><code style="font-size:11px;color:#059669;">${deal.deal_code || ('Deal ' + (idx + 1))}</code></td><td>${this.formatDate(deal.deal_date)}</td><td>${deal.company_name || '-'}</td><td><span class="badge bg-info text-dark">${deal.category_name || '-'}</span></td><td class="fw-medium">₹${this.formatNumber(deal.deal_value_total)}</td><td class="text-success">₹${this.formatNumber(deal.deal_value_received)}</td><td class="text-danger">₹${this.formatNumber(deal.deal_value_balance)}</td><td><span class="badge bg-${deal.status === 'active' ? 'success' : 'secondary'}">${deal.status || 'active'}</span></td><td><button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="window.crmLeadEditor.editDeal(${deal.id})" title="Edit Deal"><i class="fas fa-edit"></i></button></td></tr>`).join('');
+                tbody.innerHTML = this.leadDeals.map((deal, idx) => {
+                    const isPaid = ((deal.deal_value_balance || 0) <= 0 && (deal.deal_value_total || 0) > 0);
+                    const allPaidBtn = isPaid
+                        ? `<span class="badge bg-success py-1 px-2" style="font-size:10px;"><i class="fas fa-check-double me-1"></i>All Paid</span>`
+                        : `<button class="btn btn-outline-success btn-sm py-0 px-2 fw-bold" style="font-size:10px;" onclick="window.crmLeadEditor.triggerDealAllPaymentsReceived(${deal.id})" title="Mark Deal #${deal.deal_code || deal.id} as All Payments Received & Trigger Final Commission"><i class="fas fa-check-double me-1"></i>All Paid</button>`;
+                    return `<tr>
+                        <td class="fw-medium"><code style="font-size:11px;color:#059669;">${deal.deal_code || ('Deal ' + (idx + 1))}</code></td>
+                        <td>${this.formatDate(deal.deal_date)}</td>
+                        <td>${deal.company_name || '-'}</td>
+                        <td><span class="badge bg-info text-dark">${deal.category_name || '-'}</span></td>
+                        <td class="fw-medium">₹${this.formatNumber(deal.deal_value_total)}</td>
+                        <td class="text-success">₹${this.formatNumber(deal.deal_value_received)}</td>
+                        <td class="text-danger">₹${this.formatNumber(deal.deal_value_balance)}</td>
+                        <td><span class="badge bg-${deal.status === 'completed' ? 'success' : (deal.status === 'active' ? 'primary' : 'secondary')}">${deal.status || 'active'}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1">
+                                ${allPaidBtn}
+                                <button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:10px;" onclick="window.crmLeadEditor.editDeal(${deal.id})" title="Edit Deal"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
             }
             this.updateDealAggregates();
         } catch (e) { console.error('Failed to load deals:', e); tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-2">Error loading deals</td></tr>'; this.leadDeals = []; this.updateDealAggregates(); }
+    }
+
+    async triggerDealAllPaymentsReceived(dealId) {
+        const leadId = document.getElementById('ule_leadId')?.value;
+        const deal = (this.leadDeals || []).find(d => d.id === dealId);
+        const dealCode = deal?.deal_code || `Deal #${dealId}`;
+        const dealVal = deal?.deal_value_total || 0;
+
+        const targetTypeEl = document.getElementById('ule_allPaidTargetType');
+        if (targetTypeEl) targetTypeEl.value = 'deal';
+        const targetIdEl = document.getElementById('ule_allPaidTargetId');
+        if (targetIdEl) targetIdEl.value = dealId;
+
+        const titleEl = document.getElementById('ule_allPaidModalTitle');
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-check-double me-2"></i>Trigger Final Commission - ${dealCode}`;
+
+        const msgEl = document.getElementById('ule_allPaidMessage');
+        if (msgEl) {
+            msgEl.innerHTML = `
+                <div class="alert alert-success py-2 px-3 mb-2" style="font-size:12px;">
+                    <strong>Deal:</strong> ${dealCode} &nbsp;|&nbsp; <strong>Value:</strong> ₹${this.formatNumber(dealVal)}
+                </div>
+                <p class="mb-1 fw-medium">Execute Final Commission (Option B) for this deal:</p>
+                <ol class="mb-2 ps-3 small text-muted">
+                    <li>Mark <strong>${dealCode}</strong> as 100% paid (Balance: ₹0)</li>
+                    <li>Compute full waterfall commission (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%) on the deal total</li>
+                    <li>Deduct prior advances/commissions and trigger remaining balance commissions</li>
+                    <li>Reconcile unadjusted solar advances to ADJUSTED</li>
+                </ol>
+            `;
+        }
+        const sbCheck = document.getElementById('ule_allPaidReleaseSupportBrand');
+        if (sbCheck) sbCheck.checked = true;
+
+        const modalEl = document.getElementById('ule_allPaidConfirmModal');
+        if (modalEl) {
+            const modal = (typeof bootstrap !== 'undefined' && bootstrap.Modal)
+                ? (bootstrap.Modal.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(modalEl) : new bootstrap.Modal(modalEl))
+                : null;
+            if (modal) modal.show();
+        }
     }
     
     updateDealAggregates() {
@@ -1746,6 +1927,12 @@ class CRMLeadEditor {
         document.getElementById('ule_txnType').value = 'partial';
         document.getElementById('ule_txnMode').value = 'upi';
         document.getElementById('ule_txnReference').value = '';
+        const allRcvCheck = document.getElementById('ule_txnAllPaymentsReceived');
+        if (allRcvCheck) allRcvCheck.checked = false;
+        const txnSbWrap = document.getElementById('ule_txnReleaseSupportBrandWrap');
+        if (txnSbWrap) txnSbWrap.style.display = 'none';
+        const txnSb = document.getElementById('ule_txnReleaseSupportBrand');
+        if (txnSb) txnSb.checked = true;
         
         this.populateTxnDealDropdown();
         const txnModal = new bootstrap.Modal(document.getElementById('ule_addTransactionModal'));
@@ -1766,6 +1953,13 @@ class CRMLeadEditor {
         document.getElementById('ule_txnType').value = txn.transaction_type || 'partial';
         document.getElementById('ule_txnMode').value = txn.payment_mode || 'upi';
         document.getElementById('ule_txnReference').value = txn.reference_number || txn.notes || '';
+        const allRcvCheck = document.getElementById('ule_txnAllPaymentsReceived');
+        if (allRcvCheck) allRcvCheck.checked = false;
+        const txnSbWrap = document.getElementById('ule_txnReleaseSupportBrandWrap');
+        if (txnSbWrap) txnSbWrap.style.display = 'none';
+        const txnSb = document.getElementById('ule_txnReleaseSupportBrand');
+        if (txnSb) txnSb.checked = true;
+
         this.populateTxnDealDropdown();
         setTimeout(() => {
             const dealSelect = document.getElementById('ule_txnDealSelect');
@@ -1789,7 +1983,9 @@ class CRMLeadEditor {
             payment_mode: document.getElementById('ule_txnMode').value,
             reference_number: document.getElementById('ule_txnReference').value,
             deal_id: null,
-            revenue_category_id: null
+            revenue_category_id: null,
+            all_payments_received: document.getElementById('ule_txnAllPaymentsReceived')?.checked || false,
+            release_support_brand: document.getElementById('ule_txnReleaseSupportBrand')?.checked !== false
         };
         
         const txnDealEl = document.getElementById('ule_txnDealSelect');
@@ -1824,13 +2020,121 @@ class CRMLeadEditor {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('ule_addTransactionModal')).hide();
                 this.loadTransactions(leadId);
-                alert(editTxnId ? 'Transaction updated successfully!' : 'Transaction added successfully!');
+                this.loadLeadDeals(leadId);
+                let successMsg = editTxnId ? 'Transaction updated successfully!' : 'Transaction added successfully!';
+                if (data.option_b_commission) {
+                    const ob = data.option_b_commission;
+                    successMsg += `\n\nAll Payments Received Processed (Option B):\n` +
+                                  `• Status: ${ob.status || 'Success'}\n` +
+                                  `• Commission Entries Created: ${ob.entries_created?.length || 0}\n` +
+                                  `• Total Triggered Gross: ₹${(ob.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+                    if (ob.entries_created && ob.entries_created.length > 0) {
+                        successMsg += '\nDetails:';
+                        ob.entries_created.forEach(e => {
+                            successMsg += `\n- L${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')}`;
+                        });
+                    }
+                }
+                alert(successMsg);
             } else {
                 alert(data.detail || 'Error saving transaction');
             }
         } catch (error) {
             console.error('[DC-CRM-EDITOR] Transaction save error:', error);
             alert('Error saving transaction');
+        }
+    }
+
+    async triggerAllPaymentsReceived() {
+        const leadId = document.getElementById('ule_leadId')?.value;
+        if (!leadId) {
+            alert('Please select or open a lead first.');
+            return;
+        }
+
+        const targetTypeEl = document.getElementById('ule_allPaidTargetType');
+        if (targetTypeEl) targetTypeEl.value = 'lead';
+        const targetIdEl = document.getElementById('ule_allPaidTargetId');
+        if (targetIdEl) targetIdEl.value = leadId;
+
+        const titleEl = document.getElementById('ule_allPaidModalTitle');
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-check-double me-2"></i>Trigger Final Commission - Lead #${leadId}`;
+
+        const msgEl = document.getElementById('ule_allPaidMessage');
+        if (msgEl) {
+            msgEl.innerHTML = `
+                <div class="alert alert-success py-2 px-3 mb-2" style="font-size:12px;">
+                    <strong>Lead:</strong> #${leadId} &nbsp;|&nbsp; <strong>Action:</strong> Mark All Lead Payments Received
+                </div>
+                <p class="mb-1 fw-medium">Execute Final Commission (Option B) for all deals under this lead:</p>
+                <ol class="mb-2 ps-3 small text-muted">
+                    <li>Set lead payment status to <strong>Received</strong> and balance to ₹0</li>
+                    <li>Compute full waterfall commission (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%) on the deal total</li>
+                    <li>Deduct prior advances/commissions and trigger remaining balance commissions</li>
+                    <li>Reconcile unadjusted solar advances to ADJUSTED</li>
+                </ol>
+            `;
+        }
+        const sbCheck = document.getElementById('ule_allPaidReleaseSupportBrand');
+        if (sbCheck) sbCheck.checked = true;
+
+        const modalEl = document.getElementById('ule_allPaidConfirmModal');
+        if (modalEl) {
+            const modal = (typeof bootstrap !== 'undefined' && bootstrap.Modal)
+                ? (bootstrap.Modal.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(modalEl) : new bootstrap.Modal(modalEl))
+                : null;
+            if (modal) modal.show();
+        }
+    }
+
+    async confirmExecuteAllPaymentsReceived() {
+        const targetType = document.getElementById('ule_allPaidTargetType')?.value || 'lead';
+        const targetId = document.getElementById('ule_allPaidTargetId')?.value;
+        const leadId = document.getElementById('ule_leadId')?.value;
+        const companyId = document.getElementById('ule_companyId')?.value;
+        const releaseSupportBrand = document.getElementById('ule_allPaidReleaseSupportBrand')?.checked ?? true;
+
+        const modalEl = document.getElementById('ule_allPaidConfirmModal');
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getInstance ? bootstrap.Modal.getInstance(modalEl) : null;
+            if (modal) modal.hide();
+        }
+
+        try {
+            let url = '';
+            if (targetType === 'deal') {
+                url = `${this.apiBasePath}/deals/${targetId}/all-payments-received?company_id=${companyId || ''}&release_support_brand=${releaseSupportBrand}`;
+            } else {
+                url = `${this.apiBasePath}/leads/${leadId}/all-payments-received?company_id=${companyId || ''}&release_support_brand=${releaseSupportBrand}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                ...this.authOptions,
+                headers: { ...this.authOptions.headers, 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                let msg = `All Payments Received processed successfully!\n\n` +
+                          `Status: ${data.status || 'Success'}\n` +
+                          `Deal Value Total: ₹${(data.deal_value_total || 0).toLocaleString('en-IN')}\n` +
+                          `Entries Created: ${data.entries_created?.length || 0}\n` +
+                          `Total Triggered Gross: ₹${(data.total_triggered_gross || 0).toLocaleString('en-IN')}`;
+                if (data.entries_created && data.entries_created.length > 0) {
+                    msg += '\n\nCommission Entries:';
+                    data.entries_created.forEach(e => {
+                        msg += `\n• Level ${e.level} (${e.partner_name || e.partner_id}): Gross ₹${(e.gross_amount || 0).toLocaleString('en-IN')} (Net ₹${(e.net_payable || 0).toLocaleString('en-IN')})`;
+                    });
+                }
+                alert(msg);
+                this.loadTransactions(leadId, companyId);
+                this.loadLeadDeals(leadId);
+            } else {
+                alert(data.detail || data.error || 'Failed to process Option B.');
+            }
+        } catch (err) {
+            console.error('[DC-CRM-EDITOR] All payments received trigger error:', err);
+            alert('Error triggering all payments received: ' + err.message);
         }
     }
     

@@ -29,6 +29,7 @@ No negative impact on existing vgk_team_income_entries or points ledger.
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -1248,17 +1249,27 @@ def get_partner_advance_summary(db: Session, partner_id: int, company_id: int = 
         SELECT COALESCE(SUM(commission_amount), 0) AS total_given
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid
-          AND kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE')
+          AND source_lead_id IS NULL
+          AND kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE', 'PARTNER_ADVANCE', 'DIRECT_ADVANCE')
           AND status IN ('RELEASED', 'PAID')
     """)
     res_adv = db.execute(query_adv, {'pid': partner_id}).fetchone()
     total_given = Decimal(str(res_adv.total_given if res_adv and res_adv.total_given is not None else 0))
 
     query_rec = text("""
-        SELECT COALESCE(SUM(advance_adjusted_amount), 0) AS total_recovered
-        FROM vgk_cash_income_entries
-        WHERE partner_id = :pid
-          AND status IN ('RELEASED', 'PAID')
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN e.source_lead_id IS NULL AND e.kind IN ('ADVANCE_RECOVERY', 'ADVANCE_CLEARED', 'ADVANCE_DEDUCTION') THEN e.commission_amount
+                WHEN e.adjustment_ref_entry_id IN (
+                    SELECT id FROM vgk_cash_income_entries WHERE partner_id = :pid AND source_lead_id IS NULL
+                ) THEN COALESCE(e.advance_adjusted_amount, e.commission_amount, 0)
+                WHEN e.source_lead_id IS NULL THEN COALESCE(e.advance_adjusted_amount, 0)
+                ELSE 0
+            END
+        ), 0) AS total_recovered
+        FROM vgk_cash_income_entries e
+        WHERE e.partner_id = :pid
+          AND e.status IN ('RELEASED', 'PAID')
     """)
     res_rec = db.execute(query_rec, {'pid': partner_id}).fetchone()
     total_recovered = Decimal(str(res_rec.total_recovered if res_rec and res_rec.total_recovered is not None else 0))
@@ -1271,8 +1282,9 @@ def get_partner_advance_summary(db: Session, partner_id: int, company_id: int = 
             status, created_at, notes, net_payout
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid
+          AND source_lead_id IS NULL
           AND (
-            kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE')
+            kind IN ('ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE', 'DVR_ADVANCE', 'PARTNER_ADVANCE', 'DIRECT_ADVANCE', 'ADVANCE_RECOVERY', 'ADVANCE_CLEARED')
             OR advance_adjusted_amount > 0
           )
         ORDER BY created_at DESC
@@ -1316,7 +1328,8 @@ def issue_direct_advance(
     bank_ledger_id: int = None,
     cash_staff_id: int = None,
     payment_utr: str = None,
-    notes: str = None
+    notes: str = None,
+    advance_date: Any = None
 ) -> dict:
     """
     Accounts staff directly issues a cash/bank advance to a VGK partner (member).
@@ -1339,6 +1352,22 @@ def issue_direct_advance(
         k = 'ADVANCE'
 
     now = _get_ist()
+    adv_date = None
+    if advance_date:
+        try:
+            from datetime import date as dt_date
+            if isinstance(advance_date, dt_date):
+                adv_date = advance_date
+            elif isinstance(advance_date, str) and advance_date.strip():
+                adv_date = datetime.strptime(advance_date.strip()[:10], '%Y-%m-%d').date()
+        except Exception as e:
+            logger.warning(f"[VGK-CI] Failed to parse advance_date '{advance_date}': {e}")
+            adv_date = None
+    
+    if not adv_date:
+        adv_date = now.date()
+
+    adv_dt = datetime.combine(adv_date, now.time())
     entry_no = _next_entry_number(db, company_id or partner.company_id or 4)
 
     entry = VGKCashIncomeEntry(
@@ -1360,17 +1389,18 @@ def issue_direct_advance(
         net_payout=gross,
         advance_adjusted_amount=0,
         confirmed_by_id=created_by_id,
-        confirmed_at=now,
+        confirmed_at=adv_dt,
         released_by_id=created_by_id,
-        released_at=now,
+        released_at=adv_dt,
         paid_by_id=created_by_id,
-        paid_at=now,
+        paid_at=adv_dt,
         payment_mode=(payment_mode or 'BANK').upper(),
         payment_utr=payment_utr,
         paid_bank_ledger_id=bank_ledger_id,
         paid_cash_staff_id=cash_staff_id,
         notes=notes or f'Direct {k} issued to member',
-        income_date=now.date()
+        income_date=adv_date,
+        created_at=adv_dt
     )
     db.add(entry)
     db.flush()
@@ -1780,6 +1810,64 @@ def is_super_skip_user(staff) -> bool:
     ec = (getattr(staff, 'emp_code', '') or '').strip()
     rc = (getattr(staff, 'role_code', '') or '').strip().lower()
     return st in SUPER_STAFF_TYPES or ec in SUPER_EMP_CODES or rc in ('key_leadership', 'ea', 'executive_admin')
+
+
+def is_mr10001_or_accounts_staff(db: Session, staff_or_id) -> bool:
+    """
+    Return True if staff member is MR10001, super user, or belongs to Accounts / Finance department.
+    These users have an explicit override exception to mark payouts as PAID even if KYC or Bank
+    details are pending/not approved.
+    """
+    if not staff_or_id:
+        return False
+    try:
+        from app.models.staff import StaffEmployee, StaffDepartment, StaffEmployeeDepartment
+        if isinstance(staff_or_id, StaffEmployee):
+            staff = staff_or_id
+            staff_id = staff.id
+        else:
+            staff_id = int(staff_or_id)
+            staff = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+
+        if not staff:
+            return False
+
+        ec = (getattr(staff, 'emp_code', '') or '').strip().upper()
+        if ec in ('MR10001', 'MR10025'):
+            return True
+
+        if is_super_skip_user(staff):
+            return True
+
+        rc = (getattr(staff, 'role_code', '') or '').strip().lower()
+        if hasattr(staff, 'role') and staff.role:
+            rc = (getattr(staff.role, 'role_code', '') or '').strip().lower()
+        if rc in ('key_leadership', 'ea', 'executive_admin', 'super_admin'):
+            return True
+
+        # Check primary department
+        dept_name = ''
+        if getattr(staff, 'department', None):
+            dept_name = (getattr(staff.department, 'name', '') or '').strip().lower()
+        elif getattr(staff, 'department_id', None):
+            dept_obj = db.query(StaffDepartment).filter(StaffDepartment.id == staff.department_id).first()
+            if dept_obj:
+                dept_name = (dept_obj.name or '').strip().lower()
+        if 'account' in dept_name or 'finance' in dept_name or getattr(staff, 'department_id', None) == 16:
+            return True
+
+        # Check additional departments
+        add_depts = db.query(StaffDepartment.name, StaffDepartment.id).join(
+            StaffEmployeeDepartment, StaffEmployeeDepartment.department_id == StaffDepartment.id
+        ).filter(StaffEmployeeDepartment.employee_id == staff_id).all()
+        for (ad_name, ad_id) in add_depts:
+            if ad_id == 16 or 'account' in (ad_name or '').lower() or 'finance' in (ad_name or '').lower():
+                return True
+
+        return False
+    except Exception as e:
+        logger.warning(f"[VGK-PAYOUT-GATE] is_mr10001_or_accounts_staff check error: {e}")
+        return False
 
 
 
@@ -2610,9 +2698,10 @@ def mark_paid_cash_income(
     if pm == 'BANK' and not utr:
         return {'success': False, 'error': 'UTR is required for BANK payments'}
 
-    # HARD PAYOUT GATE — KYC AND BANK DETAILS APPROVAL (WITH 3-PAYMENT GRACE POLICY):
+    # HARD PAYOUT GATE — KYC AND BANK DETAILS APPROVAL (WITH 3-PAYMENT GRACE POLICY & MR10001/ACCOUNTS EXCEPTION):
     # Payout is allowed without approved KYC/Bank Details for up to 3 payments (grace period for new and existing members).
     # Beyond 3 grace payments, both KYC and Bank Details must be 'Approved'.
+    # EXCEPTION: MR10001 and Accounts/Finance Department staff are authorized to mark anyone as PAID even if KYC is pending.
     if not force and entry.partner_id:
         from app.models.staff_accounts import OfficialPartner as _OP_Gate
         _gate_partner = db.query(_OP_Gate).filter(_OP_Gate.id == entry.partner_id).with_for_update().first()
@@ -2620,8 +2709,16 @@ def mark_paid_cash_income(
             kyc_st = (_gate_partner.kyc_status or '').strip()
             bank_st = (_gate_partner.bank_details_status or '').strip()
             if kyc_st != 'Approved' or bank_st != 'Approved':
+                _can_bypass = is_mr10001_or_accounts_staff(db, paid_by_id)
                 _grace_used = getattr(_gate_partner, 'kyc_grace_payments_used', 0) or 0
-                if _grace_used < 3:
+                if _can_bypass:
+                    logger.info(
+                        f"[VGK-PAYOUT-KYC-BYPASS] Payout KYC/Bank gate bypassed by MR10001 / Accounts staff (paid_by_id={paid_by_id}) "
+                        f"for entry {entry.entry_number} (partner {_gate_partner.id}, code {_gate_partner.partner_code}, "
+                        f"KYC={kyc_st}, Bank={bank_st}, grace_used={_grace_used})."
+                    )
+                    entry.notes = ((entry.notes or '') + f" | [KYC Bypass: MR10001 / Accounts]").strip(' |')
+                elif _grace_used < 3:
                     _gate_partner.kyc_grace_payments_used = _grace_used + 1
                     logger.info(
                         f"[VGK-PAYOUT-KYC-GRACE] Payout allowed under KYC grace ({_gate_partner.kyc_grace_payments_used}/3) "
@@ -3221,3 +3318,463 @@ def record_dvr_advance_as_income_row(
         f'{getattr(advance_row,"entry_number","?")} partner={partner.partner_code} level={_adv_level}'
     )
     return {'success': True, 'income_entry_id': entry.id, 'entry_number': entry.entry_number}
+
+
+def trigger_all_payments_received_commission(
+    db: Session,
+    lead_id: int,
+    company_id: Optional[int] = None,
+    current_employee_id: Optional[int] = None,
+    force_received_sync: bool = True,
+    release_support_brand: bool = True
+) -> dict:
+    """
+    DC-OPTION-B-FINAL-COMMISSION-2026:
+    Trigger Option B balance commission on lead completion / 'All Payments Received'.
+    Computes canonical commission for each active level on the lead (L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%),
+    deducts all prior non-cancelled gross amounts already triggered on that lead for each level,
+    and creates new COMMISSION entries in PENDING status for the remaining balance.
+    """
+    from app.models.crm import CRMLead
+    from app.models.staff_accounts import OfficialPartner
+    from app.models.vgk_cash_income import VGKCashIncomeEntry
+
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        return {'success': False, 'message': f'Lead #{lead_id} not found', 'created_entries': []}
+
+    target_company_id = company_id or lead.company_id or 4
+    deal_total = Decimal(str(lead.deal_value_total or lead.deal_value or 0))
+    if deal_total <= Decimal('0.00'):
+        return {'success': False, 'message': f'Lead #{lead_id} has zero deal value total', 'created_entries': []}
+
+    # Ensure lead balances reflect 100% receipt
+    if force_received_sync or (lead.deal_value_received or 0) < float(deal_total):
+        lead.deal_value_received = float(deal_total)
+        lead.deal_value_balance = 0.0
+        if hasattr(lead, 'payment_status'):
+            setattr(lead, 'payment_status', 'paid')
+        if hasattr(lead, 'payment_received'):
+            setattr(lead, 'payment_received', True)
+        if hasattr(lead, 'first_payment_received_date') and not getattr(lead, 'first_payment_received_date', None):
+            setattr(lead, 'first_payment_received_date', _get_ist().date())
+        if hasattr(lead, 'payment_received_date'):
+            setattr(lead, 'payment_received_date', _get_ist().date())
+        db.flush()
+
+    # Resolve partner hierarchy
+    l1_pid = getattr(lead, 'associated_partner_id', None) or getattr(lead, 'direct_partner_id', None)
+    l1_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l1_pid).first() if l1_pid else None
+
+    l2_pid = getattr(lead, 'team_senior_partner_id', None) or getattr(lead, 'level1_partner_id', None) or (l1_partner.parent_partner_id if l1_partner else None)
+    l2_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l2_pid).first() if l2_pid else None
+
+    l3_pid = getattr(lead, 'level2_partner_id', None) or (l2_partner.parent_partner_id if l2_partner else None)
+    l3_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l3_pid).first() if l3_pid else None
+
+    l4_pid = getattr(lead, 'level3_partner_id', None) or (l3_partner.parent_partner_id if l3_partner else None)
+    l4_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l4_pid).first() if l4_pid else None
+
+    rates = {
+        1: Decimal('5.00'),
+        2: Decimal('1.50'),
+        3: Decimal('1.00'),
+        4: Decimal('0.50'),
+    }
+
+    try:
+        from app.models.staff_accounts import VGKTeamCommissionConfig
+        if lead.category_id:
+            cfg = db.query(VGKTeamCommissionConfig).filter(VGKTeamCommissionConfig.category_id == lead.category_id).first()
+            if cfg:
+                if cfg.level1_pct: rates[1] = Decimal(str(cfg.level1_pct))
+                if cfg.level2_pct: rates[2] = Decimal(str(cfg.level2_pct))
+                if cfg.level3_pct: rates[3] = Decimal(str(cfg.level3_pct))
+                if cfg.level4_core_pct: rates[4] = Decimal(str(cfg.level4_core_pct))
+    except Exception:
+        pass
+
+    partners_by_level = {1: l1_partner, 2: l2_partner, 3: l3_partner, 4: l4_partner}
+    created_entries = []
+
+    # Resolve best date: match existing lead commission date, latest transaction date on lead, or fallback to first_payment/today
+    existing_lead_comm = db.query(VGKCashIncomeEntry).filter(
+        VGKCashIncomeEntry.source_lead_id == lead.id,
+        VGKCashIncomeEntry.status.notin_(['CANCELLED']),
+        VGKCashIncomeEntry.kind.in_(['COMMISSION', 'EXTRA_COMMISSION', 'SENIOR_COMM'])
+    ).order_by(VGKCashIncomeEntry.id.desc()).first()
+
+    latest_txn = db.execute(text("""
+        SELECT transaction_date::date as dt
+        FROM crm_lead_transactions
+        WHERE lead_id = :lid AND validation_status = 'validated'
+        ORDER BY transaction_date DESC, id DESC LIMIT 1
+    """), {"lid": lead.id}).fetchone()
+
+    if existing_lead_comm and existing_lead_comm.income_date:
+        resolved_date = existing_lead_comm.income_date
+    elif latest_txn and latest_txn.dt:
+        resolved_date = latest_txn.dt
+    else:
+        resolved_date = getattr(lead, 'first_payment_received_date', None) or _get_ist().date()
+
+    for lvl in (1, 2, 3, 4):
+        partner = partners_by_level.get(lvl)
+        if not partner or not partner.id:
+            continue
+
+        if getattr(partner, 'partner_type', None) == 'FREELANCER':
+            continue
+
+        pct = rates[lvl]
+        canonical_gross = (deal_total * pct / Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # Check if a pending entry exists (e.g. created for final payment or awaiting release)
+        pending_entry = db.query(VGKCashIncomeEntry).filter(
+            VGKCashIncomeEntry.source_lead_id == lead.id,
+            VGKCashIncomeEntry.partner_id == partner.id,
+            VGKCashIncomeEntry.level == lvl,
+            VGKCashIncomeEntry.status == 'PENDING',
+            VGKCashIncomeEntry.kind.in_(['DVR_ADVANCE', 'STAGE2_ADVANCE', 'ADVANCE', 'COMMISSION'])
+        ).order_by(VGKCashIncomeEntry.id.desc()).first()
+
+        # Prior paid rows (excluding any pending entry being upgraded)
+        prior_paid_rows = db.execute(text("""
+            SELECT id, kind, status, commission_amount
+            FROM vgk_cash_income_entries
+            WHERE source_lead_id = :lid AND partner_id = :pid AND level = :lvl 
+              AND status IN ('PAID', 'RELEASED', 'VERIFIED')
+        """), {"lid": lead.id, "pid": partner.id, "lvl": lvl}).fetchall()
+        prior_paid_adv = sum(Decimal(str(r.commission_amount or 0)) for r in prior_paid_rows)
+
+        balance_gross = max(Decimal('0.00'), canonical_gross - prior_paid_adv)
+        admin_amt = (balance_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        tds_amt = (balance_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        net_amt = max(Decimal('0.00'), balance_gross - admin_amt - tds_amt)
+
+        if pending_entry:
+            # Upgrade the existing pending entry so there are no duplicate or split entries on completion
+            pending_entry.kind = 'COMMISSION'
+            pending_entry.commission_amount = canonical_gross
+            pending_entry.deal_value_total = deal_total
+            pending_entry.advance_adjusted_amount = prior_paid_adv
+            pending_entry.admin_charges = admin_amt
+            pending_entry.tds_amount = tds_amt
+            pending_entry.net_payout = net_amt
+            pending_entry.points_debit_required = canonical_gross
+            pending_entry.notes = f"Option B: Full Commission Settlement ({pct}%) on full payment received [Deal: ₹{deal_total:,.2f}, Prior Advances Deducted: ₹{prior_paid_adv:,.2f}]"
+            db.flush()
+
+            # Clean up any redundant duplicate pending entries for this lead/partner/level created earlier
+            db.execute(text("""
+                DELETE FROM vgk_cash_income_entries
+                WHERE source_lead_id = :lid AND partner_id = :pid AND level = :lvl
+                  AND id != :keep_id AND status = 'PENDING'
+            """), {"lid": lead.id, "pid": partner.id, "lvl": lvl, "keep_id": pending_entry.id})
+            db.flush()
+
+            created_entries.append({
+                "id": pending_entry.id,
+                "entry_number": pending_entry.entry_number,
+                "partner_id": partner.id,
+                "partner_code": partner.partner_code,
+                "partner_name": partner.partner_name,
+                "level": lvl,
+                "pct": float(pct),
+                "canonical_gross": float(canonical_gross),
+                "prior_gross": float(prior_paid_adv),
+                "balance_gross": float(balance_gross),
+                "admin_charges": float(admin_amt),
+                "tds_amount": float(tds_amt),
+                "net_payout": float(net_amt),
+                "action": "UPGRADED_TO_COMMISSION"
+            })
+        else:
+            # Resolve best date: match latest transaction date on lead, or fallback to first_payment/today
+            latest_txn = db.execute(text("""
+                SELECT transaction_date::date as dt
+                FROM crm_lead_transactions
+                WHERE lead_id = :lid AND validation_status = 'validated'
+                ORDER BY transaction_date DESC, id DESC LIMIT 1
+            """), {"lid": lead.id}).fetchone()
+            resolved_date = latest_txn.dt if latest_txn and latest_txn.dt else (getattr(lead, 'first_payment_received_date', None) or _get_ist().date())
+
+            calc_base = deal_total
+            entry_num = _next_entry_number(db, target_company_id)
+
+            new_entry = VGKCashIncomeEntry(
+                company_id              = target_company_id,
+                entry_number            = entry_num,
+                partner_id              = partner.id,
+                source_lead_id          = lead.id,
+                category_id             = lead.category_id,
+                level                   = lvl,
+                income_date             = resolved_date,
+                deal_value_total        = deal_total,
+                earning_basis_type      = 'PAYMENT_RECEIVED',
+                earning_basis_amount    = calc_base,
+                commission_pct          = pct,
+                commission_amount       = canonical_gross,
+                advance_adjusted_amount = prior_paid_adv,
+                admin_charges           = admin_amt,
+                tds_amount              = tds_amt,
+                net_payout              = net_amt,
+                points_debit_required   = canonical_gross,
+                points_actually_debited = Decimal('0.00'),
+                status                  = 'PENDING',
+                kind                    = 'COMMISSION',
+                program_version         = 'v2_sep2026',
+                notes                   = f"Option B: Full Commission Settlement ({pct}%) on full payment received [Deal: ₹{deal_total:,.2f}, Prior Advances Deducted: ₹{prior_paid_adv:,.2f}]",
+            )
+            db.add(new_entry)
+            db.flush()
+
+            created_entries.append({
+                "id": new_entry.id,
+                "entry_number": new_entry.entry_number,
+                "partner_id": partner.id,
+                "partner_code": partner.partner_code,
+                "partner_name": partner.partner_name,
+                "level": lvl,
+                "pct": float(pct),
+                "canonical_gross": float(canonical_gross),
+                "prior_gross": float(prior_paid_adv),
+                "balance_gross": float(balance_gross),
+                "admin_charges": float(admin_amt),
+                "tds_amount": float(tds_amt),
+                "net_payout": float(net_amt),
+                "action": "CREATED"
+            })
+
+    # Release Support (L5) & Brand Incomes as well
+    if release_support_brand:
+        # 1. Field Support (L5)
+        l5_pid = getattr(lead, 'vgk_field_support_id', None) or getattr(lead, 'associated_partner_id', None) or 31
+        l5_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l5_pid).first() if l5_pid else None
+        if l5_partner and getattr(l5_partner, 'partner_type', None) != 'FREELANCER':
+            l5_pct = Decimal('1.00')
+            l5_flat_amt = None
+            if lead.category_id:
+                try:
+                    from app.models.staff_accounts import VGKTeamCommissionConfig
+                    cfg = db.query(VGKTeamCommissionConfig).filter(VGKTeamCommissionConfig.category_id == lead.category_id).first()
+                    if cfg:
+                        if getattr(cfg, 'level4_type', 'PCT') == 'AMOUNT':
+                            l5_flat_amt = Decimal(str(getattr(cfg, 'level4_amt', 0) or 0))
+                        elif cfg.level4_pct:
+                            l5_pct = Decimal(str(cfg.level4_pct))
+                except Exception:
+                    pass
+
+            comp_supp = getattr(lead, 'company_supported', True)
+            if comp_supp is None:
+                comp_supp = True
+
+            effective_l5_pct = Decimal('0.75') if comp_supp else Decimal('1.50')
+            if l5_flat_amt and l5_flat_amt > 0:
+                canonical_l5_gross = (l5_flat_amt * Decimal('0.50')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if comp_supp else l5_flat_amt
+            else:
+                canonical_l5_gross = (deal_total * effective_l5_pct / Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            l5_pct = effective_l5_pct
+
+            prior_paid_l5_rows = db.execute(text("""
+                SELECT id, kind, status, commission_amount
+                FROM vgk_cash_income_entries
+                WHERE source_lead_id = :lid AND partner_id = :pid AND level = 5
+                  AND status IN ('PAID', 'RELEASED', 'VERIFIED')
+            """), {"lid": lead.id, "pid": l5_partner.id}).fetchall()
+            prior_paid_l5 = sum(Decimal(str(r.commission_amount or 0)) for r in prior_paid_l5_rows)
+
+            bal_l5_gross = max(Decimal('0.00'), canonical_l5_gross - prior_paid_l5)
+            admin_l5 = (bal_l5_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            tds_l5 = (bal_l5_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            net_l5 = max(Decimal('0.00'), bal_l5_gross - admin_l5 - tds_l5)
+
+            pending_l5 = db.query(VGKCashIncomeEntry).filter(
+                VGKCashIncomeEntry.source_lead_id == lead.id,
+                VGKCashIncomeEntry.partner_id == l5_partner.id,
+                VGKCashIncomeEntry.level == 5,
+                VGKCashIncomeEntry.status.in_(['DRAFT', 'PENDING', 'STAGE1_APPROVED'])
+            ).order_by(VGKCashIncomeEntry.id.desc()).first()
+
+            if pending_l5:
+                pending_l5.kind = 'COMMISSION'
+                pending_l5.commission_pct = l5_pct
+                pending_l5.commission_amount = canonical_l5_gross
+                pending_l5.deal_value_total = deal_total
+                pending_l5.advance_adjusted_amount = prior_paid_l5
+                if getattr(pending_l5, 'skip_tds_admin', False):
+                    pending_l5.admin_charges = Decimal('0.00')
+                    pending_l5.tds_amount = Decimal('0.00')
+                    pending_l5.net_payout = bal_l5_gross
+                else:
+                    pending_l5.admin_charges = admin_l5
+                    pending_l5.tds_amount = tds_l5
+                    pending_l5.net_payout = net_l5
+                pending_l5.status = 'PENDING'
+                pending_l5.notes = f"Option B: Field Support (L5) Settlement on full payment received [Deal: ₹{deal_total:,.2f}, Prior Deducted: ₹{prior_paid_l5:,.2f}]"
+                db.flush()
+
+                created_entries.append({
+                    "id": pending_l5.id,
+                    "entry_number": pending_l5.entry_number,
+                    "partner_id": l5_partner.id,
+                    "partner_code": l5_partner.partner_code,
+                    "partner_name": l5_partner.partner_name,
+                    "level": 5,
+                    "pct": float(l5_pct),
+                    "canonical_gross": float(canonical_l5_gross),
+                    "prior_gross": float(prior_paid_l5),
+                    "balance_gross": float(bal_l5_gross),
+                    "admin_charges": float(pending_l5.admin_charges or 0),
+                    "tds_amount": float(pending_l5.tds_amount or 0),
+                    "net_payout": float(pending_l5.net_payout or 0),
+                    "action": "UPGRADED_TO_COMMISSION"
+                })
+            elif bal_l5_gross > 0 or not prior_paid_l5_rows:
+                entry_num_l5 = _next_entry_number(db, target_company_id)
+                new_l5 = VGKCashIncomeEntry(
+                    company_id              = target_company_id,
+                    entry_number            = entry_num_l5,
+                    partner_id              = l5_partner.id,
+                    source_lead_id          = lead.id,
+                    category_id             = lead.category_id,
+                    level                   = 5,
+                    income_date             = resolved_date,
+                    deal_value_total        = deal_total,
+                    earning_basis_type      = 'PAYMENT_RECEIVED',
+                    earning_basis_amount    = deal_total,
+                    commission_pct          = l5_pct,
+                    commission_amount       = canonical_l5_gross,
+                    advance_adjusted_amount = prior_paid_l5,
+                    admin_charges           = admin_l5,
+                    tds_amount              = tds_l5,
+                    net_payout              = net_l5,
+                    status                  = 'PENDING',
+                    kind                    = 'COMMISSION',
+                    program_version         = 'v2_sep2026',
+                    notes                   = f"Option B: Field Support (L5) Settlement on full payment received [Deal: ₹{deal_total:,.2f}, Prior Deducted: ₹{prior_paid_l5:,.2f}]",
+                )
+                db.add(new_l5)
+                db.flush()
+                created_entries.append({
+                    "id": new_l5.id,
+                    "entry_number": new_l5.entry_number,
+                    "partner_id": l5_partner.id,
+                    "partner_code": l5_partner.partner_code,
+                    "partner_name": l5_partner.partner_name,
+                    "level": 5,
+                    "pct": float(l5_pct),
+                    "canonical_gross": float(canonical_l5_gross),
+                    "prior_gross": float(prior_paid_l5),
+                    "balance_gross": float(bal_l5_gross),
+                    "admin_charges": float(admin_l5),
+                    "tds_amount": float(tds_l5),
+                    "net_payout": float(net_l5),
+                    "action": "CREATED"
+                })
+
+        # 2. Solar Brand (Level 11)
+        solar_brand_id = getattr(lead, 'solar_brand_id', None)
+        if solar_brand_id and l1_partner:
+            try:
+                b_row = db.execute(text("SELECT l1_amount FROM vgk_incentive_brands WHERE id = :bid AND is_active = true"), {"bid": solar_brand_id}).fetchone()
+                b_amt = Decimal(str(b_row[0])) if (b_row and b_row[0]) else Decimal('2000.00')
+                if b_amt > 0:
+                    b_existing = db.query(VGKCashIncomeEntry).filter(
+                        VGKCashIncomeEntry.source_lead_id == lead.id,
+                        VGKCashIncomeEntry.partner_id == l1_partner.id,
+                        VGKCashIncomeEntry.level == 11,
+                        VGKCashIncomeEntry.kind == 'BRAND_COMMISSION',
+                        VGKCashIncomeEntry.status != 'CANCELLED'
+                    ).first()
+                    if b_existing:
+                        if b_existing.status in ('DRAFT', 'PENDING'):
+                            b_existing.status = 'PENDING'
+                            b_existing.notes = "Option B: Brand Incentive released on full payment received"
+                            db.flush()
+                            created_entries.append({
+                                "id": b_existing.id,
+                                "entry_number": b_existing.entry_number,
+                                "partner_id": l1_partner.id,
+                                "partner_code": l1_partner.partner_code,
+                                "partner_name": l1_partner.partner_name,
+                                "level": 11,
+                                "pct": 0.0,
+                                "canonical_gross": float(b_amt),
+                                "prior_gross": 0.0,
+                                "balance_gross": float(b_amt),
+                                "admin_charges": float(b_existing.admin_charges or 0),
+                                "tds_amount": float(b_existing.tds_amount or 0),
+                                "net_payout": float(b_existing.net_payout or 0),
+                                "action": "RELEASED_TO_PENDING"
+                            })
+                    else:
+                        b_adm = (b_amt * Decimal('0.08')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        b_tds = (b_amt * Decimal('0.02')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        b_net = (b_amt * Decimal('0.90')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        b_entry = VGKCashIncomeEntry(
+                            company_id           = target_company_id,
+                            entry_number         = _next_entry_number(db, target_company_id),
+                            partner_id           = l1_partner.id,
+                            source_lead_id       = lead.id,
+                            category_id          = lead.category_id,
+                            level                = 11,
+                            kind                 = 'BRAND_COMMISSION',
+                            income_date          = resolved_date,
+                            deal_value_total     = deal_total,
+                            commission_pct       = Decimal('0'),
+                            commission_amount    = b_amt,
+                            admin_charges        = b_adm,
+                            tds_amount           = b_tds,
+                            net_payout           = b_net,
+                            status               = 'PENDING',
+                            notes                = "Option B: Brand Incentive released on full payment received"
+                        )
+                        db.add(b_entry)
+                        db.flush()
+                        created_entries.append({
+                            "id": b_entry.id,
+                            "entry_number": b_entry.entry_number,
+                            "partner_id": l1_partner.id,
+                            "partner_code": l1_partner.partner_code,
+                            "partner_name": l1_partner.partner_name,
+                            "level": 11,
+                            "pct": 0.0,
+                            "canonical_gross": float(b_amt),
+                            "prior_gross": 0.0,
+                            "balance_gross": float(b_amt),
+                            "admin_charges": float(b_adm),
+                            "tds_amount": float(b_tds),
+                            "net_payout": float(b_net),
+                            "action": "CREATED"
+                        })
+            except Exception as _b_err:
+                logger.warning(f"[VGK-CI] Brand commission non-fatal in Option B: {_b_err}")
+
+    # Reconcile unadjusted advances in vgk_solar_cibil_advances
+    now_ist = _get_ist()
+    db.execute(text("""
+        UPDATE vgk_solar_cibil_advances
+        SET status = 'ADJUSTED',
+            adjustment_amount = advance_amount,
+            adjusted_at = :now,
+            updated_at = :now
+        WHERE lead_id = :lid AND status = 'RELEASED'
+    """), {"lid": lead.id, "now": now_ist.replace(tzinfo=None)})
+
+    db.commit()
+
+    total_gross = sum(e["balance_gross"] for e in created_entries)
+    return {
+        "success": True,
+        "status": "COMPLETED",
+        "lead_id": lead.id,
+        "deal_value_total": float(deal_total),
+        "created_count": len(created_entries),
+        "created_entries": created_entries,
+        "entries_created": created_entries,
+        "total_triggered_gross": total_gross,
+        "message": f"Successfully processed Option B final commission: {len(created_entries)} entries created (Total Gross: ₹{total_gross:,.2f})"
+    }
+
