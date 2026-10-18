@@ -28,15 +28,15 @@ COPY frontend/package.json frontend/package.json
 COPY backend/whatsapp-group-bot/package.json backend/whatsapp-group-bot/package.json
 COPY backend/whatsapp-group-bot/package-lock.json backend/whatsapp-group-bot/package-lock.json
 
-# Cache buster ensures AWS Docker daemon never uses stale cached layers
-ARG BUILD_ID=v2.4.54-185-shoutout-fix
-
 # Install Python dependencies with pre-compiled wheels
 RUN pip install --no-cache-dir --prefer-binary --default-timeout=120 -r backend/requirements.txt
 
 # Install Node.js production dependencies for frontend (no-package-lock prevents EINTEGRITY) and whatsapp bot
 RUN cd frontend && npm install --omit=dev --no-audit --no-fund --no-package-lock
-RUN cd backend/whatsapp-group-bot && npm install --omit=dev --no-audit --no-fund
+RUN cd backend/whatsapp-group-bot && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
+
+# Cache buster ensures AWS Docker daemon always copies fresh application code without busting dependency cache
+ARG BUILD_ID=v2.4.54-185-shoutout-fix
 
 # Copy application source code
 COPY . .
