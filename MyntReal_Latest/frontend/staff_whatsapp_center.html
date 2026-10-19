@@ -89,7 +89,14 @@
     .ei-contacts{background:#d1fae5;color:#065f46}
 
     /* ── TAB 2: MESSENGER SPLIT VIEW ─────────────────────────────────── */
-    .messenger-container{display:flex;height:calc(100vh - 300px);min-height:450px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.06);border:1px solid #e2e8f0;overflow:hidden;width:100%}
+    .msg-hub-controls-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(15,23,42,.03)}
+    .msg-stats-bar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .msg-stats-bar .stat-card{background:#fff;border-radius:10px;padding:8px 12px;flex:1;min-width:110px;text-align:center;box-shadow:0 1px 3px rgba(15,23,42,.04);cursor:pointer;transition:.15s;border:1.5px solid #e2e8f0;user-select:none}
+    .msg-stats-bar .stat-card:hover{border-color:#a7f3d0;background:#f0fdf4}
+    .msg-stats-bar .stat-card.active{border-color:#059669;background:#ecfdf5;box-shadow:0 2px 6px rgba(5,150,105,.18)}
+    .msg-stats-bar .stat-card .stat-val{font-size:18px;font-weight:800;line-height:1.2}
+    .msg-stats-bar .stat-card .stat-lbl{font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px}
+    .messenger-container{display:flex;height:calc(100vh - 400px);min-height:430px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.06);border:1px solid #e2e8f0;overflow:hidden;width:100%}
     .msg-sidebar{width:320px;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;background:#f8fafc;flex-shrink:0;height:100%;overflow:hidden}
     .msg-sidebar-header{padding:10px 12px;border-bottom:1px solid #e2e8f0;background:#fff}
     .msg-scope-select{width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:6px;outline:none}
@@ -204,8 +211,10 @@
       .wa-center-banner{padding:10px 12px;border-radius:10px}
       .wa-center-banner .hdr-top{flex-direction:column;align-items:flex-start;gap:8px}
       .hdr-actions{width:100%;gap:6px}
-      .hdr-search-box{width:100%}
-      .messenger-container{height:calc(100vh - 190px);min-height:380px;position:relative;border-radius:10px}
+      .messenger-container{height:calc(100vh - 280px);min-height:380px;position:relative;border-radius:10px}
+      .msg-hub-controls-bar{flex-direction:column;align-items:stretch}
+      .msg-stats-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+      .msg-stats-bar .stat-card{flex:0 0 115px}
       .msg-sidebar{width:100% !important;border-right:none}
       .msg-chat-pane{display:none;width:100%}
       .messenger-container.chat-active .msg-sidebar{display:none}
@@ -380,6 +389,60 @@
 
       <!-- ═══ MESSENGER SPLIT VIEW (Tabs 1, 2, 3, 4) ══════════════════════════════ -->
       <div class="tab-pane active" id="pane-messenger">
+
+        <!-- Messenger Date Filter Controls Bar -->
+        <div class="msg-hub-controls-bar" id="msgHubControlsBar">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:11.5px;font-weight:700;color:#475569;display:flex;align-items:center;gap:4px;margin-right:2px;">
+              <i class="far fa-calendar-alt" style="color:#059669"></i> Date Filter:
+            </span>
+            <button type="button" class="channel-pill-btn active msg-date-pill" id="datePill-all" onclick="onMsgDatePreset('all')">All Dates</button>
+            <button type="button" class="channel-pill-btn msg-date-pill" id="datePill-today" onclick="onMsgDatePreset('today')">Today</button>
+            <button type="button" class="channel-pill-btn msg-date-pill" id="datePill-yesterday" onclick="onMsgDatePreset('yesterday')">Yesterday</button>
+            <button type="button" class="channel-pill-btn msg-date-pill" id="datePill-7days" onclick="onMsgDatePreset('7days')">Last 7 Days</button>
+            <button type="button" class="channel-pill-btn msg-date-pill" id="datePill-30days" onclick="onMsgDatePreset('30days')">Last 30 Days</button>
+            <button type="button" class="channel-pill-btn msg-date-pill" id="datePill-custom" onclick="onMsgDatePreset('custom')">📅 Custom Range</button>
+          </div>
+
+          <div id="msgCustomDateWrap" style="display:none;align-items:center;gap:6px;">
+            <input type="date" id="msgDateFrom" onchange="onMsgCustomDateChange()" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11.5px;outline:none;" title="Start Date">
+            <span style="font-size:11px;color:#94a3b8">to</span>
+            <input type="date" id="msgDateTo" onchange="onMsgCustomDateChange()" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:11.5px;outline:none;" title="End Date">
+            <button type="button" class="btn-custom btn-outline-custom" onclick="clearMsgDateFilter()" style="padding:4px 8px;font-size:11px;border-radius:6px;" title="Reset Date Filter">
+              <i class="fas fa-times"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Messenger Summary KPI Metric Cards -->
+        <div class="stats-bar msg-stats-bar" id="msgSummaryCards">
+          <div class="stat-card active" id="mcard-all" onclick="filterMessengerByStatus('all')" title="Show All Conversations in Filter">
+            <div class="stat-val" id="mstat-all" style="color:#0f172a">0</div>
+            <div class="stat-lbl"><i class="fas fa-comments"></i> Total</div>
+            <div style="font-size:9.5px;color:#64748b;margin-top:2px;" id="mstat-all-sub">All Records</div>
+          </div>
+          <div class="stat-card" id="mcard-delivered" onclick="filterMessengerByStatus('delivered')" title="Filter: Delivered Messages">
+            <div class="stat-val" id="mstat-delivered" style="color:#059669">0</div>
+            <div class="stat-lbl"><i class="fas fa-check-double"></i> Delivered</div>
+            <div style="font-size:9.5px;color:#059669;margin-top:2px;font-weight:600;" id="mstat-delivered-pct">0%</div>
+          </div>
+          <div class="stat-card" id="mcard-read" onclick="filterMessengerByStatus('read')" title="Filter: Read / Seen Messages">
+            <div class="stat-val" id="mstat-read" style="color:#2563eb">0</div>
+            <div class="stat-lbl"><i class="fas fa-check-double" style="color:#2563eb"></i> Read / Seen</div>
+            <div style="font-size:9.5px;color:#2563eb;margin-top:2px;font-weight:600;" id="mstat-read-pct">0%</div>
+          </div>
+          <div class="stat-card" id="mcard-api" onclick="filterMessengerByStatus('api')" title="Filter: Meta Cloud API Messages">
+            <div class="stat-val" id="mstat-api" style="color:#0284c7">0</div>
+            <div class="stat-lbl"><i class="fas fa-bolt"></i> Meta API</div>
+            <div style="font-size:9.5px;color:#0284c7;margin-top:2px;font-weight:600;" id="mstat-api-pct">0%</div>
+          </div>
+          <div class="stat-card" id="mcard-scanned" onclick="filterMessengerByStatus('scanned')" title="Filter: Scanned QR WhatsApp Messages">
+            <div class="stat-val" id="mstat-scanned" style="color:#16a34a">0</div>
+            <div class="stat-lbl"><i class="fas fa-qrcode"></i> Scanned WA</div>
+            <div style="font-size:9.5px;color:#16a34a;margin-top:2px;font-weight:600;" id="mstat-scanned-pct">0%</div>
+          </div>
+        </div>
+
         <div class="messenger-container">
 
           <!-- Sidebar -->
@@ -423,6 +486,14 @@
                   <option value="staff">👔 Internal Staff</option>
                   <option value="vgk">💼 VGK Executive</option>
                   <option value="general">💬 General Inquiries</option>
+                </select>
+                <select id="msgDateFilterSelect" onchange="onMsgDatePreset(this.value)" style="flex:1;font-size:11.5px;padding:4px 8px;height:28px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;font-weight:500;">
+                  <option value="all">📅 All Dates</option>
+                  <option value="today">📅 Today</option>
+                  <option value="yesterday">📅 Yesterday</option>
+                  <option value="7days">📅 Last 7 Days</option>
+                  <option value="30days">📅 Last 30 Days</option>
+                  <option value="custom">📅 Custom Range...</option>
                 </select>
               </div>
 
@@ -1134,6 +1205,9 @@ let debounceTimer   = null;
 let companyChannelFilter = 'all';
 let broadcastFilter      = 'all';
 let activeMsgSegment     = '';
+let activeDatePreset     = 'all';
+let activeStatusCardFilter = 'all';
+let allMessengerConvs    = [];
 
 function onMsgSegmentChange(seg) {
   activeMsgSegment = seg || '';
@@ -1227,6 +1301,12 @@ function switchCenterTab(tabName) {
   const compFilterBar = document.getElementById('companyChannelFilterBar');
   const bcFilterBar   = document.getElementById('broadcastFilterBar');
   
+  if (['messenger', 'team', 'company', 'all', 'groups', 'broadcasts'].includes(tabName)) {
+    activeStatusCardFilter = 'all';
+    document.querySelectorAll('#pane-messenger .stat-card').forEach(card => card.classList.remove('active'));
+    document.getElementById('mcard-all')?.classList.add('active');
+  }
+
   if (tabName === 'messenger') {
     if (compFilterBar) compFilterBar.style.display = 'none';
     if (bcFilterBar) bcFilterBar.style.display = 'none';
@@ -1974,6 +2054,270 @@ function openChatFromInbox(phone) {
 }
 
 // ── TABS 1, 2, 3, 4: MESSENGER (My, Team, Company, Broadcasts) ────────────
+function getISTDayStartEnd(daysAgo = 0) {
+  const now = new Date();
+  const istOffset = 5.5 * 3600 * 1000;
+  const istNow = new Date(now.getTime() + istOffset);
+  const targetDate = new Date(istNow.getTime() - daysAgo * 86400 * 1000);
+  const yyyy = targetDate.getUTCFullYear();
+  const mm = String(targetDate.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(targetDate.getUTCDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
+  const startUtc = new Date(`${dateStr}T00:00:00+05:30`).getTime();
+  const endUtc = new Date(`${dateStr}T23:59:59.999+05:30`).getTime();
+  return { startUtc, endUtc, dateStr };
+}
+
+function getISTDateString(d) {
+  const istOffset = 5.5 * 3600 * 1000;
+  const ist = new Date((d || new Date()).getTime() + istOffset);
+  return ist.toISOString().slice(0, 10);
+}
+
+function filterConvsByDate(list) {
+  if (!list || !list.length) return [];
+  if (activeDatePreset === 'all') return list;
+
+  let minTime = 0;
+  let maxTime = Infinity;
+
+  if (activeDatePreset === 'today') {
+    const { startUtc, endUtc } = getISTDayStartEnd(0);
+    minTime = startUtc;
+    maxTime = endUtc;
+  } else if (activeDatePreset === 'yesterday') {
+    const { startUtc, endUtc } = getISTDayStartEnd(1);
+    minTime = startUtc;
+    maxTime = endUtc;
+  } else if (activeDatePreset === '7days') {
+    const now = new Date().getTime();
+    minTime = now - 7 * 86400 * 1000;
+    maxTime = now + 60000;
+  } else if (activeDatePreset === '30days') {
+    const now = new Date().getTime();
+    minTime = now - 30 * 86400 * 1000;
+    maxTime = now + 60000;
+  } else if (activeDatePreset === 'custom') {
+    const fFrom = document.getElementById('msgDateFrom')?.value;
+    const fTo = document.getElementById('msgDateTo')?.value;
+    if (fFrom) {
+      minTime = new Date(`${fFrom}T00:00:00+05:30`).getTime();
+    }
+    if (fTo) {
+      maxTime = new Date(`${fTo}T23:59:59.999+05:30`).getTime();
+    }
+  }
+
+  return list.filter(c => {
+    if (!c.last_timestamp) return false;
+    const tsStr = String(c.last_timestamp);
+    if (tsStr.startsWith('0001')) return false;
+    let t = new Date(c.last_timestamp).getTime();
+    if (isNaN(t)) {
+      t = Date.parse(c.last_timestamp);
+    }
+    if (isNaN(t)) return true;
+    return t >= minTime && t <= maxTime;
+  });
+}
+
+function updateMessengerSummaryCards(list) {
+  const currentList = list || [];
+  const total = currentList.length;
+  let delivered = 0;
+  let read = 0;
+  let apiCount = 0;
+  let scannedCount = 0;
+
+  currentList.forEach(c => {
+    const ds = String(c.delivery_status || c.status || '').toLowerCase();
+    if (ds === 'delivered' || ds === 'read') delivered++;
+    if (ds === 'read') read++;
+    if (c.channel === 'META_API' || c.channel === 'official') {
+      apiCount++;
+    } else {
+      scannedCount++;
+    }
+  });
+
+  const delPct = total > 0 ? Math.round((delivered / total) * 100) : 0;
+  const readPct = total > 0 ? Math.round((read / total) * 100) : 0;
+  const apiPct = total > 0 ? Math.round((apiCount / total) * 100) : 0;
+  const scanPct = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
+
+  const elTotal = document.getElementById('mstat-all');
+  const elDelivered = document.getElementById('mstat-delivered');
+  const elRead = document.getElementById('mstat-read');
+  const elApi = document.getElementById('mstat-api');
+  const elScanned = document.getElementById('mstat-scanned');
+
+  const elDelPct = document.getElementById('mstat-delivered-pct');
+  const elReadPct = document.getElementById('mstat-read-pct');
+  const elApiPct = document.getElementById('mstat-api-pct');
+  const elScanPct = document.getElementById('mstat-scanned-pct');
+  const elTotalSub = document.getElementById('mstat-all-sub');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elDelivered) elDelivered.textContent = delivered;
+  if (elRead) elRead.textContent = read;
+  if (elApi) elApi.textContent = apiCount;
+  if (elScanned) elScanned.textContent = scannedCount;
+
+  if (elDelPct) elDelPct.textContent = `${delPct}% delivered`;
+  if (elReadPct) elReadPct.textContent = `${readPct}% read rate`;
+  if (elApiPct) elApiPct.textContent = `${apiPct}% Meta API`;
+  if (elScanPct) elScanPct.textContent = `${scanPct}% Scanned`;
+  if (elTotalSub) {
+    if (activeDatePreset === 'today') elTotalSub.textContent = 'Today (IST)';
+    else if (activeDatePreset === 'yesterday') elTotalSub.textContent = 'Yesterday (IST)';
+    else if (activeDatePreset === '7days') elTotalSub.textContent = 'Last 7 Days';
+    else if (activeDatePreset === '30days') elTotalSub.textContent = 'Last 30 Days';
+    else if (activeDatePreset === 'custom') elTotalSub.textContent = 'Custom Range';
+    else elTotalSub.textContent = 'All Records';
+  }
+}
+
+function applyMessengerFilters() {
+  let list = (allMessengerConvs || []).slice();
+
+  // 1. Channel filter for Company & Broadcasts
+  if (activeScope === 'company' && companyChannelFilter !== 'all') {
+    list = list.filter(c => {
+      const isApi = (c.channel === 'META_API' || c.channel === 'official');
+      return companyChannelFilter === 'api' ? isApi : !isApi;
+    });
+  } else if (activeScope === 'broadcasts' && broadcastFilter !== 'all') {
+    list = list.filter(c => {
+      const isGrp = c.recipient_type === 'group' || c.contact_type === 'GROUP' || c.broadcast_type === 'group';
+      const isApi = (c.channel === 'META_API' || c.channel === 'official');
+      if (broadcastFilter === 'groups') return isGrp;
+      if (broadcastFilter === 'individuals') return !isGrp;
+      if (broadcastFilter === 'scanned') return !isApi;
+      if (broadcastFilter === 'api') return isApi;
+      return true;
+    });
+  }
+
+  // 2. Segment filter
+  if (activeMsgSegment) {
+    list = list.filter(c => {
+      if (!c.segment) return false;
+      const cs = c.segment.toLowerCase().replace(/-/g, '_');
+      const fs = activeMsgSegment.toLowerCase().replace(/-/g, '_');
+      if (fs === cs) return true;
+      if (['real_estate', 'myntreal_real', 'real_dreams'].includes(fs) && ['real_estate', 'myntreal_real', 'real_dreams'].includes(cs)) return true;
+      if (['ev_b2c', 'ev_b2b', 'ev_spares'].includes(fs) && fs === cs) return true;
+      if (['etc_training', 'etc'].includes(fs) && ['etc_training', 'etc'].includes(cs)) return true;
+      return cs.includes(fs) || fs.includes(cs);
+    });
+  }
+
+  // 3. Date filter
+  list = filterConvsByDate(list);
+
+  // 4. Update summary KPI cards from the date & scope filtered list
+  updateMessengerSummaryCards(list);
+
+  // 5. Stat card filter (Delivered, Read, Meta API, Scanned WA)
+  if (activeStatusCardFilter === 'delivered') {
+    list = list.filter(c => {
+      const st = String(c.delivery_status || c.status || '').toLowerCase();
+      return st === 'delivered' || st === 'read';
+    });
+  } else if (activeStatusCardFilter === 'read') {
+    list = list.filter(c => {
+      const st = String(c.delivery_status || c.status || '').toLowerCase();
+      return st === 'read';
+    });
+  } else if (activeStatusCardFilter === 'api') {
+    list = list.filter(c => c.channel === 'META_API' || c.channel === 'official');
+  } else if (activeStatusCardFilter === 'scanned') {
+    list = list.filter(c => c.channel !== 'META_API' && c.channel !== 'official');
+  }
+
+  // 6. Search text filter
+  const searchVal = (document.getElementById('msgSearchInput')?.value || '').trim().toLowerCase();
+  if (searchVal) {
+    list = list.filter(c => {
+      const name = (c.name || '').toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      const msg = (c.last_message || '').toLowerCase();
+      return name.includes(searchVal) || phone.includes(searchVal) || msg.includes(searchVal);
+    });
+  }
+
+  // 7. Render final conversation list
+  renderConversationsList(list);
+}
+
+function onMsgDatePreset(preset) {
+  activeDatePreset = preset;
+
+  // Sync date preset pills in top bar
+  document.querySelectorAll('.msg-date-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `datePill-${preset}`);
+  });
+
+  // Sync sidebar dropdown
+  const sidebarSelect = document.getElementById('msgDateFilterSelect');
+  if (sidebarSelect && sidebarSelect.value !== preset) {
+    sidebarSelect.value = preset;
+  }
+
+  const customWrap = document.getElementById('msgCustomDateWrap');
+  if (preset === 'custom') {
+    if (customWrap) customWrap.style.display = 'inline-flex';
+    const fFrom = document.getElementById('msgDateFrom');
+    const fTo = document.getElementById('msgDateTo');
+    if (fFrom && !fFrom.value) {
+      fFrom.value = getISTDateString(new Date());
+    }
+    if (fTo && !fTo.value) {
+      fTo.value = getISTDateString(new Date());
+    }
+  } else {
+    if (customWrap) customWrap.style.display = 'none';
+  }
+
+  // Apply filters instantly
+  applyMessengerFilters();
+}
+
+function onMsgCustomDateChange() {
+  activeDatePreset = 'custom';
+  document.querySelectorAll('.msg-date-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'datePill-custom');
+  });
+  const sidebarSelect = document.getElementById('msgDateFilterSelect');
+  if (sidebarSelect) sidebarSelect.value = 'custom';
+  loadMessengerHub();
+}
+
+function clearMsgDateFilter() {
+  const fFrom = document.getElementById('msgDateFrom');
+  const fTo = document.getElementById('msgDateTo');
+  if (fFrom) fFrom.value = '';
+  if (fTo) fTo.value = '';
+  onMsgDatePreset('all');
+  loadMessengerHub();
+}
+
+function filterMessengerByStatus(statusKey) {
+  if (activeStatusCardFilter === statusKey && statusKey !== 'all') {
+    activeStatusCardFilter = 'all';
+  } else {
+    activeStatusCardFilter = statusKey;
+  }
+
+  document.querySelectorAll('#pane-messenger .stat-card').forEach(card => {
+    card.classList.remove('active');
+  });
+  const activeCard = document.getElementById(`mcard-${activeStatusCardFilter}`);
+  if (activeCard) activeCard.classList.add('active');
+
+  applyMessengerFilters();
+}
+
 async function loadMessengerHub() {
   try {
     let url = `${API}/whatsapp/conversations-hub?scope=${activeScope}`;
@@ -1985,12 +2329,19 @@ async function loadMessengerHub() {
     if (activeMsgSegment) {
       url += `&segment=${encodeURIComponent(activeMsgSegment)}`;
     }
+    if (activeDatePreset === 'custom') {
+      const fFrom = document.getElementById('msgDateFrom')?.value;
+      const fTo = document.getElementById('msgDateTo')?.value;
+      if (fFrom) url += `&from_date=${encodeURIComponent(fFrom)}`;
+      if (fTo) url += `&to_date=${encodeURIComponent(fTo)}`;
+    }
     const searchVal = (document.getElementById('msgSearchInput')?.value || '').trim();
     if (searchVal) {
       url += `&search=${encodeURIComponent(searchVal)}`;
     }
     const data = await apiFetch(url);
-    renderConversationsList(data.conversations || []);
+    allMessengerConvs = data.conversations || [];
+    applyMessengerFilters();
   } catch(err) {
     document.getElementById('convList').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading conversations: ${err.message}</div>`;
   }
@@ -2079,18 +2430,36 @@ function renderConversationsList(convs) {
       </div>
     ` : '';
 
+    const dStatus = String(c.delivery_status || c.status || '').toLowerCase();
+    let statusTicksHtml = '';
+    if (dStatus === 'read') {
+      statusTicksHtml = `<span style="color:#2563eb;font-weight:bold;font-size:11px;" title="Read / Seen">✓✓</span>`;
+    } else if (dStatus === 'delivered') {
+      statusTicksHtml = `<span style="color:#64748b;font-weight:bold;font-size:11px;" title="Delivered">✓✓</span>`;
+    } else if (dStatus === 'sent') {
+      statusTicksHtml = `<span style="color:#9ca3af;font-weight:bold;font-size:11px;" title="Sent">✓</span>`;
+    } else if (dStatus === 'failed') {
+      statusTicksHtml = `<span style="color:#ef4444;font-weight:bold;font-size:10px;" title="Failed">✕</span>`;
+    }
+
+    const timeLabel = (c.last_time && c.last_time !== '—') ? `<span style="font-size:10px;color:#94a3b8;font-weight:500;">${escapeHtmlText(c.last_time)}</span>` : '';
+
     html += `
       <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''} ${isArchived ? 'conv-archived' : (isInProgress ? 'conv-in-progress' : '')}" onclick="selectChatByIndex(${idx})">
         <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : (activeScope === 'all' ? '🌐' : (activeScope === 'broadcasts' ? '📡' : '👤')))))}</div>
         <div class="conv-info">
           <div class="conv-name">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}">${escapeHtmlText(displayName)}</span>
-            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-              ${statusBadge}
-              ${chanBadge}
-              ${segBadge}
-              <span class="type-badge ${badgeClass}">${badgeLabel}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;${isArchived ? 'color:#64748b;' : ''}" title="${escapeHtmlText(displayName)}">${escapeHtmlText(displayName)}</span>
+            <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+              ${timeLabel}
+              ${statusTicksHtml}
             </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:2px;margin-bottom:2px;">
+            ${statusBadge}
+            ${chanBadge}
+            ${segBadge}
+            <span class="type-badge ${badgeClass}">${badgeLabel}</span>
           </div>
           <div class="conv-snippet" style="${isArchived ? 'color:#94a3b8;' : ''}">${escapeHtmlText(c.last_message || '')}</div>
           ${matchedSnippetHtml}
@@ -2122,6 +2491,10 @@ function onMsgScopeChange(scope) {
 }
 
 function onMsgSearchInput(val) {
+  // 1. Instant client-side filter (0ms speed) over loaded conversations
+  applyMessengerFilters();
+
+  // 2. Debounced backend search for deeper results
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     const s = (val || '').trim();
@@ -2143,8 +2516,15 @@ function onMsgSearchInput(val) {
       } else if (activeScope === 'broadcasts') {
         url += `&source_filter=${broadcastFilter}`;
       }
+      if (activeDatePreset === 'custom') {
+        const fFrom = document.getElementById('msgDateFrom')?.value;
+        const fTo = document.getElementById('msgDateTo')?.value;
+        if (fFrom) url += `&from_date=${encodeURIComponent(fFrom)}`;
+        if (fTo) url += `&to_date=${encodeURIComponent(fTo)}`;
+      }
       const data = await apiFetch(url);
-      renderConversationsList(data.conversations || []);
+      allMessengerConvs = data.conversations || [];
+      applyMessengerFilters();
     } catch(err) {
       console.error('[Search] Error querying conversations:', err);
     }

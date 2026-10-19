@@ -3515,6 +3515,8 @@ def get_whatsapp_conversations_hub(
     segment: Optional[str] = Query(None),
     scope: Optional[str] = Query('assigned_tagged'),
     source_filter: Optional[str] = Query('all'),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
@@ -3537,6 +3539,20 @@ def get_whatsapp_conversations_hub(
         segment_val = str(segment).strip().lower() if (segment is not None and isinstance(segment, str) and not hasattr(segment, 'default')) else None
         scope_val = str(scope).strip().lower() if (scope is not None and isinstance(scope, str) and not hasattr(scope, 'default')) else 'assigned_tagged'
         source_filt_val = str(source_filter).strip().lower() if (source_filter is not None and isinstance(source_filter, str) and not hasattr(source_filter, 'default')) else 'all'
+
+        # Parse date range filters if supplied
+        from_dt = None
+        to_dt = None
+        if from_date and str(from_date).strip() not in ('', 'null', 'None', 'all'):
+            try:
+                from_dt = datetime.strptime(str(from_date).strip()[:10], '%Y-%m-%d')
+            except Exception:
+                from_dt = None
+        if to_date and str(to_date).strip() not in ('', 'null', 'None', 'all'):
+            try:
+                to_dt = datetime.strptime(str(to_date).strip()[:10], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            except Exception:
+                to_dt = None
 
         # Independent backend security rejection: unauthorized requests to scope='all' must fail closed
         if scope_val == 'all' and not _is_all_messages_authorized(db, current_user):
@@ -3654,6 +3670,10 @@ def get_whatsapp_conversations_hub(
                     MessageLog.mobile_number.isnot(None),
                     MessageLog.mobile_number != ""
                 )
+                if from_dt:
+                    logs_q = logs_q.filter(MessageLog.sent_at >= from_dt)
+                if to_dt:
+                    logs_q = logs_q.filter(MessageLog.sent_at <= to_dt)
                 if search_val:
                     s = f"%{search_val}%"
                     logs_q = logs_q.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
@@ -3949,6 +3969,11 @@ def get_whatsapp_conversations_hub(
                     WAInbox.wamid.like('wamid.%')
                 )
 
+            if from_dt:
+                inbox_q = inbox_q.filter(WAInbox.received_at >= from_dt)
+            if to_dt:
+                inbox_q = inbox_q.filter(WAInbox.received_at <= to_dt)
+
             if search_val:
                 s = f"%{search_val}%"
                 inbox_q = inbox_q.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
@@ -4019,6 +4044,11 @@ def get_whatsapp_conversations_hub(
                         WAInbox.from_phone.ilike(f"%91{d10}%")
                     ])
                 inbox_query = inbox_query.filter(or_(*inbox_conds))
+
+            if from_dt:
+                inbox_query = inbox_query.filter(WAInbox.received_at >= from_dt)
+            if to_dt:
+                inbox_query = inbox_query.filter(WAInbox.received_at <= to_dt)
 
             inbox_limit = 250 if scope_val == 'all' else 100
             for m in inbox_query.order_by(desc(WAInbox.id)).limit(inbox_limit).all():
@@ -4144,6 +4174,11 @@ def get_whatsapp_conversations_hub(
                         MessageLog.mobile_number.ilike(f"%91{d10}%")
                     ])
                 log_query = log_query.filter(or_(*log_conds))
+
+            if from_dt:
+                log_query = log_query.filter(MessageLog.sent_at >= from_dt)
+            if to_dt:
+                log_query = log_query.filter(MessageLog.sent_at <= to_dt)
 
             log_limit = 350 if scope_val == 'all' else 100
             for l in log_query.order_by(desc(MessageLog.id)).limit(log_limit).all():
@@ -4368,7 +4403,20 @@ def get_whatsapp_conversations_hub(
                 return f_s in c_s or c_s in f_s
             sorted_contacts = [c for c in sorted_contacts if _matches_segment(c.get("segment", ""), segment_val)]
 
-        return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts}
+        if from_dt:
+            sorted_contacts = [c for c in sorted_contacts if c.get("last_timestamp") and c["last_timestamp"] >= from_dt]
+        if to_dt:
+            sorted_contacts = [c for c in sorted_contacts if c.get("last_timestamp") and c["last_timestamp"] <= to_dt]
+
+        metrics = {
+            "total": len(sorted_contacts),
+            "delivered": sum(1 for c in sorted_contacts if str(c.get("delivery_status", "")).lower() in ("delivered", "read")),
+            "read": sum(1 for c in sorted_contacts if str(c.get("delivery_status", "")).lower() == "read"),
+            "api": sum(1 for c in sorted_contacts if c.get("channel") in ("META_API", "official")),
+            "scanned": sum(1 for c in sorted_contacts if c.get("channel") not in ("META_API", "official"))
+        }
+
+        return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts, "metrics": metrics}
     except HTTPException:
         raise
     except Exception as e:
