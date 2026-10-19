@@ -723,7 +723,7 @@ export class LoginPage {
 
   private getHeaderLogo(): string {
     if (this.isZynovaOrSaaSDomain()) {
-      return `<img src="assets/zynova-os-logo.png" onerror="this.onerror=null;this.src='zynova-os-logo.png';" alt="ZYNOVA OS" class="header-logo" style="max-width: 200px; height: 50px; object-fit: contain;">`;
+      return `<img src="assets/zynova-os-logo.png?v=20261019" onerror="this.onerror=null;this.src='zynova-os-logo.png?v=20261019';" alt="ZYNOVA OS" class="header-logo" style="max-width: 200px; height: 50px; object-fit: contain;">`;
     }
     if (this.activeTab === 'announcements' || this.selectedPortal === 'mnr') {
       return `<img src="assets/mnr-logo.png" alt="MNR" class="header-logo" style="width: 80px; height: 80px; object-fit: contain;">`;

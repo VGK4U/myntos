@@ -15,10 +15,11 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { callController } from '../services/call-controller';
 import { APP_CONFIG } from '../config/app.config';
+import { DigitalCatalogPage } from './DigitalCatalogPage';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
-  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'catalog' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
 
   // ── Gateway & QR State ─────────────────────────────────────────────────────
   private gatewayConnected: boolean = true;
@@ -194,6 +195,13 @@ export class StaffWhatsAppInboxPage {
     } else if (this.activeTab === 'broadcasts') {
       this.activeScope = 'broadcasts';
       await this.loadMessenger();
+    } else if (this.activeTab === 'catalog') {
+      this.render();
+      const mountEl = document.getElementById('waMobileCatalogMount');
+      if (mountEl) {
+        const catalogPage = new DigitalCatalogPage(mountEl);
+        await catalogPage.init({ embedded: true });
+      }
     } else if (this.activeTab === 'inbox') {
       await this.loadInbox();
     } else if (this.activeTab === 'templates') {
@@ -351,6 +359,9 @@ export class StaffWhatsAppInboxPage {
           <button class="wa-nav-tab ${this.activeTab === 'broadcasts' ? 'active' : ''}" data-tab="broadcasts" style="${this.getTabBtnStyle(this.activeTab === 'broadcasts')}">
             <i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches
           </button>
+          <button class="wa-nav-tab ${this.activeTab === 'catalog' ? 'active' : ''}" data-tab="catalog" style="${this.getTabBtnStyle(this.activeTab === 'catalog')}">
+            <i class="fas fa-book-open"></i> Catalog Library
+          </button>
           ${isKeyLeadership ? `
             <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
               <i class="fas fa-robot"></i> WhatsApp API Bot
@@ -372,6 +383,7 @@ export class StaffWhatsAppInboxPage {
 
         <!-- Tab Content Panes -->
         ${(this.activeTab === 'messenger' || this.activeTab === 'team' || this.activeTab === 'company' || this.activeTab === 'all' || this.activeTab === 'groups' || this.activeTab === 'broadcasts') ? this.renderMessengerTab() : ''}
+        ${this.activeTab === 'catalog' ? `<div id="waMobileCatalogMount"></div>` : ''}
         ${this.activeTab === 'inbox' ? this.renderInboxTab() : ''}
         ${this.activeTab === 'templates' && isAdmin ? this.renderTemplatesTab() : ''}
         ${this.activeTab === 'automations' && isAdmin ? this.renderAutomationsTab() : ''}

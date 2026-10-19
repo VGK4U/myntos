@@ -45,7 +45,9 @@
         .mynt-chatbot-icon-img {
             width: 52px !important;
             height: 52px !important;
-            object-fit: cover !important;
+            object-fit: contain !important;
+            background: #ffffff !important;
+            padding: 5px !important;
             border-radius: 50% !important;
             pointer-events: none !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
@@ -257,7 +259,7 @@
 
     function isSaaSMode() {
         const loc = window.location.pathname.toLowerCase();
-        if (loc.includes('b2b-signup') || loc.includes('saas')) return true;
+        if (loc.includes('b2b-signup') || loc.includes('b2b_signup') || loc.includes('zynova') || loc.includes('saas')) return true;
         if (typeof window !== 'undefined' && (window.IS_SAAS === true || window.IS_SAAS_TENANT === true)) return true;
         return false;
     }
@@ -270,13 +272,9 @@
         document.head.appendChild(styleEl);
 
         const isSaaS = isSaaSMode();
-        const chatbotTitle = isSaaS ? 'Zynova Zen Assistant' : 'MyntReal AI Assistant';
-        const chatbotAvatar = isSaaS
-            ? '<img src="/public/zynova-os-icon.png" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:2px;">'
-            : '<img src="/public/vgk-assistant-logo.png" alt="AI Agent" style="width:40px;height:40px;object-fit:cover;border-radius:50%;" onerror="this.src=\'/vgk-assistant-logo.png\'">';
-        const btnIcon = isSaaS
-            ? '<img src="/public/zynova-os-icon.png" alt="Z" class="mynt-chatbot-icon-img" style="background:#ffffff;padding:4px;">'
-            : '<img src="/public/vgk-assistant-logo.png" alt="AI Agent" class="mynt-chatbot-icon-img" onerror="this.src=\'/vgk-assistant-logo.png\'">';
+        const chatbotTitle = isSaaS ? 'Zynova Zen Assistant' : 'Zen AI Assistant';
+        const chatbotAvatar = '<img src="/public/zynova-z-icon.png?v=zclean3" alt="Z" style="width:36px;height:36px;object-fit:contain;border-radius:50%;background:#ffffff;padding:3px;" onerror="this.src=\'/public/favicon.png\'">';
+        const btnIcon = '<img src="/public/zynova-z-icon.png?v=zclean3" alt="Z" class="mynt-chatbot-icon-img" style="background:#ffffff;padding:5px;" onerror="this.src=\'/public/favicon.png\'">';
         const welcomeText = isSaaS
             ? 'Hello! 👋 Welcome to <b>Zynova OS SaaS Platform</b>. How can I help you explore our SaaS modules and plans today? Please choose an option below:'
             : 'Hello! 👋 Welcome to <b>MyntReal Ecosystem</b>. How can I help you today? Please choose an option below:';
@@ -284,7 +282,7 @@
         const initialOptions = isSaaS
             ? `
                 <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_modules')">📦 1. Commercial SaaS Modules Matrix</button>
-                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (₹1,499 - ₹9,999/mo)</button>
+                <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (From ₹999.90/user · ₹1,999–₹9,999/mo)</button>
                 <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_signup')">🚀 3. Start 7-Day SaaS Free Trial</button>
                 <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
             `
@@ -328,6 +326,23 @@
         `;
         document.body.appendChild(container);
 
+        // Inject universal "↑ Top" button above the chatbot button if not already present on page
+        if (!document.getElementById('back-to-top-btn')) {
+            const topBtn = document.createElement('button');
+            topBtn.id = 'back-to-top-btn';
+            topBtn.type = 'button';
+            topBtn.title = 'Scroll to top of page';
+            topBtn.setAttribute('aria-label', 'Scroll to top of page');
+            topBtn.style.cssText = 'position:fixed!important;right:34px!important;bottom:118px!important;z-index:2147483646!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;padding:9px 15px!important;border-radius:999px!important;border:2px solid #ffffff!important;background:linear-gradient(135deg,#4f46e5,#7c3aed)!important;color:#ffffff!important;font-size:13px!important;font-weight:800!important;cursor:pointer!important;box-shadow:0 8px 24px rgba(79,70,229,0.55),0 2px 8px rgba(0,0,0,0.25)!important;font-family:system-ui,-apple-system,sans-serif!important;transition:transform 0.2s ease!important;';
+            topBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="#ffffff" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg><span>Top</span>';
+            topBtn.addEventListener('click', () => {
+                try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { window.scrollTo(0, 0); }
+                try { document.documentElement.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { document.documentElement.scrollTop = 0; }
+                try { document.body.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { document.body.scrollTop = 0; }
+            });
+            document.body.appendChild(topBtn);
+        }
+
         const btn = document.getElementById('myntChatbotBtn');
         const box = document.getElementById('myntChatbotBox');
         const closeBtn = document.getElementById('myntChatbotClose');
@@ -360,13 +375,14 @@
                     appendUserMsg('1. Commercial SaaS Modules Matrix');
                     appendBotMsg(`
                         <b>Zynova OS Available SaaS Modules:</b><br/>
-                        • <b>CRM & Leads</b> (1+ Logins)<br/>
+                        • <b>Effective Per-User Cost</b>: ₹999.90 – ₹1,999 / user / mo<br/>
+                        • <b>CRM & Leads + 1-Click Docs</b> (1+ Logins)<br/>
                         • <b>WhatsApp Direct Messaging</b> (1+ Logins)<br/>
                         • <b>Digital Company Profile</b> (2+ Logins)<br/>
-                        • <b>Workflows Engine</b> (2+ Logins)<br/>
-                        • <b>Journey & Appointments</b> (5+ Logins)<br/>
-                        • <b>Meta / Facebook Ads Integration</b> (5+ Logins)<br/>
-                        • <b>WhatsApp API Automation</b> (5+ Logins)<br/>
+                        • <b>Automated Workflows & Rules</b> (2+ Logins)<br/>
+                        • <b>Journey, Site Survey & Appointments</b> (5+ Logins)<br/>
+                        • <b>Meta / Facebook Ads Integration</b> (10 Logins)<br/>
+                        • <b>WhatsApp API Auto Messaging</b> (10 Logins)<br/>
                         • <b>Service Tickets & Support Desk</b> (10 Logins)<br/>
                         • <b>Referral Agent Tracking (Ved)</b> (10 Logins)<br/>
                         • <b>Core Workspace</b> (Included in all plans)
@@ -375,19 +391,19 @@
                 } else if (opt === 'saas_pricing') {
                     appendUserMsg('2. Login Seat Plans');
                     appendBotMsg(`
-                        <b>Zynova OS Monthly Seat Pricing:</b><br/>
-                        • <b>1 Login Plan</b>: ₹1,499 / month (7-Day Trial)<br/>
-                        • <b>2 Logins Plan</b>: ₹3,499 / month (7-Day Trial)<br/>
-                        • <b>5 Logins Plan</b>: ₹6,499 / month (7-Day Trial)<br/>
-                        • <b>10 Logins Plan</b>: ₹9,999 / month (7-Day Trial)<br/><br/>
-                        <i>All plans include 7 days free trial & instant automated setup.</i>
+                        <b>Zynova OS Monthly Seat Pricing (+ Effective Per-User Cost):</b><br/>
+                        • <b>10 Logins Plan</b>: <b>₹999.90/user/mo</b> (₹9,999/mo · All 9 Modules + Meta Ads & WhatsApp API)<br/>
+                        • <b>5 Logins Plan</b>: <b>₹1,299.80/user/mo</b> (₹6,499/mo · + Journeys, Site Visits & 1-Click Docs)<br/>
+                        • <b>2 Logins Plan</b>: <b>₹1,749.50/user/mo</b> (₹3,499/mo · + Digital Profile & Workflows)<br/>
+                        • <b>1 Login Plan</b>: <b>₹1,999/user/mo</b> (₹1,999/mo · CRM & WhatsApp Direct)<br/><br/>
+                        <i>Annual billing gives 2 Months FREE (down to ₹833/user/mo). All plans include a 7-day free trial!</i>
                     `);
                     this.showMenuOptions();
                 } else if (opt === 'saas_signup') {
                     appendUserMsg('3. Start 7-Day SaaS Free Trial');
                     appendBotMsg(`
                         Ready to power your organization with Zynova OS?<br/><br/>
-                        <a href="/b2b-signup#signup-form" style="display:inline-block;background:#10b981;color:white;padding:10px 18px;border-radius:8px;font-weight:bold;text-decoration:none;">Fill Out SaaS Signup Form →</a>
+                        <a href="/b2b-signup#signup" style="display:inline-block;background:#10b981;color:white;padding:10px 18px;border-radius:8px;font-weight:bold;text-decoration:none;">Fill Out SaaS Signup Form →</a>
                     `);
                     this.showMenuOptions();
                 } else if (opt === 'services') {
@@ -438,7 +454,7 @@
                 opts.innerHTML = isSaaSMode()
                     ? `
                         <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_modules')">📦 1. Commercial SaaS Modules Matrix</button>
-                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (₹1,499 - ₹9,999/mo)</button>
+                        <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_pricing')">💰 2. Login Seat Plans (From ₹999.90/user · ₹1,999–₹9,999/mo)</button>
                         <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('saas_signup')">🚀 3. Start 7-Day SaaS Free Trial</button>
                         <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('whatsapp')">📲 4. Direct WhatsApp Support</button>
                     `

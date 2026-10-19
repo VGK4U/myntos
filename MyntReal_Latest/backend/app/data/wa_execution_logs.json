@@ -1,5 +1,92 @@
 [
   {
+    "id": "log_24d63038",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "19 Oct 2026, 02:30:01 PM IST",
+    "iso_timestamp": "2026-10-19T14:30:01.086897",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 3,
+      "created": 0,
+      "updated": 3,
+      "skipped": 0,
+      "followups_created": 3
+    }
+  },
+  {
+    "id": "log_8722bf26",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "19 Oct 2026, 02:30:00 PM IST",
+    "iso_timestamp": "2026-10-19T14:30:00.789443",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_30cfdba4",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "19 Oct 2026, 02:00:00 PM IST",
+    "iso_timestamp": "2026-10-19T14:00:00.970784",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_619dd123",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -14072,110 +14159,6 @@
       "updated": 0,
       "skipped": 0,
       "followups_created": 0
-    }
-  },
-  {
-    "id": "log_39d1a71b",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "23 Sep 2026, 09:30:00 AM IST",
-    "iso_timestamp": "2026-09-23T09:30:00.334438",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "120363428888306723@g.us"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SKIPPED",
-    "error_message": "No active field staff or journeys today",
-    "detail": {
-      "reason": "no_active_journeys"
-    }
-  },
-  {
-    "id": "log_f8850028",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "23 Sep 2026, 09:30:00 AM IST",
-    "iso_timestamp": "2026-09-23T09:30:00.285335",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": 0,
-        "target_type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "UNCERTAIN",
-    "error_message": "1 dispatches uncertain",
-    "detail": {
-      "success": true,
-      "queued": true,
-      "queue_id": 765,
-      "message": "Enqueued directly to PostgreSQL queue"
-    }
-  },
-  {
-    "id": "log_c0a71e83",
-    "job_id": "vgk4u_morning_wish",
-    "job_name": "VGK4U Elite Community Morning Wish",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "23 Sep 2026, 09:29:19 AM IST",
-    "iso_timestamp": "2026-09-23T09:29:19.980160",
-    "target_summary": "VGK4u Official Channel, VGK4u Community Group, VGK4U - Vijayawada",
-    "targets": [
-      {
-        "id": "t_vgk_channel",
-        "type": "channel",
-        "name": "VGK4u Official Channel",
-        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
-      },
-      {
-        "id": "t_vgk_group",
-        "type": "group",
-        "name": "VGK4u Community Group",
-        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
-      },
-      {
-        "id": "t_vgk_vijayawada",
-        "type": "group",
-        "name": "VGK4U - Vijayawada",
-        "identifier": "VGK4U - Vijayawada"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 3,
-    "status": "FAILED",
-    "error_message": "Dispatch failed (3 targets failed)",
-    "detail": {
-      "dispatched_groups": 0,
-      "failed_groups": 3,
-      "results": [
-        {
-          "success": false,
-          "error": "WhatsApp Group Bot service offline on port 5002 (HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-group-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\")))."
-        },
-        {
-          "success": false,
-          "error": "WhatsApp Group Bot service offline on port 5002 (HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-group-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\")))."
-        },
-        {
-          "success": false,
-          "error": "WhatsApp Group Bot service offline on port 5002 (HTTPConnectionPool(host='localhost', port=5002): Max retries exceeded with url: /api/send-group-message (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=5002): Failed to establish a new connection: [Errno 61] Connection refused\")))."
-        }
-      ]
     }
   }
 ]

@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ZYNOVA OS — SaaS Commercial Catalog & Configurator · Zynova Mobility Private Limited</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/public/zynova-z-icon.png?v=zclean2">
+  <link rel="shortcut icon" type="image/x-icon" href="/public/zynova-z-favicon.ico?v=zclean2">
+  <link rel="apple-touch-icon" href="/public/apple-touch-icon.png?v=zclean2">
 <meta name="description" content="ZYNOVA OS by Zynova Mobility Private Limited — the all-in-one B2B SaaS platform for CRM, Solar Journeys, VED Referrals, Service Desk, Inventory, Accounts, Payroll and Field Force. 7-day free trial. No credit card.">
-<link rel="icon" type="image/x-icon" href="/public/favicon.ico">
-<link rel="icon" type="image/png" href="/public/favicon.png">
-<script src="/public/js/zynova-brand-config.js"></script>
+<script src="/public/js/zynova-brand-config.js?v=20261019"></script>
 <style>
   :root{
     --ink:#0f172a; --ink-2:#334155; --muted:#64748b; --line:#e2e8f0;
@@ -22,23 +23,67 @@
 
   /* ── top nav ─────────────────────────────────────────────────── */
   .nav{position:sticky!important;top:0!important;z-index:1000!important;background:rgba(255,255,255,.95);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
-  .nav-inner{max-width:1200px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none!important}
-  .brand-sub{color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap}
-  .nav-links{display:flex;gap:16px;margin-left:auto;font-size:14px;color:var(--ink-2);align-items:center}
-  .nav-links a{color:var(--ink-2);font-weight:500}
-  .nav-login-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;background:rgba(79,70,229,.08);color:var(--brand-1)!important;font-weight:600;font-size:13px;border:1px solid rgba(79,70,229,.2);transition:all .15s}
+  .nav-inner{max-width:1240px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none!important;flex-shrink:0}
+  .brand-sub{color:var(--muted);font-weight:500;font-size:12.5px;white-space:nowrap}
+  @media (max-width:1120px){.brand-sub{display:none}}
+  .nav-links{display:flex;gap:14px;margin-left:auto;font-size:13.5px;color:var(--ink-2);align-items:center;flex-wrap:nowrap;white-space:nowrap}
+  .nav-links a{color:var(--ink-2);font-weight:500;white-space:nowrap}
+  .nav-login-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:8px;background:rgba(79,70,229,.08);color:var(--brand-1)!important;font-weight:600;font-size:13px;border:1px solid rgba(79,70,229,.2);transition:all .15s;white-space:nowrap}
   .nav-login-btn:hover{background:rgba(79,70,229,.15);text-decoration:none!important}
-  .nav-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff!important;font-weight:600;font-size:13px}
+  .nav-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff!important;font-weight:600;font-size:13px;white-space:nowrap;flex-shrink:0}
   .nav-cta:hover{text-decoration:none;filter:brightness(1.05)}
   @media (max-width:768px){
-    .nav-inner{padding:10px 14px;gap:10px}
-    .brand-sub{display:none}
-    .nav-links{gap:10px;font-size:13px}
-    .nav-cta,.nav-login-btn{padding:7px 11px;font-size:12px}
+    .nav-inner{padding:10px 14px;gap:8px}
+    .nav-links{gap:10px;font-size:12.5px}
+    .nav-cta,.nav-login-btn{padding:7px 10px;font-size:12px}
   }
-  @media (max-width:480px){
+  @media (max-width:560px){
     .nav-links a:not(.nav-login-btn){display:none}
+  }
+
+  /* ── floating back to top button ─────────────────────────────── */
+  .back-to-top-fab{
+    position:fixed!important;
+    right:20px!important;
+    bottom:96px!important;
+    z-index:2147483646!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:6px!important;
+    padding:10px 16px!important;
+    border-radius:999px!important;
+    border:2px solid #ffffff!important;
+    background:linear-gradient(135deg,var(--brand-1),var(--brand-2))!important;
+    color:#ffffff!important;
+    font-size:13.5px!important;
+    font-weight:800!important;
+    letter-spacing:.3px!important;
+    cursor:pointer!important;
+    box-shadow:0 10px 26px -4px rgba(79,70,229,.75),0 4px 12px rgba(15,23,42,.28)!important;
+    opacity:1!important;
+    visibility:visible!important;
+    transform:translateY(0) scale(1)!important;
+    transition:transform .18s ease,filter .15s ease,box-shadow .18s ease!important;
+  }
+  .back-to-top-fab:hover{
+    filter:brightness(1.1)!important;
+    transform:translateY(-3px) scale(1.04)!important;
+    box-shadow:0 14px 30px -4px rgba(79,70,229,.85),0 6px 14px rgba(15,23,42,.32)!important;
+  }
+  .back-to-top-fab:active{
+    transform:translateY(0) scale(.97)!important;
+  }
+  .back-to-top-fab svg{
+    width:16px!important;
+    height:16px!important;
+    stroke:#ffffff!important;
+    stroke-width:2.8!important;
+    fill:none!important;
+  }
+  @media (max-width:600px){
+    .back-to-top-fab{right:14px!important;bottom:86px!important;padding:9px 13px!important;font-size:12px!important}
   }
 
   /* ── hero (gradient + signup form right) ─────────────────────── */
@@ -50,8 +95,8 @@
   h1.hero-title{font-size:46px;line-height:1.07;margin:14px 0 14px;letter-spacing:-.02em;font-weight:800;color:var(--ink)}
   h1 .grad{background:linear-gradient(135deg,var(--brand-1),var(--brand-2) 60%,var(--brand-3));-webkit-background-clip:text;background-clip:text;color:transparent}
   .lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:560px;margin:0 0 22px}
-  .hero-bullets{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;max-width:560px;margin:18px 0 26px}
-  .hero-bullets div{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)}
+  .hero-bullets{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;max-width:560px;margin:18px 0 26px}
+  .hero-bullets div{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
   .hero-bullets .ck{flex:0 0 22px;height:22px;border-radius:50%;background:rgba(16,185,129,.14);color:var(--ok);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-top:1px}
   .trust{display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px}
   .trust b{color:var(--ink);font-weight:700}
@@ -127,16 +172,52 @@
   .price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
   @media (max-width:980px){.price-grid{grid-template-columns:repeat(2,1fr)!important}}
   @media (max-width:580px){.price-grid{grid-template-columns:1fr!important}}
-  .price{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;position:relative}
+  .price{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;position:relative;display:flex;flex-direction:column;transition:transform .18s,box-shadow .18s}
+  .price:hover{transform:translateY(-4px);box-shadow:0 20px 44px -20px rgba(15,23,42,.18)}
   .price.featured{border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,var(--brand-1),var(--brand-2)) border-box;box-shadow:0 22px 40px -22px rgba(79,70,229,.35)}
   .price .badge{position:absolute;top:-12px;right:18px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px}
-  .price h3{font-size:18px;margin:0 0 6px;font-weight:700}
-  .price .tag{font-size:13px;color:var(--muted);margin:0 0 16px;min-height:38px}
-  .price .amount{font-size:34px;font-weight:800;letter-spacing:-.02em}
+  .price h3{font-size:19px;margin:0 0 6px;font-weight:800}
+  .price .tag{font-size:13px;color:var(--muted);margin:0 0 14px;min-height:38px;line-height:1.45}
+  .price .amount{font-size:34px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
   .price .amount small{font-size:14px;color:var(--muted);font-weight:500;letter-spacing:0}
-  .price ul{list-style:none;padding:0;margin:14px 0 0;font-size:14px}
+  .per-user-pill{margin:10px 0 12px;padding:9px 12px;border-radius:10px;background:linear-gradient(135deg,rgba(79,70,229,.10),rgba(124,58,237,.08));border:1.5px solid rgba(79,70,229,.25);font-size:12.5px;color:var(--ink);display:flex;flex-direction:column;gap:2px}
+  .per-user-pill.best{background:linear-gradient(135deg,rgba(16,185,129,.13),rgba(14,165,233,.10));border-color:rgba(16,185,129,.38)}
+  .per-user-pill .pu-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--brand-1)}
+  .per-user-pill.best .pu-label{color:#059669}
+  .per-user-pill .pu-val{font-size:15px;font-weight:800;color:var(--ink)}
+  .per-user-pill .pu-sub{font-size:11px;color:var(--muted);font-weight:500}
+  .price ul{list-style:none;padding:0;margin:10px 0 18px;font-size:13.5px;flex:1}
   .price li{padding:6px 0 6px 22px;position:relative;color:var(--ink-2)}
   .price li::before{content:"";position:absolute;left:0;top:11px;width:12px;height:6px;border-left:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(-45deg)}
+  .price li.first-row-highlight{background:rgba(79,70,229,.07);border:1px solid rgba(79,70,229,.20);border-radius:8px;padding:7px 10px 7px 26px;margin-bottom:6px;font-weight:700;color:var(--brand-1)}
+  .price li.first-row-highlight::before{left:8px;top:12px;border-color:var(--brand-1)}
+  .price .plan-select-btn{width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--brand-1);background:#fff;color:var(--brand-1);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s;text-align:center}
+  .price .plan-select-btn:hover,.price.featured .plan-select-btn{background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;border-color:transparent;box-shadow:0 8px 18px -6px rgba(79,70,229,.45)}
+
+  /* ── billing cycle toggle ────────────────────────────────────── */
+  .billing-toggle-wrap{display:inline-flex;align-items:center;gap:6px;background:#fff;padding:5px;border-radius:999px;border:1px solid var(--line);box-shadow:0 4px 14px rgba(15,23,42,.05);margin-top:16px}
+  .billing-toggle-btn{border:0;background:transparent;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .billing-toggle-btn.active{background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.35)}
+  .save-pill{background:#dcfce7;color:#15803d;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px}
+
+  /* ── comparison & solar OS tabs ──────────────────────────────── */
+  .comp-tabs{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+  .comp-tab-btn{padding:11px 22px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;font-size:13.5px;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:8px}
+  .comp-tab-btn:hover{border-color:var(--brand-1);color:var(--brand-1)}
+  .comp-tab-btn.active{background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;border-color:transparent;box-shadow:0 10px 24px -8px rgba(79,70,229,.45)}
+  .comp-panel{display:none}
+  .comp-panel.active{display:block}
+  .roi-btn{padding:9px 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s}
+  .roi-btn.active{background:var(--brand-1);color:#fff;border-color:var(--brand-1);box-shadow:0 6px 16px -4px rgba(79,70,229,.4)}
+  .doc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media (max-width:960px){.doc-grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:560px){.doc-grid{grid-template-columns:1fr}}
+  .doc-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;transition:all .15s}
+  .doc-card:hover{border-color:#a5b4fc;transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(79,70,229,.3)}
+  .wf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media (max-width:960px){.wf-grid,#roi-cards-grid{grid-template-columns:repeat(2,1fr)!important}}
+  @media (max-width:560px){.wf-grid,#roi-cards-grid{grid-template-columns:1fr!important}}
+  .wf-step{background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand-1);border-radius:10px;padding:14px}
 
   /* ── FAQ ─────────────────────────────────────────────────────── */
   .faq{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -174,13 +255,14 @@
 <nav class="nav">
   <div class="nav-inner">
     <a class="brand" href="#top">
-      <img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:36px;max-width:180px;object-fit:contain;">
+      <img src="/public/zynova-os-logo.png?v=20261019" alt="ZYNOVA OS" style="height:36px;max-width:180px;object-fit:contain;">
       <span class="brand-sub">· powered by Zynova Mobility Private Limited</span>
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#catalog">Modules</a>
+      <a href="#solar-os">Solar &amp; Docs OS</a>
       <a href="#pricing">Pricing</a>
+      <a href="#compare" style="color:var(--brand-1);font-weight:700">Compare Value</a>
       <a href="#faq">FAQ</a>
       <a class="nav-login-btn" href="/saas/login"><i class="fas fa-lock" style="font-size:11px"></i> Zen Partner Login</a>
     </div>
@@ -192,27 +274,27 @@
 <header class="hero" id="top">
   <div class="hero-inner">
     <div>
-      <span class="pill"><span class="dot"></span> 7-day free trial · No credit card</span>
-      <h1 class="hero-title">Run your <span class="grad">entire B2B operation</span> from one console.</h1>
-      <p class="lede">Zynova OS is the all-in-one operations cockpit powered by Zynova Mobility Private Limited — from CRM and Solar Journeys to VED Member referrals, service desk, inventory, accounts, payroll and Zen Partner billing. Pick the modules you need, propagate changes in seconds, and reconcile every rupee with Tally/Zoho-grade invoicing.</p>
+      <span class="pill"><span class="dot"></span> 7-day free trial · From ₹999.90/user/mo · No 10-seat lock-in</span>
+      <h1 class="hero-title">The <span class="grad">Solar &amp; B2B Business Operating System</span> in one console.</h1>
+      <p class="lede">Manage leads, generate 8+ solar &amp; customer documents in one click, automate stage-to-stage business workflows, and coordinate WhatsApp, Meta Ads, field surveys, inventory, GST invoicing, payroll and partner referrals from one configured platform — starting at just <b>₹1,999/mo for 1 login</b> (down to <b>₹999.90/user/mo</b> on 10 logins).</p>
 
       <div class="hero-bullets">
-        <div><span class="ck">✓</span> Module-level entitlements with pro-rata billing</div>
-        <div><span class="ck">✓</span> Multi-entity GST &amp; multi-currency invoicing</div>
-        <div><span class="ck">✓</span> Field force, attendance, beats, geo-tagging</div>
-        <div><span class="ck">✓</span> CRM, leads, VED Member referrals &amp; rewards</div>
-        <div><span class="ck">✓</span> Solar Journeys, service desk &amp; inventory</div>
-        <div><span class="ck">✓</span> Role-based access &amp; full audit trail</div>
+        <div><span class="ck">✓</span> <span><b>1-Click Document Engine:</b> Quotations, Proposals, Surveys, Work Orders &amp; Handover</span></div>
+        <div><span class="ck">✓</span> <span><b>Automated Solar &amp; B2B Workflows:</b> Trigger tasks, docs &amp; WhatsApp on every stage</span></div>
+        <div><span class="ck">✓</span> <span><b>No 10-Seat Minimum Lock-In:</b> Start with 1, 2, 5, or 10 logins &amp; scale anytime</span></div>
+        <div><span class="ck">✓</span> <span><b>Omnichannel Growth:</b> WhatsApp Direct, WhatsApp API Broadcasts &amp; Meta Lead Sync</span></div>
+        <div><span class="ck">✓</span> <span><b>Full Operations ERP:</b> Field Force (SFMS), Multi-Entity GST, Inventory &amp; Payroll</span></div>
+        <div><span class="ck">✓</span> <span><b>Service Desk &amp; Partner Tree:</b> SLA ticketing &amp; Ved Member referral commissions</span></div>
       </div>
 
       <div class="trust">
         <span><b id="trust-mods">550+</b> modules</span>
         <span>·</span>
-        <span><b id="trust-cats">60+</b> capability areas</span>
+        <span><b>₹999.90</b>/user/mo at 10 seats</span>
         <span>·</span>
-        <span><b>Tally / Zoho</b> parity</span>
+        <span><b>8+</b> 1-Click Solar &amp; B2B Docs</span>
         <span>·</span>
-        <span><b>SOC-friendly</b> audit log</span>
+        <span><b>Save ₹60,012+/yr</b> vs legacy bundles</span>
       </div>
     </div>
 
@@ -227,7 +309,7 @@
         <div class="row2" style="margin-top:4px">
           <div>
             <label>Company Name *</label>
-            <input name="company_name" required minlength="2" maxlength="120" placeholder="Acme Mobility Pvt Ltd"/>
+            <input name="company_name" required minlength="2" maxlength="120" placeholder="Acme Solar & Mobility Pvt Ltd"/>
           </div>
           <div>
             <label>Your Full Name *</label>
@@ -274,10 +356,10 @@
           <div>
             <label>Login Plan Tier *</label>
             <select name="plan_choice" id="plan-choice-select">
-              <option value="PLAN_1_LOGIN" selected>1 Login Plan — ₹1,999/mo (CRM &amp; WhatsApp Direct)</option>
-              <option value="PLAN_2_LOGINS">2 Logins Plan — ₹3,499/mo (+ Digital Profile &amp; Workflows)</option>
-              <option value="PLAN_5_LOGINS">5 Logins Plan — ₹6,499/mo (+ Journeys, Meta Ads, WhatsApp API)</option>
-              <option value="PLAN_10_LOGINS">10 Logins Plan — ₹9,999/mo (All 9 Commercial Modules)</option>
+              <option value="PLAN_1_LOGIN" selected>1 Login — ₹1,999/mo (₹1,999/user · CRM &amp; WhatsApp Direct)</option>
+              <option value="PLAN_2_LOGINS">2 Logins — ₹3,499/mo (₹1,749.50/user · + Digital Profile &amp; Workflows)</option>
+              <option value="PLAN_5_LOGINS">5 Logins — ₹6,499/mo (₹1,299.80/user · + Journeys &amp; Appointments)</option>
+              <option value="PLAN_10_LOGINS">10 Logins — ₹9,999/mo (₹999.90/user · All 9 Modules + Meta Ads &amp; WA API)</option>
             </select>
           </div>
           <div>
@@ -293,15 +375,19 @@
         <div style="margin-top:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <label style="font-size:13px;color:var(--brand-1);font-weight:700;margin:0">3. SaaS Module Availability Explorer</label>
-            <span style="font-size:11px;color:var(--muted)" id="module-count-badge">2 Included</span>
+            <span style="font-size:11px;color:var(--muted)" id="module-count-badge">2 of 9 Included</span>
           </div>
           <div id="module-explorer-accordion" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:4px;border:1px solid var(--line);padding:8px;border-radius:10px;background:#f8fafc">
             <!-- Rendered dynamically by script -->
           </div>
         </div>
 
-        <!-- 4. Live Order Summary Box -->
+        <!-- 4. Live Order Summary Box (with Effective Per-User Cost as 1st Row!) -->
         <div id="price-box" style="margin-top:16px;padding:14px;background:linear-gradient(135deg,#f8fafc,#eff6ff);border-radius:12px;border:1.5px solid var(--brand-1);font-size:13px">
+          <div id="summary-per-user-row" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin-bottom:8px;border-radius:8px;background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(16,185,129,.12));border:1px solid rgba(79,70,229,.25)">
+            <span style="font-size:11.5px;font-weight:800;color:var(--brand-1);text-transform:uppercase;letter-spacing:.3px">⚡ Effective Cost Per User</span>
+            <span id="summary-per-user-cost" style="font-size:13.5px;font-weight:800;color:#059669">₹1,999 / user / mo</span>
+          </div>
           <div style="display:flex;justify-content:space-between;color:var(--ink-2);font-weight:600">
             <span id="summary-plan-title">1 Login Plan (1 Seat)</span>
             <span id="price-cycle-name">Monthly Billing</span>
@@ -430,62 +516,219 @@
   </div>
 </section>
 
+<!-- ─── Solar & B2B Operating System: 1-Click Documents + Automated Workflows ─── -->
+<section id="solar-os" style="background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);border-top:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Solar &amp; B2B Business Operating System</span>
+      <h2>1-Click Document Generation Connected to Automated Workflows</h2>
+      <p>Standalone tools give you either a proposal template or a basic chat inbox. Zynova OS connects <b>customer data, 1-click operational documents, and automated stage triggers</b> so your team never re-types customer details twice.</p>
+    </div>
+
+    <!-- 8 Recommended Solar & B2B Document Templates -->
+    <div style="margin-bottom:36px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0;font-size:20px;font-weight:800;color:var(--ink)">📄 8 One-Click Business &amp; Solar Document Templates</h3>
+          <p style="margin:4px 0 0;font-size:13.5px;color:var(--muted)">Generate branded PDFs directly from stored CRM &amp; project records in one click — linked automatically to customer history.</p>
+        </div>
+        <span style="background:rgba(16,185,129,.12);color:#059669;font-weight:800;font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid rgba(16,185,129,.3)">✓ Zero Re-Typing · Auto-Populated from Lead Data</span>
+      </div>
+      <div class="doc-grid">
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 01</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Customer Quotation</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">System capacity (kW), equipment specs, pricing breakdown, GST &amp; structured payment terms.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 02</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Branded Solar Proposal</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Customer requirements, proposed system sizing, generation estimates &amp; commercial terms.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 03</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Site Survey Form / Report</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Customer &amp; site coordinates, shadow/roof observations, site photos &amp; technical survey outcome.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 04</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Application &amp; Subsidy Docs</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Configurable customer agreements, PM Surya Ghar / DISCOM annexures &amp; commissioning forms.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 05</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Installation Work Order</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Installation scope, BOM checklist, assigned engineering team, target dates &amp; responsibilities.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 06</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Completion &amp; Sync Report</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Installation completion details, quality checklist, net-meter synchronisation &amp; photo proof.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 07</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">GST Tax Invoice / Pro-Forma</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Multi-entity GSTIN, HSN/SAC codes, taxable value, CGST/SGST/IGST &amp; balance-due tracking.</p>
+        </div>
+        <div class="doc-card">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">Document 08</div>
+          <h4 style="margin:6px 0;font-size:15px;font-weight:700">Warranty &amp; Hand-Over</h4>
+          <p style="margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5">Panel &amp; inverter serial numbers, warranty certificates &amp; signed customer handover dossier.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8-Stage Automated Solar & B2B Workflow Pipeline -->
+    <div style="background:linear-gradient(135deg,#0f172a,#1e1b4b);color:#fff;border-radius:16px;padding:26px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div>
+          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#38bdf8">End-to-End Lifecycle Automation</span>
+          <h3 style="margin:4px 0 0;font-size:20px;font-weight:800;color:#fff">⚡ How Zynova OS Connects Every Document to the Next Business Step</h3>
+        </div>
+        <span style="font-size:12px;color:#cbd5e1">Included from <b>2+ Logins</b> (Workflows) &amp; <b>5+ Logins</b> (Journeys &amp; Appointments)</span>
+      </div>
+      <div class="wf-grid">
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#38bdf8">
+          <div style="font-size:11px;font-weight:800;color:#38bdf8">1. NEW LEAD INGESTED</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Auto-Assign &amp; Task</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Assigns lead to salesperson by region/source and creates an instant follow-up task.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#818cf8">
+          <div style="font-size:11px;font-weight:800;color:#818cf8">2. SITE SURVEY BOOKED</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Field Dispatch &amp; Alert</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Notifies assigned field engineer, logs appointment calendar &amp; tracks GPS check-in.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#a78bfa">
+          <div style="font-size:11px;font-weight:800;color:#a78bfa">3. SURVEY COMPLETED</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Survey Report Ready</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Generates Site Survey Report with photos and triggers quotation preparation stage.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#34d399">
+          <div style="font-size:11px;font-weight:800;color:#34d399">4. QUOTATION GENERATED</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">1-Click PDF &amp; WhatsApp</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Saves quotation &amp; proposal against customer profile for instant 1-click WhatsApp sharing.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#fbbf24">
+          <div style="font-size:11px;font-weight:800;color:#fbbf24">5. QUOTATION PENDING</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Automated Follow-Ups</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Schedules multi-day follow-up reminders &amp; drip nudges based on your configured rules.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#f472b6">
+          <div style="font-size:11px;font-weight:800;color:#f472b6">6. ORDER CONFIRMED</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Work Order &amp; Dispatch</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Generates Work Order, Customer Agreement &amp; dispatches installation tasks to crew.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#10b981">
+          <div style="font-size:11px;font-weight:800;color:#10b981">7. INSTALLATION DONE</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">Handover &amp; GST Invoice</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Collects completion proof, generates Commissioning &amp; Warranty dossier + final GST invoice.</div>
+        </div>
+        <div class="wf-step" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);border-left-color:#60a5fa">
+          <div style="font-size:11px;font-weight:800;color:#60a5fa">8. POST-SALE SERVICE</div>
+          <div style="font-size:13.5px;font-weight:700;margin:4px 0;color:#fff">SLA Ticket &amp; Referrals</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.45">Tracks service tickets with SLA timers and logs Ved Member partner referral commissions.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ─── pricing ─── -->
 <section id="pricing" style="background:linear-gradient(180deg,#fafbff,#f0f4ff);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
   <div class="container">
     <div class="section-head">
       <span class="pill">Authoritative Commercial Pricing</span>
-      <h2>Predictable Team Login Plans with Module Scaling</h2>
-      <p>Select your team login count. Every plan includes core workspace features plus progressive module entitlements.</p>
+      <h2>Predictable Team Login Plans — Effective Cost From ₹999.90 / User</h2>
+      <p>Start with 1 login or scale to 10 logins. Every plan highlights your <b>effective per-user cost as the 1st row</b> and progressively unlocks operational modules without forcing small teams into a 10-seat communication bundle.</p>
+      <div class="billing-toggle-wrap" role="group" aria-label="Billing Cycle Toggle">
+        <button type="button" class="billing-toggle-btn active" id="toggle-monthly-btn" onclick="setPricingDisplayCycle('monthly')">Monthly Billing</button>
+        <button type="button" class="billing-toggle-btn" id="toggle-annual-btn" onclick="setPricingDisplayCycle('annual')">Annual Billing <span class="save-pill">2 Months FREE · Save 16.7%</span></button>
+      </div>
     </div>
+
     <div class="price-grid" style="grid-template-columns:repeat(4,1fr);">
+      <!-- 1 Login -->
       <div class="price">
         <h3>1 Login</h3>
-        <p class="tag">Solo entrepreneurs & single users needing core CRM.</p>
-        <div class="amount">₹1,999<small> /mo</small></div>
+        <p class="tag">Solo entrepreneurs &amp; single users needing core CRM &amp; WhatsApp Direct.</p>
+        <div class="amount" id="card-price-1">₹1,999<small> /mo</small></div>
+        <div class="per-user-pill">
+          <span class="pu-label">⚡ 1st Row · Effective Per-User Cost</span>
+          <span class="pu-val" id="card-pu-1">₹1,999 / user / mo</span>
+          <span class="pu-sub" id="card-pusub-1">No 10-user minimum · Start solo</span>
+        </div>
         <ul>
+          <li class="first-row-highlight" id="card-li-pu-1">Effective Cost: ₹1,999 / login / mo</li>
           <li>1 Staff Login Seat</li>
-          <li>CRM & Lead Management</li>
+          <li>CRM &amp; Lead Management</li>
           <li>WhatsApp Direct Messaging</li>
           <li>Core Workspace Access</li>
         </ul>
+        <button type="button" class="plan-select-btn" onclick="selectPlanFromCard('PLAN_1_LOGIN')">Choose 1 Login Plan →</button>
       </div>
+
+      <!-- 2 Logins -->
       <div class="price">
         <h3>2 Logins</h3>
-        <p class="tag">Small teams ready for branding & workflow automation.</p>
-        <div class="amount">₹3,499<small> /mo</small></div>
+        <p class="tag">Small teams ready for Digital Company Profile &amp; automated workflows.</p>
+        <div class="amount" id="card-price-2">₹3,499<small> /mo</small></div>
+        <div class="per-user-pill">
+          <span class="pu-label">⚡ 1st Row · Effective Per-User Cost</span>
+          <span class="pu-val" id="card-pu-2">₹1,749.50 / user / mo</span>
+          <span class="pu-sub" id="card-pusub-2">Save 12.5% per user vs 1 Login</span>
+        </div>
         <ul>
+          <li class="first-row-highlight" id="card-li-pu-2">Effective Cost: ₹1,749.50 / login / mo</li>
           <li>2 Staff Login Seats</li>
-          <li>CRM & WhatsApp Direct</li>
-          <li>Digital Company Profile</li>
-          <li>Automated Workflows & Rules</li>
+          <li>CRM &amp; WhatsApp Direct</li>
+          <li>Digital Company Profile Page</li>
+          <li>Automated Workflows &amp; Rules</li>
         </ul>
+        <button type="button" class="plan-select-btn" onclick="selectPlanFromCard('PLAN_2_LOGINS')">Choose 2 Logins Plan →</button>
       </div>
-      <div class="price featured">
-        <span class="badge">Most Popular</span>
-        <h3>5 Logins</h3>
-        <p class="tag">Growing businesses needing automation & ad capture.</p>
-        <div class="amount">₹6,499<small> /mo</small></div>
-        <ul>
-          <li>5 Staff Login Seats</li>
-          <li>CRM, WhatsApp, Digital Profile</li>
-          <li>Journeys & Appointments</li>
-          <li>Meta/Facebook Ads Integration</li>
-          <li>WhatsApp API Auto Messaging</li>
-        </ul>
-      </div>
+
+      <!-- 5 Logins -->
       <div class="price">
-        <span class="badge" style="background:var(--ok)">All Modules</span>
-        <h3>10 Logins</h3>
-        <p class="tag">Full Enterprise Suite with complete module access.</p>
-        <div class="amount">₹9,999<small> /mo</small></div>
+        <span class="badge">Growth Teams</span>
+        <h3>5 Logins</h3>
+        <p class="tag">Growing solar &amp; B2B teams needing site visits, journeys &amp; 1-click docs.</p>
+        <div class="amount" id="card-price-5">₹6,499<small> /mo</small></div>
+        <div class="per-user-pill">
+          <span class="pu-label">⚡ 1st Row · Effective Per-User Cost</span>
+          <span class="pu-val" id="card-pu-5">₹1,299.80 / user / mo</span>
+          <span class="pu-sub" id="card-pusub-5">Save 35% per user vs 1 Login</span>
+        </div>
         <ul>
-          <li>10 Staff Login Seats</li>
-          <li>All 9 Commercial Modules</li>
-          <li>Service Desk & Ticketing</li>
-          <li>Referral Agent (Ved Member)</li>
-          <li>Priority Support & Onboarding</li>
+          <li class="first-row-highlight" id="card-li-pu-5">Effective Cost: ₹1,299.80 / login / mo</li>
+          <li>5 Staff Login Seats</li>
+          <li>CRM, WhatsApp &amp; Digital Profile</li>
+          <li>Automated Workflows &amp; Rules</li>
+          <li>Journeys, Site Visits &amp; Appointments</li>
+          <li>1-Click Solar &amp; Business Docs</li>
         </ul>
+        <button type="button" class="plan-select-btn" onclick="selectPlanFromCard('PLAN_5_LOGINS')">Choose 5 Logins Plan →</button>
+      </div>
+
+      <!-- 10 Logins -->
+      <div class="price featured">
+        <span class="badge" style="background:linear-gradient(135deg,#059669,#10b981)">All 9 Modules · Best Value</span>
+        <h3>10 Logins</h3>
+        <p class="tag">Full Enterprise Suite with Meta Ads, WhatsApp API, Service Desk &amp; Referrals.</p>
+        <div class="amount" id="card-price-10">₹9,999<small> /mo</small></div>
+        <div class="per-user-pill best">
+          <span class="pu-label">★ 1st Row · Lowest Per-User Cost</span>
+          <span class="pu-val" id="card-pu-10">₹999.90 / user / mo</span>
+          <span class="pu-sub" id="card-pusub-10">Save 50% per seat · ₹60,012/yr cheaper than SUV</span>
+        </div>
+        <ul>
+          <li class="first-row-highlight" id="card-li-pu-10" style="background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.30);color:#047857">Effective Cost: ₹999.90 / login / mo</li>
+          <li>10 Staff Login Seats (All 9 Modules)</li>
+          <li><b>Meta/Facebook Ads Integration</b></li>
+          <li><b>WhatsApp API Auto Messaging</b></li>
+          <li>Service Desk &amp; SLA Ticketing</li>
+          <li>Referral Agent (Ved Member) Tracking</li>
+        </ul>
+        <button type="button" class="plan-select-btn" onclick="selectPlanFromCard('PLAN_10_LOGINS')">Choose 10 Logins Plan →</button>
       </div>
     </div>
 
@@ -494,21 +737,45 @@
       <div style="text-align:center;margin-bottom:24px;">
         <span class="pill">Side-by-Side Breakdown</span>
         <h3 style="font-size:26px;font-weight:800;margin:10px 0 6px;letter-spacing:-.01em;">SaaS Commercial Modules Matrix by Login Plan</h3>
-        <p style="color:var(--ink-2);font-size:15px;margin:0">Compare included modules and entitlement boundaries across each login tier.</p>
+        <p style="color:var(--ink-2);font-size:15px;margin:0">Compare effective per-user cost (Row 1) and included module entitlements across each login tier. GST (18%) is additional.</p>
       </div>
       
       <div style="overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 12px 36px -16px rgba(15,23,42,0.12)">
         <table style="width:100%;border-collapse:collapse;font-size:13.5px;text-align:left;">
           <thead>
             <tr style="background:linear-gradient(180deg,#f8fafc,#f1f5f9);border-bottom:2px solid var(--line)">
-              <th style="padding:16px 18px;font-weight:700;color:var(--ink);width:32%">SaaS Commercial Module</th>
+              <th style="padding:16px 18px;font-weight:700;color:var(--ink);width:32%">SaaS Metric / Commercial Module</th>
               <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">1 Login<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹1,999/mo</span></th>
               <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">2 Logins<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹3,499/mo</span></th>
-              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);background:#f0edfb;width:17%">5 Logins ★<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹6,499/mo</span></th>
-              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">10 Logins<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹9,999/mo</span></th>
+              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);width:17%">5 Logins<br><span style="font-size:12px;color:var(--brand-1);font-weight:800">₹6,499/mo</span></th>
+              <th style="padding:16px 12px;text-align:center;font-weight:700;color:var(--ink);background:#ecfdf5;width:17%">10 Logins ★<br><span style="font-size:12px;color:#059669;font-weight:800">₹9,999/mo</span></th>
             </tr>
           </thead>
           <tbody>
+            <!-- ROW 1: EFFECTIVE PER USER COST (HIGHLIGHTED 1ST ROW!) -->
+            <tr style="background:linear-gradient(90deg,#eef2ff 0%,#f0fdf4 100%);border-bottom:2px solid #c7d2fe;">
+              <td style="padding:15px 18px;">
+                <span style="display:inline-block;background:var(--brand-1);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">⚡ 1st Row Highlight</span><br>
+                <b style="color:var(--ink);font-size:14.5px">Effective Cost Per User / Month</b><br>
+                <span style="font-size:11.5px;color:var(--ink-2)">Monthly price per staff login seat (Annual billing: 2 months FREE)</span>
+              </td>
+              <td style="padding:15px 12px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:var(--ink)" id="matrix-pu-1">₹1,999</div>
+                <div style="font-size:11px;color:var(--muted);font-weight:600">per login / mo</div>
+              </td>
+              <td style="padding:15px 12px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:var(--brand-1)" id="matrix-pu-2">₹1,749.50</div>
+                <div style="font-size:11px;color:#059669;font-weight:700">per login · Save 12%</div>
+              </td>
+              <td style="padding:15px 12px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:var(--brand-1)" id="matrix-pu-5">₹1,299.80</div>
+                <div style="font-size:11px;color:#059669;font-weight:700">per login · Save 35%</div>
+              </td>
+              <td style="padding:15px 12px;text-align:center;background:rgba(16,185,129,.12);">
+                <div style="font-size:17px;font-weight:900;color:#047857" id="matrix-pu-10">₹999.90</div>
+                <div style="font-size:11px;color:#047857;font-weight:800">per login · Save 50% ★</div>
+              </td>
+            </tr>
             <!-- 1. CRM_LEADS -->
             <tr style="border-bottom:1px solid var(--line);">
               <td style="padding:13px 18px;">
@@ -517,8 +784,8 @@
               </td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 2. WHATSAPP_INTEGRATION -->
             <tr style="border-bottom:1px solid var(--line);">
@@ -528,8 +795,8 @@
               </td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 3. DIGITAL_CATALOG -->
             <tr style="border-bottom:1px solid var(--line);">
@@ -539,8 +806,8 @@
               </td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 2+ Logins</td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 4. WORKFLOWS -->
             <tr style="border-bottom:1px solid var(--line);">
@@ -550,41 +817,41 @@
               </td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 2+ Logins</td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 5. JOURNEYS -->
             <tr style="border-bottom:1px solid var(--line);">
               <td style="padding:13px 18px;">
-                <b style="color:var(--ink)">Journey &amp; Appointments</b><br>
-                <span style="font-size:11.5px;color:var(--muted)">Site visit scheduling, appointment calendar &amp; doc generator</span>
+                <b style="color:var(--ink)">Journey, Site Visits &amp; 1-Click Documents</b><br>
+                <span style="font-size:11.5px;color:var(--muted)">Site survey scheduling, appointment calendar &amp; 1-click doc generator</span>
               </td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
-            <!-- 6. META_ADS_INTEGRATION -->
+            <!-- 6. META_ADS_INTEGRATION (MOVED TO 10 LOGINS) -->
             <tr style="border-bottom:1px solid var(--line);">
               <td style="padding:13px 18px;">
-                <b style="color:var(--ink)">Meta/Facebook Ads Lead Sync</b><br>
-                <span style="font-size:11.5px;color:var(--muted)">Real-time Facebook &amp; Instagram lead form webhook</span>
+                <b style="color:var(--ink)">Meta/Facebook Ads Integration</b><br>
+                <span style="font-size:11.5px;color:var(--muted)">Real-time Facebook &amp; Instagram lead form webhook auto-ingestion</span>
               </td>
-              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
-              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
-            <!-- 7. WHATSAPP_API -->
+            <!-- 7. WHATSAPP_API (MOVED TO 10 LOGINS) -->
             <tr style="border-bottom:1px solid var(--line);">
               <td style="padding:13px 18px;">
                 <b style="color:var(--ink)">WhatsApp API Auto Messaging</b><br>
                 <span style="font-size:11.5px;color:var(--muted)">Automated broadcasts, welcome drip &amp; follow-up sequences</span>
               </td>
-              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
-              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 5+ Logins</td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
-              <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 8. SERVICE_TICKETS -->
             <tr style="border-bottom:1px solid var(--line);">
@@ -594,8 +861,8 @@
               </td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
-              <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 9. VED_MEMBERS -->
             <tr style="border-bottom:1px solid var(--line);">
@@ -605,8 +872,8 @@
               </td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
               <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
-              <td style="padding:13px;text-align:center;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
+              <td style="padding:13px;text-align:center;color:var(--muted);font-size:12px;">🔒 10 Logins</td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(16,185,129,.12);color:var(--ok);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Included</span></td>
             </tr>
             <!-- 10. Universal Core Workspace -->
             <tr style="background:#f8fafc;">
@@ -616,12 +883,367 @@
               </td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(79,70,229,.12);color:var(--brand-1);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Universal</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(79,70,229,.12);color:var(--brand-1);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Universal</span></td>
-              <td style="padding:13px;text-align:center;background:#faf8ff;"><span style="background:rgba(79,70,229,.12);color:var(--brand-1);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Universal</span></td>
               <td style="padding:13px;text-align:center;"><span style="background:rgba(79,70,229,.12);color:var(--brand-1);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Universal</span></td>
+              <td style="padding:13px;text-align:center;background:#f0fdf4;"><span style="background:rgba(79,70,229,.12);color:var(--brand-1);font-weight:700;padding:3px 10px;border-radius:999px;font-size:12px">✓ Universal</span></td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Competitor & Market Comparison Hub (#compare) ─── -->
+<section id="compare" style="background:#ffffff;border-bottom:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Market Benchmark &amp; Value Analysis</span>
+      <h2>Why Businesses Choose Zynova OS Over Single-Purpose Tools</h2>
+      <p>Whether you are comparing against <b>10-user cloud-calling bundles</b>, <b>standalone solar proposal apps</b>, or <b>multi-app ERPs</b>, Zynova OS delivers a unified Business Operating System at a lower effective per-user cost.</p>
+    </div>
+
+    <!-- Interactive Team-Size & Annual Savings Calculator -->
+    <div style="background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1.5px solid #c7d2fe;border-radius:16px;padding:24px;margin-bottom:36px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:18px">
+        <div>
+          <span style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase;letter-spacing:.4px">Interactive Value Calculator</span>
+          <h3 style="margin:4px 0 0;font-size:20px;font-weight:800;color:var(--ink)">Calculate Your Per-User Cost &amp; Annual Savings</h3>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="roi-btn" id="roi-btn-1" onclick="updateRoiCalculator(1)">1 Login (Solo)</button>
+          <button type="button" class="roi-btn" id="roi-btn-2" onclick="updateRoiCalculator(2)">2 Logins (Small)</button>
+          <button type="button" class="roi-btn" id="roi-btn-5" onclick="updateRoiCalculator(5)">5 Logins (Growth)</button>
+          <button type="button" class="roi-btn active" id="roi-btn-10" onclick="updateRoiCalculator(10)">10 Logins (Full Suite)</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px" id="roi-cards-grid">
+        <div style="background:#fff;border:1.5px solid var(--brand-1);border-radius:12px;padding:16px">
+          <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase">⚡ 1st Metric · Zynova Per-User Cost</div>
+          <div style="font-size:26px;font-weight:900;color:var(--ink);margin:6px 0" id="roi-pu-cost">₹999.90<small style="font-size:13px;color:var(--muted);font-weight:600"> /user/mo</small></div>
+          <div style="font-size:12px;color:#059669;font-weight:700" id="roi-pu-annual">50% OFF per user (₹833.25/user on Annual)</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase">Zynova OS Monthly / Annual</div>
+          <div style="font-size:22px;font-weight:800;color:var(--ink);margin:6px 0" id="roi-zynova-total">₹9,999/mo (10 Logins)</div>
+          <div style="font-size:12px;color:var(--ink-2)" id="roi-zynova-yr">₹1,19,988/yr (₹99,990/yr on Annual · All 9 Modules)</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px">
+          <div style="font-size:11px;font-weight:800;color:#b91c1c;text-transform:uppercase" id="roi-comp-label">Separate Stack + MyOp****or SUV</div>
+          <div style="font-size:22px;font-weight:800;color:#b91c1c;margin:6px 0" id="roi-comp-total">₹24,000/mo (10 Users)</div>
+          <div style="font-size:12px;color:var(--muted)" id="roi-comp-yr">₹2,88,000/yr (SUV ₹15k/mo + CRM/Docs/ERP ₹9k/mo)</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:12px;padding:16px">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#d1fae5">★ Total Annual Savings with Zynova OS</div>
+          <div style="font-size:26px;font-weight:900;margin:6px 0" id="roi-savings-amt">Save ₹1,68,012 / yr</div>
+          <div style="font-size:12px;color:#ecfdf5;font-weight:600" id="roi-savings-sub">Includes ₹1,19,892/yr (50%) seat discount + ₹60,012/yr cheaper than SUV alone!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Category Switcher Tabs -->
+    <div class="comp-tabs">
+      <button type="button" class="comp-tab-btn active" id="tab-btn-telephony" onclick="switchCompTab('telephony')">
+        📞 1. Zynova OS vs MyOp****or (Calling &amp; WhatsApp Bundles)
+      </button>
+      <button type="button" class="comp-tab-btn" id="tab-btn-solar" onclick="switchCompTab('solar')">
+        ☀️ 2. Zynova OS vs Qu***est Solar, Op**Solar, Zo*o &amp; Od*o
+      </button>
+    </div>
+
+    <!-- TAB 1: Zynova OS vs MyOp****or -->
+    <div class="comp-panel active" id="comp-panel-telephony">
+      <!-- Price Comparison Sub-Table -->
+      <div style="margin-bottom:28px;overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 30px -16px rgba(15,23,42,.10)">
+        <div style="padding:16px 20px;background:linear-gradient(90deg,#0f172a,#1e1b4b);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <h3 style="margin:0;font-size:18px;font-weight:800">Direct Price &amp; Team-Size Flexibility: Zynova OS vs MyOp****or</h3>
+            <p style="margin:3px 0 0;font-size:12.5px;color:#cbd5e1">Comparing Zynova OS progressive team plans (1 to 10 logins) against published 10-user annual communication bundles (Sedan &amp; SUV).</p>
+          </div>
+          <span style="background:rgba(16,185,129,.2);color:#6ee7b7;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;border:1px solid rgba(16,185,129,.4)">Save ₹60,012/yr vs SUV Plan</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px;text-align:left">
+          <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid var(--line)">
+              <th style="padding:14px 18px;width:28%;font-weight:800;color:var(--ink)">Pricing &amp; Plan Metric</th>
+              <th style="padding:14px 16px;width:28%;font-weight:800;color:#047857;background:#ecfdf5">Zynova OS (All-in-One Business OS)</th>
+              <th style="padding:14px 16px;width:22%;font-weight:700;color:var(--ink-2)">MyOp****or "Sedan" (10 Users)</th>
+              <th style="padding:14px 16px;width:22%;font-weight:700;color:var(--ink-2)">MyOp****or "SUV" (10 Users)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 1ST ROW: EFFECTIVE PER USER COST -->
+            <tr style="background:linear-gradient(90deg,#eef2ff,#ecfdf5);border-bottom:2px solid #a7f3d0">
+              <td style="padding:14px 18px">
+                <span style="background:var(--brand-1);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;text-transform:uppercase">⚡ 1st Row Highlight</span><br>
+                <b style="color:var(--ink);font-size:14px">Effective Cost Per User / Month</b>
+              </td>
+              <td style="padding:14px 16px;background:rgba(16,185,129,.12);font-weight:800;color:#047857">
+                <span style="font-size:16px">₹999.90 / user / mo</span> (at 10 Logins)<br>
+                <span style="font-size:11.5px;color:var(--ink-2)">Or ₹833.25/user/mo on Annual · Starts at 1 Login (₹1,999)</span>
+              </td>
+              <td style="padding:14px 16px;color:var(--ink-2)">
+                <b>₹500 / user / mo</b><br>
+                <span style="font-size:11.5px;color:#b91c1c;font-weight:600">⚠ Mandatory 10-user lock-in (₹5,000/mo) · Basic calling/WA only</span>
+              </td>
+              <td style="padding:14px 16px;color:var(--ink-2)">
+                <b>₹1,500 / user / mo</b><br>
+                <span style="font-size:11.5px;color:#b91c1c;font-weight:600">⚠ Mandatory 10-user lock-in (₹15,000/mo) for CRM/APIs/Web calling</span>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:12px 18px;font-weight:700">Entry-Level Plan (1 Login)</td>
+              <td style="padding:12px 16px;background:#f0fdf4;font-weight:800;color:#047857">✓ ₹1,999/mo for 1 Login (CRM + WhatsApp Direct)</td>
+              <td style="padding:12px 16px;color:var(--muted)">₹5,000/mo (Must buy 10 users)</td>
+              <td style="padding:12px 16px;color:var(--muted)">₹15,000/mo (Must buy 10 users)</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:12px 18px;font-weight:700">2-User Small Team Plan</td>
+              <td style="padding:12px 16px;background:#f0fdf4;font-weight:800;color:#047857">✓ ₹3,499/mo (₹1,749.50/user · + Profile &amp; Workflows)</td>
+              <td style="padding:12px 16px;color:var(--muted)">No equivalent smaller published plan</td>
+              <td style="padding:12px 16px;color:var(--muted)">No equivalent smaller published plan</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:12px 18px;font-weight:700">5-User Growing Team Plan</td>
+              <td style="padding:12px 16px;background:#f0fdf4;font-weight:800;color:#047857">✓ ₹6,499/mo (₹1,299.80/user · + Journeys &amp; 1-Click Docs)</td>
+              <td style="padding:12px 16px;color:var(--muted)">No equivalent smaller published plan</td>
+              <td style="padding:12px 16px;color:var(--muted)">No equivalent smaller published plan</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:12px 18px;font-weight:700">10 Users with Broader Features</td>
+              <td style="padding:12px 16px;background:#f0fdf4;font-weight:800;color:#047857">✓ ₹9,999/mo (All 9 Modules + Meta Ads + WA API + Service Desk)</td>
+              <td style="padding:12px 16px;color:var(--ink-2)">₹5,000/mo (Communications only; no advanced CRM/ERP)</td>
+              <td style="padding:12px 16px;color:var(--ink-2)">₹15,000/mo for SUV (Web calling, APIs &amp; CRM integrations)</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:12px 18px;font-weight:700">Annualized Cost (10 Users, Before GST)</td>
+              <td style="padding:12px 16px;background:#f0fdf4;font-weight:800;color:#047857">₹1,19,988/yr (or ₹99,990/yr on Annual 2-Mo-Free Plan)</td>
+              <td style="padding:12px 16px;color:var(--ink-2)">₹60,000/yr (Billed annually + GST)</td>
+              <td style="padding:12px 16px;color:var(--ink-2)">₹1,80,000/yr (Billed annually + GST)</td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:13px 18px;font-weight:800;color:var(--ink)">Annual Saving with Zynova OS (10 Users)</td>
+              <td style="padding:13px 16px;background:#dcfce7;font-weight:900;color:#047857">★ Save ₹60,012/yr (Monthly) to ₹80,010/yr (Annual) vs SUV</td>
+              <td style="padding:13px 16px;font-size:12px;color:var(--muted)">Cheaper for basic calling only, but lacks native CRM, Docs, Workflows &amp; ERP</td>
+              <td style="padding:13px 16px;font-size:12px;color:#b91c1c;font-weight:700">Costs ₹60,012/yr MORE than Zynova OS 10-Login Suite</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Feature-by-Feature Comparison Table (Zynova OS vs MyOp****or) -->
+      <div style="overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 30px -16px rgba(15,23,42,.08);margin-bottom:26px">
+        <div style="padding:15px 20px;background:#f8fafc;border-bottom:1px solid var(--line)">
+          <h4 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">Feature-by-Feature Capability Audit: Complete Business OS vs Dedicated Communications Platform</h4>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+          <thead>
+            <tr style="background:#f1f5f9;border-bottom:2px solid var(--line)">
+              <th style="padding:12px 18px;width:34%">Capability / Business Function</th>
+              <th style="padding:12px 16px;width:36%;background:#ecfdf5;color:#047857;font-weight:800">Zynova OS (All-in-One Business Operations Platform)</th>
+              <th style="padding:12px 16px;width:30%;color:var(--ink-2)">MyOp****or (Communications &amp; Telephony Suite)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:linear-gradient(90deg,#eef2ff,#ecfdf5);border-bottom:1.5px solid #c7d2fe">
+              <td style="padding:11px 18px;font-weight:800;color:var(--brand-1)">⚡ 1st Row: Effective Per-User Cost &amp; Seat Minimum</td>
+              <td style="padding:11px 16px;background:rgba(16,185,129,.12);font-weight:800;color:#047857">₹999.90/user/mo (10 Logins) · Start with just 1 Login (₹1,999/mo)</td>
+              <td style="padding:11px 16px;font-weight:600">₹500–₹1,500/user/mo · Mandatory 10-user minimum (₹5k–₹15k/mo)</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Native CRM, Lead Pipelines &amp; 1-Click Documents</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — Full CRM, deal pipelines &amp; 8+ 1-click solar/business docs</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">External CRM integrations &amp; communication-focused lead handling</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Automated Business &amp; Lifecycle Workflows</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Included from 2+ Logins (Stage rules, auto-assignment &amp; tasks)</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">Primarily call/chat communication routing &amp; webhook automation</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">WhatsApp Direct (1-on-1 CRM Inbox)</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Included on all plans (1+ Logins)</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">✓ Included in 10-user communication plans</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">WhatsApp API Auto Messaging &amp; Broadcasts</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Included on 10-Login Enterprise Plan (₹999.90/user)</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">Available with plan limits &amp; Meta usage charges</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Meta / Facebook Ads Real-Time Lead Sync</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Included on 10-Login Enterprise Plan (₹999.90/user)</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">Available via campaign integrations on eligible plans</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Site Visits, Journeys &amp; Field Force (SFMS)</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — Geo-attendance, beats, site survey calendar &amp; GPS tracking</td>
+              <td style="padding:11px 16px;color:var(--muted)">✗ Not a core advertised product</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Inventory, Multi-Warehouse &amp; Dispatch</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — Stock, batches, serial numbers &amp; reorder workflows</td>
+              <td style="padding:11px 16px;color:var(--muted)">✗ Not a core advertised product</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Multi-Entity Accounting &amp; GST Invoicing</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — Tally/Zoho-grade GST invoicing across legal entities</td>
+              <td style="padding:11px 16px;color:var(--muted)">✗ Not a core advertised product</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">HR, Attendance, Leaves &amp; Payroll</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — End-to-end attendance-to-payslip compliance</td>
+              <td style="padding:11px 16px;color:var(--muted)">✗ Not a core advertised product</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 18px;font-weight:600">Service Desk, SLA Ticketing &amp; Partner Referrals</td>
+              <td style="padding:11px 16px;background:#f0fdf4;font-weight:700;color:#047857">✓ Included on 10-Login Plan (Service Tickets + Ved Member Tree)</td>
+              <td style="padding:11px 16px;color:var(--muted)">✗ Not a core advertised product</td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:11px 18px;font-weight:600">Cloud Telephony, IVR, Browser Softphone &amp; AI Calling</td>
+              <td style="padding:11px 16px;color:var(--ink-2)">Plivo/WebRTC browser softphone, call recording &amp; AI voice workflows available via telephony module integration (usage billed per telecom actuals)</td>
+              <td style="padding:11px 16px;font-weight:700;color:var(--ink)">Core specialist offering (IVR, call routing, recording; Web calling on SUV ₹15k/mo; Auto-dialer ₹700/user add-on; AI Team custom quote)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: Zynova OS vs Solar CRM, Design & ERP Alternatives -->
+    <div class="comp-panel" id="comp-panel-solar">
+      <div style="overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 10px 30px -16px rgba(15,23,42,.10);margin-bottom:26px">
+        <div style="padding:16px 20px;background:linear-gradient(90deg,#0f172a,#312e81);color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <h3 style="margin:0;font-size:18px;font-weight:800">Zynova OS vs Solar CRM, Design &amp; General ERP Alternatives</h3>
+            <p style="margin:3px 0 0;font-size:12.5px;color:#cbd5e1">Why solar vendors and B2B teams choose one pre-configured Solar &amp; Business Operating System instead of stitching 4–5 disconnected apps.</p>
+          </div>
+          <span style="background:rgba(56,189,248,.2);color:#7dd3fc;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;border:1px solid rgba(56,189,248,.4)">All-in-One Solar &amp; B2B OS</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;text-align:left">
+          <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid var(--line)">
+              <th style="padding:13px 14px;width:20%;font-weight:800;color:var(--ink)">Capability</th>
+              <th style="padding:13px 14px;width:22%;background:#ecfdf5;color:#047857;font-weight:800">Zynova OS (Solar &amp; B2B OS)</th>
+              <th style="padding:13px 12px;width:15%;color:var(--ink-2)">Qu***est Solar CRM</th>
+              <th style="padding:13px 12px;width:14%;color:var(--ink-2)">Op**Solar</th>
+              <th style="padding:13px 14px;width:15%;color:var(--ink-2)">Zo*o CRM + Writer</th>
+              <th style="padding:13px 14px;width:14%;color:var(--ink-2)">Od*o ERP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 1ST ROW: EFFECTIVE PER USER COST & ENTRY PRICE -->
+            <tr style="background:linear-gradient(90deg,#eef2ff,#ecfdf5);border-bottom:2px solid #a7f3d0">
+              <td style="padding:13px 14px">
+                <span style="background:var(--brand-1);color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:999px;text-transform:uppercase">⚡ 1st Row Highlight</span><br>
+                <b style="color:var(--ink);font-size:13px">Effective Per-User Cost &amp; Entry Price</b>
+              </td>
+              <td style="padding:13px 14px;background:rgba(16,185,129,.12);font-weight:800;color:#047857">
+                <b>₹999.90/user/mo</b> (10 Logins) to <b>₹1,999/mo</b> (1 Login) · Full Business OS included
+              </td>
+              <td style="padding:13px 12px;color:var(--ink-2)">
+                Free (1 user, 10 quotes/mo) · Pro ₹583/user/mo (3-user min, annual ₹20,997/yr)
+              </td>
+              <td style="padding:13px 12px;color:var(--ink-2)">
+                Free core design tool · Paid API &amp; external connector charges apply
+              </td>
+              <td style="padding:13px 14px;color:var(--ink-2)">
+                ₹800–₹1,400/user/mo (CRM) + extra paid add-ons for Writer doc credits, WhatsApp, Books &amp; HR
+              </td>
+              <td style="padding:13px 14px;color:var(--ink-2)">
+                Free for 1 app · Paid per-user plans + implementation/customisation costs
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">General CRM &amp; Sales Pipelines</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Yes — B2B &amp; Solar lead pipelines, stages &amp; follow-ups</td>
+              <td style="padding:11px 12px">✓ Solar lead pipelines</td>
+              <td style="padding:11px 12px">Project/contact management</td>
+              <td style="padding:11px 14px">✓ General CRM</td>
+              <td style="padding:11px 14px">✓ General CRM</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">1-Click End-to-End Business Documents</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ 8+ Templates: Quotation, Proposal, Survey, Annexures, Work Order, Sync Report, GST Invoice &amp; Handover</td>
+              <td style="padding:11px 12px">Solar proposals &amp; quotations only</td>
+              <td style="padding:11px 12px">Solar proposals &amp; quotes only</td>
+              <td style="padding:11px 14px">Mail merge via separate Writer tool &amp; credit limits</td>
+              <td style="padding:11px 14px">Requires custom ERP template configuration</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">Automated Lifecycle Workflows</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Pre-wired Solar &amp; B2B stage triggers (2+ Logins)</td>
+              <td style="padding:11px 12px">Solar lead &amp; follow-up rules</td>
+              <td style="padding:11px 12px">Solar project workflow</td>
+              <td style="padding:11px 14px">✓ Depends on plan &amp; connected apps</td>
+              <td style="padding:11px 14px">✓ Requires technical setup</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">Solar Quotation &amp; PM Surya Ghar Subsidy Docs</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Configurable Solar Quotation, Annexures (A/C/IV), Sync Cert &amp; Margin Engine</td>
+              <td style="padding:11px 12px">✓ Solar-specific &amp; PM Surya Ghar calculation</td>
+              <td style="padding:11px 12px">3D Solar design &amp; proposal (verify India DISCOM docs)</td>
+              <td style="padding:11px 14px">Requires custom CPQ &amp; template setup</td>
+              <td style="padding:11px 14px">Requires custom development</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">WhatsApp Direct + API Automation</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Direct Inbox (1+ Logins) &amp; API Auto-Messaging (10 Logins)</td>
+              <td style="padding:11px 12px">WhatsApp quote sharing &amp; follow-up</td>
+              <td style="padding:11px 12px">External connector charges apply</td>
+              <td style="padding:11px 14px">Requires paid integration / add-on</td>
+              <td style="padding:11px 14px">Requires integration setup</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">Meta / Facebook Lead Ads Auto-Ingest</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Native webhook auto-ingestion (10 Logins Plan)</td>
+              <td style="padding:11px 12px">✓ Advertised</td>
+              <td style="padding:11px 12px">Requires paid API/connector</td>
+              <td style="padding:11px 14px">Via third-party/Zoho Flow integration</td>
+              <td style="padding:11px 14px">Via connector configuration</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:11px 14px;font-weight:700">Broader Post-Sale Operations (Inventory, GST, HR, Service Desk, Partners)</td>
+              <td style="padding:11px 14px;background:#f0fdf4;font-weight:700;color:#047857">✓ Complete Suite: Field Force (SFMS), Inventory, Multi-Entity GST, Payroll, SLA Service Desk &amp; Ved Referrals</td>
+              <td style="padding:11px 12px;color:var(--muted)">✗ Primarily pre-sale proposals &amp; solar lead CRM</td>
+              <td style="padding:11px 12px;color:var(--muted)">✗ Primarily solar design &amp; proposal tool</td>
+              <td style="padding:11px 14px">Requires buying Zoho One / multiple separate apps</td>
+              <td style="padding:11px 14px">Broad ERP (requires heavy configuration)</td>
+            </tr>
+            <tr style="background:#f8fafc">
+              <td style="padding:12px 14px;font-weight:800;color:var(--ink)">Best Fit &amp; Core Verdict</td>
+              <td style="padding:12px 14px;background:#dcfce7;font-weight:800;color:#047857">★ Solar vendors &amp; B2B companies wanting ONE pre-configured Operating System from Lead → Survey → Docs → Install → GST → Service</td>
+              <td style="padding:12px 12px;color:var(--ink-2)">Small solar reps needing only basic proposals</td>
+              <td style="padding:12px 12px;color:var(--ink-2)">3D roof layout &amp; design-only workflows</td>
+              <td style="padding:12px 14px;color:var(--ink-2)">General businesses with dedicated IT admins</td>
+              <td style="padding:12px 14px;color:var(--ink-2)">Enterprises hiring ERP implementation partners</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3 Strategic Buyer Decision Cards -->
+    <div class="grid-cards" style="margin-top:20px">
+      <div class="card" style="--c1:#4f46e5;--c2:#7c3aed">
+        <div style="font-size:11px;font-weight:800;color:var(--brand-1);text-transform:uppercase;margin-bottom:6px">Advantage 01 · Small &amp; Growing Teams</div>
+        <h3>No Forced 10-User Bundle</h3>
+        <p>Start with <b>1 Login (₹1,999/mo)</b> or <b>2 Logins (₹3,499/mo)</b> instead of paying ₹5,000–₹15,000/month upfront for a 10-user communications plan you don&rsquo;t yet need.</p>
+      </div>
+      <div class="card" style="--c1:#10b981;--c2:#059669">
+        <div style="font-size:11px;font-weight:800;color:#059669;text-transform:uppercase;margin-bottom:6px">Advantage 02 · Beyond Proposals</div>
+        <h3>Run Operations Around the Quote</h3>
+        <p>Free design tools stop at the PDF proposal. Zynova OS runs the actual business around it: <b>site surveys, 8+ project documents, work orders, inventory, GST billing, payroll &amp; SLA service tickets</b>.</p>
+      </div>
+      <div class="card" style="--c1:#0ea5e9;--c2:#3b82f6">
+        <div style="font-size:11px;font-weight:800;color:#0284c7;text-transform:uppercase;margin-bottom:6px">Advantage 03 · 10-User Enterprise Value</div>
+        <h3>₹999.90/User for All 9 Modules</h3>
+        <p>At 10 logins (<b>₹9,999/mo</b>), you unlock Meta Ads sync, WhatsApp API automation, Service Desk &amp; Partner Referral tracking — saving <b>₹60,012/year</b> compared to ₹15,000/mo SUV plans.</p>
+      </div>
+    </div>
+
+    <!-- Legal & Transparent Pricing Note -->
+    <div style="margin-top:22px;padding:14px 18px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.55">
+      <b>Fair Comparison &amp; Pricing Transparency Notice:</b> All third-party references (<i>MyOp****or, Qu***est Solar, Op**Solar, Zo*o, Od*o</i>) are masked category benchmarks based on publicly published pricing and product documentation as of 2026. Zynova OS is an independent SaaS platform by Zynova Mobility Private Limited and is not affiliated with or endorsed by any third-party vendor. Zynova OS subscription prices cover software platform access and entitled modules; GST (18%) is additional, and telecom calling minutes, SMS, AI voice inference, and Meta/WhatsApp conversation charges apply separately based on actual provider consumption.
     </div>
   </div>
 </section>
@@ -635,28 +1257,28 @@
     </div>
     <div class="faq">
       <details open>
-        <summary>Do I need a credit card for the trial?</summary>
-        <p>No. Sign up with your work email and we&rsquo;ll provision your tenant for 14 days, free. You can decide on a plan only after you&rsquo;ve seen it run.</p>
+        <summary>Do I need a credit card for the 7-day free trial?</summary>
+        <p>No. Sign up with your work email and we&rsquo;ll provision your tenant for <b>7 days, free</b>. You can test your modules, workflows, and document templates before paying a rupee.</p>
+      </details>
+      <details open>
+        <summary>What is the effective per-user cost across plans?</summary>
+        <p>Your per-login cost drops automatically as your team grows: <b>₹1,999/user</b> (1 Login), <b>₹1,749.50/user</b> (2 Logins), <b>₹1,299.80/user</b> (5 Logins), and <b>₹999.90/user/mo</b> (10 Logins). Choosing Annual Billing gives you 2 months FREE (bringing the 10-Login plan down to just <b>₹833.25/user/mo</b>).</p>
       </details>
       <details>
-        <summary>How does pro-rata billing work?</summary>
-        <p>When you add or remove a module mid-cycle, we issue a single adjustment invoice for the remaining days of the current period. Per-seat modules multiply by your staff seat count automatically.</p>
+        <summary>Which plan includes Meta Ads Integration &amp; WhatsApp API Auto Messaging?</summary>
+        <p><b>WhatsApp Direct (1-on-1 CRM messaging)</b> is included on every plan starting from 1 Login (₹1,999/mo). High-volume <b>Meta/Facebook Ads Lead Sync</b> and <b>WhatsApp API Auto Messaging &amp; Broadcasts</b> are included in the <b>10 Logins Enterprise Suite (₹9,999/mo · ₹999.90/user)</b> alongside Service Desk and Ved Member Referral Tracking.</p>
       </details>
       <details>
-        <summary>Can I run multiple legal entities?</summary>
-        <p>Yes. Each tenant can have multiple GST-registered legal entities under one umbrella, with a default issuing entity for invoices. Tally/Zoho parity is built in.</p>
+        <summary>Are WhatsApp conversation fees &amp; telephony usage included in the plan price?</summary>
+        <p>Your Zynova OS subscription covers software licensing, CRM, workflows, 1-click document generation, and module entitlements. Meta WhatsApp Business API conversation charges, telecom carrier calling minutes, and AI voice usage are billed transparently as per actual consumption.</p>
       </details>
       <details>
-        <summary>What happens to my data if I leave?</summary>
-        <p>Your data is yours. We provide full data exports on request. Your tenant is archived, not deleted, when you cancel — restore it whenever you want.</p>
+        <summary>How does pro-rata billing work when upgrading?</summary>
+        <p>When you upgrade your login tier or add modules mid-cycle, we issue a single pro-rata adjustment invoice for the remaining days of your current billing period.</p>
       </details>
       <details>
-        <summary>Do you support multi-currency?</summary>
-        <p>Yes. Pick INR or USD per subscription. Module pricing is dual-currency, with per-client overrides if you need them.</p>
-      </details>
-      <details>
-        <summary>Is my access to features tracked?</summary>
-        <p>Every B2B mutation — module change, plan edit, subscription update, invoice issue — lands in the audit log with actor, before / after and timestamp.</p>
+        <summary>Can I run multiple GST legal entities and export to Tally/Zoho?</summary>
+        <p>Yes. Each tenant can manage multiple GST-registered legal entities with HSN/SAC codes, tax breakdowns, and full audit logs.</p>
       </details>
     </div>
   </div>
@@ -800,15 +1422,15 @@ async function lookupSignupPincode(pincode) {
 const COMMERCIAL_MATRIX = {
   'PLAN_1_LOGIN': ['CRM_LEADS', 'WHATSAPP_INTEGRATION'],
   'PLAN_2_LOGINS': ['CRM_LEADS', 'WHATSAPP_INTEGRATION', 'DIGITAL_CATALOG', 'WORKFLOWS'],
-  'PLAN_5_LOGINS': ['CRM_LEADS', 'WHATSAPP_INTEGRATION', 'DIGITAL_CATALOG', 'WORKFLOWS', 'JOURNEYS', 'META_ADS_INTEGRATION', 'WHATSAPP_API'],
-  'PLAN_10_LOGINS': ['CRM_LEADS', 'WHATSAPP_INTEGRATION', 'DIGITAL_CATALOG', 'WORKFLOWS', 'JOURNEYS', 'SERVICE_TICKETS', 'VED_MEMBERS', 'META_ADS_INTEGRATION', 'WHATSAPP_API']
+  'PLAN_5_LOGINS': ['CRM_LEADS', 'WHATSAPP_INTEGRATION', 'DIGITAL_CATALOG', 'WORKFLOWS', 'JOURNEYS'],
+  'PLAN_10_LOGINS': ['CRM_LEADS', 'WHATSAPP_INTEGRATION', 'DIGITAL_CATALOG', 'WORKFLOWS', 'JOURNEYS', 'META_ADS_INTEGRATION', 'WHATSAPP_API', 'SERVICE_TICKETS', 'VED_MEMBERS']
 };
 
 const PLAN_TIERS = {
-  'PLAN_1_LOGIN': { title: '1 Login Plan', seats: 1, monthly: 1999, annual: 19990 },
-  'PLAN_2_LOGINS': { title: '2 Logins Plan', seats: 2, monthly: 3499, annual: 34990 },
-  'PLAN_5_LOGINS': { title: '5 Logins Plan', seats: 5, monthly: 6499, annual: 64990 },
-  'PLAN_10_LOGINS': { title: '10 Logins Plan', seats: 10, monthly: 9999, annual: 99990 }
+  'PLAN_1_LOGIN': { title: '1 Login Plan', seats: 1, monthly: 1999, annual: 19990, perUserMonthly: '1,999', perUserAnnualMo: '1,665.83' },
+  'PLAN_2_LOGINS': { title: '2 Logins Plan', seats: 2, monthly: 3499, annual: 34990, perUserMonthly: '1,749.50', perUserAnnualMo: '1,457.92' },
+  'PLAN_5_LOGINS': { title: '5 Logins Plan', seats: 5, monthly: 6499, annual: 64990, perUserMonthly: '1,299.80', perUserAnnualMo: '1,083.17' },
+  'PLAN_10_LOGINS': { title: '10 Logins Plan', seats: 10, monthly: 9999, annual: 99990, perUserMonthly: '999.90', perUserAnnualMo: '833.25' }
 };
 
 const MODULE_NAMES = {
@@ -854,10 +1476,10 @@ function renderModuleExplorer() {
     { code: 'DIGITAL_CATALOG', name: 'Digital Company Profile', category: 'Marketing', icon: 'bi-globe', description: 'Single-page public profile for SaaS tenant.', features: ['Profile at /<shortcode>/', 'Gallery & Video links', 'AI generator'] },
     { code: 'WORKFLOWS', name: 'Workflows & Rules', category: 'Automation', icon: 'bi-diagram-3-fill', description: 'Automated lifecycle triggers & status rules.', features: ['Auto-assignment', 'Follow-up triggers', 'Status transitions'] },
     { code: 'JOURNEYS', name: 'Journey & Appointments', category: 'Scheduling', icon: 'bi-calendar-check-fill', description: 'Site visit calendar & appointment tracking.', features: ['Appointment calendar', 'Document generator', 'Field dispatch'] },
-    { code: 'SERVICE_TICKETS', name: 'Service Desk & Ticketing', category: 'Support', icon: 'bi-headset', description: 'Customer support ticket system with SLA timer.', features: ['Support tickets', 'SLA timer', 'Escalation rules'] },
-    { code: 'VED_MEMBERS', name: 'Referral Agent Tracking', category: 'Growth', icon: 'bi-diagram-2-fill', description: 'Ved member affiliate tree & referral tracking.', features: ['Referral links', 'Commission logs', 'Affiliate tree'] },
-    { code: 'META_ADS_INTEGRATION', name: 'Meta/Facebook Ads Integration', category: 'Ad Capture', icon: 'bi-facebook', description: 'Real-time Facebook Lead Form auto-ingestion.', features: ['Auto-ingest leads', 'Campaign attribution', 'Instant notification'] },
-    { code: 'WHATSAPP_API', name: 'WhatsApp API — Auto Messaging', category: 'Automation', icon: 'bi-robot', description: 'Automated WhatsApp API broadcast & follow-ups.', features: ['Bulk broadcasts', 'Welcome drip', 'Webhook bots'] }
+    { code: 'META_ADS_INTEGRATION', name: 'Meta/Facebook Ads Integration', category: 'Ad Capture', icon: 'bi-facebook', description: 'Real-time Facebook Lead Form auto-ingestion (Included in 10 Logins).', features: ['Auto-ingest leads', 'Campaign attribution', 'Instant notification'] },
+    { code: 'WHATSAPP_API', name: 'WhatsApp API — Auto Messaging', category: 'Automation', icon: 'bi-robot', description: 'Automated WhatsApp API broadcast & follow-ups (Included in 10 Logins).', features: ['Bulk broadcasts', 'Welcome drip', 'Webhook bots'] },
+    { code: 'SERVICE_TICKETS', name: 'Service Desk & Ticketing', category: 'Support', icon: 'bi-headset', description: 'Customer support ticket system with SLA timer (Included in 10 Logins).', features: ['Support tickets', 'SLA timer', 'Escalation rules'] },
+    { code: 'VED_MEMBERS', name: 'Referral Agent Tracking', category: 'Growth', icon: 'bi-diagram-2-fill', description: 'Ved member affiliate tree & referral tracking (Included in 10 Logins).', features: ['Referral links', 'Commission logs', 'Affiliate tree'] }
   ];
 
   accordionContainer.innerHTML = modulesToDisplay.map(m => {
@@ -901,6 +1523,13 @@ function updatePricingCalculation() {
 
   const symbol = currency === 'USD' ? '$' : '₹';
 
+  // Update 1st Row Effective Per-User Cost in Summary Box
+  const perUserEl = document.getElementById('summary-per-user-cost');
+  if (perUserEl) {
+    const puText = cycle === 'annual' ? `${symbol}${planInfo.perUserAnnualMo} / user / mo (2 Mo Free)` : `${symbol}${planInfo.perUserMonthly} / user / mo`;
+    perUserEl.textContent = puText;
+  }
+
   // Update Summary Box
   document.getElementById('summary-plan-title').textContent = `${planInfo.title} (${planInfo.seats} ${planInfo.seats === 1 ? 'Seat' : 'Seats'})`;
   document.getElementById('price-cycle-name').textContent = cycle === 'annual' ? 'Annual Billing (2 Months Free)' : 'Monthly Billing';
@@ -922,6 +1551,115 @@ function updatePricingCalculation() {
 
   // Re-render Explorer inclusion states
   renderModuleExplorer();
+}
+
+// ── Interactive Pricing Cycle Toggle (Monthly vs Annual 2 Months FREE) ──
+let currentDisplayCycle = 'monthly';
+function setPricingDisplayCycle(cycle) {
+  currentDisplayCycle = cycle === 'annual' ? 'annual' : 'monthly';
+  const btnM = document.getElementById('toggle-monthly-btn');
+  const btnA = document.getElementById('toggle-annual-btn');
+  if (btnM) btnM.classList.toggle('active', currentDisplayCycle === 'monthly');
+  if (btnA) btnA.classList.toggle('active', currentDisplayCycle === 'annual');
+
+  const cardsSpec = [
+    { seats: 1, mTotal: '₹1,999', aMo: '₹1,666', mPu: '₹1,999', aPu: '₹1,665.83', mSub: 'No 10-user minimum · Start solo', aSub: 'Billed ₹19,990/yr (Save ₹3,998/yr)' },
+    { seats: 2, mTotal: '₹3,499', aMo: '₹2,916', mPu: '₹1,749.50', aPu: '₹1,457.92', mSub: 'Save 12.5% per user vs 1 Login', aSub: 'Billed ₹34,990/yr (Save ₹6,998/yr)' },
+    { seats: 5, mTotal: '₹6,499', aMo: '₹5,416', mPu: '₹1,299.80', aPu: '₹1,083.17', mSub: 'Save 35% per user vs 1 Login', aSub: 'Billed ₹64,990/yr (Save ₹12,998/yr)' },
+    { seats: 10, mTotal: '₹9,999', aMo: '₹8,333', mPu: '₹999.90', aPu: '₹833.25', mSub: 'Save 50% per seat · ₹60,012/yr cheaper than SUV', aSub: 'Billed ₹99,990/yr · Save ₹80,010/yr vs SUV!' }
+  ];
+
+  cardsSpec.forEach(c => {
+    const isAnn = currentDisplayCycle === 'annual';
+    const priceEl = document.getElementById(`card-price-${c.seats}`);
+    const puEl = document.getElementById(`card-pu-${c.seats}`);
+    const subEl = document.getElementById(`card-pusub-${c.seats}`);
+    const liPuEl = document.getElementById(`card-li-pu-${c.seats}`);
+    const matPuEl = document.getElementById(`matrix-pu-${c.seats}`);
+
+    if (priceEl) priceEl.innerHTML = `${isAnn ? c.aMo : c.mTotal}<small> /mo${isAnn ? ' (annual)' : ''}</small>`;
+    if (puEl) puEl.textContent = `${isAnn ? c.aPu : c.mPu} / user / mo`;
+    if (subEl) subEl.textContent = isAnn ? c.aSub : c.mSub;
+    if (liPuEl) liPuEl.textContent = `Effective Cost: ${isAnn ? c.aPu : c.mPu} / login / mo`;
+    if (matPuEl) matPuEl.textContent = isAnn ? c.aPu : c.mPu;
+  });
+
+  // Sync top configurator billing cycle dropdown as well
+  const cycleSelect = document.getElementById('billing-cycle-select');
+  if (cycleSelect && cycleSelect.value !== currentDisplayCycle) {
+    cycleSelect.value = currentDisplayCycle;
+    updatePricingCalculation();
+  }
+}
+
+function selectPlanFromCard(planCode) {
+  const planSelect = document.getElementById('plan-choice-select');
+  const cycleSelect = document.getElementById('billing-cycle-select');
+  if (planSelect) planSelect.value = planCode;
+  if (cycleSelect) cycleSelect.value = currentDisplayCycle;
+  updatePricingCalculation();
+  const signupEl = document.getElementById('signup');
+  if (signupEl) signupEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchCompTab(tabName) {
+  const isTel = tabName === 'telephony';
+  const btnTel = document.getElementById('tab-btn-telephony');
+  const btnSol = document.getElementById('tab-btn-solar');
+  const panTel = document.getElementById('comp-panel-telephony');
+  const panSol = document.getElementById('comp-panel-solar');
+  if (btnTel) btnTel.classList.toggle('active', isTel);
+  if (btnSol) btnSol.classList.toggle('active', !isTel);
+  if (panTel) panTel.classList.toggle('active', isTel);
+  if (panSol) panSol.classList.toggle('active', !isTel);
+}
+
+function updateRoiCalculator(seats) {
+  [1, 2, 5, 10].forEach(s => {
+    const b = document.getElementById(`roi-btn-${s}`);
+    if (b) b.classList.toggle('active', s === seats);
+  });
+  const data = {
+    1: {
+      pu: '₹1,999', puAnn: 'Base Tier · ₹1,665.83/user/mo on Annual (2 Mo Free)',
+      zTot: '₹1,999/mo (1 Login)', zYr: '₹23,988/yr (₹19,990/yr on Annual · 2 Modules)',
+      cLbl: 'Separate CRM + Calling/WA Entry Stack',
+      cTot: '₹4,000/mo (1 User)', cYr: '₹48,000/yr separate tools (or ₹60k–₹1.8L/yr 10-seat lock-in)',
+      sav: 'Save ₹24,012 / yr', savSub: 'Up to ₹28,010/yr saved on Annual Plan · Zero 10-user lock-in!'
+    },
+    2: {
+      pu: '₹1,749.50', puAnn: '12.5% OFF per user (₹1,457.92/user on Annual)',
+      zTot: '₹3,499/mo (2 Logins)', zYr: '₹41,988/yr (₹34,990/yr on Annual · 4 Modules)',
+      cLbl: 'Separate CRM + Web Profile + Workflow Tools',
+      cTot: '₹7,500/mo (2 Users)', cYr: '₹90,000/yr across separate CRM, WhatsApp & Workflow apps',
+      sav: 'Save ₹48,012 / yr', savSub: 'Includes ₹5,988/yr per-seat discount + ₹55,010/yr saved on Annual!'
+    },
+    5: {
+      pu: '₹1,299.80', puAnn: '35% OFF per user (₹1,083.17/user on Annual)',
+      zTot: '₹6,499/mo (5 Logins)', zYr: '₹77,988/yr (₹64,990/yr on Annual · 5 Modules)',
+      cLbl: 'Separate CRM + Solar Docs + Field Survey Stack',
+      cTot: '₹14,000/mo (5 Users)', cYr: '₹1,68,000/yr across CRM, Proposal/Doc Engine & Field apps',
+      sav: 'Save ₹90,012 / yr', savSub: 'Includes ₹41,952/yr (35%) seat discount + ₹1,03,010/yr on Annual!'
+    },
+    10: {
+      pu: '₹999.90', puAnn: '50% OFF per user (₹833.25/user on Annual)',
+      zTot: '₹9,999/mo (10 Logins)', zYr: '₹1,19,988/yr (₹99,990/yr on Annual · All 9 Modules)',
+      cLbl: 'Separate Stack + MyOp****or SUV',
+      cTot: '₹24,000/mo (10 Users)', cYr: '₹2,88,000/yr (SUV ₹15k/mo + CRM/Docs/ERP ₹9k/mo)',
+      sav: 'Save ₹1,68,012 / yr', savSub: 'Includes ₹1,19,892/yr (50%) seat discount + ₹60,012/yr cheaper than SUV alone!'
+    }
+  }[seats];
+  if (!data) return;
+  document.getElementById('roi-pu-cost').innerHTML = `${data.pu}<small style="font-size:13px;color:var(--muted);font-weight:600"> /user/mo</small>`;
+  document.getElementById('roi-pu-annual').textContent = data.puAnn;
+  document.getElementById('roi-zynova-total').textContent = data.zTot;
+  document.getElementById('roi-zynova-yr').textContent = data.zYr;
+  const lblEl = document.getElementById('roi-comp-label');
+  if (lblEl) lblEl.textContent = data.cLbl;
+  document.getElementById('roi-comp-total').textContent = data.cTot;
+  document.getElementById('roi-comp-yr').textContent = data.cYr;
+  document.getElementById('roi-savings-amt').textContent = data.sav;
+  document.getElementById('roi-savings-sub').textContent = data.savSub;
 }
 
 // Attach change listeners
@@ -1005,10 +1743,26 @@ document.getElementById('f').addEventListener('submit', async (ev) => {
   }
 });
 
+// Floating "Top" button click handler (works across Safari/Chrome regardless of scroll container)
+function scrollToTopPage() {
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { window.scrollTo(0, 0); }
+  try { document.documentElement.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { document.documentElement.scrollTop = 0; }
+  try { document.body.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) { document.body.scrollTop = 0; }
+  const topEl = document.getElementById('top') || document.body.firstElementChild;
+  if (topEl && topEl.scrollIntoView) {
+    try { topEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e) {}
+  }
+}
+
 // Smooth-scroll for in-page anchors
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
+    if (id === '#top') {
+      e.preventDefault();
+      scrollToTopPage();
+      return;
+    }
     if (id.length > 1) {
       const t = document.querySelector(id);
       if (t) { e.preventDefault(); t.scrollIntoView({behavior:'smooth', block:'start'}); }
@@ -1016,5 +1770,12 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   });
 });
 </script>
+
+<!-- Floating Back-to-Top Button (stacked cleanly above Zen Assistant Z icon) -->
+<button id="back-to-top-btn" class="back-to-top-fab" type="button" onclick="scrollToTopPage()" aria-label="Scroll to top of page" title="Back to top">
+  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+  <span>Top</span>
+</button>
+<script src="/vgk_assistant.js?v=zclean3"></script>
 </body>
 </html>

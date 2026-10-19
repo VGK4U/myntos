@@ -5098,6 +5098,12 @@ function getUserRole(sessionToken) {
 function injectVgkAssistant(html) {
   if (!html) return html;
 
+  // Ensure every HTML page served has the clean cropped Zynova Z favicon
+  if (!html.includes('zynova-z-icon.png') && html.includes('</head>')) {
+    const cleanFaviconLinks = '<link rel="icon" type="image/png" sizes="64x64" href="/public/zynova-z-icon.png?v=zclean2">\n<link rel="shortcut icon" type="image/x-icon" href="/public/zynova-z-favicon.ico?v=zclean2">\n';
+    html = html.replace('</head>', cleanFaviconLinks + '</head>');
+  }
+
   // Never inject VGK assistant or website chatbot into public single-page digital catalogs
   const isCatalogPage = html.includes('Single-Page Digital Catalog') || 
                         html.includes('catalogSectionsContainer') || 
@@ -5118,9 +5124,9 @@ function injectVgkAssistant(html) {
   const toInject = [];
   const isStaffOrLogin = html.includes('staff_sidebar.js') || html.includes('staff_login') || html.includes('login') || html.includes('staffSidebar');
   if (!isStaffOrLogin && !html.includes('/public/js/website-chatbot.js')) {
-    toInject.push('<script src="/public/js/website-chatbot.js"></script>');
+    toInject.push('<script src="/public/js/website-chatbot.js?v=zclean3"></script>');
   } else if (!html.includes('/vgk_assistant.js')) {
-    toInject.push('<script src="/vgk_assistant.js"></script>');
+    toInject.push('<script src="/vgk_assistant.js?v=zclean3"></script>');
   }
   if (!html.includes('/public/js/dc-draft-manager.js')) {
     toInject.push('<script src="/public/js/dc-draft-manager.js"></script>');
@@ -8135,14 +8141,17 @@ const server = http.createServer(async (req, res) => {
 
   // API Proxy - Forward /api/v1/* requests to backend on port 8000
   // Serve favicon.ico from public directory
-  if (url === "/favicon.ico") {
-    const faviconPath = path.join(__dirname, "public", "favicon.ico");
+  if (url === "/favicon.ico" || url.startsWith("/favicon.ico?")) {
+    const faviconPath = path.join(__dirname, "public", "zynova-z-favicon.ico");
     fs.readFile(faviconPath, (err, data) => {
       if (err) {
         res.writeHead(204);
         res.end();
       } else {
-        res.writeHead(200, { "Content-Type": "image/x-icon" });
+        res.writeHead(200, {
+          "Content-Type": "image/x-icon",
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        });
         res.end(data);
       }
     });

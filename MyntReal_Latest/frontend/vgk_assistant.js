@@ -10,14 +10,30 @@
 
   // ─── Config ───────────────────────────────────────────────────────────────
   const VGK_VERSION = '1.0.0';
-  const VGK_LOGO_URL = '/public/vgk4u-logo-100.png';
-  const ZYNOVA_Z_ICON = '/public/zynova-os-icon.png';
+  const ZYNOVA_Z_ICON = '/public/zynova-z-icon.png?v=zclean3';
+  const VGK_LOGO_URL = ZYNOVA_Z_ICON;
+
+  try {
+    if (typeof document !== 'undefined' && document.head) {
+      document.head.querySelectorAll('link[rel*="icon"]').forEach(el => {
+        if ((el.getAttribute('href') || '').includes('favicon')) el.remove();
+      });
+      if (!document.head.querySelector('link[href*="zynova-z-icon.png"]')) {
+        const fav = document.createElement('link');
+        fav.rel = 'icon';
+        fav.type = 'image/png';
+        fav.sizes = '64x64';
+        fav.href = ZYNOVA_Z_ICON;
+        document.head.appendChild(fav);
+      }
+    }
+  } catch (_) {}
 
   function isSaaSMode() {
     if (typeof window !== 'undefined') {
       if (window.IS_SAAS === true || window.IS_SAAS_TENANT === true) return true;
       const loc = window.location.pathname.toLowerCase();
-      if (loc.startsWith('/b2b-signup') || loc.startsWith('/saas') || loc.includes('saas') || loc.startsWith('/mobile')) {
+      if (loc.startsWith('/b2b-signup') || loc.startsWith('/b2b_signup') || loc.startsWith('/zynova') || loc.startsWith('/saas') || loc.includes('saas') || loc.startsWith('/mobile')) {
         return true;
       }
       try {
@@ -35,7 +51,7 @@
   }
 
   function getLogoUrl() {
-    return isSaaSMode() ? ZYNOVA_Z_ICON : '/public/vgk-assistant-logo.png';
+    return ZYNOVA_Z_ICON;
   }
 
   const MENU_INTENT_MAP = {
@@ -320,17 +336,17 @@
     if (document.getElementById('myntChatbotBtn') || document.getElementById('vgkFab')) return;
 
     const logoSrc = getLogoUrl();
-    const assistantTitle = isSaaSMode() ? 'Zen Assistant' : 'VGK Assistant';
+    const assistantTitle = 'Zen Assistant';
     const assistantSub = isSaaSMode() ? 'Zynova OS AI Assistant' : 'AI Voice & Text Assistant';
 
     document.body.insertAdjacentHTML('beforeend', `
       <div id="vgkOverlay"></div>
       <button id="vgkFab" title="${assistantTitle}" aria-label="Open ${assistantTitle}">
-        <img id="vgkFabImg" src="${logoSrc}" alt="Z" style="width:42px;height:42px;border-radius:50%;object-fit:contain;background:#ffffff;padding:2px;" onerror="this.style.display='none';">
+        <img id="vgkFabImg" src="${logoSrc}" alt="Z" style="width:44px;height:44px;border-radius:50%;object-fit:contain;background:#ffffff;padding:3px;" onerror="this.src='/public/favicon.png';">
       </button>
       <div id="vgkModal" role="dialog" aria-label="${assistantTitle}">
         <div class="vgk-header">
-          <img id="vgkHeaderImg" src="${logoSrc}" alt="Z" style="width:32px;height:32px;border-radius:50%;object-fit:contain;background:#ffffff;padding:2px;" onerror="this.style.display='none';">
+          <img id="vgkHeaderImg" src="${logoSrc}" alt="Z" style="width:34px;height:34px;border-radius:50%;object-fit:contain;background:#ffffff;padding:3px;" onerror="this.src='/public/favicon.png';">
           <div style="flex:1">
             <div class="vgk-header-title" id="vgkTitle">${assistantTitle}</div>
             <div class="vgk-header-sub" id="vgkHeaderSub">${assistantSub}</div>
@@ -355,6 +371,17 @@
         </div>
       </div>
     `);
+
+    if (!document.getElementById('back-to-top-btn')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <button id="back-to-top-btn" type="button" title="Back to top" aria-label="Scroll to top of page"
+          onclick="try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)}try{document.documentElement.scrollTo({top:0,behavior:'smooth'})}catch(e){document.documentElement.scrollTop=0}try{document.body.scrollTo({top:0,behavior:'smooth'})}catch(e){document.body.scrollTop=0}"
+          style="position:fixed!important;right:20px!important;bottom:96px!important;z-index:2147483646!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;padding:10px 16px!important;border-radius:999px!important;border:2px solid #ffffff!important;background:linear-gradient(135deg,#4f46e5,#7c3aed)!important;color:#ffffff!important;font-size:13.5px!important;font-weight:800!important;cursor:pointer!important;box-shadow:0 10px 26px -4px rgba(79,70,229,0.75),0 4px 12px rgba(15,23,42,0.28)!important;">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ffffff" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          <span>Top</span>
+        </button>
+      `);
+    }
   }
 
   // ─── Core UI ───────────────────────────────────────────────────────────────

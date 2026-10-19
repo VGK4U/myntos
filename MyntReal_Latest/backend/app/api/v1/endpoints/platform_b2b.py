@@ -1815,6 +1815,9 @@ def get_commercial_catalog(db: Session = Depends(get_db)):
         ).filter(PlatformPlanModule.plan_id == p.id).all()
         
         inc_codes = [m.module_code for m in mod_rows]
+        seats_safe = max(1, int(p.seat_count or 1))
+        monthly_val = float(p.monthly_price_inr)
+        annual_val = float(p.annual_price_inr)
         
         catalog_plans.append({
             "plan_id": p.id,
@@ -1822,8 +1825,10 @@ def get_commercial_catalog(db: Session = Depends(get_db)):
             "plan_name": p.plan_name,
             "description": p.description,
             "seat_count": p.seat_count,
-            "monthly_price_inr": float(p.monthly_price_inr),
-            "annual_price_inr": float(p.annual_price_inr),
+            "monthly_price_inr": monthly_val,
+            "annual_price_inr": annual_val,
+            "effective_per_user_monthly_inr": round(monthly_val / seats_safe, 2),
+            "effective_per_user_annual_monthly_inr": round((annual_val / 12.0) / seats_safe, 2),
             "included_modules": inc_codes
         })
 

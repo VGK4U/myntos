@@ -945,7 +945,7 @@ window.StaffHeader = window.StaffHeader || {
                 
                 if (brandEl) {
                     logoEl.style.display = 'none';
-                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo.png" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;">`;
+                    const zynovaPlatformLogo = `<img src="/public/zynova-os-logo-dark.png?v=20261019" alt="ZYNOVA OS" style="height:28px;max-width:130px;object-fit:contain;margin-right:2px;">`;
                     const separator = `<span style="color:rgba(255,255,255,0.35);font-size:14px;font-weight:300;">|</span>`;
                     if (compLogo) {
                         brandEl.innerHTML = `

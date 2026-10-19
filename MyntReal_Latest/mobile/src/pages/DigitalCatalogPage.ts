@@ -75,6 +75,7 @@ export class DigitalCatalogPage {
   private activeTab: "packages" | "sections" | "media" | "overview" = "packages";
   private isLoading = true;
   private isUploadingPdf = false;
+  private isEmbedded = false;
 
   private readonly verticals = [
     { code: "VGK4U", label: "VGK4U Master", icon: "👑" },
@@ -93,15 +94,18 @@ export class DigitalCatalogPage {
   }
 
   public async init(params?: any): Promise<void> {
+    if (params && params.embedded) {
+      this.isEmbedded = true;
+    }
     await this.render();
   }
 
   public async render(): Promise<void> {
     this.container.innerHTML = `
-      <div class="page-container digital-catalog-page">
-        ${PageHeader.render({ title: "Digital Catalog", showBack: true })}
+      <div class="${this.isEmbedded ? 'digital-catalog-page' : 'page-container digital-catalog-page'}">
+        ${this.isEmbedded ? '' : PageHeader.render({ title: "Digital Catalog", showBack: true })}
         
-        <div class="dc-inner">
+        <div class="dc-inner" ${this.isEmbedded ? 'style="padding-top: 4px;"' : ''}>
           <!-- Top Action Bar -->
           <div class="dc-top-bar">
             <div class="dc-status-pill">
@@ -136,10 +140,12 @@ export class DigitalCatalogPage {
       </div>
     `;
 
-    PageHeader.attachListeners({
-      title: "Digital Catalog",
-      showBack: true
-    });
+    if (!this.isEmbedded) {
+      PageHeader.attachListeners({
+        title: "Digital Catalog",
+        showBack: true
+      });
+    }
 
     this.bindEvents();
     await this.loadCatalogs();

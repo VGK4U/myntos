@@ -320,10 +320,115 @@ def seed_default_plan(db: Session, internal_client_id: int) -> Optional[int]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+_COMMERCIAL_PLANS_SPEC = [
+    {
+        "plan_code": "PLAN_1_LOGIN",
+        "plan_name": "1 Login Plan",
+        "description": "Solo entrepreneurs & single users needing core CRM & WhatsApp Direct (₹1,999/user/mo).",
+        "seat_count": 1,
+        "monthly_price_inr": 1999.00,
+        "annual_price_inr": 19990.00,
+        "modules": ["CRM_LEADS", "WHATSAPP_INTEGRATION"],
+    },
+    {
+        "plan_code": "PLAN_2_LOGINS",
+        "plan_name": "2 Logins Plan",
+        "description": "Small teams ready for Digital Company Profile & Automated Workflows (₹1,749.50/user/mo).",
+        "seat_count": 2,
+        "monthly_price_inr": 3499.00,
+        "annual_price_inr": 34990.00,
+        "modules": ["CRM_LEADS", "WHATSAPP_INTEGRATION", "DIGITAL_CATALOG", "WORKFLOWS"],
+    },
+    {
+        "plan_code": "PLAN_5_LOGINS",
+        "plan_name": "5 Logins Plan",
+        "description": "Growing teams needing Journeys, Site Visits, Appointments & 1-Click Solar/Business Documents (₹1,299.80/user/mo).",
+        "seat_count": 5,
+        "monthly_price_inr": 6499.00,
+        "annual_price_inr": 64990.00,
+        "modules": ["CRM_LEADS", "WHATSAPP_INTEGRATION", "DIGITAL_CATALOG", "WORKFLOWS", "JOURNEYS"],
+    },
+    {
+        "plan_code": "PLAN_10_LOGINS",
+        "plan_name": "10 Logins Plan",
+        "description": "Full Enterprise Suite with all 9 commercial modules including Meta Ads Integration, WhatsApp API Auto Messaging, Service Desk & Referral Agent Tracking (₹999.90/user/mo).",
+        "seat_count": 10,
+        "monthly_price_inr": 9999.00,
+        "annual_price_inr": 99990.00,
+        "modules": [
+            "CRM_LEADS",
+            "WHATSAPP_INTEGRATION",
+            "DIGITAL_CATALOG",
+            "WORKFLOWS",
+            "JOURNEYS",
+            "META_ADS_INTEGRATION",
+            "WHATSAPP_API",
+            "SERVICE_TICKETS",
+            "VED_MEMBERS",
+        ],
+    },
+]
+
+
+def sync_commercial_login_plans(db: Session) -> int:
+    """
+    Idempotently synchronize the 4 public commercial login plans (1, 2, 5, 10 Logins)
+    and their exact module entitlements in platform_plans and platform_plan_modules.
+    """
+    from app.models.platform_b2b import PlatformPlan, PlatformPlanModule, PlatformModule
+
+    updated = 0
+    for spec in _COMMERCIAL_PLANS_SPEC:
+        plan = db.query(PlatformPlan).filter_by(plan_code=spec["plan_code"]).first()
+        if not plan:
+            plan = PlatformPlan(
+                plan_code=spec["plan_code"],
+                plan_name=spec["plan_name"],
+                description=spec["description"],
+                seat_count=spec["seat_count"],
+                monthly_price_inr=spec["monthly_price_inr"],
+                annual_price_inr=spec["annual_price_inr"],
+                is_active=True,
+            )
+            db.add(plan)
+            db.commit()
+            db.refresh(plan)
+        else:
+            plan.plan_name = spec["plan_name"]
+            plan.description = spec["description"]
+            plan.seat_count = spec["seat_count"]
+            plan.monthly_price_inr = spec["monthly_price_inr"]
+            plan.annual_price_inr = spec["annual_price_inr"]
+            plan.is_active = True
+            db.commit()
+
+        target_mods = (
+            db.query(PlatformModule)
+            .filter(PlatformModule.module_code.in_(spec["modules"]))
+            .all()
+        )
+        target_ids = {m.id for m in target_mods}
+        if target_ids:
+            existing_rows = db.query(PlatformPlanModule).filter_by(plan_id=plan.id).all()
+            existing_ids = {r.module_id for r in existing_rows}
+            for r in existing_rows:
+                if r.module_id not in target_ids:
+                    db.delete(r)
+            for mid in target_ids:
+                if mid not in existing_ids:
+                    db.add(PlatformPlanModule(plan_id=plan.id, module_id=mid))
+            db.commit()
+        updated += 1
+
+    return updated
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 def run_full_b2b_phase1_seed(db: Session) -> dict:
     """Top-level entry point — call from main.py startup. All steps idempotent."""
     summary: dict = {"ddl_applied": False, "internal_client_id": None,
-                     "backfilled_companies": 0, "modules_ingested": 0, "subscription_id": None}
+                     "backfilled_companies": 0, "modules_ingested": 0, "subscription_id": None,
+                     "commercial_plans_synced": 0}
     try:
         summary["ddl_applied"] = apply_platform_b2b_ddl(db)
         summary["phase4_ddl_applied"] = apply_platform_b2b_phase4_ddl(db)
@@ -333,7 +438,9 @@ def run_full_b2b_phase1_seed(db: Session) -> dict:
         summary["backfilled_companies"] = backfill_associated_companies(db, cid)
         summary["modules_ingested"] = ingest_module_catalog(db)
         summary["subscription_id"] = seed_default_plan(db, cid)
+        summary["commercial_plans_synced"] = sync_commercial_login_plans(db)
         logger.info("[DC-B2B-SEED] ✅ Phase 1 seed complete: %s", summary)
     except Exception as exc:
         logger.exception("[DC-B2B-SEED] ❌ Phase 1 seed failed (non-fatal): %s", exc)
     return summary
+
