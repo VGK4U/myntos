@@ -465,42 +465,6 @@
                 </div>
             </div>
 
-            <!-- Team Member-Wise & Lead-Wise Earnings Breakdown -->
-            <div class="card-custom p-3 mb-3 bg-white" id="teamMemberBreakdownCard">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <div class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.5px;">
-                            <i class="fas fa-sitemap text-indigo me-1"></i> Team Member-Wise &amp; Lead-Wise Earnings
-                        </div>
-                        <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle" id="teamBreakdownSummaryBadge" style="font-size: 10.5px;">All Members</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-1 flex-wrap">
-                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickAllTeam" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('ALL')">All</button>
-                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickDownlineOnly" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('TEAM_ONLY')"><i class="fas fa-sitemap me-1"></i>Downline Team Only (L2+)</button>
-                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickSelfOnly" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('SELF_ONLY')"><i class="fas fa-user me-1"></i>Self Direct (L1)</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btnToggleLeadBreakdown" style="font-size: 11px; border-radius: 6px;" onclick="toggleLeadWisePanel()">
-                            <i class="fas fa-user-tag me-1"></i><span id="toggleLeadBreakdownText">Hide Lead-Wise</span>
-                        </button>
-                    </div>
-                </div>
-                <!-- Team Member Cards -->
-                <div class="row g-2" id="teamMemberCardsContainer">
-                    <!-- Populated dynamically -->
-                </div>
-                <!-- Lead-Wise Earnings Drilldown (Under Selected Team Member / Active Filter) -->
-                <div class="mt-3 pt-2 border-top" id="leadWiseBreakdownSection">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                        <div class="fw-bold text-secondary" style="font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase;">
-                            <i class="fas fa-user-check text-primary me-1"></i> Lead-Wise Earnings <span id="leadWiseSubtitle" class="text-indigo fw-bold ms-1"></span>
-                        </div>
-                        <small class="text-muted" style="font-size: 11px;">Click any lead card to filter table entries</small>
-                    </div>
-                    <div class="row g-2" id="leadWiseCardsContainer">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-            </div>
-
             <!-- Summary KPI Data Labels / Metric Summary Cards (Without Net Payout) -->
             <div class="row g-2 g-md-3 mb-3" id="kpiCardsContainer">
                 <div class="col-6 col-md-6 col-xl-3">
@@ -528,7 +492,7 @@
                     <div class="kpi-card">
                         <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
                         <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
-                        <div class="kpi-sub" id="kpiCancelledExcluded">Cancelled Excluded</div>
+                        <div class="kpi-sub d-none d-sm-block">Total Ledger Entries</div>
                     </div>
                 </div>
             </div>
@@ -544,7 +508,7 @@
                         </select>
                     </div>
                     <!-- Customer / Lead Filter (Cascades with Team Member) -->
-                    <div class="col-lg-2 col-md-4 col-sm-6">
+                    <div class="col-lg-3 col-md-4 col-sm-6">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user me-1 text-primary"></i> Customer / Lead</label>
                         <select id="filterCustomer" class="form-select form-select-sm">
                             <option value="ALL">All Customers / Leads</option>
@@ -568,7 +532,7 @@
                         </select>
                     </div>
                     <!-- Real-time Search -->
-                    <div class="col-lg-2 col-md-4 col-sm-12">
+                    <div class="col-lg-2 col-md-5 col-sm-8">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1 text-secondary"></i> Search Entries</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
@@ -576,16 +540,10 @@
                             <button class="btn btn-outline-secondary" type="button" id="btnClearSearch" title="Clear search"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
-                    <!-- Avoid Cancelled Switch & Reset -->
-                    <div class="col-lg-2 col-md-4 col-sm-12 d-flex align-items-center justify-content-between justify-content-lg-end gap-2 pt-lg-3 mt-1">
-                        <div class="form-check form-switch mb-0" title="Avoid cancelled transactions in table and metric cards">
-                            <input class="form-check-input" type="checkbox" id="toggleAvoidCancelled" checked>
-                            <label class="form-check-label small fw-bold text-danger" for="toggleAvoidCancelled" id="toggleAvoidCancelledLabel" style="font-size: 11.5px;">
-                                Hide Cancelled (<span id="cancelledCountBadge">0</span>)
-                            </label>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btnResetFilters" type="button" title="Reset all filters">
-                            <i class="fas fa-redo-alt"></i>
+                    <!-- Reset Button -->
+                    <div class="col-lg-1 col-md-3 col-sm-4 d-flex align-items-center justify-content-end pt-lg-3 mt-1">
+                        <button class="btn btn-sm btn-outline-primary w-100" id="btnResetFilters" type="button" title="Reset all filters">
+                            <i class="fas fa-redo-alt me-1"></i> Reset
                         </button>
                     </div>
                 </div>
@@ -594,9 +552,6 @@
                     <div class="d-flex align-items-center flex-wrap gap-1">
                         <span id="entriesFilterInfo">Showing all entries</span>
                         <span id="activeFilterPills" class="d-inline-flex align-items-center flex-wrap gap-1 ms-1"></span>
-                        <span id="cancelledNoticeBadge" class="badge bg-danger-subtle text-danger ms-1">
-                            <i class="fas fa-ban me-1"></i> Cancelled transactions excluded
-                        </span>
                     </div>
                     <div class="text-end">
                         <span class="text-muted"><i class="fas fa-sort me-1"></i> Click column header to sort</span>
@@ -763,25 +718,77 @@
 
                 const bCont = document.getElementById('leadsBucketContainer');
                 bCont.innerHTML = '';
-                const buckets = leads.buckets || [];
-                if (buckets.length === 0) {
-                    bCont.innerHTML = '<span class="text-muted small">No leads pipeline stages recorded.</span>';
-                } else {
-                    buckets.forEach(b => {
+
+                function renderBucketChipsHtml(bucketArr, accentColor) {
+                    if (!bucketArr || bucketArr.length === 0) {
+                        return '<span class="text-muted small" style="font-size: 11.5px;">No leads recorded in this category.</span>';
+                    }
+                    return bucketArr.map(b => {
                         const isLost = (b.stage || '').toLowerCase() === 'lost';
                         const bStyle = isLost 
                             ? 'background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;'
-                            : 'background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b;';
+                            : 'background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b;';
                         const countBadgeStyle = isLost
                             ? 'background: #dc2626; color: #fff;'
-                            : 'background: #4f46e5; color: #fff;';
-                        bCont.innerHTML += `
-                            <div style="${bStyle} padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                            : `background: ${accentColor}; color: #fff;`;
+                        return `
+                            <div style="${bStyle} padding: 5px 11px; border-radius: 8px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px;">
                                 <span>${escHtml(b.stage)}</span>
-                                <span style="${countBadgeStyle} padding: 2px 7px; border-radius: 12px; font-size: 11px; font-weight: 700;">${b.count}</span>
+                                <span style="${countBadgeStyle} padding: 1.5px 7px; border-radius: 12px; font-size: 10.5px; font-weight: 700;">${b.count}</span>
                             </div>
                         `;
-                    });
+                    }).join('');
+                }
+
+                const selfLeads = leads.self || { total: 0, won_active: 0, lost: 0, buckets: [] };
+                const teamLeads = leads.team || { total: 0, won_active: 0, lost: 0, buckets: [] };
+
+                if (leads.self || leads.team) {
+                    bCont.className = 'row g-2 pt-1';
+                    bCont.innerHTML = `
+                        <div class="col-12 col-lg-6">
+                            <div class="p-2 px-3 rounded-3 h-100" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 pb-1 border-bottom">
+                                    <div class="fw-bold small" style="color: #1e293b; font-size: 11.5px;">
+                                        <i class="fas fa-user-check text-primary me-1"></i> SELF LEADS (OWN DIRECT)
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1" style="font-size: 11px;">
+                                        <span class="badge bg-secondary-subtle text-dark border">Total: <strong>${selfLeads.total || 0}</strong></span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Won/Active: <strong>${selfLeads.won_active || 0}</strong></span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Lost: <strong>${selfLeads.lost || 0}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${renderBucketChipsHtml(selfLeads.buckets, '#2563eb')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="p-2 px-3 rounded-3 h-100" style="background: #f5f3ff; border: 1px solid #ddd6fe;">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 pb-1 border-bottom" style="border-color: #ddd6fe !important;">
+                                    <div class="fw-bold small" style="color: #4c1d95; font-size: 11.5px;">
+                                        <i class="fas fa-sitemap me-1" style="color: #6d28d9;"></i> TEAM LEADS (DOWNLINES UP TO 3 LEVELS SUM)
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1" style="font-size: 11px;">
+                                        <span class="badge bg-white text-dark border" style="border-color: #c4b5fd !important;">Total: <strong>${teamLeads.total || 0}</strong></span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Won/Active: <strong>${teamLeads.won_active || 0}</strong></span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Lost: <strong>${teamLeads.lost || 0}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${renderBucketChipsHtml(teamLeads.buckets, '#6d28d9')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    bCont.className = 'd-flex flex-wrap gap-2 pt-1';
+                    const buckets = leads.buckets || [];
+                    if (buckets.length === 0) {
+                        bCont.innerHTML = '<span class="text-muted small">No leads pipeline stages recorded.</span>';
+                    } else {
+                        bCont.innerHTML = renderBucketChipsHtml(buckets, '#4f46e5');
+                    }
                 }
 
                 // Advances Tracking (Only shown if member availed advances)
@@ -809,11 +816,8 @@
                 if (statusCol) statusCol.classList.add('d-none');
             }
 
-            allLedgerData = payload.data || [];
-
-            // Count cancelled rows
-            const cancelledCount = allLedgerData.filter(r => (r.status || '').toUpperCase() === 'CANCELLED').length;
-            document.getElementById('cancelledCountBadge').textContent = cancelledCount;
+            allLedgerData = (payload.data || []).filter(r => (r.status || '').toUpperCase() !== 'CANCELLED');
+            document.getElementById('metaInfo').textContent = `Total Entries: ${allLedgerData.length} | Option: ${payload.show_status ? 'Status Column Visible' : 'Status Column Hidden'}`;
 
             // Populate Team Member, Level, and Customer Filter Dropdowns
             populateTeamMemberDropdown(allLedgerData);
@@ -1035,7 +1039,6 @@
                 document.getElementById('filterSearch').value = '';
                 applyFiltersAndRender();
             });
-            document.getElementById('toggleAvoidCancelled').addEventListener('change', () => applyFiltersAndRender());
             document.getElementById('btnResetFilters').addEventListener('click', () => resetAllFilters());
         }
 
@@ -1046,7 +1049,6 @@
             document.getElementById('filterCustomer').value = 'ALL';
             document.getElementById('filterStatus').value = 'ALL';
             document.getElementById('filterSearch').value = '';
-            document.getElementById('toggleAvoidCancelled').checked = true;
             currentSort = { col: 'submit_date', dir: 'desc' };
             applyFiltersAndRender();
         }
@@ -1120,209 +1122,13 @@
             return true;
         }
 
-        function renderTeamAndLeadBreakdowns(avoidCancelled, selectedTeamMember, selectedLevel, selectedCustomer, selectedStatus, searchQuery) {
-            // Update Quick Filter Button states
-            const btnAll = document.getElementById('btnQuickAllTeam');
-            const btnDownline = document.getElementById('btnQuickDownlineOnly');
-            const btnSelf = document.getElementById('btnQuickSelfOnly');
-            if (btnAll) btnAll.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'ALL' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
-            if (btnDownline) btnDownline.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'TEAM_ONLY' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
-            if (btnSelf) btnSelf.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'SELF_ONLY' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
-
-            // 1. Build Team Member Cards (respecting avoidCancelled, selectedLevel, selectedStatus, searchQuery)
-            const teamStatsMap = {};
-            allLedgerData.forEach(row => {
-                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) return;
-                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) return;
-
-                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
-                const key = getTeamMemberKey(row);
-                if (key === 'UNASSIGNED') return;
-                const isDownline = isRowDownlineTeamLead(row);
-
-                if (!teamStatsMap[key]) {
-                    teamStatsMap[key] = {
-                        name: key,
-                        code: row.lead_owner_code || '',
-                        levelCode: getRowLevelCode(row),
-                        isDownline: isDownline,
-                        leads: new Set(),
-                        entries: 0,
-                        gross: 0,
-                        advance: 0,
-                        balance: 0
-                    };
-                }
-                const cName = (row.client_name || row.member_name || '').trim();
-                if (cName) teamStatsMap[key].leads.add(cName);
-                teamStatsMap[key].entries++;
-                if (!isCancelled) {
-                    teamStatsMap[key].gross += Number(row.commission_amount) || 0;
-                    teamStatsMap[key].advance += Number(row.advance_paid) || 0;
-                    teamStatsMap[key].balance += Number(row.balance_gross) || 0;
-                }
-                if (isDownline) teamStatsMap[key].isDownline = true;
-            });
-
-            const tmContainer = document.getElementById('teamMemberCardsContainer');
-            const tmList = Object.values(teamStatsMap).sort((a, b) => {
-                if (a.isDownline !== b.isDownline) return a.isDownline ? -1 : 1;
-                return b.gross - a.gross;
-            });
-
-            const summaryBadge = document.getElementById('teamBreakdownSummaryBadge');
-            if (summaryBadge) {
-                const downlineMembersCount = tmList.filter(m => m.isDownline).length;
-                summaryBadge.textContent = `${tmList.length} Member${tmList.length === 1 ? '' : 's'} (${downlineMembersCount} Downline Team)`;
-            }
-
-            if (tmContainer) {
-                if (tmList.length === 0) {
-                    tmContainer.innerHTML = `<div class="col-12 text-muted small py-2">No team members match the current filters.</div>`;
-                } else {
-                    tmContainer.innerHTML = tmList.map(tm => {
-                        const isSelected = (selectedTeamMember === tm.name) ||
-                            (selectedTeamMember === 'TEAM_ONLY' && tm.isDownline) ||
-                            (selectedTeamMember === 'SELF_ONLY' && !tm.isDownline);
-                        const isExactSelected = selectedTeamMember === tm.name;
-                        const badgeClass = tm.isDownline
-                            ? 'bg-indigo-subtle text-indigo border border-indigo-subtle'
-                            : 'bg-secondary-subtle text-secondary border';
-                        const badgeLabel = tm.isDownline ? `${tm.levelCode} Team` : `${tm.levelCode} Self`;
-                        const safeNameAttr = escHtml(tm.name).replace(/'/g, "\\'");
-
-                        return `
-                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                <div class="team-member-card h-100 ${isSelected ? 'active' : ''}" onclick="selectTeamFilterQuick('${safeNameAttr}')" title="Click to filter by ${escHtml(tm.name)}">
-                                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
-                                        <div class="text-truncate">
-                                            <div class="fw-bold text-dark text-truncate" style="font-size: 12px;">
-                                                <i class="fas ${tm.isDownline ? 'fa-user-friends text-indigo' : 'fa-user-tie text-secondary'} me-1"></i>${escHtml(tm.name)}
-                                            </div>
-                                            <div class="text-muted font-monospace" style="font-size: 10px;">
-                                                ${escHtml(tm.code || '—')} • ${tm.leads.size} Lead${tm.leads.size === 1 ? '' : 's'} • ${tm.entries} Entr${tm.entries === 1 ? 'y' : 'ies'}
-                                            </div>
-                                        </div>
-                                        <span class="badge ${badgeClass}" style="font-size: 9.5px; white-space: nowrap;">${escHtml(badgeLabel)}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-baseline pt-1 mt-1 border-top" style="border-color: rgba(0,0,0,0.06) !important;">
-                                        <div>
-                                            <span class="text-muted" style="font-size: 10px;">Gross:</span>
-                                            <strong class="text-indigo ms-1" style="font-size: 12.5px; font-weight: 800;">₹${Math.round(tm.gross).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div>
-                                            <span class="text-muted" style="font-size: 10px;">Bal:</span>
-                                            <strong class="text-primary ms-1" style="font-size: 11.5px; font-weight: 700;">₹${Math.round(tm.balance).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                    </div>
-                                    ${isExactSelected ? `<div class="mt-1 text-indigo fw-bold" style="font-size: 10px;"><i class="fas fa-filter me-1"></i>Selected (Click to clear)</div>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            }
-
-            // 2. Build Lead-Wise Earnings Cards (respecting selectedTeamMember + selectedLevel + base filters)
-            const leadStatsMap = {};
-            allLedgerData.forEach(row => {
-                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) return;
-                if (!doesRowMatchTeamFilter(row, selectedTeamMember)) return;
-                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) return;
-
-                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
-                const cName = (row.client_name || row.member_name || '').trim();
-                if (!cName) return;
-
-                if (!leadStatsMap[cName]) {
-                    leadStatsMap[cName] = {
-                        leadName: cName,
-                        ownerName: row.lead_owner_name || '—',
-                        ownerCode: row.lead_owner_code || '',
-                        levelCode: getRowLevelCode(row),
-                        isDownline: isRowDownlineTeamLead(row),
-                        entries: 0,
-                        gross: 0,
-                        advance: 0,
-                        balance: 0
-                    };
-                }
-                leadStatsMap[cName].entries++;
-                if (!isCancelled) {
-                    leadStatsMap[cName].gross += Number(row.commission_amount) || 0;
-                    leadStatsMap[cName].advance += Number(row.advance_paid) || 0;
-                    leadStatsMap[cName].balance += Number(row.balance_gross) || 0;
-                }
-            });
-
-            const leadSubtitle = document.getElementById('leadWiseSubtitle');
-            if (leadSubtitle) {
-                if (selectedTeamMember === 'ALL') {
-                    leadSubtitle.textContent = `(All Team & Self — ${Object.keys(leadStatsMap).length} Leads)`;
-                } else if (selectedTeamMember === 'TEAM_ONLY') {
-                    leadSubtitle.textContent = `(Downline Team Leads Only — ${Object.keys(leadStatsMap).length} Leads)`;
-                } else if (selectedTeamMember === 'SELF_ONLY') {
-                    leadSubtitle.textContent = `(Self Direct Leads Only — ${Object.keys(leadStatsMap).length} Leads)`;
-                } else {
-                    leadSubtitle.textContent = `(Team Member: ${selectedTeamMember} — ${Object.keys(leadStatsMap).length} Leads)`;
-                }
-            }
-
-            const leadContainer = document.getElementById('leadWiseCardsContainer');
-            const leadList = Object.values(leadStatsMap).sort((a, b) => b.gross - a.gross);
-            if (leadContainer) {
-                if (leadList.length === 0) {
-                    leadContainer.innerHTML = `<div class="col-12 text-muted small py-1">No leads match the selected team filter.</div>`;
-                } else {
-                    leadContainer.innerHTML = leadList.map(ld => {
-                        const isLeadSelected = selectedCustomer === ld.leadName;
-                        const safeLeadAttr = escHtml(ld.leadName).replace(/'/g, "\\'");
-                        const lvlClass = ld.isDownline
-                            ? 'bg-indigo-subtle text-indigo border border-indigo-subtle'
-                            : 'bg-secondary-subtle text-secondary border';
-                        return `
-                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                <div class="lead-earning-card h-100 ${isLeadSelected ? 'active' : ''}" onclick="selectLeadFilterQuick('${safeLeadAttr}')" title="Click to filter ledger entries for lead ${escHtml(ld.leadName)}">
-                                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
-                                        <div class="text-truncate">
-                                            <div class="fw-bold text-primary text-truncate" style="font-size: 11.5px;">
-                                                <i class="fas fa-user-tag me-1"></i>${escHtml(ld.leadName)}
-                                            </div>
-                                            <div class="text-muted text-truncate" style="font-size: 10px;" title="Lead Owner: ${escHtml(ld.ownerName)}">
-                                                Owner: <span class="fw-semibold text-dark">${escHtml(ld.ownerName)}</span> (${ld.entries})
-                                            </div>
-                                        </div>
-                                        <span class="badge ${lvlClass}" style="font-size: 9.5px;">${escHtml(ld.levelCode)}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-baseline pt-1 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
-                                        <div>
-                                            <span class="text-muted" style="font-size: 10px;">Gross:</span>
-                                            <strong class="text-indigo ms-1" style="font-size: 12px; font-weight: 800;">₹${Math.round(ld.gross).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div>
-                                            <span class="text-muted" style="font-size: 10px;">Bal:</span>
-                                            <strong class="text-primary ms-1" style="font-size: 11px; font-weight: 700;">₹${Math.round(ld.balance).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                    </div>
-                                    ${isLeadSelected ? `<div class="mt-1 text-primary fw-bold" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>Active Lead Filter (Click to clear)</div>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            }
-        }
-
         function applyFiltersAndRender() {
-            const avoidCancelled = document.getElementById('toggleAvoidCancelled').checked;
+            const avoidCancelled = true;
             const selectedTeamMember = document.getElementById('filterTeamMember') ? document.getElementById('filterTeamMember').value : 'ALL';
             const selectedLevel = document.getElementById('filterLevel') ? document.getElementById('filterLevel').value : 'ALL';
             const selectedCustomer = document.getElementById('filterCustomer').value;
             const selectedStatus = document.getElementById('filterStatus').value;
             const searchQuery = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
-
-            // Update Team Member-Wise & Lead-Wise breakdown cards
-            renderTeamAndLeadBreakdowns(avoidCancelled, selectedTeamMember, selectedLevel, selectedCustomer, selectedStatus, searchQuery);
 
             // 1. Filter rows (All filters working together!)
             let filtered = allLedgerData.filter(row => {
@@ -1399,15 +1205,6 @@
             document.getElementById('kpiAdvanceDeductions').textContent = '₹' + Math.round(sumAdvPaid).toLocaleString('en-IN');
             document.getElementById('kpiBalanceGross').textContent = '₹' + Math.round(sumBal).toLocaleString('en-IN');
             document.getElementById('kpiActiveRecords').textContent = filtered.length;
-
-            const cancelledCountInFiltered = filtered.filter(r => (r.status || '').toUpperCase() === 'CANCELLED').length;
-            if (avoidCancelled) {
-                document.getElementById('kpiCancelledExcluded').innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-ban me-1"></i>Cancelled Excluded</span>`;
-                document.getElementById('cancelledNoticeBadge').classList.remove('d-none');
-            } else {
-                document.getElementById('kpiCancelledExcluded').innerHTML = `<span class="text-warning fw-bold">${cancelledCountInFiltered} Cancelled Shown</span>`;
-                document.getElementById('cancelledNoticeBadge').classList.add('d-none');
-            }
 
             document.getElementById('entriesFilterInfo').textContent = `Showing ${filtered.length} of ${allLedgerData.length} total entries`;
 

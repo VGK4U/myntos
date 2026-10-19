@@ -233,7 +233,7 @@
             <div style="width:100%;text-align:center;margin-bottom:6px">
               <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <!-- Line 1: Member Name -->
-                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">MR. BANDI GANGARAJU</div>
+                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">LOADING…</div>
                 <!-- Line 2: Career Designation below Name -->
                 <div id="prevRankContainer" style="font-size:12.5px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:3px;display:inline-flex;align-items:center;gap:6px">
                   <span style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">CAREER DESIGNATION:</span><span id="prevRank">CHANNEL PARTNER</span>
@@ -246,7 +246,7 @@
 
               <div style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center">
                 <img id="prevImg" src="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
-                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">BG</div>
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">CP</div>
               </div>
 
               <div style="position:absolute;bottom:4px;right:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
@@ -255,13 +255,13 @@
 
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:7px 14px;text-align:center;margin-bottom:6px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
               <div style="color:#92400e;font-size:11.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">OVERALL EARNING</div>
-              <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹1,07,880/-</div>
-              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
+              <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹0/-</div>
+              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">—</div>
             </div>
 
             <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:14px;padding:8px 10px;text-align:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(4,120,87,0.45);box-sizing:border-box">
-              <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹9,395/-</span></div>
-              <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none">(Already Paid: ₹3,000/-)</div>
+              <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹0/-</span></div>
+              <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none"></div>
             </div>
 
             <div id="prevTodayPayout" style="display:none"></div>
@@ -270,21 +270,21 @@
               <!-- Files Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
                 <div style="font-size:8px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">📂 FILES</div>
-                <div id="prevFiles" style="display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:950;color:#ffffff;line-height:1"><span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">6 INSTALLED</span></div>
-                <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">16 SUBMITTED</div>
+                <div id="prevFiles" style="display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:950;color:#ffffff;line-height:1"><span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">0 INSTALLED</span></div>
+                <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">0 SUBMITTED</div>
               </div>
               
               <!-- Members / Team Size Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
                 <div id="prevOverallLabel" style="font-size:8px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">👥 TEAM SIZE</div>
-                <div id="prevOverall" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">8 MEMBERS</div>
-                <div id="prevTeamBreakup" style="font-size:8px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 6 | L3: 2 | L4: 0</div>
+                <div id="prevOverall" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">0 MEMBERS</div>
+                <div id="prevTeamBreakup" style="font-size:8px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 0 | L3: 0 | L4: 0</div>
               </div>
 
               <!-- Potential Pending Card -->
               <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
                 <div style="font-size:8px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">💰 POTENTIAL PENDING</div>
-                <div id="prevPotential" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">₹20,250/-</div>
+                <div id="prevPotential" style="display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1;white-space:nowrap">₹0/-</div>
                 <div style="font-size:8px;font-weight:800;color:#fbcfe8;letter-spacing:0.2px;line-height:1;white-space:nowrap">EXPECTED EARNING</div>
               </div>
             </div>
@@ -292,23 +292,23 @@
             <div id="prevSeniorRow" style="position:relative;width:100%;background:rgba(8,18,38,0.95);border:1.5px solid rgba(234,179,8,0.65);border-radius:16px;padding:8px 12px 8px 132px;display:flex;flex-direction:column;justify-content:center;margin-top:8px;margin-bottom:4px;min-height:96px;box-shadow:0 8px 25px rgba(0,0,0,0.6);box-sizing:border-box">
               <div style="position:absolute;top:-10px;left:10px;width:110px;height:110px;border-radius:50%;background:#1e3a8a;border:4.5px solid #fde047;box-shadow:0 6px 25px rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden">
                 <img id="prevSeniorImg" src="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">NE</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">SR</div>
               </div>
 
-              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Direct Sponsor : MS. JARRA KUMARI</div>
+              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Direct Sponsor : —</div>
 
               <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding-right:4px">
                 <div style="text-align:left">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Today</div>
-                  <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹1,835/-</div>
+                  <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹0/-</div>
                 </div>
                 <div style="text-align:center">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Overall</div>
-                  <div id="prevSeniorEarning" style="font-size:13px;font-weight:950;color:#34d399">₹49,875/-</div>
+                  <div id="prevSeniorEarning" style="font-size:13px;font-weight:950;color:#34d399">₹0/-</div>
                 </div>
                 <div style="text-align:right">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Potential</div>
-                  <div id="prevSeniorPotential" style="font-size:13px;font-weight:950;color:#fb923c">₹91,650/-</div>
+                  <div id="prevSeniorPotential" style="font-size:13px;font-weight:950;color:#fb923c">₹0/-</div>
                 </div>
               </div>
             </div>
@@ -426,7 +426,14 @@
 
   async function generateMemberPoster(partnerId) {
     ensurePosterModalDOM();
+    const reqSeq = (window._posterGenReqSeq = (window._posterGenReqSeq || 0) + 1);
     window._postTotalTodayUserEdited = false;
+    window._posterCustomTextEdited = false;
+    if (typeof window.clearCustomCreativeImage === 'function') {
+      window.clearCustomCreativeImage();
+    } else if (typeof clearCustomCreativeImage === 'function') {
+      clearCustomCreativeImage();
+    }
     const modal = document.getElementById('posterModal');
     if (!modal) return;
     modal.style.display = 'flex';
@@ -448,20 +455,70 @@
       const pidStr = String(partnerId || '').trim();
       let m = (window._iedCurrentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
            || (window._currentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
+           || (window._lvCurrentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
            || (window._vgkMemberCache || {})[pidStr];
 
-      // DC Protocol: Always fetch fresh member data from API to merge latest photo paths & senior info
-      try {
-        const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-        const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
-        const freshRes = await safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
-        const freshData = await freshRes.json();
-        if (freshData.success && freshData.data && freshData.data.length) {
-          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
-          if (found) m = Object.assign({}, m || {}, found);
-        }
-      } catch (e) {
-        console.warn("Failed to fetch fresh member data from API:", e);
+      // Immediately pre-populate modal badges & preview from cached member (or neutral loading state) BEFORE awaiting network calls
+      const initName = (m && (m.partner_name || m.member_name)) ? String(m.partner_name || m.member_name).trim() : 'Loading…';
+      const initInitials = (m && (m.partner_name || m.member_name))
+        ? initName.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()
+        : 'CP';
+      const nameBadgePre = document.getElementById('postMemberNameBadge');
+      if (nameBadgePre) nameBadgePre.textContent = initName;
+      const prevNamePre = document.getElementById('prevName');
+      if (prevNamePre) prevNamePre.textContent = initName.toUpperCase();
+      const postSubPre = document.getElementById('postSubtitle');
+      if (postSubPre) postSubPre.value = initName.toUpperCase();
+      if (prevAvatar) {
+        prevAvatar.textContent = initInitials;
+        prevAvatar.style.display = 'flex';
+      }
+      const thumbImgPre = document.getElementById('postImageThumb');
+      const thumbAvatarPre = document.getElementById('postImageThumbAvatar');
+      if (thumbImgPre) thumbImgPre.style.display = 'none';
+      if (thumbAvatarPre) {
+        thumbAvatarPre.textContent = initInitials;
+        thumbAvatarPre.style.display = 'flex';
+      }
+      const prevHighlightPre = document.getElementById('prevHighlight');
+      if (prevHighlightPre) prevHighlightPre.textContent = '₹0/-';
+      const prevHighlightWordsPre = document.getElementById('prevHighlightInWords');
+      if (prevHighlightWordsPre) prevHighlightWordsPre.textContent = '—';
+      const prevTotalTodayPre = document.getElementById('prevTotalToday');
+      if (prevTotalTodayPre) prevTotalTodayPre.textContent = '₹0/-';
+      const prevSeniorNamePre = document.getElementById('prevSeniorName');
+      if (prevSeniorNamePre) prevSeniorNamePre.textContent = 'Direct Sponsor : —';
+      const prevSeniorTodayPre = document.getElementById('prevSeniorToday');
+      if (prevSeniorTodayPre) prevSeniorTodayPre.textContent = '₹0/-';
+      const prevSeniorEarningPre = document.getElementById('prevSeniorEarning');
+      if (prevSeniorEarningPre) prevSeniorEarningPre.textContent = '₹0/-';
+      const prevSeniorPotentialPre = document.getElementById('prevSeniorPotential');
+      if (prevSeniorPotentialPre) prevSeniorPotentialPre.textContent = '₹0/-';
+
+      const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+      const paramStr = pidStr.startsWith('VGK') ? 'partner_code=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+      const knownPid = (m && m.id) ? m.id : (!pidStr.startsWith('VGK') ? partnerId : null);
+      const knownParentPid = (m && m.parent_partner_id) ? m.parent_partner_id : null;
+
+      // Parallelize fresh member metadata + member income entries + senior income entries (when IDs are already known)
+      const [freshOutcome, entriesOutcome, seniorOutcome] = await Promise.all([
+        safeFetch(apiBase + '/vgk/dashboard/member-earnings?' + paramStr + '&earners_only=false&include_poster_meta=true&_cb=' + Date.now())
+          .then(res => res.json()).catch(e => { console.warn("Failed to fetch fresh member data from API:", e); return null; }),
+        knownPid
+          ? safeFetch(apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + knownPid)
+              .then(res => res.json()).catch(() => null)
+          : Promise.resolve(null),
+        knownParentPid
+          ? safeFetch(apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + knownParentPid)
+              .then(res => res.json()).catch(() => null)
+          : Promise.resolve(null)
+      ]);
+
+      if (reqSeq !== window._posterGenReqSeq) return;
+
+      if (freshOutcome && freshOutcome.success && freshOutcome.data && freshOutcome.data.length) {
+        const found = freshOutcome.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr);
+        if (found) m = Object.assign({}, m || {}, found);
       }
 
       if (!m) throw new Error('Member details could not be loaded for ID: ' + pidStr);
@@ -484,27 +541,36 @@
       ];
       loadPhotoWithFallback(prevImg, prevAvatar, memberCandidates, initials);
 
-      const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
-      const targetPid = m.id || partnerId;
-      const detailUrl = apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid;
-
-      const r = await safeFetch(detailUrl);
-      const d = await r.json();
-      const entries = (d.success && d.data) ? d.data : [];
-      window._currentEntries = entries;
-
-      window._seniorEntries = [];
-      if (m.parent_partner_id) {
-        try {
-          const srRes = await safeFetch(apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id);
-          const srData = await srRes.json();
-          if (srData.success && srData.data) {
-            window._seniorEntries = srData.data;
-          }
-        } catch (srErr) {
-          console.warn("[Poster Debug] Failed to fetch senior partner entries:", srErr);
-        }
+      // Update left control pane member profile photo thumbnail & name badge
+      const thumbImg = document.getElementById('postImageThumb');
+      const thumbAvatar = document.getElementById('postImageThumbAvatar');
+      const nameBadge = document.getElementById('postMemberNameBadge');
+      if (nameBadge) nameBadge.textContent = m.partner_name || '—';
+      if (thumbImg || thumbAvatar) {
+        loadPhotoWithFallback(thumbImg, thumbAvatar, memberCandidates, initials);
       }
+
+      const targetPid = m.id || partnerId;
+      let entries = (entriesOutcome && entriesOutcome.success && entriesOutcome.data) ? entriesOutcome.data : null;
+      const needEntriesFetch = !entries;
+      const needSeniorFetch = Boolean(m.parent_partner_id && (!seniorOutcome || String(m.parent_partner_id) !== String(knownParentPid)));
+
+      if (needEntriesFetch || needSeniorFetch) {
+        const [lateEntriesD, lateSeniorD] = await Promise.all([
+          needEntriesFetch
+            ? safeFetch(apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid).then(r => r.json()).catch(() => null)
+            : Promise.resolve(entriesOutcome),
+          needSeniorFetch
+            ? safeFetch(apiBase + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id).then(r => r.json()).catch(() => null)
+            : Promise.resolve(seniorOutcome)
+        ]);
+        if (reqSeq !== window._posterGenReqSeq) return;
+        entries = (lateEntriesD && lateEntriesD.success && lateEntriesD.data) ? lateEntriesD.data : [];
+        window._seniorEntries = (lateSeniorD && lateSeniorD.success && lateSeniorD.data) ? lateSeniorD.data : [];
+      } else {
+        window._seniorEntries = (seniorOutcome && seniorOutcome.success && seniorOutcome.data) ? seniorOutcome.data : [];
+      }
+      window._currentEntries = entries;
 
       const uniqueL1Leads = new Set();
       entries.forEach(e => {
@@ -799,9 +865,16 @@
         loadPhotoWithFallback(seniorImg, seniorAvatar, seniorCandidates, seniorInitials);
       }
 
+      const tplSelect = document.getElementById('postShareTemplate');
+      if (tplSelect) tplSelect.value = 'full';
+      window._posterCustomTextEdited = false;
+
       if (document.getElementById('postThemePreset')) document.getElementById('postThemePreset').value = 'celebration_graphic';
       changeThemePreset();
       recalculateTodayPayout();
+      if (typeof window.resetPosterCustomText === 'function') {
+        window.resetPosterCustomText();
+      }
     } catch (err) {
       alert('Failed to generate poster: ' + err.message);
       closePosterModal();
@@ -1529,11 +1602,13 @@
     // 1. Priority: Uploaded custom creative
     let customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
     if (customImg) {
-      let blob = null;
-      try {
-        blob = await (await fetch(customImg)).blob();
-      } catch (e) {
-        console.warn('[Poster export] Custom creative blob error:', e);
+      let blob = window._customUploadedCreativeBlob || null;
+      if (!blob) {
+        try {
+          blob = await (await fetch(customImg)).blob();
+        } catch (e) {
+          console.warn('[Poster export] Custom creative blob error:', e);
+        }
       }
       return { dataUrl: customImg, blob: blob, source: 'uploaded' };
     }
@@ -2169,23 +2244,41 @@
   };
 
   function handleMemberPhotoUpload(e) {
-    const file = e.target.files[0];
+    let file = null;
+    if (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      file = e.dataTransfer.files[0];
+    } else if (e && e.target && e.target.files && e.target.files.length) {
+      file = e.target.files[0];
+    } else if (e instanceof File) {
+      file = e;
+    }
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(evt) {
+      const dataUrl = evt.target.result;
       const img = document.getElementById('prevImg');
       const avatar = document.getElementById('prevAvatar');
       if (img) {
-        img.src = evt.target.result;
+        img.src = dataUrl;
         img.style.display = 'block';
         if (avatar) avatar.style.display = 'none';
       }
+      const thumbImg = document.getElementById('postImageThumb');
+      const thumbAvatar = document.getElementById('postImageThumbAvatar');
+      if (thumbImg) {
+        thumbImg.src = dataUrl;
+        thumbImg.style.display = 'block';
+        if (thumbAvatar) thumbAvatar.style.display = 'none';
+      }
     };
     reader.readAsDataURL(file);
+    if (e && e.target && 'value' in e.target) {
+      e.target.value = '';
+    }
   }
 
   function handleSeniorPhotoUpload(e) {
-    const file = e.target.files[0];
+    const file = e && e.target && e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(evt) {
@@ -2198,6 +2291,158 @@
       }
     };
     reader.readAsDataURL(file);
+    if (e && e.target && 'value' in e.target) {
+      e.target.value = '';
+    }
+  }
+
+  function _applyCoreCustomCreativeDataUrl(dataUrl, blob) {
+    window._customUploadedCreativeImage = dataUrl;
+    window._customUploadedPosterImage = dataUrl;
+    window._customUploadedCreativeBlob = blob || null;
+
+    const card = document.getElementById('customCreativeImgCard');
+    const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+    const previewImg = document.getElementById('customCreativeImg');
+    const topBadge = document.getElementById('customCreativeTopBadge');
+    const statusBadge = document.getElementById('customCreativeStatusBadge');
+    const notice = document.getElementById('customCreativeNotice');
+
+    if (previewImg) previewImg.src = dataUrl;
+    if (card) card.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    if (topBadge) {
+      topBadge.textContent = 'Ready for WhatsApp';
+      topBadge.style.background = '#065f46';
+      topBadge.style.color = '#34d399';
+      topBadge.style.borderColor = '#059669';
+    }
+    if (statusBadge) {
+      statusBadge.textContent = 'Creative Attached ✅';
+      statusBadge.style.background = '#d1fae5';
+      statusBadge.style.color = '#065f46';
+    }
+    if (notice) {
+      notice.innerHTML = '✅ <strong>Custom creative attached!</strong> It will be sent on WhatsApp along with the message.';
+      notice.style.color = '#065f46';
+    }
+  }
+
+  function handleCustomCreativeUpload(e) {
+    let file = null;
+    if (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      file = e.dataTransfer.files[0];
+    } else if (e && e.target && e.target.files && e.target.files.length) {
+      file = e.target.files[0];
+    } else if (e instanceof File) {
+      file = e;
+    }
+    if (!file) return;
+
+    const isImgType = (file.type && file.type.toLowerCase().startsWith('image/')) ||
+                      /\.(jpe?g|png|webp|gif|bmp|svg|avif|heic|heif)$/i.test(file.name || '');
+    if (!isImgType) {
+      alert('Please select a valid image file (JPG, PNG, WebP, etc.).');
+      if (e && e.target && 'value' in e.target) e.target.value = '';
+      return;
+    }
+
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) spinner.style.display = 'flex';
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const rawDataUrl = evt.target.result;
+      _applyCoreCustomCreativeDataUrl(rawDataUrl, file);
+
+      const tempImg = new Image();
+      tempImg.onload = function() {
+        try {
+          const maxDim = 1280;
+          let w = tempImg.width || 800;
+          let h = tempImg.height || 800;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const cvs = document.createElement('canvas');
+          cvs.width = w;
+          cvs.height = h;
+          const ctx = cvs.getContext('2d');
+          const isPng = (file.type && file.type.toLowerCase() === 'image/png') || /\.png$/i.test(file.name || '');
+          if (!isPng) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+          }
+          ctx.drawImage(tempImg, 0, 0, w, h);
+
+          const mimeType = isPng ? 'image/png' : 'image/jpeg';
+          const quality = isPng ? undefined : 0.92;
+          const dataUrl = cvs.toDataURL(mimeType, quality);
+
+          cvs.toBlob(function(blob) {
+            if (spinner) spinner.style.display = 'none';
+            _applyCoreCustomCreativeDataUrl(dataUrl, blob || file);
+          }, mimeType, quality);
+        } catch (err) {
+          if (spinner) spinner.style.display = 'none';
+        }
+      };
+      tempImg.onerror = function() {
+        if (spinner) spinner.style.display = 'none';
+      };
+      tempImg.src = rawDataUrl;
+    };
+    reader.onerror = function() {
+      if (spinner) spinner.style.display = 'none';
+      alert('Failed to read the selected image file.');
+    };
+    reader.readAsDataURL(file);
+    if (e && e.target && 'value' in e.target) {
+      e.target.value = '';
+    }
+  }
+
+  function clearCustomCreativeImage() {
+    window._customUploadedCreativeImage = null;
+    window._customUploadedPosterImage = null;
+    window._customUploadedCreativeBlob = null;
+
+    const fileInput = document.getElementById('postCustomCreativeFile');
+    if (fileInput) fileInput.value = '';
+    const legacyInput = document.getElementById('postCustomImageFile');
+    if (legacyInput) legacyInput.value = '';
+
+    const card = document.getElementById('customCreativeImgCard');
+    const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+    const previewImg = document.getElementById('customCreativeImg');
+    const topBadge = document.getElementById('customCreativeTopBadge');
+    const statusBadge = document.getElementById('customCreativeStatusBadge');
+    const notice = document.getElementById('customCreativeNotice');
+
+    if (previewImg) previewImg.src = '';
+    if (card) card.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+    if (topBadge) {
+      topBadge.textContent = 'Optional Attachment';
+      topBadge.style.background = '#1e293b';
+      topBadge.style.color = '#9ca3af';
+      topBadge.style.borderColor = '#334155';
+    }
+    if (statusBadge) {
+      statusBadge.textContent = 'No Creative Attached';
+      statusBadge.style.background = '#f3f4f6';
+      statusBadge.style.color = '#6b7280';
+    }
+    if (notice) {
+      notice.innerHTML = 'ℹ️ Auto-generated celebration poster will be dispatched with message (or upload custom creative to override).';
+      notice.style.color = '#047857';
+    }
   }
 
   // Export functions to global scope
@@ -2212,9 +2457,11 @@
   window._shareDefaultChannelCore = shareDefaultChannel;
   window.testShareToNumber = testShareToNumber;
   window._testShareToNumberCore = testShareToNumber;
-  window.postPosterAnnouncement = postPosterAnnouncement;
+  window.postPosterAnnouncement = window.openPostToPortalModal || postPosterAnnouncement;
   window._postPosterAnnouncementCore = postPosterAnnouncement;
-  window.showDirectWaShareDialog = showDirectWaShareDialog;
+  if (typeof showDirectWaShareDialog === 'function') {
+    window.showDirectWaShareDialog = showDirectWaShareDialog;
+  }
   window.changeThemePreset = changeThemePreset;
   window.setPosterPresetPeriod = setPosterPresetPeriod;
   window.recalculateTodayPayout = recalculateTodayPayout;
@@ -2222,5 +2469,9 @@
   window.updatePoster = updatePoster;
   window.handleMemberPhotoUpload = handleMemberPhotoUpload;
   window.handleSeniorPhotoUpload = handleSeniorPhotoUpload;
+  window.handleCustomCreativeUpload = handleCustomCreativeUpload;
+  window.handleCustomPosterImageUpload = handleCustomCreativeUpload;
+  window.clearCustomCreativeImage = clearCustomCreativeImage;
+  window.clearCustomPosterImage = clearCustomCreativeImage;
   window._meFormatInr = _meFormatInr;
 })();

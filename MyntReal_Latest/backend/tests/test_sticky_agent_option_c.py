@@ -145,5 +145,97 @@ class TestWhatsAppGroupAlertQueueing(unittest.TestCase):
             print("✓ WhatsApp Queue Fallback: Successfully caught HTTP 503 and enqueued directly to whatsapp_bot_queue")
 
 
+class TestScreenOffWakeupAndStickyRetry(unittest.TestCase):
+
+    def test_sticky_dial_complete_screen_off_retry_then_voicemail(self):
+        """Test that handle_sticky_dial_complete performs a 25s WebRTC SIP retry when mobile screen wakes up, then falls back to voicemail on retry=1."""
+        mock_db = MagicMock(spec=Session)
+        mock_emp = MagicMock()
+        mock_emp.id = 45
+        mock_emp.first_name = "Anusha"
+        mock_emp.full_name = "Anusha"
+
+        mock_ep = MagicMock()
+        mock_ep.staff_id = 45
+        mock_ep.plivo_username = "myntos_staff_1_45_abcd1234"
+        mock_ep.endpoint_username = "myntos_staff_1_45_abcd1234"
+        mock_ep.endpoint_alias = "staff_1_45"
+        mock_ep.is_active = True
+
+        def query_side_effect(model):
+            q = MagicMock()
+            q.filter.return_value = q
+            q.order_by.return_value = q
+            if getattr(model, "__name__", "") in ("Employee", "StaffEmployee"):
+                q.first.return_value = mock_emp
+            elif getattr(model, "__name__", "") == "TelephonyPlivoEndpoint":
+                q.first.return_value = mock_ep
+            else:
+                q.first.return_value = None
+            return q
+
+        mock_db.query.side_effect = query_side_effect
+
+        # 1st attempt timeout (retry="0") -> should return <Wait length="3" /> + <Dial timeout="25"> with retry=1
+        xml_retry = CallFlowInterpreter.handle_sticky_dial_complete(
+            db=mock_db,
+            form_data={"DialStatus": "no-answer", "From": "+919876543210", "To": "+918031728899"},
+            query_params={"staff_id": "45", "session_id": "sess_test_1", "retry": "0"},
+        )
+        self.assertIn('<Wait length="3" />', xml_retry)
+        self.assertIn('<User>sip:myntos_staff_1_45_abcd1234@phone.plivo.com</User>', xml_retry)
+        self.assertIn("retry=1", xml_retry)
+
+        # 2nd attempt timeout (retry="1") -> should proceed to executive voicemail
+        xml_vm = CallFlowInterpreter.handle_sticky_dial_complete(
+            db=mock_db,
+            form_data={"DialStatus": "no-answer", "From": "+919876543210", "To": "+918031728899"},
+            query_params={"staff_id": "45", "session_id": "sess_test_1", "retry": "1"},
+        )
+        self.assertIn("<Record", xml_vm)
+        self.assertIn("currently assisting another client", xml_vm)
+        print("✓ Screen-Off Sticky Dial Retry: Verified 1st timeout retries SIP after 3s wakeup, 2nd timeout goes to voicemail")
+
+    def test_mobile_call_notifier_ringing_lookup(self):
+        """Test MobileCallNotifier stores active ringing call and marks cancelled calls for screen-off standby polling."""
+        from app.services.telephony.mobile_push_service import MobileCallNotifier, _CALL_STATE_CACHE
+        _CALL_STATE_CACHE.clear()
+        mock_db = MagicMock(spec=Session)
+        q = MagicMock()
+        q.filter.return_value = q
+        q.all.return_value = []
+        q.first.return_value = None
+        mock_db.query.return_value = q
+
+        MobileCallNotifier.notify_inbound_call(
+            caller_phone="+919876543210",
+            called_did="+918031728899",
+            provider_call_id="uuid_99",
+            call_session_id="sess_screenoff_99",
+            target_staff_ids=[45],
+            company_id=1,
+            lead_name="Returning Customer",
+            db=mock_db,
+        )
+        active = MobileCallNotifier.get_active_ringing_call_for_staff(45)
+        self.assertIsNotNone(active)
+        self.assertEqual(active["state"], "ringing")
+        self.assertEqual(active["payload"]["call_session_id"], "sess_screenoff_99")
+
+        MobileCallNotifier.notify_call_cancelled(
+            call_session_id="sess_screenoff_99",
+            provider_call_id="uuid_99",
+            target_staff_ids=[45],
+            company_id=1,
+            reason="caller_hangup",
+            db=mock_db,
+        )
+        cancelled = MobileCallNotifier.get_active_ringing_call_for_staff(45)
+        self.assertIsNotNone(cancelled)
+        self.assertEqual(cancelled["state"], "cancelled")
+        print("✓ MobileCallNotifier Standby Cache: Verified active ringing and cancelled call state retrieval")
+
+
 if __name__ == "__main__":
     unittest.main()
+

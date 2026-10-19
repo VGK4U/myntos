@@ -8031,23 +8031,23 @@ const server = http.createServer(async (req, res) => {
   // Direct APK / Mobile App Download & Portal Landing Page Handling
   const isApkPath = [
     '/mobile.app', '/mobile.apk', '/download/mobile.app', '/download/mobile.apk',
-    '/download-app', '/download/apk', '/myntreal.apk', '/public/myntreal.apk',
+    '/download-app', '/download-apk', '/download/apk', '/myntreal.apk', '/public/myntreal.apk',
     '/app.apk', '/app.app', '/download/app', '/app', '/app/', '/mobile-app', '/mobile-app/',
-    '/myntreal', '/apk', '/download', '/get-app'
+    '/myntreal', '/apk', '/download', '/get-app', '/api/v1/app/download'
   ].includes(reqPathLower);
 
   if (isApkPath) {
     const apkCandidates = [
-      path.join(__dirname, 'public', 'mobile.apk'),
       path.join(__dirname, 'public', 'MyntReal.apk'),
-      path.join(__dirname, 'mobile.apk'),
+      path.join(__dirname, 'public', 'mobile.apk'),
       path.join(__dirname, 'MyntReal.apk'),
-      path.join(process.cwd(), 'public', 'mobile.apk'),
+      path.join(__dirname, 'mobile.apk'),
       path.join(process.cwd(), 'public', 'MyntReal.apk'),
-      path.join(process.cwd(), 'frontend', 'public', 'mobile.apk'),
+      path.join(process.cwd(), 'public', 'mobile.apk'),
       path.join(process.cwd(), 'frontend', 'public', 'MyntReal.apk'),
-      path.join(process.cwd(), 'MyntReal_Latest', 'frontend', 'public', 'mobile.apk'),
+      path.join(process.cwd(), 'frontend', 'public', 'mobile.apk'),
       path.join(process.cwd(), 'MyntReal_Latest', 'frontend', 'public', 'MyntReal.apk'),
+      path.join(process.cwd(), 'MyntReal_Latest', 'frontend', 'public', 'mobile.apk'),
       path.join(__dirname, 'public', 'mobile.app'),
       path.join(__dirname, '../mobile/android/app/build/outputs/apk/debug/MyntReal-1.0-02-Aug-2026.apk')
     ];
@@ -8062,18 +8062,54 @@ const server = http.createServer(async (req, res) => {
     const isDirect = urlParts.searchParams.has('direct') || 
                      reqPathLower.endsWith('.apk') || 
                      reqPathLower.endsWith('.app') || 
+                     reqPathLower === '/download/apk' ||
+                     reqPathLower === '/download-apk' ||
+                     reqPathLower === '/api/v1/app/download' ||
                      (req.headers['accept'] && req.headers['accept'].includes('application/vnd.android.package-archive'));
 
     if (isDirect) {
       if (selectedApk) {
         const stat = fs.statSync(selectedApk);
-        res.writeHead(200, {
+        const totalSize = stat.size;
+        const baseHeaders = {
           'Content-Type': 'application/vnd.android.package-archive',
-          'Content-Length': stat.size,
           'Content-Disposition': 'attachment; filename="MyntReal.apk"',
-          'Cache-Control': 'public, max-age=86400'
-        });
-        fs.createReadStream(selectedApk).pipe(res);
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Content-Type-Options': 'nosniff'
+        };
+
+        if (req.method === 'HEAD') {
+          res.writeHead(200, { ...baseHeaders, 'Content-Length': totalSize });
+          res.end();
+          return;
+        }
+
+        const range = req.headers.range;
+        if (range) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+          if (!isNaN(start) && !isNaN(end) && start >= 0 && end < totalSize && start <= end) {
+            const chunkSize = (end - start) + 1;
+            res.writeHead(206, {
+              ...baseHeaders,
+              'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+              'Content-Length': chunkSize
+            });
+            const stream = fs.createReadStream(selectedApk, { start, end });
+            res.on('close', () => stream.destroy());
+            stream.on('error', () => { if (!res.writableEnded) res.end(); });
+            stream.pipe(res);
+            return;
+          }
+        }
+
+        res.writeHead(200, { ...baseHeaders, 'Content-Length': totalSize });
+        const stream = fs.createReadStream(selectedApk);
+        res.on('close', () => stream.destroy());
+        stream.on('error', () => { if (!res.writableEnded) res.end(); });
+        stream.pipe(res);
         return;
       }
     }
@@ -8084,10 +8120,10 @@ const server = http.createServer(async (req, res) => {
     if (fs.existsSync(downloadPagePath)) {
       downloadPageHtml = fs.readFileSync(downloadPagePath, 'utf8');
     } else {
-      downloadPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Download MyntReal App</title></head><body><a href="/download/mobile.apk">Download APK</a></body></html>`;
+      downloadPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Download MyntReal App</title></head><body><a href="/api/v1/app/download">Download APK</a></body></html>`;
     }
 
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(downloadPageHtml);
     return;
   }

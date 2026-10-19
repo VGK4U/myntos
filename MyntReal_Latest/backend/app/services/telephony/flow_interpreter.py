@@ -554,7 +554,10 @@ class CallFlowInterpreter:
 
         # Gate 4b: Sticky Agent (Recent-Caller Callback Routing) - HARD PROTECTED INVARIANT
         if cls._is_qualified_sticky_caller(db, caller_phone, company_id):
-            sticky_agent_xml = cls._check_sticky_agent(db, caller_phone, called_did, company_id, now_ist)
+            sticky_agent_xml = cls._check_sticky_agent(
+                db, caller_phone, called_did, company_id, now_ist,
+                session_id=session_id, call_uuid=provider_call_id
+            )
             if sticky_agent_xml:
                 logger.info(f"[FLOW-INTERPRETER] Sticky agent routed caller {caller_phone} during open hours ({bh_reason}).")
                 return sticky_agent_xml
@@ -1083,7 +1086,14 @@ class CallFlowInterpreter:
 
             # ── 3. CALLER LOOKUP ─────────────────────────────────────────────
             elif n_type == 'caller_lookup':
-                has_owner = bool(crm_lead and (crm_lead.telecaller_id or crm_lead.primary_owner_id))
+                has_owner = bool(
+                    crm_lead and (
+                        crm_lead.telecaller_id or
+                        crm_lead.primary_owner_id or
+                        getattr(crm_lead, 'handler_id', None) or
+                        getattr(crm_lead, 'assigned_to', None)
+                    )
+                )
                 next_condition = 'assigned_owner' if has_owner else 'unassigned_or_generic'
 
             # ── 4. SPEAK PROMPT ──────────────────────────────────────────────
@@ -1202,9 +1212,9 @@ class CallFlowInterpreter:
 
             # ── 9. VOICEMAIL ─────────────────────────────────────────────────
             elif n_type == 'voicemail':
-                prompt = xml_escape(n_cfg.get('prompt_text', 'Please leave a message after the tone.'))
+                prompt = xml_escape(n_cfg.get('prompt_text') or n_cfg.get('prompt') or 'Please leave a message after the tone.')
                 voice = n_cfg.get('voice', 'Polly.Aditi')
-                max_len = n_cfg.get('max_duration_seconds', 120)
+                max_len = n_cfg.get('max_duration_seconds') or n_cfg.get('max_length_seconds') or 120
                 finish_key = n_cfg.get('finish_on_key', '#')
                 rec_action = f"{base_api_url}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
 
@@ -1248,6 +1258,13 @@ class CallFlowInterpreter:
                 if c == next_condition.lower():
                     matched_edge = e
                     break
+
+            if not matched_edge and next_condition == 'unassigned_or_generic':
+                for e in node_outs:
+                    c = (e.get('condition') or '').strip().lower()
+                    if c in ('unassigned_or_generic', 'unmatched', 'unassigned', 'no_match'):
+                        matched_edge = e
+                        break
 
             if not matched_edge and next_condition.startswith('digit_'):
                 d_val = next_condition.split('_')[1]
@@ -2083,9 +2100,39 @@ class CallFlowInterpreter:
             except Exception:
                 pass
 
+        domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
+        retry_flag = str(query_params.get("retry") or form_data.get("retry") or "").strip()
+
+        # Screen-Off Mobile Wake-Up Retry:
+        # If the initial dial ended without answer (e.g. mobile WebRTC client was waking from screen-off
+        # or cellular SIM leg returned busy/unallocated), attempt one direct WebRTC SIP dial after a 3s wake buffer.
+        if emp and retry_flag != "1":
+            try:
+                endpoint = db.query(TelephonyPlivoEndpoint).filter(
+                    TelephonyPlivoEndpoint.staff_id == emp.id
+                ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
+                if endpoint and endpoint.plivo_username:
+                    sip_uri = f"sip:{endpoint.plivo_username}@phone.plivo.com"
+                    rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback?session_id={session_id}"
+                    dial_cb = f"{domain}/api/v1/telephony/plivo/dial-callback?session_id={session_id}&amp;direction=inbound"
+                    retry_action_url = (
+                        f"{domain}/api/v1/telephony/plivo/ivr/sticky-dial-complete"
+                        f"?staff_id={emp.id}&amp;called_did={called_did}&amp;caller_phone={caller_phone}"
+                        f"&amp;session_id={session_id}&amp;retry=1"
+                    )
+                    logger.info(f"[STICKY-DIAL-COMPLETE] Attempting screen-off wake-up WebRTC SIP retry for {emp.full_name} ({sip_uri})")
+                    return cls._generate_xml_response([
+                        f'<Wait length="3" />',
+                        f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" maxLength="28800" callbackUrl="{rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                        f'<Dial timeout="25" callerId="{called_did}" action="{retry_action_url}" method="POST" callbackUrl="{dial_cb}" callbackMethod="POST">',
+                        f'  <User>{sip_uri}</User>',
+                        f'</Dial>'
+                    ])
+            except Exception as retry_err:
+                logger.warning(f"[STICKY-DIAL-COMPLETE] Wake-up retry check notice: {retry_err}")
+
         emp_name = emp.full_name if emp else "Your executive"
         emp_first = emp.first_name if emp else "our team"
-        domain = (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
         voicemail_url = f"{domain}/api/v1/telephony/plivo/voicemail?staff_id={staff_id_raw or ''}&amp;session_id={session_id}"
 
         unavailable_prompt = f"Welcome back. Your executive, {emp_name}, is currently assisting another client. Please leave a personal message after the tone, and {emp_first} will return your call promptly."
@@ -2094,4 +2141,5 @@ class CallFlowInterpreter:
             f'<Record maxLength="120" finishOnKey="#" action="{voicemail_url}" playBeep="true" />',
             f'<Hangup />'
         ])
+
 

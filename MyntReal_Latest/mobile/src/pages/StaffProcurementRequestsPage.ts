@@ -5,6 +5,8 @@
  * Features: vendor column, updated timestamp, status actions, WhatsApp send
  */
 
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 
@@ -102,8 +104,8 @@ export class StaffProcurementRequestsPage {
       <div class="page-container" style="background:#f1f5f9;min-height:100vh;padding-bottom:80px;">
         ${PageHeader.render({ title: 'Procurement Requests', showBack: true })}
 
-        <div style="padding:12px 14px 6px;">
-          <select id="prStatusFilter" onchange="window._prFilterChange()" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;background:#fff;">
+        <div style="padding:12px 14px 6px;display:flex;gap:8px;align-items:center;">
+          <select id="prStatusFilter" onchange="window._prFilterChange()" style="flex:1;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;background:#fff;">
             <option value="">All Statuses</option>
             <option value="DRAFT">Draft</option>
             <option value="SENT_TO_VENDORS">Sent to Vendors</option>
@@ -114,9 +116,113 @@ export class StaffProcurementRequestsPage {
             <option value="CANCELLED">Cancelled</option>
             <option value="RETURNED_FOR_QUALITY">Returned for Quality</option>
           </select>
+          <button onclick="window._prOpenTallyHub()" style="padding:10px 12px;background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(13,148,136,.25);">
+            ⇄ Tally XML
+          </button>
         </div>
 
         <div id="prList" style="padding:8px 14px;"></div>
+
+        <!-- Tally XML Sync & Download Sheet (DC_TALLY_SYNC_001) -->
+        <div id="prTallySheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1050;overflow-y:auto;">
+          <div style="background:#fff;margin:16px 12px;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);">
+            <div style="background:linear-gradient(135deg,#0f172a,#0f766e);padding:15px 18px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="color:#fff;font-size:15px;font-weight:800;">Tally XML Sync & Download</div>
+                <div style="color:#99f6e4;font-size:11px;">Preserve MyntOS Voucher Nos · WVV Verified</div>
+              </div>
+              <button onclick="window._prCloseTallyHub()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;">✕</button>
+            </div>
+            <div style="padding:14px 16px;">
+              <div id="prTallyKpiRow" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;text-align:center;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;">
+                  <div style="font-size:10px;color:#64748b;font-weight:700;">TOTAL</div>
+                  <div id="prTallyKpiTotal" style="font-size:16px;font-weight:800;color:#0f172a;">—</div>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px;">
+                  <div style="font-size:10px;color:#b45309;font-weight:700;">PENDING / MOD</div>
+                  <div id="prTallyKpiPending" style="font-size:16px;font-weight:800;color:#d97706;">—</div>
+                </div>
+                <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:8px;">
+                  <div style="font-size:10px;color:#047857;font-weight:700;">SYNCED</div>
+                  <div id="prTallyKpiSynced" style="font-size:16px;font-weight:800;color:#059669;">—</div>
+                </div>
+              </div>
+
+              <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">COMPANY</label>
+              <select id="prTallyCompany" onchange="window._prRefreshTallySummary()" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:13px;margin-bottom:10px;background:#fff;"></select>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">SEGMENT</label>
+                  <select id="prTallySegment" onchange="window._prRefreshTallySummary()" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;background:#fff;">
+                    <option value="">All Segments</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">TALLY VERSION</label>
+                  <select id="prTallyVersion" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;background:#fff;">
+                    <option value="TALLY_PRIME_4">TallyPrime 3.0 / 4.0+</option>
+                    <option value="TALLY_PRIME_2">TallyPrime 1.x / 2.x</option>
+                    <option value="TALLY_ERP9">Tally.ERP 9 Rel 6.x</option>
+                    <option value="UNIVERSAL">Universal XML</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">PERIOD</label>
+                  <select id="prTallyPeriod" onchange="window._prTallyPeriodChange()" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;background:#fff;">
+                    <option value="THIS_FY">Current FY (Apr–Mar)</option>
+                    <option value="THIS_MONTH">This Month</option>
+                    <option value="LAST_MONTH">Last Month</option>
+                    <option value="THIS_QUARTER">This Quarter</option>
+                    <option value="TODAY">Today</option>
+                    <option value="ALL_TIME">All Dates</option>
+                    <option value="CUSTOM">Custom Date Range</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">VOUCHER MODE</label>
+                  <select id="prTallyMode" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;background:#fff;">
+                    <option value="AUTO">Hybrid Auto (Item + Ledger)</option>
+                    <option value="ACCOUNTING_INVOICE">Accounting Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="prTallyCustomDates" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">FROM DATE</label>
+                  <input type="date" id="prTallyFrom" onchange="window._prRefreshTallySummary()" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;">
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">TO DATE</label>
+                  <input type="date" id="prTallyTo" onchange="window._prRefreshTallySummary()" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;">
+                </div>
+              </div>
+
+              <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:4px;">MODULES TO EXPORT</label>
+              <select id="prTallyScope" onchange="window._prRefreshTallySummary()" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;margin-bottom:12px;background:#fff;">
+                <option value="ALL">All Accounting Modules (PO + Purchase + Sales + Cash + JV)</option>
+                <option value="PO_PURCHASE">Procurement & Purchase Invoices Only</option>
+              </select>
+
+              <button onclick="window._prDownloadTallyXml()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;margin-bottom:12px;">
+                ⬇ Download Tally XML (Masters + Vouchers)
+              </button>
+
+              <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:4px;">
+                <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;">Upload Tally Daybook XML / CSV to Reconcile</div>
+                <input type="file" id="prTallyFile" accept=".xml,.csv" style="width:100%;font-size:12px;margin-bottom:8px;">
+                <button onclick="window._prReconcileTallyFile()" style="width:100%;padding:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:10px;font-size:12px;font-weight:700;">
+                  ⇄ Upload & Reconcile with MyntOS
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Detail sheet -->
         <div id="prDetailSheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;overflow-y:auto;">
@@ -207,6 +313,19 @@ export class StaffProcurementRequestsPage {
     };
     window._prOpenWebWA = () => this.doOpenWebWA();
     window._prSendWAAPI = () => this.doSendWAAPI();
+    window._prOpenTallyHub = () => this.openTallyHub();
+    window._prCloseTallyHub = () => {
+      document.getElementById('prTallySheet')!.style.display = 'none';
+    };
+    window._prTallyPeriodChange = () => {
+      const period = (document.getElementById('prTallyPeriod') as HTMLSelectElement).value;
+      const customBox = document.getElementById('prTallyCustomDates')!;
+      customBox.style.display = period === 'CUSTOM' ? 'grid' : 'none';
+      this.refreshTallySummary();
+    };
+    window._prRefreshTallySummary = () => this.refreshTallySummary();
+    window._prDownloadTallyXml = () => this.downloadTallyXml();
+    window._prReconcileTallyFile = () => this.reconcileTallyFile();
   }
 
   private updateList(): void {
@@ -434,6 +553,181 @@ export class StaffProcurementRequestsPage {
     }
   }
 
+  private async openTallyHub(): Promise<void> {
+    const sheet = document.getElementById('prTallySheet');
+    if (sheet) sheet.style.display = 'block';
+    await this.refreshTallySummary();
+  }
+
+  private async refreshTallySummary(): Promise<void> {
+    try {
+      const compEl = document.getElementById('prTallyCompany') as HTMLSelectElement | null;
+      const segEl = document.getElementById('prTallySegment') as HTMLSelectElement | null;
+      const periodEl = document.getElementById('prTallyPeriod') as HTMLSelectElement | null;
+      const fromEl = document.getElementById('prTallyFrom') as HTMLInputElement | null;
+      const toEl = document.getElementById('prTallyTo') as HTMLInputElement | null;
+      const scopeEl = document.getElementById('prTallyScope') as HTMLSelectElement | null;
+
+      const companyId = compEl?.value || '';
+      const segmentId = segEl?.value || '';
+      const period = periodEl?.value || 'THIS_FY';
+      const dateFrom = fromEl?.value || '';
+      const dateTo = toEl?.value || '';
+      const scope = scopeEl?.value || 'ALL';
+      const modules = scope === 'PO_PURCHASE'
+        ? 'MASTERS,PURCHASE_ORDERS,PURCHASE_INVOICES'
+        : 'MASTERS,PURCHASE_ORDERS,PURCHASE_INVOICES,SALES_INVOICES,CASH_ENTRIES,LEDGERS_JV';
+
+      let url = `/staff/accounts/tally/sync-summary?period_preset=${encodeURIComponent(period)}&modules=${encodeURIComponent(modules)}`;
+      if (companyId) url += `&company_id=${encodeURIComponent(companyId)}`;
+      if (segmentId) url += `&segment_id=${encodeURIComponent(segmentId)}`;
+      if (period === 'CUSTOM' && dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+      if (period === 'CUSTOM' && dateTo) url += `&date_to=${encodeURIComponent(dateTo)}`;
+
+      const resp: any = await apiService.get(url);
+      if (resp && resp.companies && compEl && compEl.options.length === 0) {
+        compEl.innerHTML = resp.companies.map((c: any) =>
+          `<option value="${c.id}" ${c.id === resp.company_id ? 'selected' : ''}>${c.company_name}</option>`
+        ).join('');
+      }
+      if (resp && resp.segments && segEl) {
+        const curSeg = segEl.value;
+        segEl.innerHTML = `<option value="">All Segments</option>` + resp.segments.map((s: any) =>
+          `<option value="${s.id}" ${String(s.id) === String(curSeg) ? 'selected' : ''}>${s.segment_name}</option>`
+        ).join('');
+      }
+      const kpi = resp?.kpi || {};
+      const totEl = document.getElementById('prTallyKpiTotal');
+      const pendEl = document.getElementById('prTallyKpiPending');
+      const syncEl = document.getElementById('prTallyKpiSynced');
+      if (totEl) totEl.textContent = String(kpi.total_vouchers ?? 0);
+      if (pendEl) pendEl.textContent = String((kpi.pending_sync ?? 0) + (kpi.modified_pending_sync ?? 0) + (kpi.cancelled_pending_sync ?? 0));
+      if (syncEl) syncEl.textContent = String(kpi.synced ?? 0);
+    } catch (e) {
+      console.error('[StaffProcurementRequestsPage] tally summary error:', e);
+    }
+  }
+
+  private async downloadTallyXml(): Promise<void> {
+    try {
+      const compEl = document.getElementById('prTallyCompany') as HTMLSelectElement | null;
+      const segEl = document.getElementById('prTallySegment') as HTMLSelectElement | null;
+      const verEl = document.getElementById('prTallyVersion') as HTMLSelectElement | null;
+      const periodEl = document.getElementById('prTallyPeriod') as HTMLSelectElement | null;
+      const modeEl = document.getElementById('prTallyMode') as HTMLSelectElement | null;
+      const fromEl = document.getElementById('prTallyFrom') as HTMLInputElement | null;
+      const toEl = document.getElementById('prTallyTo') as HTMLInputElement | null;
+      const scopeEl = document.getElementById('prTallyScope') as HTMLSelectElement | null;
+
+      const scope = scopeEl?.value || 'ALL';
+      const modules = scope === 'PO_PURCHASE'
+        ? ['MASTERS', 'PURCHASE_ORDERS', 'PURCHASE_INVOICES']
+        : ['MASTERS', 'PURCHASE_ORDERS', 'PURCHASE_INVOICES', 'SALES_INVOICES', 'CASH_ENTRIES', 'LEDGERS_JV'];
+
+      const payload: any = {
+        company_id: compEl?.value ? Number(compEl.value) : undefined,
+        segment_id: segEl?.value ? Number(segEl.value) : undefined,
+        tally_version: verEl?.value || 'TALLY_PRIME_4',
+        period_preset: periodEl?.value || 'THIS_FY',
+        voucher_mode: modeEl?.value || 'AUTO',
+        modules,
+        include_masters: true,
+        only_unsynced: false,
+      };
+      if (payload.period_preset === 'CUSTOM') {
+        payload.date_from = fromEl?.value || undefined;
+        payload.date_to = toEl?.value || undefined;
+      }
+
+      const resp: any = await apiService.post('/staff/accounts/tally/export-xml?return_json=true', payload);
+      if (resp && resp.xml_content) {
+        const fileName = resp.file_name || resp.filename || 'MyntOS_Tally_Export.xml';
+        const voucherCnt = resp.voucher_count ?? resp.vouchers_count ?? 0;
+        const isNative =
+          typeof Capacitor !== 'undefined' &&
+          typeof Capacitor.isNativePlatform === 'function' &&
+          Capacitor.isNativePlatform();
+
+        if (isNative) {
+          try {
+            let sharedViaFile = false;
+            if (typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function') {
+              try {
+                const xmlFile = new File([resp.xml_content], fileName, { type: 'application/xml' });
+                if (navigator.canShare({ files: [xmlFile] })) {
+                  await navigator.share({ title: fileName, files: [xmlFile] });
+                  sharedViaFile = true;
+                }
+              } catch (_fileShareErr) {
+                sharedViaFile = false;
+              }
+            }
+            if (!sharedViaFile) {
+              await Share.share({
+                title: fileName,
+                text: resp.xml_content,
+                dialogTitle: 'Export or Save Tally XML',
+              });
+            }
+            this._showToast(`Exported ${voucherCnt} Tally vouchers (${fileName})`, '#0f766e');
+          } catch (shareErr: any) {
+            const errMsg = String(shareErr?.message || shareErr || '').toLowerCase();
+            if (errMsg.includes('cancel') || errMsg.includes('abort') || errMsg.includes('dismiss')) {
+              this._showToast('Tally XML share cancelled', '#64748b');
+            } else {
+              this._showToast('Native XML share failed: ' + (shareErr?.message || 'Unable to open share sheet'), '#dc2626');
+            }
+          }
+        } else {
+          const blob = new Blob([resp.xml_content], { type: 'application/xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+          }, 500);
+          this._showToast(`Downloaded ${voucherCnt} Tally vouchers`, '#0f766e');
+        }
+        await this.refreshTallySummary();
+      } else {
+        this._showToast('Failed to generate Tally XML', '#dc2626');
+      }
+    } catch (e: any) {
+      this._showToast('Export error: ' + (e?.message || 'Unknown error'), '#dc2626');
+    }
+  }
+
+  private async reconcileTallyFile(): Promise<void> {
+    const fileInput = document.getElementById('prTallyFile') as HTMLInputElement | null;
+    const compEl = document.getElementById('prTallyCompany') as HTMLSelectElement | null;
+    if (!fileInput || !fileInput.files || !fileInput.files.length) {
+      this._showToast('Select a Tally Daybook XML or CSV file first', '#d97706');
+      return;
+    }
+    const file = fileInput.files[0];
+    try {
+      const content = await file.text();
+      const resp: any = await apiService.post('/staff/accounts/tally/import-reconcile', {
+        company_id: compEl?.value ? Number(compEl.value) : undefined,
+        file_name: file.name,
+        file_content: content,
+      });
+      if (resp && resp.success) {
+        const ambigTxt = resp.ambiguous_count ? `, ${resp.ambiguous_count} ambiguous` : '';
+        this._showToast(`Reconciled: ${resp.matched_synced || 0} synced, ${resp.mismatched || 0} mismatch${ambigTxt}`, '#16a34a');
+        await this.refreshTallySummary();
+      } else {
+        this._showToast(resp?.detail || 'Reconciliation failed', '#dc2626');
+      }
+    } catch (e: any) {
+      this._showToast('Reconcile error: ' + (e?.message || 'Unknown error'), '#dc2626');
+    }
+  }
+
   private _showToast(msg: string, bg: string): void {
     const t = document.createElement('div');
     t.style.cssText = `position:fixed;top:20px;right:16px;left:16px;background:${bg};color:#fff;padding:12px 16px;border-radius:12px;z-index:9999;font-weight:700;font-size:13px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.2);`;
@@ -456,5 +750,11 @@ declare global {
     _prCloseWA: () => void;
     _prOpenWebWA: () => void;
     _prSendWAAPI: () => void;
+    _prOpenTallyHub: () => void;
+    _prCloseTallyHub: () => void;
+    _prTallyPeriodChange: () => void;
+    _prRefreshTallySummary: () => void;
+    _prDownloadTallyXml: () => void;
+    _prReconcileTallyFile: () => void;
   }
 }

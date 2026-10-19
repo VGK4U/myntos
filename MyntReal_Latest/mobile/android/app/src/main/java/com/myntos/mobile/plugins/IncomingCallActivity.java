@@ -245,6 +245,9 @@ public class IncomingCallActivity extends AppCompatActivity {
         stopRingtoneAndVibration();
         dismissNotification();
 
+        // Notify Capacitor WebRTC bridge to reject live Plivo SIP leg
+        IncomingCallPlugin.notifyCallDeclined(callSessionId, providerCallId);
+
         // Send async rejection to backend
         sendCallRejectAsync(callSessionId, providerCallId);
 

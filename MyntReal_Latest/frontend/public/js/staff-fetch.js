@@ -321,4 +321,33 @@
     if (typeof window.staffFetchJson !== 'function') {
         window.staffFetchJson = staffFetchJson;
     }
+
+    // DC_TALLY_SYNC_001: Auto-load Tally Sync Hub on all Staff Accounts pages (idempotent with staff_header.js)
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const _p = (window.location.pathname || '').toLowerCase();
+        if (_p.includes('staff_accounts') || _p.includes('/staff/accounts')) {
+            const _loadTallyHub = function () {
+                if (
+                    window.__MYNTOS_TALLY_HUB_LOADING__ ||
+                    window.__MYNTOS_TALLY_HUB_INITIALIZED__ ||
+                    document.getElementById('dc-tally-sync-hub-script') ||
+                    document.querySelector('script[src*="tally-sync-hub.js"]')
+                ) {
+                    return;
+                }
+                window.__MYNTOS_TALLY_HUB_LOADING__ = true;
+                const s = document.createElement('script');
+                s.id = 'dc-tally-sync-hub-script';
+                s.src = '/public/js/tally-sync-hub.js?v=20261019b';
+                s.defer = true;
+                document.head.appendChild(s);
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', _loadTallyHub);
+            } else {
+                _loadTallyHub();
+            }
+        }
+    }
 })();
+

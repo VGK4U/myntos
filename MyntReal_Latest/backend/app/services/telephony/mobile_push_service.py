@@ -114,13 +114,23 @@ class MobilePushService:
             )
             db.add(record)
 
-        # Ensure Plivo endpoint is marked registered
+        # Ensure Plivo endpoint is provisioned and marked registered
         endpoint = db.query(TelephonyPlivoEndpoint).filter(
-            TelephonyPlivoEndpoint.staff_id == staff_id,
-            TelephonyPlivoEndpoint.company_id == company_id
-        ).first()
+            TelephonyPlivoEndpoint.staff_id == staff_id
+        ).order_by(TelephonyPlivoEndpoint.id.desc()).first()
+        if not endpoint:
+            try:
+                from app.services.telephony.plivo_jwt_service import PlivoJWTService
+                endpoint = PlivoJWTService.get_or_create_staff_endpoint(
+                    db=db,
+                    company_id=company_id,
+                    staff=staff
+                )
+            except Exception as ep_err:
+                logger.warning(f"[MOBILE-PUSH] Notice auto-provisioning Plivo endpoint for staff {staff_id}: {ep_err}")
         if endpoint:
             endpoint.is_registered = True
+            endpoint.last_registered_at = now
 
         db.commit()
         db.refresh(record)
@@ -280,12 +290,23 @@ class MobileCallNotifier:
             _CALL_STATE_CACHE[cache_key] = {
                 "state": "ringing",
                 "event_id": call_event_id,
+                "staff_id": staff_id,
+                "call_session_id": payload_data["call_session_id"],
+                "payload": payload_data,
                 "expires_at": time.time() + 60.0  # 60s TTL
             }
 
             tokens = []
             if db:
                 tokens = MobilePushService.get_active_tokens_for_staff(db, company_id, staff_id)
+                if not tokens:
+                    staff_obj = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+                    if staff_obj and getattr(staff_obj, "base_company_id", None) and staff_obj.base_company_id != company_id:
+                        allowed_comps = [staff_obj.base_company_id]
+                        if isinstance(getattr(staff_obj, "data_companies", None), list):
+                            allowed_comps.extend(staff_obj.data_companies)
+                        if company_id in allowed_comps or company_id in (1, 4):
+                            tokens = MobilePushService.get_active_tokens_for_staff(db, staff_obj.base_company_id, staff_id)
 
             if not tokens:
                 logger.debug(f"[MOBILE-PUSH] No active push tokens found for staff {staff_id} in company {company_id}")
@@ -301,6 +322,26 @@ class MobileCallNotifier:
             "dispatched_count": len(results),
             "results": results
         }
+
+    @classmethod
+    def get_active_ringing_call_for_staff(cls, staff_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Returns the most recent active ringing (or recently cancelled) call payload
+        for the given staff_id from the in-memory call state cache.
+        Used by mobile devices to poll/wake when screen is off or FCM is unavailable.
+        """
+        _prune_expired_call_states()
+        now = time.time()
+        suffix = f"_{staff_id}"
+        best_entry = None
+        best_ts = 0.0
+        for key, entry in list(_CALL_STATE_CACHE.items()):
+            if key.endswith(suffix) or entry.get("staff_id") == staff_id:
+                exp = entry.get("expires_at", 0.0)
+                if exp > now and exp >= best_ts:
+                    best_ts = exp
+                    best_entry = entry
+        return best_entry
 
     @classmethod
     def notify_call_cancelled(

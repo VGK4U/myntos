@@ -17485,7 +17485,7 @@ async def proxy_whatsapp_logout():
 @app.get("/mobile.app", include_in_schema=False)
 @app.get("/download/mobile.apk", include_in_schema=False)
 @app.get("/download/mobile.app", include_in_schema=False)
-@app.get("/download-app", include_in_schema=False)
+@app.get("/download-apk", include_in_schema=False)
 @app.get("/download/apk", include_in_schema=False)
 @app.get("/MyntReal.apk", include_in_schema=False)
 @app.get("/public/MyntReal.apk", include_in_schema=False)

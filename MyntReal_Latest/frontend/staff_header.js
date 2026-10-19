@@ -1566,6 +1566,42 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         }
     });
 
+    // DC_TALLY_SYNC_001 (Fix 2): Shared idempotent loader for Tally Sync Hub across all Staff Accounts pages
+    // (including Sales Invoices, Purchase Invoices, Procurement, and Ledger Masters)
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const _path = (window.location.pathname || '').toLowerCase();
+        if (
+            _path.includes('staff_accounts') ||
+            _path.includes('/staff/accounts') ||
+            _path.includes('sales_invoices') ||
+            _path.includes('purchase_invoices') ||
+            _path.includes('procurement') ||
+            _path.includes('ledger_masters')
+        ) {
+            const _ensureTallyHubScript = function () {
+                if (
+                    window.__MYNTOS_TALLY_HUB_LOADING__ ||
+                    window.__MYNTOS_TALLY_HUB_INITIALIZED__ ||
+                    document.getElementById('dc-tally-sync-hub-script') ||
+                    document.querySelector('script[src*="tally-sync-hub.js"]')
+                ) {
+                    return;
+                }
+                window.__MYNTOS_TALLY_HUB_LOADING__ = true;
+                const s = document.createElement('script');
+                s.id = 'dc-tally-sync-hub-script';
+                s.src = '/public/js/tally-sync-hub.js?v=20261019b';
+                s.defer = true;
+                document.head.appendChild(s);
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', _ensureTallyHubScript);
+            } else {
+                _ensureTallyHubScript();
+            }
+        }
+    }
+
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = typeof StaffHeader !== 'undefined' ? StaffHeader : (typeof window !== 'undefined' ? window.StaffHeader : null);
     }

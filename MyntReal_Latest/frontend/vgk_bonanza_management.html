@@ -3643,7 +3643,12 @@ function switchPosterTab(tab) {
 }
 
 function handleCustomCreativeUpload(e) {
-    const file = e.target.files[0];
+    let file = null;
+    if (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        file = e.dataTransfer.files[0];
+    } else if (e && e.target && e.target.files && e.target.files.length) {
+        file = e.target.files[0];
+    }
     if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
@@ -3656,6 +3661,9 @@ function handleCustomCreativeUpload(e) {
             }
         };
         reader.readAsDataURL(file);
+    }
+    if (e && e.target && 'value' in e.target) {
+        e.target.value = '';
     }
 }
 
@@ -3945,15 +3953,16 @@ function triggerAchieverPhotoUpload(imgId) {
 }
 
 function handleAchieverPhotoUpload(e) {
-    const file = e.target.files[0];
+    const file = e && e.target && e.target.files && e.target.files[0];
     if (file && currentEditingTargetImgId) {
         const reader = new FileReader();
         reader.onload = function(evt) {
-            const el = document.getElementById(currentEditingTargetImgId);
+            const el = document.getElementById(currentEditingTargetImgId) || document.getElementById(currentEditingTargetImgId + '_avatar');
             if (el) {
                 if (el.tagName === 'IMG') {
                     el.src = evt.target.result;
                     el.style.display = 'block';
+                    if (el.nextElementSibling) el.nextElementSibling.style.display = 'none';
                 } else {
                     const parent = el.parentElement;
                     if (parent) {
@@ -3963,6 +3972,9 @@ function handleAchieverPhotoUpload(e) {
             }
         };
         reader.readAsDataURL(file);
+    }
+    if (e && e.target && 'value' in e.target) {
+        e.target.value = '';
     }
 }
 

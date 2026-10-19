@@ -12,6 +12,8 @@ Approved Business Rules Enforced:
 """
 
 import logging
+import time
+import threading
 from typing import Dict, List, Optional, Any, Set
 from collections import defaultdict
 from sqlalchemy.orm import Session
@@ -54,6 +56,16 @@ class VGK4UCareerService:
     """
     Authoritative service for resolving VGK4U Career Designations and Personal Production Qualifications.
     """
+    _bulk_cache: Optional[Dict[int, Dict[str, Any]]] = None
+    _bulk_cache_ts: float = 0.0
+    _bulk_cache_ttl: float = 15.0
+    _bulk_cache_lock = threading.Lock()
+
+    @classmethod
+    def invalidate_cache(cls) -> None:
+        with cls._bulk_cache_lock:
+            cls._bulk_cache = None
+            cls._bulk_cache_ts = 0.0
 
     @staticmethod
     def is_lead_qualifying(
@@ -82,13 +94,22 @@ class VGK4UCareerService:
 
     @classmethod
     def get_bulk_partner_career_status(
-        cls, db: Session, partner_ids: Optional[List[int]] = None
+        cls, db: Session, partner_ids: Optional[List[int]] = None, bypass_cache: bool = False
     ) -> Dict[int, Dict[str, Any]]:
         """
         High-performance bulk calculation of career status and personal production qualification
         for all or specified VGK_TEAM partners.
         Constructs the entire unilevel tree in memory in O(N) time with zero recursion stack overflow risk.
         """
+        now_ts = time.monotonic()
+        if not bypass_cache:
+            with cls._bulk_cache_lock:
+                if cls._bulk_cache is not None and (now_ts - cls._bulk_cache_ts) < cls._bulk_cache_ttl:
+                    cached = cls._bulk_cache
+                    if partner_ids is not None:
+                        return {pid: cached[pid] for pid in partner_ids if pid in cached}
+                    return dict(cached)
+
         # 1. Fetch official partners
         query_partners = """
             SELECT id, partner_code, partner_name, parent_partner_id, is_active,
@@ -348,9 +369,13 @@ class VGK4UCareerService:
                 'next_personal_milestone': next_prod,
             }
 
+        with cls._bulk_cache_lock:
+            cls._bulk_cache = results
+            cls._bulk_cache_ts = time.monotonic()
+
         if partner_ids is not None:
             return {pid: results[pid] for pid in partner_ids if pid in results}
-        return results
+        return dict(results)
 
     @classmethod
     def get_partner_career_status(cls, db: Session, partner_id: int) -> Optional[Dict[str, Any]]:
@@ -368,6 +393,7 @@ class VGK4UCareerService:
         """
         if not partner_id:
             return None
+        cls.invalidate_cache()
         res = cls.get_partner_career_status(db, partner_id)
         if not res:
             return None
@@ -398,7 +424,8 @@ class VGK4UCareerService:
         Batch synchronize dynamic career status and qualification to official_partners
         for all or specified partners.
         """
-        bulk_res = cls.get_bulk_partner_career_status(db, partner_ids=partner_ids)
+        cls.invalidate_cache()
+        bulk_res = cls.get_bulk_partner_career_status(db, partner_ids=partner_ids, bypass_cache=True)
         if not bulk_res:
             return 0
 

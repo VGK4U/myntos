@@ -469,14 +469,26 @@ def _dispatch_inbound_push_observer(
         from app.models.crm import CRMLead
 
         sip_usernames = re.findall(r'<User>sip:([^@]+)@phone\.plivo\.com</User>', xml_str)
-        if not sip_usernames:
+        sticky_staff_matches = re.findall(r'[?&]staff_id=(\d+)', xml_str)
+        if not sip_usernames and not sticky_staff_matches:
             return
+
+        if not session_id:
+            sid_matches = re.findall(r'[?&]session_id=([a-zA-Z0-9_]+)', xml_str)
+            if sid_matches:
+                session_id = sid_matches[0]
 
         with SessionLocal() as bg_db:
             target_staff_ids = []
             company_id = 1
             lead_name = None
             lead_id = None
+
+            for st_id_str in sticky_staff_matches:
+                try:
+                    target_staff_ids.append(int(st_id_str))
+                except (ValueError, TypeError):
+                    pass
 
             for u in sip_usernames:
                 ep = bg_db.query(TelephonyPlivoEndpoint).filter(

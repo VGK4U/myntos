@@ -6225,6 +6225,7 @@ def member_earnings_dashboard(
     community_service_id: Optional[int] = Query(None, description="Filter by specific community service ID"),
     partner_id: Optional[int] = Query(None, description="Filter by specific partner ID"),
     hide_vgk_support: bool = Query(True, description="Hide VGK Support entries and totals"),
+    include_poster_meta: bool = Query(False, description="Include heavy KYC photo and parent potential earnings metadata for poster generation"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -6475,11 +6476,15 @@ def member_earnings_dashboard(
 
     # Bulk: Parent partner IDs
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
+    _inc_poster = include_poster_meta if isinstance(include_poster_meta, bool) else False
+    _has_pid = bool(partner_id) if isinstance(partner_id, int) else False
+    _has_pcode = bool(partner_code) if isinstance(partner_code, str) else False
+    _need_poster_meta = bool(_inc_poster or _has_pid or _has_pcode or len(member_ids) <= 10)
     
     # Bulk: passport_photo from kyc_document table, vgk_kyc_documents, and fallback to official_partners logo_path
     passport_photo_map: dict = {}
     all_photo_ids = list(set(member_ids + parent_ids))
-    if all_photo_ids:
+    if all_photo_ids and _need_poster_meta:
         try:
             # 1. Check kyc_document table by partner_id (document_type in passport_photo, profile_photo, photo, avatar, logo)
             photo_rows = db.execute(text(
@@ -6556,6 +6561,11 @@ def member_earnings_dashboard(
                         passport_photo_map[int(opr[0])] = p_photo
         except Exception as e:
             pass
+    elif members:
+        for m in members:
+            p_photo = getattr(m, "logo_path", None)
+            if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
+                passport_photo_map[int(m.id)] = p_photo
 
     # Bulk: Parent partner info (Senior name and earnings) (DC-VGK-SENIOR-INFO-001)
     parent_map: dict = {}
@@ -6574,8 +6584,11 @@ def member_earnings_dashboard(
             ), {"ids": parent_ids}).fetchall()
             p_earnings = {r[0]: float(r[1]) for r in p_inc_rows}
             
-            from app.services.vgk_earner_card import get_bulk_partner_potential_earning
-            p_pot_map = get_bulk_partner_potential_earning(db, parent_ids, exclude_l1=False) if parent_ids else {}
+            if _need_poster_meta:
+                from app.services.vgk_earner_card import get_bulk_partner_potential_earning
+                p_pot_map = get_bulk_partner_potential_earning(db, parent_ids, exclude_l1=False) if parent_ids else {}
+            else:
+                p_pot_map = {}
             for pid in parent_ids:
                 info = p_info.get(pid, {})
                 senior_photo_path = passport_photo_map.get(pid) or info.get("logo_path")
@@ -6590,18 +6603,22 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
-    # Bulk: Team network sizes (L2, L3, L4) (DC-VGK-TEAM-SIZE-001)
+    # Bulk: Team network sizes (L2, L3, L4) (DC-VGK-TEAM-SIZE-001) — O(N) children_map lookup
     team_network_map: dict = {}
     if member_ids:
         try:
+            from collections import defaultdict as _dd
             all_opps = db.execute(text("SELECT id, parent_partner_id FROM official_partners")).fetchall()
-            adj = {int(r[0]): (int(r[1]) if r[1] is not None else None) for r in all_opps}
+            children_map = _dd(list)
+            for r in all_opps:
+                if r[0] is not None and r[1] is not None and int(r[0]) != int(r[1]):
+                    children_map[int(r[1])].append(int(r[0]))
             for mid in member_ids:
-                l2_ids = [k for k, v in adj.items() if v == mid]
+                l2_ids = children_map.get(mid, [])
                 l2_c = len(l2_ids)
-                l3_ids = [k for k, v in adj.items() if v in l2_ids] if l2_ids else []
+                l3_ids = [cid for p2 in l2_ids for cid in children_map.get(p2, [])] if l2_ids else []
                 l3_c = len(l3_ids)
-                l4_ids = [k for k, v in adj.items() if v in l3_ids] if l3_ids else []
+                l4_ids = [cid for p3 in l3_ids for cid in children_map.get(p3, [])] if l3_ids else []
                 l4_c = len(l4_ids)
                 team_network_map[mid] = {
                     "l2": l2_c,
@@ -6705,10 +6722,18 @@ def member_earnings_dashboard(
 
         try:
             _bla_rows = db.execute(text("""
+                WITH target_leads AS (
+                    SELECT id FROM crm_leads WHERE associated_partner_id = ANY(:ids)
+                    UNION
+                    SELECT id FROM crm_leads WHERE primary_owner_id = ANY(:ids)
+                    UNION
+                    SELECT source_lead_id AS id FROM vgk_cash_income_entries WHERE partner_id = ANY(:ids) AND source_lead_id IS NOT NULL
+                )
                 SELECT c.associated_partner_id, c.primary_owner_id, v.partner_id,
                        c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
                        COALESCE(SUM(v.commission_amount), 0) AS adv_paid
-                FROM crm_leads c
+                FROM target_leads tl
+                JOIN crm_leads c ON c.id = tl.id
                 JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
                 WHERE (c.associated_partner_id = ANY(:ids) OR c.primary_owner_id = ANY(:ids) OR v.partner_id = ANY(:ids))
                   AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
@@ -7305,9 +7330,17 @@ def fetch_member_income_entries_data(
     lost_ded_map = {}
     try:
         lost_adv_rows = db.execute(text("""
+            WITH target_leads AS (
+                SELECT id FROM crm_leads WHERE associated_partner_id = :pid
+                UNION
+                SELECT id FROM crm_leads WHERE primary_owner_id = :pid
+                UNION
+                SELECT source_lead_id AS id FROM vgk_cash_income_entries WHERE partner_id = :pid AND source_lead_id IS NOT NULL
+            )
             SELECT c.id AS lead_id, c.name, c.status, c.solar_pipeline_status, c.updated_at AS rejected_at,
                    COALESCE(SUM(v.commission_amount), 0) AS adv_paid
-            FROM crm_leads c
+            FROM target_leads tl
+            JOIN crm_leads c ON c.id = tl.id
             JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
             WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
               AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
@@ -9559,7 +9592,10 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                 search=search
             )
 
-        rows = report_data.get("data", [])
+        rows = [
+            r for r in report_data.get("data", [])
+            if (r.get("status") or "").upper() != "CANCELLED"
+        ]
         if not show_status:
             for r in rows:
                 r["status"] = "—"
@@ -9621,26 +9657,46 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
             except Exception:
                 total_team = direct_team
 
-            # Leads bucketwise
-            lead_rows = db.execute(text("""
+            # Leads bucketwise — separated into Self and Team (Downlines up to 3 levels sum)
+            self_lead_rows = db.execute(text("""
                 SELECT 
                     status, 
                     solar_pipeline_status, 
                     COUNT(*) as cnt
                 FROM crm_leads 
                 WHERE associated_partner_id = :pid 
-                   OR vgk_field_support_id = :pid
-                   OR team_senior_partner_id = :pid 
-                   OR team_extended_partner_id = :pid 
-                   OR team_core_partner_id = :pid
                    OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR))
                 GROUP BY status, solar_pipeline_status
             """), {"pid": summary_pid}).fetchall()
 
-            buckets = {}
-            total_leads = 0
-            won_leads = 0
-            lost_leads = 0
+            team_lead_rows = db.execute(text("""
+                WITH RECURSIVE downline AS (
+                    SELECT id, parent_partner_id, 1 AS lvl
+                    FROM official_partners
+                    WHERE parent_partner_id = :pid
+                    UNION ALL
+                    SELECT p.id, p.parent_partner_id, d.lvl + 1
+                    FROM official_partners p
+                    JOIN downline d ON p.parent_partner_id = d.id
+                    WHERE d.lvl < 3
+                )
+                SELECT 
+                    status, 
+                    solar_pipeline_status, 
+                    COUNT(*) as cnt
+                FROM crm_leads 
+                WHERE (associated_partner_id IS NULL OR associated_partner_id != :pid)
+                  AND NOT (COALESCE(source_ref_type, '') IN ('partner', 'vgk_partner') AND COALESCE(source_ref_id, '') = CAST(:pid AS VARCHAR))
+                  AND (
+                      associated_partner_id IN (SELECT id FROM downline)
+                      OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id IN (SELECT CAST(id AS VARCHAR) FROM downline))
+                      OR team_senior_partner_id = :pid 
+                      OR team_extended_partner_id = :pid 
+                      OR team_core_partner_id = :pid
+                  )
+                GROUP BY status, solar_pipeline_status
+            """), {"pid": summary_pid}).fetchall()
+
             b_map = {
                 'subsidy_pending': 'Subsidy Pending',
                 'dcr_pending': 'DCR Pending',
@@ -9651,19 +9707,36 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                 'installed': 'Installed',
                 'completed': 'Completed'
             }
-            for lr in lead_rows:
-                st, pipe, cnt = lr[0], lr[1], int(lr[2])
-                total_leads += cnt
-                if (st or '').lower() == 'lost':
-                    lost_leads += cnt
-                    b_name = 'Lost'
-                else:
-                    won_leads += cnt
-                    raw_b = pipe or st or 'In Pipeline'
-                    b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
-                buckets[b_name] = buckets.get(b_name, 0) + cnt
 
-            bucket_list = [{"stage": k, "count": v} for k, v in buckets.items()]
+            def _agg_lead_buckets(rows_in):
+                b_dict = {}
+                t_cnt = 0
+                w_cnt = 0
+                l_cnt = 0
+                for lr in rows_in:
+                    st, pipe, cnt = lr[0], lr[1], int(lr[2])
+                    t_cnt += cnt
+                    if (st or '').lower() == 'lost':
+                        l_cnt += cnt
+                        b_name = 'Lost'
+                    else:
+                        w_cnt += cnt
+                        raw_b = pipe or st or 'In Pipeline'
+                        b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
+                    b_dict[b_name] = b_dict.get(b_name, 0) + cnt
+                b_list = [{"stage": k, "count": v} for k, v in sorted(b_dict.items(), key=lambda x: (-x[1], x[0]))]
+                return {"total": t_cnt, "won_active": w_cnt, "lost": l_cnt, "buckets": b_list, "_dict": b_dict}
+
+            self_leads_data = _agg_lead_buckets(self_lead_rows)
+            team_leads_data = _agg_lead_buckets(team_lead_rows)
+
+            combined_buckets = dict(self_leads_data["_dict"])
+            for k, v in team_leads_data["_dict"].items():
+                combined_buckets[k] = combined_buckets.get(k, 0) + v
+            bucket_list = [{"stage": k, "count": v} for k, v in sorted(combined_buckets.items(), key=lambda x: (-x[1], x[0]))]
+            total_leads = self_leads_data["total"] + team_leads_data["total"]
+            won_leads = self_leads_data["won_active"] + team_leads_data["won_active"]
+            lost_leads = self_leads_data["lost"] + team_leads_data["lost"]
 
             # Income by type aggregation from non-cancelled entries + Downline Team Income summary
             type_agg = {}
@@ -9719,7 +9792,19 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                     "total": total_leads,
                     "won_active": won_leads,
                     "lost": lost_leads,
-                    "buckets": bucket_list
+                    "buckets": bucket_list,
+                    "self": {
+                        "total": self_leads_data["total"],
+                        "won_active": self_leads_data["won_active"],
+                        "lost": self_leads_data["lost"],
+                        "buckets": self_leads_data["buckets"]
+                    },
+                    "team": {
+                        "total": team_leads_data["total"],
+                        "won_active": team_leads_data["won_active"],
+                        "lost": team_leads_data["lost"],
+                        "buckets": team_leads_data["buckets"]
+                    }
                 },
                 "income_by_type": income_by_type,
                 "team_income": team_income_summary

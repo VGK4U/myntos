@@ -19554,3 +19554,419 @@ def reset_training_progress(
         raise
     except Exception as e:
         return handle_accounts_error(e)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DC_TALLY_SYNC_001: End-to-End Tally XML Export, Version Selector, Segment/Period
+# Filtering & Daybook Upload Reconciliation Endpoints
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/tally/sync-summary")
+async def get_tally_sync_summary_endpoint(
+    company_id: Optional[int] = Query(None, description="Company ID (defaults to first active company if omitted)"),
+    period: Optional[str] = Query(None, description="TODAY|YESTERDAY|THIS_WEEK|THIS_MONTH|LAST_MONTH|THIS_QUARTER|THIS_FY|LAST_FY|ALL_TIME|CUSTOM"),
+    period_preset: Optional[str] = Query(None, description="Alias for period"),
+    date_from: Optional[str] = Query(None, description="Custom start date YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="Custom end date YYYY-MM-DD"),
+    segment_id: Optional[int] = Query(None, description="Optional CompanySegment ID for segment-wise filtering"),
+    modules: Optional[str] = Query(None, description="Comma-separated modules: MASTERS,PURCHASE_ORDERS,PURCHASE_INVOICES,SALES_INVOICES,CASH_ENTRIES,LEDGERS_JV"),
+    sync_status: str = Query("ALL", description="ALL|UNSYNCED_OR_MODIFIED|MODIFIED_ONLY|SYNCED_ONLY"),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC_TALLY_SYNC_001: Returns live WVV-verified Tally sync summary, segment list,
+    selectable Tally versions, module counts, voucher preview list, and recent batch history.
+    """
+    try:
+        from app.services.tally_integration_service import (
+            TallyIntegrationService,
+            TALLY_VERSIONS,
+            ALL_TALLY_MODULES,
+        )
+        from app.models.staff_accounts import AssociatedCompany, CompanySegment, TallySyncBatch
+
+        TallyIntegrationService.ensure_tables(db)
+        companies = (
+            db.query(AssociatedCompany)
+            .filter(AssociatedCompany.is_active == True)
+            .order_by(AssociatedCompany.id.asc())
+            .all()
+        )
+        resolved_company_id = company_id or (companies[0].id if companies else 1)
+        effective_period = period or period_preset or "THIS_MONTH"
+
+        start_d, end_d, resolved_preset = TallyIntegrationService.resolve_period(effective_period, date_from, date_to)
+        mod_list = (
+            [m.strip().upper() for m in modules.split(",") if m.strip()]
+            if modules
+            else ALL_TALLY_MODULES
+        )
+
+        collected = TallyIntegrationService.collect_company_vouchers(
+            db=db,
+            company_id=resolved_company_id,
+            start_date=start_d,
+            end_date=end_d,
+            segment_id=segment_id,
+            modules=mod_list,
+            sync_status_filter=sync_status,
+        )
+
+        segments = (
+            db.query(CompanySegment)
+            .filter(CompanySegment.company_id == resolved_company_id, CompanySegment.is_active == True)
+            .order_by(CompanySegment.display_order.asc(), CompanySegment.id.asc())
+            .all()
+        )
+
+        recent_batches = (
+            db.query(TallySyncBatch)
+            .filter(TallySyncBatch.company_id == resolved_company_id)
+            .order_by(TallySyncBatch.id.desc())
+            .limit(15)
+            .all()
+        )
+
+        mstats = collected["module_stats"]
+        kpi = {
+            "total_vouchers": sum(m.get("total", 0) for m in mstats.values()),
+            "pending_sync": sum(m.get("not_synced", 0) for m in mstats.values()),
+            "modified_pending_sync": sum(m.get("modified", 0) for m in mstats.values()),
+            "cancelled_pending_sync": sum(m.get("cancelled_pending_sync", 0) for m in mstats.values()),
+            "exported": sum(m.get("exported", 0) for m in mstats.values()),
+            "synced": sum(m.get("synced", 0) for m in mstats.values()),
+            "mismatch": sum(m.get("mismatch", 0) for m in mstats.values()),
+        }
+
+        preview_vouchers = [
+            {
+                "module": v["module"],
+                "entity_type": v["entity_type"],
+                "entity_id": v["entity_id"],
+                "myntos_voucher_no": v["myntos_voucher_no"],
+                "tally_voucher_type": v["tally_voucher_type"],
+                "tally_guid": v["tally_guid"],
+                "transaction_date": v["transaction_date"].isoformat() if v.get("transaction_date") else None,
+                "party_name": v.get("party_name"),
+                "segment_id": v.get("segment_id"),
+                "segment_name": v.get("segment_name"),
+                "amount": float(v.get("amount") or 0),
+                "tally_status": v["tally_status"],
+                "is_cancelled": bool(v.get("is_cancelled")),
+                "validation_warning": v.get("validation_warning"),
+                "wvv_hash": v["wvv_hash"][:12] if v.get("wvv_hash") else None,
+            }
+            for v in collected["vouchers"][:250]
+        ]
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "company_id": resolved_company_id,
+                "companies": [{"id": c.id, "company_name": c.company_name, "company_code": c.company_code} for c in companies],
+                "kpi": kpi,
+                "period": {
+                    "preset": resolved_preset,
+                    "date_from": start_d.isoformat() if start_d else None,
+                    "date_to": end_d.isoformat() if end_d else None,
+                },
+                "tally_versions": list(TALLY_VERSIONS.values()),
+                "segments": [s.to_dict() for s in segments],
+                "module_stats": mstats,
+                "company_wide_excluded_modules": collected.get("company_wide_excluded_modules", []),
+                "cashflow_register_notice": collected.get("cashflow_register_notice"),
+                "validation_warnings": collected.get("validation_warnings", []),
+                "total_matching_vouchers": len(collected["vouchers"]),
+                "vouchers_preview": preview_vouchers,
+                "recent_batches": [b.to_dict() for b in recent_batches],
+            }
+        )
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+@router.api_route("/tally/export-xml", methods=["GET", "POST"])
+async def export_tally_xml_endpoint(
+    request: Request,
+    company_id: Optional[int] = Query(None),
+    tally_version: str = Query("TALLY_PRIME_4"),
+    voucher_mode: str = Query("AUTO"),
+    period: str = Query("THIS_MONTH"),
+    period_preset: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    segment_id: Optional[int] = Query(None),
+    modules: Optional[str] = Query(None),
+    sync_status: str = Query("ALL"),
+    include_masters: bool = Query(True),
+    include_company_wide: bool = Query(False),
+    include_cashflow_register: bool = Query(False),
+    download: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC_TALLY_SYNC_001: Generate and download Tally XML (<ENVELOPE>) for the selected
+    Tally version, period/custom dates, segment, and modules.
+    Preserves exact MyntOS voucher numbers and deterministic GUIDs.
+    """
+    try:
+        from fastapi.responses import Response
+        from app.services.tally_integration_service import TallyIntegrationService, ALL_TALLY_MODULES
+        from app.models.staff_accounts import AssociatedCompany
+
+        body_data = {}
+        if request.method == "POST":
+            try:
+                body_data = await request.json()
+            except Exception:
+                body_data = {}
+
+        cid = int(body_data.get("company_id") or company_id or 0)
+        if not cid:
+            first_co = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).order_by(AssociatedCompany.id.asc()).first()
+            cid = first_co.id if first_co else 0
+        if not cid:
+            return JSONResponse(status_code=400, content={"success": False, "message": "company_id is required"})
+
+        t_ver = str(body_data.get("tally_version") or tally_version or "TALLY_PRIME_4")
+        v_mode = str(body_data.get("voucher_mode") or voucher_mode or "AUTO")
+        prd = str(body_data.get("period") or body_data.get("period_preset") or period_preset or period or "THIS_MONTH")
+        d_from = body_data.get("date_from") or date_from
+        d_to = body_data.get("date_to") or date_to
+        seg_raw = body_data.get("segment_id") if "segment_id" in body_data else segment_id
+        seg_id = int(seg_raw) if seg_raw not in (None, "", 0, "0") else None
+        s_stat = str(body_data.get("sync_status") or sync_status or "ALL")
+        if body_data.get("only_unsynced") is True and s_stat == "ALL":
+            s_stat = "UNSYNCED_OR_MODIFIED"
+        inc_masters = bool(body_data.get("include_masters", include_masters))
+        inc_cw = bool(body_data.get("include_company_wide", include_company_wide))
+        inc_cf = bool(body_data.get("include_cashflow_register", include_cashflow_register))
+
+        mods_raw = body_data.get("modules") if "modules" in body_data else modules
+        if isinstance(mods_raw, list):
+            mod_list = [str(m).strip().upper() for m in mods_raw if str(m).strip()]
+        elif isinstance(mods_raw, str) and mods_raw.strip():
+            mod_list = [m.strip().upper() for m in mods_raw.split(",") if m.strip()]
+        else:
+            mod_list = ALL_TALLY_MODULES
+
+        actor_name = getattr(current_user, "full_name", None) or f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip()
+
+        result = TallyIntegrationService.generate_tally_xml(
+            db=db,
+            company_id=cid,
+            tally_version=t_ver,
+            voucher_mode=v_mode,
+            period_preset=prd,
+            date_from=d_from,
+            date_to=d_to,
+            segment_id=seg_id,
+            modules=mod_list,
+            sync_status_filter=s_stat,
+            include_masters=inc_masters,
+            mark_as_exported=True,
+            include_company_wide=inc_cw,
+            include_cashflow_register=inc_cf,
+            actor_id=current_user.id,
+            actor_name=actor_name,
+        )
+
+        if download or request.method == "GET":
+            return Response(
+                content=result["xml_content"].encode("utf-8"),
+                media_type="application/xml",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{result["filename"]}"',
+                    "X-Tally-Batch-Code": result["batch"]["batch_code"],
+                    "X-Tally-Vouchers-Count": str(result["vouchers_count"]),
+                    "X-Tally-Masters-Count": str(result["masters_count"]),
+                },
+            )
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "filename": result["filename"],
+                "file_name": result["filename"],
+                "report_name": result.get("report_name"),
+                "xml_content": result["xml_content"],
+                "batch": result["batch"],
+                "masters_count": result["masters_count"],
+                "vouchers_count": result["vouchers_count"],
+                "voucher_count": result["vouchers_count"],
+                "order_vouchers_count": result.get("order_vouchers_count", 0),
+                "cancelled_vouchers_count": result.get("cancelled_vouchers_count", 0),
+                "total_debit": result["total_debit"],
+                "total_credit": result["total_credit"],
+                "balanced": result["balanced"],
+                "unresolved_ledgers": result.get("unresolved_ledgers", []),
+                "validation_warnings": result.get("validation_warnings", []),
+                "company_wide_excluded_modules": result.get("company_wide_excluded_modules", []),
+                "cashflow_register_notice": result.get("cashflow_register_notice"),
+            }
+        )
+    except Exception as e:
+        db.rollback()
+        return handle_accounts_error(e)
+
+
+@router.post("/tally/import-reconcile")
+async def import_reconcile_tally_file_endpoint(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    company_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC_TALLY_SYNC_001: Upload Tally Daybook / Vouchers XML or CSV to reconcile
+    and auto-mark matching MyntOS records across POs, Purchases, Sales, Cash, and JVs as SYNCED.
+    Supports both multipart/form-data (UploadFile) and application/json ({company_id, file_name, file_content}).
+    """
+    try:
+        from app.services.tally_integration_service import TallyIntegrationService
+        from app.models.staff_accounts import AssociatedCompany
+
+        file_bytes = b""
+        fname = "tally_daybook.xml"
+        cid = company_id or 0
+
+        if file is not None:
+            file_bytes = await file.read()
+            fname = file.filename or fname
+        else:
+            try:
+                body = await request.json()
+                cid = int(body.get("company_id") or cid or 0)
+                fname = str(body.get("file_name") or body.get("filename") or fname)
+                raw_content = body.get("file_content") or ""
+                file_bytes = raw_content.encode("utf-8") if isinstance(raw_content, str) else b""
+            except Exception:
+                pass
+
+        if not cid:
+            first_co = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).order_by(AssociatedCompany.id.asc()).first()
+            cid = first_co.id if first_co else 0
+
+        if not file_bytes:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Uploaded file is empty"})
+
+        actor_name = getattr(current_user, "full_name", None) or f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip()
+        res = TallyIntegrationService.import_and_reconcile_tally_file(
+            db=db,
+            company_id=cid,
+            file_bytes=file_bytes,
+            filename=fname,
+            actor_id=current_user.id,
+            actor_name=actor_name,
+        )
+        res["matched_synced"] = res.get("synced_count", 0)
+        res["mismatched"] = res.get("mismatch_count", 0)
+        res["ambiguous"] = res.get("ambiguous_count", 0)
+        return JSONResponse(content=res)
+    except Exception as e:
+        db.rollback()
+        return handle_accounts_error(e)
+
+
+@router.post("/tally/mark-status")
+async def mark_tally_status_endpoint(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC_TALLY_SYNC_001: Mark one or more MyntOS records as SYNCED, NOT_SYNCED, or EXCLUDED in Tally.
+    """
+    try:
+        from app.services.tally_integration_service import TallyIntegrationService, ALL_TALLY_MODULES
+        from app.models.staff_accounts import TallySyncRecord, IncomeEntry, ExpenseEntry, VendorTransactionHeader
+
+        body = await request.json()
+        company_id = int(body.get("company_id") or 0)
+        target_status = str(body.get("status") or "SYNCED").upper()
+        items = body.get("items") or []
+        if not company_id or not items:
+            return JSONResponse(status_code=400, content={"success": False, "message": "company_id and items are required"})
+
+        if target_status not in (
+            "SYNCED",
+            "NOT_SYNCED",
+            "EXPORTED",
+            "EXCLUDED",
+            "CANCELLED_PENDING_SYNC",
+            "CANCELLED_SYNCED",
+        ):
+            return JSONResponse(status_code=400, content={"success": False, "message": f"Invalid status: {target_status}"})
+
+        TallyIntegrationService.ensure_tables(db)
+        collected = TallyIntegrationService.collect_company_vouchers(
+            db=db, company_id=company_id, modules=ALL_TALLY_MODULES, sync_status_filter="ALL", include_company_wide=True
+        )
+        v_map = {(v["entity_type"], v["entity_id"]): v for v in collected["vouchers"]}
+        sync_map = TallyIntegrationService._load_sync_map(db, company_id)
+        now_ist = get_indian_time()
+        updated_count = 0
+
+        for it in items:
+            etype = str(it.get("entity_type") or "").upper()
+            eid = int(it.get("entity_id") or 0)
+            if not etype or not eid:
+                continue
+            v = v_map.get((etype, eid))
+            rec = sync_map.get((etype, eid))
+            vno = (v["myntos_voucher_no"] if v else str(it.get("myntos_voucher_no") or f"{etype}-{eid}"))
+            vtype = (v["tally_voucher_type"] if v else "Journal")
+            guid = (v["tally_guid"] if v else f"myntos-co{company_id}-{etype.lower()}-{eid}")
+            wvv = (v["wvv_hash"] if v else None)
+
+            if not rec:
+                rec = TallySyncRecord(
+                    company_id=company_id,
+                    segment_id=v.get("segment_id") if v else None,
+                    entity_type=etype,
+                    entity_id=eid,
+                    myntos_voucher_no=vno,
+                    tally_voucher_no=vno,
+                    tally_voucher_type=vtype,
+                    tally_guid=guid,
+                    transaction_date=v.get("transaction_date") if v else None,
+                    party_name=v.get("party_name") if v else None,
+                    amount=v.get("amount", 0) if v else 0,
+                    tally_status=target_status,
+                    wvv_hash=wvv,
+                    last_synced_at=now_ist if target_status == "SYNCED" else None,
+                    updated_by_id=current_user.id,
+                )
+                db.add(rec)
+            else:
+                rec.tally_status = target_status
+                if wvv:
+                    rec.wvv_hash = wvv
+                if target_status == "SYNCED":
+                    rec.last_synced_at = now_ist
+                rec.updated_by_id = current_user.id
+
+            if etype == "INCOME_ENTRY":
+                ie_upd = {"tally_status": target_status}
+                if target_status == "SYNCED":
+                    ie_upd["status"] = "TALLY_DONE"
+                db.query(IncomeEntry).filter(IncomeEntry.id == eid).update(ie_upd, synchronize_session=False)
+            elif etype == "EXPENSE_ENTRY":
+                db.query(ExpenseEntry).filter(ExpenseEntry.id == eid).update(
+                    {"tally_status": target_status}, synchronize_session=False
+                )
+            elif etype == "VENDOR_TXN":
+                db.query(VendorTransactionHeader).filter(VendorTransactionHeader.id == eid).update(
+                    {"tally_status": target_status}, synchronize_session=False
+                )
+
+            updated_count += 1
+
+        db.commit()
+        return JSONResponse(content={"success": True, "updated_count": updated_count, "status": target_status})
+    except Exception as e:
+        db.rollback()
+        return handle_accounts_error(e)

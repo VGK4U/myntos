@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -24,6 +25,19 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.myntos.mobile.R;
+
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 /**
  * Canonical Capacitor Bridge Plugin for Incoming Calls & VoIP Push.
@@ -48,13 +62,36 @@ public class IncomingCallPlugin extends Plugin {
     private static volatile String pendingDealValue = null;
     private static volatile String pendingLeadId = null;
 
+    private static volatile String lastShownSessionId = null;
+    private static volatile String lastCancelledSessionId = null;
     private static IncomingCallPlugin instance = null;
+
+    private PowerManager.WakeLock standbyWakeLock = null;
+    private ScheduledExecutorService standbyScheduler = null;
+    private OkHttpClient standbyHttpClient = null;
+    private volatile boolean isPollInFlight = false;
 
     @Override
     public void load() {
         super.load();
         instance = this;
         Log.d(TAG, "IncomingCallPlugin loaded into Capacitor bridge");
+        ensureStandbyWatcherRunning();
+    }
+
+    public static synchronized void markSessionShown(String sessionId) {
+        if (sessionId != null && !sessionId.isEmpty()) {
+            lastShownSessionId = sessionId;
+        }
+    }
+
+    public static synchronized void notifyCallDeclined(String sessionId, String providerCallId) {
+        if (instance != null) {
+            JSObject data = new JSObject();
+            data.put("sessionId", sessionId != null ? sessionId : "");
+            data.put("providerCallId", providerCallId != null ? providerCallId : "");
+            instance.notifyListeners("callDeclined", data, true);
+        }
     }
 
     public static synchronized void setPendingCall(String sessionId, String phone, String name, String providerCallId) {
@@ -216,6 +253,8 @@ public class IncomingCallPlugin extends Plugin {
                 if (nm != null) {
                     nm.cancel(MyntosFirebaseMessagingService.NOTIFICATION_ID);
                 }
+                Intent cancelIntent = new Intent(IncomingCallActivity.ACTION_CALL_CANCELLED);
+                context.sendBroadcast(cancelIntent);
             }
             call.resolve(new JSObject().put("success", true));
         } catch (Exception e) {
@@ -236,7 +275,245 @@ public class IncomingCallPlugin extends Plugin {
             if (authToken != null) editor.putString(KEY_AUTH_TOKEN, authToken);
             editor.apply();
         }
+        ensureStandbyWatcherRunning();
         call.resolve(new JSObject().put("success", true));
+    }
+
+    private synchronized void ensureStandbyWatcherRunning() {
+        Context context = getContext();
+        if (context == null) return;
+
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String authToken = prefs.getString(KEY_AUTH_TOKEN, "");
+
+        if (authToken == null || authToken.trim().isEmpty()) {
+            // Release standby wake lock on logout
+            if (standbyWakeLock != null && standbyWakeLock.isHeld()) {
+                try {
+                    standbyWakeLock.release();
+                } catch (Exception ignored) {
+                }
+                standbyWakeLock = null;
+            }
+            return;
+        }
+
+        // Acquire lightweight PARTIAL_WAKE_LOCK while logged in so screen-off WebRTC & standby watcher stay responsive
+        if (standbyWakeLock == null) {
+            try {
+                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    standbyWakeLock = pm.newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK,
+                        "MyntOS::TelephonyStandbyWakeLock"
+                    );
+                    standbyWakeLock.setReferenceCounted(false);
+                    standbyWakeLock.acquire();
+                    Log.d(TAG, "Acquired TelephonyStandbyWakeLock for screen-off incoming calls");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Notice acquiring standby wakeLock: " + e.getMessage());
+            }
+        }
+
+        if (standbyHttpClient == null) {
+            standbyHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(6, TimeUnit.SECONDS)
+                .readTimeout(6, TimeUnit.SECONDS)
+                .build();
+        }
+
+        if (standbyScheduler == null) {
+            standbyScheduler = Executors.newSingleThreadScheduledExecutor();
+            standbyScheduler.scheduleWithFixedDelay(this::pollIncomingCallStandby, 2, 4, TimeUnit.SECONDS);
+            Log.d(TAG, "Started native screen-off incoming call standby watcher (4s interval)");
+        }
+    }
+
+    private void pollIncomingCallStandby() {
+        if (isPollInFlight) return;
+        Context context = getContext();
+        if (context == null) return;
+
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String baseUrl = prefs.getString(KEY_SERVER_URL, "https://www.myntreal.com");
+        String token = prefs.getString(KEY_AUTH_TOKEN, "");
+        if (token == null || token.trim().isEmpty() || standbyHttpClient == null) {
+            return;
+        }
+
+        isPollInFlight = true;
+        String url = baseUrl.replaceAll("/+$", "") + "/api/v1/telephony/mobile/incoming-check";
+        Request req = new Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer " + token)
+            .get()
+            .build();
+
+        standbyHttpClient.newCall(req).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                isPollInFlight = false;
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String bodyStr = response.body().string();
+                        JSONObject json = new JSONObject(bodyStr);
+                        boolean hasIncoming = json.optBoolean("has_incoming_call", false);
+                        String state = json.optString("state", "idle");
+                        String sessionId = json.optString("call_session_id", "");
+
+                        if (hasIncoming && !sessionId.isEmpty() && !sessionId.equals(lastShownSessionId)) {
+                            lastShownSessionId = sessionId;
+                            JSONObject callObj = json.optJSONObject("call");
+                            if (callObj != null) {
+                                String phone = callObj.optString("caller_number", callObj.optString("raw_caller_phone", "+91 ••••••••••"));
+                                String name = callObj.optString("caller_name", callObj.optString("raw_caller_name", "Incoming Lead Inquiry"));
+                                String cat = callObj.optString("category", "");
+                                String ltype = callObj.optString("lead_type", "");
+                                String cty = callObj.optString("city", "");
+                                String st = callObj.optString("status", "");
+                                String dv = callObj.optString("deal_value", "");
+                                String lid = callObj.optString("lead_id", "");
+                                String uuid = callObj.optString("provider_call_id", "");
+
+                                JSObject wakeupPayload = new JSObject();
+                                wakeupPayload.put("sessionId", sessionId);
+                                notifyListeners("incomingCallWakeup", wakeupPayload, true);
+
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    presentNativeIncomingCallUI(
+                                        context, sessionId, phone, name, cat, ltype, cty, st, dv, lid, uuid
+                                    );
+                                });
+                            }
+                        } else if ("cancelled".equalsIgnoreCase(state) && !sessionId.isEmpty() && !sessionId.equals(lastCancelledSessionId)) {
+                            lastCancelledSessionId = sessionId;
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                try {
+                                    NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                                    if (nm != null) {
+                                        nm.cancel(MyntosFirebaseMessagingService.NOTIFICATION_ID);
+                                    }
+                                    Intent cancelIntent = new Intent(IncomingCallActivity.ACTION_CALL_CANCELLED);
+                                    cancelIntent.putExtra("call_session_id", sessionId);
+                                    context.sendBroadcast(cancelIntent);
+                                } catch (Exception ignored) {
+                                }
+                            });
+                        }
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    response.close();
+                    isPollInFlight = false;
+                }
+            }
+        });
+    }
+
+    @SuppressWarnings("deprecation")
+    private void presentNativeIncomingCallUI(
+        Context context,
+        String sessionId,
+        String phone,
+        String name,
+        String category,
+        String leadType,
+        String city,
+        String status,
+        String dealValue,
+        String leadId,
+        String providerCallId
+    ) {
+        try {
+            // 0. Physically wake up the display from screen-off / lock state
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                PowerManager.WakeLock screenWakeLock = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                    "MyntOS::IncomingCallScreenWakeLock"
+                );
+                screenWakeLock.setReferenceCounted(false);
+                screenWakeLock.acquire(25000L);
+            }
+
+            // 1. Ensure notification channel
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    MyntosFirebaseMessagingService.CHANNEL_ID,
+                    "Incoming Phone Calls",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Incoming VoIP telephony calls from Plivo");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 1000, 1000});
+                channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    nm.createNotificationChannel(channel);
+                }
+            }
+
+            Intent fullScreenIntent = new Intent(context, IncomingCallActivity.class);
+            fullScreenIntent.putExtra("call_session_id", sessionId);
+            fullScreenIntent.putExtra("caller_phone", phone);
+            fullScreenIntent.putExtra("caller_name", name);
+            fullScreenIntent.putExtra("category", category);
+            fullScreenIntent.putExtra("lead_type", leadType);
+            fullScreenIntent.putExtra("city", city);
+            fullScreenIntent.putExtra("status", status);
+            fullScreenIntent.putExtra("deal_value", dealValue);
+            fullScreenIntent.putExtra("lead_id", leadId);
+            fullScreenIntent.putExtra("provider_call_id", providerCallId);
+            fullScreenIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            );
+
+            int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+
+            PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
+                context,
+                sessionId.hashCode(),
+                fullScreenIntent,
+                pendingFlags
+            );
+
+            String notifTitle = (category != null && !category.isEmpty() && !name.startsWith("[") ? "[" + category + "] " : "") + name;
+            StringBuilder notifSubtitle = new StringBuilder();
+            if (leadType != null && !leadType.isEmpty()) notifSubtitle.append(leadType).append(" • ");
+            if (city != null && !city.isEmpty()) notifSubtitle.append(city).append(" • ");
+            notifSubtitle.append(phone);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MyntosFirebaseMessagingService.CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(notifTitle)
+                .setContentText(notifSubtitle.toString())
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setOngoing(true)
+                .setAutoCancel(true)
+                .setFullScreenIntent(fullScreenPendingIntent, true);
+
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.notify(MyntosFirebaseMessagingService.NOTIFICATION_ID, builder.build());
+            }
+
+            context.startActivity(fullScreenIntent);
+            Log.d(TAG, "Native incoming call UI presented on Android: " + notifTitle + " (session=" + sessionId + ")");
+        } catch (Exception e) {
+            Log.w(TAG, "Error presenting native incoming call on Android: " + e.getMessage());
+        }
     }
 
     @PluginMethod
@@ -249,6 +526,8 @@ public class IncomingCallPlugin extends Plugin {
         String status = call.getString("status", "Interested");
         String dealValue = call.getString("dealValue", "₹3,50,000");
         String leadId = call.getString("leadId", "test_lead_001");
+        String customSessionId = call.getString("sessionId", null);
+        String customProviderCallId = call.getString("providerCallId", null);
         Double delay = call.getDouble("delaySeconds", 0.0);
         long delayMs = (long) ((delay != null ? delay : 0.0) * 1000);
 
@@ -259,83 +538,16 @@ public class IncomingCallPlugin extends Plugin {
         }
 
         Runnable triggerRunnable = () -> {
-            try {
-                // 1. Ensure notification channel
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    NotificationChannel channel = new NotificationChannel(
-                        MyntosFirebaseMessagingService.CHANNEL_ID,
-                        "Incoming Phone Calls",
-                        NotificationManager.IMPORTANCE_HIGH
-                    );
-                    channel.setDescription("Incoming VoIP telephony calls from Plivo");
-                    channel.enableVibration(true);
-                    channel.setVibrationPattern(new long[]{0, 1000, 1000});
-                    channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-                    NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                    if (nm != null) {
-                        nm.createNotificationChannel(channel);
-                    }
-                }
-
-                String sessionId = "test_" + System.currentTimeMillis();
-                String providerCallId = "test_provider_" + sessionId;
-
-                Intent fullScreenIntent = new Intent(context, IncomingCallActivity.class);
-                fullScreenIntent.putExtra("call_session_id", sessionId);
-                fullScreenIntent.putExtra("caller_phone", phone);
-                fullScreenIntent.putExtra("caller_name", name);
-                fullScreenIntent.putExtra("category", category);
-                fullScreenIntent.putExtra("lead_type", leadType);
-                fullScreenIntent.putExtra("city", city);
-                fullScreenIntent.putExtra("status", status);
-                fullScreenIntent.putExtra("deal_value", dealValue);
-                fullScreenIntent.putExtra("lead_id", leadId);
-                fullScreenIntent.putExtra("provider_call_id", providerCallId);
-                fullScreenIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK |
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-                );
-
-                int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
-                }
-
-                PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
-                    context,
-                    sessionId.hashCode(),
-                    fullScreenIntent,
-                    pendingFlags
-                );
-
-                String notifTitle = (category != null && !category.isEmpty() ? "[" + category + "] " : "") + name;
-                StringBuilder notifSubtitle = new StringBuilder();
-                if (leadType != null && !leadType.isEmpty()) notifSubtitle.append(leadType).append(" • ");
-                if (city != null && !city.isEmpty()) notifSubtitle.append(city).append(" • ");
-                notifSubtitle.append(phone);
-
-                NotificationCompat.Builder builder = new NotificationCompat.Builder(context, MyntosFirebaseMessagingService.CHANNEL_ID)
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle(notifTitle)
-                    .setContentText(notifSubtitle.toString())
-                    .setPriority(NotificationCompat.PRIORITY_MAX)
-                    .setCategory(NotificationCompat.CATEGORY_CALL)
-                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .setOngoing(true)
-                    .setAutoCancel(true)
-                    .setFullScreenIntent(fullScreenPendingIntent, true);
-
-                NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                if (nm != null) {
-                    nm.notify(MyntosFirebaseMessagingService.NOTIFICATION_ID, builder.build());
-                }
-
-                context.startActivity(fullScreenIntent);
-                Log.d(TAG, "Test incoming call UI triggered successfully on Android: " + notifTitle);
-            } catch (Exception e) {
-                Log.w(TAG, "Error triggering test incoming call on Android: " + e.getMessage());
-            }
+            String sessionId = (customSessionId != null && !customSessionId.isEmpty())
+                ? customSessionId
+                : ("test_" + System.currentTimeMillis());
+            String providerCallId = (customProviderCallId != null && !customProviderCallId.isEmpty())
+                ? customProviderCallId
+                : ("test_provider_" + sessionId);
+            lastShownSessionId = sessionId;
+            presentNativeIncomingCallUI(
+                context, sessionId, phone, name, category, leadType, city, status, dealValue, leadId, providerCallId
+            );
         };
 
         if (delayMs > 0) {

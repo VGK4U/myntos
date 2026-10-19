@@ -180,3 +180,46 @@ def test_incoming_call_dispatch(
         "test_session_id": mock_session_id,
         "dispatch_result": dispatch_res
     }
+
+
+@router.get("/mobile/incoming-check")
+def check_active_incoming_call(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Lightweight native standby check for screen-off mobile devices.
+    1. Acts as a continuous mobile presence heartbeat (ensures TelephonyPlivoEndpoint.is_registered = True).
+    2. Returns any active ringing or recently cancelled incoming call for this staff member.
+    """
+    try:
+        from app.models.telephony_call_flow import TelephonyPlivoEndpoint
+        from app.models.base import get_indian_time
+        ep = db.query(TelephonyPlivoEndpoint).filter(
+            TelephonyPlivoEndpoint.staff_id == current_user.id
+        ).order_by(TelephonyPlivoEndpoint.id.desc()).first()
+        if ep and not ep.is_registered:
+            ep.is_registered = True
+            ep.last_registered_at = get_indian_time()
+            db.commit()
+    except Exception:
+        pass
+
+    active_entry = MobileCallNotifier.get_active_ringing_call_for_staff(current_user.id)
+    if active_entry:
+        return {
+            "success": True,
+            "has_incoming_call": active_entry.get("state") == "ringing",
+            "state": active_entry.get("state"),
+            "call_session_id": active_entry.get("call_session_id"),
+            "call": active_entry.get("payload") or {}
+        }
+
+    return {
+        "success": True,
+        "has_incoming_call": False,
+        "state": "idle",
+        "call_session_id": None,
+        "call": None
+    }
+

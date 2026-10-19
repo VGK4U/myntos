@@ -2821,22 +2821,40 @@ def vgk_dashboard_summary(
         l3_count = next((r["count"] for r in team_levels if r["level"] == 3), 0)
         l1_direct = l2_count  # Keep for backward compatibility
 
-    # 4c. Leads bucketwise details
-    lead_rows_b = db.execute(sa_text("""
+    # 4c. Leads bucketwise details — separated into Self and Team (Downlines up to 3 levels sum)
+    self_lead_rows_b = db.execute(sa_text("""
         SELECT status, solar_pipeline_status, COUNT(*) as cnt
-        FROM crm_leads WHERE id IN (
-            SELECT id FROM crm_leads WHERE associated_partner_id=:pid
-            UNION
-            SELECT id FROM crm_leads WHERE vgk_field_support_id=:pid
-            UNION
-            SELECT source_lead_id FROM vgk_team_income_entries WHERE partner_id=:pid AND level>=2 AND source_lead_id IS NOT NULL
-            UNION
-            SELECT id FROM crm_leads WHERE team_senior_partner_id=:pid OR team_extended_partner_id=:pid OR team_core_partner_id=:pid
-            UNION
-            SELECT id FROM crm_leads WHERE source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR)
-        )
+        FROM crm_leads
+        WHERE associated_partner_id = :pid
+           OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = CAST(:pid AS VARCHAR))
         GROUP BY status, solar_pipeline_status
     """), {"pid": pid}).fetchall()
+
+    team_lead_rows_b = db.execute(sa_text("""
+        WITH RECURSIVE downline AS (
+            SELECT id, parent_partner_id, 1 AS lvl
+            FROM official_partners
+            WHERE parent_partner_id = :pid
+            UNION ALL
+            SELECT p.id, p.parent_partner_id, d.lvl + 1
+            FROM official_partners p
+            JOIN downline d ON p.parent_partner_id = d.id
+            WHERE d.lvl < 3
+        )
+        SELECT status, solar_pipeline_status, COUNT(*) as cnt
+        FROM crm_leads
+        WHERE (associated_partner_id IS NULL OR associated_partner_id != :pid)
+          AND NOT (COALESCE(source_ref_type, '') IN ('partner', 'vgk_partner') AND COALESCE(source_ref_id, '') = CAST(:pid AS VARCHAR))
+          AND (
+              associated_partner_id IN (SELECT id FROM downline)
+              OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id IN (SELECT CAST(id AS VARCHAR) FROM downline))
+              OR team_senior_partner_id = :pid
+              OR team_extended_partner_id = :pid
+              OR team_core_partner_id = :pid
+          )
+        GROUP BY status, solar_pipeline_status
+    """), {"pid": pid}).fetchall()
+
     b_map = {
         'subsidy_pending': 'Subsidy Pending',
         'dcr_pending': 'DCR Pending',
@@ -2847,16 +2865,35 @@ def vgk_dashboard_summary(
         'installed': 'Installed',
         'completed': 'Completed'
     }
-    buckets_dict = {}
-    for lr in lead_rows_b:
-        st, pipe, cnt = lr[0], lr[1], int(lr[2])
-        if (st or '').lower() == 'lost':
-            b_name = 'Lost'
-        else:
-            raw_b = pipe or st or 'In Pipeline'
-            b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
-        buckets_dict[b_name] = buckets_dict.get(b_name, 0) + cnt
-    lead_buckets_list = [{"stage": k, "count": v} for k, v in buckets_dict.items()]
+
+    def _agg_buckets_auth(rows_in):
+        b_dict = {}
+        t_cnt = 0
+        w_cnt = 0
+        l_cnt = 0
+        for lr in rows_in:
+            st, pipe, cnt = lr[0], lr[1], int(lr[2])
+            t_cnt += cnt
+            if (st or '').lower() == 'lost':
+                l_cnt += cnt
+                b_name = 'Lost'
+            else:
+                w_cnt += cnt
+                raw_b = pipe or st or 'In Pipeline'
+                b_name = b_map.get(raw_b, raw_b.replace('_', ' ').title())
+            b_dict[b_name] = b_dict.get(b_name, 0) + cnt
+        b_list = [{"stage": k, "count": v} for k, v in sorted(b_dict.items(), key=lambda x: (-x[1], x[0]))]
+        return {"total": t_cnt, "won_active": w_cnt, "lost": l_cnt, "buckets": b_list, "_dict": b_dict}
+
+    self_b_data = _agg_buckets_auth(self_lead_rows_b)
+    team_b_data = _agg_buckets_auth(team_lead_rows_b)
+    buckets_dict = dict(self_b_data["_dict"])
+    for k, v in team_b_data["_dict"].items():
+        buckets_dict[k] = buckets_dict.get(k, 0) + v
+    lead_buckets_list = [{"stage": k, "count": v} for k, v in sorted(buckets_dict.items(), key=lambda x: (-x[1], x[0]))]
+    leads_total = self_b_data["total"] + team_b_data["total"]
+    leads_won_active = self_b_data["won_active"] + team_b_data["won_active"]
+    leads_lost_count = self_b_data["lost"] + team_b_data["lost"]
 
     # ── 5. Upline ──────────────────────────────────────────────────────────────
     upline_info = None
@@ -3027,7 +3064,26 @@ def vgk_dashboard_summary(
             "recent": recent_pts_list,
         },
         "team":    {"total": total_team, "l1_direct": l1_direct, "l2": l2_count, "l3": l3_count, "levels": team_levels},
-        "leads":   {"total": leads_total,   "new": leads_new,  "converted": leads_converted, "buckets": lead_buckets_list},
+        "leads": {
+            "total": leads_total,
+            "new": leads_new,
+            "converted": leads_converted,
+            "won_active": leads_won_active,
+            "lost": leads_lost_count,
+            "buckets": lead_buckets_list,
+            "self": {
+                "total": self_b_data["total"],
+                "won_active": self_b_data["won_active"],
+                "lost": self_b_data["lost"],
+                "buckets": self_b_data["buckets"]
+            },
+            "team": {
+                "total": team_b_data["total"],
+                "won_active": team_b_data["won_active"],
+                "lost": team_b_data["lost"],
+                "buckets": team_b_data["buckets"]
+            }
+        },
         "orders":  {"total": orders_total,  "pending": orders_pend},
         "tickets": {"total": tickets_total, "open": tickets_open},
         "upline":  upline_info,

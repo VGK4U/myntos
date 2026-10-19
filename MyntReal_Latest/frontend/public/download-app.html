@@ -218,22 +218,46 @@
     <p class="app-tagline">Complete field sales, softphone dialer, WhatsApp center & CRM automation in one app.</p>
 
     <div class="version-badge">
-      <i class="fas fa-shield-check"></i> Official Release v1.0.4 · 15 MB
+      <i class="fas fa-shield-check"></i> Official Release v1.0.4 · 9.9 MB · Signed APK
     </div>
 
     <!-- Download Options -->
     <div class="action-group">
-      <!-- Android Direct APK Download -->
-      <a href="/download/mobile.apk" class="btn-download-apk" download="MyntReal.apk">
+      <!-- Android Direct APK Download (uses server Content-Disposition, avoids .apk.html Chrome bug) -->
+      <a href="/download/apk?direct=1" id="primary-apk-btn" class="btn-download-apk" onclick="handleApkDownload(this)">
         <i class="fab fa-android" style="font-size: 22px;"></i>
-        <span>Download for Android (.APK)</span>
+        <span id="primary-apk-btn-text">Download for Android (.APK · 9.9 MB)</span>
       </a>
+
+      <div style="font-size: 12px; color: #94a3b8; margin-top: -6px; margin-bottom: 4px;">
+        Trouble downloading? <a href="/api/v1/app/download" style="color: #34d399; font-weight: 600; text-decoration: underline;">Tap here for Direct Mirror Link</a>
+      </div>
 
       <!-- Instant Web App Launch -->
       <a href="/mobile/" class="btn-open-web">
         <i class="fas fa-arrow-up-right-from-square" style="font-size: 16px;"></i>
-        <span>Launch Mobile Web App</span>
+        <span>Launch Mobile Web App (Instant)</span>
       </a>
+    </div>
+
+    <!-- Android Installation Guide -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fab fa-android" style="color: #34d399; font-size: 16px;"></i>
+        <span>Android Installation Steps (30 Seconds)</span>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-num" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">1</div>
+        <div>Tap <strong>"Download for Android (.APK)"</strong> above. If Chrome asks <em>"File might be harmful"</em>, tap <strong>Download anyway</strong>.</div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-num" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">2</div>
+        <div>Open the downloaded <code>MyntReal.apk</code> (`9.9 MB`) from your notification bar or Chrome <strong>Downloads</strong>.</div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-num" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">3</div>
+        <div>If prompted, enable <strong>"Allow from this source"</strong> and tap <strong>Install</strong>.</div>
+      </div>
     </div>
 
     <!-- iOS Installation Guide -->
@@ -255,6 +279,18 @@
         <div>Scroll down and select <strong>"Add to Home Screen"</strong> <i class="fas fa-plus-square" style="color: #38bdf8; margin: 0 2px;"></i>.</div>
       </div>
     </div>
+
+    <script>
+      function handleApkDownload(btn) {
+        var textEl = document.getElementById('primary-apk-btn-text');
+        if (textEl) {
+          textEl.textContent = 'Starting Download (9.9 MB)...';
+          setTimeout(function() {
+            textEl.textContent = 'Download Started! Tap to Retry';
+          }, 3500);
+        }
+      }
+    </script>
 
     <!-- App Highlights -->
     <div class="card">

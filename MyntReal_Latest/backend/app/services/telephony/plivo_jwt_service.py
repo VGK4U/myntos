@@ -332,10 +332,26 @@ class PlivoJWTService:
             TelephonyPlivoEndpoint.company_id == company_id,
             TelephonyPlivoEndpoint.staff_id == staff_id
         ).first()
+        if not endpoint:
+            endpoint = db.query(TelephonyPlivoEndpoint).filter(
+                TelephonyPlivoEndpoint.staff_id == staff_id
+            ).order_by(TelephonyPlivoEndpoint.id.desc()).first()
 
         if endpoint:
+            if not is_registered:
+                try:
+                    from app.models.mobile_device_push_token import MobileDevicePushToken
+                    has_active_mobile = db.query(MobileDevicePushToken).filter(
+                        MobileDevicePushToken.staff_id == staff_id,
+                        MobileDevicePushToken.is_active == True
+                    ).first() is not None
+                    if has_active_mobile:
+                        is_registered = True
+                except Exception:
+                    pass
             endpoint.is_registered = is_registered
             endpoint.last_registered_at = get_indian_time()
             db.commit()
             return True
         return False
+

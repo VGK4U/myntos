@@ -3529,29 +3529,64 @@
                     <div style="background:#fff;border:1.5px solid #e0e7ff;border-radius:14px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.03)">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
                             <div style="font-size:13px;font-weight:700;color:#1e1b4b">
-                                <i class="fas fa-filter me-2" style="color:#4f46e5"></i>Leads Generated — Pipeline Stages
+                                <i class="fas fa-filter me-2" style="color:#4f46e5"></i>Leads Generated — Bucketwise Pipeline
                             </div>
                             <div style="font-size:12px;display:flex;gap:10px;align-items:center">
                                 <span style="color:#64748b">Total: <strong style="color:#1e1b4b">${data.leads?.total||0}</strong></span>
-                                <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px">Won/Active: ${(data.leads?.converted||0) + (data.leads?.total > 0 && data.leads?.converted === 0 ? Math.max(0, data.leads?.total - (data.leads?.lost||0)) : 0)}</span>
+                                <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px">Won/Active: ${data.leads?.won_active != null ? data.leads.won_active : ((data.leads?.converted||0) + (data.leads?.total > 0 && data.leads?.converted === 0 ? Math.max(0, data.leads?.total - (data.leads?.lost||0)) : 0))}</span>
                                 <span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px">Lost: ${data.leads?.lost || (data.leads?.buckets ? (data.leads.buckets.find(b => (b.stage||'').toLowerCase() === 'lost') || {}).count || 0 : 0)}</span>
                                 <button onclick="showTab('leads')" style="background:none;border:none;color:#4f46e5;font-size:12px;font-weight:700;cursor:pointer;padding:0">
                                     View All Leads →
                                 </button>
                             </div>
                         </div>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap">
-                            ${(data.leads?.buckets && data.leads.buckets.length > 0) ? data.leads.buckets.map(b => {
-                                const isLost = (b.stage||'').toLowerCase() === 'lost';
-                                const bBg = isLost ? '#fef2f2' : '#f8fafc';
-                                const bBorder = isLost ? '#fecaca' : '#e2e8f0';
-                                const bColor = isLost ? '#991b1b' : '#1e293b';
-                                const badgeBg = isLost ? '#dc2626' : '#4f46e5';
-                                return `<div onclick="showTab('leads')" style="background:${bBg};border:1px solid ${bBorder};color:${bColor};padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:8px;cursor:pointer">
-                                    <span>${escHtml(b.stage)}</span>
-                                    <span style="background:${badgeBg};color:#fff;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:700">${b.count}</span>
-                                </div>`;
-                            }).join('') : '<div style="font-size:12px;color:#94a3b8;padding:4px 0">No leads recorded yet.</div>'}
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">
+                                    <span style="font-size:11.5px;font-weight:800;color:#1e293b"><i class="fas fa-user-check me-1" style="color:#2563eb"></i>SELF LEADS (OWN DIRECT)</span>
+                                    <div style="display:flex;gap:6px;font-size:11px">
+                                        <span style="background:#e2e8f0;color:#1e293b;padding:1px 7px;border-radius:8px;font-weight:700">Total: ${data.leads?.self?.total||0}</span>
+                                        <span style="background:#dcfce7;color:#15803d;padding:1px 7px;border-radius:8px;font-weight:700">Won/Active: ${data.leads?.self?.won_active||0}</span>
+                                        <span style="background:#fee2e2;color:#b91c1c;padding:1px 7px;border-radius:8px;font-weight:700">Lost: ${data.leads?.self?.lost||0}</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    ${(data.leads?.self?.buckets && data.leads.self.buckets.length > 0) ? data.leads.self.buckets.map(b => {
+                                        const isLost = (b.stage||'').toLowerCase() === 'lost';
+                                        const bBg = isLost ? '#fef2f2' : '#ffffff';
+                                        const bBorder = isLost ? '#fecaca' : '#cbd5e1';
+                                        const bColor = isLost ? '#991b1b' : '#1e293b';
+                                        const badgeBg = isLost ? '#dc2626' : '#2563eb';
+                                        return `<div onclick="showTab('leads')" style="background:${bBg};border:1px solid ${bBorder};color:${bColor};padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                                            <span>${escHtml(b.stage)}</span>
+                                            <span style="background:${badgeBg};color:#fff;padding:1px 6px;border-radius:10px;font-size:10.5px;font-weight:700">${b.count}</span>
+                                        </div>`;
+                                    }).join('') : '<span style="font-size:11.5px;color:#94a3b8">No self leads recorded yet.</span>'}
+                                </div>
+                            </div>
+                            <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px 12px">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #ddd6fe">
+                                    <span style="font-size:11.5px;font-weight:800;color:#4c1d95"><i class="fas fa-sitemap me-1" style="color:#6d28d9"></i>TEAM LEADS (DOWNLINES UP TO 3 LEVELS SUM)</span>
+                                    <div style="display:flex;gap:6px;font-size:11px">
+                                        <span style="background:#fff;border:1px solid #c4b5fd;color:#4c1d95;padding:1px 7px;border-radius:8px;font-weight:700">Total: ${data.leads?.team?.total||0}</span>
+                                        <span style="background:#dcfce7;color:#15803d;padding:1px 7px;border-radius:8px;font-weight:700">Won/Active: ${data.leads?.team?.won_active||0}</span>
+                                        <span style="background:#fee2e2;color:#b91c1c;padding:1px 7px;border-radius:8px;font-weight:700">Lost: ${data.leads?.team?.lost||0}</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    ${(data.leads?.team?.buckets && data.leads.team.buckets.length > 0) ? data.leads.team.buckets.map(b => {
+                                        const isLost = (b.stage||'').toLowerCase() === 'lost';
+                                        const bBg = isLost ? '#fef2f2' : '#ffffff';
+                                        const bBorder = isLost ? '#fecaca' : '#ddd6fe';
+                                        const bColor = isLost ? '#991b1b' : '#1e293b';
+                                        const badgeBg = isLost ? '#dc2626' : '#6d28d9';
+                                        return `<div onclick="showTab('leads')" style="background:${bBg};border:1px solid ${bBorder};color:${bColor};padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+                                            <span>${escHtml(b.stage)}</span>
+                                            <span style="background:${badgeBg};color:#fff;padding:1px 6px;border-radius:10px;font-size:10.5px;font-weight:700">${b.count}</span>
+                                        </div>`;
+                                    }).join('') : '<span style="font-size:11.5px;color:#94a3b8">No downline team leads recorded yet.</span>'}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -7805,7 +7840,7 @@
             if (_el('ciDirectTeamCount')) _el('ciDirectTeamCount').textContent = directTeam;
 
             if (_el('ciLeadsTotal')) _el('ciLeadsTotal').textContent = l.total || 0;
-            const wonCount = (l.converted || 0) + (l.total > 0 && l.converted === 0 ? Math.max(0, l.total - (l.lost || 0)) : 0);
+            const wonCount = l.won_active != null ? l.won_active : ((l.converted || 0) + (l.total > 0 && l.converted === 0 ? Math.max(0, l.total - (l.lost || 0)) : 0));
             if (_el('ciLeadsWon')) _el('ciLeadsWon').textContent = wonCount;
             const lostCount = l.lost || (l.buckets ? (l.buckets.find(b => (b.stage || '').toLowerCase() === 'lost') || {}).count || 0 : 0);
             if (_el('ciLeadsLost')) _el('ciLeadsLost').textContent = lostCount;
@@ -7813,23 +7848,63 @@
             const bCont = _el('ciLeadsBucketContainer');
             if (bCont) {
                 bCont.innerHTML = '';
-                const buckets = l.buckets || [];
-                if (buckets.length === 0) {
-                    bCont.innerHTML = '<span style="font-size:12px;color:#9ca3af">No pipeline buckets recorded yet.</span>';
-                } else {
-                    buckets.forEach(b => {
+                const _renderSubChips = (arr, accent) => {
+                    if (!arr || arr.length === 0) return '<span style="font-size:11.5px;color:#9ca3af">No leads recorded in this category.</span>';
+                    return arr.map(b => {
                         const isLost = (b.stage || '').toLowerCase() === 'lost';
-                        const bBg = isLost ? '#fef2f2' : '#f8fafc';
+                        const bBg = isLost ? '#fef2f2' : '#ffffff';
                         const bBorder = isLost ? '#fecaca' : '#e2e8f0';
                         const bColor = isLost ? '#991b1b' : '#1e293b';
-                        const badgeBg = isLost ? '#dc2626' : '#4f46e5';
-                        bCont.innerHTML += `
-                            <div style="background:${bBg};border:1px solid ${bBorder};color:${bColor};padding:5px 10px;border-radius:8px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px">
+                        const badgeBg = isLost ? '#dc2626' : accent;
+                        return `
+                            <div style="background:${bBg};border:1px solid ${bBorder};color:${bColor};padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px">
                                 <span>${escHtml(b.stage)}</span>
                                 <span style="background:${badgeBg};color:#fff;padding:1px 6px;border-radius:10px;font-size:10.5px;font-weight:700">${b.count}</span>
                             </div>
                         `;
-                    });
+                    }).join('');
+                };
+                if (l.self || l.team) {
+                    const sData = l.self || { total: 0, won_active: 0, lost: 0, buckets: [] };
+                    const tData = l.team || { total: 0, won_active: 0, lost: 0, buckets: [] };
+                    bCont.style.display = 'grid';
+                    bCont.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+                    bCont.style.gap = '10px';
+                    bCont.innerHTML = `
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">
+                                <span style="font-size:11.5px;font-weight:800;color:#1e293b"><i class="fas fa-user-check me-1" style="color:#2563eb"></i>SELF LEADS (OWN DIRECT)</span>
+                                <div style="display:flex;gap:5px;font-size:10.5px">
+                                    <span style="background:#e2e8f0;color:#1e293b;padding:1px 6px;border-radius:8px;font-weight:700">Total: ${sData.total || 0}</span>
+                                    <span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:8px;font-weight:700">Won/Active: ${sData.won_active || 0}</span>
+                                    <span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:8px;font-weight:700">Lost: ${sData.lost || 0}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                ${_renderSubChips(sData.buckets, '#2563eb')}
+                            </div>
+                        </div>
+                        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px 12px">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #ddd6fe">
+                                <span style="font-size:11.5px;font-weight:800;color:#4c1d95"><i class="fas fa-sitemap me-1" style="color:#6d28d9"></i>TEAM LEADS (DOWNLINES UP TO 3 LEVELS SUM)</span>
+                                <div style="display:flex;gap:5px;font-size:10.5px">
+                                    <span style="background:#fff;border:1px solid #c4b5fd;color:#4c1d95;padding:1px 6px;border-radius:8px;font-weight:700">Total: ${tData.total || 0}</span>
+                                    <span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:8px;font-weight:700">Won/Active: ${tData.won_active || 0}</span>
+                                    <span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:8px;font-weight:700">Lost: ${tData.lost || 0}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                ${_renderSubChips(tData.buckets, '#6d28d9')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const buckets = l.buckets || [];
+                    if (buckets.length === 0) {
+                        bCont.innerHTML = '<span style="font-size:12px;color:#9ca3af">No pipeline buckets recorded yet.</span>';
+                    } else {
+                        bCont.innerHTML = _renderSubChips(buckets, '#4f46e5');
+                    }
                 }
             }
 

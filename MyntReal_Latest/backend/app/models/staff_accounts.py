@@ -7891,3 +7891,135 @@ class PurchasePendingExtraItem(BaseModel):
     created_by_id   = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
 
     __table_args__ = (Index('idx_ppei_invoice', 'invoice_id'),)
+
+
+# ── DC_TALLY_SYNC_001: End-to-End Tally Integration Tracking & WVV Ledger (Oct 2026) ──
+
+class TallySyncRecord(BaseModel):
+    """
+    DC_TALLY_SYNC_001: Tracks Tally export/import synchronization state and WVV hash
+    for every MyntOS financial record across Purchase Orders, Purchase Invoices,
+    Sales Invoices, Cash/Income/Expense Entries, Journal Vouchers, and Masters.
+    Zero destructive schema mutation on existing tables.
+    """
+    __tablename__ = 'tally_sync_records'
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, nullable=False, index=True)
+    segment_id = Column(Integer, nullable=True, index=True)
+
+    # e.g. 'PURCHASE_ORDER', 'SPARE_PO', 'PURCHASE_INVOICE', 'VENDOR_TXN',
+    #      'SALES_INVOICE', 'INCOME_ENTRY', 'EXPENSE_ENTRY', 'CASHFLOW_REGISTER',
+    #      'JOURNAL_VOUCHER', 'PAYMENT_TXN', 'MASTER_LEDGER', 'MASTER_PARTY', 'MASTER_ITEM'
+    entity_type = Column(String(40), nullable=False, index=True)
+    entity_id = Column(Integer, nullable=False, index=True)
+
+    # Exact MyntOS Voucher / Invoice / Reference number (preserved in Tally <VOUCHERNUMBER> & <REFERENCE>)
+    myntos_voucher_no = Column(String(60), nullable=False, index=True)
+    tally_voucher_no = Column(String(60), nullable=True)
+    tally_voucher_type = Column(String(40), nullable=False)  # Sales, Purchase, Purchase Order, Receipt, Payment, Contra, Journal, Master
+    tally_guid = Column(String(100), nullable=False, index=True)
+
+    transaction_date = Column(Date, nullable=True, index=True)
+    party_name = Column(String(200), nullable=True)
+    amount = Column(Numeric(15, 2), nullable=False, default=0)
+
+    # Status: NOT_SYNCED | EXPORTED | SYNCED | MODIFIED_PENDING_SYNC | MISMATCH | EXCLUDED
+    tally_status = Column(String(30), nullable=False, default='NOT_SYNCED', index=True)
+    tally_version = Column(String(30), nullable=True, default='TALLY_PRIME_4')
+    wvv_hash = Column(String(64), nullable=True)
+
+    last_batch_id = Column(Integer, nullable=True, index=True)
+    last_exported_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    updated_by_id = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('company_id', 'entity_type', 'entity_id', name='uq_tally_sync_co_entity'),
+        Index('idx_tally_sync_co_mod_stat', 'company_id', 'entity_type', 'tally_status'),
+        Index('idx_tally_sync_voucher_no', 'company_id', 'myntos_voucher_no'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'segment_id': self.segment_id,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'myntos_voucher_no': self.myntos_voucher_no,
+            'tally_voucher_no': self.tally_voucher_no or self.myntos_voucher_no,
+            'tally_voucher_type': self.tally_voucher_type,
+            'tally_guid': self.tally_guid,
+            'transaction_date': self.transaction_date.isoformat() if self.transaction_date else None,
+            'party_name': self.party_name,
+            'amount': float(self.amount or 0),
+            'tally_status': self.tally_status,
+            'tally_version': self.tally_version,
+            'wvv_hash': self.wvv_hash,
+            'last_batch_id': self.last_batch_id,
+            'last_exported_at': self.last_exported_at.isoformat() if self.last_exported_at else None,
+            'last_synced_at': self.last_synced_at.isoformat() if self.last_synced_at else None,
+            'notes': self.notes,
+        }
+
+
+class TallySyncBatch(BaseModel):
+    """
+    DC_TALLY_SYNC_001: Audit log for every Tally XML download or upload operation.
+    Records period, custom dates, segment filter, Tally version, modules included,
+    record counts, and WVV integrity digest.
+    """
+    __tablename__ = 'tally_sync_batches'
+
+    id = Column(Integer, primary_key=True, index=True)
+    batch_code = Column(String(40), unique=True, nullable=False, index=True)
+    company_id = Column(Integer, nullable=False, index=True)
+    segment_id = Column(Integer, nullable=True, index=True)
+
+    direction = Column(String(20), nullable=False, default='EXPORT')  # EXPORT | IMPORT
+    tally_version = Column(String(30), nullable=False, default='TALLY_PRIME_4')
+    voucher_mode = Column(String(30), nullable=False, default='AUTO')  # AUTO | ITEM_INVOICE | ACCOUNTING_INVOICE
+    period_preset = Column(String(30), nullable=True)
+    date_from = Column(Date, nullable=True)
+    date_to = Column(Date, nullable=True)
+
+    modules_included = Column(JSONB, nullable=False, default=list)
+    masters_count = Column(Integer, nullable=False, default=0)
+    vouchers_count = Column(Integer, nullable=False, default=0)
+    total_debit = Column(Numeric(15, 2), nullable=False, default=0)
+    total_credit = Column(Numeric(15, 2), nullable=False, default=0)
+    wvv_batch_hash = Column(String(64), nullable=True)
+    summary_json = Column(JSONB, nullable=True)
+
+    actor_id = Column(Integer, nullable=True)
+    actor_name = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'batch_code': self.batch_code,
+            'company_id': self.company_id,
+            'segment_id': self.segment_id,
+            'direction': self.direction,
+            'tally_version': self.tally_version,
+            'voucher_mode': self.voucher_mode,
+            'period_preset': self.period_preset,
+            'date_from': self.date_from.isoformat() if self.date_from else None,
+            'date_to': self.date_to.isoformat() if self.date_to else None,
+            'modules_included': self.modules_included or [],
+            'masters_count': self.masters_count,
+            'vouchers_count': self.vouchers_count,
+            'total_debit': float(self.total_debit or 0),
+            'total_credit': float(self.total_credit or 0),
+            'wvv_batch_hash': self.wvv_batch_hash,
+            'summary_json': self.summary_json or {},
+            'actor_id': self.actor_id,
+            'actor_name': self.actor_name,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

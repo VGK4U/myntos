@@ -885,7 +885,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
     <tbody id="membersTable">
       <tr>
         <td colspan="35" style="padding:0;border:none">
-          <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+          <div style="position:sticky;left:0;width:var(--vgk-wrap-w,100%);max-width:100%;min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
             <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#7c3aed"></i>
             <div style="font-weight:600;font-size:14px;color:#374151">Loading Channel Partners…</div>
             <div style="font-size:12px;color:#9ca3af;margin-top:4px">Fetching partner records and performance data</div>
@@ -2948,7 +2948,7 @@ window.toggleAllCommissions = async function(entryId, release, entryNum, partner
         if (data.success) {
             showToast(data.message || `All Commissions ${release ? 'RELEASED' : 'CANCELLED'} for ${entryNum}`, 'success');
             
-            // Invalidate/refresh member detail cache to reflect newly released/cancelled Support & Brand rows
+            const refreshTasks = [];
             if (partnerId) {
                 const mCache = window._meDetailCache || (typeof _meDetailCache !== 'undefined' ? _meDetailCache : null);
                 if (mCache && mCache[partnerId]) {
@@ -2959,28 +2959,28 @@ window.toggleAllCommissions = async function(entryId, release, entryNum, partner
                     });
                 }
                 if (typeof window.refreshMeSubEntries === 'function') {
-                    await window.refreshMeSubEntries(partnerId);
+                    refreshTasks.push(window.refreshMeSubEntries(partnerId));
                 } else if (typeof _renderMeDetailTable === 'function') {
                     _renderMeDetailTable(partnerId);
                 }
-                if (typeof window.updateMemberSummaryRowAndKpis === 'function') {
-                    window.updateMemberSummaryRowAndKpis(partnerId);
-                }
             }
 
-            // Invalidate/refresh lead detail cache if present
             const lvCache = window._lvDetailCache || (typeof _lvDetailCache !== 'undefined' ? _lvDetailCache : null);
-            if (lvCache && leadId) {
+            if (lvCache && leadId && (lvCache[leadId] || (typeof _lvExpanded !== 'undefined' && _lvExpanded.has(leadId)))) {
                 if (lvCache[leadId]) {
                     lvCache[leadId].forEach(x => {
                         x.all_commissions_released = release;
                     });
                 }
                 if (typeof window.refreshLvSubEntries === 'function') {
-                    await window.refreshLvSubEntries(leadId);
+                    refreshTasks.push(window.refreshLvSubEntries(leadId));
                 } else if (typeof _lvRenderDetail === 'function' && lvCache[leadId]) {
                     _lvRenderDetail(leadId, lvCache[leadId]);
                 }
+            }
+            if (refreshTasks.length) await Promise.all(refreshTasks);
+            if (partnerId && typeof window.updateMemberSummaryRowAndKpis === 'function') {
+                window.updateMemberSummaryRowAndKpis(partnerId);
             }
         } else {
             const errMsg = data.detail || data.message || data.error || (Array.isArray(data.errors) ? data.errors.join(', ') : 'Failed to toggle All Commissions');
@@ -3005,7 +3005,7 @@ window.toggleCompanySupport = async function(entryId, compSupported, entryNum, p
         if (data.success) {
             showToast(data.message || `Company Support ${compSupported ? 'ENABLED (0.75%)' : 'DISABLED (1.5%)'} for ${entryNum}`, 'success');
             
-            // Invalidate/refresh member detail cache
+            const refreshTasks = [];
             if (partnerId) {
                 const mCache = window._meDetailCache || (typeof _meDetailCache !== 'undefined' ? _meDetailCache : null);
                 if (mCache && mCache[partnerId]) {
@@ -3016,28 +3016,28 @@ window.toggleCompanySupport = async function(entryId, compSupported, entryNum, p
                     });
                 }
                 if (typeof window.refreshMeSubEntries === 'function') {
-                    await window.refreshMeSubEntries(partnerId);
+                    refreshTasks.push(window.refreshMeSubEntries(partnerId));
                 } else if (typeof _renderMeDetailTable === 'function') {
                     _renderMeDetailTable(partnerId);
                 }
-                if (typeof window.updateMemberSummaryRowAndKpis === 'function') {
-                    window.updateMemberSummaryRowAndKpis(partnerId);
-                }
             }
 
-            // Invalidate/refresh lead detail cache if present
             const lvCache = window._lvDetailCache || (typeof _lvDetailCache !== 'undefined' ? _lvDetailCache : null);
-            if (lvCache && leadId) {
+            if (lvCache && leadId && (lvCache[leadId] || (typeof _lvExpanded !== 'undefined' && _lvExpanded.has(leadId)))) {
                 if (lvCache[leadId]) {
                     lvCache[leadId].forEach(x => {
                         x.company_supported = compSupported;
                     });
                 }
                 if (typeof window.refreshLvSubEntries === 'function') {
-                    await window.refreshLvSubEntries(leadId);
+                    refreshTasks.push(window.refreshLvSubEntries(leadId));
                 } else if (typeof _lvRenderDetail === 'function' && lvCache[leadId]) {
                     _lvRenderDetail(leadId, lvCache[leadId]);
                 }
+            }
+            if (refreshTasks.length) await Promise.all(refreshTasks);
+            if (partnerId && typeof window.updateMemberSummaryRowAndKpis === 'function') {
+                window.updateMemberSummaryRowAndKpis(partnerId);
             }
         } else {
             const errMsg = data.detail || data.message || data.error || (Array.isArray(data.errors) ? data.errors.join(', ') : 'Failed to toggle Company Support');
@@ -3240,6 +3240,10 @@ function switchTab(tab) {
   if (tab === 'incomeDash' && !_iedLoaded) { loadIedSegments(); loadIncomeDash(1); }
   if (tab === 'leadView' && !_lvLoaded) { _lvLoadSegments(); _lvLoadCommunityServices(); loadLeadView(1); }
   if (tab === 'commServices' && !_commLoaded) loadCommServicesTab(1);
+  if (typeof _syncSubtableWrapWidths === 'function') {
+    _syncSubtableWrapWidths();
+    requestAnimationFrame(_syncSubtableWrapWidths);
+  }
 }
 
 // ── DC-VGK-FREELANCERS-TAB: Freelancers Tab Controller ──
@@ -3950,10 +3954,17 @@ function _tptReload() {
   loadTopPartnersTable(1);
 }
 
+let _tptAbortCtrl = null;
+let _tptReqSeq = 0;
+
 async function loadTopPartnersTable(page = 1) {
   _tptPage = page;
   const body = document.getElementById('tptBody');
   if (!body) return;
+  if (_tptAbortCtrl) { try { _tptAbortCtrl.abort(); } catch (_) {} }
+  const ctrl = new AbortController();
+  _tptAbortCtrl = ctrl;
+  const reqSeq = ++_tptReqSeq;
   
   body.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
 
@@ -3980,9 +3991,11 @@ async function loadTopPartnersTable(page = 1) {
   }
 
   try {
-    const res = await staffFetch(url);
+    const res = await staffFetch(url, { signal: ctrl.signal });
+    if (reqSeq !== _tptReqSeq) return;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
+    if (reqSeq !== _tptReqSeq) return;
     const data = json.data || {};
     const partners = data.partners || [];
     _tptLoaded = true;
@@ -4112,6 +4125,8 @@ async function loadTopPartnersTable(page = 1) {
     _renderTptPagination(data.total_pages || 1, page);
 
   } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    if (reqSeq !== _tptReqSeq) return;
     console.error('[TPT_LOAD_ERR]', err);
     body.innerHTML = `<tr><td colspan="26" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
   }
@@ -4349,8 +4364,16 @@ function _renderMeHead(){
     </th>`).join('') + `</tr>`;
 }
 
+let _meAbortCtrl = null;
+let _meReqSeq = 0;
+
 async function loadMemberEarnings(pg=1){
   _mePage = pg;
+  if (_meAbortCtrl) { try { _meAbortCtrl.abort(); } catch (_) {} }
+  const ctrl = new AbortController();
+  _meAbortCtrl = ctrl;
+  const reqSeq = ++_meReqSeq;
+
   const search      = (document.getElementById('meSearch')?.value||'').trim();
   const custSearch  = (document.getElementById('meCustSearch')?.value||'').trim();
   const dateFrom    = (document.getElementById('meDateFrom')?.value||'').trim();
@@ -4376,14 +4399,18 @@ async function loadMemberEarnings(pg=1){
   _renderMeHead();
   document.getElementById('meBody').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try{
-    const r = await staffFetch(url);
+    const r = await staffFetch(url, { signal: ctrl.signal });
+    if (reqSeq !== _meReqSeq) return;
     const d = await r.json();
+    if (reqSeq !== _meReqSeq) return;
     if(!d.success){ showToast('Failed to load earnings','error'); return; }
     _meLoaded = true;
     _renderMeKpis(d.data, d.total);
     _renderMeTable(d.data);
     _renderMePagination(d.total, pg, 50);
   } catch(e){
+    if (e && e.name === 'AbortError') return;
+    if (reqSeq !== _meReqSeq) return;
     document.getElementById('meBody').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
   }
 }
@@ -4457,10 +4484,42 @@ function _renderMeTable(rows){
     </tr>
     <tr id="me-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
       <td colspan="10" style="padding:0;background:#f5f3ff;max-width:0;width:100%;box-sizing:border-box">
-        <div id="me-detail-${m.id}" style="padding:14px 20px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0"></div>
+        <div id="me-detail-${m.id}" style="padding:14px 20px;width:var(--vgk-wrap-w,100%);max-width:var(--vgk-wrap-w,100%);box-sizing:border-box;position:sticky;left:0"></div>
       </td>
     </tr>`;
   }).join('');
+  _syncSubtableWrapWidths();
+}
+
+function _syncSubtableWrapWidths() {
+  ['iedTable', 'meTable', 'lvTable', 'commTable', 'membersTable'].forEach(id => {
+    const el = document.getElementById(id);
+    const wrap = el ? (el.closest('.table-scroll-wrap') || (el.tagName === 'TBODY' ? el.parentElement?.parentElement : el.parentElement)) : null;
+    if (wrap && wrap.clientWidth > 0) {
+      wrap.style.setProperty('--vgk-wrap-w', wrap.clientWidth + 'px');
+    } else if (wrap) {
+      wrap.style.removeProperty('--vgk-wrap-w');
+    }
+  });
+}
+if (typeof window !== 'undefined' && !window._vgkSubtableRoAttached) {
+  window._vgkSubtableRoAttached = true;
+  window.addEventListener('resize', _syncSubtableWrapWidths);
+  document.addEventListener('DOMContentLoaded', () => {
+    _syncSubtableWrapWidths();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => _syncSubtableWrapWidths());
+      ['iedTable', 'meTable', 'lvTable', 'commTable', 'membersTable'].forEach(id => {
+        const el = document.getElementById(id);
+        const wrap = el ? (el.closest('.table-scroll-wrap') || (el.tagName === 'TBODY' ? el.parentElement?.parentElement : el.parentElement)) : null;
+        if (wrap) ro.observe(wrap);
+      });
+      const ca = document.querySelector('.content-area');
+      if (ca) ro.observe(ca);
+      const mc = document.querySelector('.main-content');
+      if (mc) ro.observe(mc);
+    }
+  });
 }
 
 // ── DC-VGK-EARN-DASH-001: Income Dashboard Tab (IED) ─────────────────────────
@@ -4644,8 +4703,16 @@ function _iedRenderHead(){
     </th>`).join('') + `</tr>`;
 }
 
+let _iedAbortCtrl = null;
+let _iedReqSeq = 0;
+
 async function loadIncomeDash(pg=1){
   _iedPage = pg;
+  if (_iedAbortCtrl) { try { _iedAbortCtrl.abort(); } catch (_) {} }
+  const ctrl = new AbortController();
+  _iedAbortCtrl = ctrl;
+  const reqSeq = ++_iedReqSeq;
+
   const search      = (document.getElementById('iedSearch')?.value||'').trim();
   const custSearch  = (document.getElementById('iedCustSearch')?.value||'').trim();
   const dateFrom    = (document.getElementById('iedDateFrom')?.value||'').trim();
@@ -4674,8 +4741,10 @@ async function loadIncomeDash(pg=1){
   _iedRenderHead();
   document.getElementById('iedBody').innerHTML = '<tr><td colspan="18" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try{
-    const r = await staffFetch(url);
+    const r = await staffFetch(url, { signal: ctrl.signal });
+    if (reqSeq !== _iedReqSeq) return;
     const d = await r.json();
+    if (reqSeq !== _iedReqSeq) return;
     if(!d.success){
       showToast(d.error || d.detail || 'Failed to load income dashboard','error');
       document.getElementById('iedBody').innerHTML = `<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Failed to load: ${(d.error || d.detail || 'Unknown error')}<br><button onclick="loadIncomeDash(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
@@ -4693,6 +4762,8 @@ async function loadIncomeDash(pg=1){
       if ((d.data || []).some(m => m.id === pid)) toggleIedRow(pid);
     }
   } catch(e){
+    if (e && e.name === 'AbortError') return;
+    if (reqSeq !== _iedReqSeq) return;
     document.getElementById('iedBody').innerHTML = `<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${e.message}<br><button onclick="loadIncomeDash(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }
 }
@@ -4843,10 +4914,11 @@ function _iedRenderTable(rows){
     </tr>
     <tr id="ied-expand-${m.id}" style="display:${expanded?'table-row':'none'}">
       <td colspan="19" style="padding:0;background:#f5f3ff;max-width:0;width:100%;box-sizing:border-box">
-        <div id="ied-detail-${m.id}" style="padding:14px 20px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0"></div>
+        <div id="ied-detail-${m.id}" style="padding:14px 20px;width:var(--vgk-wrap-w,100%);max-width:var(--vgk-wrap-w,100%);box-sizing:border-box;position:sticky;left:0"></div>
       </td>
     </tr>`;
   }).join('');
+  _syncSubtableWrapWidths();
 }
 
 async function toggleIedRow(partnerId){
@@ -5251,11 +5323,10 @@ function _renderMeDetailTable(partnerId){
       const isDesc = sortVal.endsWith('_desc');
       const icon = isCur ? (isDesc ? ' <i class="fas fa-sort-down"></i>' : ' <i class="fas fa-sort-up"></i>') : ' <i class="fas fa-sort" style="opacity:.35"></i>';
       const toggleKey = isCur ? (isDesc ? sortKey + '_asc' : sortKey + '_desc') : sortKey + '_desc';
-      return `<th onclick="_setMeSubSort(${partnerId}, '${toggleKey}')" style="padding:7px 10px;text-align:${align};color:${isCur?'#4c1d95':'#6b7280'};font-weight:700;font-size:10.5px;text-transform:uppercase;cursor:pointer;user-select:none;${extra}">${txt}${icon}</th>`;
+      return `<th onclick="_setMeSubSort(${partnerId}, '${toggleKey}')" style="padding:7px 10px;text-align:${align};color:${isCur?'#4c1d95':'#6b7280'};font-weight:700;font-size:10.5px;text-transform:uppercase;cursor:pointer;user-select:none;white-space:nowrap;${extra}">${txt}${icon}</th>`;
     };
 
-    const cardEl = detail.closest('.tab-panel') || document.getElementById('tabIncomeDash') || document.getElementById('tabEarnings') || document.body;
-    const availW = Math.max(320, (cardEl.clientWidth || (window.innerWidth - 300)) - 60);
+    _syncSubtableWrapWidths();
 
     detail.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
@@ -5274,7 +5345,7 @@ function _renderMeDetailTable(partnerId){
         <button onclick="generateMemberPoster('${partnerId}')" style="background:linear-gradient(135deg,#059669,#047857);color:white;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.4)"><i class="fas fa-image"></i> Generate Achievement Poster</button>
       </div>
     </div>
-    <div id="me-scroll-wrap-${partnerId}" class="me-subtable-scroll-wrap" style="width:100%;max-width:${availW}px;box-sizing:border-box">
+    <div id="me-scroll-wrap-${partnerId}" class="me-subtable-scroll-wrap" style="width:100%;max-width:100%;box-sizing:border-box">
     <table style="width:100%;min-width:1450px;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
@@ -5545,19 +5616,6 @@ function _renderMeDetailTable(partnerId){
         </tr>
       </tfoot>
     </table></div>`;
-
-  setTimeout(() => {
-    const wrap = document.getElementById('me-scroll-wrap-' + partnerId);
-    if (wrap && !wrap._hasWheel) {
-      wrap._hasWheel = true;
-      wrap.addEventListener('wheel', (ev) => {
-        if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
-          ev.preventDefault();
-          wrap.scrollLeft += ev.deltaY * 1.5;
-        }
-      }, { passive: false });
-    }
-  }, 50);
 }
 
 function _renderMePagination(total, pg, pageSize){
@@ -5677,8 +5735,16 @@ function _lvResetFilters(){
   loadLeadView(1);
 }
 
+let _lvAbortCtrl = null;
+let _lvReqSeq = 0;
+
 async function loadLeadView(pg){
   _lvPage = pg || 1;
+  if (_lvAbortCtrl) { try { _lvAbortCtrl.abort(); } catch (_) {} }
+  const ctrl = new AbortController();
+  _lvAbortCtrl = ctrl;
+  const reqSeq = ++_lvReqSeq;
+
   Object.keys(_lvDetailCache).forEach(k=>delete _lvDetailCache[k]);
   const tbody = document.getElementById('lvBody');
   tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
@@ -5710,9 +5776,13 @@ async function loadLeadView(pg){
 
   let data;
   try{
-    const r = await staffFetch('/api/v1/vgk/dashboard/lead-earnings?' + params.toString());
+    const r = await staffFetch('/api/v1/vgk/dashboard/lead-earnings?' + params.toString(), { signal: ctrl.signal });
+    if (reqSeq !== _lvReqSeq) return;
     data = await r.json();
+    if (reqSeq !== _lvReqSeq) return;
   } catch(e){
+    if (e && e.name === 'AbortError') return;
+    if (reqSeq !== _lvReqSeq) return;
     tbody.innerHTML = `<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626">Error: ${e.message}</td></tr>`;
     return;
   }
@@ -6083,7 +6153,7 @@ function _lvDetailRowHtml(lid, entries){
     </tr>`;
   }).join('');
 
-  const subHead = `<tr style="background:#f0f0fb;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">
+  const subHead = `<tr style="background:#f0f0fb;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">
     <td style="padding:6px 10px">Submit Date</td>
     <td style="padding:6px 10px;cursor:pointer;user-select:none;color:#4c1d95" onclick="toggleLvSubSort(${lid})" title="Click to toggle sort order">Trigger Date <i class="fas fa-sort-${isAsc?'up':'down'}" style="font-size:9px;margin-left:2px"></i></td>
     <td style="padding:6px 10px">Payment Date</td>
@@ -6178,7 +6248,7 @@ function _lvDetailRowHtml(lid, entries){
   const totNet      = Math.max(0, totBalGross - totAdmin - totTds);
 
   return `<tr id="lvDetail_${lid}"><td colspan="15" style="padding:0;background:#f9fafb;max-width:0;width:100%;box-sizing:border-box">
-    <div style="padding:10px 14px;width:100%;max-width:calc(100vw - 320px);box-sizing:border-box;position:sticky;left:0">
+    <div style="padding:10px 14px;width:var(--vgk-wrap-w,100%);max-width:var(--vgk-wrap-w,100%);box-sizing:border-box;position:sticky;left:0">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f3f4f6;border-radius:6px 6px 0 0;border:1px solid #ddd6fe;border-bottom:none">
         <span style="font-size:11px;font-weight:700;color:#5b21b6"><i class="fas fa-layer-group me-1"></i>Member Breakdown for Lead #${lid} (${filtered.length} entries)</span>
         <div style="display:inline-flex;align-items:center;gap:4px">
@@ -6214,6 +6284,7 @@ function _lvDetailRowHtml(lid, entries){
 }
 
 function _lvRenderDetail(lid, entries){
+  _syncSubtableWrapWidths();
   const existing = document.getElementById(`lvDetail_${lid}`);
   const html = _lvDetailRowHtml(lid, entries);
   if(existing){
@@ -6229,18 +6300,6 @@ function _lvRenderDetail(lid, entries){
       }
     }
   }
-  setTimeout(() => {
-    const wrap = document.getElementById('lv-scroll-wrap-' + lid);
-    if (wrap && !wrap._hasWheel) {
-      wrap._hasWheel = true;
-      wrap.addEventListener('wheel', (ev) => {
-        if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
-          ev.preventDefault();
-          wrap.scrollLeft += ev.deltaY * 1.5;
-        }
-      }, { passive: false });
-    }
-  }, 50);
 }
 
 function _lvRenderPagination(pg, total){
@@ -6722,10 +6781,17 @@ document.addEventListener('click', function(e) {
   }
 });
 
+let _mbAbortCtrl = null;
+let _mbReqSeq = 0;
+
 async function loadMembers(page = 1) {
   currentPage = page;
   const tbody = document.getElementById('membersTable');
   if (!tbody) return;
+  if (_mbAbortCtrl) { try { _mbAbortCtrl.abort(); } catch (_) {} }
+  const ctrl = new AbortController();
+  _mbAbortCtrl = ctrl;
+  const reqSeq = ++_mbReqSeq;
 
   const search = (document.getElementById('searchInput')?.value || '').trim();
   const status = document.getElementById('statusFilter')?.value || 'active';
@@ -6775,19 +6841,21 @@ async function loadMembers(page = 1) {
   if (hierarchyMember) url += '&hierarchy_member=' + encodeURIComponent(hierarchyMember);
 
   tbody.innerHTML = `<tr><td colspan="35" style="padding:0;border:none">
-    <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+    <div style="position:sticky;left:0;width:var(--vgk-wrap-w,100%);max-width:100%;min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
       <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#7c3aed"></i>
       <div style="font-weight:600;font-size:14px;color:#374151">Loading Channel Partners…</div>
       <div style="font-size:12px;color:#9ca3af;margin-top:4px">Fetching partner records and performance data</div>
     </div>
   </td></tr>`;
   try {
-    const r = await staffFetch(url);
+    const r = await staffFetch(url, { signal: ctrl.signal });
+    if (reqSeq !== _mbReqSeq) return;
     const d = await r.json();
+    if (reqSeq !== _mbReqSeq) return;
     if (!d.success) {
       showToast(d.detail || d.error || 'Failed to load Channel Partners', 'error');
       tbody.innerHTML = `<tr><td colspan="35" style="padding:0;border:none">
-        <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+        <div style="position:sticky;left:0;width:var(--vgk-wrap-w,100%);max-width:100%;min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
           <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
             <i class="fas fa-exclamation-triangle" style="font-size:20px;color:#dc2626"></i>
           </div>
@@ -6815,7 +6883,7 @@ async function loadMembers(page = 1) {
         }
       }
       tbody.innerHTML = `<tr><td colspan="35" style="padding:0;border:none">
-        <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+        <div style="position:sticky;left:0;width:var(--vgk-wrap-w,100%);max-width:100%;min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
           <div style="width:52px;height:52px;border-radius:50%;background:#f5f3ff;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
             <i class="fas fa-users-slash" style="font-size:22px;color:#7c3aed"></i>
           </div>
@@ -6967,10 +7035,12 @@ async function loadMembers(page = 1) {
     }
     renderPagination(d.total || 0, page, 25);
   } catch(e) {
+    if (e && e.name === 'AbortError') return;
+    if (reqSeq !== _mbReqSeq) return;
     console.error('[ERROR loadMembers]', e);
     showToast('Error loading Channel Partners', 'error');
     tbody.innerHTML = `<tr><td colspan="35" style="padding:0;border:none">
-      <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+      <div style="position:sticky;left:0;width:var(--vgk-wrap-w,100%);max-width:100%;min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
         <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
           <i class="fas fa-exclamation-circle" style="font-size:20px;color:#dc2626"></i>
         </div>
@@ -9638,72 +9708,107 @@ window.closePosterModal = closePosterModal;
 // ── Channel Partner Poster Image & WhatsApp Template Engine ──────────────────
 window._customUploadedCreativeImage = null;
 window._customUploadedPosterImage = null; // compatibility alias
+window._customUploadedCreativeBlob = null;
 window._originalPosterProfilePhoto = null;
 window._posterCustomTextEdited = false;
 
+function _applyCustomCreativeDataUrl(finalDataUrl, rawFile) {
+  if (!finalDataUrl) return;
+  const approxKb = Math.max(1, Math.round((finalDataUrl.length * 0.75) / 1024));
+
+  window._customUploadedCreativeImage = finalDataUrl;
+  window._customUploadedPosterImage = finalDataUrl; // alias
+  if (rawFile instanceof Blob) {
+    window._customUploadedCreativeBlob = rawFile;
+  }
+
+  // 1. Update Preview Card Beside Existing Poster Canvas
+  const img = document.getElementById('customCreativeImg');
+  const card = document.getElementById('customCreativeImgCard');
+  const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+  const topBadge = document.getElementById('customCreativeTopBadge');
+
+  if (img) {
+    img.src = finalDataUrl;
+    img.style.display = 'block';
+  }
+  if (card) card.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+  if (topBadge) {
+    topBadge.textContent = `Active for WhatsApp (${approxKb} KB) ✅`;
+    topBadge.style.background = '#d1fae5';
+    topBadge.style.color = '#065f46';
+    topBadge.style.borderColor = '#10b981';
+  }
+
+  // 2. Update Left Controls Card
+  const leftBadge = document.getElementById('customCreativeStatusBadge');
+  if (leftBadge) {
+    leftBadge.textContent = `Creative Attached (${approxKb} KB) ✅`;
+    leftBadge.style.background = '#dcfce7';
+    leftBadge.style.color = '#15803d';
+  }
+  const leftNotice = document.getElementById('customCreativeNotice');
+  if (leftNotice) {
+    leftNotice.textContent = `✅ Custom creative attached and optimized to ${approxKb} KB! WhatsApp shares will dispatch this image instantly.`;
+  }
+}
+
 function handleCustomCreativeUpload(e) {
-  const file = e.target.files && e.target.files[0];
+  if (e && typeof e.preventDefault === 'function' && e.type === 'drop') {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const file = (e && e.target && e.target.files && e.target.files[0]) || (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
   if (!file) return;
 
   const reader = new FileReader();
   reader.onload = function(evt) {
     const rawDataUrl = evt.target.result;
-    
+    if (e && e.target && typeof e.target.value === 'string') {
+      try { e.target.value = ''; } catch (err) {}
+    }
+
+    // Immediately show raw image so user gets instant visual feedback
+    _applyCustomCreativeDataUrl(rawDataUrl, file);
+
     // Auto-compress large uploads to < 200KB while keeping crisp HD visual quality
     const tempImg = new Image();
     tempImg.onload = function() {
-      const maxDim = 1200;
-      let w = tempImg.width;
-      let h = tempImg.height;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) {
-          h = Math.round((h * maxDim) / w);
-          w = maxDim;
-        } else {
-          w = Math.round((w * maxDim) / h);
-          h = maxDim;
+      try {
+        const maxDim = 1200;
+        let w = tempImg.width || 800;
+        let h = tempImg.height || 800;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
         }
-      }
-      const cvs = document.createElement('canvas');
-      cvs.width = w;
-      cvs.height = h;
-      const ctx = cvs.getContext('2d');
-      ctx.drawImage(tempImg, 0, 0, w, h);
-      
-      const compressedDataUrl = cvs.toDataURL('image/jpeg', 0.82);
-      const finalDataUrl = (compressedDataUrl && compressedDataUrl.length < rawDataUrl.length) ? compressedDataUrl : rawDataUrl;
-      const approxKb = Math.round((finalDataUrl.length * 0.75) / 1024);
+        const cvs = document.createElement('canvas');
+        cvs.width = w;
+        cvs.height = h;
+        const ctx = cvs.getContext('2d');
+        const isPng = (file.type || '').toLowerCase() === 'image/png';
+        if (!isPng) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+        }
+        ctx.drawImage(tempImg, 0, 0, w, h);
 
-      window._customUploadedCreativeImage = finalDataUrl;
-      window._customUploadedPosterImage = finalDataUrl; // alias
-
-      // 1. Update Preview Card Beside Existing Poster Canvas
-      const img = document.getElementById('customCreativeImg');
-      const card = document.getElementById('customCreativeImgCard');
-      const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
-      const topBadge = document.getElementById('customCreativeTopBadge');
-
-      if (img) img.src = finalDataUrl;
-      if (card) card.style.display = 'block';
-      if (placeholder) placeholder.style.display = 'none';
-      if (topBadge) {
-        topBadge.textContent = `Active for WhatsApp (${approxKb} KB) ✅`;
-        topBadge.style.background = '#d1fae5';
-        topBadge.style.color = '#065f46';
-        topBadge.style.borderColor = '#10b981';
+        const outMime = isPng && rawDataUrl.length < 500000 ? 'image/png' : 'image/jpeg';
+        const compressedDataUrl = outMime === 'image/png' ? cvs.toDataURL('image/png') : cvs.toDataURL('image/jpeg', 0.85);
+        const finalDataUrl = (compressedDataUrl && compressedDataUrl.length < rawDataUrl.length) ? compressedDataUrl : rawDataUrl;
+        _applyCustomCreativeDataUrl(finalDataUrl, file);
+      } catch (compErr) {
+        console.warn('[CustomCreativeUpload] Compression fallback to raw image:', compErr);
       }
-
-      // 2. Update Left Controls Card
-      const leftBadge = document.getElementById('customCreativeStatusBadge');
-      if (leftBadge) {
-        leftBadge.textContent = `Creative Attached (${approxKb} KB) ✅`;
-        leftBadge.style.background = '#dcfce7';
-        leftBadge.style.color = '#15803d';
-      }
-      const leftNotice = document.getElementById('customCreativeNotice');
-      if (leftNotice) {
-        leftNotice.textContent = `✅ Custom creative attached and optimized to ${approxKb} KB! WhatsApp shares will dispatch this image instantly.`;
-      }
+    };
+    tempImg.onerror = function() {
+      _applyCustomCreativeDataUrl(rawDataUrl, file);
     };
     tempImg.src = rawDataUrl;
   };
@@ -9712,9 +9817,40 @@ function handleCustomCreativeUpload(e) {
 window.handleCustomCreativeUpload = handleCustomCreativeUpload;
 window.handlePosterImageUpload = handleCustomCreativeUpload; // compatibility alias
 
+function handleMemberPhotoUpload(e) {
+  const file = (e && e.target && e.target.files && e.target.files[0]) || (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const dataUrl = evt.target.result;
+    if (e && e.target && typeof e.target.value === 'string') {
+      try { e.target.value = ''; } catch (err) {}
+    }
+    const img = document.getElementById('prevImg');
+    const avatar = document.getElementById('prevAvatar');
+    if (img) {
+      img.removeAttribute('crossorigin');
+      img.src = dataUrl;
+      img.style.display = 'block';
+      if (avatar) avatar.style.display = 'none';
+    }
+    const thumbImg = document.getElementById('postImageThumb');
+    const thumbAvatar = document.getElementById('postImageThumbAvatar');
+    if (thumbImg) {
+      thumbImg.removeAttribute('crossorigin');
+      thumbImg.src = dataUrl;
+      thumbImg.style.display = 'block';
+      if (thumbAvatar) thumbAvatar.style.display = 'none';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+window.handleMemberPhotoUpload = handleMemberPhotoUpload;
+
 function clearCustomCreativeImage() {
   window._customUploadedCreativeImage = null;
   window._customUploadedPosterImage = null; // alias
+  window._customUploadedCreativeBlob = null;
 
   const fileInput = document.getElementById('postCustomCreativeFile');
   if (fileInput) fileInput.value = '';
@@ -9744,7 +9880,7 @@ function clearCustomCreativeImage() {
   }
   const leftNotice = document.getElementById('customCreativeNotice');
   if (leftNotice) {
-    leftNotice.textContent = '✨ No custom creative attached. WhatsApp will send the default message.';
+    leftNotice.textContent = 'ℹ️ Auto-generated celebration poster will be dispatched with message (or upload custom creative to override).';
   }
 }
 window.clearCustomCreativeImage = clearCustomCreativeImage;
@@ -9858,6 +9994,7 @@ window.resetPosterCustomText = resetPosterCustomText;
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
+  const reqSeq = (window._posterGenReqSeq = (window._posterGenReqSeq || 0) + 1);
   modal.style.display = 'flex';
   window._postTotalTodayUserEdited = false;
   
@@ -9877,25 +10014,48 @@ async function generateMemberPoster(partnerId) {
     const pidStr = String(partnerId || '').trim();
     let m = (window._iedCurrentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
          || (window._currentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
+         || (window._lvCurrentRows || []).find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr)
          || (window._vgkMemberCache || {})[pidStr];
 
-    if (!m || !m.id) {
+    // Immediately pre-populate modal badges & preview from cached member before awaiting network calls
+    const initName = (m && (m.partner_name || m.member_name)) ? String(m.partner_name || m.member_name).trim() : 'Loading…';
+    const initInitials = (m && (m.partner_name || m.member_name)) ? getCleanInitials(initName) : 'CP';
+    const nameBadgePre = document.getElementById('postMemberNameBadge');
+    if (nameBadgePre) nameBadgePre.textContent = initName;
+    const prevNamePre = document.getElementById('prevName');
+    if (prevNamePre) prevNamePre.textContent = initName.toUpperCase();
+    const postSubPre = document.getElementById('postSubtitle');
+    if (postSubPre) postSubPre.value = initName.toUpperCase();
+    const avatarPre = document.getElementById('prevAvatar');
+    if (avatarPre) {
+      avatarPre.textContent = initInitials;
+      avatarPre.style.display = 'flex';
+    }
+    const thumbImgPre = document.getElementById('postImageThumb');
+    const thumbAvatarPre = document.getElementById('postImageThumbAvatar');
+    if (thumbImgPre) thumbImgPre.style.display = 'none';
+    if (thumbAvatarPre) {
+      thumbAvatarPre.textContent = initInitials;
+      thumbAvatarPre.style.display = 'flex';
+    }
+
+    if (!m || !m.id || !m.passport_photo) {
       try {
-        const paramStr = pidStr.startsWith('VGK') ? 'search=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
-        const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?' + paramStr + '&_cb=' + Date.now());
+        const paramStr = pidStr.startsWith('VGK') ? 'partner_code=' + encodeURIComponent(pidStr) : 'partner_id=' + encodeURIComponent(pidStr);
+        const freshRes = await staffFetch(API + '/vgk/dashboard/member-earnings?' + paramStr + '&earners_only=false&include_poster_meta=true&_cb=' + Date.now());
         const freshData = await freshRes.json();
         if (freshData.success && freshData.data && freshData.data.length) {
-          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr) || freshData.data[0];
-          if (found) m = found;
+          const found = freshData.data.find(x => String(x.id) === pidStr || String(x.partner_code) === pidStr);
+          if (found) m = Object.assign({}, m || {}, found);
         }
       } catch(e) {
         console.warn("Failed to fetch member data from API:", e);
       }
     }
+    if (reqSeq !== window._posterGenReqSeq) return;
 
     if (!m) throw new Error('Member details could not be loaded for ID: ' + pidStr);
     window._currentPosterMember = m;
-    console.log("[Poster Debug] Selected member object:", m);
     
     document.getElementById('prevName').textContent = (m.partner_name || '').toUpperCase();
     const initials = getCleanInitials(m.partner_name || '');
@@ -9936,12 +10096,10 @@ async function generateMemberPoster(partnerId) {
         img.removeAttribute('crossorigin');
       }
       img.onload = () => {
-        console.log("[Poster Debug] Main photo loaded successfully:", img.src);
         img.style.display = 'block';
         avatar.style.display = 'none';
       };
       img.onerror = (err) => {
-        console.warn("[Poster Debug] Main photo CORS fallback retry for:", resolvedUrl);
         if (!triedWithoutCors) {
           triedWithoutCors = true;
           try { img.removeAttribute('crossOrigin'); } catch(e){}
@@ -9953,35 +10111,26 @@ async function generateMemberPoster(partnerId) {
       };
       img.src = resolvedUrl.includes('?') ? resolvedUrl : (resolvedUrl + '?t=' + Date.now());
     } else {
-      console.log("[Poster Debug] No main photo path found. Displaying initials.");
       avatar.style.display = 'flex';
       if (thumbImg) thumbImg.style.display = 'none';
       if (thumbAvatar) thumbAvatar.style.display = 'flex';
     }
     
-    // Fetch full member income details (unfiltered) to populate poster stats, location and customer
+    // Fetch full member + senior income details in parallel
     const targetPid = m.id || partnerId;
     delete _meDetailCache[targetPid];
-    let detailUrl = API + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid + '&_t=' + Date.now();
-    
-    const r = await staffFetch(detailUrl);
-    const d = await r.json();
-    const entries = (d.success && d.data) ? d.data : [];
+    const [d, srData] = await Promise.all([
+      staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + targetPid + '&_t=' + Date.now())
+        .then(r => r.json()).catch(() => null),
+      m.parent_partner_id
+        ? staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id + '&_t=' + Date.now())
+            .then(srRes => srRes.json()).catch(() => null)
+        : Promise.resolve(null)
+    ]);
+    if (reqSeq !== window._posterGenReqSeq) return;
+    const entries = (d && d.success && d.data) ? d.data : [];
     window._currentEntries = entries;
-
-    // Fetch Senior Referrer entries if senior partner exists
-    window._seniorEntries = [];
-    if (m.parent_partner_id) {
-      try {
-        const srRes = await staffFetch(API + '/vgk/dashboard/member-income-entries?partner_id=' + m.parent_partner_id + '&_t=' + Date.now());
-        const srData = await srRes.json();
-        if (srData.success && srData.data) {
-          window._seniorEntries = srData.data;
-        }
-      } catch (srErr) {
-        console.warn("[Poster Debug] Failed to fetch senior partner entries:", srErr);
-      }
-    }
+    window._seniorEntries = (srData && srData.success && srData.data) ? srData.data : [];
     
     const uniqueL1Leads = new Set();
     entries.forEach(e => {
@@ -10282,7 +10431,6 @@ async function generateMemberPoster(partnerId) {
       }
     }
     
-    const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
     setChecked('payTypeStage1', true);
     setChecked('payTypeStage2Adv', true);
     setChecked('payTypeFinalComm', true);
@@ -11920,13 +12068,48 @@ function updateGenMsgCharCount() {
 }
 window.updateGenMsgCharCount = updateGenMsgCharCount;
 
+function _applyGenMsgCreativeDataUrl(dataUrl, blob, fileName) {
+  window._genMsgUploadedImage = { dataUrl, blob: blob || null, name: fileName || 'creative.jpg' };
+
+  const card = document.getElementById('genMsgImgCard');
+  const placeholder = document.getElementById('genMsgEmptyPlaceholder');
+  const preview = document.getElementById('genMsgImgPreview');
+  const topBadge = document.getElementById('genMsgPreviewTopBadge');
+  const statusBadge = document.getElementById('genMsgUploadStatusBadge');
+
+  if (preview) preview.src = dataUrl;
+  if (card) card.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+
+  if (topBadge) {
+    topBadge.textContent = 'Ready for Broadcast';
+    topBadge.style.background = '#065f46';
+    topBadge.style.color = '#34d399';
+    topBadge.style.borderColor = '#059669';
+  }
+  if (statusBadge) {
+    statusBadge.textContent = 'Creative Attached ✅';
+    statusBadge.style.background = '#d1fae5';
+    statusBadge.style.color = '#065f46';
+  }
+}
+
 function handleGenMsgImageUpload(e) {
-  const file = e.target.files && e.target.files[0];
+  let file = null;
+  if (e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    file = e.dataTransfer.files[0];
+  } else if (e && e.target && e.target.files && e.target.files.length) {
+    file = e.target.files[0];
+  } else if (e instanceof File) {
+    file = e;
+  }
   if (!file) return;
 
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-  if (!validTypes.includes(file.type.toLowerCase())) {
-    alert('Please select a valid image file (JPG, PNG, WebP).');
+  const isImgType = (file.type && file.type.toLowerCase().startsWith('image/')) ||
+                    /\.(jpe?g|png|webp|gif|bmp|svg|avif|heic|heif)$/i.test(file.name || '');
+  if (!isImgType) {
+    alert('Please select a valid image file (JPG, PNG, WebP, etc.).');
+    if (e && e.target && 'value' in e.target) e.target.value = '';
     return;
   }
 
@@ -11935,64 +12118,60 @@ function handleGenMsgImageUpload(e) {
 
   const reader = new FileReader();
   reader.onload = function(evt) {
+    const rawDataUrl = evt.target.result;
+    _applyGenMsgCreativeDataUrl(rawDataUrl, file, file.name);
+
     const tempImg = new Image();
     tempImg.onload = function() {
-      const maxDim = 1200;
-      let w = tempImg.width;
-      let h = tempImg.height;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) {
-          h = Math.round((h * maxDim) / w);
-          w = maxDim;
-        } else {
-          w = Math.round((w * maxDim) / h);
-          h = maxDim;
+      try {
+        const maxDim = 1280;
+        let w = tempImg.width || 800;
+        let h = tempImg.height || 800;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
         }
-      }
-      const cvs = document.createElement('canvas');
-      cvs.width = w;
-      cvs.height = h;
-      const ctx = cvs.getContext('2d');
-      ctx.drawImage(tempImg, 0, 0, w, h);
+        const cvs = document.createElement('canvas');
+        cvs.width = w;
+        cvs.height = h;
+        const ctx = cvs.getContext('2d');
+        const isPng = (file.type && file.type.toLowerCase() === 'image/png') || /\.png$/i.test(file.name || '');
+        if (!isPng) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+        }
+        ctx.drawImage(tempImg, 0, 0, w, h);
 
-      const mimeType = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
-      const quality = (mimeType === 'image/jpeg') ? 0.90 : undefined;
-      const dataUrl = cvs.toDataURL(mimeType, quality);
+        const mimeType = isPng ? 'image/png' : 'image/jpeg';
+        const quality = isPng ? undefined : 0.92;
+        const dataUrl = cvs.toDataURL(mimeType, quality);
 
-      cvs.toBlob(function(blob) {
+        cvs.toBlob(function(blob) {
+          if (spinner) spinner.style.display = 'none';
+          _applyGenMsgCreativeDataUrl(dataUrl, blob || file, file.name);
+        }, mimeType, quality);
+      } catch (err) {
         if (spinner) spinner.style.display = 'none';
-        window._genMsgUploadedImage = { dataUrl, blob, name: file.name };
-
-        const card = document.getElementById('genMsgImgCard');
-        const placeholder = document.getElementById('genMsgEmptyPlaceholder');
-        const preview = document.getElementById('genMsgImgPreview');
-        const topBadge = document.getElementById('genMsgPreviewTopBadge');
-        const statusBadge = document.getElementById('genMsgUploadStatusBadge');
-
-        if (preview) preview.src = dataUrl;
-        if (card) card.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
-
-        if (topBadge) {
-          topBadge.textContent = 'Ready for Broadcast';
-          topBadge.style.background = '#065f46';
-          topBadge.style.color = '#34d399';
-          topBadge.style.borderColor = '#059669';
-        }
-        if (statusBadge) {
-          statusBadge.textContent = 'Creative Attached ✅';
-          statusBadge.style.background = '#d1fae5';
-          statusBadge.style.color = '#065f46';
-        }
-      }, mimeType, quality);
+      }
     };
     tempImg.onerror = function() {
       if (spinner) spinner.style.display = 'none';
-      alert('Could not decode image file.');
     };
-    tempImg.src = evt.target.result;
+    tempImg.src = rawDataUrl;
+  };
+  reader.onerror = function() {
+    if (spinner) spinner.style.display = 'none';
+    alert('Failed to read the selected image file.');
   };
   reader.readAsDataURL(file);
+  if (e && e.target && 'value' in e.target) {
+    e.target.value = '';
+  }
 }
 window.handleGenMsgImageUpload = handleGenMsgImageUpload;
 
@@ -12779,13 +12958,14 @@ function _commRenderTable(rows) {
       <td style="padding:10px 12px">${statusPills || '<span style="color:#d1d5db;font-size:11px">No entries</span>'}</td>
     </tr>
     <tr id="comm-expand-${m.id}" style="display:${expanded ? 'table-row' : 'none'};background:#fcfbfe">
-      <td colspan="16" style="padding:12px 24px;border-bottom:1px solid #e5e7eb">
-        <div id="comm-detail-${m.id}" style="padding-bottom:6px">
+      <td colspan="16" style="padding:0;background:#fcfbfe;max-width:0;width:100%;box-sizing:border-box;border-bottom:1px solid #e5e7eb">
+        <div id="comm-detail-${m.id}" style="padding:12px 24px 18px;width:var(--vgk-wrap-w,100%);max-width:var(--vgk-wrap-w,100%);box-sizing:border-box;position:sticky;left:0">
           <span style="color:#9ca3af;font-size:12px"><i class="fas fa-spinner fa-spin me-1"></i>Loading entries…</span>
         </div>
       </td>
     </tr>`;
   }).join('');
+  _syncSubtableWrapWidths();
 }
 
 function _commRenderPagination(total, pg, pageSize) {
@@ -12844,6 +13024,7 @@ function _filterCommDetail(partnerId) {
 }
 
 function _renderCommDetailTable(partnerId) {
+  _syncSubtableWrapWidths();
   const detail = document.getElementById('comm-detail-' + partnerId);
   if (!detail) return;
 
@@ -12921,7 +13102,7 @@ function _renderCommDetailTable(partnerId) {
   const totalAll = allRows.length;
 
   const TH = (txt, align = 'left', extra = '') =>
-    `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;${extra}">${txt}</th>`;
+    `<th style="padding:7px 10px;text-align:${align};color:#6b7280;font-weight:700;font-size:10.5px;text-transform:uppercase;white-space:nowrap;${extra}">${txt}</th>`;
 
   detail.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
@@ -12944,8 +13125,8 @@ function _renderCommDetailTable(partnerId) {
         <option value="ADVANCE" ${kindVal === 'ADVANCE' ? 'selected' : ''}>Solar Advance</option>
       </select>
     </div>
-    <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <div id="comm-scroll-wrap-${partnerId}" class="me-subtable-scroll-wrap" style="width:100%;max-width:100%;box-sizing:border-box">
+    <table style="width:100%;min-width:1300px;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:#ede9fe;border-bottom:1px solid #ddd6fe">
           ${TH('Date')}
@@ -13157,16 +13338,20 @@ function _renderCommDetailTable(partnerId) {
         
         <div style="display:flex;flex-direction:column;gap:12px">
           <!-- MEMBER PROFILE AVATAR DISPLAY (Existing photo used in poster canvas) -->
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;box-sizing:border-box;display:flex;align-items:center;gap:12px">
-            <div style="width:46px;height:46px;border-radius:50%;border:2.5px solid #10b981;overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+          <input type="file" id="postMemberPhotoFile" accept="image/*" onchange="handleMemberPhotoUpload(event)" style="display:none">
+          <div onclick="document.getElementById('postMemberPhotoFile').click()" title="Click to upload or change member profile photo inside poster" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;box-sizing:border-box;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
+            <div style="width:46px;height:46px;border-radius:50%;border:2.5px solid #10b981;overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15);position:relative">
               <img id="postImageThumb" src="" style="width:100%;height:100%;object-fit:cover;display:none" alt="Avatar">
-              <div id="postImageThumbAvatar" style="font-size:14px;font-weight:800;color:#fff">MB</div>
+              <div id="postImageThumbAvatar" style="font-size:14px;font-weight:800;color:#fff">CP</div>
             </div>
             <div style="min-width:0;flex:1">
               <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.3px">Member Profile Photo</div>
-              <div id="postMemberNameBadge" style="font-size:12px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Teku Jyothi Kumar</div>
-              <div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px"><i class="fas fa-check-circle me-1"></i>Shown inside auto-generated poster</div>
+              <div id="postMemberNameBadge" style="font-size:12px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Loading…</div>
+              <div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px"><i class="fas fa-camera me-1"></i>Shown in poster (Click to change)</div>
             </div>
+            <button type="button" onclick="event.stopPropagation(); document.getElementById('postMemberPhotoFile').click()" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0">
+              <i class="fas fa-camera me-1"></i>Photo
+            </button>
           </div>
 
           <div>
@@ -13448,7 +13633,7 @@ function _renderCommDetailTable(partnerId) {
             <div style="width:100%;text-align:center;margin-bottom:6px">
               <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <!-- Line 1: Member Name -->
-                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">MR. BANDI GANGARAJU</div>
+                <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">LOADING…</div>
                 <!-- Line 2: Career Designation Plaque Header & Value -->
                 <div id="prevRankContainer" style="font-size:12px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:4px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.4);padding:2px 10px;border-radius:6px">
                   <span style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">CAREER DESIGNATION:</span><span id="prevRank">CHANNEL PARTNER</span>
@@ -13462,9 +13647,9 @@ function _renderCommDetailTable(partnerId) {
               <!-- Left Standalone 3D Champion Trophy (No Circular Background) -->
               <div style="position:absolute;bottom:4px;left:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
 
-              <div style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center">
+              <div onclick="document.getElementById('postMemberPhotoFile')?.click()" title="Click to upload or change member profile photo" style="width:220px;height:220px;border-radius:50%;border:5px solid #fde047;overflow:hidden;background:#001233;box-shadow:0 0 50px rgba(234,179,8,0.95);display:flex;align-items:center;justify-content:center;cursor:pointer">
                 <img id="prevImg" src="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;display:none">
-                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">BG</div>
+                <div id="prevAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:70px;font-weight:900">CP</div>
               </div>
 
               <!-- Right Standalone 3D Champion Trophy (No Circular Background) -->
@@ -13477,14 +13662,14 @@ function _renderCommDetailTable(partnerId) {
             <!-- 5. Overall Earning Plaque (Centerpiece) -->
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:7px 14px;text-align:center;margin-bottom:6px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
               <div style="color:#92400e;font-size:11.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">OVERALL EARNING</div>
-              <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹1,07,880/-</div>
-              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
+              <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹0/-</div>
+              <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">—</div>
             </div>
 
             <!-- 6. Today's Earning Banner Card (Enlarged 21px Font & Single Line Lock) -->
             <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:14px;padding:8px 10px;text-align:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(4,120,87,0.45);box-sizing:border-box">
-              <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹9,395/-</span></div>
-              <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none">(Already Paid: ₹3,000/-)</div>
+              <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹0/-</span></div>
+              <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none"></div>
             </div>
 
             <!-- Hidden Breakup Element to keep JS calculations working without visual display -->
@@ -13495,21 +13680,21 @@ function _renderCommDetailTable(partnerId) {
               <!-- Files Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 2px;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:60px;box-sizing:border-box">
                 <div style="font-size:8px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:0.2px;line-height:1;white-space:nowrap">📂 FILES</div>
-                <div id="prevFiles" style="display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:950;color:#ffffff;line-height:1"><span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">6 INSTALLED</span></div>
-                <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">16 SUBMITTED</div>
+                <div id="prevFiles" style="display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:950;color:#ffffff;line-height:1"><span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">0 INSTALLED</span></div>
+                <div id="prevTeamBreakupFiles" style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">0 SUBMITTED</div>
               </div>
               
               <!-- Members / Team Size Card -->
               <div style="background:rgba(15,23,42,0.88);border:1.5px solid rgba(234,179,8,0.5);border-radius:12px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;align-items:center;height:54px;box-sizing:border-box">
                 <div id="prevOverallLabel" style="font-size:8.5px;font-weight:900;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.5px;line-height:1">👥 TEAM SIZE</div>
-                <div id="prevOverall" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">8 MEMBERS</div>
-                <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 6 | L3: 2 | L4: 0</div>
+                <div id="prevOverall" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">0 MEMBERS</div>
+                <div id="prevTeamBreakup" style="font-size:8.5px;font-weight:800;color:#6ee7b7;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">L2: 0 | L3: 0 | L4: 0</div>
               </div>
 
               <!-- Potential Pending Card -->
               <div style="background:linear-gradient(135deg, rgba(112,26,117,0.88), rgba(131,24,67,0.88));border:1.5px solid #f472b6;border-radius:12px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;align-items:center;height:54px;box-sizing:border-box">
                 <div style="font-size:8.5px;font-weight:900;color:#fbcfe8;text-transform:uppercase;letter-spacing:0.5px;line-height:1">💰 POTENTIAL PENDING</div>
-                <div id="prevPotential" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">₹20,250/-</div>
+                <div id="prevPotential" style="height:18px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:950;color:#ffffff;line-height:1">₹0/-</div>
                 <div style="font-size:8.5px;font-weight:800;color:#fbcfe8;letter-spacing:0.5px;line-height:1">EXPECTED EARNING</div>
               </div>
             </div>
@@ -13524,21 +13709,21 @@ function _renderCommDetailTable(partnerId) {
               </div>
 
               <!-- Senior Name in single top line -->
-              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Direct Sponsor : MS. JARRA KUMARI</div>
+              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Direct Sponsor : —</div>
 
               <!-- Senior 3 Data Columns stacked below name -->
               <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding-right:4px">
                 <div style="text-align:left">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Today</div>
-                  <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹1,835/-</div>
+                  <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹0/-</div>
                 </div>
                 <div style="text-align:center">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Overall</div>
-                  <div id="prevSeniorEarning" style="font-size:13px;font-weight:950;color:#34d399">₹49,875/-</div>
+                  <div id="prevSeniorEarning" style="font-size:13px;font-weight:950;color:#34d399">₹0/-</div>
                 </div>
                 <div style="text-align:right">
                   <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Potential</div>
-                  <div id="prevSeniorPotential" style="font-size:13px;font-weight:950;color:#fb923c">₹91,650/-</div>
+                  <div id="prevSeniorPotential" style="font-size:13px;font-weight:950;color:#fb923c">₹0/-</div>
                 </div>
               </div>
 
@@ -13566,7 +13751,7 @@ function _renderCommDetailTable(partnerId) {
           </div>
 
           <!-- Displayed when image IS uploaded -->
-          <div id="customCreativeImgCard" style="display:none;width:480px;background:#0f172a;border:3px solid #10b981;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(16,185,129,0.25);position:relative">
+          <div id="customCreativeImgCard" ondragover="event.preventDefault()" ondrop="event.preventDefault();handleCustomCreativeUpload(event)" style="display:none;width:480px;background:#0f172a;border:3px solid #10b981;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(16,185,129,0.25);position:relative">
             <div style="background:#1e293b;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155">
               <span style="font-size:12px;font-weight:700;color:#34d399;display:flex;align-items:center;gap:6px">
                 <i class="fas fa-check-circle"></i>Attached for WhatsApp
@@ -13589,15 +13774,15 @@ function _renderCommDetailTable(partnerId) {
           </div>
 
           <!-- Displayed when NO image is uploaded yet -->
-          <div id="customCreativeEmptyPlaceholder" onclick="document.getElementById('postCustomCreativeFile').click()" style="width:480px;min-height:600px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
+          <div id="customCreativeEmptyPlaceholder" onclick="document.getElementById('postCustomCreativeFile').click()" ondragover="event.preventDefault();this.style.borderColor='#10b981'" ondragleave="this.style.borderColor='#334155'" ondrop="event.preventDefault();this.style.borderColor='#334155';handleCustomCreativeUpload(event)" style="width:480px;min-height:600px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
             <div style="width:76px;height:76px;border-radius:50%;background:#1e293b;color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;box-shadow:0 8px 20px rgba(0,0,0,0.4)">
               <i class="fas fa-cloud-upload-alt"></i>
             </div>
             <h4 style="color:#f8fafc;font-size:16px;font-weight:800;margin:0 0 8px 0">Upload Custom Creative / Poster</h4>
             <p style="color:#94a3b8;font-size:12px;line-height:1.5;max-width:320px;margin:0 0 18px 0">
-              Have a ready-made flyer or graphic designed in Photoshop or Canva? Click here to upload it.
+              Have a ready-made flyer or graphic designed in Photoshop or Canva? Click here or drag &amp; drop to upload it.
             </p>
-            <button type="button" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(5,150,105,0.4)">
+            <button type="button" onclick="event.stopPropagation();document.getElementById('postCustomCreativeFile').click()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(5,150,105,0.4)">
               <i class="fas fa-plus"></i> Select Image File
             </button>
             <div style="color:#059669;font-size:10.5px;margin-top:16px;max-width:300px;line-height:1.4">
@@ -13731,7 +13916,7 @@ function _renderCommDetailTable(partnerId) {
           </div>
 
           <!-- Displayed when image IS uploaded -->
-          <div id="genMsgImgCard" style="display:none;width:100%;background:#0f172a;border:3px solid #0284c7;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(2,132,199,0.25);position:relative">
+          <div id="genMsgImgCard" ondragover="event.preventDefault()" ondrop="event.preventDefault();handleGenMsgImageUpload(event)" style="display:none;width:100%;background:#0f172a;border:3px solid #0284c7;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(2,132,199,0.25);position:relative">
             <div style="background:#1e293b;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155">
               <span style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px">
                 <i class="fas fa-check-circle text-success"></i>Attached for Broadcast
@@ -13754,15 +13939,15 @@ function _renderCommDetailTable(partnerId) {
           </div>
 
           <!-- Displayed when NO image is uploaded yet -->
-          <div id="genMsgEmptyPlaceholder" onclick="document.getElementById('genMsgCreativeFileInput').click()" style="width:100%;min-height:500px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
+          <div id="genMsgEmptyPlaceholder" onclick="document.getElementById('genMsgCreativeFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='#0284c7'" ondragleave="this.style.borderColor='#334155'" ondrop="event.preventDefault();this.style.borderColor='#334155';handleGenMsgImageUpload(event)" style="width:100%;min-height:500px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
             <div style="width:76px;height:76px;border-radius:50%;background:#1e293b;color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;box-shadow:0 8px 20px rgba(0,0,0,0.4)">
               <i class="fas fa-cloud-upload-alt"></i>
             </div>
             <h4 style="color:#f8fafc;font-size:16px;font-weight:800;margin:0 0 8px 0">Upload Custom Creative / Poster</h4>
             <p style="color:#94a3b8;font-size:12px;line-height:1.5;max-width:320px;margin:0 0 18px 0">
-              Have a flyer, banner, circular, or announcement graphic? Click here to upload.
+              Have a flyer, banner, circular, or announcement graphic? Click here or drag &amp; drop to upload.
             </p>
-            <button type="button" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(2,132,199,0.4)">
+            <button type="button" onclick="event.stopPropagation();document.getElementById('genMsgCreativeFileInput').click()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(2,132,199,0.4)">
               <i class="fas fa-plus"></i> Select Image File
             </button>
             <div style="color:#38bdf8;font-size:11px;margin-top:16px;max-width:320px;line-height:1.4">
@@ -14853,7 +15038,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<script src="/public/js/poster-modal-core.js?v=20261018_2145"></script>
+<script src="/public/js/poster-modal-core.js?v=20261019_1505"></script>
 
 <!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
 <script>

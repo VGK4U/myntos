@@ -26,4 +26,30 @@ public class MainActivity extends BridgeActivity {
         super.onNewIntent(intent);
         setIntent(intent);
     }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Keep Chromium WebView timers and Plivo WebRTC SIP WebSocket active when screen turns off
+        try {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                getBridge().getWebView().onResume();
+                getBridge().getWebView().resumeTimers();
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        try {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                getBridge().getWebView().onResume();
+                getBridge().getWebView().resumeTimers();
+            }
+        } catch (Exception ignored) {
+        }
+    }
 }
+

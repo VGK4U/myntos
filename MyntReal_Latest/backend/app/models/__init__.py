@@ -112,7 +112,9 @@ from app.models.staff_accounts import (
     VendorReturnRequest, VendorReturnItem,
     ServiceCenterReceipt, ServiceCenterDispatch,
     # VGK Team Models (DC Protocol Mar 2026)
-    VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest
+    VGKTeamCommissionConfig, VGKTeamIncomeEntry, VGKPINPurchaseRequest,
+    # Tally Sync & Reconciliation Models (DC_TALLY_SYNC_001 - Oct 2026)
+    TallySyncRecord, TallySyncBatch
 )
 from app.models.vgk_cash_income import VGKCashIncomeEntry
 from app.models.vgk_incentive_brands import VGKIncentiveBrand
@@ -400,6 +402,8 @@ __all__ = [
     "VendorReturnItem",
     "ServiceCenterReceipt",
     "ServiceCenterDispatch",
+    "TallySyncRecord",
+    "TallySyncBatch",
     
     # Real Dreams - Real Estate Marketplace models (DC Protocol Compliant - Dec 08, 2025)
     "RDCompanyConfig",

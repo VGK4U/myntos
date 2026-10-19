@@ -88,16 +88,22 @@ public class MyntosFirebaseMessagingService extends MessagingService {
         }
 
         Log.d(TAG, "Dispatching native incoming call UI for session: " + callSessionId + " (" + callerName + ")");
+        IncomingCallPlugin.markSessionShown(callSessionId);
 
-        // 1. Acquire temporary partial wake lock (20s bound) to guarantee CPU stays active
+        // 1. Acquire temporary screen-bright wake lock (25s bound) to physically turn screen on and keep CPU active
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        PowerManager.WakeLock wakeLock = null;
         if (pm != null) {
-            wakeLock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "MyntOS::IncomingCallWakeLock"
-            );
-            wakeLock.acquire(20000L);
+            try {
+                @SuppressWarnings("deprecation")
+                PowerManager.WakeLock wakeLock = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                    "MyntOS::IncomingCallWakeLock"
+                );
+                wakeLock.setReferenceCounted(false);
+                wakeLock.acquire(25000L);
+            } catch (Exception e) {
+                Log.w(TAG, "Notice acquiring FCM screen wakeLock: " + e.getMessage());
+            }
         }
 
         // 2. Ensure high-importance notification channel is registered

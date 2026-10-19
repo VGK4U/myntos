@@ -130,6 +130,23 @@ class TelephonyService {
 
   private registrationResolve: ((val: boolean) => void) | null = null;
   private registrationReject: ((err: any) => void) | null = null;
+  private pendingAutoAnswerUntil: number = 0;
+  private registrationKeepAliveTimer: any = null;
+
+  public startRegistrationKeepAlive(): void {
+    if (this.registrationKeepAliveTimer) return;
+    this.registrationKeepAliveTimer = setInterval(async () => {
+      try {
+        if (this.registrationState !== 'REGISTERED' && this.registrationState !== 'CONNECTING') {
+          await this.initPlivoWebRTC();
+        } else if (this.registrationState === 'REGISTERED') {
+          await apiService.post('/telephony/plivo/browser/register', { is_registered: true });
+        }
+      } catch {
+        // Ignore transient network errors during keepalive
+      }
+    }, 30000);
+  }
 
   public async initPlivoWebRTC(): Promise<boolean> {
     if (this.registrationState === 'REGISTERED' && this.plivoClient) {
@@ -181,10 +198,13 @@ class TelephonyService {
           return;
         }
 
-        // Pre-warm local microphone tracks with hardware AEC
-        if (hasMedia) {
+        // Pre-warm local microphone tracks with hardware AEC only when foreground visible and with a strict 1.5s timeout so screen-off registration never blocks
+        if (hasMedia && typeof document !== 'undefined' && document.visibilityState === 'visible') {
           try {
-            const testStream = await this.audioAdapter.startMicrophone();
+            const testStream = await Promise.race([
+              this.audioAdapter.startMicrophone(),
+              new Promise<null>((r) => setTimeout(() => r(null), 1500))
+            ]);
             if (testStream) {
               testStream.getTracks().forEach((t) => t.stop());
               console.log('[TelephonyService] Microphone AEC initialized and ready.');
@@ -325,6 +345,10 @@ class TelephonyService {
         this.registrationResolve = null;
       }
       this.registrationPromise = null;
+      this.startRegistrationKeepAlive();
+      apiService.post('/telephony/plivo/browser/register', { is_registered: true }).catch((err) => {
+        console.warn('[TelephonyService] Registration status sync notice:', err);
+      });
     });
 
     this.plivoClient.on('onLogout', () => {
@@ -348,9 +372,10 @@ class TelephonyService {
       const callerPhone = callerName || callInfo?.src || '';
       const leadName = extraHeaders?.['X-PH-Lead-Name'] || 'Incoming Inquiry';
       const maskedPhone = this.maskPhone(callerPhone);
+      const inSessionId = extraHeaders?.['X-PH-Call-Session-ID'] || callInfo?.callUUID || `vcs_in_${Date.now()}`;
 
       this.session = {
-        sessionId: extraHeaders?.['X-PH-Call-Session-ID'] || callInfo?.callUUID || `vcs_in_${Date.now()}`,
+        sessionId: inSessionId,
         destinationPhone: maskedPhone,
         contactName: leadName,
         leadId: extraHeaders?.['X-PH-Lead-ID'] || null,
@@ -367,11 +392,39 @@ class TelephonyService {
         isIncoming: true
       };
       this.notify();
+
+      // If the user already tapped Accept on the native lockscreen UI before the SIP INVITE arrived,
+      // auto-answer the call immediately!
+      if (this.pendingAutoAnswerUntil > Date.now()) {
+        console.log('[TelephonyService] Auto-answering incoming SIP call (accepted from lock-screen)');
+        this.pendingAutoAnswerUntil = 0;
+        this.answerIncomingCall();
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('myntos-plivo-incoming-call', {
+            detail: {
+              sessionId: inSessionId,
+              callerPhone: maskedPhone,
+              rawCallerPhone: callerPhone,
+              callerName: leadName,
+              providerCallId: callInfo?.callUUID || '',
+              leadId: extraHeaders?.['X-PH-Lead-ID'] || ''
+            }
+          })
+        );
+      }
     });
 
     this.plivoClient.on('onIncomingCallCanceled', () => {
       console.log('[TelephonyService] Inbound call canceled / missed');
       this.incomingCallObj = null;
+      this.pendingAutoAnswerUntil = 0;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('myntos-plivo-call-ended'));
+      }
       this.handleCallEnd('Call missed / canceled');
     });
 
@@ -405,6 +458,10 @@ class TelephonyService {
 
     this.plivoClient.on('onCallTerminated', () => {
       console.log('[TelephonyService] Call terminated');
+      this.pendingAutoAnswerUntil = 0;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('myntos-plivo-call-ended'));
+      }
       this.handleCallEnd('Call ended');
     });
 
@@ -537,22 +594,52 @@ class TelephonyService {
     if (this.incomingCallObj && typeof this.incomingCallObj.answer === 'function') {
       try {
         this.incomingCallObj.answer();
+        this.pendingAutoAnswerUntil = 0;
+        void this.handleCallConnected('user-answer-incoming');
+        return;
       } catch (err) {
         console.warn('[TelephonyService] Answer error:', err);
       }
+    } else if (this.plivoClient && typeof this.plivoClient.answer === 'function' && this.session.state === 'ringing') {
+      try {
+        this.plivoClient.answer();
+        this.pendingAutoAnswerUntil = 0;
+        void this.handleCallConnected('user-answer-incoming');
+        return;
+      } catch (err) {
+        console.warn('[TelephonyService] Client answer error:', err);
+      }
     }
-    void this.handleCallConnected('user-answer-incoming');
+
+    // User tapped Accept on native lock-screen before Plivo's SIP INVITE arrived (e.g. during IVR greeting or WebRTC wake-up).
+    // Arm 25-second auto-answer window so the instant onIncomingCall fires, it answers and bridges audio automatically.
+    console.log('[TelephonyService] Armed pending auto-answer window (25s) awaiting Plivo SIP INVITE...');
+    this.pendingAutoAnswerUntil = Date.now() + 25000;
+    this.session.state = 'connecting';
+    this.session.isIncoming = true;
+    this.notify();
+    void this.initPlivoWebRTC();
   }
 
   public rejectIncomingCall(): void {
+    this.pendingAutoAnswerUntil = 0;
     if (this.incomingCallObj && typeof this.incomingCallObj.reject === 'function') {
       try {
         this.incomingCallObj.reject();
       } catch (err) {
         console.warn('[TelephonyService] Reject error:', err);
       }
+    } else if (this.plivoClient && typeof this.plivoClient.reject === 'function') {
+      try {
+        this.plivoClient.reject();
+      } catch (err) {
+        console.warn('[TelephonyService] Client reject error:', err);
+      }
     }
     this.incomingCallObj = null;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('myntos-plivo-call-ended'));
+    }
     this.handleCallEnd('Call rejected');
   }
 
