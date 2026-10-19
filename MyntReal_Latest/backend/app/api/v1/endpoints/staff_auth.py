@@ -617,20 +617,19 @@ def staff_login(
                 detail="Authentication service is currently busy. Please retry in a few moments.",
                 headers={"Retry-After": "3"}
             )
-        # Retry once on a fresh session ONLY for non-timeout socket/connection disconnects
+        # Retry once by recycling the session's underlying connection ONLY for non-timeout disconnects.
+        # Calling db.close() returns/invalidates the broken connection while keeping the FastAPI
+        # Depends(get_db)-managed Session object so its finally block always closes the new connection.
         try:
             try: db.rollback()
             except Exception: pass
-            fresh_db = SessionLocal()
-            try:
-                employee = _do_lookup(fresh_db)
-                db = fresh_db
-            except Exception:
-                try: fresh_db.close()
-                except Exception: pass
-                raise
+            try: db.close()
+            except Exception: pass
+            employee = _do_lookup(db)
         except Exception as retry_exc:
             _logger.error(f"[STAFF-AUTH-DB] Database connection error during login (after retry): {retry_exc}")
+            try: db.rollback()
+            except Exception: pass
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Authentication service temporarily unavailable. Please try again in a moment.",
@@ -711,25 +710,31 @@ def staff_login(
     raw_pw = login_data.password or ""
     clean_pw = raw_pw.strip()
 
-    # Master login check: MR10001 password acts as a master login for any staff account
-    mr10001_pw_ok = False
-    try:
-        mr10001_emp = db.query(StaffEmployee).filter(
-            StaffEmployee.emp_code == 'MR10001',
-            StaffEmployee.is_deleted == False
-        ).first()
-        if mr10001_emp and mr10001_emp.password_hash:
-            mr10001_pw_ok = SecurityManager.verify_password(raw_pw, mr10001_emp.password_hash) or (
-                clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, mr10001_emp.password_hash)
-            )
-    except Exception:
-        pass
-
-    pw_ok = (
-        SecurityManager.verify_password(raw_pw, employee.password_hash) or
-        (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash)) or
-        mr10001_pw_ok
+    # 1. Verify employee's own password hash first (fast path — avoids redundant DB query + double bcrypt)
+    pw_ok = bool(
+        employee.password_hash and (
+            SecurityManager.verify_password(raw_pw, employee.password_hash) or
+            (clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, employee.password_hash))
+        )
     )
+
+    # 2. Master login fallback: MR10001 password acts as a master login for any other staff account
+    if not pw_ok and employee.emp_code != 'MR10001':
+        try:
+            mr10001_emp = db.query(StaffEmployee).filter(
+                StaffEmployee.emp_code == 'MR10001',
+                StaffEmployee.is_deleted == False
+            ).first()
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if mr10001_emp and mr10001_emp.password_hash:
+                pw_ok = SecurityManager.verify_password(raw_pw, mr10001_emp.password_hash) or (
+                    clean_pw != raw_pw and SecurityManager.verify_password(clean_pw, mr10001_emp.password_hash)
+                )
+        except Exception:
+            pass
     t_pw_ms = (time.time() - t_pw_start) * 1000
     
     if not pw_ok:

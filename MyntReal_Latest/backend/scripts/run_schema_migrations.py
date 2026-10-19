@@ -87,9 +87,8 @@ def run_migrations():
         logger.info("Running feature-specific schema migrations...")
         if engine.dialect.name == 'postgresql':
             with engine.connect() as conn:
-                with conn.begin():
-                    conn.execute(text("SET LOCAL lock_timeout = '2000'"))
-                    conn.execute(text("SET LOCAL statement_timeout = '10000'"))
+                conn.execute(text("SET lock_timeout = '2000'"))
+                conn.execute(text("SET statement_timeout = '10000'"))
 
                 # 4.1 service_center_given_out (from staff_accounts_service)
                 conn.execute(text("""
@@ -1078,7 +1077,8 @@ def run_migrations():
                     "ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb",
                 ]:
                     try:
-                        conn.execute(text(ddl_stmt))
+                        with conn.begin_nested():
+                            conn.execute(text(ddl_stmt))
                     except Exception as ddl_err:
                         logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
                 logger.info("✅ SaaS Governance & Module Entitlements schema invariants verified/applied")
@@ -1130,7 +1130,8 @@ def run_migrations():
                     )"""
                 ]:
                     try:
-                        conn.execute(text(ddl_stmt))
+                        with conn.begin_nested():
+                            conn.execute(text(ddl_stmt))
                     except Exception as ddl_err:
                         logger.warning(f"Non-fatal DDL notice ({ddl_stmt[:40]}...): {ddl_err}")
                 logger.info("✅ VGK Freelancer Segment & KYC Grace Period schema invariants verified/applied")
@@ -1192,20 +1193,49 @@ def run_migrations():
                 logger.info("✅ DC-GDRIVE-GUC: guc_admin_users table verified/created")
 
                 # 4.34 WhatsApp Message Log & Inbox Field Width Expansion (OOM / Truncation Prevention)
-                for ddl_col in [
-                    "ALTER TABLE message_log ALTER COLUMN mobile_number TYPE VARCHAR(100)",
-                    "ALTER TABLE message_log ALTER COLUMN from_number TYPE VARCHAR(100)",
-                    "ALTER TABLE message_log ALTER COLUMN to_number TYPE VARCHAR(100)",
-                    "ALTER TABLE message_log ALTER COLUMN error_code TYPE VARCHAR(50)",
-                    "ALTER TABLE message_log ALTER COLUMN failure_reason TYPE TEXT",
-                    "ALTER TABLE wa_inbox ALTER COLUMN from_phone TYPE VARCHAR(100)",
-                    "ALTER TABLE wa_conversations ALTER COLUMN phone TYPE VARCHAR(100)",
+                existing_col_meta = {
+                    (r[0], r[1]): (r[2], r[3])
+                    for r in conn.execute(text("""
+                        SELECT table_name, column_name, data_type, character_maximum_length
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name IN ('message_log', 'wa_inbox', 'wa_conversations')
+                    """)).fetchall()
+                }
+                for tbl_name, col_name, target_type, min_len, ddl_col in [
+                    ("message_log", "mobile_number", "character varying", 100, "ALTER TABLE message_log ALTER COLUMN mobile_number TYPE VARCHAR(100)"),
+                    ("message_log", "from_number", "character varying", 100, "ALTER TABLE message_log ALTER COLUMN from_number TYPE VARCHAR(100)"),
+                    ("message_log", "to_number", "character varying", 100, "ALTER TABLE message_log ALTER COLUMN to_number TYPE VARCHAR(100)"),
+                    ("message_log", "error_code", "character varying", 50, "ALTER TABLE message_log ALTER COLUMN error_code TYPE VARCHAR(50)"),
+                    ("message_log", "failure_reason", "text", None, "ALTER TABLE message_log ALTER COLUMN failure_reason TYPE TEXT"),
+                    ("wa_inbox", "from_phone", "character varying", 100, "ALTER TABLE wa_inbox ALTER COLUMN from_phone TYPE VARCHAR(100)"),
+                    ("wa_conversations", "phone", "character varying", 100, "ALTER TABLE wa_conversations ALTER COLUMN phone TYPE VARCHAR(100)"),
                 ]:
+                    cur_type, cur_len = existing_col_meta.get((tbl_name, col_name), (None, None))
+                    if cur_type == "text" or (target_type == "character varying" and cur_len is not None and cur_len >= (min_len or 0)):
+                        continue
                     try:
-                        conn.execute(text(ddl_col))
+                        with conn.begin_nested():
+                            conn.execute(text(ddl_col))
                     except Exception as ddl_e:
                         logger.warning(f"Non-fatal column width update notice ({ddl_col}): {ddl_e}")
                 logger.info("✅ WhatsApp message_log & wa_inbox column widths verified/expanded")
+
+                # 4.35 Staff Auth & Audit Lookup Indexes (Prevent seq-scan / statement_timeout on login)
+                for idx_ddl in [
+                    'CREATE INDEX IF NOT EXISTS idx_public_staff_audit_log_id ON public.staff_audit_log (id DESC)',
+                    'CREATE INDEX IF NOT EXISTS idx_public_staff_audit_log_timestamp ON public.staff_audit_log ("timestamp" DESC)',
+                    'CREATE INDEX IF NOT EXISTS idx_public_staff_audit_log_employee_id ON public.staff_audit_log (employee_id)',
+                    'CREATE INDEX IF NOT EXISTS idx_public_staff_employees_emp_code ON public.staff_employees (emp_code)',
+                    'CREATE INDEX IF NOT EXISTS idx_public_staff_employees_email ON public.staff_employees (email)',
+                ]:
+                    try:
+                        with conn.begin_nested():
+                            conn.execute(text(idx_ddl))
+                    except Exception as idx_e:
+                        logger.warning(f"Non-fatal index creation notice ({idx_ddl}): {idx_e}")
+
+                conn.commit()
 
         logger.info("✅ Feature-specific schema migrations complete")
         
