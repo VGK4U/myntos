@@ -521,7 +521,7 @@
             <div class="card-custom">
                 <div class="d-flex d-md-none align-items-center justify-content-between px-3 py-2 bg-light border-bottom text-muted" style="font-size: 11px;">
                     <span><i class="fas fa-arrows-left-right text-primary me-1"></i> Swipe table horizontally</span>
-                    <span class="badge bg-secondary-subtle text-secondary border">21 Columns</span>
+                    <span class="badge bg-secondary-subtle text-secondary border">20 Columns</span>
                 </div>
                 <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table class="table table-custom table-hover align-middle mb-0" id="ledgerTable">
@@ -536,7 +536,6 @@
                                 <th class="sortable" data-col="lead_owner_name" data-type="text">Team Member (Lead Owner) <i class="fas fa-sort ms-1 sort-icon"></i></th>
                                 <th class="sortable" data-col="level" data-type="text">Level <i class="fas fa-sort ms-1 sort-icon"></i></th>
                                 <th class="sortable" data-col="display_kind" data-type="text">Entry Kind <i class="fas fa-sort ms-1 sort-icon"></i></th>
-                                <th class="sortable" data-col="deal_value" data-type="number">Deal Value ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
                                 <th class="sortable" data-col="received_value" data-type="number">Received Value ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
                                 <th class="sortable" data-col="commission_pct" data-type="number">Calc % <i class="fas fa-sort ms-1 sort-icon"></i></th>
                                 <th class="sortable" data-col="commission_amount" data-type="number">Gross ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
@@ -556,7 +555,7 @@
                         </thead>
                         <tbody id="tableBody">
                             <tr>
-                                <td colspan="21" class="text-center py-4 text-muted">
+                                <td colspan="20" class="text-center py-4 text-muted">
                                     <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading income ledger...
                                 </td>
                             </tr>
@@ -1009,7 +1008,7 @@
                 }
             }
 
-            // 4. Update Table Top Totals Row (with totals for ALL value columns)
+            // 4. Update Table Top Totals Row (with totals for commission/payout columns; no subtotal for Received Value)
             const totalsRow = document.getElementById('totalsHeaderRow');
             if (filtered.length === 0) {
                 totalsRow.innerHTML = '';
@@ -1024,8 +1023,7 @@
                     <th>—</th>
                     <th>—</th>
                     <th>—</th>
-                    <th class="fw-bold text-dark">₹${Math.round(sumDeal).toLocaleString('en-IN')}</th>
-                    <th class="fw-bold text-dark">₹${Math.round(sumRecv).toLocaleString('en-IN')}</th>
+                    <th>—</th>
                     <th class="text-center">—</th>
                     <th class="fw-bold text-indigo">₹${Math.round(sumGross).toLocaleString('en-IN')}</th>
                     <th class="fw-bold text-dark">₹${Math.round(sumStg1).toLocaleString('en-IN')}</th>
@@ -1076,7 +1074,7 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            const colSpan = showStatusColumn ? 21 : 20;
+            const colSpan = showStatusColumn ? 20 : 19;
 
             if (!rows || rows.length === 0) {
                 tbody.innerHTML = `
@@ -1143,7 +1141,7 @@
                 }
                 const levelCodeCellHtml = `<span class="badge fw-bold" style="${lvlBadgeStyle} font-size: 11px; padding: 4px 8px;">${escHtml(lvlCode)}</span>`;
 
-                // 21 properly mapped columns matching the 21 table headers
+                // 20 properly mapped columns matching the 20 table headers
                 tr.innerHTML = `
                     <td>${row.submit_date || '—'}</td>
                     <td>${row.trigger_date || row.income_date || '—'}</td>
@@ -1154,7 +1152,6 @@
                     <td>${ownerCellHtml}</td>
                     <td>${levelCodeCellHtml}</td>
                     <td><span class="badge-kind">${displayKind}</span></td>
-                    <td>₹${(row.deal_value || 0).toLocaleString('en-IN')}</td>
                     <td>₹${(row.received_value || 0).toLocaleString('en-IN')}</td>
                     <td>${row.commission_pct || 0}%</td>
                     <td class="fw-bold text-dark">₹${(row.commission_amount || 0).toLocaleString('en-IN')}</td>
