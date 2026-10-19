@@ -252,6 +252,42 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
         }
+        .team-member-card {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .team-member-card:hover {
+            transform: translateY(-2px);
+            border-color: #818cf8;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.1);
+        }
+        .team-member-card.active {
+            background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+            border-color: #4f46e5;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
+        }
+        .lead-earning-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 9px;
+            padding: 8px 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .lead-earning-card:hover {
+            border-color: #0ea5e9;
+            background: #f0f9ff;
+            transform: translateY(-1px);
+        }
+        .lead-earning-card.active {
+            background: #eff6ff;
+            border-color: #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+        }
 
         /* Mobile Viewport Optimizations (<= 576px) */
         @media (max-width: 576px) {
@@ -429,6 +465,42 @@
                 </div>
             </div>
 
+            <!-- Team Member-Wise & Lead-Wise Earnings Breakdown -->
+            <div class="card-custom p-3 mb-3 bg-white" id="teamMemberBreakdownCard">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.5px;">
+                            <i class="fas fa-sitemap text-indigo me-1"></i> Team Member-Wise &amp; Lead-Wise Earnings
+                        </div>
+                        <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle" id="teamBreakdownSummaryBadge" style="font-size: 10.5px;">All Members</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickAllTeam" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('ALL')">All</button>
+                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickDownlineOnly" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('TEAM_ONLY')"><i class="fas fa-sitemap me-1"></i>Downline Team Only (L2+)</button>
+                        <button type="button" class="btn btn-sm py-0 px-2 fw-bold" id="btnQuickSelfOnly" style="font-size: 11px; border-radius: 6px;" onclick="selectTeamFilterQuick('SELF_ONLY')"><i class="fas fa-user me-1"></i>Self Direct (L1)</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btnToggleLeadBreakdown" style="font-size: 11px; border-radius: 6px;" onclick="toggleLeadWisePanel()">
+                            <i class="fas fa-user-tag me-1"></i><span id="toggleLeadBreakdownText">Hide Lead-Wise</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Team Member Cards -->
+                <div class="row g-2" id="teamMemberCardsContainer">
+                    <!-- Populated dynamically -->
+                </div>
+                <!-- Lead-Wise Earnings Drilldown (Under Selected Team Member / Active Filter) -->
+                <div class="mt-3 pt-2 border-top" id="leadWiseBreakdownSection">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div class="fw-bold text-secondary" style="font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase;">
+                            <i class="fas fa-user-check text-primary me-1"></i> Lead-Wise Earnings <span id="leadWiseSubtitle" class="text-indigo fw-bold ms-1"></span>
+                        </div>
+                        <small class="text-muted" style="font-size: 11px;">Click any lead card to filter table entries</small>
+                    </div>
+                    <div class="row g-2" id="leadWiseCardsContainer">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Summary KPI Data Labels / Metric Summary Cards (Without Net Payout) -->
             <div class="row g-2 g-md-3 mb-3" id="kpiCardsContainer">
                 <div class="col-6 col-md-6 col-xl-3">
@@ -461,18 +533,32 @@
                 </div>
             </div>
 
-            <!-- Customer-Wise Filters & Toolbar -->
+            <!-- Team-Wise, Lead-Wise, Level & Status Filters Toolbar -->
             <div class="card-custom p-3 mb-3 bg-white">
                 <div class="row g-2 align-items-center">
-                    <!-- Customer Filter -->
-                    <div class="col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user me-1 text-primary"></i> Customer / Member</label>
+                    <!-- Team Member (Lead Owner) Filter -->
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-users me-1 text-indigo"></i> Team / Team Member</label>
+                        <select id="filterTeamMember" class="form-select form-select-sm">
+                            <option value="ALL">All Team &amp; Self</option>
+                        </select>
+                    </div>
+                    <!-- Customer / Lead Filter (Cascades with Team Member) -->
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user me-1 text-primary"></i> Customer / Lead</label>
                         <select id="filterCustomer" class="form-select form-select-sm">
-                            <option value="ALL">All Customers</option>
+                            <option value="ALL">All Customers / Leads</option>
+                        </select>
+                    </div>
+                    <!-- Level Filter -->
+                    <div class="col-lg-1 col-md-4 col-sm-6">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-layer-group me-1 text-purple"></i> Level</label>
+                        <select id="filterLevel" class="form-select form-select-sm">
+                            <option value="ALL">All</option>
                         </select>
                     </div>
                     <!-- Status Filter -->
-                    <div class="col-md-2 col-sm-6" id="statusFilterCol">
+                    <div class="col-lg-2 col-md-4 col-sm-6" id="statusFilterCol">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-tags me-1 text-info"></i> Status</label>
                         <select id="filterStatus" class="form-select form-select-sm">
                             <option value="ALL">All Statuses</option>
@@ -482,32 +568,33 @@
                         </select>
                     </div>
                     <!-- Real-time Search -->
-                    <div class="col-md-4 col-sm-12">
+                    <div class="col-lg-2 col-md-4 col-sm-12">
                         <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1 text-secondary"></i> Search Entries</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="filterSearch" class="form-control" placeholder="Search customer, entry #, kind, location...">
+                            <input type="text" id="filterSearch" class="form-control" placeholder="Search lead, team, entry #...">
                             <button class="btn btn-outline-secondary" type="button" id="btnClearSearch" title="Clear search"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
                     <!-- Avoid Cancelled Switch & Reset -->
-                    <div class="col-md-3 col-sm-12 d-flex align-items-center justify-content-between justify-content-md-end gap-3 pt-md-3 mt-1">
+                    <div class="col-lg-2 col-md-4 col-sm-12 d-flex align-items-center justify-content-between justify-content-lg-end gap-2 pt-lg-3 mt-1">
                         <div class="form-check form-switch mb-0" title="Avoid cancelled transactions in table and metric cards">
                             <input class="form-check-input" type="checkbox" id="toggleAvoidCancelled" checked>
-                            <label class="form-check-label small fw-bold text-danger" for="toggleAvoidCancelled" id="toggleAvoidCancelledLabel">
+                            <label class="form-check-label small fw-bold text-danger" for="toggleAvoidCancelled" id="toggleAvoidCancelledLabel" style="font-size: 11.5px;">
                                 Hide Cancelled (<span id="cancelledCountBadge">0</span>)
                             </label>
                         </div>
-                        <button class="btn btn-sm btn-outline-primary" id="btnResetFilters" type="button">
-                            <i class="fas fa-redo-alt me-1"></i> Reset
+                        <button class="btn btn-sm btn-outline-primary py-1 px-2" id="btnResetFilters" type="button" title="Reset all filters">
+                            <i class="fas fa-redo-alt"></i>
                         </button>
                     </div>
                 </div>
                 <!-- Filter Status Strip -->
-                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small text-muted">
-                    <div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top small text-muted">
+                    <div class="d-flex align-items-center flex-wrap gap-1">
                         <span id="entriesFilterInfo">Showing all entries</span>
-                        <span id="cancelledNoticeBadge" class="badge bg-danger-subtle text-danger ms-2">
+                        <span id="activeFilterPills" class="d-inline-flex align-items-center flex-wrap gap-1 ms-1"></span>
+                        <span id="cancelledNoticeBadge" class="badge bg-danger-subtle text-danger ms-1">
                             <i class="fas fa-ban me-1"></i> Cancelled transactions excluded
                         </span>
                     </div>
@@ -578,6 +665,7 @@
         let allLedgerData = [];
         let currentPartnerId = null;
         let showStatusColumn = true;
+        let showLeadWisePanel = true;
         let currentSort = { col: 'submit_date', dir: 'desc' };
 
         async function loadSharedLedger() {
@@ -727,7 +815,9 @@
             const cancelledCount = allLedgerData.filter(r => (r.status || '').toUpperCase() === 'CANCELLED').length;
             document.getElementById('cancelledCountBadge').textContent = cancelledCount;
 
-            // Populate Customer Filter Dropdown
+            // Populate Team Member, Level, and Customer Filter Dropdowns
+            populateTeamMemberDropdown(allLedgerData);
+            populateLevelDropdown(allLedgerData);
             populateCustomerDropdown(allLedgerData);
 
             // Wire up interactive toolbar & sort listeners
@@ -737,34 +827,176 @@
             applyFiltersAndRender();
         }
 
+        function getTeamMemberKey(row) {
+            const ownerName = (row.lead_owner_name || '').trim();
+            if (!ownerName || ownerName === '—') return 'UNASSIGNED';
+            return ownerName;
+        }
+
+        function populateTeamMemberDropdown(data) {
+            const teamMap = {};
+            let downlineCount = 0;
+            let downlineGross = 0;
+            let selfCount = 0;
+            let selfGross = 0;
+
+            data.forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const key = getTeamMemberKey(r);
+                const isDownline = isRowDownlineTeamLead(r);
+                const gross = isCancelled ? 0 : (Number(r.commission_amount) || 0);
+                if (!isCancelled) {
+                    if (isDownline) {
+                        downlineCount++;
+                        downlineGross += gross;
+                    } else {
+                        selfCount++;
+                        selfGross += gross;
+                    }
+                }
+                if (key === 'UNASSIGNED') return;
+                if (!teamMap[key]) {
+                    teamMap[key] = {
+                        name: key,
+                        code: r.lead_owner_code || '',
+                        levelCode: getRowLevelCode(r),
+                        isDownline: isDownline,
+                        leads: new Set(),
+                        activeEntries: 0,
+                        gross: 0
+                    };
+                }
+                const cName = (r.client_name || r.member_name || '').trim();
+                if (cName && !isCancelled) teamMap[key].leads.add(cName);
+                if (!isCancelled) {
+                    teamMap[key].activeEntries++;
+                    teamMap[key].gross += gross;
+                }
+                if (isDownline) teamMap[key].isDownline = true;
+            });
+
+            const selectEl = document.getElementById('filterTeamMember');
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="ALL">All Team &amp; Self (${Object.keys(teamMap).length} Members)</option>`;
+            selectEl.innerHTML += `<option value="TEAM_ONLY">⚡ Downline Team Leads Only (L2+) — ₹${Math.round(downlineGross).toLocaleString('en-IN')}</option>`;
+            selectEl.innerHTML += `<option value="SELF_ONLY">👤 Self / Direct Leads Only (L1) — ₹${Math.round(selfGross).toLocaleString('en-IN')}</option>`;
+
+            const sortedMembers = Object.values(teamMap).sort((a, b) => {
+                if (a.isDownline !== b.isDownline) return a.isDownline ? -1 : 1;
+                return b.gross - a.gross;
+            });
+
+            sortedMembers.forEach(tm => {
+                const opt = document.createElement('option');
+                opt.value = tm.name;
+                const tag = tm.isDownline ? `[${tm.levelCode || 'Team'}]` : `[L1 Self]`;
+                const codeStr = tm.code ? ` (${tm.code})` : '';
+                opt.textContent = `${tag} ${tm.name}${codeStr} — ${tm.leads.size} Leads • ₹${Math.round(tm.gross).toLocaleString('en-IN')}`;
+                selectEl.appendChild(opt);
+            });
+
+            if (currentVal && (currentVal === 'ALL' || currentVal === 'TEAM_ONLY' || currentVal === 'SELF_ONLY' || teamMap[currentVal])) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        function populateLevelDropdown(data) {
+            const levelMap = {};
+            data.forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const lvlCode = getRowLevelCode(r);
+                if (!lvlCode || lvlCode === '—') return;
+                if (!levelMap[lvlCode]) levelMap[lvlCode] = 0;
+                if (!isCancelled) levelMap[lvlCode]++;
+            });
+
+            const selectEl = document.getElementById('filterLevel');
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="ALL">All Levels</option>`;
+            Object.keys(levelMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).forEach(lvl => {
+                const opt = document.createElement('option');
+                opt.value = lvl;
+                opt.textContent = `${lvl} (${levelMap[lvl]})`;
+                selectEl.appendChild(opt);
+            });
+            if (currentVal && levelMap[currentVal]) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        function doesRowMatchTeamFilter(row, selectedTeamMember) {
+            if (!selectedTeamMember || selectedTeamMember === 'ALL') return true;
+            if (selectedTeamMember === 'TEAM_ONLY') return isRowDownlineTeamLead(row);
+            if (selectedTeamMember === 'SELF_ONLY') return !isRowDownlineTeamLead(row);
+            return getTeamMemberKey(row) === selectedTeamMember;
+        }
+
         function populateCustomerDropdown(data) {
+            const selectedTeamMember = document.getElementById('filterTeamMember') ? document.getElementById('filterTeamMember').value : 'ALL';
+            const selectedLevel = document.getElementById('filterLevel') ? document.getElementById('filterLevel').value : 'ALL';
+
             const customerMap = {};
             data.forEach(r => {
+                if (!doesRowMatchTeamFilter(r, selectedTeamMember)) return;
+                if (selectedLevel !== 'ALL' && getRowLevelCode(r) !== selectedLevel) return;
+
                 const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
                 const cName = (r.client_name || r.member_name || '').trim();
                 if (!cName) return;
                 if (!customerMap[cName]) {
-                    customerMap[cName] = { total: 0, active: 0 };
+                    customerMap[cName] = { total: 0, active: 0, gross: 0 };
                 }
                 customerMap[cName].total++;
-                if (!isCancelled) customerMap[cName].active++;
+                if (!isCancelled) {
+                    customerMap[cName].active++;
+                    customerMap[cName].gross += Number(r.commission_amount) || 0;
+                }
             });
 
             const selectEl = document.getElementById('filterCustomer');
             const currentVal = selectEl.value;
-            selectEl.innerHTML = `<option value="ALL">All Customers (${Object.keys(customerMap).length})</option>`;
+            const totalLeads = Object.keys(customerMap).length;
+            const scopeLabel = selectedTeamMember === 'ALL'
+                ? `All Customers / Leads (${totalLeads})`
+                : `Leads in Selected Team (${totalLeads})`;
+            selectEl.innerHTML = `<option value="ALL">${escHtml(scopeLabel)}</option>`;
 
             Object.keys(customerMap).sort((a,b) => a.localeCompare(b)).forEach(cName => {
                 const opt = document.createElement('option');
                 opt.value = cName;
                 const stats = customerMap[cName];
-                opt.textContent = `${cName} (${stats.active} active)`;
+                opt.textContent = `${cName} (${stats.active} entries • ₹${Math.round(stats.gross).toLocaleString('en-IN')})`;
                 selectEl.appendChild(opt);
             });
 
             if (currentVal && customerMap[currentVal]) {
                 selectEl.value = currentVal;
+            } else {
+                selectEl.value = 'ALL';
             }
+        }
+
+        function selectTeamFilterQuick(val) {
+            const teamSelect = document.getElementById('filterTeamMember');
+            if (!teamSelect) return;
+            teamSelect.value = (teamSelect.value === val && val !== 'ALL') ? 'ALL' : val;
+            populateCustomerDropdown(allLedgerData);
+            applyFiltersAndRender();
+        }
+
+        function selectLeadFilterQuick(leadName) {
+            const custSelect = document.getElementById('filterCustomer');
+            if (!custSelect) return;
+            custSelect.value = (custSelect.value === leadName) ? 'ALL' : leadName;
+            applyFiltersAndRender();
+        }
+
+        function toggleLeadWisePanel() {
+            showLeadWisePanel = !showLeadWisePanel;
+            const sec = document.getElementById('leadWiseBreakdownSection');
+            const txt = document.getElementById('toggleLeadBreakdownText');
+            if (sec) sec.classList.toggle('d-none', !showLeadWisePanel);
+            if (txt) txt.textContent = showLeadWisePanel ? 'Hide Lead-Wise' : 'Show Lead-Wise';
         }
 
         let listenersInitialized = false;
@@ -787,7 +1019,15 @@
                 });
             });
 
-            // Filter controls
+            // Filter controls (all working together + cascading customer dropdown)
+            document.getElementById('filterTeamMember').addEventListener('change', () => {
+                populateCustomerDropdown(allLedgerData);
+                applyFiltersAndRender();
+            });
+            document.getElementById('filterLevel').addEventListener('change', () => {
+                populateCustomerDropdown(allLedgerData);
+                applyFiltersAndRender();
+            });
             document.getElementById('filterCustomer').addEventListener('change', () => applyFiltersAndRender());
             document.getElementById('filterStatus').addEventListener('change', () => applyFiltersAndRender());
             document.getElementById('filterSearch').addEventListener('input', () => applyFiltersAndRender());
@@ -800,6 +1040,9 @@
         }
 
         function resetAllFilters() {
+            document.getElementById('filterTeamMember').value = 'ALL';
+            document.getElementById('filterLevel').value = 'ALL';
+            populateCustomerDropdown(allLedgerData);
             document.getElementById('filterCustomer').value = 'ALL';
             document.getElementById('filterStatus').value = 'ALL';
             document.getElementById('filterSearch').value = '';
@@ -838,16 +1081,260 @@
             return Number(row[col]) || 0;
         }
 
+        function doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery) {
+            const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
+            if (avoidCancelled && isCancelled) return false;
+
+            if (selectedStatus !== 'ALL') {
+                const rowStatus = (row.status || '').toUpperCase();
+                if (selectedStatus === 'STAGE1_APPROVED') {
+                    if (rowStatus !== 'STAGE1_APPROVED') return false;
+                } else if (selectedStatus === 'PAID') {
+                    if (rowStatus !== 'PAID' && rowStatus !== 'RELEASED') return false;
+                } else if (selectedStatus === 'PENDING') {
+                    if (rowStatus === 'PAID' || rowStatus === 'RELEASED' || rowStatus === 'STAGE1_APPROVED' || rowStatus === 'CANCELLED') return false;
+                } else if (rowStatus !== selectedStatus) {
+                    return false;
+                }
+            }
+
+            if (searchQuery) {
+                const matchStr = [
+                    row.client_name,
+                    row.member_name,
+                    row.lead_owner_name,
+                    row.lead_owner_code,
+                    getRowLevelCode(row),
+                    row.entry_number,
+                    row.display_kind,
+                    row.kind,
+                    row.level_label,
+                    row.location,
+                    row.payment_utr,
+                    row.submit_date
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                if (!matchStr.includes(searchQuery)) return false;
+            }
+
+            return true;
+        }
+
+        function renderTeamAndLeadBreakdowns(avoidCancelled, selectedTeamMember, selectedLevel, selectedCustomer, selectedStatus, searchQuery) {
+            // Update Quick Filter Button states
+            const btnAll = document.getElementById('btnQuickAllTeam');
+            const btnDownline = document.getElementById('btnQuickDownlineOnly');
+            const btnSelf = document.getElementById('btnQuickSelfOnly');
+            if (btnAll) btnAll.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'ALL' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
+            if (btnDownline) btnDownline.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'TEAM_ONLY' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
+            if (btnSelf) btnSelf.className = `btn btn-sm py-0 px-2 fw-bold ${selectedTeamMember === 'SELF_ONLY' ? 'btn-indigo bg-indigo-subtle text-indigo border-indigo-subtle' : 'btn-outline-secondary'}`;
+
+            // 1. Build Team Member Cards (respecting avoidCancelled, selectedLevel, selectedStatus, searchQuery)
+            const teamStatsMap = {};
+            allLedgerData.forEach(row => {
+                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) return;
+                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) return;
+
+                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
+                const key = getTeamMemberKey(row);
+                if (key === 'UNASSIGNED') return;
+                const isDownline = isRowDownlineTeamLead(row);
+
+                if (!teamStatsMap[key]) {
+                    teamStatsMap[key] = {
+                        name: key,
+                        code: row.lead_owner_code || '',
+                        levelCode: getRowLevelCode(row),
+                        isDownline: isDownline,
+                        leads: new Set(),
+                        entries: 0,
+                        gross: 0,
+                        advance: 0,
+                        balance: 0
+                    };
+                }
+                const cName = (row.client_name || row.member_name || '').trim();
+                if (cName) teamStatsMap[key].leads.add(cName);
+                teamStatsMap[key].entries++;
+                if (!isCancelled) {
+                    teamStatsMap[key].gross += Number(row.commission_amount) || 0;
+                    teamStatsMap[key].advance += Number(row.advance_paid) || 0;
+                    teamStatsMap[key].balance += Number(row.balance_gross) || 0;
+                }
+                if (isDownline) teamStatsMap[key].isDownline = true;
+            });
+
+            const tmContainer = document.getElementById('teamMemberCardsContainer');
+            const tmList = Object.values(teamStatsMap).sort((a, b) => {
+                if (a.isDownline !== b.isDownline) return a.isDownline ? -1 : 1;
+                return b.gross - a.gross;
+            });
+
+            const summaryBadge = document.getElementById('teamBreakdownSummaryBadge');
+            if (summaryBadge) {
+                const downlineMembersCount = tmList.filter(m => m.isDownline).length;
+                summaryBadge.textContent = `${tmList.length} Member${tmList.length === 1 ? '' : 's'} (${downlineMembersCount} Downline Team)`;
+            }
+
+            if (tmContainer) {
+                if (tmList.length === 0) {
+                    tmContainer.innerHTML = `<div class="col-12 text-muted small py-2">No team members match the current filters.</div>`;
+                } else {
+                    tmContainer.innerHTML = tmList.map(tm => {
+                        const isSelected = (selectedTeamMember === tm.name) ||
+                            (selectedTeamMember === 'TEAM_ONLY' && tm.isDownline) ||
+                            (selectedTeamMember === 'SELF_ONLY' && !tm.isDownline);
+                        const isExactSelected = selectedTeamMember === tm.name;
+                        const badgeClass = tm.isDownline
+                            ? 'bg-indigo-subtle text-indigo border border-indigo-subtle'
+                            : 'bg-secondary-subtle text-secondary border';
+                        const badgeLabel = tm.isDownline ? `${tm.levelCode} Team` : `${tm.levelCode} Self`;
+                        const safeNameAttr = escHtml(tm.name).replace(/'/g, "\\'");
+
+                        return `
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <div class="team-member-card h-100 ${isSelected ? 'active' : ''}" onclick="selectTeamFilterQuick('${safeNameAttr}')" title="Click to filter by ${escHtml(tm.name)}">
+                                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark text-truncate" style="font-size: 12px;">
+                                                <i class="fas ${tm.isDownline ? 'fa-user-friends text-indigo' : 'fa-user-tie text-secondary'} me-1"></i>${escHtml(tm.name)}
+                                            </div>
+                                            <div class="text-muted font-monospace" style="font-size: 10px;">
+                                                ${escHtml(tm.code || '—')} • ${tm.leads.size} Lead${tm.leads.size === 1 ? '' : 's'} • ${tm.entries} Entr${tm.entries === 1 ? 'y' : 'ies'}
+                                            </div>
+                                        </div>
+                                        <span class="badge ${badgeClass}" style="font-size: 9.5px; white-space: nowrap;">${escHtml(badgeLabel)}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline pt-1 mt-1 border-top" style="border-color: rgba(0,0,0,0.06) !important;">
+                                        <div>
+                                            <span class="text-muted" style="font-size: 10px;">Gross:</span>
+                                            <strong class="text-indigo ms-1" style="font-size: 12.5px; font-weight: 800;">₹${Math.round(tm.gross).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted" style="font-size: 10px;">Bal:</span>
+                                            <strong class="text-primary ms-1" style="font-size: 11.5px; font-weight: 700;">₹${Math.round(tm.balance).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                    </div>
+                                    ${isExactSelected ? `<div class="mt-1 text-indigo fw-bold" style="font-size: 10px;"><i class="fas fa-filter me-1"></i>Selected (Click to clear)</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 2. Build Lead-Wise Earnings Cards (respecting selectedTeamMember + selectedLevel + base filters)
+            const leadStatsMap = {};
+            allLedgerData.forEach(row => {
+                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) return;
+                if (!doesRowMatchTeamFilter(row, selectedTeamMember)) return;
+                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) return;
+
+                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
+                const cName = (row.client_name || row.member_name || '').trim();
+                if (!cName) return;
+
+                if (!leadStatsMap[cName]) {
+                    leadStatsMap[cName] = {
+                        leadName: cName,
+                        ownerName: row.lead_owner_name || '—',
+                        ownerCode: row.lead_owner_code || '',
+                        levelCode: getRowLevelCode(row),
+                        isDownline: isRowDownlineTeamLead(row),
+                        entries: 0,
+                        gross: 0,
+                        advance: 0,
+                        balance: 0
+                    };
+                }
+                leadStatsMap[cName].entries++;
+                if (!isCancelled) {
+                    leadStatsMap[cName].gross += Number(row.commission_amount) || 0;
+                    leadStatsMap[cName].advance += Number(row.advance_paid) || 0;
+                    leadStatsMap[cName].balance += Number(row.balance_gross) || 0;
+                }
+            });
+
+            const leadSubtitle = document.getElementById('leadWiseSubtitle');
+            if (leadSubtitle) {
+                if (selectedTeamMember === 'ALL') {
+                    leadSubtitle.textContent = `(All Team & Self — ${Object.keys(leadStatsMap).length} Leads)`;
+                } else if (selectedTeamMember === 'TEAM_ONLY') {
+                    leadSubtitle.textContent = `(Downline Team Leads Only — ${Object.keys(leadStatsMap).length} Leads)`;
+                } else if (selectedTeamMember === 'SELF_ONLY') {
+                    leadSubtitle.textContent = `(Self Direct Leads Only — ${Object.keys(leadStatsMap).length} Leads)`;
+                } else {
+                    leadSubtitle.textContent = `(Team Member: ${selectedTeamMember} — ${Object.keys(leadStatsMap).length} Leads)`;
+                }
+            }
+
+            const leadContainer = document.getElementById('leadWiseCardsContainer');
+            const leadList = Object.values(leadStatsMap).sort((a, b) => b.gross - a.gross);
+            if (leadContainer) {
+                if (leadList.length === 0) {
+                    leadContainer.innerHTML = `<div class="col-12 text-muted small py-1">No leads match the selected team filter.</div>`;
+                } else {
+                    leadContainer.innerHTML = leadList.map(ld => {
+                        const isLeadSelected = selectedCustomer === ld.leadName;
+                        const safeLeadAttr = escHtml(ld.leadName).replace(/'/g, "\\'");
+                        const lvlClass = ld.isDownline
+                            ? 'bg-indigo-subtle text-indigo border border-indigo-subtle'
+                            : 'bg-secondary-subtle text-secondary border';
+                        return `
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <div class="lead-earning-card h-100 ${isLeadSelected ? 'active' : ''}" onclick="selectLeadFilterQuick('${safeLeadAttr}')" title="Click to filter ledger entries for lead ${escHtml(ld.leadName)}">
+                                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-primary text-truncate" style="font-size: 11.5px;">
+                                                <i class="fas fa-user-tag me-1"></i>${escHtml(ld.leadName)}
+                                            </div>
+                                            <div class="text-muted text-truncate" style="font-size: 10px;" title="Lead Owner: ${escHtml(ld.ownerName)}">
+                                                Owner: <span class="fw-semibold text-dark">${escHtml(ld.ownerName)}</span> (${ld.entries})
+                                            </div>
+                                        </div>
+                                        <span class="badge ${lvlClass}" style="font-size: 9.5px;">${escHtml(ld.levelCode)}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline pt-1 border-top" style="border-color: rgba(0,0,0,0.05) !important;">
+                                        <div>
+                                            <span class="text-muted" style="font-size: 10px;">Gross:</span>
+                                            <strong class="text-indigo ms-1" style="font-size: 12px; font-weight: 800;">₹${Math.round(ld.gross).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted" style="font-size: 10px;">Bal:</span>
+                                            <strong class="text-primary ms-1" style="font-size: 11px; font-weight: 700;">₹${Math.round(ld.balance).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                    </div>
+                                    ${isLeadSelected ? `<div class="mt-1 text-primary fw-bold" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>Active Lead Filter (Click to clear)</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
         function applyFiltersAndRender() {
             const avoidCancelled = document.getElementById('toggleAvoidCancelled').checked;
+            const selectedTeamMember = document.getElementById('filterTeamMember') ? document.getElementById('filterTeamMember').value : 'ALL';
+            const selectedLevel = document.getElementById('filterLevel') ? document.getElementById('filterLevel').value : 'ALL';
             const selectedCustomer = document.getElementById('filterCustomer').value;
             const selectedStatus = document.getElementById('filterStatus').value;
             const searchQuery = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
 
-            // 1. Filter rows
+            // Update Team Member-Wise & Lead-Wise breakdown cards
+            renderTeamAndLeadBreakdowns(avoidCancelled, selectedTeamMember, selectedLevel, selectedCustomer, selectedStatus, searchQuery);
+
+            // 1. Filter rows (All filters working together!)
             let filtered = allLedgerData.filter(row => {
-                const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
-                if (avoidCancelled && isCancelled) {
+                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) {
+                    return false;
+                }
+
+                if (!doesRowMatchTeamFilter(row, selectedTeamMember)) {
+                    return false;
+                }
+
+                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) {
                     return false;
                 }
 
@@ -856,40 +1343,28 @@
                     if (rowCust !== selectedCustomer) return false;
                 }
 
-                if (selectedStatus !== 'ALL') {
-                    const rowStatus = (row.status || '').toUpperCase();
-                    if (selectedStatus === 'STAGE1_APPROVED') {
-                        if (rowStatus !== 'STAGE1_APPROVED') return false;
-                    } else if (selectedStatus === 'PAID') {
-                        if (rowStatus !== 'PAID' && rowStatus !== 'RELEASED') return false;
-                    } else if (selectedStatus === 'PENDING') {
-                        if (rowStatus === 'PAID' || rowStatus === 'RELEASED' || rowStatus === 'STAGE1_APPROVED' || rowStatus === 'CANCELLED') return false;
-                    } else if (rowStatus !== selectedStatus) {
-                        return false;
-                    }
-                }
-
-                if (searchQuery) {
-                    const matchStr = [
-                        row.client_name,
-                        row.member_name,
-                        row.lead_owner_name,
-                        row.lead_owner_code,
-                        getRowLevelCode(row),
-                        row.entry_number,
-                        row.display_kind,
-                        row.kind,
-                        row.level_label,
-                        row.location,
-                        row.payment_utr,
-                        row.submit_date
-                    ].filter(Boolean).join(' ').toLowerCase();
-
-                    if (!matchStr.includes(searchQuery)) return false;
-                }
-
                 return true;
             });
+
+            // Render active filter pills in the toolbar status strip
+            const pillsEl = document.getElementById('activeFilterPills');
+            if (pillsEl) {
+                const pills = [];
+                if (selectedTeamMember !== 'ALL') {
+                    const label = selectedTeamMember === 'TEAM_ONLY' ? 'Downline Team (L2+)' : (selectedTeamMember === 'SELF_ONLY' ? 'Self Direct (L1)' : `Team: ${selectedTeamMember}`);
+                    pills.push(`<span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle">${escHtml(label)}</span>`);
+                }
+                if (selectedLevel !== 'ALL') {
+                    pills.push(`<span class="badge bg-purple-subtle text-purple border border-purple-subtle">Level: ${escHtml(selectedLevel)}</span>`);
+                }
+                if (selectedCustomer !== 'ALL') {
+                    pills.push(`<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Lead: ${escHtml(selectedCustomer)}</span>`);
+                }
+                if (selectedStatus !== 'ALL') {
+                    pills.push(`<span class="badge bg-info-subtle text-info border border-info-subtle">Status: ${escHtml(selectedStatus)}</span>`);
+                }
+                pillsEl.innerHTML = pills.join('');
+            }
 
             // 2. Compute Totals for All Value Columns
             let sumDeal = 0;
@@ -989,7 +1464,7 @@
 
                     const teamIncomeCardHtml = `
                         <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-                            <div class="income-type-team-highlight h-100" title="Income generated from downline team leads (L2, L3, L4...)">
+                            <div class="income-type-team-highlight h-100" style="cursor: pointer;" onclick="selectTeamFilterQuick('TEAM_ONLY')" title="Click to filter by Downline Team Income (L2, L3, L4...)">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold text-indigo text-truncate" style="font-size: 11.5px;">
                                         <i class="fas fa-sitemap me-1"></i>Team Income
