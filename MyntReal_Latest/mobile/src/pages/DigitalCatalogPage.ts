@@ -1343,7 +1343,7 @@ export class DigitalCatalogPage {
   }
 
   // ── Dispatch History & Telemetry Modal ──────────────────────────────
-  private currentMobileHistoryScope: "my" | "team" = "my";
+  private currentMobileHistoryScope: "my" | "team" | "staff_summary" = "my";
   private mobileHistoryDebounceTimer: any = null;
 
   private openMobileDispatchHistoryModal(): void {
@@ -1369,7 +1369,7 @@ export class DigitalCatalogPage {
             </div>
             <div class="dc-modal-title-wrap">
               <h3 class="dc-modal-title">Dispatch History & Telemetry</h3>
-              <div class="dc-modal-subtitle">Real-time link views & engagement tracking</div>
+              <div class="dc-modal-subtitle">Real-time link views, staff counts & engagement tracking</div>
             </div>
           </div>
           <button type="button" id="closeMobileHistModalBtn" class="dc-modal-close-btn" title="Close">
@@ -1377,13 +1377,16 @@ export class DigitalCatalogPage {
           </button>
         </div>
 
-        <!-- Scope Pills (My Dispatches vs Team Dispatches) -->
-        <div class="dc-scope-toggle-bar">
-          <button type="button" class="dc-scope-btn active" id="btnMobileScopeMy">
-            <i class="fas fa-user me-1"></i> My Dispatches (<span id="mobileBadgeMy">0</span>)
+        <!-- Scope Pills (My Dispatches vs Team Dispatches vs Staff-Wise Summary) -->
+        <div class="dc-scope-toggle-bar" style="overflow-x: auto;">
+          <button type="button" class="dc-scope-btn active" id="btnMobileScopeMy" style="white-space: nowrap;">
+            <i class="fas fa-user me-1"></i> My (<span id="mobileBadgeMy">0</span>)
           </button>
-          <button type="button" class="dc-scope-btn" id="btnMobileScopeTeam">
-            <i class="fas fa-users me-1"></i> Team Dispatches (<span id="mobileBadgeTeam">0</span>)
+          <button type="button" class="dc-scope-btn" id="btnMobileScopeTeam" style="white-space: nowrap;">
+            <i class="fas fa-users me-1"></i> Team (<span id="mobileBadgeTeam">0</span>)
+          </button>
+          <button type="button" class="dc-scope-btn" id="btnMobileScopeStaff" style="white-space: nowrap;">
+            <i class="fas fa-chart-bar me-1"></i> Staff-Wise (<span id="mobileBadgeStaff">0</span>)
           </button>
         </div>
 
@@ -1407,13 +1410,13 @@ export class DigitalCatalogPage {
           </div>
         </div>
 
-        <!-- Quick Filters Toolbar -->
+        <!-- Quick Filters & Sort Toolbar -->
         <div>
           <div class="dc-hist-filter-row">
             <div class="dc-search-wrap" style="flex: 1;">
               <i class="fas fa-search dc-search-icon"></i>
               <input type="text" id="mobileHistSearchInput" class="dc-search-input compact" 
-                     placeholder="Search recipient, phone, staff..." />
+                     placeholder="Search recipient, phone, staff, ref..." />
             </div>
             <button type="button" class="dc-reset-btn" id="btnMobileHistReset" title="Reset Filters">
               <i class="fas fa-undo"></i>
@@ -1423,7 +1426,7 @@ export class DigitalCatalogPage {
             <select id="mobileHistModelFilter" class="dc-hist-select">
               <option value="ALL">All Models</option>
               <option value="SOLAR">Solar</option>
-              <option value="INDUSTRIAL_HUB">Hub 5-in-1</option>
+              <option value="INDUSTRIAL_HUB">MyntReal Hub</option>
               <option value="EV_B2C">EV 2W Pricing</option>
               <option value="HUB_PRICING">Hub Commercials</option>
               <option value="EV_B2B">EV Fleet</option>
@@ -1431,12 +1434,19 @@ export class DigitalCatalogPage {
               <option value="ETC_TRAINING">ETC Training</option>
               <option value="REAL_DREAMS">Real Dreams</option>
               <option value="INSURANCE">Insurance</option>
+              <option value="VGK4U">VGK4U Master</option>
             </select>
             <select id="mobileHistEngagementFilter" class="dc-hist-select">
               <option value="all">All Activity</option>
               <option value="viewed">✓ Viewed (&gt;0 clicks)</option>
               <option value="high">🔥 High (2+ clicks)</option>
               <option value="unviewed">⚪ Unopened (0 clicks)</option>
+            </select>
+            <select id="mobileHistMethodFilter" class="dc-hist-select">
+              <option value="all">All Formats</option>
+              <option value="web_link">Web Link</option>
+              <option value="pdf_document">PDF Brochure</option>
+              <option value="both">Both (Link + PDF)</option>
             </select>
             <select id="mobileHistTimeframeFilter" class="dc-hist-select">
               <option value="all">All Time</option>
@@ -1445,10 +1455,23 @@ export class DigitalCatalogPage {
               <option value="7d">Last 7d</option>
               <option value="30d">Last 30d</option>
             </select>
+            <select id="mobileHistStaffFilter" class="dc-hist-select" style="display: none;">
+              <option value="">All Team Members</option>
+            </select>
+            <select id="mobileHistSortFilter" class="dc-hist-select">
+              <option value="sent_desc">Sort: Newest First</option>
+              <option value="sent_asc">Sort: Oldest First</option>
+              <option value="views_desc">Sort: Most Clicks</option>
+              <option value="dispatches_desc">Sort: Most Dispatches (Staff)</option>
+              <option value="dispatches_asc">Sort: Least Dispatches (Staff)</option>
+              <option value="ctr_desc">Sort: Highest CTR % (Staff)</option>
+              <option value="recipients_desc">Sort: Unique Clients (Staff)</option>
+              <option value="name_asc">Sort: Name A-Z</option>
+            </select>
           </div>
         </div>
 
-        <!-- Scrollable List of Dispatches -->
+        <!-- Scrollable List of Dispatches or Staff-Wise Summary -->
         <div id="mobileHistListContainer" style="flex: 1; overflow-y: auto; padding-right: 2px;">
           <div class="text-center py-4 text-muted">
             <i class="fas fa-spinner fa-spin fa-2x text-info mb-2"></i>
@@ -1469,22 +1492,31 @@ export class DigitalCatalogPage {
 
     const btnScopeMy = modalEl.querySelector("#btnMobileScopeMy") as HTMLElement;
     const btnScopeTeam = modalEl.querySelector("#btnMobileScopeTeam") as HTMLElement;
+    const btnScopeStaff = modalEl.querySelector("#btnMobileScopeStaff") as HTMLElement;
+    const staffFilterEl = modalEl.querySelector("#mobileHistStaffFilter") as HTMLSelectElement;
+    const sortFilterEl = modalEl.querySelector("#mobileHistSortFilter") as HTMLSelectElement;
 
-    if (btnScopeMy && btnScopeTeam) {
-      btnScopeMy.addEventListener("click", () => {
-        this.currentMobileHistoryScope = "my";
-        btnScopeMy.className = "dc-scope-btn active";
-        btnScopeTeam.className = "dc-scope-btn";
-        this.fetchAndRenderMobileHistory();
-      });
+    const setScopeTab = (scope: "my" | "team" | "staff_summary") => {
+      this.currentMobileHistoryScope = scope;
+      if (btnScopeMy) btnScopeMy.className = scope === "my" ? "dc-scope-btn active" : "dc-scope-btn";
+      if (btnScopeTeam) btnScopeTeam.className = scope === "team" ? "dc-scope-btn active" : "dc-scope-btn";
+      if (btnScopeStaff) btnScopeStaff.className = scope === "staff_summary" ? "dc-scope-btn active" : "dc-scope-btn";
+      if (staffFilterEl) {
+        staffFilterEl.style.display = (scope === "team" || scope === "staff_summary") ? "inline-block" : "none";
+      }
+      if (sortFilterEl) {
+        if (scope === "staff_summary" && (sortFilterEl.value === "sent_desc" || sortFilterEl.value === "sent_asc")) {
+          sortFilterEl.value = "dispatches_desc";
+        } else if (scope !== "staff_summary" && sortFilterEl.value.startsWith("dispatches_")) {
+          sortFilterEl.value = "sent_desc";
+        }
+      }
+      this.fetchAndRenderMobileHistory();
+    };
 
-      btnScopeTeam.addEventListener("click", () => {
-        this.currentMobileHistoryScope = "team";
-        btnScopeTeam.className = "dc-scope-btn active";
-        btnScopeMy.className = "dc-scope-btn";
-        this.fetchAndRenderMobileHistory();
-      });
-    }
+    if (btnScopeMy) btnScopeMy.addEventListener("click", () => setScopeTab("my"));
+    if (btnScopeTeam) btnScopeTeam.addEventListener("click", () => setScopeTab("team"));
+    if (btnScopeStaff) btnScopeStaff.addEventListener("click", () => setScopeTab("staff_summary"));
 
     const resetBtn = modalEl.querySelector("#btnMobileHistReset");
     if (resetBtn) {
@@ -1492,21 +1524,30 @@ export class DigitalCatalogPage {
         const s = modalEl?.querySelector("#mobileHistSearchInput") as HTMLInputElement;
         const m = modalEl?.querySelector("#mobileHistModelFilter") as HTMLSelectElement;
         const e = modalEl?.querySelector("#mobileHistEngagementFilter") as HTMLSelectElement;
+        const mf = modalEl?.querySelector("#mobileHistMethodFilter") as HTMLSelectElement;
         const tf = modalEl?.querySelector("#mobileHistTimeframeFilter") as HTMLSelectElement;
+        const stf = modalEl?.querySelector("#mobileHistStaffFilter") as HTMLSelectElement;
+        const sof = modalEl?.querySelector("#mobileHistSortFilter") as HTMLSelectElement;
         if (s) s.value = "";
         if (m) m.value = "ALL";
         if (e) e.value = "all";
+        if (mf) mf.value = "all";
         if (tf) tf.value = "all";
+        if (stf) stf.value = "";
+        if (sof) sof.value = this.currentMobileHistoryScope === "staff_summary" ? "dispatches_desc" : "sent_desc";
         this.fetchAndRenderMobileHistory();
       });
     }
 
-    // Preload opposite scope count for team badge
+    // Preload opposite scope count for team and staff badges
     apiService.get<any>("/api/v1/digital-catalogs/dispatches/history?scope=team&limit=1").then(teamRes => {
       const p = teamRes?.data || teamRes || {};
       const t = p?.total ?? teamRes?.total ?? 0;
-      const b = modalEl?.querySelector("#mobileBadgeTeam");
-      if (b && t) b.textContent = String(t);
+      const sc = p?.total_staff_count ?? teamRes?.total_staff_count ?? 0;
+      const bTeam = modalEl?.querySelector("#mobileBadgeTeam");
+      const bStaff = modalEl?.querySelector("#mobileBadgeStaff");
+      if (bTeam && t !== undefined) bTeam.textContent = String(t);
+      if (bStaff && sc !== undefined) bStaff.textContent = String(sc);
     }).catch(() => {});
 
     const searchInput = modalEl.querySelector("#mobileHistSearchInput") as HTMLInputElement;
@@ -1519,7 +1560,7 @@ export class DigitalCatalogPage {
       });
     }
 
-    ["mobileHistModelFilter", "mobileHistEngagementFilter", "mobileHistTimeframeFilter"].forEach(id => {
+    ["mobileHistModelFilter", "mobileHistEngagementFilter", "mobileHistMethodFilter", "mobileHistTimeframeFilter", "mobileHistStaffFilter", "mobileHistSortFilter"].forEach(id => {
       const el = modalEl?.querySelector(`#${id}`);
       if (el) {
         el.addEventListener("change", () => this.fetchAndRenderMobileHistory());
@@ -1544,24 +1585,44 @@ export class DigitalCatalogPage {
     }
 
     try {
+      const isStaffSummary = (this.currentMobileHistoryScope === "staff_summary");
+      const isTeam = (this.currentMobileHistoryScope === "team" || isStaffSummary);
       const q = ((modalEl.querySelector("#mobileHistSearchInput") as HTMLInputElement)?.value || "").trim();
       const segment_code = (modalEl.querySelector("#mobileHistModelFilter") as HTMLSelectElement)?.value || "ALL";
       const engagement = (modalEl.querySelector("#mobileHistEngagementFilter") as HTMLSelectElement)?.value || "all";
+      const delivery_method = (modalEl.querySelector("#mobileHistMethodFilter") as HTMLSelectElement)?.value || "all";
       const timeframe = (modalEl.querySelector("#mobileHistTimeframeFilter") as HTMLSelectElement)?.value || "all";
+      const staff_id = isTeam ? ((modalEl.querySelector("#mobileHistStaffFilter") as HTMLSelectElement)?.value || "") : "";
+      const sort_by = (modalEl.querySelector("#mobileHistSortFilter") as HTMLSelectElement)?.value || (isStaffSummary ? "dispatches_desc" : "sent_desc");
 
       const params = new URLSearchParams();
       params.set("scope", this.currentMobileHistoryScope);
       if (q) params.set("q", q);
       if (segment_code && segment_code !== "ALL") params.set("segment_code", segment_code);
       if (engagement && engagement !== "all") params.set("engagement", engagement);
+      if (delivery_method && delivery_method !== "all") params.set("delivery_method", delivery_method);
       if (timeframe && timeframe !== "all") params.set("timeframe", timeframe);
+      if (staff_id) params.set("staff_id", staff_id);
+      if (sort_by) params.set("sort_by", sort_by);
       params.set("limit", "100");
 
       const res = await apiService.get<any>("/api/v1/digital-catalogs/dispatches/history?" + params.toString());
       const payload = res?.data || res || {};
       const dispatches = payload?.dispatches || res?.dispatches || [];
+      const staffSummary = payload?.staff_summary || res?.staff_summary || [];
+      const teamMembers = payload?.team_members || res?.team_members || [];
       const stats = payload?.stats || res?.stats || {};
       const total = payload?.total ?? res?.total ?? 0;
+      const totalStaffCount = payload?.total_staff_count ?? res?.total_staff_count ?? staffSummary.length;
+
+      // Populate team staff filter dropdown once
+      const staffSelect = modalEl.querySelector("#mobileHistStaffFilter") as HTMLSelectElement;
+      if (staffSelect && isTeam && teamMembers.length > 0 && staffSelect.options.length <= 1) {
+        const curVal = staffSelect.value;
+        staffSelect.innerHTML = `<option value="">All Team Members</option>` +
+          teamMembers.map((m: any) => `<option value="${m.id}">${m.name} (${m.code || "Staff"})</option>`).join("");
+        staffSelect.value = curVal;
+      }
 
       // Update KPIs
       const kpiDisp = modalEl.querySelector("#mobileHistKpiDispatches");
@@ -1569,20 +1630,129 @@ export class DigitalCatalogPage {
       const kpiRate = modalEl.querySelector("#mobileHistKpiRate");
       const kpiModel = modalEl.querySelector("#mobileHistKpiModel");
 
-      if (kpiDisp) kpiDisp.textContent = stats.total_dispatches || 0;
-      if (kpiClicks) kpiClicks.textContent = stats.total_views || 0;
+      const totalDispatches = stats.total_dispatches || 0;
+      if (kpiDisp) kpiDisp.textContent = String(totalDispatches);
+      if (kpiClicks) kpiClicks.textContent = String(stats.total_views || 0);
       if (kpiRate) kpiRate.textContent = `${stats.view_rate_percent || 0}%`;
       if (kpiModel) kpiModel.textContent = (stats.top_model || "SOLAR").replace(/_/g, " ");
 
       const badgeMy = modalEl.querySelector("#mobileBadgeMy");
       const badgeTeam = modalEl.querySelector("#mobileBadgeTeam");
+      const badgeStaff = modalEl.querySelector("#mobileBadgeStaff");
       if (this.currentMobileHistoryScope === "my" && badgeMy) {
         badgeMy.textContent = String(total);
-      } else if (this.currentMobileHistoryScope === "team" && badgeTeam) {
+      } else if ((this.currentMobileHistoryScope === "team" || isStaffSummary) && badgeTeam && !staff_id && !q && segment_code === "ALL" && engagement === "all" && delivery_method === "all" && timeframe === "all") {
         badgeTeam.textContent = String(total);
+      }
+      if (badgeStaff) {
+        badgeStaff.textContent = String(totalStaffCount);
       }
 
       if (!listContainer) return;
+
+      // ── RENDER MODE A: STAFF-WISE SUMMARY CARDS ────────────────────────────
+      if (isStaffSummary) {
+        if (staffSummary.length === 0) {
+          listContainer.innerHTML = `
+            <div class="text-center py-5 text-muted">
+              <i class="fas fa-users-slash fa-2x mb-2 d-block opacity-50"></i>
+              <div>No staff dispatch records found for current filters.</div>
+            </div>
+          `;
+          return;
+        }
+
+        listContainer.innerHTML = staffSummary.map((st: any, idx: number) => {
+          const rank = idx + 1;
+          const sTotal = st.total_dispatches || 0;
+          const sharePct = totalDispatches > 0 ? Math.round((sTotal / totalDispatches) * 100) : 0;
+          const sUnique = st.unique_recipients || 0;
+          const sViews = st.total_views || 0;
+          const sViewed = st.viewed_dispatches || 0;
+          const sUnviewed = st.unviewed_dispatches || 0;
+          const sCtr = st.ctr_percent ?? 0;
+          const rankColor = rank === 1 ? "#f59e0b" : (rank === 2 ? "#94a3b8" : (rank === 3 ? "#d97706" : "#334155"));
+
+          const modelsObj = st.models_breakdown || {};
+          const modelChips = Object.entries(modelsObj)
+            .sort((a: any, b: any) => Number(b[1]) - Number(a[1]))
+            .map(([seg, cnt]) => `<span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 700;">${seg}: ${cnt}</span>`)
+            .join(" ");
+
+          const fmt = st.formats_breakdown || {};
+          const fmtChips = [
+            fmt.web_link ? `<span style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.2); color: #60a5fa;">Link: ${fmt.web_link}</span>` : "",
+            fmt.pdf_document ? `<span style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #f87171;">PDF: ${fmt.pdf_document}</span>` : "",
+            fmt.both ? `<span style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-weight: 700;">Both: ${fmt.both}</span>` : ""
+          ].filter(Boolean).join(" ");
+
+          const lastDateStr = st.last_sent_at ? new Date(st.last_sent_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+
+          return `
+            <div class="dc-hist-card">
+              <div class="dc-hist-card-header" style="align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 24px; height: 24px; border-radius: 6px; background: ${rankColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;">
+                    #${rank}
+                  </div>
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #1e293b; border: 1px solid #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #60a5fa;">
+                    ${(st.staff_name || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div class="dc-hist-card-customer">${st.staff_name || "Staff Member"}</div>
+                    <div class="dc-hist-card-phone">${st.staff_code || ""} • ${st.designation || st.staff_type || "Staff"}</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 15px; font-weight: 800; color: #fff;">${sTotal} <span style="font-size: 10px; color: #38bdf8; font-weight: 600;">(${sharePct}%)</span></div>
+                  <div style="font-size: 10px; color: #94a3b8;">${sUnique} unique client${sUnique === 1 ? "" : "s"}</div>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;">
+                ${modelChips}
+                ${fmtChips}
+              </div>
+
+              <div class="dc-hist-footer" style="margin-top: 6px;">
+                <div style="font-size: 11px;">
+                  <span style="color: #34d399; font-weight: 700;"><i class="fas fa-mouse-pointer me-1"></i>${sViews} clicks (${sCtr}%)</span>
+                  <span style="color: #64748b; margin-left: 6px;">${sViewed} viewed • ${sUnviewed} unopened</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 10px; color: #94a3b8;"><i class="far fa-clock me-1"></i>${lastDateStr}</span>
+                  <button type="button" class="dc-hist-action-btn mobile-staff-drilldown-btn" data-staff-id="${st.staff_id}" style="padding: 3px 8px; width: auto; font-size: 10.5px; font-weight: 700; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">
+                    <i class="fas fa-list-ul me-1"></i>View (${sTotal})
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        listContainer.querySelectorAll(".mobile-staff-drilldown-btn").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const sid = (e.currentTarget as HTMLElement).getAttribute("data-staff-id") || "";
+            if (staffSelect) {
+              staffSelect.value = sid;
+              staffSelect.style.display = "inline-block";
+            }
+            const bMy = modalEl.querySelector("#btnMobileScopeMy");
+            const bTeam = modalEl.querySelector("#btnMobileScopeTeam");
+            const bStaff = modalEl.querySelector("#btnMobileScopeStaff");
+            this.currentMobileHistoryScope = "team";
+            if (bMy) bMy.className = "dc-scope-btn";
+            if (bTeam) bTeam.className = "dc-scope-btn active";
+            if (bStaff) bStaff.className = "dc-scope-btn";
+            const sof = modalEl.querySelector("#mobileHistSortFilter") as HTMLSelectElement;
+            if (sof && sof.value.startsWith("dispatches_")) sof.value = "sent_desc";
+            this.fetchAndRenderMobileHistory();
+          });
+        });
+        return;
+      }
+
+      // ── RENDER MODE B: INDIVIDUAL DISPATCH CARDS ───────────────────────────
       if (dispatches.length === 0) {
         listContainer.innerHTML = `
           <div class="text-center py-5 text-muted">
@@ -1592,8 +1762,6 @@ export class DigitalCatalogPage {
         `;
         return;
       }
-
-      const isTeam = (this.currentMobileHistoryScope === "team");
 
       listContainer.innerHTML = dispatches.map((d: any) => {
         const clicks = d.view_count || 0;

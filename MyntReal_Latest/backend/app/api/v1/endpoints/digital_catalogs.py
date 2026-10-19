@@ -621,14 +621,14 @@ def _format_dispatch_record(s: CatalogLeadSend, staff_map: dict) -> dict:
 
 @router.get("/dispatches/history")
 def get_dispatch_history(
-    scope: str = Query("my", description="'my' for current login, 'team' for entire team/company"),
+    scope: str = Query("my", description="'my' for current login, 'team' for entire team/company, 'staff_summary' for staff-wise aggregation"),
     q: Optional[str] = Query(None, description="Search recipient name, phone, ref code, or staff name/code"),
     segment_code: Optional[str] = Query(None, description="Filter by catalog model segment"),
     delivery_method: Optional[str] = Query(None, description="web_link, pdf_document, both, all"),
     engagement: Optional[str] = Query(None, description="all, viewed, unviewed, high"),
     staff_id: Optional[int] = Query(None, description="Filter by specific staff sender"),
     timeframe: Optional[str] = Query(None, description="today, yesterday, 7d, 30d, all"),
-    sort_by: str = Query("sent_desc", description="sent_desc, sent_asc, views_desc, name_asc"),
+    sort_by: str = Query("sent_desc", description="sent_desc, sent_asc, views_desc, name_asc, dispatches_desc, dispatches_asc, ctr_desc, recipients_desc"),
     limit: int = Query(100, le=500),
     offset: int = Query(0, ge=0),
     current_user: StaffEmployee = Depends(get_current_staff_user),
@@ -636,24 +636,25 @@ def get_dispatch_history(
 ):
     """
     Returns comprehensive catalog dispatch history with multi-model filtering,
-    click telemetry, and dedicated 'my' vs 'team' scoping.
+    click telemetry, staff-wise summary analytics, and dedicated 'my' / 'team' / 'staff_summary' scoping.
     """
-    from collections import Counter
+    from collections import Counter, defaultdict
     query = db.query(CatalogLeadSend)
 
     # 1. Scope filter
-    scope_str = scope if isinstance(scope, str) else "my"
-    is_team_scope = (scope_str.lower() == "team")
-    if not is_team_scope:
+    scope_str = (scope if isinstance(scope, str) else "my").lower()
+    is_team_or_staff_scope = scope_str in ("team", "staff_summary", "staff")
+    if not is_team_or_staff_scope:
         query = query.filter(CatalogLeadSend.staff_id == current_user.id)
     elif staff_id and isinstance(staff_id, int):
         query = query.filter(CatalogLeadSend.staff_id == staff_id)
 
-    # 2. Model / Segment filter
+    # Join DigitalCatalog / StaffEmployee once when needed by segment or search filters
+    has_catalog_join = False
     if segment_code and isinstance(segment_code, str) and segment_code.upper() != "ALL":
-        query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id).filter(
-            DigitalCatalog.segment_code == segment_code.upper()
-        )
+        query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id)
+        has_catalog_join = True
+        query = query.filter(DigitalCatalog.segment_code == segment_code.upper())
 
     # 3. Delivery method filter
     if delivery_method and isinstance(delivery_method, str) and delivery_method.lower() != "all":
@@ -686,26 +687,34 @@ def get_dispatch_history(
     # 6. Text Search
     if q and isinstance(q, str) and q.strip():
         term = f"%{q.strip()}%"
-        query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id, isouter=True) \
-                     .join(StaffEmployee, CatalogLeadSend.staff_id == StaffEmployee.id, isouter=True) \
+        if not has_catalog_join:
+            query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id, isouter=True)
+        query = query.join(StaffEmployee, CatalogLeadSend.staff_id == StaffEmployee.id, isouter=True) \
                      .filter(or_(
                          CatalogLeadSend.recipient_name.ilike(term),
                          CatalogLeadSend.recipient_phone.ilike(term),
                          CatalogLeadSend.share_ref_code.ilike(term),
                          DigitalCatalog.title.ilike(term),
+                         DigitalCatalog.segment_code.ilike(term),
                          StaffEmployee.first_name.ilike(term),
                          StaffEmployee.last_name.ilike(term),
-                         StaffEmployee.emp_code.ilike(term)
+                         StaffEmployee.emp_code.ilike(term),
+                         StaffEmployee.staff_type.ilike(term),
+                         StaffEmployee.designation.ilike(term)
                      ))
 
-    # 7. Sorting
+    # 7. Sorting for individual dispatch records
     sort_str = sort_by if isinstance(sort_by, str) else "sent_desc"
     if sort_str == "sent_asc":
         query = query.order_by(CatalogLeadSend.sent_at.asc())
     elif sort_str == "views_desc":
         query = query.order_by(CatalogLeadSend.view_count.desc(), CatalogLeadSend.sent_at.desc())
+    elif sort_str == "views_asc":
+        query = query.order_by(CatalogLeadSend.view_count.asc(), CatalogLeadSend.sent_at.desc())
     elif sort_str == "name_asc":
         query = query.order_by(CatalogLeadSend.recipient_name.asc())
+    elif sort_str == "name_desc":
+        query = query.order_by(CatalogLeadSend.recipient_name.desc())
     else:  # sent_desc
         query = query.order_by(CatalogLeadSend.sent_at.desc())
 
@@ -721,6 +730,100 @@ def get_dispatch_history(
     model_counts = Counter(s.catalog.segment_code for s in all_sends if s.catalog)
     top_model = model_counts.most_common(1)[0][0] if model_counts else "SOLAR"
 
+    # Pre-fetch staff map across all filtered dispatches (for both paged items and staff_summary)
+    all_staff_ids = list({s.staff_id for s in all_sends if s.staff_id})
+    staff_map = {}
+    if all_staff_ids:
+        staff_records = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_staff_ids)).all()
+        staff_map = {st.id: st for st in staff_records}
+
+    # Build Staff-Wise Summary & Analytics
+    staff_groups = defaultdict(list)
+    for s in all_sends:
+        sid = s.staff_id or 0
+        staff_groups[sid].append(s)
+
+    staff_summary = []
+    for sid, sends in staff_groups.items():
+        st = staff_map.get(sid)
+        if st:
+            st_name = f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code or f"Staff #{sid}"
+            st_code = st.emp_code or ""
+            st_type = st.staff_type or "STAFF"
+            st_desig = st.designation or st.staff_type or "Staff"
+        else:
+            st_name = "System / Unassigned" if sid == 0 else f"Staff #{sid}"
+            st_code = "SYS" if sid == 0 else f"ID-{sid}"
+            st_type = "SYSTEM"
+            st_desig = "System"
+
+        s_total = len(sends)
+        s_unique_phones = len({(s.recipient_phone or "").strip() for s in sends if s.recipient_phone})
+        s_views = sum((s.view_count or 0) for s in sends)
+        s_viewed = sum(1 for s in sends if (s.view_count or 0) > 0)
+        s_high = sum(1 for s in sends if (s.view_count or 0) >= 2)
+        s_unviewed = s_total - s_viewed
+        s_ctr = round((s_viewed / s_total * 100), 1) if s_total > 0 else 0.0
+
+        s_models_counter = Counter((s.catalog.segment_code if s.catalog else "SOLAR") for s in sends)
+        s_top_model = s_models_counter.most_common(1)[0][0] if s_models_counter else "SOLAR"
+
+        s_formats = {
+            "web_link": sum(1 for s in sends if s.delivery_method == "web_link"),
+            "pdf_document": sum(1 for s in sends if s.delivery_method == "pdf_document"),
+            "both": sum(1 for s in sends if s.delivery_method == "both")
+        }
+
+        sent_dates = [s.sent_at for s in sends if s.sent_at]
+        last_dt = max(sent_dates) if sent_dates else None
+        first_dt = min(sent_dates) if sent_dates else None
+
+        staff_summary.append({
+            "staff_id": sid,
+            "staff_name": st_name,
+            "staff_code": st_code,
+            "staff_type": st_type,
+            "designation": st_desig,
+            "total_dispatches": s_total,
+            "unique_recipients": s_unique_phones,
+            "total_views": s_views,
+            "viewed_dispatches": s_viewed,
+            "high_engagement_count": s_high,
+            "unviewed_dispatches": s_unviewed,
+            "ctr_percent": s_ctr,
+            "top_model": s_top_model,
+            "models_breakdown": dict(s_models_counter),
+            "formats_breakdown": s_formats,
+            "last_sent_at": last_dt.isoformat() if last_dt else None,
+            "first_sent_at": first_dt.isoformat() if first_dt else None
+        })
+
+    # Sort staff_summary
+    if sort_str == "dispatches_asc":
+        staff_summary.sort(key=lambda x: (x["total_dispatches"], x["total_views"]))
+    elif sort_str == "views_desc":
+        staff_summary.sort(key=lambda x: (x["total_views"], x["total_dispatches"]), reverse=True)
+    elif sort_str == "views_asc":
+        staff_summary.sort(key=lambda x: (x["total_views"], x["total_dispatches"]))
+    elif sort_str == "ctr_desc":
+        staff_summary.sort(key=lambda x: (x["ctr_percent"], x["total_views"], x["total_dispatches"]), reverse=True)
+    elif sort_str == "ctr_asc":
+        staff_summary.sort(key=lambda x: (x["ctr_percent"], x["total_views"], x["total_dispatches"]))
+    elif sort_str == "recipients_desc":
+        staff_summary.sort(key=lambda x: (x["unique_recipients"], x["total_dispatches"]), reverse=True)
+    elif sort_str == "recipients_asc":
+        staff_summary.sort(key=lambda x: (x["unique_recipients"], x["total_dispatches"]))
+    elif sort_str == "sent_desc" and scope_str in ("staff_summary", "staff"):
+        staff_summary.sort(key=lambda x: (x["last_sent_at"] or ""), reverse=True)
+    elif sort_str == "sent_asc":
+        staff_summary.sort(key=lambda x: (x["last_sent_at"] or ""))
+    elif sort_str == "name_asc":
+        staff_summary.sort(key=lambda x: (x["staff_name"] or "").lower())
+    elif sort_str == "name_desc":
+        staff_summary.sort(key=lambda x: (x["staff_name"] or "").lower(), reverse=True)
+    else:  # default dispatches_desc
+        staff_summary.sort(key=lambda x: (x["total_dispatches"], x["total_views"]), reverse=True)
+
     # Paginate safely
     limit_val = limit if isinstance(limit, int) else (getattr(limit, "default", 100) if hasattr(limit, "default") else 100)
     offset_val = offset if isinstance(offset, int) else (getattr(offset, "default", 0) if hasattr(offset, "default") else 0)
@@ -730,29 +833,22 @@ def get_dispatch_history(
         offset_val = 0
 
     paged_sends = all_sends[offset_val:offset_val + limit_val]
-
-    # Pre-fetch staff map for performance
-    staff_ids = list({s.staff_id for s in paged_sends if s.staff_id})
-    staff_map = {}
-    if staff_ids:
-        staff_records = db.query(StaffEmployee).filter(StaffEmployee.id.in_(staff_ids)).all()
-        staff_map = {st.id: st for st in staff_records}
-
     items = [_format_dispatch_record(s, staff_map) for s in paged_sends]
 
-    # Team members list for filter dropdown
+    # Team members list for filter dropdown & overall distinct staff count
     team_members = []
-    if is_team_scope or _is_catalog_author(current_user):
-        distinct_staff_ids = [r[0] for r in db.query(CatalogLeadSend.staff_id).distinct().all() if r[0]]
-        if distinct_staff_ids:
-            st_list = db.query(StaffEmployee).filter(StaffEmployee.id.in_(distinct_staff_ids)).all()
-            for st in st_list:
-                team_members.append({
-                    "id": st.id,
-                    "name": f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code,
-                    "code": st.emp_code or "",
-                    "designation": st.designation or st.staff_type or "Staff"
-                })
+    distinct_staff_ids = [r[0] for r in db.query(CatalogLeadSend.staff_id).distinct().all() if r[0]]
+    total_staff_count = len(distinct_staff_ids)
+    if (is_team_or_staff_scope or _is_catalog_author(current_user)) and distinct_staff_ids:
+        st_list = db.query(StaffEmployee).filter(StaffEmployee.id.in_(distinct_staff_ids)).all()
+        for st in st_list:
+            team_members.append({
+                "id": st.id,
+                "name": f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code,
+                "code": st.emp_code or "",
+                "designation": st.designation or st.staff_type or "Staff"
+            })
+        team_members.sort(key=lambda m: (m["name"] or "").lower())
 
     # Available catalog models
     all_catalogs = db.query(DigitalCatalog).filter(DigitalCatalog.is_active == True).order_by(DigitalCatalog.sort_order.asc()).all()
@@ -765,9 +861,12 @@ def get_dispatch_history(
         "success": True,
         "scope": scope,
         "total": total_count,
+        "total_staff_count": total_staff_count,
+        "filtered_staff_count": len(staff_summary),
         "limit": limit,
         "offset": offset,
         "dispatches": items,
+        "staff_summary": staff_summary,
         "stats": {
             "total_dispatches": total_count,
             "total_views": total_views,
@@ -775,7 +874,8 @@ def get_dispatch_history(
             "unviewed_count": total_count - viewed_count,
             "high_engagement_count": high_count,
             "view_rate_percent": view_rate,
-            "top_model": top_model
+            "top_model": top_model,
+            "active_staff_count": len(staff_summary)
         },
         "team_members": team_members,
         "available_models": available_models

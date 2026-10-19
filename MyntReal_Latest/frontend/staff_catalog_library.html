@@ -430,7 +430,12 @@
         /* DC-CATALOG-EMBED-001: Seamless Embed Mode inside WhatsApp Center Tab */
         body.embed-mode #staffSidebar,
         body.embed-mode #headerContainer,
-        body.embed-mode #btnCatalogHomeLink {
+        body.embed-mode #btnCatalogHomeLink,
+        body.embed-mode #vgk-assistant-root,
+        body.embed-mode #vgk-fab,
+        body.embed-mode #vgk-scroll-top-btn,
+        body.embed-mode .vgk-assistant-container,
+        body.embed-mode .vgk-fab-wrapper {
             display: none !important;
         }
         body.embed-mode .main-content {
@@ -962,7 +967,7 @@
                                 <div class="text-muted" style="font-size: 12px;">Tracked catalog dispatches across all models, client link clicks, and engagement telemetry.</div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
                             <!-- Scope Switcher Pills -->
                             <div class="nav nav-pills bg-dark p-1 rounded-pill border border-secondary border-opacity-25" role="tablist">
                                 <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold" id="btnScopeMy" onclick="switchDispatchHistoryTab('my')">
@@ -970,6 +975,9 @@
                                 </button>
                                 <button type="button" class="btn btn-sm btn-ghost-dark rounded-pill px-3 fw-bold text-light" id="btnScopeTeam" onclick="switchDispatchHistoryTab('team')">
                                     <i class="fas fa-users me-1"></i> Team Dispatches (<span id="scopeBadgeTeam">0</span>)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-ghost-dark rounded-pill px-3 fw-bold text-light" id="btnScopeStaff" onclick="switchDispatchHistoryTab('staff_summary')">
+                                    <i class="fas fa-chart-bar me-1"></i> Staff-Wise Summary (<span id="scopeBadgeStaff">0</span>)
                                 </button>
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" onclick="loadDispatchHistory()" title="Refresh" style="width: 34px; height: 34px; padding: 0;">
@@ -1082,7 +1090,7 @@
                         </div>
 
                         <div class="row g-2 align-items-center mt-1">
-                            <!-- Team Staff Member Filter (Only shown for Team Tab) -->
+                            <!-- Team Staff Member Filter (Shown for Team & Staff-Wise Summary Tabs) -->
                             <div class="col-12 col-md-4" id="histStaffFilterCol" style="display: none;">
                                 <div class="d-flex align-items-center gap-2">
                                     <label class="form-label small text-muted mb-0 text-nowrap"><i class="fas fa-user-tag me-1 text-info"></i>Staff:</label>
@@ -1092,14 +1100,19 @@
                                 </div>
                             </div>
                             <!-- Sort Filter -->
-                            <div class="col-8 col-md-4 ms-auto">
+                            <div class="col-8 col-md-5 ms-auto">
                                 <div class="d-flex align-items-center gap-2 justify-content-end">
                                     <label class="form-label small text-muted mb-0 text-nowrap"><i class="fas fa-sort me-1"></i>Sort:</label>
-                                    <select id="histSortFilter" class="form-select form-select-sm bg-dark text-white border-secondary border-opacity-50" style="max-width: 200px;">
+                                    <select id="histSortFilter" class="form-select form-select-sm bg-dark text-white border-secondary border-opacity-50" style="max-width: 240px;">
                                         <option value="sent_desc">Newest First</option>
                                         <option value="sent_asc">Oldest First</option>
                                         <option value="views_desc">Most Clicks First</option>
-                                        <option value="name_asc">Recipient A-Z</option>
+                                        <option value="dispatches_desc">Most Dispatches First (Staff)</option>
+                                        <option value="dispatches_asc">Least Dispatches First (Staff)</option>
+                                        <option value="ctr_desc">Highest CTR % First (Staff)</option>
+                                        <option value="recipients_desc">Most Unique Recipients (Staff)</option>
+                                        <option value="name_asc">Name A-Z</option>
+                                        <option value="name_desc">Name Z-A</option>
                                     </select>
                                 </div>
                             </div>
@@ -1112,18 +1125,28 @@
                         </div>
                     </div>
 
-                    <!-- Dispatch History Table -->
+                    <!-- Dispatch History / Staff-Wise Summary Table -->
                     <div class="table-responsive rounded-3" style="max-height: 480px; border: 1px solid rgba(255, 255, 255, 0.08); background: #0c1322;">
                         <table class="table table-dark table-hover mb-0 small align-middle">
-                            <thead style="position: sticky; top: 0; z-index: 10; background: #162033; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
-                                <tr>
-                                    <th style="min-width: 170px;">Recipient</th>
-                                    <th id="thStaffColumn" style="min-width: 160px; display: none;">Dispatched By</th>
+                            <thead id="dispatchHistoryTableHead" style="position: sticky; top: 0; z-index: 10; background: #162033; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
+                                <tr id="trHistoryHeadRecords">
+                                    <th style="min-width: 170px; cursor: pointer;" onclick="sortDispatchHistoryColumn('name')">Recipient <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th id="thStaffColumn" style="min-width: 160px; display: none; cursor: pointer;" onclick="sortDispatchHistoryColumn('name')">Dispatched By <i class="fas fa-sort ms-1 opacity-50"></i></th>
                                     <th style="min-width: 190px;">Catalog Model</th>
                                     <th style="min-width: 110px;">Format</th>
-                                    <th style="min-width: 160px;">Clicks & Telemetry</th>
-                                    <th style="min-width: 130px;">Sent Date</th>
+                                    <th style="min-width: 160px; cursor: pointer;" onclick="sortDispatchHistoryColumn('views')">Clicks &amp; Telemetry <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 130px; cursor: pointer;" onclick="sortDispatchHistoryColumn('sent')">Sent Date <i class="fas fa-sort ms-1 opacity-50"></i></th>
                                     <th style="min-width: 130px;" class="text-end">Actions</th>
+                                </tr>
+                                <tr id="trHistoryHeadStaff" style="display: none;">
+                                    <th style="min-width: 210px; cursor: pointer;" onclick="sortDispatchHistoryColumn('name')">Staff Member <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 135px; cursor: pointer;" onclick="sortDispatchHistoryColumn('dispatches')">Total Dispatches <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 125px; cursor: pointer;" onclick="sortDispatchHistoryColumn('recipients')">Unique Clients <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 185px;">Catalog Models Sent</th>
+                                    <th style="min-width: 145px;">Formats (Link / PDF / Both)</th>
+                                    <th style="min-width: 160px; cursor: pointer;" onclick="sortDispatchHistoryColumn('ctr')">Clicks &amp; CTR % <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 130px; cursor: pointer;" onclick="sortDispatchHistoryColumn('sent')">Last Dispatch <i class="fas fa-sort ms-1 opacity-50"></i></th>
+                                    <th style="min-width: 115px;" class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="dispatchHistoryTableBody">
@@ -1134,7 +1157,7 @@
 
                     <!-- Table Footer / Count info -->
                     <div class="d-flex justify-content-between align-items-center mt-2 px-1 text-muted" style="font-size: 12px;">
-                        <div>Showing <span id="histDisplayCount" class="text-white fw-bold">0</span> of <span id="histTotalCount" class="text-white fw-bold">0</span> records</div>
+                        <div id="histFooterCountWrap">Showing <span id="histDisplayCount" class="text-white fw-bold">0</span> of <span id="histTotalCount" class="text-white fw-bold">0</span> <span id="histFooterUnit">records</span></div>
                         <div class="fst-italic"><i class="fas fa-shield-alt text-success me-1"></i>Live click telemetry tracked via unique ref codes</div>
                     </div>
                 </div>
@@ -2570,27 +2593,82 @@
             currentHistoryScope = scope;
             const btnMy = document.getElementById('btnScopeMy');
             const btnTeam = document.getElementById('btnScopeTeam');
+            const btnStaff = document.getElementById('btnScopeStaff');
             const thStaff = document.getElementById('thStaffColumn');
+            const trHeadRecords = document.getElementById('trHistoryHeadRecords');
+            const trHeadStaff = document.getElementById('trHistoryHeadStaff');
             const staffFilterCol = document.getElementById('histStaffFilterCol');
+            const sortSelect = document.getElementById('histSortFilter');
 
-            if (scope === 'team') {
-                if (btnTeam) btnTeam.className = 'btn btn-sm btn-success rounded-pill px-3 fw-bold';
-                if (btnMy) btnMy.className = 'btn btn-sm btn-ghost-dark rounded-pill px-3 fw-bold text-light';
+            const activeCls = 'btn btn-sm btn-success rounded-pill px-3 fw-bold';
+            const inactiveCls = 'btn btn-sm btn-ghost-dark rounded-pill px-3 fw-bold text-light';
+
+            if (btnMy) btnMy.className = (scope === 'my') ? activeCls : inactiveCls;
+            if (btnTeam) btnTeam.className = (scope === 'team') ? activeCls : inactiveCls;
+            if (btnStaff) btnStaff.className = (scope === 'staff_summary') ? activeCls : inactiveCls;
+
+            if (scope === 'staff_summary') {
+                if (trHeadRecords) trHeadRecords.style.display = 'none';
+                if (trHeadStaff) trHeadStaff.style.display = 'table-row';
+                if (staffFilterCol) staffFilterCol.style.display = 'block';
+                if (sortSelect && (sortSelect.value === 'sent_desc' || sortSelect.value === 'sent_asc')) {
+                    sortSelect.value = 'dispatches_desc';
+                }
+            } else if (scope === 'team') {
+                if (trHeadRecords) trHeadRecords.style.display = 'table-row';
+                if (trHeadStaff) trHeadStaff.style.display = 'none';
                 if (thStaff) thStaff.style.display = 'table-cell';
                 if (staffFilterCol) staffFilterCol.style.display = 'block';
+                if (sortSelect && sortSelect.value.startsWith('dispatches_')) {
+                    sortSelect.value = 'sent_desc';
+                }
             } else {
-                if (btnMy) btnMy.className = 'btn btn-sm btn-success rounded-pill px-3 fw-bold';
-                if (btnTeam) btnTeam.className = 'btn btn-sm btn-ghost-dark rounded-pill px-3 fw-bold text-light';
+                if (trHeadRecords) trHeadRecords.style.display = 'table-row';
+                if (trHeadStaff) trHeadStaff.style.display = 'none';
                 if (thStaff) thStaff.style.display = 'none';
                 if (staffFilterCol) staffFilterCol.style.display = 'none';
+                if (sortSelect && sortSelect.value.startsWith('dispatches_')) {
+                    sortSelect.value = 'sent_desc';
+                }
             }
             await loadDispatchHistory();
         }
 
+        function sortDispatchHistoryColumn(colKey) {
+            const sortSelect = document.getElementById('histSortFilter');
+            if (!sortSelect) return;
+            const cur = sortSelect.value;
+            let next = 'sent_desc';
+            if (colKey === 'dispatches') {
+                next = (cur === 'dispatches_desc') ? 'dispatches_asc' : 'dispatches_desc';
+            } else if (colKey === 'views') {
+                next = 'views_desc';
+            } else if (colKey === 'ctr') {
+                next = 'ctr_desc';
+            } else if (colKey === 'recipients') {
+                next = 'recipients_desc';
+            } else if (colKey === 'sent') {
+                next = (cur === 'sent_desc') ? 'sent_asc' : 'sent_desc';
+            } else if (colKey === 'name') {
+                next = (cur === 'name_asc') ? 'name_desc' : 'name_asc';
+            }
+            sortSelect.value = next;
+            loadDispatchHistory();
+        }
+
+        async function drillDownStaffDispatches(staffId) {
+            const staffSelect = document.getElementById('histStaffFilter');
+            if (staffSelect) {
+                staffSelect.value = String(staffId || '');
+            }
+            await switchDispatchHistoryTab('team');
+        }
+
         async function loadDispatchHistory() {
             const tbody = document.getElementById('dispatchHistoryTableBody');
-            const isTeam = (currentHistoryScope === 'team');
-            const colSpan = isTeam ? 7 : 6;
+            const isStaffSummary = (currentHistoryScope === 'staff_summary');
+            const isTeam = (currentHistoryScope === 'team' || isStaffSummary);
+            const colSpan = isStaffSummary ? 8 : (isTeam ? 7 : 6);
 
             if (tbody) {
                 tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-5"><div class="spinner-border spinner-border-sm text-success me-2"></div><span class="text-muted">Loading dispatch history & telemetry...</span></td></tr>`;
@@ -2603,7 +2681,7 @@
                 const delivery_method = document.getElementById('histMethodFilter')?.value || 'all';
                 const timeframe = document.getElementById('histTimeframeFilter')?.value || 'all';
                 const staff_id = isTeam ? (document.getElementById('histStaffFilter')?.value || '') : '';
-                const sort_by = document.getElementById('histSortFilter')?.value || 'sent_desc';
+                const sort_by = document.getElementById('histSortFilter')?.value || (isStaffSummary ? 'dispatches_desc' : 'sent_desc');
 
                 const params = new URLSearchParams();
                 params.set('scope', currentHistoryScope);
@@ -2621,6 +2699,7 @@
                 const data = await res.json();
 
                 cachedHistoryDispatches = data.dispatches || [];
+                const staffSummaryList = data.staff_summary || [];
 
                 // Update KPIs
                 const stats = data.stats || {};
@@ -2633,28 +2712,49 @@
                 const kpiClicksEl = document.getElementById('histKpiClicks');
                 const kpiRateEl = document.getElementById('histKpiRate');
                 const kpiModelEl = document.getElementById('histKpiTopModel');
+                const kpiDispSubEl = document.getElementById('histKpiDispatchesSub');
 
                 if (kpiDispEl) kpiDispEl.textContent = totalDispatches;
                 if (kpiClicksEl) kpiClicksEl.textContent = totalClicks;
                 if (kpiRateEl) kpiRateEl.textContent = `${clickRate}%`;
                 if (kpiModelEl) kpiModelEl.textContent = topModel.replace(/_/g, ' ');
+                if (kpiDispSubEl) {
+                    kpiDispSubEl.textContent = isStaffSummary
+                        ? `Across ${staffSummaryList.length} active staff member${staffSummaryList.length === 1 ? '' : 's'}`
+                        : 'Across catalog models';
+                }
 
                 // Update scope badges
-                const badgeEl = isTeam ? document.getElementById('scopeBadgeTeam') : document.getElementById('scopeBadgeMy');
-                if (badgeEl) badgeEl.textContent = data.total || 0;
+                const badgeMyEl = document.getElementById('scopeBadgeMy');
+                const badgeTeamEl = document.getElementById('scopeBadgeTeam');
+                const badgeStaffEl = document.getElementById('scopeBadgeStaff');
 
-                // Pre-load opposite tab total if uninitialized
-                const otherScope = isTeam ? 'my' : 'team';
-                const otherBadgeId = isTeam ? 'scopeBadgeMy' : 'scopeBadgeTeam';
-                const otherBadgeEl = document.getElementById(otherBadgeId);
-                if (otherBadgeEl && (otherBadgeEl.textContent === '0' || otherBadgeEl.textContent === '')) {
-                    staffFetch('/api/v1/digital-catalogs/dispatches/history?scope=' + otherScope + '&limit=1')
+                if (currentHistoryScope === 'my' && badgeMyEl) badgeMyEl.textContent = data.total || 0;
+                if ((currentHistoryScope === 'team' || isStaffSummary) && badgeTeamEl && !staff_id && !q && segment_code === 'ALL' && engagement === 'all' && delivery_method === 'all' && timeframe === 'all') {
+                    badgeTeamEl.textContent = data.total || 0;
+                }
+                if (badgeStaffEl) {
+                    badgeStaffEl.textContent = data.total_staff_count !== undefined ? data.total_staff_count : staffSummaryList.length;
+                }
+
+                // Pre-load opposite tab totals if uninitialized
+                if (badgeMyEl && (badgeMyEl.textContent === '0' || badgeMyEl.textContent === '') && currentHistoryScope !== 'my') {
+                    staffFetch('/api/v1/digital-catalogs/dispatches/history?scope=my&limit=1')
                         .then(r => r.json())
-                        .then(d => { if (otherBadgeEl && d.total !== undefined) otherBadgeEl.textContent = d.total; })
+                        .then(d => { if (badgeMyEl && d.total !== undefined) badgeMyEl.textContent = d.total; })
+                        .catch(() => {});
+                }
+                if (badgeTeamEl && (badgeTeamEl.textContent === '0' || badgeTeamEl.textContent === '') && currentHistoryScope === 'my') {
+                    staffFetch('/api/v1/digital-catalogs/dispatches/history?scope=team&limit=1')
+                        .then(r => r.json())
+                        .then(d => {
+                            if (badgeTeamEl && d.total !== undefined) badgeTeamEl.textContent = d.total;
+                            if (badgeStaffEl && d.total_staff_count !== undefined) badgeStaffEl.textContent = d.total_staff_count;
+                        })
                         .catch(() => {});
                 }
 
-                // Populate Team Staff Dropdown if team scope and not yet populated
+                // Populate Team Staff Dropdown if team/staff_summary scope and not yet populated
                 const staffSelect = document.getElementById('histStaffFilter');
                 if (staffSelect && isTeam && data.team_members && staffSelect.options.length <= 1) {
                     const currentVal = staffSelect.value;
@@ -2666,11 +2766,136 @@
                 // Update Footer Counts
                 const displayCountEl = document.getElementById('histDisplayCount');
                 const totalCountEl = document.getElementById('histTotalCount');
-                if (displayCountEl) displayCountEl.textContent = cachedHistoryDispatches.length;
-                if (totalCountEl) totalCountEl.textContent = data.total || 0;
+                const footerUnitEl = document.getElementById('histFooterUnit');
+                if (isStaffSummary) {
+                    if (displayCountEl) displayCountEl.textContent = staffSummaryList.length;
+                    if (totalCountEl) totalCountEl.textContent = data.total_staff_count || staffSummaryList.length;
+                    if (footerUnitEl) footerUnitEl.textContent = `staff members (${totalDispatches} total dispatches)`;
+                } else {
+                    if (displayCountEl) displayCountEl.textContent = cachedHistoryDispatches.length;
+                    if (totalCountEl) totalCountEl.textContent = data.total || 0;
+                    if (footerUnitEl) footerUnitEl.textContent = 'records';
+                }
 
-                // Render Table
                 if (!tbody) return;
+
+                // ── RENDER MODE A: STAFF-WISE SUMMARY TABLE ──────────────────────
+                if (isStaffSummary) {
+                    if (staffSummaryList.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fas fa-users-slash fa-2x mb-2 d-block opacity-50"></i>
+                                    <div>No staff dispatch records found matching the selected filters.</div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2 rounded-pill" onclick="resetDispatchFilters()">
+                                        Reset Filters
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+
+                    tbody.innerHTML = staffSummaryList.map((st, idx) => {
+                        const rank = idx + 1;
+                        const sName = escapeHtml(st.staff_name || 'Staff Member');
+                        const sCode = escapeHtml(st.staff_code || '');
+                        const sDesig = escapeHtml(st.designation || st.staff_type || 'Staff');
+                        const sTotal = st.total_dispatches || 0;
+                        const sharePct = totalDispatches > 0 ? Math.round((sTotal / totalDispatches) * 100) : 0;
+                        const sUnique = st.unique_recipients || 0;
+                        const sViews = st.total_views || 0;
+                        const sViewed = st.viewed_dispatches || 0;
+                        const sUnviewed = st.unviewed_dispatches || 0;
+                        const sCtr = st.ctr_percent !== undefined ? st.ctr_percent : 0;
+
+                        // Models breakdown pills
+                        const modelsObj = st.models_breakdown || {};
+                        const modelBadges = Object.entries(modelsObj)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([seg, cnt]) => `<span class="badge me-1 mb-1 font-monospace" style="font-size: 10px; background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">${escapeHtml(seg)}: <strong>${cnt}</strong></span>`)
+                            .join('') || `<span class="text-muted small">—</span>`;
+
+                        // Formats breakdown pills
+                        const fmt = st.formats_breakdown || {};
+                        const linkCnt = fmt.web_link || 0;
+                        const pdfCnt = fmt.pdf_document || 0;
+                        const bothCnt = fmt.both || 0;
+
+                        let ctrBadgeCls = 'bg-secondary bg-opacity-25 text-muted border-secondary';
+                        if (sCtr >= 30 || sViews >= 3) {
+                            ctrBadgeCls = 'bg-success bg-opacity-25 text-success border-success';
+                        } else if (sViews > 0) {
+                            ctrBadgeCls = 'bg-info bg-opacity-25 text-info border-info';
+                        }
+
+                        const rankBadgeColor = rank === 1 ? '#f59e0b' : (rank === 2 ? '#94a3b8' : (rank === 3 ? '#d97706' : '#334155'));
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width: 24px; height: 24px; border-radius: 6px; background: ${rankBadgeColor}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0;">
+                                            #${rank}
+                                        </div>
+                                        <div style="width: 30px; height: 30px; border-radius: 50%; background: #1e293b; border: 1px solid rgba(59, 130, 246, 0.45); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #60a5fa; flex-shrink: 0;">
+                                            ${escapeHtml((st.staff_name || 'U').charAt(0).toUpperCase())}
+                                        </div>
+                                        <div style="line-height: 1.25;">
+                                            <div class="fw-bold text-white" style="font-size: 12.5px;">${sName}</div>
+                                            <div class="text-muted" style="font-size: 10.5px;">${sCode}${sDesig ? ' • ' + sDesig : ''}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <span class="fs-6 fw-bold text-white">${sTotal}</span>
+                                        <span class="text-info" style="font-size: 10.5px; font-weight: 600;">(${sharePct}% share)</span>
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px; background: rgba(255,255,255,0.08); max-width: 110px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: ${Math.max(sharePct, 4)}%"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-light" style="font-size: 13px;"><i class="fas fa-user-check text-info me-1" style="font-size: 11px;"></i>${sUnique}</div>
+                                    <div class="text-muted" style="font-size: 10px;">Unique numbers</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap">${modelBadges}</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        ${linkCnt > 0 ? `<span class="badge bg-primary bg-opacity-75" style="font-size: 9.5px;">Link: ${linkCnt}</span>` : ''}
+                                        ${pdfCnt > 0 ? `<span class="badge bg-danger bg-opacity-75" style="font-size: 9.5px;">PDF: ${pdfCnt}</span>` : ''}
+                                        ${bothCnt > 0 ? `<span class="badge bg-warning text-dark fw-bold" style="font-size: 9.5px;">Both: ${bothCnt}</span>` : ''}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <span class="badge ${ctrBadgeCls} border border-opacity-50 px-2 py-1">
+                                            <i class="fas fa-mouse-pointer me-1"></i>${sViews} click${sViews === 1 ? '' : 's'} (${sCtr}%)
+                                        </span>
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 10px;">
+                                        <span class="text-success">${sViewed} viewed</span> • <span>${sUnviewed} unopened</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-white" style="font-size: 12px;">${st.last_sent_at ? formatDate(st.last_sent_at) : '—'}</div>
+                                    <div class="text-muted" style="font-size: 10px;">${st.last_sent_at ? formatTime(st.last_sent_at) : ''}</div>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" style="font-size: 11px;" onclick="drillDownStaffDispatches(${st.staff_id})" title="View all dispatches by ${sName}">
+                                        <i class="fas fa-list-ul me-1"></i>View (${sTotal})
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    return;
+                }
+
+                // ── RENDER MODE B: INDIVIDUAL DISPATCH RECORDS TABLE ─────────────
                 if (cachedHistoryDispatches.length === 0) {
                     tbody.innerHTML = `
                         <tr>
@@ -2800,7 +3025,7 @@
             const stFilter = document.getElementById('histStaffFilter');
             if (stFilter) stFilter.value = '';
             const soFilter = document.getElementById('histSortFilter');
-            if (soFilter) soFilter.value = 'sent_desc';
+            if (soFilter) soFilter.value = (currentHistoryScope === 'staff_summary') ? 'dispatches_desc' : 'sent_desc';
 
             loadDispatchHistory();
         }

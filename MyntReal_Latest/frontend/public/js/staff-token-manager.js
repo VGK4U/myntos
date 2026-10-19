@@ -140,6 +140,7 @@
         }
         
         console.warn('[DC_TOKEN] Session expired:', reason);
+        const rawUser = localStorage.getItem('staff_user');
         localStorage.removeItem('staff_token');
         localStorage.removeItem('staff_user');
         document.cookie = 'staff_token=; path=/; max-age=0';
