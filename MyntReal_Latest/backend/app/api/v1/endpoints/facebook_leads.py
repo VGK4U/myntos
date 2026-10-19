@@ -512,6 +512,12 @@ async def pull_meta_leads(
         for f in forms:
             f_id = f.get('id')
             f_name = f.get('name')
+            if not f_id:
+                continue
+
+            # Skip unmapped forms on pages with no default company_id before fetching 500 leads
+            if not page_cid and not facebook_leads_service.get_form_routing(str(f_id), page_id=str(page_id), db=db):
+                continue
 
             # 2. Fetch leads with cursor pagination
             leads_data = facebook_leads_service.fetch_form_leads(
@@ -519,10 +525,37 @@ async def pull_meta_leads(
                 access_token=token,
                 max_leads=500
             )
+            if not leads_data:
+                continue
+
+            # Batch-fetch already-attributed lead IDs for this form batch in 1 indexed query
+            import re as _re
+            batch_ids = set()
+            for ld in leads_data:
+                raw_lid = str(ld.get('id', '')).strip()
+                if raw_lid:
+                    clean_lid = _re.sub(r'^[lL]:', '', raw_lid).strip()
+                    batch_ids.update([raw_lid, clean_lid, f"l:{clean_lid}"])
+            existing_meta_ids = set()
+            if batch_ids:
+                try:
+                    existing_rows = db.query(MetaLeadsAttribution.meta_lead_id).filter(
+                        MetaLeadsAttribution.meta_lead_id.in_(list(batch_ids))
+                    ).all()
+                    existing_meta_ids = {str(r[0]) for r in existing_rows if r[0]}
+                except Exception:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
 
             for ld in leads_data:
-                lead_id = str(ld.get('id', ''))
+                lead_id = str(ld.get('id', '')).strip()
                 if not lead_id:
+                    continue
+                clean_lid = _re.sub(r'^[lL]:', '', lead_id).strip()
+                if lead_id in existing_meta_ids or clean_lid in existing_meta_ids or f"l:{clean_lid}" in existing_meta_ids:
+                    skipped_count += 1
                     continue
 
                 if facebook_leads_service.lead_already_exists(lead_id, db):

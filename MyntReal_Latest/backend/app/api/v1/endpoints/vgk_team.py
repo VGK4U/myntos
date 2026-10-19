@@ -6277,6 +6277,10 @@ def member_earnings_dashboard(
                     "WHERE cl.name ILIKE :cs OR cl.phone ILIKE :cs"
                 ), {"cs": f"%{_cs}%"}).scalars().all()
         except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
             _cs_ids = []
         query = query.filter(OfficialPartner.id.in_(_cs_ids))
 
@@ -6367,6 +6371,10 @@ def member_earnings_dashboard(
             earner_rows = db.execute(text(earner_sql), date_params).fetchall()
             earner_ids = [r[0] for r in earner_rows]
         except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
             earner_ids = []
         if not earner_ids:
             return {"success": True, "total": 0, "page": page, "page_size": page_size, "data": []}
@@ -6386,7 +6394,10 @@ def member_earnings_dashboard(
             ), {"ids": member_ids}).fetchall()
             pts_map = {int(r[0]): {"credited": float(r[1]), "debited": float(r[2])} for r in rows}
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Bulk: combined income metrics (status, level, files, l1_files, installed_files) in a single pass
     inc_map: dict = {}
@@ -6451,6 +6462,10 @@ def member_earnings_dashboard(
             l1_files_map = {p: len(s) for p, s in _l1_files_set.items()}
             installed_files_map = {p: len(s) for p, s in _inst_files_set.items()}
         except Exception as e:
+            try:
+                db.rollback()
+            except Exception:
+                pass
             print("[MEMBER_EARN_AGG_ERR]", e)
 
     # Bulk: registered_by names (checks staff_employees and official_partners)
@@ -6463,7 +6478,10 @@ def member_earnings_dashboard(
             ), {"codes": emp_codes}).fetchall()
             emp_name_map = {r[0]: r[1] for r in rows}
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
         try:
             op_rows = db.execute(text(
                 "SELECT partner_code, partner_name FROM official_partners WHERE partner_code = ANY(:codes)"
@@ -6472,7 +6490,10 @@ def member_earnings_dashboard(
                 if r[0] not in emp_name_map or not emp_name_map[r[0]]:
                     emp_name_map[r[0]] = r[1]
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Bulk: Parent partner IDs
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
@@ -6560,7 +6581,10 @@ def member_earnings_dashboard(
                     if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
                         passport_photo_map[int(opr[0])] = p_photo
         except Exception as e:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
     elif members:
         for m in members:
             p_photo = getattr(m, "logo_path", None)
@@ -6601,7 +6625,10 @@ def member_earnings_dashboard(
                     "potential_earned": float(p_pot_map.get(pid, 0.0))
                 }
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Bulk: Team network sizes (L2, L3, L4) (DC-VGK-TEAM-SIZE-001) — O(N) children_map lookup
     team_network_map: dict = {}
@@ -6627,7 +6654,10 @@ def member_earnings_dashboard(
                     "total": l2_c + l3_c + l4_c
                 }
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Bulk: compute per-partner, per-lead, per-level advances for exact net pending matching
     adv_map_bulk = {}
@@ -6664,7 +6694,10 @@ def member_earnings_dashboard(
                     key = (int(vr.lead_id), int(vr.level))
                     adv_map_bulk[key] = adv_map_bulk.get(key, 0.0) + float(vr.total_adv or 0)
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Fetch per-entry details per member for exact pending/net calculations
     raw_member_entries_map = {}
@@ -6700,7 +6733,10 @@ def member_earnings_dashboard(
                     "bal_gross": _bal_g
                 })
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     bulk_all_entries_map = {}
     bulk_lost_adv_map = {}
@@ -6718,7 +6754,10 @@ def member_earnings_dashboard(
                     bulk_all_entries_map[_pid] = []
                 bulk_all_entries_map[_pid].append(_r)
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         try:
             _bla_rows = db.execute(text("""
@@ -6751,13 +6790,32 @@ def member_earnings_dashboard(
                             bulk_lost_adv_map[_target_p] = []
                         bulk_lost_adv_map[_target_p].append(_r)
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
-    from app.services.vgk_earner_card import get_bulk_partner_potential_earning
-    pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False) if member_ids else {}
+    pot_map = {}
+    if member_ids:
+        try:
+            from app.services.vgk_earner_card import get_bulk_partner_potential_earning
+            pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False)
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
-    from app.services.vgk4u_career_service import VGK4UCareerService
-    bulk_career_map = VGK4UCareerService.get_bulk_partner_career_status(db, member_ids) if member_ids else {}
+    bulk_career_map = {}
+    if member_ids:
+        try:
+            from app.services.vgk4u_career_service import VGK4UCareerService
+            bulk_career_map = VGK4UCareerService.get_bulk_partner_career_status(db, member_ids)
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     items = []
     for m in members:
@@ -7294,7 +7352,10 @@ def fetch_member_income_entries_data(
                 if dr.source_lead_id and dr.id:
                     dvr_seq_map[(int(dr.source_lead_id), int(dr.id))] = int(dr.seq)
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     txn_seq_map: dict = {}
     if lead_ids:
@@ -7308,7 +7369,10 @@ def fetch_member_income_entries_data(
             for tr in t_rows:
                 txn_seq_map[(int(tr.lead_id), int(tr.id))] = int(tr.seq)
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Batch-resolve which leads have Support (L5) or Brand commissions created
     all_comm_leads = set()
@@ -7324,7 +7388,10 @@ def fetch_member_income_entries_data(
             """), {"lids": int_lids}).fetchall()
             all_comm_leads = {int(r[0]) for r in ac_rows if r[0] is not None}
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Compute lost lead advance deductions for partner across all income entries
     lost_ded_map = {}
@@ -7379,7 +7446,10 @@ def fetch_member_income_entries_data(
                     pe_ded = round(min(avail, cap_50), 2)
             lost_ded_map[pe_id] = pe_ded
     except Exception as _ex_lost:
-        pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     # Fetch commission configs & solar brand incentive configs for accurate potential calculations
     try:
@@ -7387,6 +7457,10 @@ def fetch_member_income_entries_data(
         configs = db.query(VGKTeamCommissionConfig).all()
         config_map = {c.category_id: c for c in configs}
     except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         config_map = {}
 
     try:
@@ -7394,6 +7468,10 @@ def fetch_member_income_entries_data(
         brand_map = {b.id: b for b in brands}
         brand_name_map = {b.id: b.brand_name for b in brands}
     except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         brand_map = {}
         brand_name_map = {}
 
@@ -7794,6 +7872,10 @@ def lead_earnings_dashboard(
             GROUP BY e.source_lead_id, cl.name, cl.phone, cl.submit_date, cl.complete_date, cl.category_id
         """), params).fetchall()
     except Exception as exc:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return {"success": False, "error": str(exc), "data": []}
 
     if not agg_rows:
@@ -7822,7 +7904,10 @@ def lead_earnings_dashboard(
                 status_map[lid] = {}
             status_map[lid][r[1]] = {"count": int(r[2]), "amount": float(r[3])}
     except Exception:
-        pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     # Category names
     cat_ids = list({r.category_id for r in agg_rows if r.category_id})
@@ -7834,7 +7919,10 @@ def lead_earnings_dashboard(
             ), {"ids": cat_ids}).fetchall()
             cat_map = {int(r.id): r.name for r in cr}
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     items = []
     for r in agg_rows:
@@ -7946,6 +8034,10 @@ def lead_income_members_detail(
             "ORDER BY e.created_at DESC, e.id DESC"
         ), _p).fetchall()
     except Exception as exc:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return {"success": False, "error": str(exc), "data": []}
 
     # Batch-resolve if this lead has Support (L5) or Brand commissions created
@@ -7959,7 +8051,10 @@ def lead_income_members_detail(
         """), {"lid": lead_id}).fetchone()
         has_all_comm = bool(ac_cnt)
     except Exception:
-        pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     # Batch-resolve prior advances for this lead grouped by (partner_id, level)
     adv_map: dict = {}
@@ -8003,7 +8098,10 @@ def lead_income_members_detail(
             cur["total"]  += float(ar.total_adv or 0)
             adv_map[key] = cur
     except Exception:
-        pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     dvr_seq_map_lead: dict = {}
     try:
@@ -8020,7 +8118,10 @@ def lead_income_members_detail(
         for dr in d_rows:
             dvr_seq_map_lead[int(dr.id)] = int(dr.seq)
     except Exception:
-        pass
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     def format_lead_kind_label(k: str, seq: int = 1) -> str:
         k_upper = (k or '').strip().upper()

@@ -60,7 +60,7 @@
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">MEMBER NAME</label>
-                <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. BANDI GANGARAJU">
+                <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="Member Name">
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">CAREER DESIGNATION</label>
@@ -68,7 +68,7 @@
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">OVERALL EARNING (₹)</label>
-                <input type="text" id="postHighlight" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹1,07,880/-">
+                <input type="text" id="postHighlight" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="₹0/-">
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">FILES STATUS</label>
@@ -125,7 +125,7 @@
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">TOTAL TODAY PAYOUT (₹)</label>
-                <input type="text" id="postTotalToday" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹9,395/-">
+                <input type="text" id="postTotalToday" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="₹0/-">
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">POTENTIAL EARNING (₹)</label>
-                <input type="text" id="postPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹1,41,550/-">
+                <input type="text" id="postPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="₹0/-">
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@
             <div style="display:flex;flex-direction:column;gap:8px">
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR NAME</label>
-                <input type="text" id="postSeniorName" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. MS. JARRA KUMARI">
+                <input type="text" id="postSeniorName" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="Direct Sponsor Name">
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR TODAY'S EARNING (₹)</label>

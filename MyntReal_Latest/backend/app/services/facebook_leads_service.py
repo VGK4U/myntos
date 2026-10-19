@@ -145,6 +145,10 @@ class FacebookLeadsService:
                 logger.warning(f"DB token lookup failed for page {page_id}: {e}")
         return self._legacy_token
 
+    def get_page_access_token(self, page_id: str, db: Optional[Session] = None) -> Optional[str]:
+        """Alias for get_page_token used by scheduled Meta health check."""
+        return self.get_page_token(page_id, db)
+
     def get_page_info(self, page_id: str, db: Optional[Session] = None) -> Dict[str, Any]:
         """Returns {'token': ..., 'segment': ..., 'name': ..., 'company_id': ...} for a page."""
         info = {'token': self._legacy_token or '', 'segment': 'GENERAL', 'name': '', 'company_id': None}
@@ -274,10 +278,10 @@ class FacebookLeadsService:
 
     # ── Duplicate check ───────────────────────────────────────────────────────
 
-    def lead_already_exists(self, fb_lead_id: str, db: Session) -> bool:
+    def lead_already_exists(self, fb_lead_id: str, db: Session, check_legacy_source_details: bool = False) -> bool:
         """
         Check if this Facebook lead_id was already imported into CRM.
-        DC Protocol: Queries indexed MetaLeadsAttribution first (O(1)), then fallback.
+        DC Protocol: Queries indexed MetaLeadsAttribution first (O(1)).
         Normalizes source ID by stripping optional 'l:' / 'L:' prefix.
         """
         if not fb_lead_id:
@@ -295,11 +299,13 @@ class FacebookLeadsService:
             if att:
                 return True
 
-            row = db.execute(
-                text("SELECT id FROM crm_leads WHERE source IN ('Online - M', 'Facebook Lead Ads', 'Social Media') AND (source_details LIKE :p1 OR source_details LIKE :p2) LIMIT 1"),
-                {'p1': f"%'lead_id': '{clean_id}'%", 'p2': f"%'lead_id': 'l:{clean_id}'%"}
-            ).fetchone()
-            return row is not None
+            if check_legacy_source_details:
+                row = db.execute(
+                    text("SELECT id FROM crm_leads WHERE source IN ('Online - M', 'Facebook Lead Ads', 'Social Media') AND (source_details LIKE :p1 OR source_details LIKE :p2 OR source_details LIKE :p3) LIMIT 1"),
+                    {'p1': f'%"lead_id": "{clean_id}"%', 'p2': f"%'lead_id': '{clean_id}'%", 'p3': f'%"lead_id": "l:{clean_id}"%'}
+                ).fetchone()
+                return row is not None
+            return False
         except Exception as e:
             logger.warning(f"Error checking lead existence for {fb_lead_id}: {e}")
             try:

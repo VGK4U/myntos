@@ -136,11 +136,14 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
+        from app.models.staff import StaffEmployeeDepartment
         employee = None
         emp_query = db.query(StaffEmployee).options(
             joinedload(StaffEmployee.role),
             joinedload(StaffEmployee.department),
-            joinedload(StaffEmployee.base_company)
+            joinedload(StaffEmployee.base_company),
+            joinedload(StaffEmployee.reporting_manager),
+            joinedload(StaffEmployee.additional_departments).joinedload(StaffEmployeeDepartment.department)
         )
         if employee_id and str(employee_id).isdigit():
             employee = emp_query.filter_by(id=int(employee_id)).first()

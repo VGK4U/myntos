@@ -275,17 +275,45 @@ class StaffEmployee(Base):
     
     def to_dict(self, include_sensitive=False, company_lookup=None):
         # DC_RBAC_API_STRUCTURE_001: Build complete role object for frontend access control
+        role_obj = None
+        try:
+            role_obj = self.role
+        except Exception:
+            role_obj = None
         role_data = None
-        if self.role:
+        if role_obj:
             role_data = {
-                "id": self.role.id,
-                "role_code": self.role.role_code,
-                "role_name": self.role.role_name,
-                "hierarchy_level": self.role.hierarchy_level,
-                "description": self.role.description,
-                "is_active": self.role.is_active
+                "id": role_obj.id,
+                "role_code": role_obj.role_code,
+                "role_name": role_obj.role_name,
+                "hierarchy_level": role_obj.hierarchy_level,
+                "description": role_obj.description,
+                "is_active": role_obj.is_active
             }
         
+        dept_obj = None
+        try:
+            dept_obj = self.department
+        except Exception:
+            dept_obj = None
+
+        mgr_obj = None
+        try:
+            mgr_obj = self.reporting_manager
+        except Exception:
+            mgr_obj = None
+
+        comp_obj = None
+        try:
+            comp_obj = self.base_company
+        except Exception:
+            comp_obj = None
+
+        try:
+            add_depts = self._get_additional_departments_info()
+        except Exception:
+            add_depts = []
+
         data = {
             "id": self.id,
             "emp_code": self.emp_code,
@@ -301,12 +329,12 @@ class StaffEmployee(Base):
             "email": self.email,
             "phone": self.phone,
             "department_id": self.department_id,
-            "department_name": self.department.name if self.department else None,
-            "is_freelancer_dept": self.department.is_freelancer_dept if self.department else False,
+            "department_name": dept_obj.name if dept_obj else None,
+            "is_freelancer_dept": dept_obj.is_freelancer_dept if dept_obj else False,
             "designation": self.designation,
             "role_id": self.role_id,
-            "role_code": self.role.role_code if self.role else None,
-            "role_name": self.role.role_name if self.role else None,
+            "role_code": role_obj.role_code if role_obj else None,
+            "role_name": role_obj.role_name if role_obj else None,
             "role": role_data,  # DC_RBAC_API_STRUCTURE_001: Complete role object for frontend RBAC
             "status": self.status,
             "is_active": self.status == 'active' and not getattr(self, 'is_deleted', False),  # Convenience field
@@ -326,20 +354,20 @@ class StaffEmployee(Base):
             "last_login": self.last_login.isoformat() if self.last_login else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "reporting_manager_id": self.reporting_manager_id,
-            "reporting_manager_name": self.reporting_manager.full_name if self.reporting_manager else None,
-            "reporting_manager_code": self.reporting_manager.emp_code if self.reporting_manager else None,
+            "reporting_manager_name": mgr_obj.full_name if mgr_obj else None,
+            "reporting_manager_code": mgr_obj.emp_code if mgr_obj else None,
             # DC Protocol (Dec 15, 2025): Multi-Company Assignment
             "base_company_id": self.base_company_id,
-            "base_company_name": self.base_company.company_name if self.base_company else None,
-            "base_company_code": self.base_company.company_code if self.base_company else None,
-            "company_logo": self.base_company.logo_path if self.base_company else None,
+            "base_company_name": comp_obj.company_name if comp_obj else None,
+            "base_company_code": comp_obj.company_code if comp_obj else None,
+            "company_logo": comp_obj.logo_path if comp_obj else None,
             "assigned_modules": self.assigned_modules or [],
             "data_companies": self._get_data_companies_info(company_lookup=company_lookup),
             # Stage 1 / Stage 2A Multi-Tenant Context
             "tenant_id": getattr(self, 'tenant_id', 1) or 1,
             "token_version": getattr(self, 'token_version', 1) or 1,
             # DC Protocol (Dec 21, 2025): Additional Departments (multi-department support)
-            "additional_departments": self._get_additional_departments_info(),
+            "additional_departments": add_depts,
             # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
             "employment_type": self.employment_type,
             "probation_period_months": self.probation_period_months,

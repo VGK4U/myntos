@@ -4520,12 +4520,28 @@ async def dialer_ws_sync(
         return
 
     # Resolve staff employee
-    staff = db.query(StaffEmployee).filter(StaffEmployee.id == subject).first()
+    try:
+        staff = db.query(StaffEmployee).filter(StaffEmployee.id == subject).first()
+    except Exception as _ws_db_err:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logger.warning("[DC_DIALER_WS] Transient DB error resolving staff=%s: %s", subject, _ws_db_err)
+        try:
+            await websocket.close(code=1013)
+        except Exception:
+            pass
+        return
     if not staff:
         await websocket.close(code=4003)
         return
 
     user_ref = str(staff.id)
+    try:
+        db.rollback()
+    except Exception:
+        pass
 
     await websocket.accept()
     logger.info("[DC_DIALER_WS] Connected: user_ref=%s", user_ref)

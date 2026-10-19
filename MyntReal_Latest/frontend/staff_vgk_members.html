@@ -2994,7 +2994,11 @@ window.toggleAllCommissions = async function(entryId, release, entryNum, partner
     }
 };
 
+window._compSupportInFlight = window._compSupportInFlight || new Set();
 window.toggleCompanySupport = async function(entryId, compSupported, entryNum, partnerId, leadId) {
+    const lockKey = String(leadId || entryId);
+    if (window._compSupportInFlight.has(lockKey)) return;
+    window._compSupportInFlight.add(lockKey);
     try {
         const res = await staffFetch(`${API}/vgk/staff/vgk/cash-income/${entryId}/toggle-company-support`, {
             method: 'POST',
@@ -3048,6 +3052,8 @@ window.toggleCompanySupport = async function(entryId, compSupported, entryNum, p
         console.error('Error toggling Company Support:', err);
         alert('Error updating Company Support: ' + (err.message || 'Network error'));
         if (typeof _renderMeDetailTable === 'function' && partnerId) _renderMeDetailTable(partnerId);
+    } finally {
+        window._compSupportInFlight.delete(lockKey);
     }
 };
 
@@ -13360,7 +13366,7 @@ function _renderCommDetailTable(partnerId) {
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">MEMBER NAME</label>
-            <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. MR. BANDI GANGARAJU">
+            <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="Member Name">
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">CAREER DESIGNATION</label>

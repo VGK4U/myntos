@@ -3106,6 +3106,11 @@ def toggle_all_commissions(
             release_support_brand=True
         )
         db.commit()
+        try:
+            from app.services.vgk4u_career_service import VGK4UCareerService
+            VGK4UCareerService.invalidate_cache()
+        except Exception:
+            pass
         return {
             "success": True,
             "entry_id": entry_id,
@@ -3124,6 +3129,11 @@ def toggle_all_commissions(
             sbe.status = 'CANCELLED'
             sbe.cancelled_reason = f"Cancelled via All Commissions toggle by {_emp_code or _emp_name}"
         db.commit()
+        try:
+            from app.services.vgk4u_career_service import VGK4UCareerService
+            VGK4UCareerService.invalidate_cache()
+        except Exception:
+            pass
         return {
             "success": True,
             "entry_id": entry_id,
@@ -3150,6 +3160,7 @@ def toggle_company_support(
       - Field Support L5 commission = 1.50%
     """
     from decimal import Decimal, ROUND_HALF_UP
+    import time
 
     _emp_code = (getattr(current_employee, 'emp_code', '') or '').strip().upper()
     _emp_name = (getattr(current_employee, 'full_name', '') or f"{getattr(current_employee, 'first_name', '')} {getattr(current_employee, 'last_name', '')}").strip().lower()
@@ -3183,69 +3194,94 @@ def toggle_company_support(
     target_lead_id = int(target_lead_id)
 
     from app.models.crm import CRMLead
-    lead = db.query(CRMLead).filter(CRMLead.id == target_lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail=f"Lead #{target_lead_id} not found")
-
-    # Update lead company_supported flag in DB
-    lead.company_supported = comp_supp_flag
-
-    # Recalculate any active (unpaid) Level 5 Field Support commission entries for this lead
-    unpaid_l5_entries = db.query(VGKCashIncomeEntry).filter(
-        VGKCashIncomeEntry.source_lead_id == target_lead_id,
-        VGKCashIncomeEntry.level == 5,
-        VGKCashIncomeEntry.kind.in_(['COMMISSION', 'EXTRA_COMMISSION', 'SENIOR_COMM']),
-        VGKCashIncomeEntry.status.notin_(['PAID', 'CANCELLED'])
-    ).all()
-
-    if entry and entry.level == 5 and entry not in unpaid_l5_entries and entry.status not in ('PAID', 'CANCELLED'):
-        unpaid_l5_entries.append(entry)
-
     new_pct = Decimal('0.75') if comp_supp_flag else Decimal('1.50')
-
     recalculated_entries = []
-    for l5_ent in unpaid_l5_entries:
-        base_val = Decimal(str(l5_ent.earning_basis_amount or l5_ent.confirmed_final_value or l5_ent.deal_value_total or getattr(lead, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 0))
-        if base_val <= Decimal('0.00'):
-            base_val = Decimal(str(getattr(entry, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 200000.0))
-        
-        canonical_gross = (base_val * new_pct / Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        prior_adv = Decimal(str(l5_ent.advance_adjusted_amount or 0))
-        bal_gross = max(Decimal('0.00'), canonical_gross - prior_adv)
 
-        l5_ent.commission_pct = new_pct
-        l5_ent.commission_amount = canonical_gross
+    for _attempt in range(2):
+        try:
+            lead = db.query(CRMLead).filter(CRMLead.id == target_lead_id).first()
+            if not lead:
+                raise HTTPException(status_code=404, detail=f"Lead #{target_lead_id} not found")
 
-        if getattr(l5_ent, 'skip_tds_admin', False):
-            l5_ent.admin_charges = Decimal('0.00')
-            l5_ent.tds_amount = Decimal('0.00')
-            l5_ent.net_payout = bal_gross
-        else:
-            adm = (bal_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            tds = (bal_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            l5_ent.admin_charges = adm
-            l5_ent.tds_amount = tds
-            l5_ent.net_payout = max(Decimal('0.00'), bal_gross - adm - tds)
+            # Update lead company_supported flag via lightweight targeted SQL only if changed
+            if getattr(lead, 'company_supported', None) is not comp_supp_flag:
+                db.execute(
+                    text("UPDATE crm_leads SET company_supported = :cs, updated_at = NOW() WHERE id = :lid"),
+                    {"cs": comp_supp_flag, "lid": target_lead_id}
+                )
 
-        l5_ent.notes = f"Option B: Field Support (L5) Settlement [company_supported={comp_supp_flag}, rate={float(new_pct)}%]"
-        recalculated_entries.append(l5_ent.id)
+            # Recalculate any active (unpaid) Level 5 Field Support commission entries for this lead
+            unpaid_l5_entries = db.query(VGKCashIncomeEntry).filter(
+                VGKCashIncomeEntry.source_lead_id == target_lead_id,
+                VGKCashIncomeEntry.level == 5,
+                VGKCashIncomeEntry.kind.in_(['COMMISSION', 'EXTRA_COMMISSION', 'SENIOR_COMM']),
+                VGKCashIncomeEntry.status.notin_(['PAID', 'CANCELLED'])
+            ).all()
+
+            if entry and entry.level == 5 and entry not in unpaid_l5_entries and entry.status not in ('PAID', 'CANCELLED'):
+                unpaid_l5_entries.append(entry)
+
+            recalculated_entries = []
+            for l5_ent in unpaid_l5_entries:
+                base_val = Decimal(str(l5_ent.earning_basis_amount or l5_ent.confirmed_final_value or l5_ent.deal_value_total or getattr(lead, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 0))
+                if base_val <= Decimal('0.00'):
+                    base_val = Decimal(str(getattr(entry, 'deal_value_total', 0) or getattr(lead, 'deal_value', 0) or 200000.0))
+                
+                canonical_gross = (base_val * new_pct / Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                prior_adv = Decimal(str(l5_ent.advance_adjusted_amount or 0))
+                bal_gross = max(Decimal('0.00'), canonical_gross - prior_adv)
+
+                l5_ent.commission_pct = new_pct
+                l5_ent.commission_amount = canonical_gross
+
+                if getattr(l5_ent, 'skip_tds_admin', False):
+                    l5_ent.admin_charges = Decimal('0.00')
+                    l5_ent.tds_amount = Decimal('0.00')
+                    l5_ent.net_payout = bal_gross
+                else:
+                    adm = (bal_gross * Decimal('8') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    tds = (bal_gross * Decimal('2') / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    l5_ent.admin_charges = adm
+                    l5_ent.tds_amount = tds
+                    l5_ent.net_payout = max(Decimal('0.00'), bal_gross - adm - tds)
+
+                l5_ent.notes = f"Option B: Field Support (L5) Settlement [company_supported={comp_supp_flag}, rate={float(new_pct)}%]"
+                recalculated_entries.append(l5_ent.id)
+
+            try:
+                db.execute(text("SAVEPOINT sp_audit_cs"))
+                db.execute(text("""
+                    INSERT INTO staff_audit_log (employee_id, action, resource_type, resource_id, ip_address)
+                    VALUES (:eid, :ac, 'CRM_LEAD', :rid, '127.0.0.1')
+                """), {
+                    'eid': current_employee.id,
+                    'ac': f"CRM-LEAD-COMPANY-SUPPORT-{'ENABLE' if comp_supp_flag else 'DISABLE'}",
+                    'rid': target_lead_id,
+                })
+                db.execute(text("RELEASE SAVEPOINT sp_audit_cs"))
+            except Exception:
+                try: db.execute(text("ROLLBACK TO SAVEPOINT sp_audit_cs"))
+                except: pass
+
+            db.commit()
+            break
+        except HTTPException:
+            raise
+        except Exception as _cs_err:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if _attempt == 0:
+                time.sleep(0.3)
+                continue
+            raise
 
     try:
-        db.execute(text("SAVEPOINT sp_audit_cs"))
-        db.execute(text("""
-            INSERT INTO staff_audit_log (employee_id, action, resource_type, resource_id, ip_address)
-            VALUES (:eid, :ac, 'CRM_LEAD', :rid, '127.0.0.1')
-        """), {
-            'eid': current_employee.id,
-            'ac': f"CRM-LEAD-COMPANY-SUPPORT-{'ENABLE' if comp_supp_flag else 'DISABLE'}",
-            'rid': target_lead_id,
-        })
-        db.execute(text("RELEASE SAVEPOINT sp_audit_cs"))
+        from app.services.vgk4u_career_service import VGK4UCareerService
+        VGK4UCareerService.invalidate_cache()
     except Exception:
-        try: db.execute(text("ROLLBACK TO SAVEPOINT sp_audit_cs"))
-        except: pass
-
-    db.commit()
+        pass
 
     return {
         "success": True,

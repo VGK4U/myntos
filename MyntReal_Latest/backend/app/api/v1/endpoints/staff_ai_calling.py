@@ -888,9 +888,6 @@ class GeminiProjectPool:
                 valid_candidates.append(acc)
 
         final_order = valid_candidates
-        if not final_order and cooldown_candidates:
-            cooldown_candidates.sort(key=lambda x: x[0])
-            final_order = [x[1] for x in cooldown_candidates]
 
         from google import genai
         result = []
@@ -1580,13 +1577,10 @@ def _generate_tts(
         logger.warning("[AI-CALLING] Neither Gemini nor OpenAI key configured for TTS — using static fallback")
         return _get_static_fallback_audio(language, "greeting")
 
-    if company_id:
-        candidates = _GEMINI_POOL.get_candidate_clients(company_id)
+    if gemini_client and str(type(gemini_client)).find("Mock") != -1:
+        candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
     else:
-        candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
-
-    if not candidates or (gemini_client and str(type(gemini_client)).find("Mock") != -1):
-        candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
+        candidates = _GEMINI_POOL.get_candidate_clients(company_id or 1)
 
     if max_candidates and len(candidates) > max_candidates:
         candidates = candidates[:max_candidates]
@@ -1731,13 +1725,10 @@ def _gemini_conversation(messages: list, system_prompt: str, language: str = "te
             return _gpt_conversation_openai_fallback(messages, system_prompt, language)
         return fallback, 0, 0
 
-    if company_id:
-        candidates = _GEMINI_POOL.get_candidate_clients(company_id)
+    if str(type(client)).find("Mock") != -1:
+        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
     else:
-        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
-
-    if not candidates or str(type(client)).find("Mock") != -1:
-        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
+        candidates = _GEMINI_POOL.get_candidate_clients(company_id or 1)
 
     from google.genai import types as _gtypes
     gemini_contents = []
@@ -1785,6 +1776,8 @@ def _gemini_conversation(messages: list, system_prompt: str, language: str = "te
                     if not classification["can_failover"]:
                         logger.error(f"[AI-CALLING] Fatal error on project {proj_id} ({classification['category']}) — aborting conversation rotation")
                         aborted = True
+                        break
+                    if classification["category"] == "quota_exhausted":
                         break
                 continue
         if aborted:

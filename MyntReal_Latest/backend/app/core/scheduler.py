@@ -5017,14 +5017,14 @@ def init_scheduler():
             try:
                 from app.api.v1.endpoints.facebook_leads import pull_meta_leads
                 try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        import concurrent.futures
-                        with concurrent.futures.ThreadPoolExecutor() as pool:
-                            res = pool.submit(asyncio.run, pull_meta_leads(current_user=None, db=db)).result()
-                    else:
-                        res = loop.run_until_complete(pull_meta_leads(current_user=None, db=db))
-                except Exception:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop and loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        res = pool.submit(asyncio.run, pull_meta_leads(current_user=None, db=db)).result()
+                else:
                     res = asyncio.run(pull_meta_leads(current_user=None, db=db))
                 ingested = res.get('ingested_count', 0) if isinstance(res, dict) else 0
                 if ingested > 0:
