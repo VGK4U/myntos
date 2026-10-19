@@ -1357,12 +1357,12 @@ export class DigitalCatalogPage {
     modalEl.className = "dc-modal-overlay";
 
     modalEl.innerHTML = `
-      <div class="dc-history-sheet">
+      <div class="dc-history-sheet" id="mobileHistorySheetBox" style="position: relative; transition: width 0.18s ease, height 0.18s ease, max-width 0.18s ease, max-height 0.18s ease;">
         <!-- Drag Handle -->
-        <div class="dc-drag-handle"></div>
+        <div class="dc-drag-handle" id="mobileHistDragHandle" style="cursor: move;" title="Drag with mouse pointer to move"></div>
 
         <!-- Header -->
-        <div class="dc-modal-header">
+        <div class="dc-modal-header" id="mobileHistModalHeader" style="cursor: move; user-select: none;" title="Drag with mouse pointer to move • Double-click to Expand">
           <div class="dc-modal-header-left">
             <div class="dc-modal-icon-badge telemetry">
               <i class="fas fa-chart-line"></i>
@@ -1372,9 +1372,14 @@ export class DigitalCatalogPage {
               <div class="dc-modal-subtitle">Real-time link views, staff counts & engagement tracking</div>
             </div>
           </div>
-          <button type="button" id="closeMobileHistModalBtn" class="dc-modal-close-btn" title="Close">
-            <i class="fas fa-times"></i>
-          </button>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" id="expandMobileHistModalBtn" class="dc-modal-close-btn" title="Expand / Restore Window" style="color: #38bdf8;">
+              <i class="fas fa-expand-alt" id="iconExpandMobileHistModal"></i>
+            </button>
+            <button type="button" id="closeMobileHistModalBtn" class="dc-modal-close-btn" title="Close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Scope Pills (My Dispatches vs Team Dispatches vs Staff-Wise Summary) -->
@@ -1478,6 +1483,11 @@ export class DigitalCatalogPage {
             <p class="small mt-1">Loading dispatch telemetry...</p>
           </div>
         </div>
+
+        <!-- Bottom-Right Corner Resize Grip -->
+        <div id="mobileHistResizeGrip" title="Drag corner to resize" style="position: absolute; right: 2px; bottom: 2px; width: 20px; height: 20px; cursor: nwse-resize; display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px; color: rgba(148,163,184,0.6); font-size: 10px; z-index: 20;">
+          <i class="fas fa-signal" style="transform: rotate(45deg);"></i>
+        </div>
       </div>
     `;
 
@@ -1489,6 +1499,104 @@ export class DigitalCatalogPage {
     modalEl.addEventListener("click", (e) => {
       if (e.target === modalEl) modalEl?.remove();
     });
+
+    // Mouse Drag, Expand & Resize for Mobile/Tablet/Web Sheet
+    const sheetBox = modalEl.querySelector("#mobileHistorySheetBox") as HTMLElement;
+    const headerBar = modalEl.querySelector("#mobileHistModalHeader") as HTMLElement;
+    const dragBar = modalEl.querySelector("#mobileHistDragHandle") as HTMLElement;
+    const expandBtn = modalEl.querySelector("#expandMobileHistModalBtn") as HTMLElement;
+    const expandIcon = modalEl.querySelector("#iconExpandMobileHistModal") as HTMLElement;
+    const resizeGrip = modalEl.querySelector("#mobileHistResizeGrip") as HTMLElement;
+
+    let isSheetExpanded = false;
+    let sheetTx = 0, sheetTy = 0;
+
+    const toggleSheetExpand = () => {
+      if (!sheetBox) return;
+      isSheetExpanded = !isSheetExpanded;
+      if (isSheetExpanded) {
+        sheetBox.style.width = "98vw";
+        sheetBox.style.maxWidth = "98vw";
+        sheetBox.style.height = "94vh";
+        sheetBox.style.maxHeight = "94vh";
+        sheetBox.style.borderRadius = "16px";
+        sheetBox.style.transform = "translate(0px, 0px)";
+        if (expandIcon) expandIcon.className = "fas fa-compress-alt";
+      } else {
+        sheetBox.style.width = "";
+        sheetBox.style.maxWidth = "";
+        sheetBox.style.height = "";
+        sheetBox.style.maxHeight = "";
+        sheetBox.style.transform = `translate(${sheetTx}px, ${sheetTy}px)`;
+        if (expandIcon) expandIcon.className = "fas fa-expand-alt";
+      }
+    };
+
+    if (expandBtn) expandBtn.addEventListener("click", toggleSheetExpand);
+    if (headerBar) {
+      headerBar.addEventListener("dblclick", (e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        toggleSheetExpand();
+      });
+    }
+
+    const bindDragStart = (el: HTMLElement | null) => {
+      if (!el || !sheetBox) return;
+      el.addEventListener("mousedown", (e: MouseEvent) => {
+        if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+        e.preventDefault();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const initX = sheetTx;
+        const initY = sheetTy;
+        sheetBox.style.transition = "none";
+
+        const onMove = (me: MouseEvent) => {
+          sheetTx = initX + (me.clientX - startX);
+          sheetTy = initY + (me.clientY - startY);
+          sheetBox.style.transform = `translate(${sheetTx}px, ${sheetTy}px)`;
+        };
+        const onUp = () => {
+          sheetBox.style.transition = "width 0.18s ease, height 0.18s ease, max-width 0.18s ease, max-height 0.18s ease";
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      });
+    };
+    bindDragStart(headerBar);
+    bindDragStart(dragBar);
+
+    if (resizeGrip && sheetBox) {
+      resizeGrip.addEventListener("mousedown", (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const rect = sheetBox.getBoundingClientRect();
+        const startW = rect.width;
+        const startH = rect.height;
+        sheetBox.style.transition = "none";
+
+        const onMove = (me: MouseEvent) => {
+          const newW = Math.max(340, Math.min(window.innerWidth - 12, startW + (me.clientX - startX)));
+          const newH = Math.max(380, Math.min(window.innerHeight - 12, startH + (me.clientY - startY)));
+          sheetBox.style.width = `${newW}px`;
+          sheetBox.style.maxWidth = `${newW}px`;
+          sheetBox.style.height = `${newH}px`;
+          sheetBox.style.maxHeight = `${newH}px`;
+        };
+        const onUp = () => {
+          sheetBox.style.transition = "width 0.18s ease, height 0.18s ease, max-width 0.18s ease, max-height 0.18s ease";
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      });
+    }
 
     const btnScopeMy = modalEl.querySelector("#btnMobileScopeMy") as HTMLElement;
     const btnScopeTeam = modalEl.querySelector("#btnMobileScopeTeam") as HTMLElement;

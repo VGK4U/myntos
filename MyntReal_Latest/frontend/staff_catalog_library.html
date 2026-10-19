@@ -444,6 +444,106 @@
             min-height: auto !important;
             width: 100% !important;
         }
+
+        /* DC-HISTORY-MOVABLE-EXPANDABLE: Draggable, Expandable & Mouse-Resizable History Modal */
+        #historyModal .modal-dialog {
+            max-width: min(1280px, 95vw);
+            width: 95vw;
+            transition: width 0.18s ease, max-width 0.18s ease, height 0.18s ease;
+        }
+        #historyModal .modal-dialog.dc-dragging,
+        #historyModal .modal-dialog.dc-resizing {
+            transition: none !important;
+            user-select: none !important;
+        }
+        #historyModal .modal-content {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 680px;
+            min-height: 460px;
+            max-height: 92vh;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.78), 0 0 0 1px rgba(16, 185, 129, 0.28);
+        }
+        #historyModal .modal-dialog.dc-modal-expanded {
+            max-width: 98vw !important;
+            width: 98vw !important;
+            height: 95vh !important;
+            margin: 2.5vh auto !important;
+            transform: translate(0px, 0px) !important;
+        }
+        #historyModal .modal-dialog.dc-modal-expanded .modal-content {
+            height: 95vh !important;
+            max-height: 95vh !important;
+            width: 100% !important;
+        }
+        #historyModal .modal-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            overflow: hidden;
+        }
+        #historyModal #historyTableScrollWrap {
+            flex: 1 1 auto;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+        #historyModal .modal-dialog.dc-modal-expanded #historyTableScrollWrap,
+        #historyModal .modal-dialog.dc-custom-sized #historyTableScrollWrap {
+            max-height: none !important;
+            height: 100%;
+        }
+        #historyModalHeader {
+            cursor: move;
+            user-select: none;
+        }
+        #historyModalHeader:active {
+            cursor: grabbing;
+        }
+        .dc-resize-handle {
+            position: absolute;
+            z-index: 30;
+        }
+        .dc-resize-handle-r {
+            top: 12px;
+            right: -4px;
+            bottom: 16px;
+            width: 10px;
+            cursor: ew-resize;
+        }
+        .dc-resize-handle-l {
+            top: 12px;
+            left: -4px;
+            bottom: 16px;
+            width: 10px;
+            cursor: ew-resize;
+        }
+        .dc-resize-handle-b {
+            left: 16px;
+            right: 16px;
+            bottom: -4px;
+            height: 10px;
+            cursor: ns-resize;
+        }
+        .dc-resize-handle-br {
+            right: 0;
+            bottom: 0;
+            width: 22px;
+            height: 22px;
+            cursor: nwse-resize;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 4px;
+            color: rgba(148, 163, 184, 0.65);
+            font-size: 11px;
+            border-bottom-right-radius: 16px;
+            transition: color 0.15s ease, background 0.15s ease;
+        }
+        .dc-resize-handle-br:hover {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.12);
+        }
         body.embed-mode .content-area {
             padding: 16px 20px !important;
             max-width: 100% !important;
@@ -953,17 +1053,33 @@
 
     <!-- ── MODAL: Dispatch History & Telemetry Analytics ─────────────── -->
     <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;">
-                <!-- Header -->
-                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" id="historyModalDialog">
+            <div class="modal-content" id="historyModalContent" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;">
+                <!-- Mouse Resize Handles (Left, Right, Bottom, Bottom-Right Corner) -->
+                <div class="dc-resize-handle dc-resize-handle-l" data-resize-dir="l" title="Drag left edge to resize width"></div>
+                <div class="dc-resize-handle dc-resize-handle-r" data-resize-dir="r" title="Drag right edge to resize width"></div>
+                <div class="dc-resize-handle dc-resize-handle-b" data-resize-dir="b" title="Drag bottom edge to resize height"></div>
+                <div class="dc-resize-handle dc-resize-handle-br" data-resize-dir="br" title="Drag corner with mouse pointer to expand/resize">
+                    <i class="fas fa-signal" style="transform: rotate(45deg); font-size: 10px;"></i>
+                </div>
+
+                <!-- Header (Draggable with Mouse Pointer) -->
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3" id="historyModalHeader" title="Drag with mouse pointer to move • Double-click to Expand/Restore">
                     <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center text-muted opacity-50 pe-1" style="cursor: move;" title="Drag to move window">
+                                <i class="fas fa-grip-vertical fs-5"></i>
+                            </div>
                             <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 20px;">
                                 <i class="fas fa-paper-plane"></i>
                             </div>
                             <div>
-                                <h5 class="modal-title fw-bold text-white mb-0">Catalog Dispatch History & Click Telemetry</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h5 class="modal-title fw-bold text-white mb-0">Catalog Dispatch History & Click Telemetry</h5>
+                                    <span class="badge bg-dark border border-secondary border-opacity-50 text-muted fw-normal d-none d-lg-inline-block" style="font-size: 10px;">
+                                        <i class="fas fa-arrows-alt me-1 text-success"></i>Movable &amp; Expandable
+                                    </span>
+                                </div>
                                 <div class="text-muted" style="font-size: 12px;">Tracked catalog dispatches across all models, client link clicks, and engagement telemetry.</div>
                             </div>
                         </div>
@@ -980,10 +1096,16 @@
                                     <i class="fas fa-chart-bar me-1"></i> Staff-Wise Summary (<span id="scopeBadgeStaff">0</span>)
                                 </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" onclick="loadDispatchHistory()" title="Refresh" style="width: 34px; height: 34px; padding: 0;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" onclick="loadDispatchHistory()" title="Refresh Telemetry" style="width: 34px; height: 34px; padding: 0;">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" id="btnResetHistoryModalPos" onclick="resetHistoryModalGeometry()" title="Center &amp; Reset Window Size" style="width: 34px; height: 34px; padding: 0; display: none;">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info rounded-circle" id="btnExpandHistoryModal" onclick="toggleHistoryModalExpand()" title="Expand / Maximize Window" style="width: 34px; height: 34px; padding: 0;">
+                                <i class="fas fa-expand-alt" id="iconExpandHistoryModal"></i>
+                            </button>
+                            <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="modal" title="Close"></button>
                         </div>
                     </div>
                 </div>
@@ -1126,7 +1248,7 @@
                     </div>
 
                     <!-- Dispatch History / Staff-Wise Summary Table -->
-                    <div class="table-responsive rounded-3" style="max-height: 480px; border: 1px solid rgba(255, 255, 255, 0.08); background: #0c1322;">
+                    <div class="table-responsive rounded-3" id="historyTableScrollWrap" style="max-height: 480px; border: 1px solid rgba(255, 255, 255, 0.08); background: #0c1322;">
                         <table class="table table-dark table-hover mb-0 small align-middle">
                             <thead id="dispatchHistoryTableHead" style="position: sticky; top: 0; z-index: 10; background: #162033; border-bottom: 2px solid rgba(255, 255, 255, 0.15);">
                                 <tr id="trHistoryHeadRecords">
@@ -1162,8 +1284,16 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-top border-secondary border-opacity-25 py-2">
-                    <button type="button" class="btn btn-ghost-dark" data-bs-dismiss="modal">Close</button>
+                <div class="modal-footer border-top border-secondary border-opacity-25 py-2 d-flex justify-content-between align-items-center">
+                    <div class="text-muted small d-none d-md-block" style="font-size: 11px;">
+                        <i class="fas fa-mouse-pointer text-info me-1"></i>Tip: Drag header to move window, drag edges/corner to resize, or click <strong class="text-light">Expand</strong>.
+                    </div>
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="toggleHistoryModalExpand()">
+                            <i class="fas fa-expand-alt me-1" id="iconFooterExpandHistoryModal"></i> <span id="lblFooterExpandHistoryModal">Expand Window</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-ghost-dark" data-bs-dismiss="modal">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1361,6 +1491,7 @@
             sectionModalInstance = new bootstrap.Modal(document.getElementById('sectionModal'));
             dispatchModalInstance = new bootstrap.Modal(document.getElementById('dispatchModal'));
             historyModalInstance = new bootstrap.Modal(document.getElementById('historyModal'));
+            initHistoryModalDragAndResize();
             dispatchDetailModalInstance = new bootstrap.Modal(document.getElementById('dispatchDetailModal'));
             const newCatEl = document.getElementById('newCatalogModal');
             if (newCatEl) newCatalogModalInstance = new bootstrap.Modal(newCatEl);
@@ -2582,7 +2713,178 @@
         }
 
         // ── Dispatch History & Click Telemetry Controller ──────────────
+        let historyModalDragInitialized = false;
+        let historyModalTranslate = { x: 0, y: 0 };
+
+        function updateHistoryModalExpandIcons(isExpanded) {
+            const iconTop = document.getElementById('iconExpandHistoryModal');
+            const iconFooter = document.getElementById('iconFooterExpandHistoryModal');
+            const lblFooter = document.getElementById('lblFooterExpandHistoryModal');
+            const btnReset = document.getElementById('btnResetHistoryModalPos');
+            if (iconTop) iconTop.className = isExpanded ? 'fas fa-compress-alt' : 'fas fa-expand-alt';
+            if (iconFooter) iconFooter.className = isExpanded ? 'fas fa-compress-alt me-1' : 'fas fa-expand-alt me-1';
+            if (lblFooter) lblFooter.textContent = isExpanded ? 'Restore Window' : 'Expand Window';
+            if (btnReset) {
+                const dialog = document.getElementById('historyModalDialog');
+                const hasCustom = isExpanded || historyModalTranslate.x !== 0 || historyModalTranslate.y !== 0 || (dialog && dialog.classList.contains('dc-custom-sized'));
+                btnReset.style.display = hasCustom ? 'inline-flex' : 'none';
+                if (hasCustom) {
+                    btnReset.style.alignItems = 'center';
+                    btnReset.style.justifyContent = 'center';
+                }
+            }
+        }
+
+        function toggleHistoryModalExpand() {
+            const dialog = document.getElementById('historyModalDialog');
+            const content = document.getElementById('historyModalContent');
+            if (!dialog || !content) return;
+            const isExpanded = dialog.classList.toggle('dc-modal-expanded');
+            if (isExpanded) {
+                dialog.style.transform = 'translate(0px, 0px)';
+            } else {
+                dialog.style.transform = `translate(${historyModalTranslate.x}px, ${historyModalTranslate.y}px)`;
+            }
+            updateHistoryModalExpandIcons(isExpanded);
+        }
+
+        function resetHistoryModalGeometry() {
+            const dialog = document.getElementById('historyModalDialog');
+            const content = document.getElementById('historyModalContent');
+            historyModalTranslate = { x: 0, y: 0 };
+            if (dialog) {
+                dialog.classList.remove('dc-modal-expanded', 'dc-custom-sized');
+                dialog.style.transform = 'translate(0px, 0px)';
+                dialog.style.width = '';
+                dialog.style.maxWidth = '';
+            }
+            if (content) {
+                content.style.height = '';
+                content.style.maxHeight = '';
+            }
+            updateHistoryModalExpandIcons(false);
+        }
+
+        function initHistoryModalDragAndResize() {
+            if (historyModalDragInitialized) return;
+            const dialog = document.getElementById('historyModalDialog');
+            const content = document.getElementById('historyModalContent');
+            const header = document.getElementById('historyModalHeader');
+            if (!dialog || !content || !header) return;
+            historyModalDragInitialized = true;
+
+            // 1. Double-click header to toggle Expand / Restore
+            header.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button, a, input, select, .nav-pills')) return;
+                toggleHistoryModalExpand();
+            });
+
+            // 2. Mouse Pointer Drag on Header
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let initialX = 0, initialY = 0;
+
+            header.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (e.target.closest('button, a, input, select, .nav-pills')) return;
+                if (dialog.classList.contains('dc-modal-expanded')) {
+                    dialog.classList.remove('dc-modal-expanded');
+                    updateHistoryModalExpandIcons(false);
+                }
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = historyModalTranslate.x;
+                initialY = historyModalTranslate.y;
+                dialog.classList.add('dc-dragging');
+                e.preventDefault();
+            });
+
+            // 3. Mouse Pointer Resize on Edge/Corner Handles
+            let isResizing = false;
+            let resizeDir = '';
+            let resizeStartX = 0, resizeStartY = 0;
+            let startWidth = 0, startHeight = 0;
+            let resizeInitialTx = 0;
+
+            content.querySelectorAll('.dc-resize-handle').forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (dialog.classList.contains('dc-modal-expanded')) {
+                        const rect = dialog.getBoundingClientRect();
+                        dialog.classList.remove('dc-modal-expanded');
+                        dialog.style.width = rect.width + 'px';
+                        dialog.style.maxWidth = rect.width + 'px';
+                        content.style.height = rect.height + 'px';
+                        content.style.maxHeight = '96vh';
+                        updateHistoryModalExpandIcons(false);
+                    }
+                    isResizing = true;
+                    resizeDir = handle.getAttribute('data-resize-dir') || 'br';
+                    resizeStartX = e.clientX;
+                    resizeStartY = e.clientY;
+                    const rect = content.getBoundingClientRect();
+                    startWidth = rect.width;
+                    startHeight = rect.height;
+                    resizeInitialTx = historyModalTranslate.x;
+                    dialog.classList.add('dc-resizing', 'dc-custom-sized');
+                });
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    historyModalTranslate.x = initialX + dx;
+                    historyModalTranslate.y = initialY + dy;
+                    dialog.style.transform = `translate(${historyModalTranslate.x}px, ${historyModalTranslate.y}px)`;
+                    updateHistoryModalExpandIcons(false);
+                } else if (isResizing) {
+                    const dx = e.clientX - resizeStartX;
+                    const dy = e.clientY - resizeStartY;
+                    const minW = Math.min(680, window.innerWidth - 24);
+                    const maxW = window.innerWidth - 16;
+                    const minH = 420;
+                    const maxH = window.innerHeight - 16;
+
+                    if (resizeDir.includes('r')) {
+                        const newW = Math.max(minW, Math.min(maxW, startWidth + dx));
+                        dialog.style.width = newW + 'px';
+                        dialog.style.maxWidth = newW + 'px';
+                    } else if (resizeDir.includes('l')) {
+                        const newW = Math.max(minW, Math.min(maxW, startWidth - dx));
+                        const actualDelta = newW - startWidth;
+                        dialog.style.width = newW + 'px';
+                        dialog.style.maxWidth = newW + 'px';
+                        historyModalTranslate.x = resizeInitialTx - (actualDelta / 2);
+                        dialog.style.transform = `translate(${historyModalTranslate.x}px, ${historyModalTranslate.y}px)`;
+                    }
+
+                    if (resizeDir.includes('b')) {
+                        const newH = Math.max(minH, Math.min(maxH, startHeight + dy));
+                        content.style.height = newH + 'px';
+                        content.style.maxHeight = newH + 'px';
+                    }
+                    updateHistoryModalExpandIcons(false);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dialog.classList.remove('dc-dragging');
+                }
+                if (isResizing) {
+                    isResizing = false;
+                    dialog.classList.remove('dc-resizing');
+                }
+            });
+        }
+
         async function openDispatchHistoryModal() {
+            initHistoryModalDragAndResize();
             if (historyModalInstance) {
                 historyModalInstance.show();
             }
