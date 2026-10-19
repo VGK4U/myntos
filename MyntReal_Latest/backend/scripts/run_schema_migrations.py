@@ -15,7 +15,8 @@ import sys
 import logging
 from pathlib import Path
 
-# Setup path to backend
+# Setup path to backend and ensure schema migrations always target public
+os.environ.setdefault("FORCE_PUBLIC_SCHEMA", "1")
 _backend_dir = Path(__file__).resolve().parent.parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))

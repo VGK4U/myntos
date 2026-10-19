@@ -423,51 +423,58 @@ async def sync_sandbox_data(
     rows_synced = 0
     
     try:
-        db.execute(text("CREATE SCHEMA IF NOT EXISTS testing"))
-        db.commit()
-        
-        tables_result = db.execute(text("""
-            SELECT table_name FROM information_schema.tables 
-            WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-            AND table_name NOT IN ('alembic_version', 'apscheduler_jobs')
-            ORDER BY table_name
-        """))
-        tables = [row[0] for row in tables_result.fetchall()]
-        
-        sync_details = {"tables": []}
-        
-        for table_name in tables:
-            try:
-                db.execute(text(f'DROP TABLE IF EXISTS testing."{table_name}" CASCADE'))
-                
-                db.execute(text(f'''
-                    CREATE TABLE testing."{table_name}" 
-                    (LIKE public."{table_name}" INCLUDING ALL)
-                '''))
-                
-                result = db.execute(text(f'''
-                    INSERT INTO testing."{table_name}" 
-                    SELECT * FROM public."{table_name}"
-                '''))
-                
-                row_count = result.rowcount if result.rowcount else 0
-                rows_synced += row_count
-                tables_synced += 1
-                
-                sync_details["tables"].append({
-                    "name": table_name,
-                    "rows": row_count,
-                    "status": "success"
-                })
-                
-            except Exception as table_error:
-                sync_details["tables"].append({
-                    "name": table_name,
-                    "error": str(table_error),
-                    "status": "failed"
-                })
-        
-        db.commit()
+        from app.core.database import engine
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as sync_conn:
+            sync_conn.execute(text("SET statement_timeout = 120000"))
+            sync_conn.execute(text("SET lock_timeout = 10000"))
+            sync_conn.execute(text("CREATE SCHEMA IF NOT EXISTS testing"))
+
+            tables_result = sync_conn.execute(text("""
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+                AND table_name NOT IN ('alembic_version', 'apscheduler_jobs')
+                ORDER BY table_name
+            """))
+            tables = [row[0] for row in tables_result.fetchall()]
+
+            sync_details = {"tables": []}
+
+            for table_name in tables:
+                try:
+                    sync_conn.execute(text(f'DROP TABLE IF EXISTS testing."{table_name}" CASCADE'))
+
+                    sync_conn.execute(text(f'''
+                        CREATE TABLE testing."{table_name}" 
+                        (LIKE public."{table_name}" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)
+                    '''))
+
+                    try:
+                        result = sync_conn.execute(text(f'''
+                            INSERT INTO testing."{table_name}" OVERRIDING SYSTEM VALUE
+                            SELECT * FROM public."{table_name}"
+                        '''))
+                    except Exception:
+                        result = sync_conn.execute(text(f'''
+                            INSERT INTO testing."{table_name}" 
+                            SELECT * FROM public."{table_name}"
+                        '''))
+
+                    row_count = result.rowcount if result.rowcount and result.rowcount > 0 else 0
+                    rows_synced += row_count
+                    tables_synced += 1
+
+                    sync_details["tables"].append({
+                        "name": table_name,
+                        "rows": row_count,
+                        "status": "success"
+                    })
+
+                except Exception as table_error:
+                    sync_details["tables"].append({
+                        "name": table_name,
+                        "error": str(table_error),
+                        "status": "failed"
+                    })
         
         duration = int(time.time() - start_time)
         

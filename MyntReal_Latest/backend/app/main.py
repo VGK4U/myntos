@@ -4697,16 +4697,25 @@ def _startup_worker():
 
     # Check if explicit migration runner was requested
     if os.getenv("RUN_EXPLICIT_MIGRATIONS") != "1":
-        # Initialize APScheduler for background jobs (safe in-memory job store, max 4 workers)
+        # Initialize APScheduler for background jobs ONLY in production (or when ENABLE_LOCAL_SCHEDULER=1)
+        _is_eb_env = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+        _is_prod_env = (
+            _is_eb_env
+            or os.getenv("ENVIRONMENT", "").lower() == "production"
+            or os.getenv("NODE_ENV", "").lower() == "production"
+            or (os.getenv("ENABLE_LOCAL_SCHEDULER") or "").strip() == "1"
+        )
         _worker_id = os.environ.get("GUNICORN_CHILD_PROC")
         _is_gunicorn_non_primary = _worker_id is not None and _worker_id != "0"
-        if not _is_gunicorn_non_primary:
+        if _is_prod_env and not _is_gunicorn_non_primary:
             try:
                 from app.core.scheduler import init_scheduler
                 init_scheduler()
                 print("[DC-STARTUP] ✅ APScheduler background service initialized", flush=True)
             except Exception as _sched_err:
                 print(f"[DC-STARTUP] ⚠️ APScheduler init warning: {_sched_err}", flush=True)
+        elif not _is_prod_env:
+            print("[DC-STARTUP] ⏭️ Local Sandbox Mode: APScheduler cron jobs skipped (prevents duplicate production jobs)", flush=True)
 
         print("[DC-STARTUP] ⏩ Runtime startup complete: Database connectivity ready. Schema mutations strictly decoupled to migration runner.", flush=True)
         return

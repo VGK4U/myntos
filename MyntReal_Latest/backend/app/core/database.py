@@ -150,8 +150,23 @@ else:
             echo=False
         )
     else:
-        # RDS PostgreSQL — Bound pool sized for EB auto-scale instances (max 4 instances * 12 = 48 <= 76)
-        print("[DC-DB-INIT] Creating PostgreSQL engine (Bounded Pool mode - Max 12 conns/worker)...", flush=True)
+        _is_eb_env = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+        _is_prod_env = (
+            _is_eb_env
+            or os.getenv("ENVIRONMENT", "").lower() == "production"
+            or os.getenv("NODE_ENV", "").lower() == "production"
+            or (os.getenv("FORCE_PUBLIC_SCHEMA") or "").strip() == "1"
+        )
+        _pg_options = "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000 -c lock_timeout=5000"
+        if not _is_prod_env:
+            _pg_options += " -c search_path=testing,public"
+            _pool_size = 3
+            _max_overflow = 2
+            print("[DC-DB-INIT] Creating PostgreSQL engine (Local SANDBOX schema=testing,public - Max 5 conns)...", flush=True)
+        else:
+            _pool_size = 14
+            _max_overflow = 6
+            print("[DC-DB-INIT] Creating PostgreSQL engine (Bounded Pool mode - Max 12 conns/worker)...", flush=True)
 
         _rds_connect_args = {
             "connect_timeout": 10,
@@ -160,7 +175,7 @@ else:
             "keepalives_idle": 30,
             "keepalives_interval": 10,
             "keepalives_count": 3,
-            "options": "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000 -c lock_timeout=5000",
+            "options": _pg_options,
         }
         if _resolved_rds_ip:
             _rds_connect_args["hostaddr"] = _resolved_rds_ip
@@ -168,8 +183,8 @@ else:
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=14,             # 14 connections per worker (safely handles 4 background scheduler threads + web traffic)
-            max_overflow=6,           # 6 burst overflow (total max 20 conns per worker)
+            pool_size=_pool_size,     # 14 in prod; 3 in local sandbox mode
+            max_overflow=_max_overflow, # 6 in prod; 2 in local sandbox mode
             pool_timeout=15,          # 15s timeout to fail fast rather than stalling web requests
             pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
             pool_use_lifo=True,
