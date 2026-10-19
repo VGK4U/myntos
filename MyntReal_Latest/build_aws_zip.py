@@ -176,9 +176,11 @@ def create_zip():
     print(f"  Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
     print(f"  Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")
 
-    # Synchronize to MyntReal_AWS_Deploy.zip and root paths
+    # Synchronize to MyntReal_AWS_Deploy.zip and root paths (unlink first so macOS Finder updates 'Date Added')
     for target in [final_zip_path, root_deploy_zip_path, root_final_zip_path]:
         try:
+            if target.exists():
+                target.unlink()
             shutil.copyfile(deploy_zip_path, target)
             print(f"[SYNC] Synchronized: {target}")
         except Exception as e:
