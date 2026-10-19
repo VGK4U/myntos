@@ -4412,6 +4412,7 @@ def get_whatsapp_conversations_hub(
             "total": len(sorted_contacts),
             "delivered": sum(1 for c in sorted_contacts if str(c.get("delivery_status", "")).lower() in ("delivered", "read")),
             "read": sum(1 for c in sorted_contacts if str(c.get("delivery_status", "")).lower() == "read"),
+            "failed": sum(1 for c in sorted_contacts if str(c.get("delivery_status", "")).lower() in ("failed", "undelivered", "error", "rejected")),
             "api": sum(1 for c in sorted_contacts if c.get("channel") in ("META_API", "official")),
             "scanned": sum(1 for c in sorted_contacts if c.get("channel") not in ("META_API", "official"))
         }

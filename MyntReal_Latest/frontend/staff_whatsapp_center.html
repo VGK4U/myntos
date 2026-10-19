@@ -431,6 +431,11 @@
             <div class="stat-lbl"><i class="fas fa-check-double" style="color:#2563eb"></i> Read / Seen</div>
             <div style="font-size:9.5px;color:#2563eb;margin-top:2px;font-weight:600;" id="mstat-read-pct">0%</div>
           </div>
+          <div class="stat-card" id="mcard-failed" onclick="filterMessengerByStatus('failed')" title="Filter: Failed / Undelivered Messages">
+            <div class="stat-val" id="mstat-failed" style="color:#ef4444">0</div>
+            <div class="stat-lbl"><i class="fas fa-times-circle" style="color:#ef4444"></i> Failed</div>
+            <div style="font-size:9.5px;color:#ef4444;margin-top:2px;font-weight:600;" id="mstat-failed-pct">0% failed</div>
+          </div>
           <div class="stat-card" id="mcard-api" onclick="filterMessengerByStatus('api')" title="Filter: Meta Cloud API Messages">
             <div class="stat-val" id="mstat-api" style="color:#0284c7">0</div>
             <div class="stat-lbl"><i class="fas fa-bolt"></i> Meta API</div>
@@ -2126,6 +2131,7 @@ function updateMessengerSummaryCards(list) {
   const total = currentList.length;
   let delivered = 0;
   let read = 0;
+  let failed = 0;
   let apiCount = 0;
   let scannedCount = 0;
 
@@ -2133,6 +2139,7 @@ function updateMessengerSummaryCards(list) {
     const ds = String(c.delivery_status || c.status || '').toLowerCase();
     if (ds === 'delivered' || ds === 'read') delivered++;
     if (ds === 'read') read++;
+    if (ds === 'failed' || ds === 'undelivered' || ds === 'error' || ds === 'rejected') failed++;
     if (c.channel === 'META_API' || c.channel === 'official') {
       apiCount++;
     } else {
@@ -2142,17 +2149,20 @@ function updateMessengerSummaryCards(list) {
 
   const delPct = total > 0 ? Math.round((delivered / total) * 100) : 0;
   const readPct = total > 0 ? Math.round((read / total) * 100) : 0;
+  const failPct = total > 0 ? Math.round((failed / total) * 100) : 0;
   const apiPct = total > 0 ? Math.round((apiCount / total) * 100) : 0;
   const scanPct = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
 
   const elTotal = document.getElementById('mstat-all');
   const elDelivered = document.getElementById('mstat-delivered');
   const elRead = document.getElementById('mstat-read');
+  const elFailed = document.getElementById('mstat-failed');
   const elApi = document.getElementById('mstat-api');
   const elScanned = document.getElementById('mstat-scanned');
 
   const elDelPct = document.getElementById('mstat-delivered-pct');
   const elReadPct = document.getElementById('mstat-read-pct');
+  const elFailPct = document.getElementById('mstat-failed-pct');
   const elApiPct = document.getElementById('mstat-api-pct');
   const elScanPct = document.getElementById('mstat-scanned-pct');
   const elTotalSub = document.getElementById('mstat-all-sub');
@@ -2160,11 +2170,13 @@ function updateMessengerSummaryCards(list) {
   if (elTotal) elTotal.textContent = total;
   if (elDelivered) elDelivered.textContent = delivered;
   if (elRead) elRead.textContent = read;
+  if (elFailed) elFailed.textContent = failed;
   if (elApi) elApi.textContent = apiCount;
   if (elScanned) elScanned.textContent = scannedCount;
 
-  if (elDelPct) elDelPct.textContent = `${delPct}% delivered`;
+  if (elDelPct) elDelPct.textContent = failed > 0 ? `${delPct}% delivered (${failed} failed)` : `${delPct}% delivered`;
   if (elReadPct) elReadPct.textContent = `${readPct}% read rate`;
+  if (elFailPct) elFailPct.textContent = `${failPct}% failed`;
   if (elApiPct) elApiPct.textContent = `${apiPct}% Meta API`;
   if (elScanPct) elScanPct.textContent = `${scanPct}% Scanned`;
   if (elTotalSub) {
@@ -2218,7 +2230,7 @@ function applyMessengerFilters() {
   // 4. Update summary KPI cards from the date & scope filtered list
   updateMessengerSummaryCards(list);
 
-  // 5. Stat card filter (Delivered, Read, Meta API, Scanned WA)
+  // 5. Stat card filter (Delivered, Read, Failed, Meta API, Scanned WA)
   if (activeStatusCardFilter === 'delivered') {
     list = list.filter(c => {
       const st = String(c.delivery_status || c.status || '').toLowerCase();
@@ -2228,6 +2240,11 @@ function applyMessengerFilters() {
     list = list.filter(c => {
       const st = String(c.delivery_status || c.status || '').toLowerCase();
       return st === 'read';
+    });
+  } else if (activeStatusCardFilter === 'failed') {
+    list = list.filter(c => {
+      const st = String(c.delivery_status || c.status || '').toLowerCase();
+      return st === 'failed' || st === 'undelivered' || st === 'error' || st === 'rejected';
     });
   } else if (activeStatusCardFilter === 'api') {
     list = list.filter(c => c.channel === 'META_API' || c.channel === 'official');
