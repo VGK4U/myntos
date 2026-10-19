@@ -7132,24 +7132,29 @@ def fetch_member_income_entries_data(
             except: pass
             bp_rows = []
 
-    # Batch-resolve client names + mobile numbers from CRM in one query (VCI + VSCA + BP)
+    # Batch-resolve client names + mobile numbers + lead owner (Team Member) from CRM in one query (VCI + VSCA + BP)
     lead_ids = list({r.source_lead_id for r in list(rows) + list(vsca_rows) + list(bp_rows) if r.source_lead_id})
     lead_info: dict = {}
     if lead_ids:
         try:
             lr = db.execute(text(
-                "SELECT id, name, phone, COALESCE(deal_value_received, 0) AS deal_value_received, "
-                "  submit_date::text AS submit_date, complete_date::text AS complete_date, "
-                "  first_payment_received_date::text AS first_payment_received_date, "
-                "  status::text AS lead_status, solar_pipeline_status::text AS solar_pipeline_status, "
-                "  installation_date::text AS installation_date, "
-                "  city, area, state, "
-                "  COALESCE(solar_value, 0)::float AS solar_value, "
-                "  COALESCE(deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
-                "  COALESCE(deal_value_total, 0)::float AS deal_value_total, "
-                "  category_id, solar_brand_id, vgk_field_support_id, kw_size::text AS kw_size, "
-                "  COALESCE(company_supported, true) AS company_supported "
-                "FROM crm_leads WHERE id = ANY(:ids)"
+                "SELECT cl.id, cl.name, cl.phone, COALESCE(cl.deal_value_received, 0) AS deal_value_received, "
+                "  cl.submit_date::text AS submit_date, cl.complete_date::text AS complete_date, "
+                "  cl.first_payment_received_date::text AS first_payment_received_date, "
+                "  cl.status::text AS lead_status, cl.solar_pipeline_status::text AS solar_pipeline_status, "
+                "  cl.installation_date::text AS installation_date, "
+                "  cl.city, cl.area, cl.state, "
+                "  COALESCE(cl.solar_value, 0)::float AS solar_value, "
+                "  COALESCE(cl.deal_value_excl_tax, 0)::float AS deal_value_excl_tax, "
+                "  COALESCE(cl.deal_value_total, 0)::float AS deal_value_total, "
+                "  cl.category_id, cl.solar_brand_id, cl.vgk_field_support_id, cl.kw_size::text AS kw_size, "
+                "  COALESCE(cl.company_supported, true) AS company_supported, "
+                "  cl.associated_partner_id AS lead_owner_id, "
+                "  op.partner_name AS lead_owner_name, "
+                "  op.partner_code AS lead_owner_code "
+                "FROM crm_leads cl "
+                "LEFT JOIN official_partners op ON op.id = cl.associated_partner_id "
+                "WHERE cl.id = ANY(:ids)"
             ), {"ids": lead_ids}).fetchall()
             lead_info = {r.id: {
                 "name": r.name, "mobile": r.phone,
@@ -7169,7 +7174,26 @@ def fetch_member_income_entries_data(
                 "vgk_field_support_id": r.vgk_field_support_id,
                 "kw_size": str(r.kw_size or "").strip(),
                 "company_supported": bool(r.company_supported if r.company_supported is not None else True),
+                "lead_owner_id": r.lead_owner_id,
+                "lead_owner_name": (r.lead_owner_name or "").strip() or None,
+                "lead_owner_code": (r.lead_owner_code or "").strip() or None,
             } for r in lr}
+
+            # Fallback for any lead where associated_partner_id was not set: resolve L1 partner from vgk_cash_income_entries
+            missing_owner_lids = [lid for lid, info in lead_info.items() if not info.get("lead_owner_name")]
+            if missing_owner_lids:
+                l1_rows = db.execute(text(
+                    "SELECT DISTINCT ON (e.source_lead_id) e.source_lead_id, e.partner_id, op.partner_name, op.partner_code "
+                    "FROM vgk_cash_income_entries e "
+                    "JOIN official_partners op ON op.id = e.partner_id "
+                    "WHERE e.source_lead_id = ANY(:lids) AND e.level = 1 AND e.status != 'CANCELLED' "
+                    "ORDER BY e.source_lead_id, e.id ASC"
+                ), {"lids": missing_owner_lids}).fetchall()
+                for l1r in l1_rows:
+                    if l1r.source_lead_id in lead_info:
+                        lead_info[l1r.source_lead_id]["lead_owner_id"] = l1r.partner_id
+                        lead_info[l1r.source_lead_id]["lead_owner_name"] = (l1r.partner_name or "").strip() or None
+                        lead_info[l1r.source_lead_id]["lead_owner_code"] = (l1r.partner_code or "").strip() or None
         except Exception:
             try: db.rollback()
             except: pass
@@ -7519,6 +7543,20 @@ def fetch_member_income_entries_data(
 
         display_kind_str = format_kind_label(_kind_raw, _seq)
 
+        _lead_owner_id = _li.get("lead_owner_id") if _li else None
+        _lead_owner_name = _li.get("lead_owner_name") if _li else None
+        _lead_owner_code = _li.get("lead_owner_code") if _li else None
+        if _lvl_int == 1 and not _lead_owner_name:
+            _lead_owner_id = partner_id
+            _lead_owner_name = (partner.partner_name or "").strip() or None
+            _lead_owner_code = (partner.partner_code or "").strip() or None
+
+        _is_team_lead = bool(
+            (_lvl_int is not None and _lvl_int >= 2 and _lvl_int not in (5, 6))
+            or (_lead_owner_id is not None and int(_lead_owner_id) != int(partner_id) and _lvl_int != 1)
+        )
+        _level_code = f"L{_lvl_int}" if (_lvl_int is not None and _lvl_int > 0) else ("Direct" if getattr(r, 'source_lead_id', None) is None else "—")
+
         return {
             "id":                int(r.id),
             "entry_number":      r.entry_number or f"INC-{r.id}",
@@ -7527,7 +7565,12 @@ def fetch_member_income_entries_data(
             "display_kind":      display_kind_str,
             "entry_kind_label":  display_kind_str,
             "level":             _lvl_int,
+            "level_code":        _level_code,
             "level_label":       _lvl_labels_map.get(_lvl_int, f"L{_lvl_int}") if _lvl_int is not None else ("Direct" if getattr(r, 'source_lead_id', None) is None else "—"),
+            "lead_owner_id":     _lead_owner_id,
+            "lead_owner_name":   _lead_owner_name or "—",
+            "lead_owner_code":   _lead_owner_code or "",
+            "is_team_lead":      _is_team_lead,
             "income_date":       r.entry_date,
             "trigger_date":      r.entry_date,
             "created_at":        (str(r.created_at)[:10] if getattr(r, 'created_at', None) else str(r.entry_date)),
@@ -9622,8 +9665,9 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
 
             bucket_list = [{"stage": k, "count": v} for k, v in buckets.items()]
 
-            # Income by type aggregation from non-cancelled entries
+            # Income by type aggregation from non-cancelled entries + Downline Team Income summary
             type_agg = {}
+            team_income_summary = {"type": "Team Income", "count": 0, "gross": 0.0, "advance": 0.0, "balance": 0.0, "net": 0.0}
             for r in rows:
                 if (r.get("status") or "").upper() == "CANCELLED":
                     continue
@@ -9635,6 +9679,15 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                 type_agg[k]["advance"] += float(r.get("advance_paid") or 0.0)
                 type_agg[k]["balance"] += float(r.get("balance_gross") or 0.0)
                 type_agg[k]["net"] += float(r.get("net_payout") or 0.0)
+
+                lvl_v = r.get("level")
+                is_tl = bool(r.get("is_team_lead")) or (lvl_v is not None and int(lvl_v) >= 2 and int(lvl_v) not in (5, 6))
+                if is_tl:
+                    team_income_summary["count"] += 1
+                    team_income_summary["gross"] += float(r.get("commission_amount") or 0.0)
+                    team_income_summary["advance"] += float(r.get("advance_paid") or 0.0)
+                    team_income_summary["balance"] += float(r.get("balance_gross") or 0.0)
+                    team_income_summary["net"] += float(r.get("net_payout") or 0.0)
 
             income_by_type = list(type_agg.values())
 
@@ -9668,7 +9721,8 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                     "lost": lost_leads,
                     "buckets": bucket_list
                 },
-                "income_by_type": income_by_type
+                "income_by_type": income_by_type,
+                "team_income": team_income_summary
             }
 
         return {
