@@ -305,10 +305,10 @@
         <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-envelope-open-text"></i> 3. New Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
         <button class="wa-tab-btn" id="btn-tab-all" onclick="switchCenterTab('all')" style="display:none"><i class="fas fa-globe"></i> 4. All Messages</button>
         <button class="wa-tab-btn" id="btn-tab-groups" onclick="switchCenterTab('groups')"><i class="fas fa-users-rectangle"></i> Groups</button>
-        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches</button>
+        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')" style="display:none !important"><i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches</button>
         <button class="wa-tab-btn" id="btn-tab-general-broadcast" onclick="switchCenterTab('general-broadcast')" style="display:none;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#065f46;border:1px solid #6ee7b7;font-weight:700"><i class="fas fa-paper-plane"></i> General Broadcast</button>
         <button class="wa-tab-btn" id="btn-tab-catalog" onclick="switchCenterTab('catalog')"><i class="fas fa-book-open"></i> Catalog Library</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')" style="display:none !important"><i class="fas fa-robot"></i> WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> Templates</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> Automations</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> Audit Log</button>
@@ -2308,6 +2308,11 @@ function switchCenterTab(tabName) {
   if (tabName !== 'general-broadcast' && tabName !== 'general_broadcast') {
     if (typeof stopGbcRealtimePoller === 'function') stopGbcRealtimePoller();
   }
+  if (['broadcasts', 'inbox'].includes(tabName)) {
+    switchCenterTab('messenger');
+    return;
+  }
+
   document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
 
@@ -8319,7 +8324,7 @@ async function initWhatsAppCenter() {
     const urlParams = new URLSearchParams(window.location.search);
     const requestedTab = urlParams.get('tab');
 
-    if (requestedTab) {
+    if (requestedTab && !['inbox', 'broadcasts'].includes(requestedTab)) {
       switchCenterTab(requestedTab);
     } else {
       // Default landing tab is Tab 1: Messenger
