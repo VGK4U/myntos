@@ -143,6 +143,44 @@ class TestWhatsAppClusterCoordinator(unittest.TestCase):
         self.assertEqual(chk.json()['status'], 'sent')
         self.assertEqual(chk.json()['result_payload']['message_id'], 'TEST-MSG-ID-999')
 
+    def test_graceful_leader_release_and_session_guard(self):
+        # 1. Node 1 acquires leadership
+        res1 = self.client.post('/api/v1/whatsapp/bot-cluster-heartbeat', json={
+            'instance_id': 'test-node-leader-1',
+            'instance_host': '172.31.0.21',
+            'status': 'connected',
+            'can_send_now': True
+        })
+        self.assertEqual(res1.status_code, 200)
+        self.assertTrue(res1.json()['is_leader'])
+
+        # 2. Node 1 gracefully steps down on SIGTERM via /bot-cluster-release
+        rel = self.client.post('/api/v1/whatsapp/bot-cluster-release', json={
+            'instance_id': 'test-node-leader-1'
+        })
+        self.assertEqual(rel.status_code, 200)
+        self.assertTrue(rel.json()['success'])
+
+        # 3. Node 2 can immediately take over without waiting 15s
+        res2 = self.client.post('/api/v1/whatsapp/bot-cluster-heartbeat', json={
+            'instance_id': 'test-node-leader-2',
+            'instance_host': '172.31.0.22'
+        })
+        self.assertEqual(res2.status_code, 200)
+        self.assertTrue(res2.json()['is_leader'])
+        self.assertEqual(res2.json()['leader_id'], 'test-node-leader-2')
+
+        # 4. Verify unauthenticated 1-file creds.json is blocked from overwriting S3
+        unauth_backup = self.client.post('/api/v1/whatsapp/bot-session-backup', json={
+            'session_id': 'test_guard_session',
+            'files': {
+                'creds.json': '{"registered": false, "me": {"id": "918897797667@s.whatsapp.net", "name": "~"}}'
+            }
+        })
+        self.assertEqual(unauth_backup.status_code, 200)
+        self.assertFalse(unauth_backup.json()['success'])
+        self.assertTrue(unauth_backup.json().get('skipped_unauthenticated'))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -7092,6 +7092,29 @@ def _get_session_backup_lock(session_id: str) -> threading.Lock:
         return _SESSION_BACKUP_LOCKS[session_id]
 
 
+def _is_valid_authenticated_session_files(files: dict) -> bool:
+    """
+    Verifies that a session file map represents a genuinely linked WhatsApp Web device
+    (either registered=True or a linked device JID containing ':'), preventing
+    1-file unauthenticated pre-pairing states from overwriting valid S3 sessions.
+    """
+    if not isinstance(files, dict) or not files:
+        return False
+    if "creds.json" not in files:
+        # Allow diagnostic/non-creds test payloads (e.g. {"ping": "pong"})
+        return True
+    try:
+        raw_creds = files.get("creds.json")
+        creds = json.loads(raw_creds) if isinstance(raw_creds, str) else raw_creds
+        if not isinstance(creds, dict):
+            return False
+        me_id = str((creds.get("me") or {}).get("id") or "")
+        has_linked_device_jid = ":" in me_id
+        return bool(creds.get("registered") is True or has_linked_device_jid)
+    except Exception:
+        return False
+
+
 @router.post("/bot-session-backup")
 def backup_bot_session_files(
     payload: dict = Body(...)
@@ -7114,6 +7137,11 @@ def backup_bot_session_files(
     if not files:
         return {"success": True, "saved": 0}
 
+    # Guard: Never overwrite durable S3 session with an incomplete/unpaired creds.json
+    if not _is_valid_authenticated_session_files(files):
+        logger.warning(f"[WHATSAPP-S3-SYNC] 🛡️ Blocked unauthenticated/incomplete creds.json backup for '{session_id}' ({len(files)} files).")
+        return {"success": False, "skipped_unauthenticated": True, "saved": 0, "session_id": session_id}
+
     lock = _get_session_backup_lock(session_id)
     acquired = lock.acquire(timeout=5.0)
     if not acquired:
@@ -7131,6 +7159,12 @@ def backup_bot_session_files(
         
         uploaded = s3.upload_file(s3_key, data_payload)
         if uploaded:
+            # Also persist a rolling last-known-good snapshot when full session (>= 5 files) is present
+            if "creds.json" in files and len(files) >= 5:
+                try:
+                    s3.upload_file(f"whatsapp-sessions/{session_id}_last_good.json", data_payload)
+                except Exception:
+                    pass
             logger.info(f"[WHATSAPP-S3-SYNC] ✅ Persisted {len(files)} session files to S3: {s3_key}")
             return {"success": True, "saved": len(files), "storage": "s3", "session_id": session_id}
         else:
@@ -7149,7 +7183,7 @@ def restore_bot_session_files(
 ):
     """
     Restores Baileys WhatsApp authentication credentials from AWS S3 durable vault.
-    Falls back to legacy PostgreSQL data if S3 snapshot is not yet created.
+    Falls back to last_good S3 snapshot if primary key was transiently cleared or incomplete.
     """
     env = (os.getenv("ENVIRONMENT") or "").lower()
     is_prod = (env == "production")
@@ -7164,19 +7198,21 @@ def restore_bot_session_files(
         from app.services.s3_storage import S3StorageService
         s3 = S3StorageService()
         s3_key = f"whatsapp-sessions/{resolved_id}.json"
+        fallback_key = f"whatsapp-sessions/{resolved_id}_last_good.json"
         
         if s3.bucket_name:
-            try:
-                obj = s3.s3_client.get_object(Bucket=s3.bucket_name, Key=s3_key)
-                content = json.loads(obj['Body'].read().decode('utf-8'))
-                files = content.get("files", {})
-                if files:
-                    logger.info(f"[WHATSAPP-S3-RESTORE] ✅ Restored {len(files)} session files from S3: {s3_key}")
-                    return {"success": True, "session_id": resolved_id, "files": files, "count": len(files), "source": "s3"}
-            except s3.s3_client.exceptions.NoSuchKey:
-                logger.info(f"[WHATSAPP-S3-RESTORE] S3 key {s3_key} not found, checking legacy DB fallback...")
-            except Exception as s3_err:
-                logger.warning(f"[WHATSAPP-S3-RESTORE] S3 fetch note: {s3_err}")
+            for candidate_key, src_label in ((s3_key, "s3"), (fallback_key, "s3_last_good")):
+                try:
+                    obj = s3.s3_client.get_object(Bucket=s3.bucket_name, Key=candidate_key)
+                    content = json.loads(obj['Body'].read().decode('utf-8'))
+                    files = content.get("files", {})
+                    if files and _is_valid_authenticated_session_files(files):
+                        logger.info(f"[WHATSAPP-S3-RESTORE] ✅ Restored {len(files)} session files from S3 ({src_label}): {candidate_key}")
+                        return {"success": True, "session_id": resolved_id, "files": files, "count": len(files), "source": src_label}
+                except s3.s3_client.exceptions.NoSuchKey:
+                    continue
+                except Exception as s3_err:
+                    logger.warning(f"[WHATSAPP-S3-RESTORE] S3 fetch note for {candidate_key}: {s3_err}")
         # WhatsApp sessions are strictly isolated outside PostgreSQL
         return {"success": True, "session_id": resolved_id, "files": {}, "count": 0, "source": "s3_isolated"}
     except Exception as e:
@@ -7185,24 +7221,62 @@ def restore_bot_session_files(
 
 @router.post("/bot-session-clear")
 def clear_bot_session_files(
-    session_id: str = "default_baileys"
+    session_id: str = "default_baileys",
+    reason: str = "explicit_logout"
 ):
     """
-    Purges session credentials from AWS S3 durable vault upon explicit logout.
+    Purges session credentials from AWS S3 durable vault upon explicit logout or terminal invalidation.
     """
     resolved_id = _resolve_baileys_session_id(session_id)
     try:
         from app.services.s3_storage import S3StorageService
         s3 = S3StorageService()
         s3_key = f"whatsapp-sessions/{resolved_id}.json"
+        fallback_key = f"whatsapp-sessions/{resolved_id}_last_good.json"
         if s3.bucket_name:
-            try:
-                s3.s3_client.delete_object(Bucket=s3.bucket_name, Key=s3_key)
-            except Exception as e:
-                logger.warning(f"[WHATSAPP-S3-CLEAR] S3 delete note: {e}")
-        return {"success": True, "message": "Session cleared from S3 vault", "session_id": resolved_id}
+            for key_to_del in (s3_key, fallback_key):
+                try:
+                    s3.s3_client.delete_object(Bucket=s3.bucket_name, Key=key_to_del)
+                except Exception as e:
+                    logger.warning(f"[WHATSAPP-S3-CLEAR] S3 delete note for {key_to_del}: {e}")
+        return {"success": True, "message": "Session cleared from S3 vault", "session_id": resolved_id, "reason": reason}
     except Exception as e:
         return {"success": False, "error": str(e), "session_id": resolved_id}
+
+
+@router.post("/bot-cluster-release")
+def bot_cluster_release(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Graceful leader lease step-down during container shutdown (SIGTERM/SIGINT).
+    Allows the outgoing container to flush its final S3 backup, close its WebSocket,
+    and immediately release the lease so the incoming container can take over cleanly
+    without dual-socket split-brain or 15-second failover lag.
+    """
+    from sqlalchemy import text
+    instance_id = payload.get("instance_id")
+    if not instance_id:
+        return {"success": False, "error": "instance_id is required"}
+    try:
+        db.execute(
+            text("""
+                UPDATE whatsapp_bot_lease
+                SET heartbeat_at = NOW() - INTERVAL '30 seconds',
+                    status = 'reconnecting',
+                    can_send_now = FALSE
+                WHERE id = 1 AND leader_id = :instance_id
+            """),
+            {"instance_id": instance_id}
+        )
+        db.commit()
+        logger.info(f"[WA-CLUSTER] 🕊️ Leader {instance_id} gracefully stepped down and released cluster lease.")
+        return {"success": True, "released_by": instance_id}
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[WA-CLUSTER] Lease release note: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # ── Baileys Multi-Instance Distributed Leader Lease & Outbound Queue ─────────
@@ -7463,8 +7537,8 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
 
         res = db.execute(
             text("""
-                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, created_at, instance_id, result_payload)
-                VALUES (:target_type, :target_jid, :message, :media_url, 'pending', NOW(), :instance_id, CAST(:result_payload AS jsonb))
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, created_at, instance_id, job_id, result_payload)
+                VALUES (:target_type, :target_jid, :message, :media_url, 'pending', NOW(), :instance_id, :job_id, CAST(:result_payload AS jsonb))
                 RETURNING id
             """),
             {
@@ -7473,6 +7547,7 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
                 "message": message,
                 "media_url": media_url,
                 "instance_id": instance_id,
+                "job_id": payload.get("job_id"),
                 "result_payload": json.dumps(initial_rp) if initial_rp else None
             }
         )
@@ -7712,11 +7787,12 @@ def poll_bot_queue(
                 WHERE status IN ('pending', 'processing')
                   AND target_type != 'group'
                   AND (target_jid IS NULL OR target_jid NOT LIKE '%@g.us')
+                  AND COALESCE(instance_id, '') NOT LIKE 'test-%'
                   AND (
                       target_jid NOT LIKE '%8875551666%'
                       AND target_jid NOT LIKE '%8897797667%'
                       AND target_jid NOT LIKE '%8019045667%'
-                      AND (job_id IS NULL OR job_id NOT IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned'))
+                      AND COALESCE(job_id, result_payload->>'job_id', '') NOT IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
                   )
             """))
             db.commit()
@@ -7734,7 +7810,8 @@ def poll_bot_queue(
                       OR target_jid LIKE '%8875551666%'
                       OR target_jid LIKE '%8897797667%'
                       OR target_jid LIKE '%8019045667%'
-                      OR job_id IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
+                      OR COALESCE(instance_id, '') LIKE 'test-%'
+                      OR COALESCE(job_id, result_payload->>'job_id', '') IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
                   )
                 ORDER BY id ASC
                 LIMIT :limit

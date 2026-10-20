@@ -73,3 +73,16 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
   - **Dynamic Environment Resolution**: All credentials MUST be loaded dynamically via environment variables (`os.getenv("AWS_ACCESS_KEY_ID")`, `process.env.API_KEY`, etc.) or local `.env` files.
   - **Git & GitHub Safeguard**: All `.env`, `backend/.env`, `frontend/.env`, `.env.local`, `.env.production`, and build archives (`*.zip`) MUST remain strictly in `.gitignore`. NEVER stage or commit `.env` files or secret credentials to Git/GitHub repositories.
   - **No Secrets in Client Bundles**: Web, `/mobile`, Android, and iOS client-side assets MUST NOT expose private backend credentials. All file operations and external API requests requiring credentials MUST route securely through backend services.
+
+---
+
+### 8. WHATSAPP QR SESSION IMMUTABILITY & LOCAL SANDBOX ISOLATION (HARD-CORE RULE)
+- **Rule**: Publishing or deploying a new build to AWS Elastic Beanstalk MUST NEVER log out, overwrite, or invalidate the active production WhatsApp QR session (`prod_baileys`), and local development MUST NEVER interfere with production database pools or WhatsApp sockets.
+- **Standard**:
+  1. **Zero Deployment Logout (`backend/whatsapp-group-bot/server.js`, `backend/app/api/v1/endpoints/whatsapp.py`, `start.sh`)**:
+     - Both `creds.update` and Signal key ratchets (`state.keys.set`) MUST sync to AWS S3 (`whatsapp-sessions/prod_baileys.json` + `prod_baileys_last_good.json`).
+     - Container shutdown (`SIGTERM` / `SIGINT` in `start.sh` and `server.js`) MUST flush the final `AUTH_DIR` state to S3, close the WebSocket cleanly (`stopWhatsAppSocket()` — NEVER `sock.logout()`), and release the cluster lease (`POST /api/v1/whatsapp/bot-cluster-release`) before exiting.
+     - Unauthenticated or pre-pairing `creds.json` states (where `registered !== true` and `me.id` has no `:device` suffix) MUST NEVER overwrite a valid authenticated session in S3.
+     - Transient `401` disconnects on live sockets MUST re-sync from S3 (`restoreSessionFromDatabase()` / `s3_last_good`) and retry with backoff before declaring terminal logout.
+  2. **Strict Local vs. Production Isolation (`backend/app/core/database.py`, `backend/app/main.py`)**:
+     - Non-production local environments MUST default to `search_path=testing,public` (sandbox schema), bounded connection pool (`pool_size=3, max_overflow=2`), disabled duplicate background APScheduler, and `dev_standby` WhatsApp mode (`SESSION_ID = "dev_baileys"`).

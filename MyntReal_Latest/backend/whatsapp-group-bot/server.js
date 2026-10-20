@@ -419,7 +419,8 @@ function isSessionRegistered() {
     try {
         const raw = fs.readFileSync(credsPath, 'utf8');
         const creds = JSON.parse(raw);
-        return Boolean(creds && (creds.registered === true || (creds.me && creds.me.id)));
+        const hasLinkedDeviceJid = Boolean(creds && creds.me && creds.me.id && String(creds.me.id).includes(':'));
+        return Boolean(creds && (creds.registered === true || hasLinkedDeviceJid));
     } catch {
         return false;
     }
@@ -444,12 +445,12 @@ async function restoreSessionFromDatabase() {
         if (resp.ok) {
             const data = await resp.json();
             if (data.success && data.files && Object.keys(data.files).length > 0) {
-                // Guard: If restored payload has no authenticated identity (no creds.me.id), do not restore
+                // Guard: If restored payload has no authenticated identity (no linked device JID), do not restore
                 const rawCreds = data.files['creds.json'];
                 if (rawCreds) {
                     try {
                         const parsed = JSON.parse(rawCreds);
-                        const hasIdentity = Boolean(parsed && parsed.me && parsed.me.id);
+                        const hasIdentity = Boolean(parsed && parsed.me && parsed.me.id && String(parsed.me.id).includes(':'));
                         if (!hasIdentity && parsed && parsed.registered === false) {
                             console.log(`[S3-SESSION-SYNC] ℹ️ Session payload for '${SESSION_ID}' has no authenticated identity. Skipping unauthenticated restore.`);
                             return false;
@@ -475,14 +476,14 @@ async function restoreSessionFromDatabase() {
     return false;
 }
 
-async function purgeS3Session() {
+async function purgeS3Session(reason = 'explicit_logout') {
     try {
-        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-clear?session_id=${SESSION_ID}`, {
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-session-clear?session_id=${SESSION_ID}&reason=${encodeURIComponent(reason)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
         if (resp.ok) {
-            console.log(`[S3-SESSION-SYNC] 🧹 Purged dead session '${SESSION_ID}' from S3 durable storage.`);
+            console.log(`[S3-SESSION-SYNC] 🧹 Purged dead session '${SESSION_ID}' from S3 durable storage (reason: ${reason}).`);
         }
     } catch (err) {
         console.log(`[S3-SESSION-SYNC] ⚠️ Note on S3 purge: ${err.message}`);
@@ -591,7 +592,7 @@ async function startWhatsAppBot() {
     }
 
     // Attempt restoring session from RDS/S3 database before loading auth state
-    if (!fs.existsSync(path.join(AUTH_DIR, 'creds.json'))) {
+    if (!fs.existsSync(path.join(AUTH_DIR, 'creds.json')) || !isSessionRegistered()) {
         await restoreSessionFromDatabase();
     }
 
@@ -603,16 +604,27 @@ async function startWhatsAppBot() {
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    if (state && state.keys && typeof state.keys.set === 'function') {
+        const origKeysSet = state.keys.set.bind(state.keys);
+        state.keys.set = async (data) => {
+            const res = await origKeysSet(data);
+            if (thisGen === clientGen && isSessionRegistered()) {
+                scheduleDebouncedBackup();
+            }
+            return res;
+        };
+    }
     
     let version;
     try {
-        const waWeb = await fetchLatestWaWebVersion();
-        version = waWeb.version;
-        console.log(`[WA-LIFECYCLE] 🌐 Using live WhatsApp Web production version: ${version.join('.')}`);
-    } catch (verErr) {
         const fallback = await fetchLatestBaileysVersion();
         version = fallback.version;
-        console.warn(`[WA-LIFECYCLE] ⚠️ Note on live WA Web version fetch: ${verErr.message}. Using bundled Baileys version: ${version.join('.')}`);
+        console.log(`[WA-LIFECYCLE] 🌐 Using stable Baileys WhatsApp Web protocol version: ${version.join('.')}`);
+    } catch (verErr) {
+        try {
+            const waWeb = await fetchLatestWaWebVersion();
+            version = waWeb.version;
+        } catch (_) {}
     }
 
     sock = makeWASocket({
@@ -629,7 +641,6 @@ async function startWhatsAppBot() {
         emitOwnEvents: false
     });
 
-    let backupDebounceTimer = null;
     sock.ev.on('creds.update', async () => {
         if (thisGen !== clientGen) return; // Stale client guard
         await saveCreds();
@@ -731,21 +742,25 @@ async function processConnectionUpdate(thisGen, update) {
         
         if (isLoggedOut) {
             consecutiveAuthFailures++;
-            if (consecutiveAuthFailures < 2) {
-                console.warn(`⚠️ [WA-LIFECYCLE] Received 401 disconnect (auth failure attempt #${consecutiveAuthFailures}/2, Gen: ${thisGen}). Attempting safe socket reconnect before declaring terminal logout...`);
+            if (sock !== null && consecutiveAuthFailures < 3) {
+                const retryDelayMs = 5000 * consecutiveAuthFailures;
+                console.warn(`⚠️ [WA-LIFECYCLE] Received 401 disconnect (auth failure attempt #${consecutiveAuthFailures}/3, Gen: ${thisGen}). Re-syncing S3 vault and attempting safe socket reconnect in ${retryDelayMs / 1000}s before declaring terminal logout...`);
                 connectionStatus = 'reconnecting';
-                setTimeout(() => {
-                    if (thisGen === clientGen) startWhatsAppBot();
-                }, 3000);
+                setTimeout(async () => {
+                    if (thisGen === clientGen) {
+                        await restoreSessionFromDatabase();
+                        startWhatsAppBot();
+                    }
+                }, retryDelayMs);
                 syncClusterCoordinator();
                 return { dropped: false, status: connectionStatus };
             }
             consecutiveAuthFailures = 0;
             connectionStatus = 'qr_ready';
             currentQr = null;
-            console.log(`🧹 [WA-LIFECYCLE] Terminal logout confirmed after consecutive 401s (Status: ${statusCode}, Gen: ${thisGen}). Purging dead session and preparing fresh QR...`);
+            console.log(`🧹 [WA-LIFECYCLE] Terminal logout confirmed (Status: ${statusCode}, Gen: ${thisGen}). Purging dead session and preparing fresh QR...`);
             skipRestoreOnce = true;
-            await purgeS3Session();
+            await purgeS3Session('terminal_401_confirmed');
             try {
                 if (fs.existsSync(AUTH_DIR)) {
                     fs.rmSync(AUTH_DIR, { recursive: true, force: true });
@@ -817,7 +832,7 @@ async function logoutBotSession() {
         consecutiveAuthFailures = 0;
 
         skipRestoreOnce = true;
-        await purgeS3Session();
+        await purgeS3Session('explicit_logout');
 
         if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
@@ -2210,7 +2225,38 @@ app.post('/api/send-message', async (req, res) => {
     }
 });
 
+let isShuttingDown = false;
+async function gracefulShutdown(signal) {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    console.log(`🕊️ [WA-LIFECYCLE] Received ${signal}. Flushing session state to S3 and releasing cluster lease before exit...`);
+    const wasLeader = isLeader;
+    isLeader = false;
+    if (backupDebounceTimer) {
+        clearTimeout(backupDebounceTimer);
+        backupDebounceTimer = null;
+    }
+    try {
+        if (wasLeader && isSessionRegistered()) {
+            await backupSessionToDatabase();
+        }
+    } catch (e) {}
+    stopWhatsAppSocket();
+    try {
+        if (wasLeader) {
+            await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-cluster-release`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ instance_id: INSTANCE_ID })
+            });
+        }
+    } catch (e) {}
+    process.exit(0);
+}
+
 if (require.main === module) {
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     app.listen(PORT, () => {
         console.log(`🚀 Self-Hosted WhatsApp Web Group Bot running on http://localhost:${PORT} [Instance: ${INSTANCE_ID}]`);
         // Start cluster coordinator loop immediately and every 5 seconds
