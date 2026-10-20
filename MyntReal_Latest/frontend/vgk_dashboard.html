@@ -1085,18 +1085,14 @@
                 <div class="section-title"><i class="fas fa-user-tag" style="color:#0d9488"></i>My Leads</div>
 
                 <!-- Stat cards (MNR-style) -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
-                    <div style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border-radius:12px;padding:14px 16px;color:#fff;text-align:center;cursor:pointer" onclick="switchLeadsTab('source')">
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.9;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-map-marker-alt me-1"></i>Source Marked</div>
-                        <div id="vgkStatSource" style="font-size:24px;font-weight:800">0</div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px">
+                    <div style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border-radius:12px;padding:16px 20px;color:#fff;text-align:center;cursor:pointer" onclick="switchLeadsTab('source')">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;opacity:.9;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-map-marker-alt me-1"></i>Source Marked</div>
+                        <div id="vgkStatSource" style="font-size:26px;font-weight:800">0</div>
                     </div>
-                    <div style="background:linear-gradient(135deg,#7c3aed,#9333ea);border-radius:12px;padding:14px 16px;color:#fff;text-align:center;cursor:pointer" onclick="switchLeadsTab('guru')">
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.9;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-user-graduate me-1"></i>Senior Leads</div>
-                        <div id="vgkStatGuru" style="font-size:24px;font-weight:800">0</div>
-                    </div>
-                    <div style="background:linear-gradient(135deg,#0d9488,#0891b2);border-radius:12px;padding:14px 16px;color:#fff;text-align:center;cursor:pointer" onclick="switchLeadsTab('overall')">
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.9;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-layer-group me-1"></i>Overall</div>
-                        <div id="vgkStatOverall" style="font-size:24px;font-weight:800">0</div>
+                    <div style="background:linear-gradient(135deg,#7c3aed,#9333ea);border-radius:12px;padding:16px 20px;color:#fff;text-align:center;cursor:pointer" onclick="switchLeadsTab('guru')">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;opacity:.9;letter-spacing:.05em;margin-bottom:3px"><i class="fas fa-user-graduate me-1"></i>Senior Leads</div>
+                        <div id="vgkStatGuru" style="font-size:26px;font-weight:800">0</div>
                     </div>
                 </div>
 
@@ -1116,18 +1112,12 @@
                     </div>
                 </div>
 
-                <!-- Sub-tabs (6-tab: Overall / Source / Guru / ZGuru / Core / Support) -->
+                <!-- Sub-tabs (5-tab: Source / Guru / ZGuru / Core / Support) -->
                 <ul class="nav nav-tabs mb-3" id="leadsSubTabs" style="border-bottom:2px solid #e2e8f0;flex-wrap:wrap">
                     <li class="nav-item">
-                        <button class="nav-link active" id="vgk-tab-overall" onclick="switchLeadsTab('overall')" style="color:#0d9488;font-weight:600">
-                            <i class="fas fa-layer-group me-1"></i>Overall
-                            <span id="vgkTabCountOverall" style="background:#ede9fe;color:#0d9488;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="vgk-tab-source" onclick="switchLeadsTab('source')" style="color:#6b7280;font-weight:600">
+                        <button class="nav-link active" id="vgk-tab-source" onclick="switchLeadsTab('source')" style="color:#0d9488;font-weight:600">
                             <i class="fas fa-map-marker-alt me-1"></i>Source
-                            <span id="vgkTabCountSrc" style="background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                            <span id="vgkTabCountSrc" style="background:#ede9fe;color:#0d9488;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
                         </button>
                     </li>
                     <li class="nav-item">
@@ -3659,20 +3649,22 @@
             finally { if (btn) { btn.disabled = false; btn.innerHTML = orig; } }
         }
 
-        // ── Leads (6-tab: Overall / Source / Guru / ZGuru / Core / Support) ──────
-        let leadsPage = 1, leadsTotal = 0, vgkLeadsSegment = 'overall';
+        // ── Leads (5-tab: Source / Guru / ZGuru / Core / Support) ──────
+        let leadsPage = 1, leadsTotal = 0, vgkLeadsSegment = 'source', vgkStageFilter = '';
         let vgkLeadSearchTimer = null;
 
         function switchLeadsTab(seg) {
+            if (seg === 'overall') seg = 'source';
             vgkLeadsSegment = seg;
+            vgkStageFilter = '';
             leadsPage = 1;
             document.querySelectorAll('#leadsSubTabs .nav-link').forEach(b => {
                 b.classList.remove('active');
                 b.style.color = '#6b7280';
                 b.style.background = '';
             });
-            const tabMap = { overall:'vgk-tab-overall', source:'vgk-tab-source', guru:'vgk-tab-guru', zguru:'vgk-tab-zguru', core:'vgk-tab-core', support:'vgk-tab-support' };
-            const activeBtn = document.getElementById(tabMap[seg] || 'vgk-tab-overall');
+            const tabMap = { source:'vgk-tab-source', guru:'vgk-tab-guru', zguru:'vgk-tab-zguru', core:'vgk-tab-core', support:'vgk-tab-support' };
+            const activeBtn = document.getElementById(tabMap[seg] || 'vgk-tab-source');
             if (activeBtn) { activeBtn.classList.add('active'); activeBtn.style.color = '#0d9488'; }
 
             // Show/hide disclaimer based on tab
@@ -3689,6 +3681,26 @@
             loadLeads(1);
         }
 
+        function vgkFilterByStage(stageKey) {
+            if (vgkStageFilter === stageKey) {
+                vgkStageFilter = ''; // toggle off
+            } else {
+                vgkStageFilter = stageKey;
+            }
+            // Ensure we are viewing Source Marked tab when filtering self lead stage
+            if (vgkLeadsSegment !== 'source') {
+                vgkLeadsSegment = 'source';
+                document.querySelectorAll('#leadsSubTabs .nav-link').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.color = '#6b7280';
+                    b.style.background = '';
+                });
+                const activeBtn = document.getElementById('vgk-tab-source');
+                if (activeBtn) { activeBtn.classList.add('active'); activeBtn.style.color = '#0d9488'; }
+            }
+            loadLeads(1);
+        }
+
         function vgkDebounceSearch() {
             clearTimeout(vgkLeadSearchTimer);
             vgkLeadSearchTimer = setTimeout(() => loadLeads(1), 350);
@@ -3700,6 +3712,7 @@
             document.getElementById('vgkLeadPriority').value = '';
             document.getElementById('vgkLeadSort').value = 'created_at|desc';
             vgkFollowupFilter = '';
+            vgkStageFilter = '';
             document.getElementById('vgkFollowupToday')?.classList.remove('active');
             document.getElementById('vgkFollowupOverdue')?.classList.remove('active');
             loadLeads(1);
@@ -3759,6 +3772,7 @@
                 if (search)           url += '&search='          + encodeURIComponent(search);
                 if (status)           url += '&status='          + encodeURIComponent(status);
                 if (priority)         url += '&priority='        + encodeURIComponent(priority);
+                if (vgkStageFilter)   url += '&stage='           + encodeURIComponent(vgkStageFilter);
                 if (vgkFollowupFilter) url += '&followup_filter=' + encodeURIComponent(vgkFollowupFilter);
 
                 const resp = await fetch(url, { headers: authHeaders() });
@@ -3774,7 +3788,6 @@
                 if (data.tab_counts) {
                     const tc = data.tab_counts;
                     const setEl = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-                    setEl('vgkTabCountOverall', tc.overall || 0);
                     setEl('vgkTabCountSrc',     tc.source  || 0);
                     setEl('vgkTabCountGuru',    tc.guru    || 0);
                     setEl('vgkTabCountZGuru',   tc.zguru   || 0);
@@ -3782,7 +3795,6 @@
                     setEl('vgkTabCountSupport', tc.support || 0);
                     setEl('vgkStatSource',  tc.source  || 0);
                     setEl('vgkStatGuru',    tc.guru    || 0);
-                    setEl('vgkStatOverall', tc.overall || 0);
                 }
 
                 // ── Stage-wise badges for Self (L1) leads ─────────────
@@ -3799,12 +3811,25 @@
                             subsidy_pending: '#059669', completed: '#16a34a', lost: '#ef4444'
                         };
                         const totSelf = Object.values(ssc).reduce((a, b) => a + b, 0);
-                        let bHtml = `<span style="background:#7c3aed;color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">All Self: ${totSelf}</span>`;
+                        const isAllActive = (vgkStageFilter === 'all_self');
+                        let bHtml = `<span onclick="vgkFilterByStage('all_self')" title="Show All Self Leads" style="cursor:pointer;background:${isAllActive ? '#4c1d95' : '#7c3aed'};color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;box-shadow:${isAllActive ? '0 0 0 2px #fff, 0 0 0 4px #7c3aed' : 'none'};transition:all .15s;user-select:none;display:inline-flex;align-items:center;gap:4px">
+                            ${isAllActive ? '<i class=\"fas fa-check-circle\"></i> ' : ''}All Self: ${totSelf}
+                        </span>`;
                         bHtml += stageKeys.map(k => {
                             const c = stageColors[k.toLowerCase()] || '#475569';
                             const label = k.replace(/_/g, ' ').toUpperCase();
-                            return `<span style="background:${c}18;color:${c};border:1px solid ${c}40;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">${label}: ${ssc[k]}</span>`;
+                            const isAct = (vgkStageFilter.toLowerCase() === k.toLowerCase());
+                            const bg = isAct ? c : (c + '18');
+                            const textCol = isAct ? '#ffffff' : c;
+                            const border = isAct ? `2px solid ${c}` : `1px solid ${c}40`;
+                            const shadow = isAct ? `0 2px 8px ${c}55` : 'none';
+                            return `<span onclick="vgkFilterByStage('${escHtml(k)}')" title="Filter by ${label}" style="cursor:pointer;background:${bg};color:${textCol};border:${border};box-shadow:${shadow};border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;transition:all .15s;user-select:none;display:inline-flex;align-items:center;gap:4px">
+                                ${isAct ? '<i class=\"fas fa-check-circle\"></i> ' : ''}${label}: ${ssc[k]}
+                            </span>`;
                         }).join(' ');
+                        if (vgkStageFilter) {
+                            bHtml += `<button onclick="vgkFilterByStage('')" title="Clear Stage Filter" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><i class="fas fa-times"></i> Clear Filter</button>`;
+                        }
                         sscEl.innerHTML = bHtml;
                     }
                 }

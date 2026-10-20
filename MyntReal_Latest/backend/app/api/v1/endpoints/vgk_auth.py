@@ -1054,6 +1054,9 @@ def vgk_member_search(
     }
 
 
+_VGK_LEADS_TAB_CACHE: dict = {}
+
+
 @router.get("/dashboard/leads")
 def vgk_my_leads(
     page: int = 1,
@@ -1061,6 +1064,7 @@ def vgk_my_leads(
     search: Optional[str] = None,
     status: Optional[str] = None,
     priority: Optional[str] = None,
+    stage: Optional[str] = None,
     sort_by: str = "created_at",
     sort_dir: str = "desc",
     followup_filter: Optional[str] = None,
@@ -1068,85 +1072,107 @@ def vgk_my_leads(
     db: Session = Depends(get_db)
 ):
     """
-    DC Protocol Apr 2026 / Jun 2026: VGK member leads — 6-segment support system.
-    segment=overall       → all leads across any role
-    segment=source        → L1 source (associated_partner_id == member.id) — with support info
-    segment=guru          → L2 leads (income entry level=2 for this member)
-    segment=zguru         → L3 leads (income entry level=3 for this member)
-    segment=core          → L4 CORE leads (income entry level=4 for this member) [DC-VGK-L4CORE-001]
+    DC Protocol Apr 2026 / Jun 2026: VGK member leads — optimized 5-segment support system.
+    segment=source        → L1 source (associated_partner_id == member.id) [DEFAULT]
+    segment=guru          → L2 leads (Senior partner)
+    segment=zguru         → L3 leads (Extended partner)
+    segment=core          → L4 CORE leads (Core partner)
     segment=support       → L5 field support (vgk_field_support_id == member.id)
-    Legacy segments source_marked/field_assistant still accepted as aliases.
     """
-    from sqlalchemy import asc, desc as sqldesc, or_, and_
+    import time
+    from sqlalchemy import asc, desc as sqldesc, or_, and_, func as sqlfunc
 
     page_size = 20
     mid = current_member.id
-
-    # --- Tab counts (unfiltered) ---
     mid_str = str(mid)
+
     source_condition = or_(
         CRMLead.associated_partner_id == mid,
         and_(CRMLead.created_by_type == 'partner', CRMLead.created_by_id == mid_str),
         and_(CRMLead.source_ref_type.in_(['partner', 'vgk_partner']), CRMLead.source_ref_id == mid_str)
     )
-    source_count = db.query(CRMLead).filter(source_condition).count()
-    support_count = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid).count()
 
-    guru_lead_ids = list(set([
-        r[0] for r in db.execute(
-            sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
-                    "WHERE partner_id=:pid AND level=2 AND source_lead_id IS NOT NULL"),
-            {"pid": mid}
-        ).fetchall()
-    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_senior_partner_id == mid).all()]))
-    zguru_lead_ids = list(set([
-        r[0] for r in db.execute(
-            sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
-                    "WHERE partner_id=:pid AND level=3 AND source_lead_id IS NOT NULL"),
-            {"pid": mid}
-        ).fetchall()
-    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_extended_partner_id == mid).all()]))
-    core_lead_ids = list(set([
-        r[0] for r in db.execute(
-            sa_text("SELECT DISTINCT source_lead_id FROM vgk_team_income_entries "
-                    "WHERE partner_id=:pid AND level=4 AND source_lead_id IS NOT NULL"),
-            {"pid": mid}
-        ).fetchall()
-    ] + [r.id for r in db.query(CRMLead.id).filter(CRMLead.team_core_partner_id == mid).all()]))
-    guru_count = len(guru_lead_ids)
-    zguru_count = len(zguru_lead_ids)
-    core_count  = len(core_lead_ids)
+    # High-speed cached tab counts (20s TTL)
+    now_ts = time.time()
+    cached_entry = _VGK_LEADS_TAB_CACHE.get(mid)
+    if cached_entry and (now_ts - cached_entry[0] < 20.0):
+        _, tab_counts, self_stage_counts, guru_lead_ids, zguru_lead_ids, core_lead_ids = cached_entry
+    else:
+        source_count = db.query(CRMLead).filter(source_condition).count()
+        support_count = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid).count()
 
-    all_role_lead_ids = list(set(guru_lead_ids + zguru_lead_ids + core_lead_ids))
-    overall_conditions = [source_condition, CRMLead.vgk_field_support_id == mid]
-    if all_role_lead_ids:
-        overall_conditions.append(CRMLead.id.in_(all_role_lead_ids))
-    overall_filter = or_(*overall_conditions)
-    overall_count = db.query(CRMLead).filter(overall_filter).count()
+        # Batch income entries in 1 query
+        income_rows = db.execute(
+            sa_text("SELECT level, source_lead_id FROM vgk_team_income_entries "
+                    "WHERE partner_id=:pid AND level IN (2, 3, 4) AND source_lead_id IS NOT NULL"),
+            {"pid": mid}
+        ).fetchall()
+        inc_l2 = {r[1] for r in income_rows if r[0] == 2}
+        inc_l3 = {r[1] for r in income_rows if r[0] == 3}
+        inc_l4 = {r[1] for r in income_rows if r[0] == 4}
+
+        # Batch team role columns in 1 query
+        role_rows = db.execute(
+            sa_text("SELECT id, team_senior_partner_id, team_extended_partner_id, team_core_partner_id "
+                    "FROM crm_leads WHERE team_senior_partner_id=:pid OR team_extended_partner_id=:pid OR team_core_partner_id=:pid"),
+            {"pid": mid}
+        ).fetchall()
+        for r in role_rows:
+            if r[1] == mid: inc_l2.add(r[0])
+            if r[2] == mid: inc_l3.add(r[0])
+            if r[3] == mid: inc_l4.add(r[0])
+
+        guru_lead_ids = list(inc_l2)
+        zguru_lead_ids = list(inc_l3)
+        core_lead_ids = list(inc_l4)
+
+        tab_counts = {
+            "source": source_count,
+            "guru": len(guru_lead_ids),
+            "zguru": len(zguru_lead_ids),
+            "core": len(core_lead_ids),
+            "support": support_count,
+            "source_marked": source_count,
+            "field_assistant": support_count
+        }
+
+        # Stage-wise counts for Self (L1) leads
+        self_stages = db.execute(sa_text("""
+            SELECT COALESCE(NULLIF(solar_pipeline_status, ''), status) AS stage, COUNT(*)
+            FROM crm_leads
+            WHERE associated_partner_id = :mid
+               OR (created_by_type = 'partner' AND created_by_id = :mid_str)
+               OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = :mid_str)
+            GROUP BY COALESCE(NULLIF(solar_pipeline_status, ''), status)
+        """), {"mid": mid, "mid_str": mid_str}).fetchall()
+        self_stage_counts = {r[0]: r[1] for r in self_stages if r[0]}
+
+        _VGK_LEADS_TAB_CACHE[mid] = (now_ts, tab_counts, self_stage_counts, guru_lead_ids, zguru_lead_ids, core_lead_ids)
 
     # --- Build base query by segment ---
     norm = segment.lower()
-    if norm in ("source", "source_marked"):
+    if norm in ("source", "source_marked", "overall"):
         query = db.query(CRMLead).filter(source_condition)
     elif norm in ("support", "field_assistant"):
         query = db.query(CRMLead).filter(CRMLead.vgk_field_support_id == mid)
     elif norm == "core":
-        if core_lead_ids:
-            query = db.query(CRMLead).filter(CRMLead.id.in_(core_lead_ids))
-        else:
-            query = db.query(CRMLead).filter(CRMLead.id == -1)
+        query = db.query(CRMLead).filter(CRMLead.id.in_(core_lead_ids)) if core_lead_ids else db.query(CRMLead).filter(CRMLead.id == -1)
     elif norm == "guru":
-        if guru_lead_ids:
-            query = db.query(CRMLead).filter(CRMLead.id.in_(guru_lead_ids))
-        else:
-            query = db.query(CRMLead).filter(CRMLead.id == -1)
+        query = db.query(CRMLead).filter(CRMLead.id.in_(guru_lead_ids)) if guru_lead_ids else db.query(CRMLead).filter(CRMLead.id == -1)
     elif norm == "zguru":
-        if zguru_lead_ids:
-            query = db.query(CRMLead).filter(CRMLead.id.in_(zguru_lead_ids))
-        else:
-            query = db.query(CRMLead).filter(CRMLead.id == -1)
+        query = db.query(CRMLead).filter(CRMLead.id.in_(zguru_lead_ids)) if zguru_lead_ids else db.query(CRMLead).filter(CRMLead.id == -1)
     else:
-        query = db.query(CRMLead).filter(overall_filter)
+        query = db.query(CRMLead).filter(source_condition)
+
+    # Stage filter (Self L1 Lead Stage Breakdown)
+    if stage:
+        stage_clean = stage.strip().lower()
+        if stage_clean in ('all_self', 'source', 'self', 'all'):
+            query = query.filter(source_condition)
+        else:
+            stage_expr = sqlfunc.lower(sqlfunc.coalesce(sqlfunc.nullif(CRMLead.solar_pipeline_status, ''), CRMLead.status, ''))
+            ev_expr = sqlfunc.lower(sqlfunc.coalesce(CRMLead.ev_b2b_stage, ''))
+            query = query.filter(or_(stage_expr == stage_clean, ev_expr == stage_clean))
 
     # Filters
     if status:
@@ -1318,32 +1344,12 @@ def vgk_my_leads(
 
         return base
 
-    # Stage-wise counts for Self (L1) files
-    self_stages = db.execute(sa_text("""
-        SELECT COALESCE(NULLIF(solar_pipeline_status, ''), status) AS stage, COUNT(*)
-        FROM crm_leads
-        WHERE associated_partner_id = :mid
-           OR (created_by_type = 'partner' AND created_by_id = :mid_str)
-           OR (source_ref_type IN ('partner', 'vgk_partner') AND source_ref_id = :mid_str)
-        GROUP BY COALESCE(NULLIF(solar_pipeline_status, ''), status)
-    """), {"mid": mid, "mid_str": mid_str}).fetchall()
-    self_stage_counts = {r[0]: r[1] for r in self_stages if r[0]}
-
     return {
         "success": True,
         "total": total,
         "page": page,
         "segment": segment,
-        "tab_counts": {
-            "overall": overall_count,
-            "source": source_count,
-            "guru": guru_count,
-            "zguru": zguru_count,
-            "core": core_count,
-            "support": support_count,
-            "source_marked": source_count,
-            "field_assistant": support_count,
-        },
+        "tab_counts": tab_counts,
         "self_stage_counts": self_stage_counts,
         "data": [lead_dict(l) for l in leads]
     }
