@@ -215,17 +215,20 @@ class VGK4UCareerService:
             own_files = qual_file_map.get(pid, 0)
             active_legs = active_legs_map[pid]
 
-            # --- A. Career Designation / Production Tier (Attachment 1: Personal Files) ---
-            # Dual-track decoupled model: Designation reflects Personal Production Tier Level
+            # --- A. Career Designation / Leadership Rank (Track 2: Team Performance) ---
+            # Unified Architecture: Career Rank is strictly based on Active Direct Team Members
+            # (Decoupled from Personal Production Slab which is purely an Incentive Achievement)
+            # Tier 1 Channel Partner: 0 active legs (requires >=1 personal file)
+            # Tier 2 Senior / Manager: >= 1 active direct leg (Overrides +0.50%)
+            # Tier 3 Extended / GM:    >= 5 active direct legs (Overrides +1.00%)
+            # Tier 4 Core / RM:        >= 10 active direct legs (Overrides +1.50%)
             if is_apex:
                 career_desig = DESIGNATION_APEX_NODE
-            elif own_files == 0:
-                career_desig = DESIGNATION_MEMBER
-            elif own_files >= 16:
+            elif active_legs >= 10:
                 career_desig = DESIGNATION_CORE
-            elif own_files >= 10:
+            elif active_legs >= 5:
                 career_desig = DESIGNATION_EXTENDED
-            elif own_files >= 5:
+            elif active_legs >= 1:
                 career_desig = DESIGNATION_SENIOR
             elif own_files >= 1:
                 career_desig = DESIGNATION_CHANNEL_PARTNER
