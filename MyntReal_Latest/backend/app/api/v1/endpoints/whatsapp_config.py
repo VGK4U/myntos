@@ -233,8 +233,179 @@ class CampaignCreateSchema(BaseModel):
 
 # ── TEMPLATES ─────────────────────────────────────────────────────────────────
 
+_TPL_STATS_CACHE = {"ts": 0.0, "auto_map": {}, "msg_groups": [], "gbc_runs": []}
+
+def _build_template_candidate_keys(t, linked_events: list) -> tuple:
+    """Return (candidate_msg_types, candidate_exec_prefixes) for matching a template to message_log."""
+    slug = (t.slug or "").strip().lower()
+    meta_name = (t.meta_template_name or "").strip().lower()
+    base_keys = set()
+    for k in [slug, meta_name] + [e.lower() for e in (linked_events or []) if e]:
+        if not k:
+            continue
+        base_keys.add(k)
+        # Strip trailing _en / _te / _v1 / _v2 for matching historical execution prefixes
+        stripped = re.sub(r'_(en|te)$', '', k)
+        if stripped:
+            base_keys.add(stripped)
+        stripped_v = re.sub(r'_v\d+(_(en|te))?$', '', k)
+        if stripped_v:
+            base_keys.add(stripped_v)
+
+    # Known historical aliases between template slugs and scheduler execution prefixes / message_types
+    alias_map = {
+        "vgk_partner_morning_statement_v1": ["vgk_member_morning_statement"],
+        "vgk_partner_morning_statement": ["vgk_member_morning_statement"],
+        "vgk_partner_morning_motivation_v1": ["vgk_member_zero_lead_motivational"],
+        "vgk_partner_morning_motivation": ["vgk_member_zero_lead_motivational"],
+        "daily_wish_rot_1": ["wa_daily_morning_wish"],
+        "missed_call_ack_v1": ["missed_call_ack"],
+        "vgk4u_morning_wish": ["vgk4u_wish", "vgk4u_morning_wish"],
+        "whatsapp_otp": ["whatsapp_otp"],
+    }
+    for bk in list(base_keys):
+        for al in alias_map.get(bk, []):
+            base_keys.add(al)
+
+    msg_types = set()
+    exec_prefixes = set()
+    for bk in base_keys:
+        msg_types.add(bk)
+        msg_types.add(f"auto_{bk}")
+        msg_types.add(f"fallback_{bk}")
+        msg_types.add(f"template:{bk}")
+        exec_prefixes.add(bk)
+        exec_prefixes.add(f"wa_{bk}")
+    return msg_types, exec_prefixes
+
+
+def _get_template_usage_stats(db: Session, templates: list) -> dict:
+    """Compute trigger & delivery counts per template using a single fast grouped SQL query."""
+    import time as _time
+    from sqlalchemy import text as _t
+
+    now = _time.time()
+    if now - _TPL_STATS_CACHE["ts"] > 120.0 or not _TPL_STATS_CACHE["msg_groups"]:
+        try:
+            auto_rows = db.execute(_t("""
+                SELECT template_id, event_key
+                FROM whatsapp_auto_triggers
+                WHERE template_id IS NOT NULL
+            """)).fetchall()
+            auto_map = {}
+            for r in auto_rows:
+                tid = int(r[0])
+                auto_map.setdefault(tid, []).append(r[1])
+
+            msg_groups = db.execute(_t("""
+                SELECT LOWER(SPLIT_PART(COALESCE(execution_id, 'none'), '_202', 1)) as exec_prefix,
+                       LOWER(COALESCE(message_type, '')) as msg_type,
+                       COUNT(*) as total_messages,
+                       COUNT(DISTINCT COALESCE(execution_id, DATE(sent_at)::text)) as times_triggered,
+                       COUNT(*) FILTER (WHERE current_status IN ('sent','delivered','read')) as sent_count,
+                       COUNT(*) FILTER (WHERE current_status IN ('delivered','read')) as delivered_count,
+                       COUNT(*) FILTER (WHERE current_status = 'read') as read_count,
+                       COUNT(*) FILTER (WHERE current_status = 'failed') as failed_count,
+                       MAX(sent_at) as last_triggered_at
+                FROM (
+                    SELECT execution_id, message_type, current_status, sent_at
+                    FROM message_log
+                    ORDER BY id DESC
+                    LIMIT 500 OFFSET 0
+                ) recent_ml
+                WHERE sent_at >= NOW() - INTERVAL '60 days'
+                  AND NOT (message_type = 'template' AND execution_id IS NULL)
+                GROUP BY LOWER(SPLIT_PART(COALESCE(execution_id, 'none'), '_202', 1)),
+                         LOWER(COALESCE(message_type, ''))
+            """)).fetchall()
+
+            gbc_runs = db.execute(_t("""
+                SELECT ae.id::text as exec_id,
+                       ae.execution_metadata::jsonb->>'template_id' as tpl_id,
+                       LOWER(COALESCE(ae.execution_metadata::jsonb->>'template_slug', '')) as tpl_slug,
+                       ae.started_at,
+                       COALESCE(ae.total_targets, 0) as total_messages,
+                       COALESCE(ae.sent_count, 0) as sent_count,
+                       COALESCE(ae.sent_count, 0) as delivered_count,
+                       0 as read_count,
+                       COALESCE(ae.failed_count, 0) as failed_count
+                FROM automation_execution ae
+                WHERE ae.job_id IN ('wa_general_broadcast', 'general_broadcast_campaign')
+                  AND ae.execution_metadata IS NOT NULL
+                  AND (ae.execution_metadata::jsonb->>'template_id' IS NOT NULL OR ae.execution_metadata::jsonb->>'template_slug' IS NOT NULL)
+                ORDER BY ae.started_at DESC
+                LIMIT 50
+            """)).fetchall()
+
+            _TPL_STATS_CACHE["ts"] = now
+            _TPL_STATS_CACHE["auto_map"] = auto_map
+            _TPL_STATS_CACHE["msg_groups"] = msg_groups
+            _TPL_STATS_CACHE["gbc_runs"] = gbc_runs
+        except Exception as e:
+            db.rollback()
+            _TPL_STATS_CACHE["ts"] = now
+            logger.warning(f"[TPL-STATS] Failed to compute template usage stats: {e}")
+
+    auto_map = _TPL_STATS_CACHE.get("auto_map", {})
+    msg_groups = _TPL_STATS_CACHE.get("msg_groups", [])
+    gbc_runs = _TPL_STATS_CACHE.get("gbc_runs", [])
+
+    stats_by_id = {}
+    for t in templates:
+        linked_events = auto_map.get(t.id, [])
+        msg_types, exec_prefixes = _build_template_candidate_keys(t, linked_events)
+
+        times_triggered = 0
+        total_messages = 0
+        sent_count = 0
+        delivered_count = 0
+        read_count = 0
+        failed_count = 0
+        last_trig = None
+
+        for g in msg_groups:
+            ep, mt, tot, trig_cnt, s_cnt, d_cnt, r_cnt, f_cnt, l_at = g
+            if mt in msg_types or (ep != 'none' and ep in exec_prefixes):
+                times_triggered += int(trig_cnt or 0)
+                total_messages += int(tot or 0)
+                sent_count += int(s_cnt or 0)
+                delivered_count += int(d_cnt or 0)
+                read_count += int(r_cnt or 0)
+                failed_count += int(f_cnt or 0)
+                if l_at and (last_trig is None or l_at > last_trig):
+                    last_trig = l_at
+
+        t_slug_low = (t.slug or "").strip().lower()
+        t_meta_low = (t.meta_template_name or "").strip().lower()
+        for gr in gbc_runs:
+            _, gr_tid, gr_slug, gr_start, tot, s_cnt, d_cnt, r_cnt, f_cnt = gr
+            if (gr_tid and str(gr_tid) == str(t.id)) or (gr_slug and gr_slug in (t_slug_low, t_meta_low)):
+                times_triggered += 1
+                total_messages += int(tot or 0)
+                sent_count += int(s_cnt or 0)
+                delivered_count += int(d_cnt or 0)
+                read_count += int(r_cnt or 0)
+                failed_count += int(f_cnt or 0)
+                if gr_start and (last_trig is None or gr_start > last_trig):
+                    last_trig = gr_start
+
+        avg_count = round(total_messages / times_triggered, 1) if times_triggered > 0 else 0.0
+        stats_by_id[t.id] = {
+            "times_triggered": times_triggered,
+            "total_messages": total_messages,
+            "avg_count": avg_count,
+            "sent_count": sent_count,
+            "delivered_count": delivered_count,
+            "read_count": read_count,
+            "failed_count": failed_count,
+            "last_triggered_at": last_trig.isoformat() if last_trig else None,
+            "linked_triggers": linked_events,
+        }
+    return stats_by_id
+
+
 @router.get("/templates")
-async def list_templates(
+def list_templates(
     mode: Optional[str] = None,
     segment: Optional[str] = None,
     category: Optional[str] = None,
@@ -245,7 +416,7 @@ async def list_templates(
     current_user=Depends(require_wa_send)
 ):
     from app.models.whatsapp import WhatsAppTemplate
-    from sqlalchemy import or_
+    from sqlalchemy import or_, func, desc
     q = db.query(WhatsAppTemplate)
     if is_active is not None:
         q = q.filter_by(is_active=is_active)
@@ -270,6 +441,7 @@ async def list_templates(
                 WhatsAppTemplate.name.ilike(s_term),
                 WhatsAppTemplate.body_text.ilike(s_term),
                 WhatsAppTemplate.slug.ilike(s_term),
+                WhatsAppTemplate.meta_template_name.ilike(s_term),
                 WhatsAppTemplate.segment.ilike(s_term)
             )
         )
@@ -285,19 +457,38 @@ async def list_templates(
         # Scanned Bot mode: active templates suitable for scanned/bot dispatch (not meta_only)
         q = q.filter(WhatsAppTemplate.usage_scope != 'meta_only')
 
-    templates = q.order_by(WhatsAppTemplate.segment, WhatsAppTemplate.name).all()
+    # Always show latest templates on top
+    templates = q.order_by(
+        desc(func.coalesce(WhatsAppTemplate.created_at, WhatsAppTemplate.meta_submitted_at, WhatsAppTemplate.updated_at)),
+        desc(WhatsAppTemplate.id)
+    ).all()
+
+    stats_map = _get_template_usage_stats(db, templates)
+
     tpl_list = []
     for t in templates:
         d = t.to_dict()
         d['category'] = t.meta_category or 'MARKETING'
         d['template_name'] = t.name
+        ref_dt = t.created_at or t.meta_submitted_at or t.updated_at
+        d['display_date'] = ref_dt.isoformat() if ref_dt else None
+        st = stats_map.get(t.id, {})
+        d['times_triggered'] = st.get('times_triggered', 0)
+        d['total_messages'] = st.get('total_messages', 0)
+        d['avg_count'] = st.get('avg_count', 0.0)
+        d['sent_count'] = st.get('sent_count', 0)
+        d['delivered_count'] = st.get('delivered_count', 0)
+        d['read_count'] = st.get('read_count', 0)
+        d['failed_count'] = st.get('failed_count', 0)
+        d['last_triggered_at'] = st.get('last_triggered_at')
+        d['linked_triggers'] = st.get('linked_triggers', [])
         tpl_list.append(d)
 
     return {"success": True, "templates": tpl_list, "total": len(tpl_list)}
 
 
 @router.get("/templates/approved")
-async def list_approved_templates(
+def list_approved_templates(
     segment: Optional[str] = None,
     category: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -305,6 +496,7 @@ async def list_approved_templates(
 ):
     """DC-WA-TRACK-001: Returns Meta-APPROVED templates for CRM WA send modal."""
     from app.models.whatsapp import WhatsAppTemplate
+    from sqlalchemy import func, desc
     q = db.query(WhatsAppTemplate).filter(
         WhatsAppTemplate.is_active == True,
         WhatsAppTemplate.meta_approval_status == 'APPROVED'
@@ -313,8 +505,169 @@ async def list_approved_templates(
         q = q.filter(WhatsAppTemplate.segment == segment)
     if category:
         q = q.filter(WhatsAppTemplate.meta_category == category.upper())
-    templates = q.order_by(WhatsAppTemplate.segment, WhatsAppTemplate.name).all()
+    templates = q.order_by(
+        desc(func.coalesce(WhatsAppTemplate.created_at, WhatsAppTemplate.meta_submitted_at, WhatsAppTemplate.updated_at)),
+        desc(WhatsAppTemplate.id)
+    ).all()
     return {"success": True, "templates": [t.to_dict() for t in templates], "total": len(templates)}
+
+
+@router.get("/templates/{template_id}/details")
+def get_template_details(
+    template_id: int,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_send)
+):
+    """Return full template metadata, KPI metrics, trigger batch runs, and individual message logs."""
+    from app.models.whatsapp import WhatsAppTemplate
+    from sqlalchemy import text as _t
+
+    t = db.query(WhatsAppTemplate).get(template_id)
+    if not t:
+        raise HTTPException(404, "Template not found")
+
+    stats_map = _get_template_usage_stats(db, [t])
+    st = stats_map.get(t.id, {})
+    linked_events = st.get("linked_triggers", [])
+    msg_types, exec_prefixes = _build_template_candidate_keys(t, linked_events)
+
+    tpl_dict = t.to_dict()
+    tpl_dict["category"] = t.meta_category or "MARKETING"
+    tpl_dict["template_name"] = t.name
+    ref_dt = t.created_at or t.meta_submitted_at or t.updated_at
+    tpl_dict["display_date"] = ref_dt.isoformat() if ref_dt else None
+    tpl_dict.update(st)
+
+    # Query trigger batches & individual messages matching this template
+    mt_list = list(msg_types) or ["__none__"]
+    ep_list = list(exec_prefixes) or ["__none__"]
+
+    # Also include execution_ids from wa_general_broadcast where template_id matches
+    gbc_exec_rows = db.execute(_t("""
+        SELECT 'gbc_' || id::text FROM automation_execution
+        WHERE job_id = 'wa_general_broadcast'
+          AND execution_metadata IS NOT NULL
+          AND (
+              execution_metadata::jsonb->>'template_id' = :tid
+              OR LOWER(COALESCE(execution_metadata::jsonb->>'template_slug', '')) IN (:slug, :meta_name)
+          )
+    """), {
+        "tid": str(t.id),
+        "slug": (t.slug or "").strip().lower(),
+        "meta_name": (t.meta_template_name or "").strip().lower(),
+    }).fetchall()
+    gbc_exec_ids = [r[0] for r in gbc_exec_rows if r[0]] or ["__none__"]
+
+    batches_rows = db.execute(_t("""
+        SELECT COALESCE(execution_id, TO_CHAR(sent_at, 'YYYY-MM-DD')) as batch_key,
+               COALESCE(message_type, 'template') as trigger_type,
+               MIN(sent_at) as started_at,
+               MAX(sent_at) as last_sent_at,
+               COUNT(*) as total_count,
+               COUNT(*) FILTER (WHERE current_status IN ('sent','delivered','read')) as sent_count,
+               COUNT(*) FILTER (WHERE current_status IN ('delivered','read')) as delivered_count,
+               COUNT(*) FILTER (WHERE current_status = 'read') as read_count,
+               COUNT(*) FILTER (WHERE current_status = 'failed') as failed_count
+        FROM message_log
+        WHERE NOT (message_type = 'template' AND execution_id IS NULL)
+          AND (
+              LOWER(COALESCE(message_type, '')) = ANY(:mt_list)
+              OR LOWER(regexp_replace(COALESCE(execution_id, 'none'), '_[0-9]{8}.*$', '')) = ANY(:ep_list)
+              OR execution_id = ANY(:gbc_exec_ids)
+          )
+        GROUP BY COALESCE(execution_id, TO_CHAR(sent_at, 'YYYY-MM-DD')), COALESCE(message_type, 'template')
+        ORDER BY MAX(sent_at) DESC NULLS LAST
+        LIMIT 50
+    """), {
+        "mt_list": mt_list,
+        "ep_list": ep_list,
+        "gbc_exec_ids": gbc_exec_ids,
+    }).fetchall()
+
+    trigger_batches = []
+    for br in batches_rows:
+        trigger_batches.append({
+            "batch_key": br[0],
+            "trigger_type": br[1],
+            "started_at": br[2].isoformat() if br[2] else None,
+            "last_sent_at": br[3].isoformat() if br[3] else None,
+            "total_count": int(br[4] or 0),
+            "sent_count": int(br[5] or 0),
+            "delivered_count": int(br[6] or 0),
+            "read_count": int(br[7] or 0),
+            "failed_count": int(br[8] or 0),
+        })
+
+    # Individual message logs
+    status_filter_sql = ""
+    params = {
+        "mt_list": mt_list,
+        "ep_list": ep_list,
+        "gbc_exec_ids": gbc_exec_ids,
+        "lim": min(max(int(limit or 200), 10), 500),
+    }
+    if status and status.strip().lower() not in ("", "all"):
+        st_val = status.strip().lower()
+        if st_val == "sent":
+            status_filter_sql += " AND current_status IN ('sent','delivered','read')"
+        elif st_val == "delivered":
+            status_filter_sql += " AND current_status IN ('delivered','read')"
+        else:
+            status_filter_sql += " AND LOWER(COALESCE(current_status, '')) = :st_val"
+            params["st_val"] = st_val
+
+    if search and search.strip():
+        status_filter_sql += """ AND (
+            COALESCE(mobile_number, '') ILIKE :q
+            OR COALESCE(user_name, '') ILIKE :q
+            OR COALESCE(message_body, '') ILIKE :q
+            OR COALESCE(execution_id, '') ILIKE :q
+        )"""
+        params["q"] = f"%{search.strip()}%"
+
+    msg_rows = db.execute(_t(f"""
+        SELECT id, mobile_number, user_name, message_type, execution_id,
+               current_status, sent_at, delivered_at, read_at,
+               message_sid, error_message, LEFT(COALESCE(message_body, ''), 300) as message_body
+        FROM message_log
+        WHERE NOT (message_type = 'template' AND execution_id IS NULL)
+          AND (
+              LOWER(COALESCE(message_type, '')) = ANY(:mt_list)
+              OR LOWER(regexp_replace(COALESCE(execution_id, 'none'), '_[0-9]{{8}}.*$', '')) = ANY(:ep_list)
+              OR execution_id = ANY(:gbc_exec_ids)
+          )
+          {status_filter_sql}
+        ORDER BY sent_at DESC NULLS LAST, id DESC
+        LIMIT :lim
+    """), params).fetchall()
+
+    messages = []
+    for mr in msg_rows:
+        messages.append({
+            "id": mr[0],
+            "mobile_number": mr[1] or "",
+            "user_name": mr[2] or "—",
+            "message_type": mr[3] or "template",
+            "execution_id": mr[4] or "—",
+            "current_status": mr[5] or "unknown",
+            "sent_at": mr[6].isoformat() if mr[6] else None,
+            "delivered_at": mr[7].isoformat() if mr[7] else None,
+            "read_at": mr[8].isoformat() if mr[8] else None,
+            "message_sid": mr[9] or "",
+            "error_message": mr[10] or "",
+            "message_body": mr[11] or "",
+        })
+
+    return {
+        "success": True,
+        "template": tpl_dict,
+        "trigger_batches": trigger_batches,
+        "messages": messages,
+        "messages_count": len(messages),
+    }
 
 
 @router.post("/track/generate")
@@ -366,7 +719,7 @@ def get_track_stats(
 
 
 @router.get("/templates/{template_id}")
-async def get_template(
+def get_template(
     template_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(require_wa_send)
@@ -1198,7 +1551,8 @@ def sync_meta_template_status(
             t.meta_template_id = meta_t.get("id") or t.meta_template_id
             t.is_meta_approved = (new_status == "APPROVED")
             t.meta_rejected_reason = rejected_reason or None  # DC-WA-REJECTED-001: persist
-            t.updated_at = get_indian_time()
+            if old_status != new_status:
+                t.updated_at = get_indian_time()
             updated.append({
                 "id": t.id, "name": t.name,
                 "meta_name": t.meta_template_name,
@@ -1222,21 +1576,30 @@ def sync_meta_template_status(
                 return comp.get("text", "") or ""
         return ""
 
+    from sqlalchemy import or_ as _or
     orphans_captured = []
     for meta_key, meta_t in all_meta.items():
         meta_name_lower = meta_t.get("name", "").lower()
         if meta_name_lower in matched_meta_names:
             continue
+        _slug_base = meta_name_lower + "_" + (meta_t.get("language", "en") or "en")
         existing = db.query(WhatsAppTemplate).filter(
-            WhatsAppTemplate.meta_template_name == meta_name_lower
+            _or(
+                WhatsAppTemplate.meta_template_name == meta_name_lower,
+                WhatsAppTemplate.slug == meta_name_lower,
+                WhatsAppTemplate.slug == _slug_base,
+            )
         ).first()
         if existing:
+            existing.meta_template_name = existing.meta_template_name or meta_name_lower
+            existing.meta_template_id = str(meta_t.get("id", "")) or existing.meta_template_id
+            existing.meta_approval_status = meta_t.get("status", existing.meta_approval_status)
+            existing.is_meta_approved = (meta_t.get("status", "") == "APPROVED")
             matched_meta_names.add(meta_name_lower)
             continue
         raw_reason = meta_t.get("rejected_reason", "") or ""
         rej_reason = None if raw_reason.upper() in ("NONE", "") else raw_reason
         _body = _extract_meta_body(meta_t) or meta_name_lower.replace("_", " ").title()
-        _slug_base = meta_name_lower + "_" + (meta_t.get("language", "en") or "en")
         # Ensure slug uniqueness
         from app.models.whatsapp import WhatsAppTemplate as _WATpl
         slug_exists = db.query(_WATpl).filter(_WATpl.slug == _slug_base).first()

@@ -95,22 +95,7 @@ else:
         return None
 
     _resolved_rds_ip = _resolve_rds_ip(str(settings.DATABASE_URL)) if sys.platform == "win32" else None
-
-    try:
-        _conn_timeout = 15 if _allow_prod else 5
-        _test_connect_args = {"connect_timeout": _conn_timeout, "sslmode": "require"}
-        if _resolved_rds_ip:
-            _test_connect_args["hostaddr"] = _resolved_rds_ip
-        _test_eng = create_engine(settings.DATABASE_URL, connect_args=_test_connect_args)
-        _test_conn = _test_eng.connect()
-        _test_conn.close()
-        _test_eng.dispose()
-    except Exception as _db_conn_err:
-        if _allow_prod:
-            print(f"[DC-DB-INIT] Primary Database warning ({_db_conn_err}), retrying with standard pool...", flush=True)
-        else:
-            print(f"[DC-DB-INIT] Primary Database unreachable ({_db_conn_err}). Falling back to local SQLite engine...", flush=True)
-            _use_sqlite_fallback = True
+    _use_sqlite_fallback = False
 
     if _use_sqlite_fallback:
         print("[DC-DB-INIT] Creating SQLite engine (development fallback mode with WAL & 30s timeout)...", flush=True)
@@ -160,16 +145,18 @@ else:
         _pg_options = "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000 -c lock_timeout=5000"
         if not _is_prod_env:
             _pg_options += " -c search_path=testing,public"
-            _pool_size = 3
-            _max_overflow = 2
-            print("[DC-DB-INIT] Creating PostgreSQL engine (Local SANDBOX schema=testing,public - Max 5 conns)...", flush=True)
+            _pool_size = 10
+            _max_overflow = 10
+            _pool_timeout = 30
+            print("[DC-DB-INIT] Creating PostgreSQL engine (Local SANDBOX schema=testing,public - Max 20 conns)...", flush=True)
         else:
             _pool_size = 14
             _max_overflow = 6
+            _pool_timeout = 15
             print("[DC-DB-INIT] Creating PostgreSQL engine (Bounded Pool mode - Max 12 conns/worker)...", flush=True)
 
         _rds_connect_args = {
-            "connect_timeout": 10,
+            "connect_timeout": 15,
             "sslmode": "require",
             "keepalives": 1,
             "keepalives_idle": 30,
@@ -183,10 +170,10 @@ else:
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=_pool_size,     # 14 in prod; 3 in local sandbox mode
-            max_overflow=_max_overflow, # 6 in prod; 2 in local sandbox mode
-            pool_timeout=15,          # 15s timeout to fail fast rather than stalling web requests
-            pool_recycle=120,         # Recycle idle connections every 2m (120s) to prevent RDS SSL drops
+            pool_size=_pool_size,     # 14 in prod; 10 in local sandbox mode
+            max_overflow=_max_overflow, # 6 in prod; 10 in local sandbox mode
+            pool_timeout=_pool_timeout, # 15s in prod; 30s in local sandbox mode
+            pool_recycle=900,         # Keep warm RDS SSL connections alive for 15m (keepalives_idle=30 prevents drops)
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
             connect_args=_rds_connect_args,

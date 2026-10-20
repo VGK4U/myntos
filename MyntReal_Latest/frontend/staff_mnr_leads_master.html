@@ -5953,12 +5953,12 @@ async function loadTabCounts(){
     if(t.key==='etc'){
       promises.push(staffFetch(`${API_ETC}/students/?page=1&per_page=1`).then(r=>r.json()).then(d=>{tabCounts['etc']=d.total||0;updateTabCount('etc');}).catch(()=>{}));
     }else{
-      promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1`).then(r=>r.json()).then(d=>{tabCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
+      promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1&count_only=1`).then(r=>r.json()).then(d=>{tabCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
     }
   }
   for(const t of TABS){
     if(t.key==='etc'||t.key==='ground-source') continue;
-    promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1&status=won_plus`).then(r=>r.json()).then(d=>{wonCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
+    promises.push(staffFetch(`${API_CRM}/master-leads?category=${encodeURIComponent(t.category)}&per_page=1&page=1&status=won_plus&count_only=1`).then(r=>r.json()).then(d=>{wonCounts[t.key]=(d.pagination||{}).total||0;updateTabCount(t.key);}).catch(()=>{}));
   }
   await Promise.allSettled(promises);
 }

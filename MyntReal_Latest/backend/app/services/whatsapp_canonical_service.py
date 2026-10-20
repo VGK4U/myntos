@@ -275,6 +275,49 @@ class WhatsAppCanonicalService:
                     logger.warning(f"[WA-CANONICAL] Dual-write wa_inbox error: {ie}")
 
                 db.commit()
+                # Also ensure row exists in public.message_log when running in testing sandbox so production Meta webhook updates it
+                try:
+                    from sqlalchemy import text as _sql_text
+                    exists_pub = db.execute(
+                        _sql_text("SELECT id FROM public.message_log WHERE message_sid = :wamid LIMIT 1"),
+                        {"wamid": wamid}
+                    ).fetchone()
+                    if not exists_pub:
+                        db.execute(
+                            _sql_text("""
+                                INSERT INTO public.message_log (
+                                    message_sid, mobile_number, to_number, from_number,
+                                    user_name, message_type, message_body, provider,
+                                    initial_status, current_status, status_source, sent_at,
+                                    sent_by_staff_id, sent_by_name, sender_type, job_id, execution_id
+                                ) VALUES (
+                                    :wamid, :mobile_number, :to_number, :from_number,
+                                    :user_name, :message_type, :message_body, 'META_WHATSAPP',
+                                    'sent', 'sent', 'SYSTEM', :sent_at,
+                                    :sent_by_staff_id, :sent_by_name, :sender_type, :job_id, :execution_id
+                                )
+                            """),
+                            {
+                                "wamid": wamid,
+                                "mobile_number": recipient,
+                                "to_number": recipient,
+                                "from_number": "+918585852738",
+                                "user_name": user_name or f"Customer ({recipient[-4:]})",
+                                "message_type": message_type,
+                                "message_body": raw_body_fallback or f"Template: {template_name}",
+                                "sent_at": now_utc,
+                                "sent_by_staff_id": staff_id,
+                                "sent_by_name": sent_by_name or "System",
+                                "sender_type": sender_type or "system",
+                                "job_id": job_id,
+                                "execution_id": execution_id,
+                            }
+                        )
+                        db.commit()
+                except Exception as _pub_err:
+                    db.rollback()
+                    logger.debug(f"[WA-CANONICAL] public.message_log mirror skipped: {_pub_err}")
+
                 logger.info(f"[WA-CANONICAL] Outbound SUCCESS wamid={wamid} recipient={recipient} template={template_name}")
                 return {"success": True, "wamid": wamid, "message_log_id": log_entry.id, "status": "sent"}
 

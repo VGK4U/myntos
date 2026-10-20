@@ -426,6 +426,120 @@ _TEMPLATES = [
         ],
         "example_values": ["Ramesh Kumar", "10.00", "98****3210"],
     },
+    {
+        "slug": "vgk_general_broadcast_v1",
+        "name": "VGK4U & MyntReal General Update (Universal Envelope)",
+        "body_text": (
+            "Namaste {{name}} Ji 🙏,\n\n"
+            "Here is an important update regarding your *{{segment}}* profile with *VGK4U & MyntReal Group*:\n\n"
+            "{{message_body}}\n\n"
+            "{{signature}}\n"
+            "Thank you for being a valued member of the VGK4U & MyntReal network."
+        ),
+        "footer_text": "VGK4U & MyntReal Official",
+        "segment": "general",
+        "meta_category": "UTILITY",
+        "event_key": "general_broadcast_utility_envelope",
+        "event_label": "General Broadcast Utility Envelope",
+        "event_category": "partner",
+        "buttons": [
+            {"type": "QUICK_REPLY", "text": "Interested / Call Back"},
+            {"type": "QUICK_REPLY", "text": "Need More Info"},
+            {"type": "QUICK_REPLY", "text": "Thank You"}
+        ],
+        "example_values": [
+            "Ramesh Kumar",
+            "VGK4U Partner Network",
+            "Your partner profile and monthly activity update for this cycle are now available on the portal.",
+            "Warm Regards, VGK4U Supreme Administration"
+        ],
+    },
+    {
+        "slug": "mnr_promotional_campaign_v1",
+        "name": "MyntReal Promotional Wishes & Campaign Envelope",
+        "body_text": (
+            "Namaste {{name}} Ji 🌟,\n\n"
+            "Warm greetings from *VGK4U & MyntReal Group*!\n\n"
+            "{{campaign_message}}\n\n"
+            "Explore our flagship services in Rooftop Solar, Electric Vehicles, EV Skill Training & Verified Real Estate at https://www.myntreal.com\n\n"
+            "{{signature}}\n"
+            "Reply to this message anytime for priority assistance from our team."
+        ),
+        "footer_text": "myntreal.com | vgk4u.com",
+        "segment": "general",
+        "meta_category": "MARKETING",
+        "event_key": "general_broadcast_marketing_envelope",
+        "event_label": "General Broadcast Marketing & Wishes Envelope",
+        "event_category": "crm",
+        "buttons": [
+            {"type": "QUICK_REPLY", "text": "Interested in Solar"},
+            {"type": "QUICK_REPLY", "text": "Interested in EV"},
+            {"type": "QUICK_REPLY", "text": "Call Me Back"}
+        ],
+        "example_values": [
+            "Suresh Kumar",
+            "Wishing you and your family a prosperous season! Claim up to Rs.78,000 PM Surya Ghar Solar Subsidy and exclusive benefits this month.",
+            "Warm Regards, Team MyntReal & VGK4U"
+        ],
+    },
+    {
+        "slug": "vgk_general_broadcast_img_v1",
+        "name": "VGK4U & MyntReal General Update (With Image Header)",
+        "header_type": "image",
+        "body_text": (
+            "Namaste {{name}} Ji 🙏,\n\n"
+            "Here is an important update regarding your *{{segment}}* profile with *VGK4U & MyntReal Group*:\n\n"
+            "{{message_body}}\n\n"
+            "{{signature}}\n"
+            "Thank you for being a valued member of the VGK4U & MyntReal network."
+        ),
+        "footer_text": "VGK4U & MyntReal Official",
+        "segment": "general",
+        "meta_category": "UTILITY",
+        "event_key": "general_broadcast_utility_img_envelope",
+        "event_label": "General Broadcast Utility Image Envelope",
+        "event_category": "partner",
+        "buttons": [
+            {"type": "QUICK_REPLY", "text": "Interested / Call Back"},
+            {"type": "QUICK_REPLY", "text": "Need More Info"},
+            {"type": "QUICK_REPLY", "text": "Thank You"}
+        ],
+        "example_values": [
+            "Ramesh Kumar",
+            "VGK4U Partner Network",
+            "Your partner profile and monthly activity update for this cycle are now available on the portal.",
+            "Warm Regards, VGK4U Supreme Administration"
+        ],
+    },
+    {
+        "slug": "mnr_promotional_campaign_img_v1",
+        "name": "MyntReal Promotional Wishes & Flyer Campaign (With Image Header)",
+        "header_type": "image",
+        "body_text": (
+            "Namaste {{name}} Ji 🌟,\n\n"
+            "Warm greetings from *VGK4U & MyntReal Group*!\n\n"
+            "{{campaign_message}}\n\n"
+            "Explore our flagship services in Rooftop Solar, Electric Vehicles, EV Skill Training & Verified Real Estate at https://www.myntreal.com\n\n"
+            "{{signature}}\n"
+            "Reply to this message anytime for priority assistance from our team."
+        ),
+        "footer_text": "myntreal.com | vgk4u.com",
+        "segment": "general",
+        "meta_category": "MARKETING",
+        "event_key": "general_broadcast_marketing_img_envelope",
+        "event_label": "General Broadcast Marketing Image Envelope",
+        "event_category": "crm",
+        "buttons": [
+            {"type": "QUICK_REPLY", "text": "Interested in Solar"},
+            {"type": "QUICK_REPLY", "text": "Interested in EV"},
+            {"type": "QUICK_REPLY", "text": "Call Me Back"}
+        ],
+        "example_values": [
+            "Suresh Kumar",
+            "Wishing you and your family a prosperous season! Claim up to Rs.78,000 PM Surya Ghar Solar Subsidy and exclusive benefits this month.",
+            "Warm Regards, Team MyntReal & VGK4U"
+        ],
+    },
 ]
 
 

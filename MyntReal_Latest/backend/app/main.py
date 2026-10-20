@@ -17042,6 +17042,43 @@ def _startup_worker():
     except Exception as _dub_e2:
         print(f"[DC-DVR-UNBLOCK-20260927] ⚠️ outer: {_dub_e2}", flush=True)
 
+    # DC-PERF-INDEX-PARITY-20261020: Ensure critical B-Tree indexes on message_log,
+    # automation_dispatch, staff_nda_acceptances, and staff_employee_menu_settings across public & testing.
+    try:
+        _perf_idx_key = 'dc_perf_index_parity_20261020'
+        if _perf_idx_key not in _applied_keys:
+            _pidx_db = SessionLocal()
+            try:
+                for _idx_sql in (
+                    "CREATE INDEX IF NOT EXISTS idx_public_ml_sid ON public.message_log (message_sid)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_ml_id_desc ON public.message_log (id DESC)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_ml_staff_id_desc ON public.message_log (sent_by_staff_id, id DESC)",
+                    "CREATE INDEX IF NOT EXISTS idx_public_ml_mobile ON public.message_log (mobile_number)",
+                    "CREATE INDEX IF NOT EXISTS idx_pub_auto_dispatch_exec_status ON public.automation_dispatch (execution_id, status, id)",
+                    "CREATE INDEX IF NOT EXISTS idx_pub_auto_dispatch_msg_log_id ON public.automation_dispatch (message_log_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_pub_nda_acc_emp_ver ON public.staff_nda_acceptances (employee_id, nda_version_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_pub_emp_menu_lookup ON public.staff_employee_menu_settings (employee_id, company_id, menu_id)",
+                ):
+                    try:
+                        _pidx_db.execute(text(_idx_sql))
+                        _pidx_db.commit()
+                    except Exception:
+                        _pidx_db.rollback()
+                _pidx_db.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k) ON CONFLICT DO NOTHING"),
+                    {'k': _perf_idx_key}
+                )
+                _pidx_db.commit()
+                print("[DC-PERF-INDEX-PARITY-20261020] ✅ Critical performance B-Tree indexes verified", flush=True)
+            except Exception as _pidx_e:
+                try: _pidx_db.rollback()
+                except Exception: pass
+                print(f"[DC-PERF-INDEX-PARITY-20261020] ⚠️ {_pidx_e}", flush=True)
+            finally:
+                _pidx_db.close()
+    except Exception as _pidx_outer:
+        print(f"[DC-PERF-INDEX-PARITY-20261020] ⚠️ outer: {_pidx_outer}", flush=True)
+
     try:
         seed_bank_wise_leads_menu()
     except Exception as _bw_e:

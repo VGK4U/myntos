@@ -1454,6 +1454,27 @@ def get_active_nda_for_staff_type(db, staff_type: str, document_type: str = 'NDA
     return None
 
 
+import time as _nda_time
+
+_AGREEMENT_CHECK_CACHE: dict = {}  # (employee_id, staff_type_or_empty) -> (expires_at, result_tuple)
+_NDA_ACCEPTANCE_CACHE: dict = {}   # (employee_id, staff_type_or_empty, document_type) -> (expires_at, result_tuple)
+_AGREEMENT_CACHE_TTL_SEC = 300.0
+
+
+def invalidate_agreement_cache(employee_id: int = None) -> None:
+    """Invalidate in-memory NDA/agreement check cache (for a specific employee or all employees)."""
+    if employee_id is None:
+        _AGREEMENT_CHECK_CACHE.clear()
+        _NDA_ACCEPTANCE_CACHE.clear()
+    else:
+        for k in list(_AGREEMENT_CHECK_CACHE.keys()):
+            if k[0] == employee_id:
+                _AGREEMENT_CHECK_CACHE.pop(k, None)
+        for k in list(_NDA_ACCEPTANCE_CACHE.keys()):
+            if k[0] == employee_id:
+                _NDA_ACCEPTANCE_CACHE.pop(k, None)
+
+
 def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type: str = 'NDA'):
     """
     Check if employee has accepted the latest active agreement of a given type.
@@ -1472,6 +1493,12 @@ def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type:
     Returns:
         tuple (needs_acceptance: bool, version: StaffNdaVersion or None)
     """
+    cache_key = (int(employee_id), str(staff_type or ''), str(document_type or 'NDA'))
+    now_ts = _nda_time.time()
+    cached = _NDA_ACCEPTANCE_CACHE.get(cache_key)
+    if cached and cached[0] > now_ts:
+        return cached[1]
+
     from app.core.database import SessionLocal
     read_session = SessionLocal()
     try:
@@ -1483,7 +1510,9 @@ def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type:
         
         active_version = get_active_nda_for_staff_type(read_session, staff_type, document_type)
         if not active_version:
-            return (False, None)
+            res = (False, None)
+            _NDA_ACCEPTANCE_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+            return res
         
         acceptance = read_session.query(StaffNdaAcceptance.id).filter(
             StaffNdaAcceptance.employee_id == employee_id,
@@ -1492,9 +1521,13 @@ def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type:
         
         read_session.expunge(active_version)
         if acceptance:
-            return (False, active_version)
+            res = (False, active_version)
+            _NDA_ACCEPTANCE_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+            return res
         else:
-            return (True, active_version)
+            res = (True, active_version)
+            _NDA_ACCEPTANCE_CACHE[cache_key] = (now_ts + 30.0, res)
+            return res
     finally:
         try:
             read_session.rollback()
@@ -1524,6 +1557,12 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
     Returns:
         tuple (needs_acceptance: bool, agreement_type: str or None, version: StaffNdaVersion or None)
     """
+    cache_key = (int(employee_id), str(staff_type or ''))
+    now_ts = _nda_time.time()
+    cached = _AGREEMENT_CHECK_CACHE.get(cache_key)
+    if cached and cached[0] > now_ts:
+        return cached[1]
+
     from sqlalchemy import desc
     from app.core.database import SessionLocal
 
@@ -1534,15 +1573,21 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
             staff_type = staff_type or emp_obj.staff_type or 'MN_STAFF'
             # External SaaS client tenants are independent organizations and not subject to internal staff agreements
             if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER', 'SAAS_USER', 'SAAS_TENANT']:
-                return (False, None, None)
+                res = (False, None, None)
+                _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+                return res
             from app.services.saas_tenant_resolver import resolve_tenant_context
             ctx = resolve_tenant_context(read_session, emp_obj)
             if ctx.is_saas_tenant:
-                return (False, None, None)
+                res = (False, None, None)
+                _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+                return res
         else:
             staff_type = staff_type or 'MN_STAFF'
             if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER', 'SAAS_USER', 'SAAS_TENANT']:
-                return (False, None, None)
+                res = (False, None, None)
+                _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+                return res
             
         VALID_STAFF_TYPES = [
             'MN_STAFF', 'FREELANCER', 'MYNT_REAL', 'MN_EMPLOYEE',
@@ -1556,7 +1601,9 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
         ).order_by(desc(StaffNdaVersion.id)).all()
         
         if not active_versions:
-            return (False, None, None)
+            res = (False, None, None)
+            _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+            return res
             
         active_by_type = {}
         for doc_type in ['NDA', 'EMPLOYMENT']:
@@ -1575,7 +1622,9 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
                 active_by_type[doc_type] = match
                 
         if not active_by_type:
-            return (False, None, None)
+            res = (False, None, None)
+            _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+            return res
             
         # Single batch query to check user's acceptances for all relevant active version IDs
         target_version_ids = [v.id for v in active_by_type.values()]
@@ -1592,9 +1641,13 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
                 version = active_by_type[doc_type]
                 if version.id not in accepted_version_ids:
                     read_session.expunge(version)
-                    return (True, doc_type, version)
+                    res = (True, doc_type, version)
+                    _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + 30.0, res)
+                    return res
         
-        return (False, None, None)
+        res = (False, None, None)
+        _AGREEMENT_CHECK_CACHE[cache_key] = (now_ts + _AGREEMENT_CACHE_TTL_SEC, res)
+        return res
     finally:
         try:
             read_session.rollback()

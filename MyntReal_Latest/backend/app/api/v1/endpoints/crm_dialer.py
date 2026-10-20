@@ -4602,6 +4602,16 @@ async def dialer_ws_sync(
 
     except Exception as e:
         logger.warning("[DC_DIALER_WS] Init send failed for user_ref=%s: %s", user_ref, e)
+    finally:
+        # Release DB transaction & return connection to pool before entering long-lived WebSocket loop
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        try:
+            db.close()
+        except Exception:
+            pass
 
     # DC_DIALER_WS_001 Main loop — two delivery paths (both are event-driven, no polling):
     #   1. Same-worker: _push_dialer_ws() enqueues into `q`; loop drains immediately.

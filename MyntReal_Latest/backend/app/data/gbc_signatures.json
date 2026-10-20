@@ -1,0 +1,33 @@
+[
+  {
+    "id": "sig_mynt_official",
+    "label": "Mynt Official Administration",
+    "text": "Warm Regards,\n*Mynt & MyntReal Group*\n🌐 www.myntreal.com",
+    "is_default": true
+  },
+  {
+    "id": "sig_myntreal_solar",
+    "label": "MyntReal Solar & Clean Energy",
+    "text": "Warm Regards,\n*Team MyntReal Solar & Clean Energy*\n🌐 www.myntreal.com",
+    "is_default": false
+  },
+  {
+    "id": "sig_myntreal_ev",
+    "label": "MyntReal EV Mobility Division",
+    "text": "Warm Regards,\n*Team MyntReal EV Mobility*\n⚡ Empowering Green Transport",
+    "is_default": false
+  },
+  {
+    "id": "sig_ashwanth",
+    "label": "Ashwanth — Operations & Strategy (Mynt)",
+    "text": "Best Regards,\n*Ashwanth — Operations & Strategy*\n*Mynt & MyntReal Group*",
+    "is_default": false
+  },
+  {
+    "id": "sig_5ea64e1f",
+    "label": "VGK4U",
+    "text": "ఆత్మీయ శుభాకాంక్షలతో,\nఇట్లు,\n*మీ VGK4U టీమ్* 💙\nvgk4u.com",
+    "is_default": false,
+    "updated_by": "System Administrator (VGK4U Supreme) (MR10001)"
+  }
+]

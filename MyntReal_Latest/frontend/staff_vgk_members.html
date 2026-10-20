@@ -11132,6 +11132,170 @@ async function resolvePosterImagePayload(container) {
 }
 window.resolvePosterImagePayload = resolvePosterImagePayload;
 
+async function _ensurePngBlobForClipboard(dataUrl, existingBlob) {
+  if (existingBlob && existingBlob.type === 'image/png') {
+    return existingBlob;
+  }
+  if (!dataUrl) return existingBlob || null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      try {
+        const cvs = document.createElement('canvas');
+        cvs.width = img.naturalWidth || img.width || 800;
+        cvs.height = img.naturalHeight || img.height || 800;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        cvs.toBlob((pngBlob) => resolve(pngBlob || existingBlob), 'image/png');
+      } catch (e) {
+        resolve(existingBlob);
+      }
+    };
+    img.onerror = () => resolve(existingBlob);
+    img.src = dataUrl;
+  });
+}
+
+function _flashCopyButtonState(btnEl, copiedHtml, durationMs = 2400) {
+  if (!btnEl) return;
+  if (!btnEl.dataset.origHtml) {
+    btnEl.dataset.origHtml = btnEl.innerHTML;
+  }
+  btnEl.innerHTML = copiedHtml;
+  clearTimeout(btnEl._copyTimer);
+  btnEl._copyTimer = setTimeout(() => {
+    if (btnEl.dataset.origHtml) {
+      btnEl.innerHTML = btnEl.dataset.origHtml;
+    }
+  }, durationMs);
+}
+
+async function copyPosterImage(btnEl) {
+  const container = document.getElementById('posterCanvasWrapper');
+  const spinner = document.getElementById('posterSpinner');
+  if (spinner) {
+    spinner.style.display = 'flex';
+    const spText = spinner.querySelector('div div');
+    if (spText) spText.textContent = 'Copying poster image to clipboard...';
+  }
+  try {
+    const { dataUrl, blob } = await resolvePosterImagePayload(container);
+    const pngBlob = await _ensurePngBlobForClipboard(dataUrl, blob);
+    if (spinner) spinner.style.display = 'none';
+    if (!pngBlob) {
+      alert('Failed to prepare poster image for copying.');
+      return;
+    }
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+      _flashCopyButtonState(btnEl, '<i class="fas fa-check me-1"></i>Image Copied!');
+      if (typeof toast === 'function') {
+        toast('✅ Poster image copied to clipboard! Paste (Ctrl+V / Cmd+V) directly in WhatsApp.', 'success');
+      }
+    } else {
+      alert('Clipboard image copy is not supported in this browser. Please use Download Image.');
+    }
+  } catch (err) {
+    if (spinner) spinner.style.display = 'none';
+    console.error('[copyPosterImage] Error:', err);
+    alert('Could not copy image to clipboard: ' + (err.message || err));
+  }
+}
+window.copyPosterImage = copyPosterImage;
+
+async function copyPosterText(btnEl) {
+  try {
+    const shareDetails = getPosterShareDetails();
+    const text = (document.getElementById('postShareCustomText')?.value || shareDetails.text || '').trim();
+    if (!text) {
+      alert('No message text available to copy.');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    _flashCopyButtonState(btnEl, '<i class="fas fa-check me-1"></i>Text Copied!');
+    if (typeof toast === 'function') {
+      toast('✅ WhatsApp message text copied to clipboard!', 'success');
+    }
+  } catch (err) {
+    console.error('[copyPosterText] Error:', err);
+    alert('Failed to copy text: ' + (err.message || err));
+  }
+}
+window.copyPosterText = copyPosterText;
+
+async function sendIndividualWhatsAppApiFirst({ phone, message, imageUrl, recipientName }) {
+  const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token') || '';
+  const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+  const headers = { 'Content-Type': 'application/json' };
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 14000);
+    const res = await fetch(`${apiBase}/whatsapp/send-individual-api-first`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        phone: phone,
+        message: message || '',
+        imageUrl: imageUrl || '',
+        recipient_name: recipientName || ''
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(tid);
+    const json = await res.json();
+    if (json && (json.success || json.blocked)) {
+      return json;
+    }
+    // If backend returned non-success and did not already succeed via scanned fallback, try direct scanned fallback
+    if (json && json.channel === 'failed') {
+      return json;
+    }
+  } catch (apiErr) {
+    console.warn('[WA-API-FIRST] Backend API-first call error, falling back to /api/send-message:', apiErr);
+  }
+
+  // Safety fallback to Scanned WhatsApp if backend endpoint was unreachable
+  const controller2 = new AbortController();
+  const tid2 = setTimeout(() => controller2.abort(), 12000);
+  try {
+    const res2 = await fetch('/api/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone, imageUrl: imageUrl || '', message: message || '' }),
+      signal: controller2.signal
+    });
+    clearTimeout(tid2);
+    const json2 = await res2.json();
+    if (json2 && json2.success) {
+      return {
+        ...json2,
+        channel: 'scanned_fallback',
+        via: 'Scanned WhatsApp (API Fallback)',
+        delivery_label: 'Delivered via Scanned WA (API Fallback) ✅'
+      };
+    }
+    return json2;
+  } catch (fbErr) {
+    clearTimeout(tid2);
+    throw fbErr;
+  }
+}
+window.sendIndividualWhatsAppApiFirst = sendIndividualWhatsAppApiFirst;
+
 async function shareOnWhatsApp() {
   const container = document.getElementById('posterCanvasWrapper');
   const shareDetails = getPosterShareDetails();
@@ -11369,53 +11533,53 @@ async function shareDefaultChannel() {
       updateDispatchStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
     }
 
-    // 2. Member Direct Send via Scanned Bot
+    // 2. Member Direct Send (Individual -> Always Official API Number First for Text; Fallback to Scanned ONLY if API fails)
     if (isMemberBlocked) {
       updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
     } else if (mPhone) {
       try {
-        const res = await fetchWithTimeout('/api/send-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
+        const json = await sendIndividualWhatsAppApiFirst({
+          phone: mPhone,
+          imageUrl: dataUrl,
+          message: shareText,
+          recipientName: partnerName
         });
-        const json = await res.json();
-        if (json.success) {
-          updateDispatchStatus('member', 'sent', dataUrl ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
-        } else if (json.blocked) {
+        if (json && json.success) {
+          updateDispatchStatus('member', 'sent', json.delivery_label || (json.channel === 'meta_api' ? 'Delivered via Official API (Text) ✅' : 'Delivered via Scanned WA (API Fallback) ✅'));
+        } else if (json && json.blocked) {
           updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
         } else {
-          updateDispatchStatus('member', 'error', json.error || 'Bot Error');
+          updateDispatchStatus('member', 'error', (json && json.error) || 'Send Error');
         }
       } catch (mErr) {
-        updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline');
+        updateDispatchStatus('member', 'error', 'WhatsApp Service Offline');
       }
     } else {
       updateDispatchStatus('member', 'skipped', 'No Phone Number');
     }
 
-    // 3. Senior Direct Send via Scanned Bot
+    // 3. Senior Direct Send (Individual -> Always Official API Number First for Text; Fallback to Scanned ONLY if API fails)
     if (!isSeniorVisible) {
       updateDispatchStatus('senior', 'skipped', 'Excluded by toggle');
     } else if (isSeniorBlocked) {
       updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
     } else if (sPhone) {
       try {
-        const res = await fetchWithTimeout('/api/send-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
+        const json = await sendIndividualWhatsAppApiFirst({
+          phone: sPhone,
+          imageUrl: dataUrl,
+          message: shareText,
+          recipientName: seniorName || 'Direct Sponsor'
         });
-        const json = await res.json();
-        if (json.success) {
-          updateDispatchStatus('senior', 'sent', dataUrl ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
-        } else if (json.blocked) {
+        if (json && json.success) {
+          updateDispatchStatus('senior', 'sent', json.delivery_label || (json.channel === 'meta_api' ? 'Delivered via Official API (Text) ✅' : 'Delivered via Scanned WA (API Fallback) ✅'));
+        } else if (json && json.blocked) {
           updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
         } else {
-          updateDispatchStatus('senior', 'error', json.error || 'Bot Error');
+          updateDispatchStatus('senior', 'error', (json && json.error) || 'Send Error');
         }
       } catch (sErr) {
-        updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
+        updateDispatchStatus('senior', 'error', 'WhatsApp Service Offline');
       }
     } else {
       updateDispatchStatus('senior', 'skipped', 'No Senior Phone');
@@ -11548,18 +11712,19 @@ async function testShareToNumber() {
   if (spinner) spinner.style.display = 'none';
 
   try {
-    const res = await fetch('/api/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
+    const json = await sendIndividualWhatsAppApiFirst({
+      phone: cleanPhone,
+      imageUrl: dataUrl,
+      message: shareText,
+      recipientName: shareDetails.partnerName || 'Test Recipient'
     });
-    const json = await res.json();
-    if (json.success) {
+    if (json && json.success) {
+      const routeVia = json.via || (json.channel === 'meta_api' ? 'Official API Number (Text)' : 'Scanned WhatsApp (API Fallback)');
       const attachDesc = dataUrl ? (source === 'uploaded' ? 'Uploaded Custom Creative 🖼️' : 'Auto-Generated Celebration Poster 🖼️') : 'Text Only (Default Message)';
-      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nRoute: ${routeVia}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
     } else {
-      const errNotice = json.error || 'WhatsApp bot not connected';
-      const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+      const errNotice = (json && json.error) || 'WhatsApp service not connected';
+      const useFallback = confirm(`⚠️ Automated Dispatch Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
       if (useFallback) {
         const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
         window.open(directUrl, '_blank');
@@ -12238,18 +12403,19 @@ async function testShareGenMsg() {
   }
 
   try {
-    const res = await fetch('/api/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: cleanPhone, imageUrl: imgData, message: text })
+    const json = await sendIndividualWhatsAppApiFirst({
+      phone: cleanPhone,
+      imageUrl: imgData,
+      message: text,
+      recipientName: 'Test Recipient'
     });
-    const json = await res.json();
     if (spinner) spinner.style.display = 'none';
-    if (json.success) {
-      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${imgData ? 'Flyer Image 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp to verify.`);
+    if (json && json.success) {
+      const routeVia = json.via || (json.channel === 'meta_api' ? 'Official API Number (Text)' : 'Scanned WhatsApp (API Fallback)');
+      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nRoute: ${routeVia}\nAttachment: ${imgData ? 'Flyer Image 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp to verify.`);
     } else {
-      const errNotice = json.error || 'WhatsApp bot not connected';
-      const useFallback = confirm(`⚠️ Automated Bot Notice:\n${errNotice}\n\nWould you like to open directly via WhatsApp Web to +91 ${cleanPhone.slice(-10)} instead?`);
+      const errNotice = (json && json.error) || 'WhatsApp service not connected';
+      const useFallback = confirm(`⚠️ Automated Dispatch Notice:\n${errNotice}\n\nWould you like to open directly via WhatsApp Web to +91 ${cleanPhone.slice(-10)} instead?`);
       if (useFallback) {
         window.open(`https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(text)}`, '_blank');
       }
@@ -12411,7 +12577,7 @@ async function shareGenMsgDefaultChannel() {
     updateStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
   }
 
-  // 2. Selected Members Direct Dispatch
+  // 2. Selected Members Direct Dispatch (Individual -> Always Official API Number First for Text; Fallback to Scanned ONLY if API fails)
   for (const m of members) {
     const tId = 'gen_member_' + (m.id || m.partner_code);
     const cleanPhone = (m.phone || '').replace(/\D/g, '');
@@ -12421,21 +12587,21 @@ async function shareGenMsgDefaultChannel() {
       updateStatus(tId, 'skipped', 'Suppressed (Blocked Member)');
     } else if (cleanPhone) {
       try {
-        const res = await fetchWithTimeout('/api/send-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanPhone, imageUrl: imgData, message: text })
+        const json = await sendIndividualWhatsAppApiFirst({
+          phone: cleanPhone,
+          imageUrl: imgData,
+          message: text,
+          recipientName: m.partner_name || m.name || 'Partner'
         });
-        const json = await res.json();
-        if (json.success) {
-          updateStatus(tId, 'sent', imgData ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
-        } else if (json.blocked) {
+        if (json && json.success) {
+          updateStatus(tId, 'sent', json.delivery_label || (json.channel === 'meta_api' ? 'Delivered via Official API (Text) ✅' : 'Delivered via Scanned WA (API Fallback) ✅'));
+        } else if (json && json.blocked) {
           updateStatus(tId, 'skipped', 'Suppressed (Blocked Member)');
         } else {
-          updateStatus(tId, 'error', json.error || 'Send Failed');
+          updateStatus(tId, 'error', (json && json.error) || 'Send Failed');
         }
       } catch(mErr) {
-        updateStatus(tId, 'error', 'WhatsApp Bot Offline');
+        updateStatus(tId, 'error', 'WhatsApp Service Offline');
       }
     } else {
       updateStatus(tId, 'skipped', 'No Phone Number');
@@ -12583,6 +12749,65 @@ function downloadGenMsgImage() {
   link.click();
 }
 window.downloadGenMsgImage = downloadGenMsgImage;
+
+async function copyGenMsgImage(btnEl) {
+  const imgData = window._genMsgUploadedImage?.dataUrl;
+  const imgBlob = window._genMsgUploadedImage?.blob;
+  if (!imgData && !imgBlob) {
+    alert('No flyer image attached to copy. Please upload an image first.');
+    return;
+  }
+  try {
+    const pngBlob = await _ensurePngBlobForClipboard(imgData, imgBlob);
+    if (!pngBlob) {
+      alert('Failed to prepare image for clipboard.');
+      return;
+    }
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+      _flashCopyButtonState(btnEl, '<i class="fas fa-check me-1"></i>Image Copied!');
+      if (typeof toast === 'function') {
+        toast('✅ Flyer image copied to clipboard! Paste (Ctrl+V / Cmd+V) directly in WhatsApp.', 'success');
+      }
+    } else {
+      alert('Clipboard image copy is not supported in this browser. Please use Download Image.');
+    }
+  } catch (err) {
+    console.error('[copyGenMsgImage] Error:', err);
+    alert('Failed to copy image: ' + (err.message || err));
+  }
+}
+window.copyGenMsgImage = copyGenMsgImage;
+
+async function copyGenMsgText(btnEl) {
+  const text = (document.getElementById('genMsgText')?.value || '').trim();
+  if (!text) {
+    alert('Please enter broadcast message text first before copying.');
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    _flashCopyButtonState(btnEl, '<i class="fas fa-check me-1"></i>Text Copied!');
+    if (typeof toast === 'function') {
+      toast('✅ Broadcast message text copied to clipboard!', 'success');
+    }
+  } catch (err) {
+    console.error('[copyGenMsgText] Error:', err);
+    alert('Failed to copy text: ' + (err.message || err));
+  }
+}
+window.copyGenMsgText = copyGenMsgText;
 
 function showDirectWaShareDialog({ memberName, memberPhone, seniorName, seniorPhone, msgText }) {
   const old = document.getElementById('directWaShareModal');
@@ -13503,9 +13728,14 @@ function _renderCommDetailTable(partnerId) {
               <label style="font-size:11.5px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.3px;margin:0">
                 <i class="fab fa-whatsapp me-1 text-success"></i>WhatsApp Message Template
               </label>
-              <button type="button" onclick="resetPosterCustomText()" style="background:none;border:none;color:#059669;font-size:11px;font-weight:700;cursor:pointer;padding:0">
-                <i class="fas fa-redo-alt me-1"></i>Reset Text
-              </button>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button type="button" id="btnCopyPosterTextInline" onclick="copyPosterText(this)" style="background:#059669;color:#ffffff;border:none;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;padding:3px 9px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 5px rgba(5,150,105,0.25)">
+                  <i class="fas fa-copy"></i> Copy Text
+                </button>
+                <button type="button" onclick="resetPosterCustomText()" style="background:none;border:none;color:#059669;font-size:11px;font-weight:700;cursor:pointer;padding:0">
+                  <i class="fas fa-redo-alt me-1"></i>Reset Text
+                </button>
+              </div>
             </div>
             
             <div style="margin-bottom:8px">
@@ -13570,9 +13800,14 @@ function _renderCommDetailTable(partnerId) {
             <span style="font-size:12px;font-weight:800;color:#fbbf24;letter-spacing:0.5px;text-transform:uppercase">
               <i class="fas fa-magic me-1"></i>Auto-Generated Poster
             </span>
-            <span style="font-size:10.5px;font-weight:700;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:10px;border:1px solid #334155">
-              Canvas Template
-            </span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button type="button" onclick="copyPosterImage(this)" style="background:#059669;color:#ffffff;border:1px solid #34d399;border-radius:10px;padding:2px 10px;font-size:10.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(5,150,105,0.4)" title="Copy poster image to clipboard">
+                <i class="fas fa-copy"></i> Copy Image
+              </button>
+              <span style="font-size:10.5px;font-weight:700;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:10px;border:1px solid #334155">
+                Canvas Template
+              </span>
+            </div>
           </div>
 
           <!-- Renderable Canvas Wrapper - Dynamic Content-Fitting Celebration Poster (480px width, tight auto-fit height with zero empty space) -->
@@ -13763,6 +13998,9 @@ function _renderCommDetailTable(partnerId) {
                 <i class="fas fa-check-circle"></i>Attached for WhatsApp
               </span>
               <div style="display:flex;gap:8px">
+                <button type="button" onclick="copyPosterImage(this)" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-copy me-1"></i>Copy Image
+                </button>
                 <button type="button" onclick="document.getElementById('postCustomCreativeFile').click()" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
                   <i class="fas fa-sync-alt me-1"></i>Replace
                 </button>
@@ -13800,14 +14038,16 @@ function _renderCommDetailTable(partnerId) {
     </div>
     
     <!-- Footer actions (Fixed at bottom of modal window) -->
-    <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
-      <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
-      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
-      <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
-      <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
-      <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
-      <button onclick="openPostToPortalModal()" id="btnPostToPortal" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
-      <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
+    <div style="background:#f3f4f6;padding:10px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0;min-height:62px;flex-wrap:wrap;box-sizing:border-box;z-index:20">
+      <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
+      <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
+      <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
+      <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="openPostToPortalModal()" id="btnPostToPortal" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
+      <button onclick="copyPosterText(this)" id="btnCopyPosterTextFooter" style="background:linear-gradient(135deg,#4f46e5,#4338ca);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-align-left me-2"></i>Copy Text</button>
+      <button onclick="copyPosterImage(this)" id="btnCopyPosterImageFooter" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-copy me-2"></i>Copy Image</button>
+      <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
 </div>
@@ -13868,7 +14108,12 @@ function _renderCommDetailTable(partnerId) {
           <textarea id="genMsgText" rows="7" oninput="updateGenMsgCharCount()" style="width:100%;font-size:12px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.45;border:1.5px solid #cbd5e1;border-radius:8px;padding:10px;box-sizing:border-box;resize:vertical;background:#ffffff;color:#111827" placeholder="Type your announcement or broadcast message here..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
             <span style="font-size:10px;color:#94a3b8">Tip: Use *bold*, _italics_ for WhatsApp formatting</span>
-            <button type="button" onclick="document.getElementById('genMsgText').value='';updateGenMsgCharCount()" style="background:none;border:none;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;padding:0">Clear</button>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button type="button" onclick="copyGenMsgText(this)" style="background:#0284c7;color:#ffffff;border:none;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;padding:3px 9px;display:inline-flex;align-items:center;gap:4px">
+                <i class="fas fa-copy"></i> Copy Text
+              </button>
+              <button type="button" onclick="document.getElementById('genMsgText').value='';updateGenMsgCharCount()" style="background:none;border:none;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;padding:0">Clear</button>
+            </div>
           </div>
         </div>
 
@@ -13928,6 +14173,9 @@ function _renderCommDetailTable(partnerId) {
                 <i class="fas fa-check-circle text-success"></i>Attached for Broadcast
               </span>
               <div style="display:flex;gap:8px">
+                <button type="button" onclick="copyGenMsgImage(this)" style="background:#0d9488;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-copy me-1"></i>Copy Image
+                </button>
                 <button type="button" onclick="document.getElementById('genMsgCreativeFileInput').click()" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
                   <i class="fas fa-sync-alt me-1"></i>Replace
                 </button>
@@ -13965,14 +14213,16 @@ function _renderCommDetailTable(partnerId) {
     </div>
     
     <!-- Footer actions (Identical layout to existing poster modal) -->
-    <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
-      <button onclick="closeGeneralMessageModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
-      <button onclick="testShareGenMsg()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
-      <button onclick="shareGenMsgWhatsAppWeb()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
-      <button onclick="shareGenMsgPoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Message</button>
-      <button onclick="shareGenMsgDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
-      <button onclick="openGenMsgPostToPortal()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
-      <button onclick="downloadGenMsgImage()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
+    <div style="background:#f3f4f6;padding:10px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0;min-height:62px;flex-wrap:wrap;box-sizing:border-box;z-index:20">
+      <button onclick="closeGeneralMessageModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareGenMsg()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
+      <button onclick="shareGenMsgWhatsAppWeb()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
+      <button onclick="shareGenMsgPoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Message</button>
+      <button onclick="shareGenMsgDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="openGenMsgPostToPortal()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post to Portal</button>
+      <button onclick="copyGenMsgText(this)" style="background:linear-gradient(135deg,#4f46e5,#4338ca);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-align-left me-2"></i>Copy Text</button>
+      <button onclick="copyGenMsgImage(this)" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-copy me-2"></i>Copy Image</button>
+      <button onclick="downloadGenMsgImage()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
 </div>
@@ -15044,7 +15294,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<script src="/public/js/poster-modal-core.js?v=20261019_1505"></script>
+<script src="/public/js/poster-modal-core.js?v=20261020_0700"></script>
 
 <!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
 <script>

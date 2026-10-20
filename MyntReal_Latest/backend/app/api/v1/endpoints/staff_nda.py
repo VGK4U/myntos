@@ -546,6 +546,11 @@ async def activate_nda_version(
     )
     
     db.commit()
+    try:
+        from app.models.staff import invalidate_agreement_cache
+        invalidate_agreement_cache()
+    except Exception:
+        pass
     
     # DC Protocol: Count only applicable staff types (Dec 04, 2025)
     applicable_types = version.applicable_staff_types or []
@@ -611,6 +616,11 @@ async def deactivate_nda_version(
     )
     
     db.commit()
+    try:
+        from app.models.staff import invalidate_agreement_cache
+        invalidate_agreement_cache()
+    except Exception:
+        pass
     
     return {
         "success": True,
@@ -1064,6 +1074,11 @@ async def accept_nda(
     )
     
     db.commit()
+    try:
+        from app.models.staff import invalidate_agreement_cache
+        invalidate_agreement_cache(current_user.id)
+    except Exception:
+        pass
     
     return {
         "success": True,

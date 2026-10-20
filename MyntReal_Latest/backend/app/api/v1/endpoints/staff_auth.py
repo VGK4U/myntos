@@ -241,14 +241,21 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
                     }
                 )
         
-        # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+        # DC Protocol (ARCHITECTURAL FIX - Sep 2026 / Oct 2026):
         # Deterministically end read transaction before returning to downstream route.
-        # This guarantees AccessShareLock on staff_employees is NOT held while downstream route handlers
-        # perform serialization, network transfers, or CPU calculations.
+        # Use db.commit() for clean read-only sessions (with expire_on_commit=False) so
+        # employee attributes and joinedload relationships remain populated in memory
+        # without triggering a fresh idle-in-transaction SELECT when accessed downstream.
         try:
-            db.rollback()
+            if not db.new and not db.dirty and not db.deleted:
+                db.commit()
+            else:
+                db.rollback()
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         return employee
         
@@ -606,10 +613,10 @@ def staff_login(
         import logging
         _logger = logging.getLogger(__name__)
         err_str = str(db_exc).lower()
-        # Fast-fail if query timed out or hit lock contention - do NOT queue a second blocking connection!
-        is_timeout = any(k in err_str for k in ("timeout", "canceling statement", "cancelling statement", "lock_timeout", "deadlock"))
-        if is_timeout:
-            _logger.warning(f"[STAFF-AUTH-DB] Query timed out during staff lookup: {db_exc}")
+        # Fast-fail ONLY if SQL statement timed out or hit lock contention — allow TCP/SSL connection timeouts to retry once!
+        is_sql_timeout = any(k in err_str for k in ("canceling statement", "cancelling statement", "lock_timeout", "deadlock", "statement timeout"))
+        if is_sql_timeout:
+            _logger.warning(f"[STAFF-AUTH-DB] SQL statement/lock timed out during staff lookup: {db_exc}")
             try: db.rollback()
             except Exception: pass
             raise HTTPException(
@@ -617,7 +624,7 @@ def staff_login(
                 detail="Authentication service is currently busy. Please retry in a few moments.",
                 headers={"Retry-After": "3"}
             )
-        # Retry once by recycling the session's underlying connection ONLY for non-timeout disconnects.
+        # Retry once by recycling the session's underlying connection for transient TCP/SSL disconnects or connect timeouts.
         # Calling db.close() returns/invalidates the broken connection while keeping the FastAPI
         # Depends(get_db)-managed Session object so its finally block always closes the new connection.
         try:

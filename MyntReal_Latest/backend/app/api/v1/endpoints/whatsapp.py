@@ -787,6 +787,171 @@ def handle_recharge_service_lead(
     return lead
 
 
+def _process_meta_webhook_statuses_bg(statuses_list: list):
+    """Process Meta delivery status webhooks in a background thread so the main asyncio loop is never blocked."""
+    import json as _json
+    from app.core.database import SessionLocal
+    from app.models.whatsapp import MessageLog, WAInbox, WhatsAppCampaignLog
+    from app.models.wa_audit import WAMessage
+
+    STATUS_PRECEDENCE = {
+        "failed": 99,
+        "read": 4,
+        "delivered": 3,
+        "sent": 2,
+        "api_accepted": 1,
+        "queued": 0
+    }
+    status_map = {"sent": "sent", "delivered": "delivered", "read": "read", "failed": "failed"}
+
+    db = SessionLocal()
+    try:
+        for su in statuses_list:
+            wamid = su.get("id")
+            meta_status = su.get("status")
+            recipient_id = su.get("recipient_id")
+            status_timestamp = su.get("timestamp")
+            if not wamid or not meta_status:
+                continue
+            mapped = status_map.get(meta_status, meta_status)
+            ml = db.query(MessageLog).filter(MessageLog.message_sid == wamid).first()
+            if not ml:
+                logger.warning(f"[WA-ORPHAN-WEBHOOK] wamid={wamid} status={mapped} recipient={recipient_id} timestamp={status_timestamp} raw={_json.dumps(su)[:150]}")
+                continue
+
+            curr_prec = STATUS_PRECEDENCE.get(str(ml.current_status).lower(), 0)
+            new_prec = STATUS_PRECEDENCE.get(mapped.lower(), 0)
+
+            if curr_prec > new_prec and curr_prec != 99:
+                continue
+
+            ml.current_status     = mapped
+            ml.status_source      = 'META_WEBHOOK'
+            ml.last_status_update = get_indian_time()
+            ml.last_updated       = get_indian_time()
+            ml.webhook_data       = _json.dumps(su)
+
+            err_code = None
+            err_msg = None
+
+            if mapped == "delivered":
+                if not ml.delivered_at:
+                    ml.delivered_at = get_indian_time()
+            elif mapped == "read":
+                if not ml.read_at:
+                    ml.read_at = get_indian_time()
+                if not ml.delivered_at:
+                    ml.delivered_at = get_indian_time()
+            elif mapped == "failed":
+                if not ml.failed_at:
+                    ml.failed_at = get_indian_time()
+                errs = su.get("errors", [])
+                if errs:
+                    err_code = str(errs[0].get("code", ""))
+                    err_msg  = errs[0].get("message", "") or errs[0].get("title", "")
+                    details  = errs[0].get("error_data", {}).get("details", "")
+
+                    ml.error_code    = err_code[:20] if err_code else err_code
+                    ml.error_message = err_msg[:95] if err_msg else err_msg
+                    full_reason = f"{err_msg}: {details}" if details else err_msg
+                    ml.failure_reason = full_reason[:95] if full_reason else full_reason
+
+                try:
+                    is_critical = (
+                        ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome')
+                        or (ml.message_type and ml.message_type.startswith(('auto_', 'crm_lead_')))
+                    )
+                    if is_critical and ml.message_body and ml.mobile_number:
+                        if getattr(ml, 'status_source', None) != 'FAILOVER_DISPATCHED':
+                            from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+                            fb_res = dispatch_scanned_lead_fallback(
+                                db=db,
+                                phone=ml.mobile_number,
+                                message=ml.message_body,
+                                event_key=ml.message_type or "system_failover",
+                                reason=f"Meta async failure: {err_code or 'UNKNOWN'}"
+                            )
+                            if fb_res.get("success"):
+                                ml.status_source = 'FAILOVER_DISPATCHED'
+                except Exception as _fb_dispatch_err:
+                    logger.warning(f"[WA-FAILOVER] Webhook failover error for {wamid}: {_fb_dispatch_err}")
+
+            try:
+                inb_row = db.query(WAInbox).filter(WAInbox.wamid == wamid).first()
+                if inb_row:
+                    inb_curr_prec = STATUS_PRECEDENCE.get(str(inb_row.status).lower(), 0)
+                    if inb_curr_prec <= new_prec or mapped == "failed":
+                        inb_row.status = mapped
+                        if mapped == "read":
+                            inb_row.is_read = True
+            except Exception:
+                pass
+
+            try:
+                wa_msg = db.query(WAMessage).filter(WAMessage.wamid == wamid).first()
+                if wa_msg:
+                    wa_curr_prec = STATUS_PRECEDENCE.get(str(wa_msg.delivery_status).lower(), 0)
+                    if wa_curr_prec <= new_prec or mapped == "failed":
+                        wa_msg.delivery_status = mapped.upper()
+                        if mapped == "delivered" and not wa_msg.delivered_at:
+                            wa_msg.delivered_at = get_indian_time()
+                        elif mapped == "read":
+                            if not wa_msg.read_at:
+                                wa_msg.read_at = get_indian_time()
+                            if not wa_msg.delivered_at:
+                                wa_msg.delivered_at = get_indian_time()
+            except Exception:
+                pass
+
+            try:
+                db.execute(
+                    text("""
+                        UPDATE automation_dispatch
+                        SET
+                            status = CASE
+                                WHEN :mapped = 'read' THEN 'READ'
+                                WHEN :mapped = 'delivered' AND status != 'READ' THEN 'DELIVERED'
+                                WHEN :mapped = 'failed' THEN 'FAILED'
+                                ELSE status
+                            END,
+                            delivered_at = CASE WHEN :mapped IN ('delivered', 'read') THEN COALESCE(delivered_at, :now_ts) ELSE delivered_at END,
+                            failed_at = CASE WHEN :mapped = 'failed' THEN COALESCE(failed_at, :now_ts) ELSE failed_at END,
+                            error_code = CASE WHEN :mapped = 'failed' THEN :err_code ELSE error_code END,
+                            error_message = CASE WHEN :mapped = 'failed' THEN :err_msg ELSE error_message END
+                        WHERE provider_message_id = :wamid
+                    """),
+                    {"mapped": mapped, "wamid": wamid, "now_ts": get_indian_time(), "err_code": err_code, "err_msg": err_msg or ''}
+                )
+            except Exception:
+                pass
+
+            try:
+                c_log = db.query(WhatsAppCampaignLog).filter(WhatsAppCampaignLog.wamid == wamid).first()
+                if c_log:
+                    c_curr = STATUS_PRECEDENCE.get(str(c_log.status).lower(), 0)
+                    if new_prec >= c_curr or c_curr == 99:
+                        c_log.status = mapped
+                        if mapped == "delivered" and not c_log.delivered_at:
+                            c_log.delivered_at = get_indian_time()
+                        elif mapped == "read":
+                            if not c_log.read_at:
+                                c_log.read_at = get_indian_time()
+                            if not c_log.delivered_at:
+                                c_log.delivered_at = get_indian_time()
+                        elif mapped == "failed" and not c_log.failed_at:
+                            c_log.failed_at = get_indian_time()
+            except Exception:
+                pass
+
+        try:
+            db.commit()
+        except Exception as _commit_err:
+            db.rollback()
+            logger.warning(f"[WA-WEBHOOK] Status batch commit notice: {_commit_err}")
+    finally:
+        db.close()
+
+
 @router.post("/webhook")
 async def meta_webhook_status_canonical(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
@@ -805,156 +970,10 @@ async def meta_webhook_status_canonical(request: Request, background_tasks: Back
         for change in entry.get("changes", []):
             value = change.get("value", {})
 
-            # ── 1. Delivery status updates ─────────────────────────────────
-            STATUS_PRECEDENCE = {
-                "failed": 99,
-                "read": 4,
-                "delivered": 3,
-                "sent": 2,
-                "api_accepted": 1,
-                "queued": 0
-            }
-
-            for su in value.get("statuses", []):
-                wamid       = su.get("id")
-                meta_status = su.get("status")
-                recipient_id = su.get("recipient_id")
-                status_timestamp = su.get("timestamp")
-                if not wamid or not meta_status:
-                    continue
-                status_map = {"sent": "sent", "delivered": "delivered", "read": "read", "failed": "failed"}
-                mapped = status_map.get(meta_status, meta_status)
-                ml = db.query(MessageLog).filter(MessageLog.message_sid == wamid).first()
-                if not ml:
-                    # Log structured orphan webhook event for auditing
-                    logger.warning(f"[WA-ORPHAN-WEBHOOK] wamid={wamid} status={mapped} recipient={recipient_id} timestamp={status_timestamp} raw={_json.dumps(su)[:150]}")
-                    continue
-
-                # State Machine Regression Guard: higher precedence cannot be overwritten by lower
-                curr_prec = STATUS_PRECEDENCE.get(str(ml.current_status).lower(), 0)
-                new_prec = STATUS_PRECEDENCE.get(mapped.lower(), 0)
-
-                # If current state is 'read' and incoming is 'delivered' or 'sent' -> Ignore regression
-                if curr_prec > new_prec and curr_prec != 99:
-                    logger.info(f"[WA-WEBHOOK-GUARD] Ignored state regression for {wamid}: current='{ml.current_status}' incoming='{mapped}'")
-                    continue
-
-                # Idempotent status update
-                ml.current_status     = mapped
-                ml.status_source      = 'META_WEBHOOK'
-                ml.last_status_update = get_indian_time()
-                ml.last_updated       = get_indian_time()
-                ml.webhook_data       = _json.dumps(su)
-                
-                err_code = None
-                err_msg = None
-                
-                if mapped == "delivered":
-                    if not ml.delivered_at:
-                        ml.delivered_at = get_indian_time()
-                elif mapped == "read":
-                    if not ml.read_at:
-                        ml.read_at = get_indian_time()
-                    if not ml.delivered_at:
-                        ml.delivered_at = get_indian_time()
-                elif mapped == "failed":
-                    if not ml.failed_at:
-                        ml.failed_at = get_indian_time()
-                    errs = su.get("errors", [])
-                    if errs:
-                        err_code = str(errs[0].get("code", ""))
-                        err_msg  = errs[0].get("message", "") or errs[0].get("title", "")
-                        details  = errs[0].get("error_data", {}).get("details", "")
-                        
-                        ml.error_code    = err_code[:20] if err_code else err_code
-                        ml.error_message = err_msg[:95] if err_msg else err_msg
-                        full_reason = f"{err_msg}: {details}" if details else err_msg
-                        ml.failure_reason = full_reason[:95] if full_reason else full_reason
-
-                    # [DC-WA-FAILOVER-001] Automated failover for critical system messages (OTP & Member Registration)
-                    # When Meta asynchronously reports failure (e.g. 131042 billing hold, 131026, policy block),
-                    # immediately failover to deliver via Scanned WhatsApp Bot Gateway
-                    try:
-                        is_critical = (
-                            ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome')
-                            or (ml.message_type and ml.message_type.startswith(('auto_', 'crm_lead_')))
-                        )
-                        if is_critical and ml.message_body and ml.mobile_number:
-                            if getattr(ml, 'status_source', None) != 'FAILOVER_DISPATCHED':
-                                from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
-                                fb_res = dispatch_scanned_lead_fallback(
-                                    db=db,
-                                    phone=ml.mobile_number,
-                                    message=ml.message_body,
-                                    event_key=ml.message_type or "system_failover",
-                                    reason=f"Meta async failure: {err_code or 'UNKNOWN'}"
-                                )
-                                if fb_res.get("success"):
-                                    ml.status_source = 'FAILOVER_DISPATCHED'
-                                    logger.info(f"[WA-FAILOVER] Successfully failed over {wamid} ({ml.message_type}) to Scanned WhatsApp Bot")
-                    except Exception as _fb_dispatch_err:
-                        logger.warning(f"[WA-FAILOVER] Webhook failover error for {wamid}: {_fb_dispatch_err}")
-
-                # Structured Logging
-                logger.info(f"WHATSAPP_STATUS message_id={wamid} recipient={recipient_id or ml.mobile_number} status={mapped} timestamp={status_timestamp} error_code={err_code} error_message={err_msg}")
-                
-                # Synchronize to WAInbox
-                try:
-                    from app.models.whatsapp import WAInbox
-                    inb_row = db.query(WAInbox).filter(WAInbox.wamid == wamid).first()
-                    if inb_row:
-                        inb_curr_prec = STATUS_PRECEDENCE.get(str(inb_row.status).lower(), 0)
-                        if inb_curr_prec <= new_prec or mapped == "failed":
-                            inb_row.status = mapped
-                            if mapped == "read":
-                                inb_row.is_read = True
-                except Exception as _inb_sync_err:
-                    logger.warning(f"[WA-WEBHOOK] Could not sync status to WAInbox for {wamid}: {_inb_sync_err}")
-
-                # Synchronize to WAMessage (wa_messages table)
-                try:
-                    from app.models.wa_audit import WAMessage
-                    wa_msg = db.query(WAMessage).filter(WAMessage.wamid == wamid).first()
-                    if wa_msg:
-                        wa_curr_prec = STATUS_PRECEDENCE.get(str(wa_msg.delivery_status).lower(), 0)
-                        if wa_curr_prec <= new_prec or mapped == "failed":
-                            wa_msg.delivery_status = mapped.upper()
-                            if mapped == "delivered" and not wa_msg.delivered_at:
-                                wa_msg.delivered_at = get_indian_time()
-                            elif mapped == "read":
-                                if not wa_msg.read_at:
-                                    wa_msg.read_at = get_indian_time()
-                                if not wa_msg.delivered_at:
-                                    wa_msg.delivered_at = get_indian_time()
-                except Exception as _wamsg_sync_err:
-                    logger.warning(f"[WA-WEBHOOK] Could not sync status to WAMessage for {wamid}: {_wamsg_sync_err}")
-
-                # Also update WhatsAppCampaignLog if matching wamid
-                try:
-                    from app.models.whatsapp import WhatsAppCampaignLog
-                    c_log = db.query(WhatsAppCampaignLog).filter(WhatsAppCampaignLog.wamid == wamid).first()
-                    if c_log:
-                        c_curr = STATUS_PRECEDENCE.get(str(c_log.status).lower(), 0)
-                        if new_prec >= c_curr or c_curr == 99:
-                            c_log.status = mapped
-                            if mapped == "delivered" and not c_log.delivered_at:
-                                c_log.delivered_at = get_indian_time()
-                            elif mapped == "read":
-                                if not c_log.read_at:
-                                    c_log.read_at = get_indian_time()
-                                if not c_log.delivered_at:
-                                    c_log.delivered_at = get_indian_time()
-                            elif mapped == "failed" and not c_log.failed_at:
-                                c_log.failed_at = get_indian_time()
-                except Exception as _ce:
-                    pass
-                print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
-
-            try:
-                db.commit()
-            except Exception as _commit_err:
-                db.rollback()
-                logger.warning(f"[WA-WEBHOOK] Status batch commit notice: {_commit_err}")
+            # ── 1. Delivery status updates (offloaded to background task so event loop never blocks) ─
+            statuses_batch = value.get("statuses", [])
+            if statuses_batch:
+                background_tasks.add_task(_process_meta_webhook_statuses_bg, statuses_batch)
 
             # ── 2. Incoming messages ────────────────────────────────────────
             metadata = value.get("metadata", {})
@@ -3114,6 +3133,11 @@ def _is_all_messages_authorized(db: Session, staff: StaffEmployee) -> bool:
     return False
 
 
+_PERMITTED_PHONES_CACHE: dict = {}
+_PERMITTED_PHONES_TTL_SEC = 30.0
+_EXEC_IMAGE_CACHE: dict = {}
+
+
 def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: str = 'assigned_tagged') -> Optional[set]:
     """
     Returns set of permitted 10-digit phone numbers for staff member based on scope:
@@ -3137,13 +3161,16 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
     if level >= 80 and scope not in ('assigned_tagged', 'downline'):
         return None  # Unrestricted access for leadership outside personal/team views
 
+    import time as _t_perm
+    _cache_key = (getattr(staff, 'id', 0), scope)
+    _now_perm = _t_perm.time()
+    _cached_entry = _PERMITTED_PHONES_CACHE.get(_cache_key)
+    if _cached_entry and (_now_perm - _cached_entry[0]) < _PERMITTED_PHONES_TTL_SEC:
+        return set(_cached_entry[1])
+
     from app.models.crm import CRMLead
     from app.models.whatsapp import MessageLog, WAInbox
     from sqlalchemy import or_
-
-    target_staff_ids = {staff.id}
-    if scope == 'downline':
-        target_staff_ids = _get_downline_staff_ids(db, staff.id)
 
     permitted_phones = set()
 
@@ -3153,6 +3180,26 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
         if len(sph) == 10:
             permitted_phones.add(sph)
 
+    # Resolve target staff IDs based on scope
+    if scope == 'downline':
+        target_staff_ids = _get_downline_staff_ids(db, staff.id)
+    else:
+        target_staff_ids = {staff.id}
+
+    # For leadership (level >= 80, e.g. MR10001), personal assigned_tagged is strictly their own phone & direct personal messages (excluding broadcasts)
+    if level >= 80 and scope == 'assigned_tagged':
+        log_rows = db.query(MessageLog.mobile_number).filter(
+            MessageLog.sent_by_staff_id == staff.id,
+            MessageLog.execution_id.is_(None),
+            MessageLog.message_type.notin_(['general_broadcast', 'broadcast', 'campaign', 'bulk_campaign'])
+        ).order_by(MessageLog.id.desc()).limit(150).all()
+        for (mob,) in log_rows:
+            if mob:
+                cm = ''.join(filter(str.isdigit, str(mob)))[-10:]
+                if len(cm) == 10: permitted_phones.add(cm)
+        _PERMITTED_PHONES_CACHE[_cache_key] = (_now_perm, set(permitted_phones))
+        return permitted_phones
+
     # Query leads assigned to or tagged by target staff IDs
     lead_query = db.query(CRMLead.phone, CRMLead.alternate_phone).filter(
         or_(
@@ -3161,7 +3208,7 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
             CRMLead.depends_on_staff_id.in_(target_staff_ids),
             (CRMLead.handler_type == 'staff') & (CRMLead.handler_id.in_([str(sid) for sid in target_staff_ids]))
         )
-    ).limit(300)
+    ).limit(500)
     for p1, p2 in lead_query.all():
         if p1:
             c1 = ''.join(filter(str.isdigit, str(p1)))[-10:]
@@ -3170,27 +3217,32 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
             c2 = ''.join(filter(str.isdigit, str(p2)))[-10:]
             if len(c2) == 10: permitted_phones.add(c2)
 
-    # Query messages sent by target staff IDs
-    log_query = db.query(MessageLog.mobile_number).filter(
-        MessageLog.sent_by_staff_id.in_(target_staff_ids)
-    ).order_by(MessageLog.id.desc()).limit(200)
-    for (mob,) in log_query.all():
-        if mob:
-            cm = ''.join(filter(str.isdigit, str(mob)))[-10:]
-            if len(cm) == 10: permitted_phones.add(cm)
+    # Query messages sent by target staff IDs (strictly excluding automated broadcasts)
+    if target_staff_ids:
+        log_rows = db.query(MessageLog.mobile_number).filter(
+            MessageLog.sent_by_staff_id.in_(target_staff_ids),
+            MessageLog.execution_id.is_(None),
+            MessageLog.message_type.notin_(['general_broadcast', 'broadcast', 'campaign', 'bulk_campaign'])
+        ).order_by(MessageLog.id.desc()).limit(300).all()
+        for (mob,) in log_rows:
+            if mob:
+                cm = ''.join(filter(str.isdigit, str(mob)))[-10:]
+                if len(cm) == 10: permitted_phones.add(cm)
 
     # Query conversations from WAInbox handled or assigned to target staff IDs
-    inbox_query = db.query(WAInbox.from_phone).filter(
-        or_(
-            WAInbox.replied_by_id.in_(target_staff_ids),
-            WAInbox.assigned_to_emp_id.in_(target_staff_ids)
-        )
-    ).order_by(WAInbox.id.desc()).limit(200)
-    for (f_ph,) in inbox_query.all():
-        if f_ph:
-            c_in = ''.join(filter(str.isdigit, str(f_ph)))[-10:]
-            if len(c_in) == 10: permitted_phones.add(c_in)
+    if target_staff_ids:
+        inb_handled = db.query(WAInbox.from_phone).filter(
+            or_(
+                WAInbox.replied_by_id.in_(target_staff_ids),
+                WAInbox.assigned_to_emp_id.in_(target_staff_ids)
+            )
+        ).order_by(WAInbox.id.desc()).limit(300).all()
+        for (f_ph,) in inb_handled:
+            if f_ph:
+                c_in = ''.join(filter(str.isdigit, str(f_ph)))[-10:]
+                if len(c_in) == 10: permitted_phones.add(c_in)
 
+    _PERMITTED_PHONES_CACHE[_cache_key] = (_now_perm, set(permitted_phones))
     return permitted_phones
 
 
@@ -3398,6 +3450,9 @@ def is_known_whatsapp_group(ident: str, target_map: Optional[dict] = None) -> bo
     digits = ''.join(filter(str.isdigit, s))
     if digits.startswith("120363") and len(digits) >= 15:
         return True
+    # Standard 10-digit Indian mobile numbers (or 91 + 10 digits) without @g.us are never groups
+    if len(digits) == 10 or (len(digits) == 12 and digits.startswith("91")):
+        return False
     if target_map:
         if s in target_map:
             t_type = str(target_map[s].get("type") or "").upper()
@@ -3414,10 +3469,15 @@ def _build_target_map(targets_dict: dict) -> dict:
     target_map = {}
     for j_id, g_list in (targets_dict or {}).items():
         for g in (g_list or []):
-            t_type = (g.get("type") or "group").upper()
-            g_name = g.get("name") or "WhatsApp Target"
             ident = (g.get("identifier") or "").strip()
             digits = ''.join(filter(str.isdigit, ident))
+            is_indiv_phone = (
+                not ident.lower().endswith("@g.us")
+                and (len(digits) == 10 or (len(digits) == 12 and digits.startswith("91")))
+            )
+            default_type = "contact" if is_indiv_phone else "group"
+            t_type = ("contact" if is_indiv_phone else (g.get("type") or default_type)).upper()
+            g_name = g.get("name") or "WhatsApp Target"
             info = {"name": g_name, "type": t_type, "raw_ident": ident}
             if ident:
                 target_map[ident.lower()] = info
@@ -3571,16 +3631,16 @@ def get_whatsapp_conversations_hub(
         if scope_val in ('broadcasts', 'dispatches', 'broadcast'):
             s_filt = source_filt_val
 
-            # 1. WhatsApp Groups & Broadcast Channels
+            # 1. WhatsApp Groups & Broadcast Channels (Batch-indexed lookup instead of N+1 ILIKE scans)
             if s_filt in ('all', 'groups', 'scanned', 'api'):
+                group_entries = []
+                all_group_variants = set()
                 for j_id, g_list in targets_dict.items():
                     for g in (g_list or []):
                         g_name = g.get("name") or "WhatsApp Group"
                         ident = (g.get("identifier") or "").strip()
                         if not ident or ident == "Direct Customer Mobile":
                             continue
-
-                        # Extract numeric part if group JID to match records stored with or without @g.us
                         ident_digits = ''.join(filter(str.isdigit, ident))
                         group_variants = [ident]
                         if ident_digits:
@@ -3589,80 +3649,100 @@ def get_whatsapp_conversations_hub(
                             group_variants.append(ident[:-5])
                         elif ident_digits.startswith("120363"):
                             group_variants.append(f"{ident_digits}@g.us")
+                        all_group_variants.update(group_variants)
+                        group_entries.append((ident, g_name, group_variants))
 
-                        # Fetch latest message sent into this group across WAInbox and MessageLog
-                        last_m = db.query(WAInbox).filter(
-                            or_(
-                                WAInbox.from_phone.in_(group_variants),
-                                WAInbox.from_name.ilike(f"%{g_name}%")
-                            )
-                        ).order_by(desc(WAInbox.received_at)).first()
+                inbox_by_phone = {}
+                ml_by_phone = {}
+                if all_group_variants:
+                    variant_list = list(all_group_variants)
+                    for m_row in db.query(WAInbox).filter(
+                        WAInbox.from_phone.in_(variant_list)
+                    ).limit(300).all():
+                        if m_row.from_phone:
+                            prev_m = inbox_by_phone.get(m_row.from_phone)
+                            if prev_m is None or (m_row.received_at or datetime.min) > (prev_m.received_at or datetime.min):
+                                inbox_by_phone[m_row.from_phone] = m_row
 
-                        last_ml = db.query(MessageLog).filter(
-                            or_(
-                                MessageLog.mobile_number.in_(group_variants),
-                                MessageLog.user_name.ilike(f"%{g_name}%")
-                            )
-                        ).order_by(desc(MessageLog.sent_at)).first()
+                    for ml_row in db.query(MessageLog).filter(
+                        MessageLog.mobile_number.in_(variant_list)
+                    ).limit(300).all():
+                        if ml_row.mobile_number:
+                            prev_ml = ml_by_phone.get(ml_row.mobile_number)
+                            if prev_ml is None or (ml_row.sent_at or datetime.min) > (prev_ml.sent_at or datetime.min):
+                                ml_by_phone[ml_row.mobile_number] = ml_row
 
-                        last_body = "Scheduled broadcast channel active."
-                        last_dt = None
-                        g_chan = "SCANNED"
+                for ident, g_name, group_variants in group_entries:
+                    last_m = None
+                    for gv in group_variants:
+                        cand_m = inbox_by_phone.get(gv)
+                        if cand_m and (last_m is None or (cand_m.received_at or datetime.min) > (last_m.received_at or datetime.min)):
+                            last_m = cand_m
 
-                        if last_m and last_ml:
-                            if (last_ml.sent_at or datetime.min) >= (last_m.received_at or datetime.min):
-                                last_body = last_ml.message_body or "Group broadcast sent"
-                                last_dt = last_ml.sent_at
-                                prov_str = (last_ml.provider or "").upper()
-                                w_sid = str(last_ml.message_sid or "")
-                                if "META" in prov_str or w_sid.startswith("wamid."):
-                                    g_chan = "META_API"
-                            else:
-                                last_body = last_m.body_text or "Group broadcast received"
-                                last_dt = last_m.received_at
-                                if str(last_m.wamid or '').startswith('wamid.'):
-                                    g_chan = "META_API"
-                        elif last_ml:
+                    last_ml = None
+                    for gv in group_variants:
+                        cand_ml = ml_by_phone.get(gv)
+                        if cand_ml and (last_ml is None or (cand_ml.sent_at or datetime.min) > (last_ml.sent_at or datetime.min)):
+                            last_ml = cand_ml
+
+                    last_body = "Scheduled broadcast channel active."
+                    last_dt = None
+                    g_chan = "SCANNED"
+
+                    if last_m and last_ml:
+                        if (last_ml.sent_at or datetime.min) >= (last_m.received_at or datetime.min):
                             last_body = last_ml.message_body or "Group broadcast sent"
                             last_dt = last_ml.sent_at
                             prov_str = (last_ml.provider or "").upper()
                             w_sid = str(last_ml.message_sid or "")
                             if "META" in prov_str or w_sid.startswith("wamid."):
                                 g_chan = "META_API"
-                        elif last_m:
+                        else:
                             last_body = last_m.body_text or "Group broadcast received"
                             last_dt = last_m.received_at
                             if str(last_m.wamid or '').startswith('wamid.'):
                                 g_chan = "META_API"
+                    elif last_ml:
+                        last_body = last_ml.message_body or "Group broadcast sent"
+                        last_dt = last_ml.sent_at
+                        prov_str = (last_ml.provider or "").upper()
+                        w_sid = str(last_ml.message_sid or "")
+                        if "META" in prov_str or w_sid.startswith("wamid."):
+                            g_chan = "META_API"
+                    elif last_m:
+                        last_body = last_m.body_text or "Group broadcast received"
+                        last_dt = last_m.received_at
+                        if str(last_m.wamid or '').startswith('wamid.'):
+                            g_chan = "META_API"
 
-                        if s_filt == 'scanned' and g_chan != 'SCANNED':
+                    if s_filt == 'scanned' and g_chan != 'SCANNED':
+                        continue
+                    if s_filt == 'api' and g_chan != 'META_API':
+                        continue
+
+                    if search_val:
+                        s_lower = search_val.lower()
+                        if not (s_lower in g_name.lower() or s_lower in ident.lower() or s_lower in last_body.lower()):
                             continue
-                        if s_filt == 'api' and g_chan != 'META_API':
-                            continue
 
-                        if search_val:
-                            s_lower = search_val.lower()
-                            if not (s_lower in g_name.lower() or s_lower in ident.lower() or s_lower in last_body.lower()):
-                                continue
-
-                        contact_map[ident] = {
-                            "phone": ident,
-                            "name": g_name,
-                            "recipient_type": "group",
-                            "contact_type": "GROUP",
-                            "status": "active",
-                            "category": "Group Broadcast",
-                            "last_message": last_body,
-                            "last_time": last_dt.strftime('%d %b, %I:%M %p') if last_dt else '—',
-                            "last_timestamp": last_dt or datetime.min,
-                            "message_type": "broadcast",
-                            "delivery_status": "SENT",
-                            "unread_count": 0,
-                            "channel": g_chan,
-                            "broadcast_type": "group",
-                            "badge": "Group",
-                            "is_unassigned": False
-                        }
+                    contact_map[ident] = {
+                        "phone": ident,
+                        "name": g_name,
+                        "recipient_type": "group",
+                        "contact_type": "GROUP",
+                        "status": "active",
+                        "category": "Group Broadcast",
+                        "last_message": last_body,
+                        "last_time": last_dt.strftime('%d %b, %I:%M %p') if last_dt else '—',
+                        "last_timestamp": last_dt or datetime.min,
+                        "message_type": "broadcast",
+                        "delivery_status": "SENT",
+                        "unread_count": 0,
+                        "channel": g_chan,
+                        "broadcast_type": "group",
+                        "badge": "Group",
+                        "is_unassigned": False
+                    }
 
             # 2. Individual Dispatches (1-on-1 Messages & Bot Notifications)
             if s_filt in ('all', 'individuals', 'scanned', 'api'):
@@ -3678,7 +3758,7 @@ def get_whatsapp_conversations_hub(
                     s = f"%{search_val}%"
                     logs_q = logs_q.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
 
-                for l in logs_q.order_by(desc(MessageLog.sent_at)).limit(300).all():
+                for l in logs_q.order_by(desc(MessageLog.id)).limit(300).all():
                     raw_phone = l.mobile_number or ''
                     # Exclude groups from individual dispatches list
                     if is_known_whatsapp_group(raw_phone, target_map):
@@ -3978,7 +4058,7 @@ def get_whatsapp_conversations_hub(
                 s = f"%{search_val}%"
                 inbox_q = inbox_q.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
 
-            for m in inbox_q.order_by(desc(WAInbox.id)).limit(100).all():
+            for m in inbox_q.order_by(desc(WAInbox.received_at)).limit(100).all():
                 raw_phone = m.from_phone or ''
                 if is_known_whatsapp_group(raw_phone, target_map):
                     continue
@@ -4051,7 +4131,7 @@ def get_whatsapp_conversations_hub(
                 inbox_query = inbox_query.filter(WAInbox.received_at <= to_dt)
 
             inbox_limit = 250 if scope_val == 'all' else 100
-            for m in inbox_query.order_by(desc(WAInbox.id)).limit(inbox_limit).all():
+            for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(inbox_limit).all():
                 raw_phone = m.from_phone or ''
                 is_grp = is_known_whatsapp_group(raw_phone, target_map)
 
@@ -4149,13 +4229,17 @@ def get_whatsapp_conversations_hub(
                 target_staff_ids = _get_downline_staff_ids(db, staff.id)
                 log_query = db.query(MessageLog).filter(
                     MessageLog.mobile_number.isnot(None),
-                    MessageLog.sent_by_staff_id.in_(target_staff_ids)
+                    MessageLog.sent_by_staff_id.in_(target_staff_ids),
+                    MessageLog.execution_id.is_(None),
+                    MessageLog.message_type.notin_(['general_broadcast', 'broadcast', 'campaign', 'bulk_campaign'])
                 )
             else:
                 target_staff_ids = {staff.id}
                 log_query = db.query(MessageLog).filter(
                     MessageLog.mobile_number.isnot(None),
-                    MessageLog.sent_by_staff_id.in_(target_staff_ids)
+                    MessageLog.sent_by_staff_id.in_(target_staff_ids),
+                    MessageLog.execution_id.is_(None),
+                    MessageLog.message_type.notin_(['general_broadcast', 'broadcast', 'campaign', 'bulk_campaign'])
                 )
 
             if search_val:
@@ -4181,7 +4265,14 @@ def get_whatsapp_conversations_hub(
                 log_query = log_query.filter(MessageLog.sent_at <= to_dt)
 
             log_limit = 350 if scope_val == 'all' else 100
-            for l in log_query.order_by(desc(MessageLog.id)).limit(log_limit).all():
+            if scope_val != 'all' and len(target_staff_ids) == 1:
+                single_sid = list(target_staff_ids)[0]
+                log_ordered = log_query.filter(
+                    MessageLog.sent_by_staff_id == single_sid
+                ).order_by(desc(MessageLog.id))
+            else:
+                log_ordered = log_query.order_by(desc(MessageLog.id))
+            for l in log_ordered.limit(log_limit).all():
                 raw_phone = l.mobile_number or ''
                 is_grp = is_known_whatsapp_group(raw_phone, target_map)
 
@@ -4297,9 +4388,14 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["name"] = l_name
                             contact_map[cp]["contact_type"] = "CONTACT"
 
-            staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
-                StaffEmployee.phone.in_(phone_variants)
-            ).all()
+            if len(phone_variants) <= 150:
+                staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
+                    StaffEmployee.phone.in_(phone_variants)
+                ).all()
+            else:
+                staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
+                    StaffEmployee.phone.isnot(None)
+                ).all()
             for fn, ln, ecode, sph in staff_members:
                 if sph:
                     cp = ''.join(filter(str.isdigit, str(sph)))[-10:]
@@ -4321,22 +4417,19 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["contact_type"] = "USER"
 
         # Clean up any remaining generic System/Auto, numeric, or staff dispatch labels for contacts
+        generic_phones = []
         for p, info in contact_map.items():
             if info.get("contact_type") in ("GROUP", "CHANNEL") or info.get("recipient_type") in ("group", "channel"):
                 continue
             curr_name = str(info.get("name") or "").strip()
             if not curr_name or curr_name in ("System/Auto", "All", "Missed Call", "0", "None", "null", "Staff Lead Dispatch") or curr_name.isdigit():
-                ml_name_row = db.query(MessageLog.user_name).filter(
-                    MessageLog.mobile_number.in_([p, f"91{p}", f"+91{p}"]),
-                    MessageLog.user_name.isnot(None),
-                    ~MessageLog.user_name.in_(["0", "None", "null", "Staff Lead Dispatch", "System/Auto", "All"])
-                ).order_by(MessageLog.id.desc()).first()
-                if ml_name_row and ml_name_row[0]:
-                    info["name"] = ml_name_row[0]
-                else:
-                    info["name"] = f"Customer (+91 {p})"
+                generic_phones.append(p)
             if "contact_type" not in info:
                 info["contact_type"] = "CONTACT"
+
+        if generic_phones:
+            for p in generic_phones:
+                contact_map[p]["name"] = f"Customer (+91 {p})"
 
         # Resolve segment and content search snippets for all contacts
         for p, info in contact_map.items():
@@ -4496,19 +4589,19 @@ def get_whatsapp_chat_history(
         seen_bodies = set()
         seen_keys = set()
 
-        # Fetch from MessageLog first (primary outbound log)
+        # Fetch from MessageLog first (primary outbound log - strictly use single indexed IN clause)
         ml_filters = [
-            MessageLog.mobile_number.in_(target_variants_list),
-            MessageLog.mobile_number == search_target
+            MessageLog.mobile_number.in_(target_variants_list)
         ]
-        if group_name_filter:
-            ml_filters.append(MessageLog.user_name.ilike(f"%{group_name_filter}%"))
-        else:
-            ml_filters.append(MessageLog.user_name.ilike(f"%{raw_target}%"))
+        if not target_variants_list:
+            if group_name_filter:
+                ml_filters.append(MessageLog.user_name.ilike(f"%{group_name_filter}%"))
+            elif is_grp or not search_target.isdigit():
+                ml_filters.append(MessageLog.user_name.ilike(f"%{raw_target}%"))
 
         log_q = db.query(MessageLog).filter(
-            or_(*ml_filters)
-        ).order_by(MessageLog.id.asc()).limit(500).all()
+            or_(*ml_filters) if len(ml_filters) > 1 else ml_filters[0]
+        ).limit(500).all()
 
         for l in log_q:
             body_content = l.message_body
@@ -4592,6 +4685,22 @@ def get_whatsapp_chat_history(
                 except Exception:
                     pass
 
+            if not media_url and l.execution_id:
+                if l.execution_id not in _EXEC_IMAGE_CACHE:
+                    try:
+                        ex_row = db.execute(text("SELECT execution_metadata FROM automation_execution WHERE id = :eid"), {"eid": l.execution_id}).fetchone()
+                        if ex_row and ex_row[0]:
+                            ex_data = ex_row[0] if isinstance(ex_row[0], dict) else json.loads(ex_row[0])
+                            _EXEC_IMAGE_CACHE[l.execution_id] = ex_data.get("image_url")
+                        else:
+                            _EXEC_IMAGE_CACHE[l.execution_id] = None
+                    except Exception:
+                        _EXEC_IMAGE_CACHE[l.execution_id] = None
+                img_cand = _EXEC_IMAGE_CACHE.get(l.execution_id)
+                if img_cand:
+                    media_url = img_cand
+                    media_name = os.path.basename(media_url)
+
             if not media_url and body_content and "[Media: " in body_content:
                 import re
                 m_match = re.search(r'\[Media:\s*([^\]]+)\]', body_content)
@@ -4628,20 +4737,20 @@ def get_whatsapp_chat_history(
                 "provider": prov_lbl
             })
 
-        # Fetch from WAInbox (deduplicating against seen_bodies and seen_wamids)
+        # Fetch from WAInbox (deduplicating against seen_bodies and seen_wamids - strictly use single indexed IN clause)
         inbox_messages = []
         inb_filters = [
-            WAInbox.from_phone.in_(target_variants_list),
-            WAInbox.from_phone == search_target
+            WAInbox.from_phone.in_(target_variants_list)
         ]
-        if group_name_filter:
-            inb_filters.append(WAInbox.from_name.ilike(f"%{group_name_filter}%"))
-        else:
-            inb_filters.append(WAInbox.from_name.ilike(f"%{raw_target}%"))
+        if not target_variants_list:
+            if group_name_filter:
+                inb_filters.append(WAInbox.from_name.ilike(f"%{group_name_filter}%"))
+            elif is_grp or not search_target.isdigit():
+                inb_filters.append(WAInbox.from_name.ilike(f"%{raw_target}%"))
 
         inbox_q = db.query(WAInbox).filter(
-            or_(*inb_filters)
-        ).order_by(WAInbox.id.asc()).limit(500).all()
+            or_(*inb_filters) if len(inb_filters) > 1 else inb_filters[0]
+        ).limit(500).all()
 
         for m in inbox_q:
             c_body = _clean_body(m.body_text)
@@ -5372,9 +5481,14 @@ def send_manual_whatsapp_message(
             "message": "Duplicate dispatch prevented."
         }
 
-    gateway_url = "http://localhost:5002/api/send-message"
-    if rec_type in ("group", "channel") or "@g.us" in rec or "@newsletter" in rec or "chat.whatsapp.com" in rec or "channel" in rec:
-        gateway_url = "http://localhost:5002/api/send-group-message"
+    is_group_or_channel = (
+        rec_type in ("group", "channel")
+        or "@g.us" in rec
+        or "@newsletter" in rec
+        or "chat.whatsapp.com" in rec
+        or "channel" in rec
+    )
+    gateway_url = "http://localhost:5002/api/send-group-message" if is_group_or_channel else "http://localhost:5002/api/send-message"
 
     bot_payload = {
         "phone": clean_target,
@@ -5396,19 +5510,42 @@ def send_manual_whatsapp_message(
     sent_success = False
     error_msg = None
     wamid = f"wamid_manual_{uuid.uuid4().hex[:12]}"
+    provider_used = "BAILEYS"
 
-    try:
-        resp = requests.post(gateway_url, json=bot_payload, timeout=12)
-        raw_res = resp.json() if resp.status_code == 200 else {}
-        if resp.status_code == 200 and raw_res.get("success"):
-            sent_success = True
-            wamid = (raw_res.get("key") or {}).get("id") or wamid
-        else:
-            error_msg = raw_res.get("error") or f"WhatsApp Bot Gateway returned status {resp.status_code}"
-    except requests.exceptions.ConnectionError:
-        error_msg = "WhatsApp is currently disconnected. Please scan QR code at http://localhost:5002/qr"
-    except Exception as exc:
-        error_msg = str(exc)
+    # [DC-WA-INDIVIDUAL-ROUTING] For individual numbers (text), always try Official Meta Cloud API first;
+    # fall back to Scanned WhatsApp only if the API is not working.
+    if not is_group_or_channel and not payload.media_url and msg_text and len(clean_target) == 10:
+        try:
+            from app.services.whatsapp_auto_service import _send_meta
+            meta_res = _send_meta(
+                phone=clean_target,
+                message=msg_text,
+                template=None,
+                db=db,
+                context=None,
+                is_internal_system=True,
+            )
+            if meta_res.get("success") and meta_res.get("wamid"):
+                sent_success = True
+                wamid = meta_res["wamid"]
+                provider_used = "META_WHATSAPP"
+        except Exception as _meta_err:
+            logger.warning(f"[WA-SEND] Meta API primary attempt failed for {clean_target}: {_meta_err}")
+
+    if not sent_success:
+        try:
+            resp = requests.post(gateway_url, json=bot_payload, timeout=12)
+            raw_res = resp.json() if resp.status_code == 200 else {}
+            if resp.status_code == 200 and raw_res.get("success"):
+                sent_success = True
+                wamid = (raw_res.get("key") or {}).get("id") or wamid
+                provider_used = "BAILEYS" if is_group_or_channel else "SCANNED_FALLBACK"
+            else:
+                error_msg = raw_res.get("error") or f"WhatsApp Bot Gateway returned status {resp.status_code}"
+        except requests.exceptions.ConnectionError:
+            error_msg = "WhatsApp is currently disconnected. Please scan QR code at http://localhost:5002/qr"
+        except Exception as exc:
+            error_msg = str(exc)
 
     now_utc = get_indian_time()
 
@@ -5430,7 +5567,7 @@ def send_manual_whatsapp_message(
             user_name=rec_name[:100],
             message_type="manual_staff",
             message_body=msg_text or (f"[Media: {payload.media_url}]" if payload.media_url else ""),
-            provider="BAILEYS",
+            provider=provider_used,
             initial_status="sent" if sent_success else "failed",
             current_status="sent" if sent_success else "failed",
             error_message=(error_msg if not sent_success else None),
@@ -5513,6 +5650,226 @@ def send_manual_whatsapp_message(
             "wamid": wamid,
             "phone": clean_target
         }
+
+
+class WAIndividualApiFirstPayload(BaseModel):
+    phone: Optional[str] = None
+    to_phone: Optional[str] = None
+    recipient: Optional[str] = None
+    message: str = ""
+    imageUrl: Optional[str] = None
+    media_url: Optional[str] = None
+    recipient_name: Optional[str] = None
+
+
+@router.post("/send-individual-api-first")
+def send_individual_whatsapp_api_first(
+    payload: WAIndividualApiFirstPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    [DC-WA-INDIVIDUAL-ROUTING]
+    For individual phone numbers:
+      1. ALWAYS attempt Official Meta WhatsApp Cloud API (API Number) first for text.
+      2. ONLY if the Official API is not working / fails (e.g. error, 24h window restriction,
+         missing credentials, or network issue), automatically fall back to the Scanned WhatsApp
+         session on port 5002.
+    """
+    import uuid
+    import json
+    import requests as _req
+    from app.services.whatsapp_auto_service import _send_meta
+
+    raw_phone = (payload.phone or payload.to_phone or payload.recipient or "").strip()
+    digits = "".join(filter(str.isdigit, raw_phone))
+    if len(digits) < 10:
+        return {
+            "success": False,
+            "error": "A valid 10-digit mobile number is required for individual dispatch."
+        }
+
+    clean_10 = digits[-10:]
+    e164_phone = f"91{clean_10}"
+    msg_text = (payload.message or "").strip()
+    image_url = (payload.imageUrl or payload.media_url or "").strip()
+    rec_name = (payload.recipient_name or f"Partner (+91 {clean_10})").strip()
+
+    if not msg_text and not image_url:
+        return {
+            "success": False,
+            "error": "Message text or image payload is required."
+        }
+
+    # [DC-VGK-BLOCKED-001] Suppress communications to blocked channel partners
+    try:
+        is_blocked = db.execute(text("""
+            SELECT 1 FROM official_partners
+            WHERE (is_blocked = TRUE OR member_status = 'BLOCKED')
+              AND RIGHT(REGEXP_REPLACE(COALESCE(phone, whatsapp_number, ''), '[^0-9]', '', 'g'), 10) = :p
+            LIMIT 1
+        """), {"p": clean_10}).scalar()
+        if is_blocked:
+            logger.info(f"[WA-INDIVIDUAL-API-FIRST] Suppressing message to blocked partner {clean_10}")
+            return {
+                "success": False,
+                "blocked": True,
+                "error": "Suppressed (Blocked Channel Partner)",
+                "phone": clean_10
+            }
+    except Exception as _blk_err:
+        logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Blocked check error for {clean_10}: {_blk_err}")
+
+    now_utc = get_indian_time()
+    effective_text = msg_text or "🎉 Congratulations from Team VGK4U!"
+
+    # ── STEP 1: Official Meta WhatsApp Cloud API (API Number) First for Text ──
+    meta_res = {"success": False, "reason": "not_attempted"}
+    try:
+        meta_res = _send_meta(
+            phone=clean_10,
+            message=effective_text,
+            template=None,
+            db=db,
+            context=None,
+            is_internal_system=True,
+        )
+    except Exception as _meta_exc:
+        meta_res = {"success": False, "reason": str(_meta_exc), "error_code": "META_EXC"}
+
+    if meta_res.get("success") and meta_res.get("wamid"):
+        wamid = meta_res["wamid"]
+        logger.info(f"[WA-INDIVIDUAL-API-FIRST] ✅ Delivered via Official Meta API to {clean_10} (wamid={wamid})")
+        try:
+            log_entry = MessageLog(
+                message_sid=wamid,
+                mobile_number=e164_phone[:20],
+                user_name=rec_name[:100],
+                message_type="individual_api_text",
+                message_body=effective_text,
+                provider="META_WHATSAPP",
+                initial_status="API_ACCEPTED",
+                current_status="API_ACCEPTED",
+                status_source="SYSTEM",
+                sent_at=now_utc,
+                sender_type="staff",
+            )
+            db.add(log_entry)
+            from app.models.whatsapp import WAInbox
+            db.add(WAInbox(
+                wamid=wamid,
+                from_phone=clean_10,
+                from_name=rec_name[:100],
+                message_type="outbound",
+                body_text=effective_text,
+                is_read=True,
+                replied=False,
+                received_at=now_utc,
+                status="sent",
+            ))
+            db.commit()
+        except Exception as _log_err:
+            db.rollback()
+            logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Meta log notice: {_log_err}")
+
+        return {
+            "success": True,
+            "channel": "meta_api",
+            "provider": "META_WHATSAPP",
+            "via": "Official API Number",
+            "wamid": wamid,
+            "phone": clean_10,
+            "delivery_label": "Delivered via Official API (Text) ✅"
+        }
+
+    # ── STEP 2: Automatic Fallback to Scanned WhatsApp (ONLY if API failed / not working) ──
+    meta_reason = meta_res.get("reason") or meta_res.get("error_code") or "Meta API unavailable"
+    logger.warning(
+        f"[WA-INDIVIDUAL-API-FIRST] ⚠️ Official Meta API not working for {clean_10} ({meta_reason}). "
+        f"Falling back to Scanned WhatsApp (port 5002)..."
+    )
+
+    scanned_wamid = f"wamid_scan_fb_{uuid.uuid4().hex[:12]}"
+    scanned_success = False
+    scanned_error = None
+
+    try:
+        bot_payload = {
+            "phone": e164_phone,
+            "message": effective_text,
+            "imageUrl": image_url or "",
+            "media_url": image_url or "",
+            "skip_backend_log": True
+        }
+        resp = _req.post("http://127.0.0.1:5002/api/send-message", json=bot_payload, timeout=12)
+        raw_res = resp.json() if resp.content else {}
+        if resp.status_code == 200 and raw_res.get("success"):
+            scanned_success = True
+            scanned_wamid = (raw_res.get("key") or {}).get("id") or scanned_wamid
+        elif raw_res.get("blocked"):
+            return {
+                "success": False,
+                "blocked": True,
+                "error": "Suppressed (Blocked Channel Partner)",
+                "phone": clean_10
+            }
+        else:
+            scanned_error = raw_res.get("error") or f"Scanned Bot status {resp.status_code}"
+    except Exception as _sc_exc:
+        scanned_error = f"Scanned WhatsApp Bot unavailable: {_sc_exc}"
+
+    if scanned_success:
+        try:
+            log_entry = MessageLog(
+                message_sid=scanned_wamid,
+                mobile_number=e164_phone[:20],
+                user_name=rec_name[:100],
+                message_type="individual_scanned_fallback",
+                message_body=effective_text,
+                provider="SCANNED_FALLBACK",
+                initial_status="sent",
+                current_status="sent",
+                sent_at=now_utc,
+                sender_type="staff",
+                webhook_data=json.dumps({"meta_fallback_reason": meta_reason, "has_image": bool(image_url)})
+            )
+            db.add(log_entry)
+            from app.models.whatsapp import WAInbox
+            db.add(WAInbox(
+                wamid=scanned_wamid,
+                from_phone=clean_10,
+                from_name=rec_name[:100],
+                message_type="outbound",
+                body_text=effective_text,
+                media_url=image_url if image_url and not image_url.startswith("data:") else None,
+                is_read=True,
+                replied=False,
+                received_at=now_utc,
+                status="sent",
+            ))
+            db.commit()
+        except Exception as _log_err:
+            db.rollback()
+            logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Scanned fallback log notice: {_log_err}")
+
+        return {
+            "success": True,
+            "channel": "scanned_fallback",
+            "provider": "SCANNED_FALLBACK",
+            "via": "Scanned WhatsApp (API Fallback)",
+            "wamid": scanned_wamid,
+            "phone": clean_10,
+            "meta_fallback_reason": meta_reason,
+            "delivery_label": "Delivered via Scanned WA (API Fallback) ✅"
+        }
+
+    return {
+        "success": False,
+        "channel": "failed",
+        "error": scanned_error or "Both Official API and Scanned WhatsApp failed",
+        "meta_error": meta_reason,
+        "phone": clean_10
+    }
 
 
 @router.get("/contacts-search")
@@ -5608,6 +5965,35 @@ def search_whatsapp_contacts(
                     "details": f"MNR Member • {u.id}"
                 })
 
+    # 3.5. VGK Channel Partners (PARTNER)
+    if not type_filter or type_filter.upper() in ("PARTNER", "VGK", "ALL", "INDIVIDUAL"):
+        try:
+            sql_p = """
+                SELECT id, partner_code, partner_name, COALESCE(whatsapp_number, phone) AS ph, city
+                FROM official_partners
+                WHERE COALESCE(is_blocked, false) = false
+                  AND UPPER(COALESCE(member_status, '')) != 'BLOCKED'
+            """
+            params_p = {}
+            if q:
+                sql_p += " AND (partner_name ILIKE :s OR partner_code ILIKE :s OR phone ILIKE :s OR whatsapp_number ILIKE :s)"
+                params_p["s"] = s_term
+            sql_p += " LIMIT 25"
+            p_rows = db.execute(text(sql_p), params_p).fetchall()
+            for pr in p_rows:
+                digits = ''.join(filter(str.isdigit, str(pr[3] or '')))[-10:]
+                if len(digits) == 10:
+                    results.append({
+                        "id": f"vgk_{pr[0]}",
+                        "name": f"{pr[2] or 'Partner'} ({pr[1] or pr[0]})",
+                        "phone": digits,
+                        "type": "PARTNER",
+                        "badge": "🤝 VGK Partner",
+                        "details": f"VGK Partner • {pr[1] or ''} • {pr[4] or ''}".strip(" •")
+                    })
+        except Exception as _p_err:
+            logger.warning(f"[CONTACTS-SEARCH] VGK search error: {_p_err}")
+
     # 4. Configured Groups (GROUP)
     if not type_filter or type_filter.upper() in ("GROUP", "ALL"):
         targets = _load_targets_from_db(db)
@@ -5674,8 +6060,20 @@ DEFAULT_JOB_TARGETS = {
 }
 
 TARGETS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_job_targets.json")
+_TARGETS_MEM_CACHE = {"expires_at": 0.0, "data": None}
+
+
+def _invalidate_targets_cache() -> None:
+    _TARGETS_MEM_CACHE["expires_at"] = 0.0
+    _TARGETS_MEM_CACHE["data"] = None
+
 
 def _load_targets_from_db(db: Session = None) -> dict:
+    import time as _t_cache
+    now_ts = _t_cache.time()
+    if _TARGETS_MEM_CACHE["data"] is not None and _TARGETS_MEM_CACHE["expires_at"] > now_ts:
+        return _TARGETS_MEM_CACHE["data"]
+
     if db:
         try:
             from app.models.automation import AutomationTargetConfig
@@ -5692,6 +6090,8 @@ def _load_targets_from_db(db: Session = None) -> dict:
                         "identifier": r.recipient_identifier,
                         "target_role": r.target_role or "PRIMARY"
                     })
+                _TARGETS_MEM_CACHE["data"] = res
+                _TARGETS_MEM_CACHE["expires_at"] = now_ts + 60.0
                 return res
         except Exception as e:
             logger.warning(f"Could not load targets from automation_target_config: {e}")
@@ -5704,12 +6104,17 @@ def _load_targets_from_db(db: Session = None) -> dict:
                     for k, v in DEFAULT_JOB_TARGETS.items():
                         if k not in loaded:
                             loaded[k] = v
+                    _TARGETS_MEM_CACHE["data"] = loaded
+                    _TARGETS_MEM_CACHE["expires_at"] = now_ts + 60.0
                     return loaded
     except Exception as e:
         logger.warning(f"Could not load targets file: {e}")
+    _TARGETS_MEM_CACHE["data"] = DEFAULT_JOB_TARGETS
+    _TARGETS_MEM_CACHE["expires_at"] = now_ts + 60.0
     return DEFAULT_JOB_TARGETS
 
 def _save_targets_to_db(db: Session, targets_dict: dict) -> None:
+    _invalidate_targets_cache()
     try:
         os.makedirs(os.path.dirname(TARGETS_FILE_PATH), exist_ok=True)
         with open(TARGETS_FILE_PATH, "w") as f:
@@ -5758,6 +6163,8 @@ def get_wa_trigger_execution_logs(
         if rows:
             logs = []
             for r in rows:
+                if r.job_id == "general_broadcast_campaign" and str(r.status or "").upper() == "RUNNING":
+                    _ensure_running_gbc_worker(r.id)
                 ts_str = r.started_at.strftime('%d %b %Y, %I:%M:%S %p IST') if r.started_at else '—'
                 iso_ts = r.started_at.isoformat() if r.started_at else ''
                 logs.append({
@@ -6209,6 +6616,7 @@ def update_wa_job_targets(
         raise HTTPException(status_code=400, detail="job_id and action required")
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
+    _invalidate_targets_cache()
 
     if action == "add":
         name = payload.get("name", "New Target")
@@ -8822,5 +9230,2935 @@ def get_chat_media_gallery(
             "documents": docs_count
         }
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DC-WA-GENERAL-BROADCAST-HUB-001: Multi-Recipient General Broadcast & Campaign Hub
+# Strictly Authorized for MR10001 and Ashwanth / Yaswanth Only
+# ══════════════════════════════════════════════════════════════════════════════
+
+import re
+from typing import Tuple
+
+_ACTIVE_GBC_CONTROL: Dict[str, str] = {}  # execution_id -> "RUNNING" | "PAUSED" | "CANCELLED"
+_ACTIVE_GBC_WORKERS: set = set()  # execution_ids with an active worker thread in this process
+_GBC_INDEXES_ENSURED: bool = True
+
+
+def _check_gbc_authorized_user(current_user: Any, db: Session) -> Tuple[bool, str, Optional[int]]:
+    """
+    Strictly verifies that the current staff user is MR10001 or Ashwanth / Yaswanth.
+    Returns (is_authorized, display_label, staff_id).
+    """
+    if not current_user:
+        return False, "Unauthenticated", None
+
+    emp_code = ""
+    full_name = ""
+    staff_id = None
+
+    if isinstance(current_user, dict):
+        emp_code = str(current_user.get("emp_code") or current_user.get("employee_code") or current_user.get("sub") or "").strip().upper()
+        full_name = str(current_user.get("full_name") or current_user.get("name") or "").strip()
+        staff_id = current_user.get("id") or current_user.get("staff_id")
+    else:
+        emp_code = str(getattr(current_user, "emp_code", "") or getattr(current_user, "employee_code", "") or "").strip().upper()
+        full_name = str(getattr(current_user, "full_name", "") or getattr(current_user, "name", "") or "").strip()
+        staff_id = getattr(current_user, "id", None)
+
+    if staff_id and (not emp_code or not full_name):
+        try:
+            row = db.execute(
+                text("SELECT id, emp_code, full_name FROM staff_employees WHERE id = :sid LIMIT 1"),
+                {"sid": int(staff_id)}
+            ).fetchone()
+            if row:
+                emp_code = emp_code or str(row[1] or "").strip().upper()
+                full_name = full_name or str(row[2] or "").strip()
+        except Exception:
+            pass
+
+    name_lower = full_name.lower()
+    allowed_codes = {"MR10001", "MR10016", "ADM0165"}
+    is_allowed = (
+        emp_code in allowed_codes
+        or staff_id in (1, 16, 336)
+        or "ashwanth" in name_lower
+        or "yaswanth" in name_lower
+        or "yashwanth" in name_lower
+    )
+    label = f"{full_name} ({emp_code})" if full_name and emp_code else (full_name or emp_code or "Authorized Admin")
+    return is_allowed, label, (int(staff_id) if str(staff_id or "").isdigit() else None)
+
+
+def _require_gbc_authorized(
+    current_user=Depends(_require_staff_optional),
+    db: Session = Depends(get_db)
+):
+    is_ok, label, sid = _check_gbc_authorized_user(current_user, db)
+    if not is_ok:
+        raise HTTPException(
+            status_code=403,
+            detail="Access Restricted: General Broadcast Hub is accessible only to MR10001 and Ashwanth."
+        )
+    return {"user": current_user, "label": label, "staff_id": sid}
+
+
+def _clean_10_digit_phone(raw_val: Any) -> Optional[str]:
+    if not raw_val:
+        return None
+    s = str(raw_val).strip()
+    if "*" in s or "•" in s:
+        return None
+    digits = re.sub(r"\D", "", s)
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if len(digits) == 10 and digits[0] in "6789":
+        # Reject obvious dummy numbers like 9999999999
+        if len(set(digits)) == 1:
+            return None
+        return digits
+    return None
+
+
+def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Resolves deduplicated recipients across:
+    - Category 1 ('associations'): VGK Members, Freelancers (with/without communication), MNR Members, Staff, Tenants, Vendors
+    - Category 2 ('leads'): All CRM Lead segments, status groups (Won+, Still In Process Before Won+, Lost, etc.), and stages (Before/After Installation)
+    - Custom added numbers & explicit exclusions
+    """
+    primary_category = str(filters.get("primary_category") or "associations").strip().lower()
+    recipients_map: Dict[str, Dict[str, Any]] = {}
+    breakdown: Dict[str, int] = {}
+    summary_parts: List[str] = []
+
+    excluded_raw = filters.get("excluded_phones") or []
+    excluded_set = set()
+    for ep in excluded_raw:
+        cp = _clean_10_digit_phone(ep)
+        if cp:
+            excluded_set.add(cp)
+
+    def _add_recipient(
+        phone_raw: Any,
+        name: str,
+        code: str,
+        category_label: str,
+        segment: str = "General",
+        status_label: str = "Active",
+        stage_label: str = "—",
+        city: str = "",
+        entity_type: str = "contact",
+        entity_id: Optional[int] = None,
+    ):
+        cp = _clean_10_digit_phone(phone_raw)
+        if not cp or cp in excluded_set:
+            return
+        if cp not in recipients_map:
+            recipients_map[cp] = {
+                "phone": f"91{cp}",
+                "display_phone": f"+91 {cp}",
+                "clean_phone": cp,
+                "name": (name or f"Contact ({cp[-4:]})").strip(),
+                "code": (code or "—").strip(),
+                "category_label": category_label,
+                "segment": segment or "General",
+                "status_label": status_label or "Active",
+                "stage_label": stage_label or "—",
+                "city": (city or "").strip(),
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+            }
+            breakdown[category_label] = breakdown.get(category_label, 0) + 1
+
+    # ── UNIVERSAL BLACKLIST SUPPRESSION (OPTION A: VGK, MNR, LEADS, CUSTOM) ──
+    # Hard-pinned suppression list for known blocked individuals (e.g. Nookunaidu, Yerrinaidu, Ganesh, etc.)
+    universal_blacklist_phones = {
+        "8688269969",  # Kalla Nookunaidu (VGK4U Partner #77)
+        "9849313029",  # K.NOOKU NAIDU (MNR Member MNR1800186)
+        "9849524734",  # PANCHADA YERRINAIDU (MNR Member MNR1800638)
+        "9550297657",  # Mr. B. Ramalakshmi / YERRINAAID (VGK4U Partner #216 & MNR1800325)
+        "8932293794",  # YERRINAAID B (MNR Member MNR1800598)
+        "9963052473",  # Esamsetty Yerrinaidu (MNR Member MNR182362183)
+        "9247949596",  # Mr. Reddy Ganesh (VGK4U Partner #159)
+    }
+    try:
+        # 1. Blocked official partners (phone and whatsapp_number)
+        b_rows = db.execute(text(
+            "SELECT phone, whatsapp_number FROM official_partners WHERE is_blocked = true OR UPPER(COALESCE(member_status, '')) = 'BLOCKED'"
+        )).fetchall()
+        for br in b_rows:
+            for p_col in (br[0], br[1]):
+                cp = _clean_10_digit_phone(p_col)
+                if cp:
+                    universal_blacklist_phones.add(cp)
+
+        # 2. Blocked / locked / suspended MNR members and pattern-matched names
+        u_rows = db.execute(text("""
+            SELECT phone_number FROM "user" 
+            WHERE phone_number IS NOT NULL 
+              AND (account_locked = true 
+                   OR LOWER(COALESCE(account_status, '')) IN ('blocked', 'suspended', 'inactive_blocked')
+                   OR LOWER(COALESCE(name, '')) ILIKE '%nookunaidu%'
+                   OR LOWER(COALESCE(name, '')) ILIKE '%nooku naidu%'
+                   OR LOWER(COALESCE(name, '')) ILIKE '%yerrinaidu%'
+                   OR LOWER(COALESCE(name, '')) ILIKE '%yerrinaaid%')
+        """)).fetchall()
+        for ur in u_rows:
+            cp = _clean_10_digit_phone(ur[0])
+            if cp:
+                universal_blacklist_phones.add(cp)
+    except Exception as _blk_build_err:
+        logger.warning(f"[GBC] Blacklist resolution error: {_blk_build_err}")
+
+    excluded_set.update(universal_blacklist_phones)
+
+    # ── CATEGORY 1: MEMBERS & ASSOCIATIONS ────────────────────────────────────
+    if primary_category in ("associations", "vgk_members", "members"):
+        assoc_types_raw = filters.get("association_types") or ["all"]
+        if isinstance(assoc_types_raw, str):
+            assoc_types = [x.strip().lower() for x in assoc_types_raw.split(",") if x.strip()]
+        else:
+            assoc_types = [str(x).strip().lower() for x in assoc_types_raw if str(x).strip()]
+        if not assoc_types or "all" in assoc_types:
+            assoc_types = ["vgk_members", "freelancers", "mnr_members", "staff", "tenants", "vendors"]
+
+        status_mode = str(filters.get("status_mode") or "active").strip().lower()  # 'active' | 'all'
+        freelancer_mode = str(filters.get("freelancer_mode") or "with_comm_only").strip().lower()
+        # freelancer_mode options:
+        # - 'with_comm_only' (default: include freelancers with WITH_COMMUNICATION, exclude WITHOUT_COMMUNICATION)
+        # - 'include_all' (include both WITH_COMMUNICATION and WITHOUT_COMMUNICATION)
+        # - 'exclude_all' (exclude all freelancers)
+        # - 'only_with_comm' (only freelancers with WITH_COMMUNICATION)
+        # - 'only_without_comm' (only freelancers with WITHOUT_COMMUNICATION)
+
+        if freelancer_mode in ("only_with_comm", "only_without_comm"):
+            assoc_types = ["freelancers"]
+        elif freelancer_mode == "exclude_all" and "freelancers" in assoc_types:
+            assoc_types = [a for a in assoc_types if a != "freelancers"]
+
+        if "wa_groups" in assoc_types or filters.get("include_default_groups"):
+            breakdown["WhatsApp Group"] = 7
+
+        summary_parts.append(f"Category: Associations ({', '.join(assoc_types).upper()})")
+        summary_parts.append(f"Status: {status_mode.upper()}")
+        summary_parts.append(f"Freelancers: {freelancer_mode.upper()}")
+
+        # 1. VGK Channel Partners (non-freelancer official_partners)
+        if "vgk_members" in assoc_types:
+            try:
+                sql_vgk = """
+                    SELECT id, partner_code, partner_name, COALESCE(whatsapp_number, phone) AS ph,
+                           city, is_active, COALESCE(member_status, 'INACTIVE') AS m_status, is_blocked
+                    FROM official_partners
+                    WHERE COALESCE(partner_type, 'BOTH') != 'FREELANCER'
+                      AND COALESCE(is_blocked, false) = false
+                      AND UPPER(COALESCE(member_status, '')) != 'BLOCKED'
+                """
+                rows = db.execute(text(sql_vgk)).fetchall()
+                for r in rows:
+                    st_lbl = "Active"
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "VGK Partner",
+                        code=r[1] or f"VGK-{r[0]}",
+                        category_label="VGK Channel Partner",
+                        segment="VGK4U",
+                        status_label=st_lbl,
+                        stage_label=st_lbl,
+                        city=r[4] or "",
+                        entity_type="vgk_member",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] VGK members query error: {e}")
+
+        # 2. Freelancers (official_partners where partner_type='FREELANCER' + staff_employees where staff_type='FREELANCER')
+        if "freelancers" in assoc_types and freelancer_mode != "exclude_all":
+            try:
+                sql_fl = """
+                    SELECT id, partner_code, partner_name, COALESCE(whatsapp_number, phone) AS ph,
+                           city, is_active, COALESCE(member_status, 'INACTIVE') AS m_status,
+                           COALESCE(freelancer_classification, 'WITH_COMMUNICATION') AS fl_comm
+                    FROM official_partners
+                    WHERE partner_type = 'FREELANCER'
+                      AND COALESCE(is_blocked, false) = false
+                      AND UPPER(COALESCE(member_status, '')) != 'BLOCKED'
+                """
+                if status_mode == "active":
+                    sql_fl += " AND is_active = true"
+                if freelancer_mode in ("with_comm_only", "only_with_comm"):
+                    sql_fl += " AND COALESCE(freelancer_classification, 'WITH_COMMUNICATION') = 'WITH_COMMUNICATION'"
+                elif freelancer_mode == "only_without_comm":
+                    sql_fl += " AND COALESCE(freelancer_classification, 'WITH_COMMUNICATION') = 'WITHOUT_COMMUNICATION'"
+
+                fl_rows = db.execute(text(sql_fl)).fetchall()
+                for r in fl_rows:
+                    comm_tag = "Without Comm" if r[7] == "WITHOUT_COMMUNICATION" else "With Comm"
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Freelancer",
+                        code=r[1] or f"FL-{r[0]}",
+                        category_label=f"Freelancer ({comm_tag})",
+                        segment="VGK Freelancer",
+                        status_label="Active" if r[5] else "Inactive",
+                        stage_label=comm_tag,
+                        city=r[4] or "",
+                        entity_type="freelancer",
+                        entity_id=r[0],
+                    )
+
+                # Also check staff_employees where staff_type = 'FREELANCER' (unless only_without_comm)
+                if freelancer_mode != "only_without_comm":
+                    sql_st_fl = """
+                        SELECT id, emp_code, full_name, phone, status
+                        FROM staff_employees
+                        WHERE UPPER(COALESCE(staff_type, '')) = 'FREELANCER'
+                          AND COALESCE(is_deleted, false) = false
+                    """
+                    if status_mode == "active":
+                        sql_st_fl += " AND LOWER(COALESCE(status, '')) = 'active'"
+                    st_fl_rows = db.execute(text(sql_st_fl)).fetchall()
+                    for r in st_fl_rows:
+                        _add_recipient(
+                            phone_raw=r[3],
+                            name=r[2] or "Staff Freelancer",
+                            code=r[1] or f"FL-{r[0]}",
+                            category_label="Freelancer (With Comm)",
+                            segment="Staff Freelancer",
+                            status_label=str(r[4] or "active").title(),
+                            stage_label="With Comm",
+                            city="",
+                            entity_type="freelancer_staff",
+                            entity_id=r[0],
+                        )
+            except Exception as e:
+                logger.warning(f"[GBC] Freelancers query error: {e}")
+
+        # 3. MNR Members ("user" table)
+        if "mnr_members" in assoc_types:
+            try:
+                sql_mnr = """
+                    SELECT id, name, phone_number, city, COALESCE(account_status, 'Active') AS acc_st,
+                           COALESCE(account_locked, false) AS acc_lock, COALESCE(position_name, 'Member') AS pos
+                    FROM "user"
+                    WHERE phone_number IS NOT NULL AND TRIM(phone_number) != ''
+                """
+                if status_mode == "active":
+                    sql_mnr += " AND LOWER(COALESCE(account_status, 'active')) = 'active' AND COALESCE(account_locked, false) = false"
+                mnr_rows = db.execute(text(sql_mnr)).fetchall()
+                for r in mnr_rows:
+                    _add_recipient(
+                        phone_raw=r[2],
+                        name=r[1] or "MNR Member",
+                        code=str(r[0]),
+                        category_label="MNR Member",
+                        segment="MNR",
+                        status_label="Active" if (str(r[4]).lower() == "active" and not r[5]) else str(r[4]),
+                        stage_label=str(r[6] or "Member"),
+                        city=r[3] or "",
+                        entity_type="mnr_member",
+                        entity_id=None,
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] MNR members query error: {e}")
+
+        # 4. Internal Staff (staff_employees excluding FREELANCER if already handled)
+        if "staff" in assoc_types:
+            try:
+                sql_staff = """
+                    SELECT id, emp_code, full_name, phone, status, COALESCE(designation, staff_type, 'Staff')
+                    FROM staff_employees
+                    WHERE COALESCE(is_deleted, false) = false
+                      AND UPPER(COALESCE(staff_type, '')) != 'FREELANCER'
+                """
+                if status_mode == "active":
+                    sql_staff += " AND LOWER(COALESCE(status, '')) = 'active'"
+                st_rows = db.execute(text(sql_staff)).fetchall()
+                for r in st_rows:
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Staff Member",
+                        code=r[1] or f"EMP-{r[0]}",
+                        category_label="Internal Staff",
+                        segment="Staff",
+                        status_label=str(r[4] or "active").title(),
+                        stage_label=str(r[5] or "Staff"),
+                        city="",
+                        entity_type="staff",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] Staff query error: {e}")
+
+        # 5. Tenants / SaaS Clients (associated_companies)
+        if "tenants" in assoc_types:
+            try:
+                sql_ten = """
+                    SELECT id, company_code, company_name, phone, city, is_active, company_type
+                    FROM associated_companies
+                    WHERE phone IS NOT NULL AND TRIM(phone) != ''
+                """
+                if status_mode == "active":
+                    sql_ten += " AND COALESCE(is_active, true) = true"
+                ten_rows = db.execute(text(sql_ten)).fetchall()
+                for r in ten_rows:
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Tenant Organization",
+                        code=r[1] or f"TEN-{r[0]}",
+                        category_label="Tenant / Company",
+                        segment=str(r[6] or "Tenant"),
+                        status_label="Active" if r[5] else "Inactive",
+                        stage_label=str(r[6] or "Tenant"),
+                        city=r[4] or "",
+                        entity_type="tenant",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] Tenants query error: {e}")
+
+        # 6. Vendors / Business Partners (vendor_master)
+        if "vendors" in assoc_types:
+            try:
+                sql_ven = """
+                    SELECT id, vendor_code, vendor_name, phone, city, is_active, COALESCE(vendor_type, 'Vendor')
+                    FROM vendor_master
+                    WHERE phone IS NOT NULL AND TRIM(phone) != ''
+                """
+                if status_mode == "active":
+                    sql_ven += " AND COALESCE(is_active, true) = true"
+                ven_rows = db.execute(text(sql_ven)).fetchall()
+                for r in ven_rows:
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Vendor Partner",
+                        code=r[1] or f"VEN-{r[0]}",
+                        category_label="Vendor / Dealer",
+                        segment="Vendor",
+                        status_label="Active" if r[5] else "Inactive",
+                        stage_label=str(r[6] or "Vendor"),
+                        city=r[4] or "",
+                        entity_type="vendor",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] Vendors query error: {e}")
+
+    # ── CATEGORY 2: CRM LEADS ─────────────────────────────────────────────────
+    elif primary_category == "leads":
+        lead_segment = str(filters.get("lead_segment") or "all").strip().lower()
+        lead_status_group = str(filters.get("lead_status_group") or "all_active").strip().lower()
+        lead_statuses_custom = filters.get("lead_statuses") or []
+        lead_stage_group = str(filters.get("lead_stage_group") or "all").strip().lower()
+        pipeline_stage_specific = str(filters.get("pipeline_stage") or "").strip().lower()
+
+        summary_parts.append(f"Category: CRM Leads (Segment: {lead_segment.upper()})")
+        summary_parts.append(f"Status Filter: {lead_status_group.upper()}")
+        summary_parts.append(f"Stage Filter: {(pipeline_stage_specific or lead_stage_group).upper()}")
+
+        try:
+            sql_leads = """
+                SELECT l.id, l.name, l.phone, l.alternate_phone,
+                       COALESCE(sc.name, 'General') AS seg_name,
+                       COALESCE(l.status, 'new') AS lead_st,
+                       l.solar_pipeline_status,
+                       l.ev_b2b_stage,
+                       l.installation_date,
+                       l.city
+                FROM crm_leads l
+                LEFT JOIN signup_categories sc ON sc.id = l.category_id
+                WHERE (l.phone IS NOT NULL OR l.alternate_phone IS NOT NULL)
+            """
+            params_l: Dict[str, Any] = {}
+
+            # 1. Segment filter
+            if lead_segment and lead_segment != "all":
+                seg_map = {
+                    "solar": "%solar%",
+                    "ev_b2c": "%ev b2c%",
+                    "ev_b2b": "%ev b2b%",
+                    "ev_spares": "%ev spares%",
+                    "real_estate": "%real%",
+                    "etc_training": "%etc%",
+                    "insurance": "%insurance%",
+                    "general": "%general%",
+                }
+                pat = seg_map.get(lead_segment, f"%{lead_segment.replace('_', ' ')}%")
+                sql_leads += " AND COALESCE(sc.name, 'General') ILIKE :seg_pat"
+                params_l["seg_pat"] = pat
+
+            # 2. Status-wise subcategory filter
+            post_won_list = ("won", "order_placed", "dispatched", "delivered", "installed", "completed")
+            before_won_list = (
+                "new", "contacted", "tried to contact", "interested",
+                "qualified", "proposal", "loan_process", "in_progress",
+                "follow_up", "on_hold"
+            )
+            if lead_status_group == "won_plus":
+                sql_leads += " AND LOWER(COALESCE(l.status, '')) IN :st_list"
+                params_l["st_list"] = post_won_list
+            elif lead_status_group == "in_process_before_won":
+                sql_leads += " AND LOWER(COALESCE(l.status, '')) IN :st_list"
+                params_l["st_list"] = before_won_list
+            elif lead_status_group == "lost":
+                sql_leads += " AND LOWER(COALESCE(l.status, '')) = 'lost'"
+            elif lead_status_group == "all_active":
+                sql_leads += " AND LOWER(COALESCE(l.status, '')) NOT IN ('lost', 'do_not_call')"
+            elif lead_status_group == "custom" and lead_statuses_custom:
+                clean_sts = tuple(str(x).strip().lower() for x in lead_statuses_custom if str(x).strip())
+                if clean_sts:
+                    sql_leads += " AND LOWER(COALESCE(l.status, '')) IN :st_list"
+                    params_l["st_list"] = clean_sts
+
+            # 3. Stage filter (Before Installation vs After Installation vs Specific Pipeline Stage)
+            after_install_stages = (
+                "installed", "dcr_pending", "discom_pending", "net_meter_pending",
+                "balance_pending", "balance_received", "subsidy_pending", "completed"
+            )
+            if lead_stage_group == "after_installation":
+                sql_leads += """
+                    AND (
+                        l.installation_date IS NOT NULL
+                        OR LOWER(COALESCE(l.solar_pipeline_status, '')) IN :after_st
+                        OR LOWER(COALESCE(l.status, '')) IN ('installed', 'completed')
+                    )
+                """
+                params_l["after_st"] = after_install_stages
+            elif lead_stage_group == "before_installation":
+                sql_leads += """
+                    AND l.installation_date IS NULL
+                    AND LOWER(COALESCE(l.solar_pipeline_status, '')) NOT IN :after_st
+                    AND LOWER(COALESCE(l.status, '')) NOT IN ('installed', 'completed')
+                """
+                params_l["after_st"] = after_install_stages
+
+            if pipeline_stage_specific and pipeline_stage_specific != "all":
+                sql_leads += " AND (LOWER(COALESCE(l.solar_pipeline_status, '')) = :p_stage OR LOWER(COALESCE(l.ev_b2b_stage, '')) = :p_stage)"
+                params_l["p_stage"] = pipeline_stage_specific
+
+            sql_leads += " ORDER BY l.id DESC LIMIT 5000"
+            l_rows = db.execute(text(sql_leads), params_l).fetchall()
+
+            for r in l_rows:
+                lid, lname, lphone, lalt, seg_name, lst, sps, evs, inst_dt, lcity = r
+                ph_use = lphone if _clean_10_digit_phone(lphone) else lalt
+                is_installed = bool(inst_dt) or (str(sps or "").lower() in after_install_stages) or (str(lst or "").lower() in ("installed", "completed"))
+                stage_lbl = str(sps or evs or ("After Installation" if is_installed else "Before Installation")).replace("_", " ").title()
+                _add_recipient(
+                    phone_raw=ph_use,
+                    name=lname or f"Lead #{lid}",
+                    code=f"LEAD-{lid}",
+                    category_label=f"Lead ({seg_name})",
+                    segment=seg_name or "CRM Lead",
+                    status_label=str(lst or "new").replace("_", " ").title(),
+                    stage_label=stage_lbl,
+                    city=lcity or "",
+                    entity_type="crm_lead",
+                    entity_id=lid,
+                )
+        except Exception as e:
+            logger.warning(f"[GBC] CRM leads query error: {e}")
+
+    # ── CUSTOM / MANUALLY SELECTED RECIPIENTS ─────────────────────────────────
+    custom_list = list(filters.get("custom_recipients") or []) + list(filters.get("custom_phones") or [])
+    for cr in custom_list:
+        if isinstance(cr, dict):
+            _add_recipient(
+                phone_raw=cr.get("phone"),
+                name=cr.get("name") or "Selected Recipient",
+                code=cr.get("code") or "MANUAL",
+                category_label=cr.get("category_label") or "Manual Selection",
+                segment=cr.get("segment") or "Direct",
+                status_label="Selected",
+                stage_label="Manual",
+                city=cr.get("city") or "",
+                entity_type="manual",
+                entity_id=cr.get("id"),
+            )
+        elif isinstance(cr, str):
+            _add_recipient(
+                phone_raw=cr,
+                name="Custom Number",
+                code="CUSTOM",
+                category_label="Custom Number",
+                segment="Direct",
+                status_label="Selected",
+                stage_label="Manual",
+            )
+
+    recipients_list = list(recipients_map.values())
+
+    # Apply optional text search filter within audience
+    sq = str(filters.get("search_query") or "").strip().lower()
+    if sq:
+        recipients_list = [
+            r for r in recipients_list
+            if sq in str(r.get("name") or "").lower()
+            or sq in str(r.get("phone") or "").lower()
+            or sq in str(r.get("code") or "").lower()
+            or sq in str(r.get("city") or "").lower()
+            or sq in str(r.get("segment") or "").lower()
+        ]
+
+    # Apply optional explicit selected_phones subset
+    sel_phones = filters.get("selected_phones")
+    if isinstance(sel_phones, list) and len(sel_phones) > 0:
+        sel_clean = set()
+        for sp in sel_phones:
+            cp = _clean_10_digit_phone(sp)
+            if cp:
+                sel_clean.add(f"91{cp}")
+                sel_clean.add(cp)
+        recipients_list = [r for r in recipients_list if r.get("phone") in sel_clean]
+
+    return {
+        "total": len(recipients_list),
+        "summary_label": " • ".join(summary_parts) if summary_parts else "Custom Selection",
+        "breakdown": breakdown,
+        "recipients": recipients_list,
+    }
+
+
+def _interpolate_gbc_message(template_text: str, rec: Dict[str, Any]) -> str:
+    if not template_text:
+        return ""
+    msg = str(template_text)
+    r_name = rec.get("name") or "Valued Partner"
+    r_code = rec.get("code") or ""
+    r_seg = rec.get("segment") or "MyntReal"
+    r_stage = rec.get("stage_label") or ""
+    r_status = rec.get("status_label") or ""
+    r_city = rec.get("city") or "India"
+
+    replacements = {
+        "{{name}}": r_name,
+        "{name}": r_name,
+        "{{1}}": r_name,
+        "{{code}}": r_code,
+        "{{partner_code}}": r_code,
+        "{code}": r_code,
+        "{{segment}}": r_seg,
+        "{segment}": r_seg,
+        "{{stage}}": r_stage,
+        "{stage}": r_stage,
+        "{{status}}": r_status,
+        "{{city}}": r_city,
+        "{city}": r_city,
+        "{{company_name}}": "VGK4U & MyntReal",
+    }
+    for k, v in replacements.items():
+        msg = msg.replace(k, str(v))
+    return msg
+
+
+_GBC_SIGNATURES_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+    "data",
+    "gbc_signatures.json",
+)
+
+_DEFAULT_GBC_SIGNATURES = [
+    {
+        "id": "sig_mynt_official",
+        "label": "Mynt Official Administration",
+        "text": "Warm Regards,\n*Mynt & MyntReal Group*\n🌐 www.myntreal.com",
+        "is_default": True,
+    },
+    {
+        "id": "sig_myntreal_solar",
+        "label": "MyntReal Solar & Clean Energy",
+        "text": "Warm Regards,\n*Team MyntReal Solar & Clean Energy*\n🌐 www.myntreal.com",
+        "is_default": False,
+    },
+    {
+        "id": "sig_myntreal_ev",
+        "label": "MyntReal EV Mobility Division",
+        "text": "Warm Regards,\n*Team MyntReal EV Mobility*\n⚡ Empowering Green Transport",
+        "is_default": False,
+    },
+    {
+        "id": "sig_ashwanth",
+        "label": "Ashwanth — Operations & Strategy (Mynt)",
+        "text": "Best Regards,\n*Ashwanth — Operations & Strategy*\n*Mynt & MyntReal Group*",
+        "is_default": False,
+    },
+]
+
+
+def _load_gbc_signatures() -> List[Dict[str, Any]]:
+    try:
+        if os.path.exists(_GBC_SIGNATURES_FILE):
+            with open(_GBC_SIGNATURES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+    except Exception as e:
+        logger.warning(f"[GBC] Failed to load signatures file: {e}")
+    return [dict(x) for x in _DEFAULT_GBC_SIGNATURES]
+
+
+def _save_gbc_signatures(sigs: List[Dict[str, Any]]) -> None:
+    try:
+        os.makedirs(os.path.dirname(_GBC_SIGNATURES_FILE), exist_ok=True)
+        with open(_GBC_SIGNATURES_FILE, "w", encoding="utf-8") as f:
+            json.dump(sigs, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"[GBC] Failed to save signatures file: {e}")
+
+
+def _compose_full_gbc_message(
+    base_message: str,
+    signature_text: Optional[str] = None,
+    action_buttons: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """
+    Combines base broadcast message with optional custom signature text and optional CTA action buttons/options.
+    Avoids duplicating if base_message already contains the signature or CTA block.
+    """
+    parts = [str(base_message or "").strip()]
+    sig = str(signature_text or "").strip()
+    if sig and sig not in parts[0]:
+        parts.append(f"────────────────\n{sig}")
+
+    if action_buttons and isinstance(action_buttons, list):
+        btn_lines = []
+        for b in action_buttons:
+            if not isinstance(b, dict):
+                continue
+            b_type = str(b.get("type") or "url").strip().lower()
+            b_label = str(b.get("label") or "").strip()
+            b_val = str(b.get("value") or "").strip()
+            if not b_label and not b_val:
+                continue
+            if b_type == "url":
+                line = f"🔗 *{b_label or 'Visit Link'}:* {b_val}" if b_val else f"🔗 *{b_label}*"
+            elif b_type in ("phone", "call"):
+                line = f"📞 *{b_label or 'Call Us'}:* {b_val}" if b_val else f"📞 *{b_label}*"
+            else:
+                line = f"💬 *Reply* `{b_val}` — {b_label}" if (b_val and b_label) else f"💬 *{b_label or b_val}*"
+            if line not in parts[0]:
+                btn_lines.append(line)
+        if btn_lines:
+            parts.append("\n".join(btn_lines))
+
+    return "\n\n".join([p for p in parts if p])
+
+
+@router.get("/general-broadcast/signatures")
+def list_general_broadcast_signatures(
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+):
+    sigs = _load_gbc_signatures()
+    return {"success": True, "signatures": sigs}
+
+
+@router.post("/general-broadcast/signatures")
+def create_general_broadcast_signature(
+    payload: Dict[str, Any] = Body(...),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+):
+    import uuid
+    label = str(payload.get("label") or "").strip()
+    text_val = str(payload.get("text") or "").strip()
+    is_default = bool(payload.get("is_default", False))
+    if not label or not text_val:
+        raise HTTPException(status_code=400, detail="Both signature label and signature text are required.")
+
+    sigs = _load_gbc_signatures()
+    if is_default:
+        for s in sigs:
+            s["is_default"] = False
+
+    new_sig = {
+        "id": f"sig_{uuid.uuid4().hex[:8]}",
+        "label": label[:100],
+        "text": text_val[:1000],
+        "is_default": is_default,
+        "updated_by": auth_ctx["label"],
+    }
+    sigs.append(new_sig)
+    _save_gbc_signatures(sigs)
+    return {"success": True, "signature": new_sig, "signatures": sigs}
+
+
+@router.put("/general-broadcast/signatures/{sig_id}")
+def update_general_broadcast_signature(
+    sig_id: str,
+    payload: Dict[str, Any] = Body(...),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+):
+    label = str(payload.get("label") or "").strip()
+    text_val = str(payload.get("text") or "").strip()
+    if not label or not text_val:
+        raise HTTPException(status_code=400, detail="Both signature label and signature text are required.")
+
+    sigs = _load_gbc_signatures()
+    found = None
+    is_default = payload.get("is_default")
+    if is_default is True:
+        for s in sigs:
+            s["is_default"] = False
+
+    for s in sigs:
+        if s.get("id") == sig_id:
+            s["label"] = label[:100]
+            s["text"] = text_val[:1000]
+            if is_default is not None:
+                s["is_default"] = bool(is_default)
+            s["updated_by"] = auth_ctx["label"]
+            found = s
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Signature preset not found.")
+
+    _save_gbc_signatures(sigs)
+    return {"success": True, "signature": found, "signatures": sigs}
+
+
+@router.delete("/general-broadcast/signatures/{sig_id}")
+def delete_general_broadcast_signature(
+    sig_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+):
+    sigs = _load_gbc_signatures()
+    new_sigs = [s for s in sigs if s.get("id") != sig_id]
+    if len(new_sigs) == len(sigs):
+        raise HTTPException(status_code=404, detail="Signature preset not found.")
+    _save_gbc_signatures(new_sigs)
+    return {"success": True, "deleted_id": sig_id, "signatures": new_sigs}
+
+
+@router.get("/general-broadcast/auth-check")
+def check_general_broadcast_access(
+    current_user=Depends(_require_staff_optional),
+    db: Session = Depends(get_db)
+):
+    is_ok, label, sid = _check_gbc_authorized_user(current_user, db)
+    return {
+        "success": True,
+        "authorized": is_ok,
+        "user_label": label,
+        "staff_id": sid,
+    }
+
+
+@router.post("/general-broadcast/preview-recipients")
+def preview_general_broadcast_recipients(
+    payload: Dict[str, Any] = Body(...),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    """
+    Resolves and previews all matching recipients for the selected Category (VGK/Associations vs Leads),
+    Sub-filters (Active/All, Freelancer communication mode, Lead Segment/Status/Stage), and Custom selections.
+    """
+    resolved = _resolve_general_broadcast_recipients(db, payload)
+    limit_preview = int(payload.get("preview_limit") or 5000)
+    return {
+        "success": True,
+        "total": resolved["total"],
+        "summary_label": resolved["summary_label"],
+        "breakdown": resolved["breakdown"],
+        "recipients": resolved["recipients"][:limit_preview],
+    }
+
+
+_META_MEDIA_ID_CACHE: Dict[str, str] = {}
+
+
+@router.post("/upload-media")
+async def upload_whatsapp_broadcast_media(
+    file: UploadFile = File(...),
+):
+    """
+    Uploads any custom broadcast flyer/creative image selected via 'Choose File' in the UI,
+    saves it under /static/images/uploads/, and returns the clean static URL so Meta API
+    and Scanned WhatsApp always send the exact custom image uploaded by the user.
+    """
+    import time
+    import uuid
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parents[5]
+    upload_dir = str(project_root / "frontend" / "static" / "images" / "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    # Ensure static/images/uploads is also accessible
+    static_upload_dir = str(project_root / "static" / "images" / "uploads")
+    if not os.path.exists(static_upload_dir):
+        try:
+            os.makedirs(os.path.dirname(static_upload_dir), exist_ok=True)
+            os.symlink(os.path.relpath(upload_dir, os.path.dirname(static_upload_dir)), static_upload_dir)
+        except Exception:
+            pass
+
+    orig_name = os.path.basename(file.filename or "creative.jpg")
+    ext = os.path.splitext(orig_name)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        ext = ".jpg"
+    safe_stem = re.sub(r"[^a-zA-Z0-9_-]+", "_", os.path.splitext(orig_name)[0]).strip("_")[:40] or "creative"
+    out_name = f"gbc_{int(time.time())}_{uuid.uuid4().hex[:6]}_{safe_stem}{ext}"
+    out_path = os.path.join(upload_dir, out_name)
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded image file is empty")
+
+    with open(out_path, "wb") as f:
+        f.write(content)
+
+    public_url = f"/static/images/uploads/{out_name}"
+    return {
+        "success": True,
+        "url": public_url,
+        "media_url": public_url,
+        "file_url": public_url,
+        "filename": out_name,
+        "size": len(content),
+    }
+
+
+def _resolve_meta_header_image_param(db: Session, image_url: Optional[str]) -> Optional[Dict[str, str]]:
+    """
+    Resolves a header image parameter for Meta Graph API template & direct messages.
+    Supports:
+    1. Custom uploaded files (/static/images/uploads/... or any /static/... path)
+    2. Base64 Data URLs (data:image/jpeg;base64,... or data:image/png;base64,...) from FileReader
+    3. External public https:// URLs
+    Uploads the exact custom image binary to Meta's /media endpoint and returns {'id': media_id}.
+    """
+    import os
+    import base64
+    import hashlib
+    import mimetypes
+    from pathlib import Path
+    import requests as _req
+    from urllib.parse import urlparse, unquote
+    from app.services.wa_credentials import get_wa_credentials
+
+    project_root = Path(__file__).resolve().parents[5]
+    raw = (image_url or "").strip()
+    local_rel = None
+    found_path = None
+
+    # 1. Handle Base64 Data URI (data:image/...;base64,...) directly so custom uploaded images NEVER fall back to default
+    if raw.startswith("data:image/"):
+        try:
+            header_part, b64_data = raw.split(",", 1)
+            mime_match = re.search(r"data:(image/[a-zA-Z0-9.+-]+)", header_part)
+            mime_type = mime_match.group(1).lower() if mime_match else "image/jpeg"
+            ext = ".png" if "png" in mime_type else (".webp" if "webp" in mime_type else ".jpg")
+
+            # Clean whitespace and ensure base64 padding is multiple of 4
+            b64_clean = re.sub(r"\s+", "", b64_data)
+            rem = len(b64_clean) % 4
+            if rem:
+                b64_clean = b64_clean + ("=" * (4 - rem))
+            img_bytes = base64.b64decode(b64_clean)
+
+            h_digest = hashlib.sha256(img_bytes).hexdigest()[:16]
+            upload_dir = str(project_root / "frontend" / "static" / "images" / "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            b64_file_path = os.path.join(upload_dir, f"gbc_b64_{h_digest}{ext}")
+            if not os.path.isfile(b64_file_path):
+                with open(b64_file_path, "wb") as bf:
+                    bf.write(img_bytes)
+            found_path = b64_file_path
+        except Exception as b64_err:
+            logger.warning(f"[GBC] Failed to decode base64 image_url: {b64_err}")
+
+    if not found_path:
+        if not raw:
+            local_rel = "frontend/static/images/dussehra_wishes_flyer.png"
+        elif raw.startswith("/"):
+            local_rel = unquote(raw.lstrip("/"))
+        elif raw.startswith("http://localhost") or raw.startswith("http://127.0.0.1"):
+            parsed = urlparse(raw)
+            local_rel = unquote(parsed.path.lstrip("/"))
+        elif raw.startswith("https://") or raw.startswith("http://"):
+            return {"link": raw}
+
+        candidates = []
+        if local_rel:
+            candidates.extend([
+                local_rel,
+                str(project_root / local_rel),
+                str(project_root / "frontend" / local_rel),
+                str(project_root / "backend" / local_rel),
+                os.path.join("frontend", local_rel),
+                os.path.join("backend", local_rel),
+            ])
+        else:
+            candidates.extend([
+                str(project_root / "frontend" / "static" / "images" / "dussehra_wishes_flyer.png"),
+                str(project_root / "frontend" / "static" / "images" / "solar_banner_creative.jpg"),
+                "frontend/static/images/dussehra_wishes_flyer.png",
+                "backend/static/images/dussehra_wishes_flyer.png",
+            ])
+
+        found_path = next((p for p in candidates if p and os.path.isfile(p)), None)
+        if not found_path:
+            return {"link": raw} if raw.startswith("http") else None
+
+    abs_path = os.path.abspath(found_path)
+    mtime_key = f"{abs_path}:{int(os.path.getmtime(abs_path))}:{os.path.getsize(abs_path)}"
+    if mtime_key in _META_MEDIA_ID_CACHE:
+        return {"id": _META_MEDIA_ID_CACHE[mtime_key]}
+
+    creds = get_wa_credentials(db, company_id=1)
+    access_token = (creds.get("access_token") or os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "")).strip()
+    phone_number_id = (creds.get("phone_number_id") or os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", "")).strip()
+    if not access_token or not phone_number_id:
+        return None
+
+    mime_type, _ = mimetypes.guess_type(abs_path)
+    if not mime_type or not mime_type.startswith("image/"):
+        mime_type = "image/png" if abs_path.lower().endswith(".png") else "image/jpeg"
+
+    try:
+        with open(abs_path, "rb") as f:
+            resp = _req.post(
+                f"https://graph.facebook.com/v21.0/{phone_number_id}/media",
+                headers={"Authorization": f"Bearer {access_token}"},
+                data={"messaging_product": "whatsapp", "type": mime_type},
+                files={"file": (os.path.basename(abs_path), f, mime_type)},
+                timeout=25,
+            )
+        j = resp.json() if resp.content else {}
+        media_id = j.get("id")
+        if resp.status_code in (200, 201) and media_id:
+            _META_MEDIA_ID_CACHE[mtime_key] = str(media_id)
+            return {"id": str(media_id)}
+    except Exception as e:
+        logger.warning(f"[GBC] Meta media upload failed for {abs_path}: {e}")
+    return None
+
+
+def _sanitize_meta_param_text(val: Any, max_len: int = 900) -> str:
+    """
+    Meta Graph API (#132018) forbids newlines/tabs or >4 consecutive spaces inside template body parameter values.
+    """
+    s = str(val or "").strip()
+    s = re.sub(r"[\r\n\t]+", "  ", s)
+    s = re.sub(r" {3,}", "  ", s)
+    return s[:max_len] or "—"
+
+
+_LAST_GBC_WEBHOOK_SYNC: Dict[str, float] = {}
+
+
+def _sync_gbc_webhook_statuses(db: Session, execution_id: Optional[str] = None):
+    """
+    Synchronizes Meta webhook delivery/read/failure updates from public.message_log into the active schema's
+    message_log and automation_dispatch rows so local/sandbox & production UI always show live Delivered/Read/Failed counts.
+    Throttled to at most once every 5 seconds per execution_id to avoid row-lock contention.
+    """
+    import time
+    try:
+        if execution_id:
+            now_ts = time.time()
+            if now_ts - _LAST_GBC_WEBHOOK_SYNC.get(execution_id, 0.0) < 5.0:
+                return
+            _LAST_GBC_WEBHOOK_SYNC[execution_id] = now_ts
+
+            # 1. Sync from public.message_log into active schema's message_log
+            try:
+                db.execute(
+                    text("""
+                        UPDATE message_log ml
+                        SET
+                            current_status = p.current_status,
+                            status_source = COALESCE(p.status_source, ml.status_source),
+                            delivered_at = COALESCE(ml.delivered_at, p.delivered_at),
+                            read_at = COALESCE(ml.read_at, p.read_at),
+                            failed_at = COALESCE(ml.failed_at, p.failed_at),
+                            error_code = COALESCE(ml.error_code, p.error_code),
+                            error_message = COALESCE(ml.error_message, p.error_message),
+                            failure_reason = COALESCE(ml.failure_reason, p.failure_reason),
+                            webhook_data = COALESCE(p.webhook_data, ml.webhook_data),
+                            last_status_update = COALESCE(p.last_status_update, ml.last_status_update)
+                        FROM automation_dispatch ad
+                        JOIN public.message_log p ON p.message_sid = ad.provider_message_id
+                        WHERE ad.execution_id = :eid
+                          AND ml.id = ad.message_log_id
+                          AND (ml.current_status IS DISTINCT FROM p.current_status)
+                    """),
+                    {"eid": execution_id},
+                )
+            except Exception:
+                pass
+
+            # 2. Sync from public.message_log directly into automation_dispatch
+            try:
+                db.execute(
+                    text("""
+                        UPDATE automation_dispatch ad
+                        SET
+                            status = CASE
+                                WHEN LOWER(COALESCE(p.current_status, '')) = 'read' THEN 'READ'
+                                WHEN LOWER(COALESCE(p.current_status, '')) = 'delivered' AND ad.status != 'READ' THEN 'DELIVERED'
+                                WHEN LOWER(COALESCE(p.current_status, '')) IN ('failed', 'undelivered') THEN 'FAILED'
+                                ELSE ad.status
+                            END,
+                            delivered_at = COALESCE(ad.delivered_at, p.delivered_at),
+                            failed_at = COALESCE(ad.failed_at, p.failed_at),
+                            error_message = CASE
+                                WHEN LOWER(COALESCE(p.current_status, '')) IN ('failed', 'undelivered')
+                                    THEN COALESCE(p.failure_reason, p.error_message, ad.error_message)
+                                ELSE ad.error_message
+                            END
+                        FROM public.message_log p
+                        WHERE ad.execution_id = :eid
+                          AND p.message_sid = ad.provider_message_id
+                          AND ad.status IN ('SENT', 'DELIVERED')
+                    """),
+                    {"eid": execution_id},
+                )
+            except Exception:
+                pass
+
+            # 3. Sync from active schema's message_log into automation_dispatch
+            try:
+                db.execute(
+                    text("""
+                        UPDATE automation_dispatch ad
+                        SET
+                            status = CASE
+                                WHEN LOWER(COALESCE(ml.current_status, '')) = 'read' THEN 'READ'
+                                WHEN LOWER(COALESCE(ml.current_status, '')) = 'delivered' AND ad.status != 'READ' THEN 'DELIVERED'
+                                WHEN LOWER(COALESCE(ml.current_status, '')) IN ('failed', 'undelivered') THEN 'FAILED'
+                                ELSE ad.status
+                            END,
+                            delivered_at = COALESCE(ad.delivered_at, ml.delivered_at),
+                            failed_at = COALESCE(ad.failed_at, ml.failed_at),
+                            error_message = CASE
+                                WHEN LOWER(COALESCE(ml.current_status, '')) IN ('failed', 'undelivered')
+                                    THEN COALESCE(ml.failure_reason, ml.error_message, ad.error_message)
+                                ELSE ad.error_message
+                            END
+                        FROM message_log ml
+                        WHERE ad.message_log_id = ml.id
+                          AND ad.execution_id = :eid
+                          AND ad.status IN ('SENT', 'DELIVERED')
+                    """),
+                    {"eid": execution_id},
+                )
+            except Exception:
+                pass
+
+            db.commit()
+    except Exception as _sync_err:
+        db.rollback()
+        logger.debug(f"[GBC] Webhook sync skipped: {_sync_err}")
+
+
+
+def _send_meta_direct_exact_gbc(
+    db: Session,
+    phone_digits: str,
+    recipient_name: str,
+    personalized_msg: str,
+    image_url: Optional[str],
+    execution_id: str,
+    staff_id: Optional[int],
+    sent_by_name: Optional[str],
+) -> Dict[str, Any]:
+    """
+    Sends the 100% exact composed message (Opening Greeting + Custom Body + Signature) and optional
+    Flyer Image directly via Official Meta Cloud API (/messages type='image' or 'text'),
+    mirrors to public.message_log, and checks the live Meta webhook verdict.
+    """
+    import os
+    import time
+    import requests as _req
+    from app.models.whatsapp import MessageLog
+    from app.services.wa_credentials import get_wa_credentials
+
+    creds = get_wa_credentials(db, company_id=1)
+    access_token = (creds.get("access_token") or os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "")).strip()
+    phone_number_id = (creds.get("phone_number_id") or os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", "")).strip()
+    if not access_token or not phone_number_id:
+        return {"success": False, "reason": "No Meta API credentials"}
+
+    img_param = _resolve_meta_header_image_param(db, image_url) if image_url else None
+    if img_param:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone_digits,
+            "type": "image",
+            "image": {
+                **img_param,
+                "caption": personalized_msg[:1024],
+            },
+        }
+    else:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone_digits,
+            "type": "text",
+            "text": {"preview_url": True, "body": personalized_msg[:4096]},
+        }
+
+    try:
+        resp = _req.post(
+            f"https://graph.facebook.com/v21.0/{phone_number_id}/messages",
+            json=payload,
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+            timeout=15,
+        )
+        data = resp.json() if resp.content else {}
+        if resp.status_code not in (200, 201):
+            err_obj = data.get("error") or {}
+            return {
+                "success": False,
+                "error_code": str(err_obj.get("code") or resp.status_code),
+                "reason": err_obj.get("message") or f"HTTP {resp.status_code}",
+            }
+        wamid = ((data.get("messages") or [{}])[0]).get("id")
+        if not wamid:
+            return {"success": False, "reason": "Missing WAMID"}
+
+        now_ist = get_indian_time()
+        gbc_media_dict = {}
+        if image_url:
+            gbc_media_dict = {
+                "media_url": image_url,
+                "media_type": "image",
+                "media_name": os.path.basename(image_url),
+            }
+        gbc_media_json = json.dumps(gbc_media_dict) if gbc_media_dict else None
+
+        ml = MessageLog(
+            message_sid=wamid,
+            mobile_number=phone_digits,
+            to_number=phone_digits,
+            from_number="+918585852738",
+            user_name=(recipient_name or phone_digits)[:100],
+            message_type="general_broadcast",
+            message_body=personalized_msg,
+            provider="META_WHATSAPP",
+            initial_status="sent",
+            current_status="sent",
+            status_source="SYSTEM",
+            sent_at=now_ist,
+            sent_by_staff_id=staff_id,
+            sent_by_name=sent_by_name or "System",
+            sender_type="staff",
+            job_id="general_broadcast_campaign",
+            execution_id=execution_id,
+            webhook_data=gbc_media_json,
+        )
+        db.add(ml)
+        db.commit()
+
+        try:
+            db.execute(
+                text("""
+                    INSERT INTO public.message_log (
+                        message_sid, mobile_number, to_number, from_number,
+                        user_name, message_type, message_body, provider,
+                        initial_status, current_status, status_source, sent_at,
+                        sent_by_staff_id, sent_by_name, sender_type, job_id, execution_id, webhook_data
+                    ) VALUES (
+                        :wamid, :mobile_number, :to_number, '+918585852738',
+                        :user_name, 'general_broadcast', :message_body, 'META_WHATSAPP',
+                        'sent', 'sent', 'SYSTEM', :sent_at,
+                        :sent_by_staff_id, :sent_by_name, 'staff', 'general_broadcast_campaign', :execution_id, :webhook_data
+                    )
+                """),
+                {
+                    "wamid": wamid,
+                    "mobile_number": phone_digits,
+                    "to_number": phone_digits,
+                    "user_name": (recipient_name or phone_digits)[:100],
+                    "message_body": personalized_msg,
+                    "sent_at": now_ist,
+                    "sent_by_staff_id": staff_id,
+                    "sent_by_name": sent_by_name or "System",
+                    "execution_id": execution_id,
+                    "webhook_data": gbc_media_json,
+                },
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+
+        for _pw in range(3):
+            time.sleep(1.5)
+            try:
+                db.expire_all()
+                prow = db.execute(
+                    text("""
+                        SELECT current_status, status_source, error_code, error_message, failure_reason
+                        FROM public.message_log
+                        WHERE message_sid = :wamid
+                        ORDER BY id DESC LIMIT 1
+                    """),
+                    {"wamid": wamid},
+                ).fetchone()
+                if prow and prow[1] == "META_WEBHOOK":
+                    pst = str(prow[0] or "").lower()
+                    if pst in ("delivered", "read"):
+                        _sync_gbc_webhook_statuses(db, execution_id)
+                        return {"success": True, "wamid": wamid, "message_log_id": ml.id, "delivered": True}
+                    elif pst in ("failed", "undelivered"):
+                        _sync_gbc_webhook_statuses(db, execution_id)
+                        return {
+                            "success": False,
+                            "wamid": wamid,
+                            "message_log_id": ml.id,
+                            "error_code": str(prow[2] or ""),
+                            "reason": str(prow[4] or prow[3] or "Direct send rejected by Meta webhook"),
+                        }
+            except Exception:
+                db.rollback()
+
+        return {"success": True, "wamid": wamid, "message_log_id": ml.id, "delivered": False}
+    except Exception as e:
+        return {"success": False, "reason": str(e)}
+
+
+def _ensure_running_gbc_worker(execution_id: str):
+    import threading
+    if not execution_id or execution_id in _ACTIVE_GBC_WORKERS:
+        return
+    if _ACTIVE_GBC_CONTROL.get(execution_id) in ("PAUSED", "CANCELLED", "ABORTED"):
+        return
+    _ACTIVE_GBC_CONTROL[execution_id] = "RUNNING"
+    t = threading.Thread(target=_execute_general_broadcast_run, args=(execution_id,), daemon=True)
+    t.start()
+
+
+def _execute_general_broadcast_run(execution_id: str):
+    """
+    Background worker that executes a General Broadcast Campaign run with:
+    - Batched QUEUED fetching (100 rows at a time) + persistent HTTPS keep-alive session
+    - Pre-cached Meta credentials & media ID to eliminate redundant DB/API round-trips
+    - Official Meta Cloud API (Template / Universal Envelope / Direct Text) primary path
+    - Scanned WhatsApp Anti-Ban Safe Queue (randomized human jitter delay + batch cooldown) when selected or as fallback
+    """
+    global _GBC_INDEXES_ENSURED
+    import os
+    import time
+    import random
+    import uuid
+    import requests as _req
+    from app.core.database import SessionLocal
+    from app.models.automation import AutomationExecution, AutomationDispatch
+    from app.models.whatsapp import MessageLog, WhatsAppTemplate
+    from app.services.whatsapp_auto_service import _send_meta, send_direct_whatsapp
+    from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+    from app.services.wa_credentials import get_wa_credentials
+
+    if execution_id in _ACTIVE_GBC_WORKERS:
+        return
+    _ACTIVE_GBC_WORKERS.add(execution_id)
+
+    db = SessionLocal()
+    http_session = _req.Session()
+    try:
+        try:
+            db.execute(text("SET statement_timeout = 60000"))
+            db.execute(text("SET lock_timeout = 15000"))
+        except Exception:
+            db.rollback()
+        if not _GBC_INDEXES_ENSURED:
+            _GBC_INDEXES_ENSURED = True
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_auto_dispatch_exec_status ON automation_dispatch (execution_id, status, id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_auto_dispatch_msg_log_id ON automation_dispatch (message_log_id)"))
+                db.commit()
+            except Exception:
+                db.rollback()
+
+        exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+        if not exec_row:
+            return
+
+        meta = dict(exec_row.execution_metadata or {})
+        raw_message = meta.get("message_text") or ""
+        greeting_text = meta.get("greeting_text") or ""
+        raw_subject_text = meta.get("raw_subject_text") or ""
+        signature_text = meta.get("signature_text") or ""
+        action_buttons = meta.get("action_buttons") or []
+        dry_run = bool(meta.get("dry_run", False))
+        composed_raw_message = _compose_full_gbc_message(raw_message, signature_text, action_buttons)
+        image_url = meta.get("image_url") or None
+        template_id = meta.get("template_id")
+        channel_mode = str(meta.get("channel_mode") or "api_first").lower()
+        scanned_speed = str(meta.get("scanned_speed") or "safe").lower()
+
+        total_cnt = int(exec_row.total_targets or 0)
+        sent_cnt = int(exec_row.sent_count or 0)
+        failed_cnt = int(exec_row.failed_count or 0)
+        skipped_cnt = int(exec_row.skipped_count or 0)
+        trig_staff_id = exec_row.triggered_by_staff_id
+        trig_by_name = exec_row.triggered_by
+
+        tpl_obj = None
+        if template_id:
+            try:
+                tpl_obj = db.query(WhatsAppTemplate).get(int(template_id))
+            except Exception:
+                tpl_obj = None
+
+        # Pre-cache Meta credentials & header image Media ID ONCE before the loop
+        creds = get_wa_credentials(db, company_id=1)
+        meta_access_token = (creds.get("access_token") or os.environ.get("META_WHATSAPP_ACCESS_TOKEN", "")).strip()
+        meta_phone_id = (creds.get("phone_number_id") or os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID", "")).strip()
+        meta_post_url = f"https://graph.facebook.com/v21.0/{meta_phone_id}/messages" if meta_phone_id else ""
+        meta_headers = {
+            "Authorization": f"Bearer {meta_access_token}",
+            "Content-Type": "application/json",
+        }
+        cached_header_img_param = None
+        if tpl_obj and (tpl_obj.header_type or "").lower() == "image":
+            cached_header_img_param = _resolve_meta_header_image_param(db, image_url or tpl_obj.header_media_url)
+
+        # Pre-check once if Scanned WA bot (127.0.0.1:5002) is online so bulk API runs never sleep/stall when bot is offline
+        scanned_bot_online = False
+        if channel_mode in ("scanned_safe", "api_first"):
+            try:
+                r_ping = http_session.get("http://127.0.0.1:5002/api/status", timeout=1.2)
+                scanned_bot_online = r_ping.status_code == 200
+            except Exception:
+                scanned_bot_online = False
+
+        idx = sent_cnt + failed_cnt + skipped_cnt
+        aborted = False
+
+        while not aborted:
+            try:
+                dispatches = (
+                    db.query(AutomationDispatch)
+                    .filter(AutomationDispatch.execution_id == execution_id, AutomationDispatch.status == "QUEUED")
+                    .order_by(AutomationDispatch.id.asc())
+                    .limit(100)
+                    .all()
+                )
+            except Exception as q_err:
+                logger.warning(f"[GBC] Transient error fetching QUEUED batch for {execution_id}: {q_err}")
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                time.sleep(1.5)
+                continue
+
+            if not dispatches:
+                break
+
+            if total_cnt <= 0:
+                total_cnt = len(dispatches)
+
+            # High-Speed Parallel Meta Template Dispatch for bulk campaigns (> 3 recipients)
+            if (
+                not dry_run
+                and channel_mode in ("api_default", "api_first")
+                and total_cnt > 3
+                and tpl_obj
+                and tpl_obj.is_meta_approved
+                and tpl_obj.meta_template_name
+                and meta_post_url
+                and meta_access_token
+                and all(d.recipient_type not in ("group", "channel") for d in dispatches)
+            ):
+                from concurrent.futures import ThreadPoolExecutor
+                t_slug = (tpl_obj.meta_template_name or tpl_obj.slug or "").lower()
+                t_name = tpl_obj.meta_template_name
+                t_lang = tpl_obj.meta_template_language or "en"
+                is_img_hdr = (tpl_obj.header_type or "").lower() == "image"
+                img_param = cached_header_img_param or (
+                    _resolve_meta_header_image_param(db, image_url or tpl_obj.header_media_url) if is_img_hdr else None
+                )
+
+                def _build_tpl_payload(d_item):
+                    snap_i = dict(d_item.payload_snapshot or {})
+                    rec_ctx = {
+                        "name": d_item.recipient_name or "Valued Partner",
+                        "code": snap_i.get("code") or "",
+                        "segment": snap_i.get("segment") or "MyntReal",
+                        "stage_label": snap_i.get("stage_label") or "",
+                        "status_label": snap_i.get("status_label") or "",
+                        "city": snap_i.get("city") or "",
+                    }
+                    p_msg = _interpolate_gbc_message(composed_raw_message, rec_ctx)
+                    snap_i["rendered_message"] = p_msg
+                    p_digits = re.sub(r"\D", "", str(d_item.recipient_identifier or ""))
+                    if len(p_digits) == 10:
+                        p_digits = "91" + p_digits
+
+                    interp_base = _interpolate_gbc_message(raw_message, rec_ctx)
+                    clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
+                    if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1"):
+                        open_greet_raw = greeting_text or "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *Mynt & MyntReal Group*!"
+                        subj_raw = raw_subject_text or raw_message
+                        if greeting_text and subj_raw.startswith(greeting_text):
+                            subj_raw = subj_raw[len(greeting_text):].strip()
+                        interp_greet = _interpolate_gbc_message(open_greet_raw, rec_ctx)
+                        interp_subj = _interpolate_gbc_message(subj_raw, rec_ctx)
+                        interp_sig = _interpolate_gbc_message(signature_text or "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group", rec_ctx)
+
+                        g_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_greet) if ln.strip()]
+                        g1 = re.sub(r"^🌟\s*", "", g_lines[0]).strip() if g_lines else f"Namaste *{rec_ctx['name']}* Ji 🌟,"
+                        g2 = "  ".join(g_lines[1:]).strip() if len(g_lines) > 1 else f"Warm greetings from *{rec_ctx['segment']}*!"
+
+                        paras = [p.strip() for p in re.split(r"\n\s*\n|\r\n\s*\r\n", interp_subj) if p.strip()]
+                        if len(paras) < 4:
+                            paras = [p.strip() for p in re.split(r"[\r\n]+", interp_subj) if p.strip()]
+                        while len(paras) < 4:
+                            paras.append("🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸")
+                        p1, p2, p3 = paras[0], paras[1], paras[2]
+                        p4 = re.sub(r"^🌸\s*|\s*🌸$", "", "  ".join(paras[3:]).strip()).strip() or "మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు!"
+
+                        s_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_sig) if ln.strip()]
+                        s1 = s_lines[0] if s_lines else "ఆత్మీయ శుభాకాంక్షలతో,"
+                        s2 = re.sub(r"\s*🙏$", "", "  ".join(s_lines[1:]).strip() if len(s_lines) > 1 else "MyntReal Group").strip() or "MyntReal Group"
+
+                        b_vars = [
+                            _sanitize_meta_param_text(g1, 200),
+                            _sanitize_meta_param_text(g2, 200),
+                            _sanitize_meta_param_text(p1, 300),
+                            _sanitize_meta_param_text(p2, 500),
+                            _sanitize_meta_param_text(p3, 500),
+                            _sanitize_meta_param_text(p4, 300),
+                            _sanitize_meta_param_text(s1, 150),
+                            _sanitize_meta_param_text(s2, 200),
+                        ]
+                    else:
+                        b_vars = [
+                            _sanitize_meta_param_text(rec_ctx["name"], 100),
+                            _sanitize_meta_param_text(interp_base, 850),
+                            clean_sig,
+                        ]
+
+                    comps = []
+                    if is_img_hdr and img_param:
+                        comps.append({"type": "header", "parameters": [{"type": "image", "image": img_param}]})
+                    if b_vars:
+                        comps.append({"type": "body", "parameters": [{"type": "text", "text": str(v)} for v in b_vars]})
+
+                    payload_dict = {
+                        "messaging_product": "whatsapp",
+                        "to": p_digits,
+                        "type": "template",
+                        "template": {
+                            "name": t_name,
+                            "language": {"code": t_lang},
+                            **({"components": comps} if comps else {}),
+                        },
+                    }
+                    return p_digits, p_msg, snap_i, payload_dict
+
+                def _fire_meta_req(item_tuple):
+                    d_id, r_name, r_ident, p_digits, p_msg, snap_i, payload_dict = item_tuple
+                    try:
+                        r_m = _req.post(meta_post_url, json=payload_dict, headers=meta_headers, timeout=12)
+                        j_m = r_m.json() if r_m.content else {}
+                        if r_m.status_code in (200, 201) and j_m.get("messages"):
+                            w_id = j_m["messages"][0].get("id")
+                            if w_id:
+                                return (d_id, r_name, r_ident, p_digits, p_msg, snap_i, True, w_id, None)
+                        err_o = j_m.get("error") if isinstance(j_m.get("error"), dict) else {}
+                        return (d_id, r_name, r_ident, p_digits, p_msg, snap_i, False, None, f"Meta #{err_o.get('code', r_m.status_code)}: {err_o.get('message', 'Template dispatch failed')}")
+                    except Exception as req_exc:
+                        return (d_id, r_name, r_ident, p_digits, p_msg, snap_i, False, None, str(req_exc))
+
+                from psycopg2.extras import execute_values, Json
+                with ThreadPoolExecutor(max_workers=10) as pool:
+                    for sub_start in range(0, len(dispatches), 20):
+                        ctrl_state = _ACTIVE_GBC_CONTROL.get(execution_id)
+                        if not ctrl_state:
+                            try:
+                                st_row = db.execute(text("SELECT status FROM automation_execution WHERE id = :eid"), {"eid": execution_id}).fetchone()
+                                ctrl_state = str(st_row[0] if st_row else "RUNNING").upper()
+                            except Exception:
+                                db.rollback()
+                                ctrl_state = "RUNNING"
+
+                        while ctrl_state == "PAUSED":
+                            try:
+                                db.execute(text("UPDATE automation_execution SET status = 'PAUSED' WHERE id = :eid"), {"eid": execution_id})
+                                db.commit()
+                            except Exception:
+                                db.rollback()
+                            time.sleep(2.0)
+                            ctrl_state = _ACTIVE_GBC_CONTROL.get(execution_id)
+                            if not ctrl_state:
+                                try:
+                                    st_row = db.execute(text("SELECT status FROM automation_execution WHERE id = :eid"), {"eid": execution_id}).fetchone()
+                                    ctrl_state = str(st_row[0] if st_row else "RUNNING").upper()
+                                except Exception:
+                                    db.rollback()
+                                    ctrl_state = "PAUSED"
+
+                        if ctrl_state in ("CANCELLED", "ABORTED"):
+                            try:
+                                db.execute(
+                                    text("UPDATE automation_execution SET status = 'CANCELLED', completed_at = :now WHERE id = :eid"),
+                                    {"now": get_indian_time(), "eid": execution_id},
+                                )
+                                db.commit()
+                            except Exception:
+                                db.rollback()
+                            aborted = True
+                            break
+
+                        sub_batch = dispatches[sub_start:sub_start + 20]
+                        prepared = []
+                        for d_item in sub_batch:
+                            p_digits, p_msg, snap_i, payload_dict = _build_tpl_payload(d_item)
+                            prepared.append((int(d_item.id), d_item.recipient_name or "", d_item.recipient_identifier or "", p_digits, p_msg, snap_i, payload_dict))
+
+                        # Commit/close any read transaction before firing external HTTP calls
+                        try:
+                            db.commit()
+                        except Exception:
+                            db.rollback()
+
+                        # Execute 20 Meta HTTP calls concurrently across 10 worker threads
+                        results = list(pool.map(_fire_meta_req, prepared))
+                        now_ist = get_indian_time()
+
+                        # Persist all 20 results in 3 single-round-trip bulk SQL statements
+                        try:
+                            raw_cur = db.connection().connection.cursor()
+                            ml_tuples = []
+                            for d_id, r_name, r_ident, p_digits, p_msg, snap_i, ok_flag, w_id, err_str in results:
+                                if ok_flag and w_id:
+                                    ml_tuples.append((
+                                        w_id,
+                                        "general_broadcast",
+                                        p_digits,
+                                        p_digits,
+                                        "+918585852738",
+                                        (r_name or p_digits)[:100],
+                                        p_msg,
+                                        "META_WHATSAPP",
+                                        "sent",
+                                        "sent",
+                                        "SYSTEM",
+                                        now_ist,
+                                        trig_staff_id,
+                                        trig_by_name,
+                                        "staff",
+                                        "general_broadcast_campaign",
+                                        execution_id,
+                                    ))
+
+                            wamid_to_ml_id = {}
+                            if ml_tuples:
+                                ins_rows = execute_values(
+                                    raw_cur,
+                                    """
+                                    INSERT INTO message_log (
+                                        message_sid, message_type, mobile_number, to_number, from_number,
+                                        user_name, message_body, provider, initial_status, current_status,
+                                        status_source, sent_at, sent_by_staff_id, sent_by_name, sender_type,
+                                        job_id, execution_id
+                                    ) VALUES %s
+                                    RETURNING id, message_sid
+                                    """,
+                                    ml_tuples,
+                                    fetch=True,
+                                )
+                                for r_id, r_wamid in (ins_rows or []):
+                                    wamid_to_ml_id[str(r_wamid)] = int(r_id)
+
+                            ad_tuples = []
+                            last_rec_label = ""
+                            for d_id, r_name, r_ident, p_digits, p_msg, snap_i, ok_flag, w_id, err_str in results:
+                                idx += 1
+                                last_rec_label = f"{r_name} ({r_ident})"
+                                if ok_flag and w_id:
+                                    sent_cnt += 1
+                                    ad_tuples.append((
+                                        int(d_id),
+                                        "META_WHATSAPP",
+                                        w_id,
+                                        wamid_to_ml_id.get(str(w_id)),
+                                        Json(snap_i),
+                                        "SENT",
+                                        now_ist,
+                                        None,
+                                        None,
+                                    ))
+                                else:
+                                    failed_cnt += 1
+                                    ad_tuples.append((
+                                        int(d_id),
+                                        "META_WHATSAPP",
+                                        None,
+                                        None,
+                                        Json(snap_i),
+                                        "FAILED",
+                                        None,
+                                        now_ist,
+                                        (err_str or "Delivery failed")[:500],
+                                    ))
+
+                            if ad_tuples:
+                                execute_values(
+                                    raw_cur,
+                                    """
+                                    UPDATE automation_dispatch AS ad
+                                    SET
+                                        provider = v.provider,
+                                        provider_message_id = v.wamid,
+                                        message_log_id = v.ml_id::integer,
+                                        payload_snapshot = v.snap::jsonb,
+                                        status = v.st,
+                                        sent_at = v.sent_at::timestamp,
+                                        failed_at = v.failed_at::timestamp,
+                                        error_message = v.err_msg
+                                    FROM (VALUES %s) AS v(id, provider, wamid, ml_id, snap, st, sent_at, failed_at, err_msg)
+                                    WHERE ad.id = v.id::bigint
+                                    """,
+                                    ad_tuples,
+                                )
+
+                            meta["current_recipient"] = last_rec_label
+                            meta["processed_count"] = idx
+                            raw_cur.execute(
+                                """
+                                UPDATE automation_execution
+                                SET status = 'RUNNING',
+                                    sent_count = %s,
+                                    failed_count = %s,
+                                    skipped_count = %s,
+                                    execution_metadata = %s::jsonb
+                                WHERE id = %s
+                                """,
+                                (sent_cnt, failed_cnt, skipped_cnt, Json(meta), execution_id),
+                            )
+                            db.commit()
+                        except Exception as batch_commit_err:
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            logger.warning(f"[GBC] Batch commit recovery for {execution_id}: {batch_commit_err}")
+                continue
+
+            for batch_pos, d in enumerate(dispatches):
+                # Check live control state (Pause / Cancel / Abort) in memory first, and refresh DB every 10 items
+                if batch_pos % 10 == 0:
+                    try:
+                        db.refresh(exec_row)
+                    except Exception:
+                        try:
+                            db.rollback()
+                        except Exception:
+                            pass
+                ctrl_state = _ACTIVE_GBC_CONTROL.get(execution_id) or str(exec_row.status or "RUNNING").upper()
+                while ctrl_state == "PAUSED":
+                    try:
+                        exec_row.status = "PAUSED"
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                    time.sleep(2.0)
+                    try:
+                        db.refresh(exec_row)
+                    except Exception:
+                        pass
+                    ctrl_state = _ACTIVE_GBC_CONTROL.get(execution_id) or str(exec_row.status or "RUNNING").upper()
+
+                if ctrl_state in ("CANCELLED", "ABORTED"):
+                    try:
+                        exec_row.status = "CANCELLED"
+                        exec_row.completed_at = get_indian_time()
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                    aborted = True
+                    break
+
+                if exec_row.status != "RUNNING":
+                    exec_row.status = "RUNNING"
+
+                snap = dict(d.payload_snapshot or {})
+                rec_context = {
+                    "name": d.recipient_name or "Valued Partner",
+                    "code": snap.get("code") or "",
+                    "segment": snap.get("segment") or "MyntReal",
+                    "stage_label": snap.get("stage_label") or "",
+                    "status_label": snap.get("status_label") or "",
+                    "city": snap.get("city") or "",
+                }
+                personalized_msg = _interpolate_gbc_message(composed_raw_message, rec_context)
+                snap["rendered_message"] = personalized_msg
+
+                meta["current_recipient"] = f"{d.recipient_name or ''} ({d.recipient_identifier})"
+                meta["processed_count"] = idx
+
+                now_ist = get_indian_time()
+                phone_digits = re.sub(r"\D", "", str(d.recipient_identifier or ""))
+                if len(phone_digits) == 10:
+                    phone_digits = "91" + phone_digits
+
+                delivered_ok = False
+                webhook_verified_delivered = False
+                used_provider = "META_WHATSAPP"
+                wamid_out = None
+                ml_id_out = None
+                err_out = None
+
+                # ── DRY RUN / SIMULATION MODE ──
+                if dry_run:
+                    delivered_ok = True
+                    used_provider = "DRY_RUN_SIMULATED"
+                    wamid_out = f"wamid.dryrun.{uuid.uuid4().hex[:14]}"
+
+                # ── GROUP DISPATCH (Always Scanned WA) ────────────────────────────
+                elif d.recipient_type in ("group", "channel"):
+                    used_provider = "SCANNED_WA"
+                    try:
+                        grp_payload = {"message": personalized_msg, "imageUrl": image_url}
+                        if str(d.recipient_identifier).startswith("GRP_NAME:"):
+                            grp_payload["groupName"] = str(d.recipient_identifier).replace("GRP_NAME:", "", 1)
+                        else:
+                            grp_payload["inviteCode"] = str(d.recipient_identifier)
+                        r_grp = http_session.post("http://127.0.0.1:5002/api/send-group-message", json=grp_payload, timeout=25)
+                        j_grp = r_grp.json() if r_grp.content else {}
+                        if r_grp.status_code == 200 and j_grp.get("success"):
+                            delivered_ok = True
+                            wamid_out = f"wamid.scanned_grp.{uuid.uuid4().hex[:14]}"
+                        else:
+                            err_out = j_grp.get("error") or f"Group bot HTTP {r_grp.status_code}"
+                    except Exception as ge:
+                        err_out = f"Group bot unreachable: {str(ge)}"
+
+                # ── INDIVIDUAL DISPATCH ───────────────────────────────────────────
+                else:
+                    if channel_mode in ("api_default", "api_first"):
+                        try:
+                            direct_res = {"success": False}
+                            if total_cnt <= 3 or not (tpl_obj and tpl_obj.is_meta_approved and tpl_obj.meta_template_name):
+                                direct_res = _send_meta_direct_exact_gbc(
+                                    db=db,
+                                    phone_digits=phone_digits,
+                                    recipient_name=d.recipient_name or "Valued Partner",
+                                    personalized_msg=personalized_msg,
+                                    image_url=image_url or (tpl_obj.header_media_url if tpl_obj else None),
+                                    execution_id=execution_id,
+                                    staff_id=trig_staff_id,
+                                    sent_by_name=trig_by_name,
+                                )
+                            if direct_res.get("success") and direct_res.get("wamid"):
+                                delivered_ok = True
+                                webhook_verified_delivered = bool(direct_res.get("delivered"))
+                                used_provider = "META_WHATSAPP"
+                                wamid_out = direct_res.get("wamid")
+                                ml_id_out = direct_res.get("message_log_id")
+                            elif tpl_obj and tpl_obj.is_meta_approved and tpl_obj.meta_template_name:
+                                t_slug = (tpl_obj.meta_template_name or tpl_obj.slug or "").lower()
+                                interp_base = _interpolate_gbc_message(raw_message, rec_context)
+                                if t_slug in ("vgk_general_broadcast_v1", "vgk_general_broadcast_img_v1", "mnr_promotional_campaign_v1", "mnr_promotional_campaign_img_v1", "mnr_custom_wishes_v1", "mnr_custom_wishes_img_v1"):
+                                    interp_base = re.sub(r"^\s*Namaste\s+[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
+                                    interp_base = re.sub(r"^\s*Warm greetings from[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
+                                clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
+                                if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1"):
+                                    open_greet_raw = greeting_text or "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *Mynt & MyntReal Group*!"
+                                    subj_raw = raw_subject_text or raw_message
+                                    if greeting_text and subj_raw.startswith(greeting_text):
+                                        subj_raw = subj_raw[len(greeting_text):].strip()
+                                    interp_greet = _interpolate_gbc_message(open_greet_raw, rec_context)
+                                    interp_subj = _interpolate_gbc_message(subj_raw, rec_context)
+                                    interp_sig = _interpolate_gbc_message(signature_text or "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group", rec_context)
+
+                                    g_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_greet) if ln.strip()]
+                                    g1 = re.sub(r"^🌟\s*", "", g_lines[0]).strip() if g_lines else f"Namaste *{rec_context['name']}* Ji 🌟,"
+                                    g2 = "  ".join(g_lines[1:]).strip() if len(g_lines) > 1 else f"Warm greetings from *{rec_context['segment']}*!"
+
+                                    paras = [p.strip() for p in re.split(r"\n\s*\n|\r\n\s*\r\n", interp_subj) if p.strip()]
+                                    if len(paras) < 4:
+                                        paras = [p.strip() for p in re.split(r"[\r\n]+", interp_subj) if p.strip()]
+                                    while len(paras) < 4:
+                                        paras.append("🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸")
+                                    p1 = paras[0]
+                                    p2 = paras[1]
+                                    p3 = paras[2]
+                                    p4 = "  ".join(paras[3:]).strip()
+                                    p4 = re.sub(r"^🌸\s*|\s*🌸$", "", p4).strip() or "మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు!"
+
+                                    s_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_sig) if ln.strip()]
+                                    s1 = s_lines[0] if s_lines else "ఆత్మీయ శుభాకాంక్షలతో,"
+                                    s2 = "  ".join(s_lines[1:]).strip() if len(s_lines) > 1 else "MyntReal Group"
+                                    s2 = re.sub(r"\s*🙏$", "", s2).strip() or "MyntReal Group"
+
+                                    body_vars = [
+                                        _sanitize_meta_param_text(g1, 200),
+                                        _sanitize_meta_param_text(g2, 200),
+                                        _sanitize_meta_param_text(p1, 300),
+                                        _sanitize_meta_param_text(p2, 500),
+                                        _sanitize_meta_param_text(p3, 500),
+                                        _sanitize_meta_param_text(p4, 300),
+                                        _sanitize_meta_param_text(s1, 150),
+                                        _sanitize_meta_param_text(s2, 200),
+                                    ]
+                                elif t_slug in ("mnr_wishes_template_v1", "mnr_wishes_template_img_v1", "mnr_wishes_template_v2", "mnr_wishes_template_img_v2"):
+                                    open_greet_raw = greeting_text or "Namaste *{{name}}* Ji 🌟, Warm greetings from *Mynt & MyntReal Group*!"
+                                    subj_raw = raw_subject_text or raw_message
+                                    if greeting_text and subj_raw.startswith(greeting_text):
+                                        subj_raw = subj_raw[len(greeting_text):].strip()
+                                    interp_greet = _interpolate_gbc_message(open_greet_raw, rec_context)
+                                    interp_subj = _interpolate_gbc_message(subj_raw, rec_context)
+                                    body_vars = [
+                                        _sanitize_meta_param_text(interp_greet, 250),
+                                        _sanitize_meta_param_text(interp_subj, 850),
+                                        clean_sig,
+                                    ]
+                                elif t_slug in ("vgk_general_broadcast_v1", "vgk_general_broadcast_img_v1"):
+                                    body_vars = [
+                                        _sanitize_meta_param_text(rec_context["name"], 100),
+                                        _sanitize_meta_param_text(rec_context["segment"], 100),
+                                        _sanitize_meta_param_text(interp_base, 850),
+                                        clean_sig,
+                                    ]
+                                elif t_slug in ("mnr_promotional_campaign_v1", "mnr_promotional_campaign_img_v1", "mnr_custom_wishes_v1", "mnr_custom_wishes_img_v1"):
+                                    body_vars = [
+                                        _sanitize_meta_param_text(rec_context["name"], 100),
+                                        _sanitize_meta_param_text(interp_base, 850),
+                                        clean_sig,
+                                    ]
+                                else:
+                                    var_tokens = re.findall(r"\{\{([a-zA-Z0-9_]+)\}\}", tpl_obj.body_text or "")
+                                    seen_vars = []
+                                    for vt in var_tokens:
+                                        if vt not in seen_vars:
+                                            seen_vars.append(vt)
+                                    n_vars = len(seen_vars)
+                                    if n_vars == 0:
+                                        body_vars = []
+                                    elif n_vars == 1:
+                                        body_vars = [_sanitize_meta_param_text(rec_context["name"], 100)]
+                                    elif n_vars == 2:
+                                        body_vars = [
+                                            _sanitize_meta_param_text(rec_context["name"], 100),
+                                            _sanitize_meta_param_text(interp_base, 850),
+                                        ]
+                                    else:
+                                        body_vars = [
+                                            _sanitize_meta_param_text(rec_context["name"], 100),
+                                            _sanitize_meta_param_text(interp_base, 850),
+                                            clean_sig,
+                                        ]
+                                        while len(body_vars) < n_vars:
+                                            body_vars.append("Mynt & MyntReal")
+                                components = []
+                                if (tpl_obj.header_type or "").lower() == "image":
+                                    img_param = cached_header_img_param or _resolve_meta_header_image_param(db, image_url or tpl_obj.header_media_url)
+                                    if img_param:
+                                        components.append({
+                                            "type": "header",
+                                            "parameters": [{"type": "image", "image": img_param}]
+                                        })
+                                if body_vars:
+                                    components.append({
+                                        "type": "body",
+                                        "parameters": [{"type": "text", "text": str(v)} for v in body_vars]
+                                    })
+
+                                # Fast direct Meta Graph API template call using persistent keep-alive session
+                                if meta_post_url and meta_access_token and total_cnt > 3:
+                                    tpl_payload = {
+                                        "messaging_product": "whatsapp",
+                                        "to": phone_digits,
+                                        "type": "template",
+                                        "template": {
+                                            "name": tpl_obj.meta_template_name,
+                                            "language": {"code": tpl_obj.meta_template_language or "en"},
+                                            **({"components": components} if components else {}),
+                                        },
+                                    }
+                                    r_meta = http_session.post(meta_post_url, json=tpl_payload, headers=meta_headers, timeout=10)
+                                    j_meta = r_meta.json() if r_meta.content else {}
+                                    if r_meta.status_code in (200, 201) and j_meta.get("messages"):
+                                        wamid_out = j_meta["messages"][0].get("id")
+                                        if wamid_out:
+                                            delivered_ok = True
+                                            used_provider = "META_WHATSAPP"
+                                            ml = MessageLog(
+                                                message_sid=wamid_out,
+                                                message_type="general_broadcast",
+                                                mobile_number=phone_digits,
+                                                to_number=phone_digits,
+                                                from_number="+918585852738",
+                                                user_name=(d.recipient_name or phone_digits)[:100],
+                                                message_body=personalized_msg,
+                                                provider="META_WHATSAPP",
+                                                initial_status="sent",
+                                                current_status="sent",
+                                                status_source="SYSTEM",
+                                                sent_at=now_ist,
+                                                sent_by_staff_id=trig_staff_id,
+                                                sent_by_name=trig_by_name,
+                                                sender_type="staff",
+                                                job_id="general_broadcast_campaign",
+                                                execution_id=execution_id,
+                                            )
+                                            db.add(ml)
+                                            db.flush()
+                                            ml_id_out = ml.id
+                                    else:
+                                        err_obj = j_meta.get("error") if isinstance(j_meta.get("error"), dict) else {}
+                                        err_out = f"Meta #{err_obj.get('code', r_meta.status_code)}: {err_obj.get('message', 'Template dispatch failed')}"
+                                else:
+                                    c_res = WhatsAppCanonicalService.send_meta_template_message(
+                                        db=db,
+                                        phone=phone_digits,
+                                        template_name=tpl_obj.meta_template_name,
+                                        language_code=tpl_obj.meta_template_language or "en",
+                                        components=components or None,
+                                        message_type="general_broadcast",
+                                        user_name=d.recipient_name,
+                                        staff_id=trig_staff_id,
+                                        sent_by_name=trig_by_name,
+                                        sender_type="staff",
+                                        idempotency_key=f"{execution_id}:{phone_digits}",
+                                        raw_body_fallback=None,
+                                        job_id="general_broadcast_campaign",
+                                        execution_id=execution_id,
+                                    )
+                                    if c_res.get("success") and c_res.get("wamid"):
+                                        delivered_ok = True
+                                        used_provider = "META_WHATSAPP"
+                                        wamid_out = c_res.get("wamid")
+                                        ml_id_out = c_res.get("message_log_id")
+                                        webhook_verified_delivered = False
+
+                                        if total_cnt <= 25 and wamid_out:
+                                            for _pw in range(3):
+                                                time.sleep(1.5)
+                                                try:
+                                                    db.expire_all()
+                                                    prow = db.execute(
+                                                        text("""
+                                                            SELECT current_status, status_source, error_code, error_message, failure_reason
+                                                            FROM public.message_log
+                                                            WHERE message_sid = :wamid
+                                                            ORDER BY id DESC LIMIT 1
+                                                        """),
+                                                        {"wamid": wamid_out},
+                                                    ).fetchone()
+                                                    if prow and prow[1] == "META_WEBHOOK":
+                                                        pst = str(prow[0] or "").lower()
+                                                        if pst in ("delivered", "read"):
+                                                            webhook_verified_delivered = True
+                                                            _sync_gbc_webhook_statuses(db, execution_id)
+                                                            break
+                                                        elif pst in ("failed", "undelivered"):
+                                                            delivered_ok = False
+                                                            err_out = f"Meta #{prow[2] or ''}: {prow[4] or prow[3] or 'Delivery failed'}"
+                                                            _sync_gbc_webhook_statuses(db, execution_id)
+                                                            if str(prow[2] or "") == "131049":
+                                                                u_res = _send_meta(
+                                                                    db=db,
+                                                                    phone=phone_digits,
+                                                                    message=personalized_msg,
+                                                                    template=None,
+                                                                    context=rec_context,
+                                                                    is_internal_system=True,
+                                                                )
+                                                                if u_res.get("success") and u_res.get("wamid"):
+                                                                    delivered_ok = True
+                                                                    wamid_out = u_res.get("wamid")
+                                                                    err_out = None
+                                                            break
+                                                except Exception:
+                                                    db.rollback()
+                                    else:
+                                        err_out = c_res.get("reason") or c_res.get("error") or "Meta template send failed"
+                            else:
+                                m_res = _send_meta(
+                                    db=db,
+                                    phone=phone_digits,
+                                    message=personalized_msg,
+                                    template=tpl_obj,
+                                    context=rec_context,
+                                    is_internal_system=True,
+                                )
+                                if m_res.get("success"):
+                                    delivered_ok = True
+                                    used_provider = "META_WHATSAPP"
+                                    wamid_out = m_res.get("wamid") or f"wamid.meta.{uuid.uuid4().hex[:16]}"
+                                    try:
+                                        ml = MessageLog(
+                                            message_sid=wamid_out,
+                                            message_type="general_broadcast",
+                                            mobile_number=phone_digits,
+                                            to_number=phone_digits,
+                                            user_name=(d.recipient_name or phone_digits)[:100],
+                                            message_body=personalized_msg,
+                                            provider="META_WHATSAPP",
+                                            initial_status="sent",
+                                            current_status="sent",
+                                            sent_at=now_ist,
+                                            sent_by_staff_id=trig_staff_id,
+                                            sent_by_name=trig_by_name,
+                                            sender_type="staff",
+                                            job_id="general_broadcast_campaign",
+                                            execution_id=execution_id,
+                                        )
+                                        db.add(ml)
+                                        db.flush()
+                                        ml_id_out = ml.id
+                                    except Exception:
+                                        db.rollback()
+                                else:
+                                    err_out = m_res.get("reason") or "Meta API rejected freeform text outside 24h window"
+                        except Exception as me:
+                            try:
+                                db.rollback()
+                            except Exception:
+                                pass
+                            err_out = str(me)
+
+                    # 2. Scanned WhatsApp Path (when channel_mode == 'scanned_safe' OR when 'api_first' falls back and Scanned bot is online)
+                    if not delivered_ok and (channel_mode == "scanned_safe" or (channel_mode == "api_first" and scanned_bot_online)):
+                        try:
+                            if idx > 0 and total_cnt > 1:
+                                if scanned_speed == "fast":
+                                    time.sleep(random.uniform(1.8, 3.5))
+                                else:
+                                    if idx % 25 == 0:
+                                        time.sleep(random.uniform(20.0, 35.0))
+                                    else:
+                                        time.sleep(random.uniform(4.5, 9.5))
+
+                            r_sc = http_session.post(
+                                "http://127.0.0.1:5002/api/send-message",
+                                json={
+                                    "phone": phone_digits,
+                                    "message": personalized_msg,
+                                    "imageUrl": image_url,
+                                },
+                                timeout=25,
+                            )
+                            j_sc = r_sc.json() if r_sc.content else {}
+                            if r_sc.status_code == 200 and j_sc.get("success"):
+                                delivered_ok = True
+                                used_provider = "SCANNED_WA" if channel_mode == "scanned_safe" else "SCANNED_FALLBACK"
+                                wamid_out = f"wamid.scanned.{uuid.uuid4().hex[:16]}"
+                                err_out = None
+                                try:
+                                    ml = MessageLog(
+                                        message_sid=wamid_out,
+                                        message_type="general_broadcast",
+                                        mobile_number=phone_digits,
+                                        to_number=phone_digits,
+                                        user_name=(d.recipient_name or phone_digits)[:100],
+                                        message_body=personalized_msg,
+                                        provider=used_provider,
+                                        initial_status="sent",
+                                        current_status="sent",
+                                        sent_at=now_ist,
+                                        sent_by_staff_id=trig_staff_id,
+                                        sent_by_name=trig_by_name,
+                                        sender_type="staff",
+                                        job_id="general_broadcast_campaign",
+                                        execution_id=execution_id,
+                                    )
+                                    db.add(ml)
+                                    db.flush()
+                                    ml_id_out = ml.id
+                                except Exception:
+                                    db.rollback()
+                            else:
+                                sc_err = j_sc.get("error") or f"Scanned bot HTTP {r_sc.status_code}"
+                                err_out = f"{err_out} | Scanned WA: {sc_err}" if err_out else sc_err
+                        except Exception as se:
+                            err_out = f"{err_out} | Scanned WA unreachable: {str(se)}" if err_out else f"Scanned WA unreachable: {str(se)}"
+
+                # Update Dispatch & Execution counters
+                idx += 1
+                try:
+                    d.provider = used_provider
+                    d.provider_message_id = wamid_out
+                    d.message_log_id = ml_id_out
+                    d.payload_snapshot = snap
+                    if delivered_ok:
+                        d.status = "DELIVERED" if webhook_verified_delivered else "SENT"
+                        d.sent_at = now_ist
+                        if webhook_verified_delivered:
+                            d.delivered_at = now_ist
+                        d.error_message = None
+                        sent_cnt += 1
+                    else:
+                        d.status = "FAILED"
+                        d.failed_at = now_ist
+                        d.error_message = (err_out or "Delivery failed")[:500]
+                        failed_cnt += 1
+
+                    exec_row.sent_count = sent_cnt
+                    exec_row.failed_count = failed_cnt
+                    exec_row.skipped_count = skipped_cnt
+                    meta["processed_count"] = idx
+                    exec_row.execution_metadata = dict(meta)
+                    # Commit every item for small runs (<= 25), or every 5 items (and end of batch) for high-speed bulk runs
+                    if total_cnt <= 25 or (batch_pos + 1) % 5 == 0 or (batch_pos + 1) == len(dispatches):
+                        db.commit()
+                except Exception as _commit_err:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                    logger.warning(f"[GBC] Recovering DB session after commit error on {d.recipient_identifier}: {_commit_err}")
+
+        if not aborted and _ACTIVE_GBC_CONTROL.get(execution_id) not in ("CANCELLED", "ABORTED"):
+            exec_row.status = "SUCCESS" if (sent_cnt > 0 or failed_cnt == 0) else "FAILED"
+            exec_row.completed_at = get_indian_time()
+            meta["current_recipient"] = "Completed"
+            exec_row.execution_metadata = dict(meta)
+            db.commit()
+    except Exception as exc:
+        logger.error(f"[GBC] Background execution error for {execution_id}: {exc}")
+        try:
+            db.rollback()
+            exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+            if exec_row and exec_row.status not in ("CANCELLED", "PAUSED"):
+                exec_row.error_message = str(exc)[:500]
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        try:
+            http_session.close()
+        except Exception:
+            pass
+        _ACTIVE_GBC_WORKERS.discard(execution_id)
+        db.close()
+
+
+@router.post("/general-broadcast/trigger")
+def trigger_general_broadcast_campaign(
+    payload: Dict[str, Any] = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    """
+    Creates a General Broadcast Execution, queues all resolved individual/group dispatches,
+    and launches the background sender with live progress tracking.
+    """
+    import uuid
+    from app.models.automation import AutomationExecution, AutomationDispatch
+
+    message_text = str(payload.get("message_text") or payload.get("message") or "").strip()
+    greeting_text = str(payload.get("greeting_text") or "").strip() or None
+    raw_subject_text = str(payload.get("raw_subject_text") or "").strip() or None
+    signature_id = payload.get("signature_id") or None
+    signature_label = str(payload.get("signature_label") or "").strip() or None
+    signature_text = str(payload.get("signature_text") or "").strip() or None
+    action_buttons = payload.get("action_buttons") if isinstance(payload.get("action_buttons"), list) else []
+    dry_run = bool(payload.get("dry_run", False))
+    image_url = payload.get("image_url") or payload.get("imageUrl") or None
+    template_id = payload.get("template_id")
+    campaign_title = str(payload.get("title") or "").strip()
+    channel_mode = str(payload.get("channel_mode") or "api_first").strip().lower()
+    scanned_speed = str(payload.get("scanned_speed") or "safe").strip().lower()
+    assoc_types_raw = payload.get("association_types") or []
+    if isinstance(assoc_types_raw, str):
+        assoc_types_list = [x.strip().lower() for x in assoc_types_raw.split(",") if x.strip()]
+    else:
+        assoc_types_list = [str(x).strip().lower() for x in assoc_types_raw if str(x).strip()]
+
+    include_default_groups = bool(payload.get("include_default_groups", False)) or ("wa_groups" in assoc_types_list)
+
+    if not message_text and not image_url and not template_id:
+        raise HTTPException(status_code=400, detail="Please provide a broadcast message text, template, or creative image.")
+
+    composed_preview = _compose_full_gbc_message(message_text, signature_text, action_buttons)
+
+    resolved = _resolve_general_broadcast_recipients(db, payload)
+    recipients = resolved["recipients"]
+
+    default_groups = []
+    if include_default_groups:
+        default_groups = [
+            {"id": "0029Vb7Vb5f9cDDXf3zWtf0m", "name": "VGK4U Official Channel", "type": "channel"},
+            {"id": "HNQQoKXFfCm5PQngGdrlcY", "name": "VGK Community Group", "type": "group"},
+            {"id": "LfX8mGootXa7SpwNIz7P5C", "name": "Executive Announcements", "type": "group"},
+            {"id": "GRP_NAME:Ev scooty. MNR (royal ev ) stars", "name": "Ev scooty. MNR (royal ev ) stars", "type": "group"},
+            {"id": "GRP_NAME:MNR General Group", "name": "MNR General Group", "type": "group"},
+            {"id": "GRP_NAME:VGK4U - Vijayawada", "name": "VGK4U - Vijayawada", "type": "group"},
+            {"id": "GRP_NAME:VGK4U General", "name": "VGK4U General", "type": "group"},
+        ]
+
+    total_targets = len(recipients) + len(default_groups)
+    if total_targets == 0:
+        raise HTTPException(status_code=400, detail="No matching recipients found for the selected filter criteria.")
+
+    now_ist = get_indian_time()
+    exec_id = f"gbc_{now_ist.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    if not campaign_title:
+        campaign_title = f"Broadcast: {resolved['summary_label'][:75]}"
+
+    meta_obj = {
+        "title": campaign_title,
+        "message_text": message_text,
+        "greeting_text": greeting_text,
+        "raw_subject_text": raw_subject_text,
+        "composed_message": composed_preview,
+        "signature_id": signature_id,
+        "signature_label": signature_label,
+        "signature_text": signature_text,
+        "action_buttons": action_buttons,
+        "dry_run": dry_run,
+        "image_url": image_url,
+        "template_id": template_id,
+        "channel_mode": channel_mode,
+        "scanned_speed": scanned_speed,
+        "include_default_groups": include_default_groups,
+        "filters": {
+            "primary_category": payload.get("primary_category"),
+            "association_types": payload.get("association_types"),
+            "status_mode": payload.get("status_mode"),
+            "freelancer_mode": payload.get("freelancer_mode"),
+            "lead_segment": payload.get("lead_segment"),
+            "lead_status_group": payload.get("lead_status_group"),
+            "lead_stage_group": payload.get("lead_stage_group"),
+            "pipeline_stage": payload.get("pipeline_stage"),
+        },
+        "breakdown": resolved["breakdown"],
+        "processed_count": 0,
+        "current_recipient": "Initializing...",
+    }
+
+    exec_row = AutomationExecution(
+        id=exec_id,
+        job_id="general_broadcast_campaign",
+        job_name=campaign_title[:200],
+        trigger_type="GENERAL_BROADCAST",
+        triggered_by=auth_ctx["label"][:100],
+        triggered_by_staff_id=auth_ctx["staff_id"],
+        company_id=1,
+        status="RUNNING",
+        target_summary=resolved["summary_label"][:500],
+        total_targets=total_targets,
+        sent_count=0,
+        uncertain_count=0,
+        failed_count=0,
+        skipped_count=0,
+        started_at=now_ist,
+        is_legacy=False,
+        execution_metadata=meta_obj,
+    )
+    db.add(exec_row)
+    db.flush()
+
+    for r in recipients:
+        d = AutomationDispatch(
+            execution_id=exec_id,
+            job_id="general_broadcast_campaign",
+            recipient_type="individual",
+            recipient_identifier=r["phone"],
+            recipient_name=(r["name"] or "")[:200],
+            target_entity_type=r.get("entity_type"),
+            target_entity_id=r.get("entity_id"),
+            provider="META_WHATSAPP" if channel_mode != "scanned_safe" else "SCANNED_WA",
+            status="QUEUED",
+            payload_snapshot={
+                "code": r.get("code"),
+                "category_label": r.get("category_label"),
+                "segment": r.get("segment"),
+                "status_label": r.get("status_label"),
+                "stage_label": r.get("stage_label"),
+                "city": r.get("city"),
+            },
+        )
+        db.add(d)
+
+    for g in default_groups:
+        d = AutomationDispatch(
+            execution_id=exec_id,
+            job_id="general_broadcast_campaign",
+            recipient_type=g["type"],
+            recipient_identifier=g["id"],
+            recipient_name=g["name"],
+            target_entity_type="whatsapp_group",
+            provider="SCANNED_WA",
+            status="QUEUED",
+            payload_snapshot={
+                "code": "GROUP",
+                "category_label": "WhatsApp Group / Channel",
+                "segment": "Broadcast Group",
+                "status_label": "Active",
+                "stage_label": "Group",
+            },
+        )
+        db.add(d)
+
+    db.commit()
+    _ACTIVE_GBC_CONTROL[exec_id] = "RUNNING"
+    background_tasks.add_task(_execute_general_broadcast_run, exec_id)
+
+    return {
+        "success": True,
+        "execution_id": exec_id,
+        "title": campaign_title,
+        "total_targets": total_targets,
+        "summary_label": resolved["summary_label"],
+        "channel_mode": channel_mode,
+        "message": f"Broadcast triggered for {total_targets} recipients.",
+    }
+
+
+def _compute_execution_live_metrics(db: Session, exec_row: Any) -> Dict[str, Any]:
+    """
+    Aggregates live Sent, Delivered, Read, Failed, Queued counts for a General Broadcast execution
+    by joining AutomationDispatch with MessageLog (where Meta webhooks update delivered_at / read_at).
+    """
+    _sync_gbc_webhook_statuses(db, exec_row.id)
+    row = db.execute(text("""
+        SELECT
+            COUNT(*) AS total_cnt,
+            COUNT(*) FILTER (WHERE ad.status = 'QUEUED') AS queued_cnt,
+            COUNT(*) FILTER (WHERE ad.status IN ('SENT', 'DELIVERED', 'READ')) AS sent_cnt,
+            COUNT(*) FILTER (
+                WHERE ad.status IN ('DELIVERED', 'READ')
+                   OR LOWER(COALESCE(ml.current_status, '')) IN ('delivered', 'read')
+                   OR ml.delivered_at IS NOT NULL
+                   OR ad.provider IN ('SCANNED_WA', 'SCANNED_FALLBACK') AND ad.status = 'SENT'
+            ) AS delivered_cnt,
+            COUNT(*) FILTER (
+                WHERE ad.status = 'READ'
+                   OR LOWER(COALESCE(ml.current_status, '')) = 'read'
+                   OR ml.read_at IS NOT NULL
+            ) AS read_cnt,
+            COUNT(*) FILTER (
+                WHERE ad.status = 'FAILED'
+                   OR LOWER(COALESCE(ml.current_status, '')) IN ('failed', 'undelivered')
+            ) AS failed_cnt
+        FROM automation_dispatch ad
+        LEFT JOIN message_log ml ON ml.id = ad.message_log_id
+        WHERE ad.execution_id = :eid
+    """), {"eid": exec_row.id}).fetchone()
+
+    has_dispatches = bool(row and int(row[0] or 0) > 0)
+    total_cnt = int(row[0]) if has_dispatches else int(exec_row.total_targets or 0)
+    queued_cnt = int(row[1] or 0) if has_dispatches else 0
+    sent_cnt = int(row[2] or 0) if has_dispatches else int(exec_row.sent_count or 0)
+    delivered_cnt = int(row[3] or 0) if has_dispatches else 0
+    read_cnt = int(row[4] or 0) if has_dispatches else 0
+    failed_cnt = int(row[5] or 0) if has_dispatches else int(exec_row.failed_count or 0)
+    processed_cnt = total_cnt - queued_cnt
+    pct = round((processed_cnt / total_cnt) * 100, 1) if total_cnt > 0 else 100.0
+
+    return {
+        "total": total_cnt,
+        "processed": processed_cnt,
+        "queued": queued_cnt,
+        "sent": sent_cnt,
+        "delivered": delivered_cnt,
+        "read": read_cnt,
+        "failed": failed_cnt,
+        "percent": pct,
+    }
+
+
+@router.get("/general-broadcast/progress/{execution_id}")
+def get_general_broadcast_progress(
+    execution_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    from app.models.automation import AutomationExecution
+    exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+    if not exec_row:
+        raise HTTPException(status_code=404, detail="Broadcast execution not found")
+
+    if str(exec_row.status or "").upper() == "RUNNING":
+        _ensure_running_gbc_worker(execution_id)
+
+    _sync_gbc_webhook_statuses(db, execution_id)
+
+    metrics = _compute_execution_live_metrics(db, exec_row)
+    meta = exec_row.execution_metadata or {}
+    return {
+        "success": True,
+        "execution_id": exec_row.id,
+        "title": exec_row.job_name,
+        "status": exec_row.status,
+        "channel_mode": meta.get("channel_mode", "api_first"),
+        "current_recipient": meta.get("current_recipient", ""),
+        "started_at": exec_row.started_at.strftime("%d %b %Y, %I:%M:%S %p IST") if exec_row.started_at else "—",
+        "completed_at": exec_row.completed_at.strftime("%d %b %Y, %I:%M:%S %p IST") if exec_row.completed_at else None,
+        **metrics,
+    }
+
+
+@router.get("/general-broadcast/triggers")
+def list_general_broadcast_triggers(
+    search: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    from app.models.automation import AutomationExecution
+
+    q = db.query(AutomationExecution).filter(AutomationExecution.job_id == "general_broadcast_campaign")
+    if status and status.upper() != "ALL":
+        q = q.filter(AutomationExecution.status == status.upper())
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        q = q.filter(or_(
+            AutomationExecution.id.ilike(s),
+            AutomationExecution.job_name.ilike(s),
+            AutomationExecution.target_summary.ilike(s),
+            AutomationExecution.triggered_by.ilike(s),
+        ))
+
+    rows = q.order_by(AutomationExecution.started_at.desc()).limit(limit).all()
+
+    # Webhook sync runs on recent executions so UI live delivers/reads stay completely accurate on refresh
+    eids = [r.id for r in rows[:20]]
+    if rows:
+        for r_top in rows[:5]:
+            _sync_gbc_webhook_statuses(db, r_top.id)
+
+    metrics_map: Dict[str, Dict[str, Any]] = {}
+    if eids:
+        try:
+            agg_rows = db.execute(text("""
+                SELECT
+                    ad.execution_id,
+                    COUNT(*) AS total_cnt,
+                    COUNT(*) FILTER (WHERE ad.status = 'QUEUED') AS queued_cnt,
+                    COUNT(*) FILTER (WHERE ad.status IN ('SENT', 'DELIVERED', 'READ')) AS sent_cnt,
+                    COUNT(*) FILTER (
+                        WHERE ad.status IN ('DELIVERED', 'READ')
+                           OR LOWER(COALESCE(ml.current_status, '')) IN ('delivered', 'read')
+                           OR ml.delivered_at IS NOT NULL
+                           OR (ad.provider IN ('SCANNED_WA', 'SCANNED_FALLBACK') AND ad.status = 'SENT')
+                    ) AS delivered_cnt,
+                    COUNT(*) FILTER (
+                        WHERE ad.status = 'READ'
+                           OR LOWER(COALESCE(ml.current_status, '')) = 'read'
+                           OR ml.read_at IS NOT NULL
+                    ) AS read_cnt,
+                    COUNT(*) FILTER (
+                        WHERE ad.status = 'FAILED'
+                           OR LOWER(COALESCE(ml.current_status, '')) IN ('failed', 'undelivered')
+                    ) AS failed_cnt
+                FROM automation_dispatch ad
+                LEFT JOIN message_log ml ON ml.id = ad.message_log_id
+                WHERE ad.execution_id IN :eids
+                GROUP BY ad.execution_id
+            """), {"eids": tuple(eids)}).fetchall()
+            for ar in agg_rows:
+                t_c = int(ar[1] or 0)
+                q_c = int(ar[2] or 0)
+                s_c = int(ar[3] or 0)
+                d_c = int(ar[4] or 0)
+                r_c = int(ar[5] or 0)
+                f_c = int(ar[6] or 0)
+                p_c = t_c - q_c
+                metrics_map[str(ar[0])] = {
+                    "total": t_c,
+                    "processed": p_c,
+                    "queued": q_c,
+                    "sent": s_c,
+                    "delivered": d_c,
+                    "read": r_c,
+                    "failed": f_c,
+                    "percent": round((p_c / t_c) * 100, 1) if t_c > 0 else 100.0,
+                }
+        except Exception:
+            db.rollback()
+
+    triggers = []
+    for r in rows:
+        meta = r.execution_metadata or {}
+        ch_mode = str(meta.get("channel_mode") or "api_first").lower()
+        if channel and channel != "all":
+            if channel == "api" and ch_mode == "scanned_safe":
+                continue
+            if channel == "scanned" and ch_mode == "api_default":
+                continue
+
+        t_fb = int(r.total_targets or 0)
+        s_fb = int(r.sent_count or 0)
+        f_fb = int(r.failed_count or 0)
+        metrics = metrics_map.get(r.id) or {
+            "total": t_fb,
+            "processed": s_fb + f_fb,
+            "queued": max(0, t_fb - s_fb - f_fb),
+            "sent": s_fb,
+            "delivered": 0,
+            "read": 0,
+            "failed": f_fb,
+            "percent": round(((s_fb + f_fb) / t_fb) * 100, 1) if t_fb > 0 else 100.0,
+        }
+        triggers.append({
+            "execution_id": r.id,
+            "title": r.job_name,
+            "date_str": r.started_at.strftime("%d %b %Y") if r.started_at else "—",
+            "time_str": r.started_at.strftime("%I:%M:%S %p IST") if r.started_at else "—",
+            "timestamp": r.started_at.strftime("%d %b %Y, %I:%M:%S %p IST") if r.started_at else "—",
+            "triggered_by": r.triggered_by,
+            "status": r.status,
+            "target_summary": r.target_summary or "General Broadcast",
+            "channel_mode": ch_mode,
+            "message_text": meta.get("message_text") or "",
+            "composed_message": meta.get("composed_message") or _compose_full_gbc_message(
+                meta.get("message_text") or "",
+                meta.get("signature_text"),
+                meta.get("action_buttons"),
+            ),
+            "signature_id": meta.get("signature_id"),
+            "signature_label": meta.get("signature_label"),
+            "signature_text": meta.get("signature_text") or "",
+            "action_buttons": meta.get("action_buttons") or [],
+            "image_url": meta.get("image_url") or None,
+            "template_id": meta.get("template_id"),
+            "filters": meta.get("filters") or {},
+            "breakdown": meta.get("breakdown") or {},
+            **metrics,
+        })
+
+    return {"success": True, "total": len(triggers), "triggers": triggers}
+
+
+@router.get("/general-broadcast/triggers/{execution_id}/recipients")
+def get_general_broadcast_trigger_recipients(
+    execution_id: str,
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(500, ge=1, le=2000),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    from app.models.automation import AutomationExecution
+
+    exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+    if not exec_row:
+        raise HTTPException(status_code=404, detail="Broadcast execution not found")
+
+    _sync_gbc_webhook_statuses(db, execution_id)
+
+    sql = """
+        SELECT
+            ad.id,
+            ad.recipient_type,
+            ad.recipient_identifier,
+            ad.recipient_name,
+            ad.provider,
+            ad.provider_message_id,
+            ad.status AS dispatch_status,
+            ad.sent_at,
+            ad.delivered_at AS ad_delivered_at,
+            ad.failed_at,
+            ad.error_message AS ad_error,
+            ad.payload_snapshot,
+            ml.current_status AS ml_status,
+            ml.delivered_at AS ml_delivered_at,
+            ml.read_at AS ml_read_at,
+            ml.error_message AS ml_error,
+            ml.message_body AS ml_body
+        FROM automation_dispatch ad
+        LEFT JOIN message_log ml ON ml.id = ad.message_log_id
+        WHERE ad.execution_id = :eid
+    """
+    params: Dict[str, Any] = {"eid": execution_id, "lim": limit}
+
+    if search and search.strip():
+        sql += """
+            AND (
+                ad.recipient_name ILIKE :s
+                OR ad.recipient_identifier ILIKE :s
+                OR COALESCE(ad.provider_message_id, '') ILIKE :s
+                OR COALESCE(ad.error_message, '') ILIKE :s
+            )
+        """
+        params["s"] = f"%{search.strip()}%"
+
+    sql += " ORDER BY ad.id ASC LIMIT :lim"
+    rows = db.execute(text(sql), params).fetchall()
+
+    meta = exec_row.execution_metadata or {}
+    fallback_msg = meta.get("message_text") or ""
+    items = []
+
+    for r in rows:
+        snap = r[11] if isinstance(r[11], dict) else {}
+        ml_st = str(r[12] or "").upper()
+        disp_st = str(r[6] or "QUEUED").upper()
+        prov = str(r[4] or "META_WHATSAPP").upper()
+
+        # Determine effective delivery status
+        if ml_st == "READ" or r[14] is not None:
+            eff_status = "READ"
+        elif ml_st == "DELIVERED" or r[13] is not None or r[8] is not None or (prov in ("SCANNED_WA", "SCANNED_FALLBACK") and disp_st == "SENT"):
+            eff_status = "DELIVERED"
+        elif disp_st == "FAILED" or ml_st in ("FAILED", "UNDELIVERED"):
+            eff_status = "FAILED"
+        elif disp_st == "SENT" or ml_st == "SENT":
+            eff_status = "SENT"
+        else:
+            eff_status = disp_st
+
+        if status and status.upper() != "ALL":
+            req_st = status.upper()
+            if req_st == "DELIVERED" and eff_status not in ("DELIVERED", "READ"):
+                continue
+            elif req_st == "SENT" and eff_status not in ("SENT", "DELIVERED", "READ"):
+                continue
+            elif req_st not in ("DELIVERED", "SENT") and eff_status != req_st:
+                continue
+
+        sent_dt = r[7]
+        deliv_dt = r[13] or r[8] or (sent_dt if prov in ("SCANNED_WA", "SCANNED_FALLBACK") and disp_st == "SENT" else None)
+        read_dt = r[14]
+
+        items.append({
+            "id": r[0],
+            "recipient_type": r[1],
+            "phone": r[2],
+            "name": r[3] or "Recipient",
+            "code": snap.get("code") or "—",
+            "category_label": snap.get("category_label") or "Recipient",
+            "segment": snap.get("segment") or "—",
+            "status_label": snap.get("status_label") or "—",
+            "stage_label": snap.get("stage_label") or "—",
+            "city": snap.get("city") or "",
+            "provider": prov,
+            "wamid": r[5] or "—",
+            "status": eff_status,
+            "sent_at": sent_dt.strftime("%d %b %Y, %I:%M:%S %p") if sent_dt else "—",
+            "delivered_at": deliv_dt.strftime("%d %b %Y, %I:%M:%S %p") if deliv_dt else "—",
+            "read_at": read_dt.strftime("%d %b %Y, %I:%M:%S %p") if read_dt else "—",
+            "error_message": r[10] or r[15] or "",
+            "rendered_message": snap.get("rendered_message") or r[16] or fallback_msg,
+        })
+
+    metrics = _compute_execution_live_metrics(db, exec_row)
+    return {
+        "success": True,
+        "execution": {
+            "execution_id": exec_row.id,
+            "title": exec_row.job_name,
+            "triggered_by": exec_row.triggered_by,
+            "timestamp": exec_row.started_at.strftime("%d %b %Y, %I:%M:%S %p IST") if exec_row.started_at else "—",
+            "status": exec_row.status,
+            "target_summary": exec_row.target_summary,
+            "message_text": fallback_msg,
+            "composed_message": meta.get("composed_message") or _compose_full_gbc_message(
+                fallback_msg,
+                meta.get("signature_text"),
+                meta.get("action_buttons"),
+            ),
+            "signature_id": meta.get("signature_id"),
+            "signature_label": meta.get("signature_label"),
+            "signature_text": meta.get("signature_text") or "",
+            "action_buttons": meta.get("action_buttons") or [],
+            "image_url": meta.get("image_url"),
+            "channel_mode": meta.get("channel_mode", "api_first"),
+            **metrics,
+        },
+        "total": len(items),
+        "recipients": items,
+    }
+
+
+@router.post("/general-broadcast/triggers/{execution_id}/control")
+def control_general_broadcast_execution(
+    execution_id: str,
+    payload: Dict[str, Any] = Body(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    from app.models.automation import AutomationExecution, AutomationDispatch
+    action = str(payload.get("action") or "").strip().lower()
+    exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+    if not exec_row:
+        raise HTTPException(status_code=404, detail="Broadcast execution not found")
+
+    _sync_gbc_webhook_statuses(db, execution_id)
+
+    if action == "pause":
+        _ACTIVE_GBC_CONTROL[execution_id] = "PAUSED"
+        exec_row.status = "PAUSED"
+    elif action == "resume":
+        was_running = _ACTIVE_GBC_CONTROL.get(execution_id) in ("RUNNING", "PAUSED")
+        _ACTIVE_GBC_CONTROL[execution_id] = "RUNNING"
+        exec_row.status = "RUNNING"
+        db.commit()
+        if not was_running:
+            background_tasks.add_task(_execute_general_broadcast_run, execution_id)
+        return {"success": True, "execution_id": execution_id, "status": exec_row.status}
+    elif action in ("cancel", "stop", "abort"):
+        _ACTIVE_GBC_CONTROL[execution_id] = "CANCELLED"
+        exec_row.status = "CANCELLED"
+        exec_row.completed_at = get_indian_time()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use pause, resume, cancel, stop, or abort.")
+
+    db.commit()
+    return {"success": True, "execution_id": execution_id, "status": exec_row.status}
+
+
+@router.delete("/general-broadcast/triggers/{execution_id}")
+def delete_general_broadcast_trigger(
+    execution_id: str,
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    from app.models.automation import AutomationExecution, AutomationDispatch
+    exec_row = db.query(AutomationExecution).filter(
+        AutomationExecution.id == execution_id,
+        AutomationExecution.job_id == "general_broadcast_campaign",
+    ).first()
+    if not exec_row:
+        raise HTTPException(status_code=404, detail="Broadcast execution not found")
+    _ACTIVE_GBC_CONTROL[execution_id] = "CANCELLED"
+    db.query(AutomationDispatch).filter(AutomationDispatch.execution_id == execution_id).delete(synchronize_session=False)
+    db.delete(exec_row)
+    db.commit()
+    return {"success": True, "deleted_id": execution_id}
+
+
+@router.post("/general-broadcast/test-send")
+def test_send_general_broadcast(
+    payload: Dict[str, Any] = Body(...),
+    auth_ctx: Dict[str, Any] = Depends(_require_gbc_authorized),
+    db: Session = Depends(get_db)
+):
+    """
+    Sends a single immediate Test Broadcast message to a selected mobile number
+    using the exact composed message, dynamic variables, custom signature, CTA action buttons,
+    creative image, and selected channel mode, and records it in Trigger History.
+    """
+    import uuid
+    from app.models.automation import AutomationExecution, AutomationDispatch
+
+    test_phone_raw = str(payload.get("test_phone") or "").strip()
+    cp = _clean_10_digit_phone(test_phone_raw)
+    if not cp:
+        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit Indian mobile number for Test Send.")
+
+    test_name = str(payload.get("test_name") or "Test Recipient").strip() or "Test Recipient"
+    test_code = str(payload.get("test_code") or "TEST-01").strip()
+    test_segment = str(payload.get("test_segment") or "VGK4U / MyntReal").strip()
+    test_stage = str(payload.get("test_stage") or "Active Stage").strip()
+    test_city = str(payload.get("test_city") or "Vijayawada").strip()
+
+    message_text = str(payload.get("message_text") or payload.get("message") or "").strip()
+    greeting_text = str(payload.get("greeting_text") or "").strip() or None
+    raw_subject_text = str(payload.get("raw_subject_text") or "").strip() or None
+    signature_id = payload.get("signature_id") or None
+    signature_label = str(payload.get("signature_label") or "").strip() or None
+    signature_text = str(payload.get("signature_text") or "").strip() or None
+    action_buttons = payload.get("action_buttons") if isinstance(payload.get("action_buttons"), list) else []
+    dry_run = bool(payload.get("dry_run", False))
+    image_url = payload.get("image_url") or payload.get("imageUrl") or None
+    template_id = payload.get("template_id")
+    channel_mode = str(payload.get("channel_mode") or "api_first").strip().lower()
+    scanned_speed = str(payload.get("scanned_speed") or "safe").strip().lower()
+    title_raw = str(payload.get("title") or "").strip()
+
+    if not message_text and not image_url and not template_id:
+        raise HTTPException(status_code=400, detail="Please enter a broadcast message or upload a creative image before testing.")
+
+    composed_preview = _compose_full_gbc_message(message_text, signature_text, action_buttons)
+    now_ist = get_indian_time()
+    exec_id = f"gbc_test_{now_ist.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:5]}"
+    campaign_title = f"[TEST SEND] {title_raw or f'To 91{cp}'}"[:200]
+
+    meta_obj = {
+        "title": campaign_title,
+        "is_test_send": True,
+        "message_text": message_text,
+        "greeting_text": greeting_text,
+        "raw_subject_text": raw_subject_text,
+        "composed_message": composed_preview,
+        "signature_id": signature_id,
+        "signature_label": signature_label,
+        "signature_text": signature_text,
+        "action_buttons": action_buttons,
+        "dry_run": dry_run,
+        "image_url": image_url,
+        "template_id": template_id,
+        "channel_mode": channel_mode,
+        "scanned_speed": scanned_speed,
+        "include_default_groups": False,
+        "filters": {"primary_category": "test_send", "test_phone": f"91{cp}"},
+        "breakdown": {"test_recipient": 1},
+        "processed_count": 0,
+        "current_recipient": f"{test_name} (91{cp})",
+    }
+
+    exec_row = AutomationExecution(
+        id=exec_id,
+        job_id="general_broadcast_campaign",
+        job_name=campaign_title,
+        trigger_type="GENERAL_BROADCAST_TEST",
+        triggered_by=auth_ctx["label"][:100],
+        triggered_by_staff_id=auth_ctx["staff_id"],
+        company_id=1,
+        status="RUNNING",
+        target_summary=f"Test Send → {test_name} (+91 {cp})",
+        total_targets=1,
+        sent_count=0,
+        uncertain_count=0,
+        failed_count=0,
+        skipped_count=0,
+        started_at=now_ist,
+        is_legacy=False,
+        execution_metadata=meta_obj,
+    )
+    db.add(exec_row)
+    db.flush()
+
+    d = AutomationDispatch(
+        execution_id=exec_id,
+        job_id="general_broadcast_campaign",
+        recipient_type="individual",
+        recipient_identifier=f"91{cp}",
+        recipient_name=test_name[:200],
+        target_entity_type="test_recipient",
+        provider="META_WHATSAPP" if channel_mode != "scanned_safe" else "SCANNED_WA",
+        status="QUEUED",
+        payload_snapshot={
+            "code": test_code,
+            "category_label": "Test Recipient",
+            "segment": test_segment,
+            "status_label": "Active",
+            "stage_label": test_stage,
+            "city": test_city,
+        },
+    )
+    db.add(d)
+    db.commit()
+
+    # Execute synchronously so the user gets immediate feedback on their Test Send
+    _ACTIVE_GBC_CONTROL[exec_id] = "RUNNING"
+    _execute_general_broadcast_run(exec_id)
+
+    db.expire_all()
+    disp_after = db.query(AutomationDispatch).filter(AutomationDispatch.execution_id == exec_id).first()
+    delivered_ok = disp_after and disp_after.status in ("SENT", "DELIVERED", "READ")
+    return {
+        "success": bool(delivered_ok),
+        "execution_id": exec_id,
+        "test_phone": f"91{cp}",
+        "test_name": test_name,
+        "status": disp_after.status if disp_after else "FAILED",
+        "provider": disp_after.provider if disp_after else "UNKNOWN",
+        "wamid": disp_after.provider_message_id if disp_after else None,
+        "error_message": disp_after.error_message if disp_after else None,
+        "rendered_message": (disp_after.payload_snapshot or {}).get("rendered_message") if disp_after else composed_preview,
+    }
+
+
+
 
 

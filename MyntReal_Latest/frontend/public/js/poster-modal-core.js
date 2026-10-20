@@ -174,6 +174,25 @@
               </div>
             </div>
           </div>
+
+          <div style="border-top:1.5px solid #e5e7eb;margin-top:8px;padding-top:12px;background:#f0fdf4;margin:4px -20px -20px -20px;padding:16px 20px;border-bottom:1px solid #d1d5db">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <label style="font-size:11.5px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.3px;margin:0">
+                <i class="fab fa-whatsapp me-1 text-success"></i>WhatsApp Message Template
+              </label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button type="button" id="btnCopyPosterTextInline" onclick="copyPosterText(this)" style="background:#059669;color:#ffffff;border:none;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;padding:3px 9px;display:inline-flex;align-items:center;gap:4px">
+                  <i class="fas fa-copy"></i> Copy Text
+                </button>
+                <button type="button" onclick="resetPosterCustomText()" style="background:none;border:none;color:#059669;font-size:11px;font-weight:700;cursor:pointer;padding:0">
+                  <i class="fas fa-redo-alt me-1"></i>Reset Text
+                </button>
+              </div>
+            </div>
+            <div>
+              <textarea id="postShareCustomText" rows="6" oninput="window._posterCustomTextEdited = true" style="width:100%;font-size:11.5px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.45;border:1.5px solid #a7f3d0;border-radius:7px;padding:8px 10px;box-sizing:border-box;resize:vertical;background:#ffffff;color:#111827;white-space:pre-wrap" placeholder="WhatsApp message will preview and update here…"></textarea>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -321,14 +340,16 @@
       </div>
     </div>
     
-    <div style="background:#f3f4f6;padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;height:62px;box-sizing:border-box;z-index:20">
-      <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
-      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
-      <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
-      <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
-      <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
-      <button onclick="postPosterAnnouncement()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post Announcement</button>
-      <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 22px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
+    <div style="background:#f3f4f6;padding:10px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0;min-height:62px;flex-wrap:wrap;box-sizing:border-box;z-index:20">
+      <button onclick="closePosterModal()" style="background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center">Cancel</button>
+      <button onclick="testShareToNumber()" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-vial me-2"></i>Test Share (Custom No)</button>
+      <button onclick="shareOnWhatsApp()" style="background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fab fa-whatsapp me-2"></i>Share on WhatsApp</button>
+      <button onclick="sharePoster()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-share-alt me-2"></i>Share Poster</button>
+      <button onclick="shareDefaultChannel()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Share Default</button>
+      <button onclick="postPosterAnnouncement()" style="background:linear-gradient(135deg,#ec4899,#be185d);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-bullhorn me-2"></i>Post Announcement</button>
+      <button onclick="copyPosterText(this)" id="btnCopyPosterTextFooter" style="background:linear-gradient(135deg,#4f46e5,#4338ca);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-align-left me-2"></i>Copy Text</button>
+      <button onclick="copyPosterImage(this)" id="btnCopyPosterImageFooter" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:white;border:none;border-radius:8px;height:38px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-copy me-2"></i>Copy Image</button>
+      <button onclick="downloadPoster()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;height:38px;padding:0 18px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center"><i class="fas fa-download me-2"></i>Download Image</button>
     </div>
   </div>
 </div>
@@ -1671,28 +1692,204 @@
     if (spinner) spinner.style.display = 'none';
 
     try {
-      const res = await fetch('/api/send-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
+      const json = await sendIndividualWhatsAppApiFirst({
+        phone: cleanPhone,
+        imageUrl: dataUrl,
+        message: shareText,
+        recipientName: partnerName
       });
-      const json = await res.json();
-      if (json.success) {
+      if (json && json.success) {
         const attachDesc = dataUrl ? (source === 'uploaded' ? 'Uploaded Custom Creative 🖼️' : 'Auto-Generated Celebration Poster 🖼️') : 'Text Only (Default Message)';
-        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+        const channelDesc = json.delivery_label || (json.channel === 'meta_api' ? 'Official Meta WhatsApp Cloud API ✅' : 'Scanned WhatsApp Session (API Fallback) ✅');
+        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nChannel: ${channelDesc}\nAttachment: ${attachDesc}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
       } else {
-        const errNotice = json.error || 'WhatsApp bot not connected';
-        const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+        const errNotice = (json && json.error) || 'Both Official API and Scanned WhatsApp bot are unavailable';
+        const useFallback = confirm(`⚠️ Automated WhatsApp Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
         if (useFallback) {
           const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
           window.open(directUrl, '_blank');
         }
       }
     } catch (err) {
-      const useFallback = confirm(`⚠️ Background Bot Unavailable.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+      const useFallback = confirm(`⚠️ Background WhatsApp Service Unavailable.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
       if (useFallback) {
         const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
         window.open(directUrl, '_blank');
+      }
+    }
+  }
+
+  function resetPosterShareText() {
+    window._posterCustomTextEdited = false;
+    const tpl = document.getElementById('postShareTemplate')?.value || 'full';
+    const txt = buildPosterShareText(tpl);
+    const customTextEl = document.getElementById('postShareCustomText');
+    if (customTextEl) customTextEl.value = txt;
+  }
+
+  async function _ensurePngBlobForClipboard(blob, dataUrl) {
+    if (blob && blob.type === 'image/png') return blob;
+    const srcUrl = dataUrl || (blob ? URL.createObjectURL(blob) : null);
+    if (!srcUrl) return null;
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const cvs = document.createElement('canvas');
+          cvs.width = img.naturalWidth || img.width || 800;
+          cvs.height = img.naturalHeight || img.height || 1000;
+          const ctx = cvs.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          cvs.toBlob((pngBlob) => resolve(pngBlob || blob), 'image/png');
+        } catch (e) {
+          resolve(blob);
+        }
+      };
+      img.onerror = () => resolve(blob);
+      img.src = srcUrl;
+    });
+  }
+
+  function _flashCopyButtonState(btnEl, successText, origHtml) {
+    if (!btnEl) return;
+    const prevHtml = origHtml || btnEl.innerHTML;
+    btnEl.innerHTML = successText;
+    btnEl.dataset.copying = '1';
+    setTimeout(() => {
+      if (btnEl) {
+        btnEl.innerHTML = prevHtml;
+        delete btnEl.dataset.copying;
+      }
+    }, 2200);
+  }
+
+  async function copyPosterImage(btnEl) {
+    const container = document.getElementById('posterCanvasWrapper');
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) btnEl.innerHTML = '⏳ Copying...';
+    const spinner = document.getElementById('posterSpinner');
+    if (spinner) {
+      spinner.style.display = 'flex';
+      const spText = spinner.querySelector('div div');
+      if (spText) spText.textContent = 'Preparing poster image for clipboard...';
+    }
+    try {
+      const { dataUrl, blob } = await resolvePosterImagePayload(container);
+      if (spinner) spinner.style.display = 'none';
+      if (!dataUrl && !blob) {
+        if (btnEl) btnEl.innerHTML = origHtml;
+        alert('Failed to generate poster image to copy.');
+        return;
+      }
+      const pngBlob = await _ensurePngBlobForClipboard(blob, dataUrl);
+      if (pngBlob && navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+        _flashCopyButtonState(btnEl, '✅ Image Copied!', origHtml);
+      } else {
+        if (btnEl) btnEl.innerHTML = origHtml;
+        alert('Your browser does not support direct image clipboard copy. Please use Download Image instead.');
+      }
+    } catch (err) {
+      if (spinner) spinner.style.display = 'none';
+      if (btnEl) btnEl.innerHTML = origHtml;
+      console.error('[Poster Copy Image] Error:', err);
+      alert('Could not copy image to clipboard: ' + (err.message || 'Clipboard permission denied'));
+    }
+  }
+
+  async function copyPosterText(btnEl) {
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    try {
+      const shareDetails = getPosterShareDetails();
+      const textToCopy = (shareDetails && shareDetails.text) ? shareDetails.text : buildPosterShareText();
+      if (!textToCopy) {
+        alert('No share text available to copy.');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = textToCopy;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      _flashCopyButtonState(btnEl, '✅ Text Copied!', origHtml);
+    } catch (err) {
+      if (btnEl) btnEl.innerHTML = origHtml;
+      alert('Failed to copy text: ' + (err.message || err));
+    }
+  }
+
+  async function sendIndividualWhatsAppApiFirst({ phone, message, imageUrl, recipientName }) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    if (!cleanPhone) {
+      return { success: false, error: 'Missing phone number' };
+    }
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : (typeof API !== 'undefined' ? API : '/api/v1');
+    const tok = localStorage.getItem('staff_token') || localStorage.getItem('access_token') || sessionStorage.getItem('staff_token') || sessionStorage.getItem('access_token') || '';
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 18000);
+      const res = await fetch(`${apiBase}/whatsapp/send-individual-api-first`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(tok ? { 'Authorization': 'Bearer ' + tok } : {})
+        },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          message: message || '',
+          imageUrl: imageUrl || null,
+          recipient_name: recipientName || null
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      const data = await res.json();
+      if (data && (data.success || data.blocked)) {
+        return data;
+      }
+      // Client-side safety fallback to Scanned WA if backend route returned unexpected error
+      const fbRes = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, imageUrl: imageUrl || null, message: message || '' })
+      });
+      const fbJson = await fbRes.json();
+      if (fbJson && fbJson.success) {
+        return {
+          success: true,
+          channel: 'scanned_fallback',
+          delivery_label: 'Delivered via Scanned WA (API Fallback) ✅',
+          api_attempted: true
+        };
+      }
+      return data || fbJson || { success: false, error: 'Delivery failed' };
+    } catch (err) {
+      try {
+        const fbRes = await fetch('/api/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, imageUrl: imageUrl || null, message: message || '' })
+        });
+        const fbJson = await fbRes.json();
+        if (fbJson && fbJson.success) {
+          return {
+            success: true,
+            channel: 'scanned_fallback',
+            delivery_label: 'Delivered via Scanned WA (API Fallback) ✅',
+            api_attempted: true
+          };
+        }
+        return fbJson;
+      } catch (fbErr) {
+        return { success: false, error: fbErr.message || err.message || 'WhatsApp service unreachable' };
       }
     }
   }
@@ -1891,53 +2088,53 @@
         updateDispatchStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
       }
 
-      // 2. Member Direct Send via Scanned Bot
+      // 2. Member Direct Send (Official API First -> Scanned WA Fallback)
       if (isMemberBlocked) {
         updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
       } else if (mPhone) {
         try {
-          const res = await fetchWithTimeout('/api/send-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
+          const json = await sendIndividualWhatsAppApiFirst({
+            phone: mPhone,
+            imageUrl: dataUrl,
+            message: shareText,
+            recipientName: partnerName
           });
-          const json = await res.json();
-          if (json.success) {
-            updateDispatchStatus('member', 'sent', 'Delivered via Scanned WhatsApp');
-          } else if (json.blocked) {
+          if (json && json.success) {
+            updateDispatchStatus('member', 'sent', json.delivery_label || 'Delivered via Official API (Text) ✅');
+          } else if (json && json.blocked) {
             updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
           } else {
-            updateDispatchStatus('member', 'error', json.error || 'Bot Error');
+            updateDispatchStatus('member', 'error', (json && json.error) || 'Delivery Failed');
           }
         } catch (mErr) {
-          updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline');
+          updateDispatchStatus('member', 'error', 'WhatsApp Service Unreachable');
         }
       } else {
         updateDispatchStatus('member', 'skipped', 'No Phone Number');
       }
 
-      // 3. Senior Direct Send via Scanned Bot
+      // 3. Senior Direct Send (Official API First -> Scanned WA Fallback)
       if (!isSeniorVisible) {
         updateDispatchStatus('senior', 'skipped', 'Excluded by toggle');
       } else if (isSeniorBlocked) {
         updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
       } else if (sPhone) {
         try {
-          const res = await fetchWithTimeout('/api/send-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
+          const json = await sendIndividualWhatsAppApiFirst({
+            phone: sPhone,
+            imageUrl: dataUrl,
+            message: shareText,
+            recipientName: seniorName || 'Direct Sponsor'
           });
-          const json = await res.json();
-          if (json.success) {
-            updateDispatchStatus('senior', 'sent', 'Delivered via Scanned WhatsApp');
-          } else if (json.blocked) {
+          if (json && json.success) {
+            updateDispatchStatus('senior', 'sent', json.delivery_label || 'Delivered via Official API (Text) ✅');
+          } else if (json && json.blocked) {
             updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
           } else {
-            updateDispatchStatus('senior', 'error', json.error || 'Bot Error');
+            updateDispatchStatus('senior', 'error', (json && json.error) || 'Delivery Failed');
           }
         } catch (sErr) {
-          updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
+          updateDispatchStatus('senior', 'error', 'WhatsApp Service Unreachable');
         }
       } else {
         updateDispatchStatus('senior', 'skipped', 'No Senior Phone');
@@ -2451,6 +2648,10 @@
   window.openPosterFromUnified = openPosterFromUnified;
   window.capturePosterCanvas = capturePosterCanvas;
   window.downloadPoster = downloadPoster;
+  window.copyPosterImage = copyPosterImage;
+  window.copyPosterText = copyPosterText;
+  window.resetPosterShareText = resetPosterShareText;
+  window.sendIndividualWhatsAppApiFirst = sendIndividualWhatsAppApiFirst;
   window.sharePoster = sharePoster;
   window.shareOnWhatsApp = shareOnWhatsApp;
   window.shareDefaultChannel = shareDefaultChannel;

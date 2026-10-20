@@ -366,7 +366,19 @@ def resolve_crm_list_security_scope(
     if not ctx:
         try:
             ctx = auth_context_service.build_context(db, current_employee)
-        except Exception:
+        except HTTPException:
+            raise
+        except Exception as _ctx_err:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            _err_s = str(_ctx_err).lower()
+            if any(k in _err_s for k in ("queuepool", "timeout", "connection", "operationalerror", "infailedsqltransaction")):
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database service temporarily busy. Please retry in a moment."
+                )
             ctx = None
 
     if not ctx:
@@ -6918,6 +6930,7 @@ def master_leads(
     sort_dir: Optional[str] = Query('desc'),
     page: int = 1,
     per_page: int = 20,
+    count_only: bool = Query(False, description="When True, returns only pagination total without row hydration"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -7315,6 +7328,17 @@ def master_leads(
         v = _parse_dt(created_to); query = query.filter(CRMLead.created_at <= v) if v else query
 
     total = query.count()
+    if count_only:
+        return {
+            'success': True,
+            'data': [],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': _math.ceil(total / per_page) if total > 0 else 0
+            }
+        }
 
     # Sorting
     _SORT_COLS = {
@@ -7401,7 +7425,7 @@ def master_leads(
             _mnr_lookup.add(_l.core_id)
     mnr_name_map = {}
     if _mnr_lookup:
-        for _u in db.query(User).filter(User.id.in_(list(_mnr_lookup))).all():
+        for _u in db.query(User.id, User.name).filter(User.id.in_(list(_mnr_lookup))).all():
             mnr_name_map[_u.id] = _u.name or _u.id
 
     # Transaction count and earliest payment date per lead (batch)
@@ -8798,10 +8822,13 @@ def lead_analytics(
             return name_map
         try:
             from app.models.user import User as _UM
-            for u in db.query(_UM).filter(_UM.id.in_(id_list)).all():
+            for u in db.query(_UM.id, _UM.name).filter(_UM.id.in_(id_list)).all():
                 name_map[u.id] = getattr(u, 'name', None) or u.id
         except Exception:
-            pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
         return name_map
 
     # ── By Guru (guru_id — L1 upline of ground source, top 50) ───────────────
