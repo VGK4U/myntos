@@ -823,8 +823,8 @@
                                     </div>
                                 </div>
                                 <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: 12px; line-height: 1.4; opacity: 0.95;">
-                                    <i class="fas fa-info-circle me-1 text-warning"></i>
-                                    <strong>Uniform Sales Rate:</strong> You earn a flat 5.00% direct commission on your own closed files. Direct sponsor (1.00%) &amp; leadership difference commissions (up to 3.00%) are earned on downline team sales.
+                                    <i class="fas fa-layer-group me-1 text-warning"></i>
+                                    <strong>Track 1 Direct Sales Commission:</strong> Tiered slabs on personal closed files: 5.00% (1–4 files), 6.50% (5–9 files), 7.50% (10–15 files), 8.00% (16+ files). 100% Zero cannibalization of upline team overrides.
                                 </div>
                             </div>
                             <div>
@@ -2615,12 +2615,12 @@
                         </span>
                     </div>
 
-                    <!-- Explanation Banner: Uniform Compensation Model -->
+                    <!-- Explanation Banner: Dual-Track Catalog Standard Model -->
                     <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:16px;color:#3730a3;font-size:12.5px;line-height:1.5">
-                        <strong><i class="fas fa-lightbulb me-1 text-warning"></i>Clear &amp; Uniform Compensation Structure:</strong><br>
-                        1. <strong>Personal Direct Commission:</strong> Flat <strong>5.00%</strong> earned on all your personal qualifying closed files.<br>
-                        2. <strong>Direct Sponsor Override:</strong> <strong>1.00%</strong> earned on every personal file closed by your direct sponsored team members.<br>
-                        3. <strong>Team Difference Commission (Upline Leadership):</strong> Up to <strong>3.00%</strong> (Senior: +1.50%, Extended: +1.00%, Core: +0.50%) earned on downline team sales based on your career designation rank difference.
+                        <strong><i class="fas fa-layer-group me-1 text-primary"></i>Official Dual-Track Compensation Architecture (Catalog Standard):</strong><br>
+                        1. <strong>Track 1 — Personal Sales Commission (Self Performance):</strong> Slabs scale strictly from your self-closed files: <strong>5.00%</strong> (1–4 files), <strong>6.50%</strong> (5–9 files), <strong>7.50%</strong> (10–15 files), and <strong>8.00%</strong> (16+ files). Paid from company margins — 100% Zero Cannibalization of upline overrides.<br>
+                        2. <strong>Track 2 — Direct Sponsor Override:</strong> <strong>1.00%</strong> earned on every personal file closed by your direct sponsored team members.<br>
+                        3. <strong>Track 2 — Direct Team Leadership Overrides:</strong> Unlocks from active direct team members (≥3 files): <strong>+0.50%</strong> (1 Active Direct), <strong>+1.00%</strong> (5 Active Directs), <strong>+1.50%</strong> (10 Active Directs), totaling a <strong>3.00% Leadership Overrides Pool</strong>.
                     </div>
 
                     <!-- 2 Main Compensation Cards -->
@@ -2631,11 +2631,11 @@
                                 <div>
                                     <div style="display:flex;justify-content:space-between;align-items:center">
                                         <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Personal Direct Sales Commission</div>
-                                        <span style="background:#d1fae5;color:#065f46;font-size:13px;font-weight:900;padding:2px 10px;border-radius:14px" id="careerDetailEffectiveRate">5.00% Flat</span>
+                                        <span style="background:#d1fae5;color:#065f46;font-size:13px;font-weight:900;padding:2px 10px;border-radius:14px" id="careerDetailEffectiveRate">5.00% Slab</span>
                                     </div>
-                                    <div style="font-size:20px;font-weight:800;color:#065f46;margin-top:4px" id="careerDetailProdQualTitle">Flat 5.00% Base Rate</div>
+                                    <div style="font-size:20px;font-weight:800;color:#065f46;margin-top:4px" id="careerDetailProdQualTitle">Direct Sales Commission</div>
                                     <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.5" id="careerDetailProdExplanation">
-                                        You earn a uniform flat <strong>5.00% direct commission</strong> on all personal qualifying files closed by you.
+                                        Personal direct sales slabs scale from 5.00% to 8.00% strictly from your personal qualifying closed files.
                                     </div>
                                 </div>
                                 <div style="margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
@@ -2695,12 +2695,12 @@
                                 <thead>
                                     <tr style="background:#f1f5f9;color:#475569;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em">
                                         <th style="padding:10px 14px;text-align:left">Designation</th>
-                                        <th style="padding:10px 14px;text-align:center">Min Own Files</th>
-                                        <th style="padding:10px 14px;text-align:center">Min Active Legs</th>
-                                        <th style="padding:10px 14px;text-align:center">Personal Commission</th>
+                                        <th style="padding:10px 14px;text-align:center">Personal Files (1st Paid)</th>
+                                        <th style="padding:10px 14px;text-align:center">Active Direct Members</th>
+                                        <th style="padding:10px 14px;text-align:center">Direct Commission Slab</th>
                                         <th style="padding:10px 14px;text-align:center">Direct Sponsor Override</th>
-                                        <th style="padding:10px 14px;text-align:center">Tier Difference</th>
-                                        <th style="padding:10px 14px;text-align:center">Cumulative Team Difference</th>
+                                        <th style="padding:10px 14px;text-align:center">Leadership Override</th>
+                                        <th style="padding:10px 14px;text-align:center">Cumulative Overrides Pool</th>
                                         <th style="padding:10px 14px;text-align:center">Your Status</th>
                                     </tr>
                                 </thead>
@@ -2714,18 +2714,22 @@
                     <!-- Commission Waterfall Breakdown Explanation -->
                     <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:18px">
                         <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px">
-                            <i class="fas fa-balance-scale text-warning me-2"></i>Solar Network Commission Waterfall (9.00% Total Pool)
+                            <i class="fas fa-balance-scale text-warning me-2"></i>Dual-Track Commission &amp; Leadership Overrides Architecture (Catalog Standard)
                         </div>
                         <div style="font-size:12px;color:#475569;line-height:1.6">
-                            Every qualifying Solar project distributes up to <strong>9.00%</strong> across the unilevel team:
+                            Compensation operates under a decoupled Dual-Track architecture with <strong>100% Zero Cannibalization</strong>:
                             <ul style="margin-top:6px;margin-bottom:10px;padding-left:20px">
-                                <li><strong>Producer Personal Sales Commission (5.00% Base):</strong> Earned by the direct closing Channel Partner on their own personal files.</li>
-                                <li><strong>Direct Sponsor Override (1.00%):</strong> Dedicated override paid directly to the producer's immediate sponsor on all their direct files.</li>
-                                <li><strong>Senior Difference Commission (+1.50%):</strong> Paid to the first eligible Senior (or above) in the upline tree.</li>
-                                <li><strong>Extended Difference Commission (+1.00%):</strong> Paid to the first eligible Extended (or above) in the upline tree.</li>
-                                <li><strong>Core Difference Commission (+0.50%):</strong> Paid to the first eligible Core (or above) in the upline tree.</li>
+                                <li><strong>Track 1 — Direct Producer Commission (5.00% to 8.00%):</strong> Slabs scale strictly with personal production (Tier 1 CP: 5.00%, Tier 2 Senior: 6.50%, Tier 3 Extended: 7.50%, Tier 4 Core: 8.00%). Producer slab growth is paid from company margins and never reduces downline or upline overrides.</li>
+                                <li><strong>Track 2 — Direct Sponsor Override (1.00%):</strong> Dedicated 1.00% override paid directly to the producer's immediate sponsor on all direct closed files.</li>
+                                <li><strong>Track 2 — Direct Team Leadership Overrides Pool (Up to 3.00%):</strong> Unlocks strictly by count of Active Direct Members (direct sponsored partners with ≥3 qualifying files):
+                                    <span style="display:block;margin-top:3px;margin-left:12px;color:#334155">
+                                        • <strong>Level 1 (Manager Override):</strong> +0.50% (Requires 1 Active Direct Member)<br>
+                                        • <strong>Level 2 (GM Royalties):</strong> +1.00% (Requires 5 Active Direct Members)<br>
+                                        • <strong>Level 3 (RM Depth &amp; Lifetime):</strong> +1.50% (Requires 10 Active Direct Members)
+                                    </span>
+                                </li>
                             </ul>
-                            <em>Note: Field Support (0.75% / 1.50%) and Showroom Channel (3.50%) are operational budgets paid outside the 9.00% network pool.</em>
+                            <em>Note: Field Support (0.75% / 1.50%) and Showroom Channel (2.50% / 3.50%) are operational fulfillment budgets paid outside the network overrides pool.</em>
                         </div>
                     </div>
                 </div>
@@ -3078,32 +3082,44 @@
             const cs = window._vgk4uCareerStatus;
             if (!cs) return;
 
-            // Direct Sales Card Elements
+            // Direct Sales Card Elements (Track 1)
             const elProdTitle = document.getElementById('careerDetailProdQualTitle');
-            if (elProdTitle) elProdTitle.textContent = (cs.own_qualifying_files || 0) >= 1 ? 'Flat 5.00% Base Rate' : 'Entry Member (0.00%)';
+            const ownF = cs.own_qualifying_files ?? 0;
+            const effR = Number(cs.effective_personal_rate != null ? cs.effective_personal_rate : (ownF >= 16 ? 8.0 : ownF >= 10 ? 7.5 : ownF >= 5 ? 6.5 : ownF >= 1 ? 5.0 : 0.0)).toFixed(2);
+            if (elProdTitle) {
+                if (ownF >= 16) elProdTitle.textContent = 'Tier 4 Core Producer (8.00%)';
+                else if (ownF >= 10) elProdTitle.textContent = 'Tier 3 Extended Producer (7.50%)';
+                else if (ownF >= 5) elProdTitle.textContent = 'Tier 2 Senior Producer (6.50%)';
+                else if (ownF >= 1) elProdTitle.textContent = 'Tier 1 Channel Partner (5.00%)';
+                else elProdTitle.textContent = 'Entry Member (0.00%)';
+            }
             const elEffectiveRate = document.getElementById('careerDetailEffectiveRate');
-            if (elEffectiveRate) elEffectiveRate.textContent = Number(cs.effective_personal_rate != null ? cs.effective_personal_rate : 5.0).toFixed(2) + '% Flat';
+            if (elEffectiveRate) elEffectiveRate.textContent = effR + '% Slab';
             const elOwnFiles = document.getElementById('careerDetailOwnFiles');
-            if (elOwnFiles) elOwnFiles.textContent = cs.own_qualifying_files ?? 0;
+            if (elOwnFiles) elOwnFiles.textContent = ownF;
             const elNextProdReq = document.getElementById('careerDetailNextProdRequirement');
             if (elNextProdReq) {
-                elNextProdReq.innerHTML = (cs.own_qualifying_files || 0) >= 1
-                    ? '<i class="fas fa-check-circle me-1 text-success"></i>Direct Commission Qualified (5.00%)'
-                    : '<i class="fas fa-arrow-up me-1 text-warning"></i>Close 1 file to unlock 5.00%';
+                if (ownF >= 16) elNextProdReq.innerHTML = '<i class="fas fa-crown text-warning me-1"></i>Top Direct Slab (8.00%) Achieved';
+                else if (ownF >= 10) elNextProdReq.innerHTML = `<i class="fas fa-arrow-up text-primary me-1"></i>${16 - ownF} files to Core (8.00%)`;
+                else if (ownF >= 5) elNextProdReq.innerHTML = `<i class="fas fa-arrow-up text-primary me-1"></i>${10 - ownF} files to Extended (7.50%)`;
+                else if (ownF >= 1) elNextProdReq.innerHTML = `<i class="fas fa-arrow-up text-primary me-1"></i>${5 - ownF} files to Senior (6.50%)`;
+                else elNextProdReq.innerHTML = '<i class="fas fa-lock text-warning me-1"></i>Close 1 file to unlock 5.00%';
             }
             const elProdExp = document.getElementById('careerDetailProdExplanation');
             if (elProdExp) {
-                elProdExp.innerHTML = (cs.own_qualifying_files || 0) >= 1
-                    ? `You earn a uniform flat <strong>5.00% direct commission</strong> on all personal qualifying files closed by you (${cs.own_qualifying_files || 0} qualifying file(s) closed to date).`
-                    : 'You are currently an entry-level Member. Close <strong>1 personal qualifying file</strong> to unlock the Channel Partner status and a flat 5.00% direct commission.';
+                if (ownF >= 1) {
+                    elProdExp.innerHTML = `You earn <strong>${effR}% direct commission</strong> on all personal qualifying files closed by you (${ownF} qualifying file(s) closed to date). Slabs scale strictly from personal production (Catalog Standard) with zero cannibalization of downline overrides.`;
+                } else {
+                    elProdExp.innerHTML = 'You are currently an entry-level Member. Close <strong>1 personal qualifying file</strong> to unlock the Channel Partner status and a 5.00% direct commission.';
+                }
             }
 
-            // Leadership & Difference Overrides Card Elements
+            // Leadership & Difference Overrides Card Elements (Track 2)
             const elDesigTitle = document.getElementById('careerDetailDesigTitle');
             if (elDesigTitle) elDesigTitle.textContent = cs.career_designation_label || 'Member';
             const elDiffBadge = document.getElementById('careerDetailDiffBadge');
             const cumDiff = Number(cs.cumulative_differential_pct || 0);
-            if (elDiffBadge) elDiffBadge.textContent = '+' + cumDiff.toFixed(2) + '% Team Diff';
+            if (elDiffBadge) elDiffBadge.textContent = '+' + cumDiff.toFixed(2) + '% Team Overrides';
             const elActiveLegs = document.getElementById('careerDetailActiveLegs');
             if (elActiveLegs) elActiveLegs.textContent = cs.active_legs ?? 0;
             const elSponsorOverride = document.getElementById('careerDetailSponsorOverride');
@@ -3115,13 +3131,13 @@
                 if (desigUpper === 'MEMBER') {
                     elDesigExp.innerHTML = 'You are an entry-level <strong>Member</strong> (0 files, 0 legs). Close 1 personal file to unlock <strong>Channel Partner</strong> and begin earning direct commissions and overrides.';
                 } else if (desigUpper === 'CHANNEL_PARTNER') {
-                    elDesigExp.innerHTML = 'You are a qualified <strong>Channel Partner</strong>. You earn a flat 5.00% on personal files and 1.00% direct sponsor override on your direct team. To unlock Senior rank (+1.50% team difference), you need <strong>5 personal files AND 1 active team leg</strong>.';
+                    elDesigExp.innerHTML = 'You are a qualified <strong>Channel Partner</strong> (1–4 personal files). You earn 5.00% on personal files and 1.00% direct sponsor override on your direct team. To unlock Senior rank (+0.50% leadership override), you need <strong>5 personal files AND 1 active direct member</strong> (≥3 files).';
                 } else if (desigUpper === 'SENIOR' || desigUpper === 'MANAGER') {
-                    elDesigExp.innerHTML = 'You have achieved <strong>Senior</strong> rank (5+ files, 1+ active leg). You earn a <strong>1.50% leadership difference commission</strong> on downline team volume below Senior rank, plus 1.00% direct sponsor override. Next rank (Extended) requires <strong>10 personal files AND 5 active legs</strong>.';
+                    elDesigExp.innerHTML = 'You have achieved <strong>Senior</strong> rank (5–9 personal files, 1+ active direct member). You earn a <strong>6.50% personal commission slab</strong> plus <strong>+0.50% team override</strong> on downline volume below Senior, and 1.00% direct sponsor override. Next rank (Extended) requires <strong>10 personal files AND 5 active direct members</strong>.';
                 } else if (desigUpper === 'EXTENDED' || desigUpper === 'GENERAL_MANAGER') {
-                    elDesigExp.innerHTML = 'You have achieved <strong>Extended</strong> rank (10+ files, 5+ active legs). You earn up to <strong>2.50% cumulative team difference commission</strong> (+1.00% Extended + 1.50% Senior) on downline volume, plus 1.00% direct sponsor override. Next rank (Core) requires <strong>16 personal files AND 10 active legs</strong>.';
+                    elDesigExp.innerHTML = 'You have achieved <strong>Extended</strong> rank (10–15 personal files, 5+ active direct members). You earn a <strong>7.50% personal commission slab</strong> plus up to <strong>+1.50% cumulative team overrides</strong> (+1.00% Extended + 0.50% Senior) on downline volume, and 1.00% direct sponsor override. Next rank (Core) requires <strong>16 personal files AND 10 active direct members</strong>.';
                 } else if (desigUpper === 'CORE' || desigUpper === 'REGIONAL_MANAGER') {
-                    elDesigExp.innerHTML = 'You have achieved <strong>Core</strong> top rank (16+ files, 10+ active legs). You command the full <strong>3.00% cumulative team difference pool</strong> (+0.50% Core + 1.00% Extended + 1.50% Senior) across your entire organization, plus 1.00% direct sponsor override.';
+                    elDesigExp.innerHTML = 'You have achieved <strong>Core</strong> top rank (16+ personal files, 10+ active direct members). You command a <strong>8.00% personal commission slab</strong> and the full <strong>3.00% cumulative team overrides pool</strong> (+1.50% Core + 1.00% Extended + 0.50% Senior) across your organization, plus 1.00% direct sponsor override.';
                 } else {
                     elDesigExp.innerHTML = `You hold the designation of <strong>${escHtml(cs.career_designation_label || 'Member')}</strong>.`;
                 }
@@ -3182,10 +3198,13 @@
                     const diffDisplay = diffVal > 0 ? `+${diffVal.toFixed(2)}%` : '—';
                     const cumDisplaySafe = Number(cumDiffDisplay) > 0 ? `+${cumDiffDisplay}%` : '—';
 
+                    const filesDisplay = c.min_files >= 16 ? '16+ Files' : c.min_files >= 10 ? '10 – 15 Files' : c.min_files >= 5 ? '5 – 9 Files' : c.min_files >= 1 ? '1 – 4 Files' : '0 Files';
+                    const legsDisplay = c.min_legs >= 10 ? '10 Active Members' : c.min_legs >= 5 ? '5 Active Members' : c.min_legs >= 1 ? '1 Active Member' : '—';
+
                     return `<tr style="${bg}border-bottom:1px solid #f1f5f9">
                         <td style="padding:10px 14px;font-weight:700;color:#1e293b">${escHtml(c.label || c.name || '')}</td>
-                        <td style="padding:10px 14px;text-align:center;font-weight:600">${c.min_files}</td>
-                        <td style="padding:10px 14px;text-align:center;font-weight:600">${c.min_legs}</td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:600"><span style="background:#f1f5f9;padding:2px 8px;border-radius:6px">${filesDisplay}</span></td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:600"><span style="background:#f1f5f9;padding:2px 8px;border-radius:6px">${legsDisplay}</span></td>
                         <td style="padding:10px 14px;text-align:center;font-weight:700;color:#059669">${Number(c.self_pct || c.self_earning_pct || 0).toFixed(2)}%</td>
                         <td style="padding:10px 14px;text-align:center;font-weight:600;color:#3b82f6">${sponsorOverrideDisplay}</td>
                         <td style="padding:10px 14px;text-align:center;font-weight:600;color:#6366f1">${diffDisplay}</td>
@@ -3296,23 +3315,44 @@
                         if (elCareerBar) elCareerBar.style.width = '100%';
                     }
 
-                    // Card 2: Personal Direct Sales Commission & Production
+                    // Card 2: Personal Direct Sales Commission & Production (Track 1)
                     const elProdTitle = document.getElementById('vgk4uProdQualTitle');
                     const ownFilesCount = cs.own_qualifying_files || 0;
-                    if (elProdTitle) elProdTitle.textContent = ownFilesCount >= 1 ? 'Direct Sales Qualified' : 'Entry Member';
+                    if (elProdTitle) {
+                        if (ownFilesCount >= 16) elProdTitle.textContent = 'Tier 4 Core (8.00%)';
+                        else if (ownFilesCount >= 10) elProdTitle.textContent = 'Tier 3 Extended (7.50%)';
+                        else if (ownFilesCount >= 5) elProdTitle.textContent = 'Tier 2 Senior (6.50%)';
+                        else if (ownFilesCount >= 1) elProdTitle.textContent = 'Tier 1 Channel Partner (5.00%)';
+                        else elProdTitle.textContent = 'Entry Member (0.00%)';
+                    }
                     const elRateBadge = document.getElementById('vgk4uEffectiveRateBadge');
-                    if (elRateBadge) elRateBadge.textContent = Number(cs.effective_personal_rate != null ? cs.effective_personal_rate : 5.0).toFixed(2) + '%';
+                    if (elRateBadge) elRateBadge.textContent = Number(cs.effective_personal_rate != null ? cs.effective_personal_rate : (ownFilesCount >= 16 ? 8.0 : ownFilesCount >= 10 ? 7.5 : ownFilesCount >= 5 ? 6.5 : ownFilesCount >= 1 ? 5.0 : 0.0)).toFixed(2) + '%';
 
                     const elNextProd = document.getElementById('vgk4uNextProdTitle');
                     const elProdRem = document.getElementById('vgk4uProdRemainingText');
                     const elProdBar = document.getElementById('vgk4uProdProgressBar');
 
-                    if (ownFilesCount >= 1) {
-                        if (elNextProd) elNextProd.textContent = 'Flat 5.00% Base Rate Qualified';
-                        if (elProdRem) elProdRem.textContent = `${ownFilesCount} Qualifying File${ownFilesCount === 1 ? '' : 's'} Closed`;
+                    if (ownFilesCount >= 16) {
+                        if (elNextProd) elNextProd.textContent = 'Top Direct Slab (8.00%) Achieved';
+                        if (elProdRem) elProdRem.textContent = `${ownFilesCount} Qualifying Files Closed`;
                         if (elProdBar) elProdBar.style.width = '100%';
+                    } else if (ownFilesCount >= 10) {
+                        const rem = 16 - ownFilesCount;
+                        if (elNextProd) elNextProd.textContent = 'Tier 4 Core (8.00%)';
+                        if (elProdRem) elProdRem.textContent = `Need ${rem} more file${rem === 1 ? '' : 's'}`;
+                        if (elProdBar) elProdBar.style.width = Math.round((ownFilesCount / 16) * 100) + '%';
+                    } else if (ownFilesCount >= 5) {
+                        const rem = 10 - ownFilesCount;
+                        if (elNextProd) elNextProd.textContent = 'Tier 3 Extended (7.50%)';
+                        if (elProdRem) elProdRem.textContent = `Need ${rem} more file${rem === 1 ? '' : 's'}`;
+                        if (elProdBar) elProdBar.style.width = Math.round((ownFilesCount / 10) * 100) + '%';
+                    } else if (ownFilesCount >= 1) {
+                        const rem = 5 - ownFilesCount;
+                        if (elNextProd) elNextProd.textContent = 'Tier 2 Senior (6.50%)';
+                        if (elProdRem) elProdRem.textContent = `Need ${rem} more file${rem === 1 ? '' : 's'}`;
+                        if (elProdBar) elProdBar.style.width = Math.round((ownFilesCount / 5) * 100) + '%';
                     } else {
-                        if (elNextProd) elNextProd.textContent = 'Channel Partner (5.00%)';
+                        if (elNextProd) elNextProd.textContent = 'Tier 1 Channel Partner (5.00%)';
                         if (elProdRem) elProdRem.textContent = 'Need 1 Qualifying File';
                         if (elProdBar) elProdBar.style.width = '0%';
                     }
@@ -10967,7 +11007,13 @@
 
         const ownFiles = (window._vgk4uStatus && window._vgk4uStatus.own_qualifying_files !== undefined) 
             ? window._vgk4uStatus.own_qualifying_files 
-            : memberActivatedCnt;
+            : (d.own_qualifying_files !== undefined
+                ? d.own_qualifying_files
+                : (d.card_data && d.card_data.own_qualifying_files !== undefined
+                    ? d.card_data.own_qualifying_files
+                    : (storedPartner.own_qualifying_files !== undefined
+                        ? storedPartner.own_qualifying_files
+                        : (storedPartner.qualifying_files || 0))));
 
         if (memberStars === 0) {
             document.getElementById('mycardBadgeSub').innerHTML = `Welcome to VGK4U! Complete your <strong>1st Qualifying File</strong> to activate and unlock <strong>Channel Partner</strong> (5.00% Base Slab).`;
@@ -10980,18 +11026,20 @@
         document.getElementById('mycardCoupons').textContent   = d.coupons_used || 0;
         const mycardRate = (window._vgk4uStatus && window._vgk4uStatus.effective_personal_rate !== undefined) 
             ? window._vgk4uStatus.effective_personal_rate 
-            : ((storedPartner.effective_personal_producer_rate !== undefined) ? storedPartner.effective_personal_producer_rate : (storedPartner.rank_slab_pct !== undefined ? storedPartner.rank_slab_pct : 5.0));
+            : ((d.effective_personal_rate !== undefined) 
+                ? d.effective_personal_rate 
+                : ((storedPartner.effective_personal_producer_rate !== undefined) ? storedPartner.effective_personal_producer_rate : (storedPartner.rank_slab_pct !== undefined ? storedPartner.rank_slab_pct : (ownFiles >= 16 ? 8.0 : ownFiles >= 10 ? 7.5 : ownFiles >= 5 ? 6.5 : ownFiles >= 1 ? 5.0 : 0.0))));
         document.getElementById('mycardRevenue').textContent   = mycardRate > 0 ? (Number(mycardRate).toFixed(2) + '%') : '0.00% (Locked)';
         document.getElementById('mycardActivated').textContent = ownFiles;
 
-        // Authoritative VGK4U Career Progression Ladder
+        // Authoritative VGK4U Career Progression Ladder (Catalog Standard)
         const rankTiers = [
             { rankNum: 0, name: 'Member', icon: '👤', slab: '0.00% (Locked)', req: 0, reqText: 'Default Joining (0 Files)', color: '#6b7280' },
             { rankNum: 1, name: 'Channel Partner', icon: 'CP', slab: '5.00%', req: 1, reqText: '1–4 Files', color: '#6b7280' },
-            { rankNum: 2, name: 'Senior (Manager)', icon: 'SR', slab: '5.00% + 1.5% Diff (6.5%)', req: 5, reqText: '5–9 Files, 1 Active Leg', color: '#7c3aed' },
-            { rankNum: 3, name: 'Extended (GM)', icon: 'EXT', slab: '5.00% + 2.5% Diff (7.5%)', req: 10, reqText: '10–15 Files, 5 Active Legs', color: '#2563eb' },
-            { rankNum: 4, name: 'Core (RM)', icon: 'COR', slab: '5.00% + 3.0% Diff (8.0%)', req: 16, reqText: '16–24 Files, 10 Active Legs', color: '#059669' },
-            { rankNum: 5, name: 'Company Apex Node', icon: 'APX', slab: '9.00% (Top Career)', req: 25, reqText: '25+ Files, 15 Active Legs', color: '#059669' },
+            { rankNum: 2, name: 'Senior (Manager)', icon: 'SR', slab: '6.50% (+0.5% Overrides)', req: 5, reqText: '5–9 Files, 1 Active Direct', color: '#7c3aed' },
+            { rankNum: 3, name: 'Extended (GM)', icon: 'EXT', slab: '7.50% (+1.5% Cum Overrides)', req: 10, reqText: '10–15 Files, 5 Active Directs', color: '#2563eb' },
+            { rankNum: 4, name: 'Core (RM)', icon: 'COR', slab: '8.00% (+3.0% Cum Overrides)', req: 16, reqText: '16+ Files, 10 Active Directs', color: '#059669' },
+            { rankNum: 5, name: 'Company Apex Node', icon: 'APX', slab: '8.00% Top Career', req: 25, reqText: 'Company Master Apex', color: '#059669' },
         ];
 
         let html = '';

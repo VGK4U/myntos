@@ -3012,18 +3012,34 @@ def vgk_dashboard_summary(
             "sponsor_override_pct": 1.0 if r[4] >= 1 else 0.0,
         })
 
-    prod_ladder = [{
-        "code": "BASE",
-        "tier_code": "BASE",
-        "name": "Direct Personal Sales",
-        "label": "Direct Personal Sales",
-        "tier_name": "Direct Personal Sales",
-        "min_files": 1,
-        "max_files": None,
-        "rank_order": 1,
-        "commission_pct": 5.0,
-        "commission_rate_pct": 5.0,
-    }]
+    prod_rows = db.execute(sa_text("""
+        SELECT tier_code, tier_name, min_qualifying_files, commission_rate_pct
+        FROM vgk4u_personal_prod_configs
+        WHERE is_active = TRUE
+        ORDER BY min_qualifying_files ASC
+    """)).fetchall()
+    prod_ladder = []
+    for idx, pr in enumerate(prod_rows):
+        next_min = prod_rows[idx + 1][2] - 1 if idx + 1 < len(prod_rows) else None
+        prod_ladder.append({
+            "code": pr[0],
+            "tier_code": pr[0],
+            "name": pr[1],
+            "label": pr[1],
+            "tier_name": pr[1],
+            "min_files": pr[2],
+            "max_files": next_min,
+            "rank_order": idx + 1,
+            "commission_pct": float(pr[3]),
+            "commission_rate_pct": float(pr[3]),
+        })
+    if not prod_ladder:
+        prod_ladder = [
+            {"code": "CHANNEL_PARTNER", "tier_code": "CHANNEL_PARTNER", "name": "Tier 1 Channel Partner", "label": "Tier 1 Channel Partner", "tier_name": "Tier 1 Channel Partner", "min_files": 1, "max_files": 4, "rank_order": 1, "commission_pct": 5.0, "commission_rate_pct": 5.0},
+            {"code": "SENIOR", "tier_code": "SENIOR", "name": "Tier 2 Senior", "label": "Tier 2 Senior", "tier_name": "Tier 2 Senior", "min_files": 5, "max_files": 9, "rank_order": 2, "commission_pct": 6.5, "commission_rate_pct": 6.5},
+            {"code": "EXTENDED", "tier_code": "EXTENDED", "name": "Tier 3 Extended", "label": "Tier 3 Extended", "tier_name": "Tier 3 Extended", "min_files": 10, "max_files": 15, "rank_order": 3, "commission_pct": 7.5, "commission_rate_pct": 7.5},
+            {"code": "CORE", "tier_code": "CORE", "name": "Tier 4 Core", "label": "Tier 4 Core", "tier_name": "Tier 4 Core", "min_files": 16, "max_files": None, "rank_order": 4, "commission_pct": 8.0, "commission_rate_pct": 8.0},
+        ]
 
     from app.services.vgk_cash_income import get_partner_advance_summary
     adv_summary = get_partner_advance_summary(db, pid)
@@ -4944,6 +4960,11 @@ def vgk_designation_progress(
     rpos = get_partner_current_position_v18(db, current_member.id)
     desig["rank_position"] = rpos
 
+    desig["own_qualifying_files"] = rpos.get("own_qualifying_files", getattr(current_member, "vgk4u_own_qualifying_files", 0) or 0)
+    desig["active_team_legs"] = rpos.get("active_team_legs", getattr(current_member, "vgk4u_active_team_count", 0) or 0)
+    desig["effective_personal_rate"] = rpos.get("effective_personal_producer_rate", 5.0)
+    desig["rank_slab_pct"] = rpos.get("rank_slab_pct", 5.0)
+
     desig["card_data"] = {
         "partner_code":       current_member.partner_code,
         "display_name":       display_name,
@@ -4961,6 +4982,8 @@ def vgk_designation_progress(
         "personal_prod_qualification": rpos.get("personal_prod_qualification", "None"),
         "effective_personal_producer_rate": rpos.get("effective_personal_producer_rate", 0.0),
         "rank_slab_pct":      rpos.get("rank_slab_pct", 5.00),
+        "own_qualifying_files": desig["own_qualifying_files"],
+        "active_team_legs":   desig["active_team_legs"],
         "passport_photo_url": passport_photo_url,
     }
     desig["idcard_enabled"] = bool(getattr(current_member, 'idcard_enabled', False))
