@@ -214,10 +214,9 @@
             border-radius: 18px;
             overflow: hidden;
             backdrop-filter: blur(8px);
-            flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 360px;
+            margin-bottom: 14px;
         }
         .announce-header {
             background: linear-gradient(135deg, rgba(124,58,237,.5), rgba(76,29,149,.6));
@@ -264,8 +263,8 @@
             flex-direction: column;
         }
         .ann-item:hover { background: rgba(255,255,255,.18); }
-        .ann-media { width: 100%; flex: 1; min-height: 180px; max-height: 420px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; display: block; }
-        .ann-media-video { width: 100%; flex: 1; min-height: 180px; max-height: 420px; border-radius: 8px; background: #000; margin-bottom: 10px; display: block; }
+        .ann-media { width: 100%; height: auto; max-height: 560px; object-fit: contain; background: rgba(0,0,0,.25); border-radius: 8px; margin-bottom: 10px; display: block; }
+        .ann-media-video { width: 100%; height: auto; max-height: 560px; object-fit: contain; border-radius: 8px; background: #000; margin-bottom: 10px; display: block; }
         .ann-text-badge {
             width: 100%; height: 72px; border-radius: 8px; margin-bottom: 8px;
             background: linear-gradient(135deg, #4c1d95, #7c3aed);
@@ -794,34 +793,9 @@
 
     </div><!-- /.col-login -->
 
-    <!-- ── RIGHT: Marketplace + VGK4U Shoutouts ── -->
+    <!-- ── RIGHT: VGK4U Shoutouts + Bonanza + Marketplace ── -->
     <div class="col-announce">
-        <!-- Marketplace quick-link -->
-        <a href="/ecom" class="mkt-card" target="_blank" rel="noopener" style="margin-bottom:10px;flex-shrink:0;">
-            <div class="mkt-icon"><i class="fas fa-bolt"></i></div>
-            <div class="mkt-text">
-                <div class="mkt-title">EV Spares Marketplace</div>
-                <div class="mkt-sub">Genuine EV spare parts — batteries, motors, controllers &amp; more. Explore the full catalogue.</div>
-            </div>
-            <div class="mkt-badge">
-                <div class="mkt-badge-top">UP TO</div>
-                <div class="mkt-badge-pct">25%</div>
-                <div class="mkt-badge-bot">DISCOUNT<br>FOR VGK PARTNERS</div>
-            </div>
-        </a>
-        <!-- Bonanza carousel banner (DC_BONANZA_CAROUSEL_001) -->
-        <div id="loginBonanzaBanner" style="display:none;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:pointer;position:relative;aspect-ratio:16/9;background:#1c0f00;border:2px solid rgba(245,158,11,.4)" onclick="window.location='/voffers?tab=bonanza'">
-            <div id="loginBnzSlides" style="position:relative;width:100%;height:100%"></div>
-            <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.55) 0%,transparent 70%);pointer-events:none;z-index:2"></div>
-            <div style="position:absolute;bottom:9px;left:12px;pointer-events:none;z-index:3">
-                <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fde68a;margin-bottom:2px">🏆 Active Bonanza</div>
-                <div id="loginBonanzaName" style="font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)"></div>
-            </div>
-            <div style="position:absolute;top:8px;right:8px;background:rgba(245,158,11,.85);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;pointer-events:none;z-index:3">View →</div>
-            <button onclick="event.stopPropagation();var _bs=document.querySelector('#loginBnzSlides .bnz-slide.active img');if(_bs)_vgkDlClick(_bs.src,_bs.src,'image')" style="position:absolute;top:8px;left:8px;z-index:5;background:rgba(0,0,0,.65);color:#fff;border:none;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;pointer-events:auto"><i class="fas fa-download"></i> Save</button>
-            <div id="loginBnzDots" style="position:absolute;bottom:10px;right:10px;display:flex;gap:4px;z-index:4;pointer-events:none"></div>
-        </div>
-
+        <!-- 1. VGK4U Shoutouts (Top Position) -->
         <div class="announce-panel">
             <div class="announce-header">
                 <div class="announce-icon"><i class="fas fa-bullhorn"></i></div>
@@ -845,6 +819,33 @@
                 </div>
             </div>
         </div>
+
+        <!-- 2. Bonanza carousel banner (DC_BONANZA_CAROUSEL_001) -->
+        <div id="loginBonanzaBanner" style="display:none;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:pointer;position:relative;aspect-ratio:16/9;background:#1c0f00;border:2px solid rgba(245,158,11,.4)" onclick="window.location='/voffers?tab=bonanza'">
+            <div id="loginBnzSlides" style="position:relative;width:100%;height:100%"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.55) 0%,transparent 70%);pointer-events:none;z-index:2"></div>
+            <div style="position:absolute;bottom:9px;left:12px;pointer-events:none;z-index:3">
+                <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fde68a;margin-bottom:2px">🏆 Active Bonanza</div>
+                <div id="loginBonanzaName" style="font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)"></div>
+            </div>
+            <div style="position:absolute;top:8px;right:8px;background:rgba(245,158,11,.85);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;pointer-events:none;z-index:3">View →</div>
+            <button onclick="event.stopPropagation();var _bs=document.querySelector('#loginBnzSlides .bnz-slide.active img');if(_bs)_vgkDlClick(_bs.src,_bs.src,'image')" style="position:absolute;top:8px;left:8px;z-index:5;background:rgba(0,0,0,.65);color:#fff;border:none;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;pointer-events:auto"><i class="fas fa-download"></i> Save</button>
+            <div id="loginBnzDots" style="position:absolute;bottom:10px;right:10px;display:flex;gap:4px;z-index:4;pointer-events:none"></div>
+        </div>
+
+        <!-- 3. EV Spares Marketplace quick-link -->
+        <a href="/ecom" class="mkt-card" target="_blank" rel="noopener" style="margin-bottom:0;flex-shrink:0;">
+            <div class="mkt-icon"><i class="fas fa-bolt"></i></div>
+            <div class="mkt-text">
+                <div class="mkt-title">EV Spares Marketplace</div>
+                <div class="mkt-sub">Genuine EV spare parts — batteries, motors, controllers &amp; more. Explore the full catalogue.</div>
+            </div>
+            <div class="mkt-badge">
+                <div class="mkt-badge-top">UP TO</div>
+                <div class="mkt-badge-pct">25%</div>
+                <div class="mkt-badge-bot">DISCOUNT<br>FOR VGK PARTNERS</div>
+            </div>
+        </a>
     </div><!-- /.col-announce -->
 
 </div><!-- /.page-wrapper -->

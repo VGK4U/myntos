@@ -28,19 +28,49 @@
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
         }
         
         .login-container {
-            max-width: 450px;
+            max-width: 980px;
             width: 100%;
-            padding: 20px;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        @media (max-width: 860px) {
+            .login-container {
+                flex-direction: column;
+                align-items: center;
+                max-width: 460px;
+            }
         }
         
         .login-card {
+            flex: 1;
+            min-width: 320px;
+            max-width: 460px;
+            width: 100%;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        #staffAnnouncementSection {
+            flex: 1;
+            min-width: 320px;
+            max-width: 480px;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .login-header {
@@ -473,8 +503,8 @@
             </div>
         </div>
 
-        <div id="staffAnnouncementSection" style="margin-top: 20px; display: none;">
-            <div style="background: rgba(255,255,255,0.12); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.18);">
+        <div id="staffAnnouncementSection" style="display: none;">
+            <div style="background: rgba(255,255,255,0.12); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.18); backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0,0,0,0.25);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
                     <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse-dot 2s infinite;"></div>
                     <span style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 1px;">Announcements</span>
@@ -982,15 +1012,21 @@
             if(ann.media && ann.media.length > 0){
                 var m = ann.media[0];
                 if(m.file_type && m.file_type.startsWith('image/')){
-                    mediaHTML = '<div style="position:relative;cursor:zoom-in" onclick="staffOpenLightbox(\''+ann.id+'\', 0)"><img src="'+escH(m.file_path)+'" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:8px;" onerror="this.style.display=\'none\'"></div>';
+                    mediaHTML = '<div style="position:relative;cursor:zoom-in;margin-bottom:8px" onclick="staffOpenLightbox(\''+ann.id+'\', 0)">' +
+                        '<img src="'+escH(m.file_path)+'" style="width:100%;height:auto;max-height:540px;object-fit:contain;background:rgba(0,0,0,0.25);border-radius:8px;display:block;" onerror="this.style.display=\'none\'">' +
+                        '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);border-radius:6px;padding:3px 8px;font-size:11px;color:#fff;display:flex;align-items:center;gap:4px;pointer-events:none;backdrop-filter:blur(3px)"><i class="fas fa-search-plus"></i> View</div>' +
+                        '</div>';
                 } else if(m.file_type && m.file_type.startsWith('video/')){
-                    mediaHTML = '<div style="position:relative"><video controls playsinline muted preload="metadata" style="width:100%;max-height:140px;border-radius:8px;background:#000;margin-bottom:8px;"><source src="'+escH(m.file_path)+'" type="'+(m.file_type||'video/mp4')+'"></video><button onclick="event.stopPropagation(); staffOpenLightbox(\''+ann.id+'\', 0)" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;z-index:5;display:flex;align-items:center;gap:3px" title="Fullscreen"><i class="fas fa-expand"></i> Expand</button></div>';
+                    mediaHTML = '<div style="position:relative;margin-bottom:8px">' +
+                        '<video controls playsinline muted preload="metadata" style="width:100%;height:auto;max-height:540px;border-radius:8px;background:#000;display:block;"><source src="'+escH(m.file_path)+'" type="'+(m.file_type||'video/mp4')+'"></video>' +
+                        '<button onclick="event.stopPropagation(); staffOpenLightbox(\''+ann.id+'\', 0)" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;z-index:5;display:flex;align-items:center;gap:3px" title="Fullscreen"><i class="fas fa-expand"></i> Expand</button>' +
+                        '</div>';
                 }
             }
             var catName = ann.category && ann.category.name ? escH(ann.category.name) : '';
             var title = escH(ann.title || 'Announcement');
             var desc = (ann.description||'');
-            var shortDesc = escH(desc.length > 100 ? desc.substring(0,100)+'…' : desc);
+            var shortDesc = escH(desc.length > 220 ? desc.substring(0,220)+'…' : desc);
             var dateStr = relD(ann.approved_at || ann.created_at);
 
             // View + Share button row
