@@ -7074,7 +7074,7 @@ def fetch_member_income_entries_data(
             "  COALESCE(e.skip_tds_admin, false)::boolean  AS skip_tds_admin "
             "FROM vgk_cash_income_entries e "
             "LEFT JOIN crm_leads l ON e.source_lead_id = l.id "
-            f"WHERE e.partner_id = :pid AND e.source_lead_id IS NOT NULL AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)){_extra_where} "
+            f"WHERE e.partner_id = :pid AND (e.source_lead_id IS NULL OR (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650))){_extra_where} "
             "ORDER BY e.created_at DESC"
         ), _extra_params).fetchall()
     except Exception as exc:
@@ -7480,7 +7480,8 @@ def fetch_member_income_entries_data(
 
     def _build_row(r, is_vsca: bool = False, is_bp: bool = False):
         _li    = lead_info.get(r.source_lead_id) if r.source_lead_id else None
-        client = _li["name"] if _li else "—"
+        _notes = getattr(r, 'notes', None)
+        client = _li["name"] if _li else (_notes or "Direct Member Advance" if getattr(r, 'source_lead_id', None) is None else "—")
         mobile = _li["mobile"] if _li else None
         
         # Fallback resolution for location (city -> area -> state)

@@ -826,7 +826,7 @@ def vgk_my_earnings(
 
     from app.services.universal_incentive_engine import get_partner_current_position_v18, get_partner_earnings_summary_v27
     rank_pos = get_partner_current_position_v18(db, current_member.id)
-    earn_breakdown = get_partner_earnings_summary_v27(db, current_member.id)
+    earn_breakdown = get_partner_earnings_summary_v27(db, current_member.id, pos_info=rank_pos)
 
     return {
         "success": True,
@@ -2964,7 +2964,7 @@ def vgk_dashboard_summary(
     from app.services.universal_incentive_engine import get_partner_current_position_v18, get_partner_earnings_summary_v27
     from app.services.vgk4u_career_service import VGK4UCareerService
     rank_pos = get_partner_current_position_v18(db, pid)
-    earn_breakdown = get_partner_earnings_summary_v27(db, pid)
+    earn_breakdown = get_partner_earnings_summary_v27(db, pid, pos_info=rank_pos)
 
     # VGK4U Authoritative Career Status & Dynamic Progression Ladders (Phase 4)
     vgk4u_status = VGK4UCareerService.get_partner_career_status(db, pid)
