@@ -85,8 +85,8 @@ if [ -f "$SCRIPT_DIR/backend/whatsapp-group-bot/server.js" ] && [ -d "$SCRIPT_DI
     (
         cd "$SCRIPT_DIR/backend/whatsapp-group-bot"
         export NODE_PATH="$SCRIPT_DIR/frontend/node_modules:$SCRIPT_DIR/backend/whatsapp-group-bot/node_modules:${NODE_PATH}"
-        # Wait up to 45s for FastAPI Backend (:8000) to be ready so S3 session restore succeeds on first boot
-        for i in $(seq 1 45); do
+        # Wait up to 120s for FastAPI Backend (:8000) to be ready so S3 session restore succeeds on first boot
+        for i in $(seq 1 120); do
             if curl -sSf http://127.0.0.1:8000/api/v1/health >/dev/null 2>&1; then
                 echo "[SUPERVISOR] FastAPI Backend (:8000) is healthy. Launching WhatsApp Bot daemon..."
                 break

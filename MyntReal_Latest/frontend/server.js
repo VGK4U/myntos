@@ -7644,6 +7644,23 @@ const VGK_TOKEN_PROPAGATION_SCRIPT = `
 const server = http.createServer(async (req, res) => {
   // DC Protocol: Global error handler wrapper for production stability
   try {
+    // 0. IMMEDIATE AWS ELB / ALB / Container Health Check Responder (Zero latency, zero dependencies, no redirects)
+    const rawPathLower = (req.url || '').split('?')[0].toLowerCase();
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    if (
+      rawPathLower === '/health' ||
+      rawPathLower === '/healthz' ||
+      rawPathLower === '/api/health' ||
+      rawPathLower === '/ping' ||
+      rawPathLower === '/elb-health' ||
+      userAgent.includes('elb-healthchecker') ||
+      userAgent.includes('healthcheck')
+    ) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
+      return;
+    }
+
     const hostHeader = (req.headers['host'] || '').toLowerCase();
 
     // SOLUTION A (Razorpay Compliance): If user initiates recharge/checkout from myntreal.com / other domains,
@@ -7804,14 +7821,6 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // AWS ELB / Load Balancer Health Check Endpoint
-    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-    const isElbHealthChecker = userAgent.includes('elb-healthchecker') || userAgent.includes('healthcheck');
-    if (isElbHealthChecker || reqPathLower === '/health' || reqPathLower === '/healthz' || reqPathLower === '/api/health' || reqPathLower === '/ping') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', service: 'frontend', timestamp: new Date().toISOString() }));
-      return;
-    }
 
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
     const RESERVED_PREFIXES = new Set([
