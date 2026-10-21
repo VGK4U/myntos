@@ -1638,7 +1638,11 @@ def get_freelancer_detail(
                COALESCE(deal_value_received, 0) as deal_value_received,
                kw_size,
                city,
-               created_at
+               created_at,
+               field_support_ref_name,
+               field_support_ref_id,
+               vgk_field_support_id,
+               source_ref_name
         FROM crm_leads 
         WHERE associated_partner_id = :fid
            OR source_ref_id = :fid_str
@@ -1646,8 +1650,19 @@ def get_freelancer_detail(
         ORDER BY id DESC
     """), {'fid': fl.id, 'fid_str': str(fl.id), 'pname': fl.partner_name or ''}).fetchall()
 
+    # Pre-resolve any vgk_field_support_id partner names where field_support_ref_name might be missing
+    fs_ids = list({r[12] for r in leads_raw if r[12]})
+    fs_name_map = {}
+    if fs_ids:
+        try:
+            fs_partners = db.query(OfficialPartner.id, OfficialPartner.partner_name).filter(OfficialPartner.id.in_(fs_ids)).all()
+            fs_name_map = {p[0]: p[1] for p in fs_partners}
+        except Exception as _fse:
+            logger.debug(f"[FREELANCER-DETAIL] Field support partners lookup: {_fse}")
+
     status_counts = {}
     stage_counts = {}
+    support_counts = {}
     won_count = 0
     lost_count = 0
     pipeline_count = 0
@@ -1668,6 +1683,13 @@ def get_freelancer_detail(
 
         stage_key = sps or st or 'lead'
         stage_counts[stage_key] = stage_counts.get(stage_key, 0) + 1
+
+        supp_name = (r[10] or '').strip()
+        if not supp_name and r[12] and r[12] in fs_name_map:
+            supp_name = fs_name_map[r[12]]
+        if not supp_name:
+            supp_name = 'Direct'
+        support_counts[supp_name] = support_counts.get(supp_name, 0) + 1
 
         is_won = (st in _WON_STATUSES or sps in ('installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed')) and sps not in _LOST_STATUSES
         is_lost = st in ('lost', 'cancelled') or sps in _LOST_STATUSES
@@ -1704,7 +1726,11 @@ def get_freelancer_detail(
             "deal_value_received": rec_val,
             "kw_size": kw if kw else None,
             "city": r[8] or "",
-            "created_at": r[9].isoformat() if r[9] else None
+            "created_at": r[9].isoformat() if r[9] else None,
+            "support_name": supp_name,
+            "field_support_ref_name": r[10],
+            "field_support_ref_id": str(r[11]) if r[11] is not None else None,
+            "vgk_field_support_id": r[12]
         }
         all_leads.append(lead_item)
 
@@ -1744,7 +1770,8 @@ def get_freelancer_detail(
         "received_value": total_received_val,
         "pending_value": pending_val,
         "status_counts": status_counts,
-        "stage_counts": stage_counts
+        "stage_counts": stage_counts,
+        "support_counts": support_counts
     }
 
     support_dict = {

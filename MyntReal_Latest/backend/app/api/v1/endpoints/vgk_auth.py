@@ -137,6 +137,14 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
     if getattr(partner, 'is_blocked', False) or getattr(partner, 'member_status', '') == 'BLOCKED':
         return VGKLoginResponse(success=False, message="Your account is blocked. Please contact administration.")
 
+    # Prevent login for freelancer sub-team accounts (registered strictly for field tracking only)
+    if getattr(partner, 'partner_type', None) in ('FREELANCER_TEAM', 'FREELANCER_SUB'):
+        return VGKLoginResponse(success=False, message="Freelancer sub-team accounts are registered for field tracking only and cannot log in.")
+    if getattr(partner, 'parent_partner_id', None):
+        _parent_p = db.query(OfficialPartner).filter(OfficialPartner.id == partner.parent_partner_id).first()
+        if _parent_p and getattr(_parent_p, 'partner_type', None) == 'FREELANCER':
+            return VGKLoginResponse(success=False, message="Freelancer sub-team accounts are registered for field tracking only and cannot log in.")
+
     if not partner.password_hash:
         return VGKLoginResponse(success=False, message="Password not set. Contact admin.")
 

@@ -1954,6 +1954,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <div id="flFvSubtitle" style="font-size:12.5px;color:#bae6fd;margin-top:2px"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
+        <button id="flFvShareBtn" onclick="copyFlFvShareableLink()" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.35);color:white;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s" title="Copy Direct Shareable Link for this member">
+          <i class="fas fa-share-alt"></i> <span>Share Link</span>
+        </button>
         <button id="flFvFsBtn" onclick="toggleFlFvFullscreen()" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.35);color:white;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s" title="Toggle Fullscreen Edge-to-Edge View">
           <i class="fas fa-expand"></i> <span>Fullscreen</span>
         </button>
@@ -2010,10 +2013,18 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
       <!-- Search, Sorting & Filters -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
-        <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:680px;flex-wrap:wrap">
-          <div style="position:relative;flex:1;min-width:240px">
+        <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:820px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:200px">
             <i class="fas fa-search" style="position:absolute;left:12px;top:10px;color:#94a3b8;font-size:13px"></i>
-            <input type="text" id="flFvSearchInput" placeholder="Filter by customer name, phone, stage..." oninput="filterFlFvLeads()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+            <input type="text" id="flFvSearchInput" placeholder="Filter by customer name, phone, stage, support..." oninput="filterFlFvLeads()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="flFvSupportSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">
+              <i class="fas fa-user-friends me-1" style="color:#0284c7"></i>Support:
+            </label>
+            <select id="flFvSupportSelect" onchange="onFlFvSupportSelectChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer;max-width:170px">
+              <option value="ALL">All Support</option>
+            </select>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             <label for="flFvSortSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">
@@ -2026,6 +2037,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
               <option value="deal_asc">Deal Value (Low to High)</option>
               <option value="name_asc">Customer Name (A → Z)</option>
               <option value="name_desc">Customer Name (Z → A)</option>
+              <option value="support_asc">Support Name (A → Z)</option>
               <option value="id_desc">Lead ID (High to Low)</option>
               <option value="id_asc">Lead ID (Low to High)</option>
               <option value="stage_asc">Solar Stage (A → Z)</option>
@@ -2037,7 +2049,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
       <!-- Leads Table Container -->
       <div id="flFvTableContainer" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:white">
-        <table style="width:100%;min-width:960px;border-collapse:collapse;font-size:12.5px;text-align:left">
+        <table style="width:100%;min-width:1040px;border-collapse:collapse;font-size:12.5px;text-align:left">
           <thead>
             <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap;user-select:none">
               <th onclick="toggleFlFvSort('id')" style="padding:10px 12px;cursor:pointer" title="Sort by Lead ID">
@@ -2045,6 +2057,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
               </th>
               <th onclick="toggleFlFvSort('name')" style="padding:10px 12px;cursor:pointer" title="Sort by Customer Name">
                 Customer Name <span id="flSortIcon_name" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('support')" style="padding:10px 12px;cursor:pointer" title="Sort by Support (L5)">
+                Support (L5) <span id="flSortIcon_support" style="color:#94a3b8;font-size:11px">↕</span>
               </th>
               <th onclick="toggleFlFvSort('phone')" style="padding:10px 12px;cursor:pointer" title="Sort by Phone">
                 Phone <span id="flSortIcon_phone" style="color:#94a3b8;font-size:11px">↕</span>
@@ -3957,8 +3972,10 @@ async function viewFreelancerDetails(flId) {
 // ─── Freelancer Full View System Modal Handlers ─────────────────────────────
 let _currentFlFvLeads = [];
 let _flFvActiveStageFilter = 'ALL';
+let _flFvActiveSupportFilter = 'ALL';
 let _flFvSortField = 'created_at';
 let _flFvSortDir = 'desc';
+let _flFvCurrentId = null;
 
 const _SOLAR_STAGE_LABELS = {
   'pending_with_bank': 'With Bank',
@@ -3986,47 +4003,50 @@ const _SOLAR_STAGE_LABELS = {
   'cancelled': 'Cancelled'
 };
 
+function copyFlFvShareableLink() {
+  if (!_flFvCurrentId) return;
+  const url = `${window.location.origin}/staff/vgk/members?open_freelancer=${encodeURIComponent(_flFvCurrentId)}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('flFvShareBtn');
+      if (btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check" style="color:#86efac"></i> <span>Copied!</span>';
+        setTimeout(() => { btn.innerHTML = orig; }, 2200);
+      }
+    }).catch(() => {
+      prompt('Copy this shareable link:', url);
+    });
+  } else {
+    prompt('Copy this shareable link:', url);
+  }
+}
+
 async function openFreelancerFullLeadModal(flId) {
   const modal = document.getElementById('freelancerFullViewModal');
   if (!modal) return;
   modal.style.display = 'block';
+  _flFvCurrentId = flId;
 
   const titleEl = document.getElementById('flFvTitle');
   const subEl = document.getElementById('flFvSubtitle');
-  const totalEl = document.getElementById('flFvTotal');
-  const totalValEl = document.getElementById('flFvTotalVal');
-  const wonEl = document.getElementById('flFvWon');
-  const wonValEl = document.getElementById('flFvWonVal');
-  const pipeEl = document.getElementById('flFvPipeline');
-  const pipeValEl = document.getElementById('flFvPipelineVal');
-  const lostEl = document.getElementById('flFvLost');
-  const lostValEl = document.getElementById('flFvLostVal');
-  const recvValEl = document.getElementById('flFvReceivedVal');
-  const pendValEl = document.getElementById('flFvPendingVal');
   const tbody = document.getElementById('flFvTableBody');
   const searchInput = document.getElementById('flFvSearchInput');
   const sortSelect = document.getElementById('flFvSortSelect');
+  const supportSelect = document.getElementById('flFvSupportSelect');
 
   if (titleEl) titleEl.textContent = 'Loading Member Full View...';
   if (subEl) subEl.textContent = 'Fetching originated leads from CRM registry...';
-  if (totalEl) totalEl.textContent = '...';
-  if (totalValEl) totalValEl.textContent = '...';
-  if (wonEl) wonEl.textContent = '...';
-  if (wonValEl) wonValEl.textContent = '...';
-  if (pipeEl) pipeEl.textContent = '...';
-  if (pipeValEl) pipeValEl.textContent = '...';
-  if (lostEl) lostEl.textContent = '...';
-  if (lostValEl) lostValEl.textContent = '...';
-  if (recvValEl) recvValEl.textContent = '...';
-  if (pendValEl) pendValEl.textContent = '...';
   if (searchInput) searchInput.value = '';
   if (sortSelect) sortSelect.value = 'created_desc';
+  if (supportSelect) supportSelect.innerHTML = '<option value="ALL">All Support</option>';
   _flFvActiveStageFilter = 'ALL';
+  _flFvActiveSupportFilter = 'ALL';
   _flFvSortField = 'created_at';
   _flFvSortDir = 'desc';
   updateFlFvSortIcons();
 
-  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
 
   try {
     const res = await staffFetch(API + '/vgk/freelancers/' + flId);
@@ -4038,7 +4058,6 @@ async function openFreelancerFullLeadModal(flId) {
     }
 
     const fl = data.data;
-    const stats = data.lead_stats || {};
     const leads = data.originated_leads || [];
     const support = data.support_partner;
 
@@ -4056,60 +4075,99 @@ async function openFreelancerFullLeadModal(flId) {
       masterLink.href = `staff_mnr_leads_master.html?category=Solar&handler_emp_code=${encodeURIComponent(fl.partner_code)}`;
     }
 
-    // Calculate aggregated business metrics
-    let totCount = leads.length;
-    let wonCount = 0, pipeCount = 0, lostCount = 0;
-    let totVal = 0, wonVal = 0, pipeVal = 0, lostVal = 0, recvVal = 0;
-
-    const _WON_ST = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'];
-    const _LOST_ST = ['lost', 'cancelled', 'loan_rejected', 'not_interested', 'bank_not_interested'];
-
-    leads.forEach(l => {
-      const st = (l.status || 'new').toLowerCase().trim();
-      const sps = (l.solar_pipeline_status || l.stage || '').toLowerCase().trim();
-      const dv = parseFloat(l.deal_value || l.deal_value_total || l.project_cost || (String(l.kw_size).includes('3') ? 200000 : 0) || 0);
-      const rv = parseFloat(l.deal_value_received || 0);
-
-      totVal += dv;
-      recvVal += rv;
-
-      const isWon = (_WON_ST.includes(st) || _WON_ST.includes(sps)) && !_LOST_ST.includes(sps);
-      const isLost = _LOST_ST.includes(st) || _LOST_ST.includes(sps);
-
-      if (isWon) {
-        wonCount++;
-        wonVal += dv;
-      } else if (isLost) {
-        lostCount++;
-        lostVal += dv;
-      } else {
-        pipeCount++;
-        pipeVal += dv;
-      }
-    });
-
-    const pendVal = Math.max(0, totVal - recvVal);
-
-    if (totalEl) totalEl.textContent = stats.total ?? totCount;
-    if (totalValEl) totalValEl.textContent = `₹${Math.round(stats.total_business_value ?? totVal).toLocaleString('en-IN')}`;
-    if (wonEl) wonEl.textContent = stats.won ?? wonCount;
-    if (wonValEl) wonValEl.textContent = `₹${Math.round(stats.won_business_value ?? wonVal).toLocaleString('en-IN')}`;
-    if (pipeEl) pipeEl.textContent = stats.pipeline ?? pipeCount;
-    if (pipeValEl) pipeValEl.textContent = `₹${Math.round(stats.pipeline_business_value ?? pipeVal).toLocaleString('en-IN')}`;
-    if (lostEl) lostEl.textContent = stats.lost ?? lostCount;
-    if (lostValEl) lostValEl.textContent = `₹${Math.round(stats.lost_business_value ?? lostVal).toLocaleString('en-IN')}`;
-    if (recvValEl) recvValEl.textContent = `₹${Math.round(stats.received_value ?? recvVal).toLocaleString('en-IN')}`;
-    if (pendValEl) pendValEl.textContent = `₹${Math.round(stats.pending_value ?? pendVal).toLocaleString('en-IN')}`;
-
     _currentFlFvLeads = leads;
     renderFlFvStagePills(leads);
+    renderFlFvSupportDropdown(leads);
     applyFlFvSortAndFilter();
   } catch (err) {
     console.error('Error opening full lead modal:', err);
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leads from server.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leads from server.</td></tr>';
     }
   }
+}
+
+function updateFlFvMetrics(leadsSubset) {
+  let totCount = leadsSubset.length;
+  let wonCount = 0, pipeCount = 0, lostCount = 0;
+  let totVal = 0, wonVal = 0, pipeVal = 0, lostVal = 0, recvVal = 0;
+
+  const _WON_ST = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'];
+  const _LOST_ST = ['lost', 'cancelled', 'loan_rejected', 'not_interested', 'bank_not_interested'];
+
+  leadsSubset.forEach(l => {
+    const st = (l.status || 'new').toLowerCase().trim();
+    const sps = (l.solar_pipeline_status || l.stage || '').toLowerCase().trim();
+    const dv = parseFloat(l.deal_value || l.deal_value_total || l.project_cost || (String(l.kw_size).includes('3') ? 200000 : 0) || 0);
+    const rv = parseFloat(l.deal_value_received || 0);
+
+    totVal += dv;
+    recvVal += rv;
+
+    const isWon = (_WON_ST.includes(st) || _WON_ST.includes(sps)) && !_LOST_ST.includes(sps);
+    const isLost = _LOST_ST.includes(st) || _LOST_ST.includes(sps);
+
+    if (isWon) {
+      wonCount++;
+      wonVal += dv;
+    } else if (isLost) {
+      lostCount++;
+      lostVal += dv;
+    } else {
+      pipeCount++;
+      pipeVal += dv;
+    }
+  });
+
+  const pendVal = Math.max(0, totVal - recvVal);
+
+  const totalEl = document.getElementById('flFvTotal');
+  const totalValEl = document.getElementById('flFvTotalVal');
+  const wonEl = document.getElementById('flFvWon');
+  const wonValEl = document.getElementById('flFvWonVal');
+  const pipeEl = document.getElementById('flFvPipeline');
+  const pipeValEl = document.getElementById('flFvPipelineVal');
+  const lostEl = document.getElementById('flFvLost');
+  const lostValEl = document.getElementById('flFvLostVal');
+  const recvValEl = document.getElementById('flFvReceivedVal');
+  const pendValEl = document.getElementById('flFvPendingVal');
+
+  if (totalEl) totalEl.textContent = totCount;
+  if (totalValEl) totalValEl.textContent = `₹${Math.round(totVal).toLocaleString('en-IN')}`;
+  if (wonEl) wonEl.textContent = wonCount;
+  if (wonValEl) wonValEl.textContent = `₹${Math.round(wonVal).toLocaleString('en-IN')}`;
+  if (pipeEl) pipeEl.textContent = pipeCount;
+  if (pipeValEl) pipeValEl.textContent = `₹${Math.round(pipeVal).toLocaleString('en-IN')}`;
+  if (lostEl) lostEl.textContent = lostCount;
+  if (lostValEl) lostValEl.textContent = `₹${Math.round(lostVal).toLocaleString('en-IN')}`;
+  if (recvValEl) recvValEl.textContent = `₹${Math.round(recvVal).toLocaleString('en-IN')}`;
+  if (pendValEl) pendValEl.textContent = `₹${Math.round(pendVal).toLocaleString('en-IN')}`;
+}
+
+function renderFlFvSupportDropdown(leads) {
+  const select = document.getElementById('flFvSupportSelect');
+  if (!select) return;
+
+  const supportCounts = {};
+  leads.forEach(l => {
+    const s = l.support_name || 'Direct';
+    supportCounts[s] = (supportCounts[s] || 0) + 1;
+  });
+
+  const sorted = Object.entries(supportCounts).sort((a, b) => b[1] - a[1]);
+
+  let html = `<option value="ALL">All Support (${leads.length})</option>`;
+  sorted.forEach(([name, count]) => {
+    html += `<option value="${esc(name)}">${esc(name)} (${count})</option>`;
+  });
+
+  select.innerHTML = html;
+  select.value = _flFvActiveSupportFilter || 'ALL';
+}
+
+function onFlFvSupportSelectChange(val) {
+  _flFvActiveSupportFilter = val || 'ALL';
+  applyFlFvSortAndFilter();
 }
 
 function renderFlFvStagePills(leads) {
@@ -4161,6 +4219,7 @@ function onFlFvSortDropdownChange(val) {
     if (fieldKey === 'created') _flFvSortField = 'created_at';
     else if (fieldKey === 'deal') _flFvSortField = 'deal_value';
     else if (fieldKey === 'name') _flFvSortField = 'name';
+    else if (fieldKey === 'support') _flFvSortField = 'support';
     else if (fieldKey === 'id') _flFvSortField = 'id';
     else if (fieldKey === 'stage') _flFvSortField = 'stage';
   }
@@ -4182,6 +4241,7 @@ function toggleFlFvSort(field) {
     if (field === 'created_at') optVal = `created_${_flFvSortDir}`;
     else if (field === 'deal_value') optVal = `deal_${_flFvSortDir}`;
     else if (field === 'name') optVal = `name_${_flFvSortDir}`;
+    else if (field === 'support') optVal = `support_${_flFvSortDir}`;
     else if (field === 'id') optVal = `id_${_flFvSortDir}`;
     else if (field === 'stage') optVal = `stage_${_flFvSortDir}`;
     if (optVal && [...sortSelect.options].some(o => o.value === optVal)) {
@@ -4194,7 +4254,7 @@ function toggleFlFvSort(field) {
 }
 
 function updateFlFvSortIcons() {
-  const fields = ['id', 'name', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
+  const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
   fields.forEach(f => {
     const el = document.getElementById(`flSortIcon_${f}`);
     if (el) {
@@ -4291,6 +4351,17 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// Auto-open Ground Source Full View if shared link with open_freelancer parameter is detected
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const flParam = params.get('open_freelancer') || params.get('freelancer_id');
+    if (flParam) {
+      setTimeout(() => { openFreelancerFullLeadModal(parseInt(flParam)); }, 500);
+    }
+  } catch (_e) {}
+});
+
 function filterFlFvLeads() {
   applyFlFvSortAndFilter();
 }
@@ -4303,6 +4374,7 @@ function applyFlFvSortAndFilter() {
     const id = String(l.id || '').toLowerCase();
     const name = String(l.lead_name || l.name || '').toLowerCase();
     const phone = String(l.phone || '').toLowerCase();
+    const supp = String(l.support_name || 'Direct').toLowerCase();
     const rawStage = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
     const stageDisplay = (_SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead').toLowerCase();
     const status = String(l.status || '').toLowerCase();
@@ -4310,7 +4382,7 @@ function applyFlFvSortAndFilter() {
 
     // Check search query
     if (query) {
-      const matchQuery = id.includes(query) || name.includes(query) || phone.includes(query) || 
+      const matchQuery = id.includes(query) || name.includes(query) || phone.includes(query) || supp.includes(query) ||
                          rawStage.includes(query) || stageDisplay.includes(query) || status.includes(query) || city.includes(query);
       if (!matchQuery) return false;
     }
@@ -4321,8 +4393,17 @@ function applyFlFvSortAndFilter() {
       if (currentStageLabel !== _flFvActiveStageFilter) return false;
     }
 
+    // Check support filter
+    if (_flFvActiveSupportFilter && _flFvActiveSupportFilter !== 'ALL') {
+      const currentSupp = (l.support_name || 'Direct').trim();
+      if (currentSupp !== _flFvActiveSupportFilter) return false;
+    }
+
     return true;
   });
+
+  // Dynamically recalculate all 6 metric cards filter-wise in real-time
+  updateFlFvMetrics(filtered);
 
   // Sort filtered list
   filtered.sort((a, b) => {
@@ -4333,6 +4414,9 @@ function applyFlFvSortAndFilter() {
     } else if (_flFvSortField === 'name') {
       vA = String(a.lead_name || a.name || '').toLowerCase();
       vB = String(b.lead_name || b.name || '').toLowerCase();
+    } else if (_flFvSortField === 'support') {
+      vA = String(a.support_name || 'Direct').toLowerCase();
+      vB = String(b.support_name || 'Direct').toLowerCase();
     } else if (_flFvSortField === 'phone') {
       vA = String(a.phone || '').toLowerCase();
       vB = String(b.phone || '').toLowerCase();
@@ -4373,7 +4457,7 @@ function renderFlFvTable(leads) {
   }
 
   if (!leads || leads.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:#94a3b8">No originated leads found matching query.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
     return;
   }
 
@@ -4402,6 +4486,12 @@ function renderFlFvTable(leads) {
       stageBg = '#fef2f2'; stageColor = '#dc2626';
     }
 
+    const suppName = esc(l.support_name || 'Direct');
+    const isDirect = !l.support_name || l.support_name === 'Direct';
+    const suppBadge = isDirect 
+      ? `<span style="color:#64748b;font-weight:600;font-size:11.5px">Direct</span>`
+      : `<span style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px"><i class="fas fa-user-shield" style="font-size:10px"></i>${suppName}</span>`;
+
     const dealVal = parseFloat(l.deal_value || l.deal_value_total || l.project_cost || l.budget_max || l.budget_min || 0);
     const recVal = parseFloat(l.deal_value_received || 0);
     const kw = l.kw_size ? `${esc(l.kw_size)} kW` : '';
@@ -4428,6 +4518,9 @@ function renderFlFvTable(leads) {
           <strong style="color:#0f172a;font-size:13px">${esc(l.lead_name || l.name || 'Unnamed')}</strong>
           ${l.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
         </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          ${suppBadge}
+        </td>
         <td style="padding:10px 12px;color:#334155;white-space:nowrap"><i class="fas fa-phone me-1" style="color:#94a3b8;font-size:11px"></i>${esc(l.phone || '—')}</td>
         <td style="padding:10px 12px;white-space:nowrap">
           <span style="background:${badgeBg};color:${badgeColor};padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700">
@@ -4442,6 +4535,18 @@ function renderFlFvTable(leads) {
         <td style="padding:10px 12px;white-space:nowrap">
           ${valDisplay}
         </td>
+        <td style="padding:10px 12px;color:#64748b;font-size:12px;white-space:nowrap">
+          ${createdDate}
+        </td>
+        <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+          <a href="staff_mnr_leads_master.html?open_lead=${l.id}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:700;text-decoration:none">
+            <i class="fas fa-external-link-alt"></i> View Lead
+          </a>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
         <td style="padding:10px 12px;color:#64748b;font-size:12px;white-space:nowrap">
           ${createdDate}
         </td>
