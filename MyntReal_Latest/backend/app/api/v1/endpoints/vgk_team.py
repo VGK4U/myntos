@@ -7862,7 +7862,11 @@ def fetch_member_income_entries_data(
     result.sort(key=lambda x: (x.get("income_date") or ""), reverse=True)
 
     non_can_entries = [e for e in result if e.get("status") != "CANCELLED"]
-    tot_gross = round(sum(float(e.get("commission_amount") or 0) for e in non_can_entries), 2)
+    earning_entries = [
+        e for e in non_can_entries 
+        if e.get("display_kind") != "Direct Advance" and e.get("kind") != "DIRECT_ADVANCE" and not (e.get("source_lead_id") is None and (e.get("kind") or "").upper() in ("ADVANCE", "STAGE1_ADVANCE", "DIRECT_ADVANCE"))
+    ]
+    tot_gross = round(sum(float(e.get("commission_amount") or 0) for e in earning_entries), 2)
     tot_bal_gross = round(sum(float(e.get("balance_gross") or 0) for e in non_can_entries if not e.get("from_vsca")), 2)
     tot_received = round(sum(float(e.get("net_payout") or 0) for e in non_can_entries if e.get("status") in ("PAID", "RELEASED", "VERIFIED")), 2)
     tot_pending = round(sum(float(e.get("net_payout") or 0) for e in non_can_entries if e.get("status") in ("DRAFT", "PENDING", "STAGE1_APPROVED")), 2)
@@ -10013,6 +10017,8 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
                 if (r.get("status") or "").upper() == "CANCELLED":
                     continue
                 k = r.get("display_kind") or r.get("kind") or "Commission"
+                if k == 'Direct Advance' or (r.get('source_lead_id') is None and (r.get('kind') or '').upper() in ('ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE')):
+                    continue
                 if k not in type_agg:
                     type_agg[k] = {"type": k, "count": 0, "gross": 0.0, "advance": 0.0, "balance": 0.0, "net": 0.0}
                 type_agg[k]["count"] += 1

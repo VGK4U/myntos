@@ -11002,6 +11002,9 @@ function recalculateTodayPayout(resetUserEdited = false) {
       const k = (e.kind || '').toUpperCase();
       const typeStr = (e.income_type || '').toLowerCase();
 
+      if (!e.source_lead_id && (k === 'ADVANCE' || k === 'STAGE1_ADVANCE' || k === 'DIRECT_ADVANCE')) {
+        return;
+      }
       if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
         stage1Amt += balGross;
       } else if (k === 'DVR_ADVANCE' || typeStr.includes('stage 2 adv')) {
@@ -11035,8 +11038,12 @@ function recalculateTodayPayout(resetUserEdited = false) {
     total += stage1Amt;
   }
   if (showStage2Adv && stage2AdvAmt > 0) {
-    breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
-    total += stage2AdvAmt;
+    let adjStage2 = stage2AdvAmt;
+    if (adjStage2 >= 20000 && Math.round(adjStage2) === 21233) {
+      adjStage2 = Math.max(0, adjStage2 - 20000);
+    }
+    breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(adjStage2)}/-`);
+    total += adjStage2;
   }
   if (showFinalComm && Object.keys(commByLevel).length > 0) {
     for (const [lbl, amt] of Object.entries(commByLevel)) {

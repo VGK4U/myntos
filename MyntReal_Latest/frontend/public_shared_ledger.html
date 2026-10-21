@@ -1235,9 +1235,12 @@
             filtered.forEach(r => {
                 const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
                 if (!isCancelled) {
+                    const isDirectAdv = (r.display_kind === 'Direct Advance' || (!r.source_lead_id && (r.kind || '').toUpperCase() === 'ADVANCE'));
                     sumDeal += Number(r.deal_value) || 0;
                     sumRecv += Number(r.received_value) || 0;
-                    sumGross += Number(r.commission_amount) || 0;
+                    if (!isDirectAdv) {
+                        sumGross += Number(r.commission_amount) || 0;
+                    }
                     sumStg1 += Number(r.stage1_adv) || 0;
                     sumStg2 += Number(r.stage2_adv) || 0;
                     sumAdvPaid += Number(r.advance_paid) || 0;
@@ -1313,6 +1316,7 @@
                     const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
                     if (isCancelled && avoidCancelled) return;
                     const kLabel = r.display_kind || r.entry_kind_label || r.kind || 'Commission';
+                    if (kLabel === 'Direct Advance' || (!r.source_lead_id && (r.kind || '').toUpperCase() === 'ADVANCE')) return;
                     if (!typeMap[kLabel]) {
                         typeMap[kLabel] = { type: kLabel, count: 0, gross: 0, advance: 0, balance: 0, net: 0 };
                     }
