@@ -1257,12 +1257,12 @@
             const isFullScope = (filtered.length === allLedgerData.length);
 
             // Overall Earning (Gross)
-            const dispGross = (isFullScope && sm.gross_earned !== undefined) ? sm.gross_earned : sumGross;
+            const dispGross = (isFullScope && sm.gross_earned !== undefined) ? sm.gross_earned : sumBal;
             const dispAdvPaid = (isFullScope && sm.advances_adjusted !== undefined) ? sm.advances_adjusted : sumAdvPaid;
-            const dispLostAdv = (isFullScope && sm.lost_advances_adjusted !== undefined) ? sm.lost_advances_adjusted : (sumLostAdv || 1500);
+            const dispLostAdv = (isFullScope && sm.lost_advances_adjusted !== undefined) ? sm.lost_advances_adjusted : sumLostAdv;
             const dispBal = (isFullScope && sm.net_earning !== undefined) ? sm.net_earning : (sumBal - (sumLostAdv || 0));
-            const dispPaid = (isFullScope && sm.received !== undefined) ? sm.received : (sumPaid || 110538.51);
-            const dispPending = (isFullScope && sm.pending !== undefined) ? sm.pending : (sumPending || 11153.61);
+            const dispPaid = (isFullScope && sm.received !== undefined) ? sm.received : sumPaid;
+            const dispPending = (isFullScope && sm.pending !== undefined) ? sm.pending : sumPending;
             const dispTotalDisbursed = (isFullScope && sm.total_disbursed !== undefined) ? sm.total_disbursed : (dispPaid + dispAdvPaid);
 
             // Section 1 Cards
