@@ -880,21 +880,26 @@
             const teamMap = {};
             let downlineCount = 0;
             let downlineGross = 0;
+            let downlineBal = 0;
             let selfCount = 0;
             let selfGross = 0;
+            let selfBal = 0;
 
             data.forEach(r => {
                 const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
                 const key = getTeamMemberKey(r);
                 const isDownline = isRowDownlineTeamLead(r);
                 const gross = isCancelled ? 0 : (Number(r.commission_amount) || 0);
+                const bal = isCancelled ? 0 : ((r.balance_gross !== undefined && r.balance_gross !== null) ? Number(r.balance_gross) : gross);
                 if (!isCancelled) {
                     if (isDownline) {
                         downlineCount++;
                         downlineGross += gross;
+                        downlineBal += bal;
                     } else {
                         selfCount++;
                         selfGross += gross;
+                        selfBal += bal;
                     }
                 }
                 if (key === 'UNASSIGNED') return;
@@ -906,7 +911,8 @@
                         isDownline: isDownline,
                         leads: new Set(),
                         activeEntries: 0,
-                        gross: 0
+                        gross: 0,
+                        balance_gross: 0
                     };
                 }
                 const cName = (r.client_name || r.member_name || '').trim();
@@ -914,6 +920,7 @@
                 if (!isCancelled) {
                     teamMap[key].activeEntries++;
                     teamMap[key].gross += gross;
+                    teamMap[key].balance_gross += bal;
                 }
                 if (isDownline) teamMap[key].isDownline = true;
             });
@@ -921,12 +928,12 @@
             const selectEl = document.getElementById('filterTeamMember');
             const currentVal = selectEl.value;
             selectEl.innerHTML = `<option value="ALL">All Team &amp; Self (${Object.keys(teamMap).length} Members)</option>`;
-            selectEl.innerHTML += `<option value="TEAM_ONLY">⚡ Downline Team Leads Only (L2+) — ₹${Math.round(downlineGross).toLocaleString('en-IN')}</option>`;
-            selectEl.innerHTML += `<option value="SELF_ONLY">👤 Self / Direct Leads Only (L1) — ₹${Math.round(selfGross).toLocaleString('en-IN')}</option>`;
+            selectEl.innerHTML += `<option value="TEAM_ONLY">⚡ Downline Team Leads Only (L2+) — ₹${Math.round(downlineBal).toLocaleString('en-IN')}</option>`;
+            selectEl.innerHTML += `<option value="SELF_ONLY">👤 Self / Direct Leads Only (L1) — ₹${Math.round(selfBal).toLocaleString('en-IN')}</option>`;
 
             const sortedMembers = Object.values(teamMap).sort((a, b) => {
                 if (a.isDownline !== b.isDownline) return a.isDownline ? -1 : 1;
-                return b.gross - a.gross;
+                return (b.balance_gross || b.gross) - (a.balance_gross || a.gross);
             });
 
             sortedMembers.forEach(tm => {
@@ -934,7 +941,7 @@
                 opt.value = tm.name;
                 const tag = tm.isDownline ? `[${tm.levelCode || 'Team'}]` : `[L1 Self]`;
                 const codeStr = tm.code ? ` (${tm.code})` : '';
-                opt.textContent = `${tag} ${tm.name}${codeStr} — ${tm.leads.size} Leads • ₹${Math.round(tm.gross).toLocaleString('en-IN')}`;
+                opt.textContent = `${tag} ${tm.name}${codeStr} — ${tm.leads.size} Leads • ₹${Math.round(tm.balance_gross || tm.gross).toLocaleString('en-IN')}`;
                 selectEl.appendChild(opt);
             });
 
@@ -987,12 +994,16 @@
                 const cName = (r.client_name || r.member_name || '').trim();
                 if (!cName) return;
                 if (!customerMap[cName]) {
-                    customerMap[cName] = { total: 0, active: 0, gross: 0 };
+                    customerMap[cName] = { total: 0, active: 0, gross: 0, balance_gross: 0 };
                 }
                 customerMap[cName].total++;
                 if (!isCancelled) {
                     customerMap[cName].active++;
                     customerMap[cName].gross += Number(r.commission_amount) || 0;
+                    const bal = (r.balance_gross !== undefined && r.balance_gross !== null)
+                        ? Number(r.balance_gross)
+                        : (Number(r.commission_amount) || 0);
+                    customerMap[cName].balance_gross += bal;
                 }
             });
 
@@ -1008,7 +1019,7 @@
                 const opt = document.createElement('option');
                 opt.value = cName;
                 const stats = customerMap[cName];
-                opt.textContent = `${cName} (${stats.active} entries • ₹${Math.round(stats.gross).toLocaleString('en-IN')})`;
+                opt.textContent = `${cName} (${stats.active} entries • ₹${Math.round(stats.balance_gross !== undefined ? stats.balance_gross : stats.gross).toLocaleString('en-IN')})`;
                 selectEl.appendChild(opt);
             });
 

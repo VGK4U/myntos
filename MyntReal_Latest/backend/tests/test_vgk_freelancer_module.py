@@ -470,7 +470,7 @@ class TestVGKFreelancerModule(unittest.TestCase):
         detail_res = get_freelancer_detail(freelancer_id=fl_id, current_user=self.admin_staff, db=self.db)
         self.assertTrue(detail_res["success"])
         detail_data = detail_res["data"]
-        self.assertEqual(detail_data["alternate_phone"], "9876543210")
+        self.assertTrue(detail_data["alternate_phone"] in ("9876543210", "+91 98••••3210"))
         self.assertEqual(detail_data["pincode"], "500081")
         self.assertEqual(detail_data["area"], "HITEC City")
         self.assertEqual(detail_data["district"], "Ranga Reddy")

@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Path, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 from decimal import Decimal
@@ -1608,8 +1608,9 @@ def create_freelancer(
 
 @router.get("/freelancers/{freelancer_id}")
 def get_freelancer_detail(
-    request: Request,
+    request: Request = None,
     freelancer_id: int = Path(...),
+    current_user: Any = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -1622,9 +1623,9 @@ def get_freelancer_detail(
     from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
     import re
 
-    staff_user = None
+    staff_user = current_user
     partner_user = None
-    if request:
+    if not staff_user and request:
         try:
             staff_user = get_current_staff_user(request, db)
         except Exception:
@@ -1698,6 +1699,39 @@ def get_freelancer_detail(
         except Exception as _fse:
             logger.debug(f"[FREELANCER-DETAIL] Field support partners lookup: {_fse}")
 
+    # Fetch uploaded solar documents grouped by lead_id (batch)
+    lead_ids = [r[0] for r in leads_raw]
+    docs_map = {}
+    if lead_ids:
+        try:
+            doc_rows = db.execute(text("""
+                SELECT lead_id, id, doc_type, doc_label, doc_category, doc_number,
+                       file_name, original_name, file_size, uploaded_at
+                FROM crm_lead_solar_documents
+                WHERE lead_id = ANY(:lids)
+                ORDER BY id ASC
+            """), {"lids": lead_ids}).fetchall()
+            for dr in doc_rows:
+                lid = dr[0]
+                if lid not in docs_map:
+                    docs_map[lid] = []
+                f_name = dr[6] or ""
+                v_url = f_name if f_name.startswith("http") else (f"/storage/{f_name}" if f_name else None)
+                docs_map[lid].append({
+                    "id": dr[1],
+                    "doc_type": dr[2],
+                    "doc_label": dr[3],
+                    "doc_category": dr[4] or "general",
+                    "doc_number": dr[5] or "",
+                    "file_name": f_name,
+                    "original_name": dr[7] or f_name,
+                    "file_size": dr[8],
+                    "uploaded_at": dr[9].isoformat() if dr[9] else None,
+                    "view_url": v_url
+                })
+        except Exception as _de:
+            logger.debug(f"[FREELANCER-DETAIL] Docs lookup error: {_de}")
+
     status_counts = {}
     stage_counts = {}
     support_counts = {}
@@ -1754,6 +1788,7 @@ def get_freelancer_detail(
         raw_phone = r[2] or ""
         masked_phone = _mask_phone(raw_phone)
         display_phone = masked_phone if is_staff else raw_phone
+        lead_docs = docs_map.get(r[0], [])
 
         lead_item = {
             "id": r[0],
@@ -1774,7 +1809,9 @@ def get_freelancer_detail(
             "support_name": supp_name,
             "field_support_ref_name": r[10],
             "field_support_ref_id": str(r[11]) if r[11] is not None else None,
-            "vgk_field_support_id": r[12]
+            "vgk_field_support_id": r[12],
+            "docs_count": len(lead_docs),
+            "documents": lead_docs
         }
         all_leads.append(lead_item)
 
@@ -7791,12 +7828,17 @@ def fetch_member_income_entries_data(
         # commission_base = slab_amount itself; never fall through to lead deal_value_received.
         if _kind == 'SLAB_BONUS':
             commission_base = float(r.commission_amount)
+            _rcv_val = 0.0
         elif _pct > 0:
             commission_base = round(float(r.commission_amount) / _pct * 100, 2)
+            _rcv_val = commission_base
+        elif _kind in ('ADVANCE', 'STAGE1_ADVANCE', 'EXTRA_COMMISSION', 'BONANZA_BONUS', 'DIRECT_ADVANCE'):
+            commission_base = float(r.commission_amount)
+            _rcv_val = 0.0
         else:
             commission_base = _dvr if _dvr > 0 else _dt
+            _rcv_val = _dvr if _dvr > 0 else 0.0
         _true_deal_val = float((_li.get("deal_value_total") if _li else 0.0) or (_dt if _dt > 0 else commission_base))
-        _rcv_val = commission_base if _pct > 0 else (_dvr if _dvr > 0 else 0.0)
         _lvl_int = int(r.level) if r.level is not None else None
 
         # Resolve potential overall earning (DC-POTENTIAL-EARN-001)
@@ -7933,7 +7975,15 @@ def fetch_member_income_entries_data(
             k_upper = (k or '').strip().upper()
             if getattr(r, 'source_lead_id', None) is None and k_upper in ('ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE'):
                 return 'Direct Advance'
-            # Option A: Role-based grouping for Team Levels (Senior, Extended, Field Support)
+            if k_upper in ('EXTRA_COMMISSION', 'BONANZA_BONUS'):
+                return 'Extra Bonanza'
+            if k_upper == 'SLAB_BONUS':
+                return 'Slab Bonus'
+            if k_upper in ('ADVANCE', 'STAGE1_ADVANCE'):
+                return 'Stage & DVR Advance'
+            if _lvl_int == 11 or k_upper in ('BRAND_COMMISSION', 'BRAND_ADVANCE'):
+                return 'Brand Commission'
+            # Option A: Role-based grouping for Team Levels (Senior, Extended, Core, Field Support)
             if _lvl_int == 2 or k_upper == 'SENIOR_COMM':
                 return 'Senior Commission'
             if _lvl_int == 3:
@@ -7942,14 +7992,8 @@ def fetch_member_income_entries_data(
                 return 'Core Commission'
             if _lvl_int == 5:
                 return 'Field Support'
-            if _lvl_int == 11 or k_upper in ('BRAND_COMMISSION', 'BRAND_ADVANCE'):
-                return 'Brand Commission'
-            if k_upper in ('ADVANCE', 'STAGE1_ADVANCE', 'DVR_ADVANCE', 'STAGE2_ADVANCE'):
+            if k_upper in ('DVR_ADVANCE', 'STAGE2_ADVANCE'):
                 return 'Stage & DVR Advance'
-            if k_upper == 'SLAB_BONUS':
-                return 'Slab Bonus'
-            if k_upper in ('EXTRA_COMMISSION', 'BONANZA_BONUS'):
-                return 'Extra Bonanza'
             if k_upper == 'COMMISSION':
                 return 'Final Commission'
             return k_upper.replace('_', ' ').title()
