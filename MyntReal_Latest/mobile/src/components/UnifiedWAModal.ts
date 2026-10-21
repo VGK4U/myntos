@@ -1217,6 +1217,7 @@ class UnifiedWAModal {
               message: msg,
               recipient_type: 'individual',
               recipient_name: name || 'Customer',
+              channel: 'scanned',
               lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
             });
 
@@ -1259,6 +1260,7 @@ class UnifiedWAModal {
             message: msg,
             recipient_type: 'individual',
             recipient_name: name || 'Customer',
+            channel: 'scanned',
             lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
           });
 
@@ -1299,6 +1301,7 @@ class UnifiedWAModal {
         message: msg,
         recipient_type: 'individual',
         recipient_name: name || 'Customer',
+        channel: 'scanned',
         lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
       });
 

@@ -858,8 +858,9 @@ def _process_meta_webhook_statuses_bg(statuses_list: list):
 
                 try:
                     is_critical = (
-                        ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome')
+                        ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome', 'manual_staff', 'manual', 'staff_reply')
                         or (ml.message_type and ml.message_type.startswith(('auto_', 'crm_lead_')))
+                        or str(err_code) in ('131047', '131026', '131051', '131052', '131053')
                     )
                     if is_critical and ml.message_body and ml.mobile_number:
                         if getattr(ml, 'status_source', None) != 'FAILOVER_DISPATCHED':
@@ -5255,6 +5256,8 @@ class WASendMessagePayload(BaseModel):
     filename: Optional[str] = None
     mimetype: Optional[str] = None
     send_as_document: Optional[bool] = None
+    channel: Optional[str] = None
+    send_mode: Optional[str] = None
 
 _processed_client_msg_ids = set()
 
@@ -5273,6 +5276,7 @@ def send_manual_whatsapp_message(
     import uuid
     import json
     import requests
+    from datetime import timedelta
 
     rec = (payload.recipient or payload.to_phone or payload.phone or "").strip()
     msg_text = (payload.message or "").strip()
@@ -5512,34 +5516,88 @@ def send_manual_whatsapp_message(
     wamid = f"wamid_manual_{uuid.uuid4().hex[:12]}"
     provider_used = "BAILEYS"
 
-    # [DC-WA-INDIVIDUAL-ROUTING] For individual numbers (text), always try Official Meta Cloud API first;
-    # fall back to Scanned WhatsApp only if the API is not working.
-    if not is_group_or_channel and not payload.media_url and msg_text and len(clean_target) == 10:
-        try:
-            from app.services.whatsapp_auto_service import _send_meta
-            meta_res = _send_meta(
-                phone=clean_target,
-                message=msg_text,
-                template=None,
-                db=db,
-                context=None,
-                is_internal_system=True,
-            )
-            if meta_res.get("success") and meta_res.get("wamid"):
-                sent_success = True
-                wamid = meta_res["wamid"]
-                provider_used = "META_WHATSAPP"
-        except Exception as _meta_err:
-            logger.warning(f"[WA-SEND] Meta API primary attempt failed for {clean_target}: {_meta_err}")
+    # [DC-WA-ROUTING-002] Channel-Aware Routing:
+    # Explicitly respects the channel selected in the UI ('scanned' vs 'official').
+    # Default for this manual endpoint is Scanned WhatsApp Bot Gateway (Port 5002)
+    # unless 'official' or 'meta' is explicitly specified.
+    req_channel = (payload.channel or payload.send_mode or "scanned").strip().lower()
 
-    if not sent_success:
+    if req_channel in ("official", "meta"):
+        if not is_group_or_channel and not payload.media_url and msg_text and len(clean_target) == 10:
+            try:
+                from app.services.whatsapp_auto_service import _send_meta
+                meta_res = _send_meta(
+                    phone=clean_target,
+                    message=msg_text,
+                    template=tpl if 'tpl' in locals() and tpl else None,
+                    db=db,
+                    context=replacements if 'replacements' in locals() and replacements else None,
+                    is_internal_system=False,
+                )
+                if meta_res.get("success") and meta_res.get("wamid"):
+                    sent_success = True
+                    wamid = meta_res["wamid"]
+                    provider_used = "META_WHATSAPP"
+                else:
+                    error_msg = meta_res.get("reason") or meta_res.get("error") or "Official Meta API send failed"
+            except Exception as _meta_err:
+                logger.warning(f"[WA-SEND] Meta API primary attempt failed for {clean_target}: {_meta_err}")
+                error_msg = str(_meta_err)
+        else:
+            error_msg = "Official Meta API does not support groups or media in direct send. Please use Scanned WhatsApp."
+    elif req_channel == "auto":
+        # Auto mode: try Meta only if 24-hr customer window is open or template is approved; otherwise use Scanned WhatsApp
+        if not is_group_or_channel and not payload.media_url and msg_text and len(clean_target) == 10:
+            from app.models.whatsapp import WAInbox
+            cutoff_24h = get_indian_time() - timedelta(hours=24)
+            has_inbound = db.query(WAInbox).filter(
+                WAInbox.from_phone.like(f"%{clean_target}%"),
+                WAInbox.message_type != "outbound",
+                WAInbox.received_at >= cutoff_24h
+            ).first() is not None
+            has_approved_tmpl = bool(tpl and getattr(tpl, 'is_meta_approved', False) and getattr(tpl, 'meta_template_name', None))
+
+            if has_inbound or has_approved_tmpl:
+                try:
+                    from app.services.whatsapp_auto_service import _send_meta
+                    meta_res = _send_meta(
+                        phone=clean_target,
+                        message=msg_text,
+                        template=tpl if has_approved_tmpl else None,
+                        db=db,
+                        context=replacements if 'replacements' in locals() and replacements else None,
+                        is_internal_system=False,
+                    )
+                    if meta_res.get("success") and meta_res.get("wamid"):
+                        sent_success = True
+                        wamid = meta_res["wamid"]
+                        provider_used = "META_WHATSAPP"
+                except Exception as _meta_err:
+                    logger.warning(f"[WA-SEND] Auto Meta API attempt failed for {clean_target}: {_meta_err}")
+
+        if not sent_success:
+            try:
+                resp = requests.post(gateway_url, json=bot_payload, timeout=12)
+                raw_res = resp.json() if resp.status_code == 200 else {}
+                if resp.status_code == 200 and raw_res.get("success"):
+                    sent_success = True
+                    wamid = (raw_res.get("key") or {}).get("id") or (raw_res.get("message_id") or wamid)
+                    provider_used = "BAILEYS"
+                else:
+                    error_msg = raw_res.get("error") or f"WhatsApp Bot Gateway returned status {resp.status_code}"
+            except requests.exceptions.ConnectionError:
+                error_msg = "WhatsApp is currently disconnected. Please scan QR code at http://localhost:5002/qr"
+            except Exception as exc:
+                error_msg = str(exc)
+    else:
+        # Default: Scanned WhatsApp direct dispatch to Baileys Gateway (Port 5002)
         try:
             resp = requests.post(gateway_url, json=bot_payload, timeout=12)
             raw_res = resp.json() if resp.status_code == 200 else {}
             if resp.status_code == 200 and raw_res.get("success"):
                 sent_success = True
-                wamid = (raw_res.get("key") or {}).get("id") or wamid
-                provider_used = "BAILEYS" if is_group_or_channel else "SCANNED_FALLBACK"
+                wamid = (raw_res.get("key") or {}).get("id") or (raw_res.get("message_id") or wamid)
+                provider_used = "BAILEYS"
             else:
                 error_msg = raw_res.get("error") or f"WhatsApp Bot Gateway returned status {resp.status_code}"
         except requests.exceptions.ConnectionError:

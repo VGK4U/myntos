@@ -2088,6 +2088,7 @@ export class StaffWhatsAppInboxPage {
           recipient: cleanPhone,
           to_phone: cleanPhone,
           phone: cleanPhone,
+          channel: 'scanned',
           message: text,
           media_url: currentAttach?.url || null,
           message_type: currentAttach ? currentAttach.type : 'text',

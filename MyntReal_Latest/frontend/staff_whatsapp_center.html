@@ -4474,10 +4474,10 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
       chanSel.value = 'scanned';
     } else if (channel === 'SCANNED' || channel === 'scanned') {
       chanSel.value = 'scanned';
-    } else {
-      // Default to official Meta API for all individual leads/contacts
+    } else if (channel === 'OFFICIAL' || channel === 'official') {
       chanSel.value = 'official';
     }
+    // If conversation does not force a channel, preserve staff's current composer selection
     if (typeof onMsgChannelChange === 'function') {
       onMsgChannelChange(chanSel.value);
     }
@@ -4892,6 +4892,7 @@ async function sendChatMessage() {
     const payload = {
       recipient: activeChatPhone,
       recipient_type: activeChatType,
+      channel: selectedChannel,
       message: rawMsgText,
       media_url: activeMediaUrl,
       message_type: activeMediaType || 'text',

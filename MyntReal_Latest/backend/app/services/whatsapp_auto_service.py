@@ -349,8 +349,23 @@ def _build_template_components(template, context: Dict[str, Any]) -> list:
     if var_names and context:
         body_params = []
         for var in var_names:
-            # Resolve named variable or positional variable {{1}} -> name
-            val = str(context.get(var, '') or (context.get('name', '') if var == '1' else '') or '').strip() or 'Customer'
+            # Resilient parameter resolution supporting named and positional placeholders
+            val = ""
+            if var in context and context[var] is not None:
+                val = str(context[var])
+            elif var == '1':
+                val = str(context.get('title') or (context.get('name') if '2' not in var_names else '') or context.get('customer_name') or 'Customer')
+            elif var == '2':
+                val = str(context.get('name') or context.get('customer_name') or context.get('lead_name') or 'Customer')
+            elif var == '3':
+                val = str(context.get('member_id') or context.get('code') or context.get('partner_code') or '-')
+            elif var == '4':
+                val = str(context.get('password') or 'Welcome@VGK')
+            elif var == '5':
+                val = str(context.get('login_url') or context.get('url') or 'https://www.vgk4u.com/vgk/login')
+            else:
+                val = str(context.get(var, '') or '')
+            val = val.strip() or 'Customer'
             body_params.append({"type": "text", "text": val})
         if body_params:
             components.append({"type": "body", "parameters": body_params})

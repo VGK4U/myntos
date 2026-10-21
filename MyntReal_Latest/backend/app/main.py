@@ -9902,14 +9902,15 @@ def _startup_worker():
         _db_vgkt = SessionLocal()
         try:
             _vgk_body = (
-                "Hello {{name}}! \U0001f389\n\n"
+                "Hello {{1}} {{2}}! \U0001f389\n\n"
                 "Welcome to *VGK4U* \u2014 the Loyalty Rewards Platform!\n\n"
-                "Your VGK Member ID: *{{member_id}}*\n"
+                "Your VGK Member ID: *{{3}}*\n"
+                "Your login Password : *{{4}}*\n"
                 "\U0001f4b0 Welcome Bonus: *10,000 Discount Credits* Credited!\n\n"
                 "You are now part of the VGK4U Loyalty Network across:\n"
                 "\u2600\ufe0f Solar Energy  \U0001f6f5 Electric Vehicles\n"
                 "\U0001f3e0 Real Estate  \U0001f6e1\ufe0f Insurance\n\n"
-                "\U0001f449 Login here: {{login_url}}\n\n"
+                "\U0001f449 Login here: {{5}}\n\n"
                 "1 Credit = \u20b91 value. Start earning rewards today!\n"
                 "*\u2014 VGK4U Team*"
             )
@@ -9923,6 +9924,7 @@ def _startup_worker():
                      'vgk_welcome_6', 'en', true, true, false, NOW(), NOW())
                 ON CONFLICT (slug) DO UPDATE
                 SET meta_template_name = 'vgk_welcome_6',
+                    body_text = :body,
                     header_type = 'image',
                     header_media_url = 'https://www.vgk4u.com/vgk4u-logo.png',
                     is_meta_approved = true,

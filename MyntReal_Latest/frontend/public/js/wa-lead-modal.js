@@ -779,6 +779,7 @@
           recipient_name: _s.name || 'Contact',
           template_id: tplId ? parseInt(tplId, 10) : null,
           variable_values: varVals,
+          channel: 'scanned',
           client_msg_id: 'lwa_modal_' + Date.now()
         })
       })
