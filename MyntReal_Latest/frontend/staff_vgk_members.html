@@ -11038,12 +11038,8 @@ function recalculateTodayPayout(resetUserEdited = false) {
     total += stage1Amt;
   }
   if (showStage2Adv && stage2AdvAmt > 0) {
-    let adjStage2 = stage2AdvAmt;
-    if (adjStage2 >= 20000 && Math.round(adjStage2) === 21233) {
-      adjStage2 = Math.max(0, adjStage2 - 20000);
-    }
-    breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(adjStage2)}/-`);
-    total += adjStage2;
+    breakupItems.push(`Stage 2 Advance: ₹${_meFormatInr(stage2AdvAmt)}/-`);
+    total += stage2AdvAmt;
   }
   if (showFinalComm && Object.keys(commByLevel).length > 0) {
     for (const [lbl, amt] of Object.entries(commByLevel)) {

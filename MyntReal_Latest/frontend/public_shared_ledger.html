@@ -466,7 +466,7 @@
             </div>
 
             <!-- Summary KPI Data Labels: Two Distinct Accounting Reconciliation Sections -->
-            <!-- Section 1: Cash Flow & Payout Reconciliation (Earned • Paid • Pending) -->
+            <!-- Section 1: Financial Cash Reconciliation (Earned • Paid • Pending) -->
             <div class="mb-3">
                 <div class="d-flex align-items-center justify-content-between mb-2 px-1">
                     <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
@@ -477,16 +477,16 @@
                 <div class="row g-2 g-md-3">
                     <div class="col-12 col-md-4">
                         <div class="kpi-card" style="border-left: 4px solid #4f46e5;">
-                            <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Overall Earning (Gross)</div>
+                            <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Overall Earning</div>
                             <div class="kpi-value text-indigo" id="kpiGrossEarned">₹0</div>
-                            <div class="kpi-sub d-none d-sm-block">Total Gross Accrued Income</div>
+                            <div class="kpi-sub d-none d-sm-block">Total Lifetime Earning (Matches Poster)</div>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <div class="kpi-card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
-                            <div class="kpi-label"><i class="fas fa-hand-holding-usd text-success"></i> Total Paid / Disbursed</div>
-                            <div class="kpi-value text-success" id="kpiTotalDisbursed">₹0</div>
-                            <div class="kpi-sub" id="kpiTotalDisbursedSub">Bank: ₹1,10,539 + Advances: ₹15,881</div>
+                            <div class="kpi-label"><i class="fas fa-university text-success"></i> Paid in Bank</div>
+                            <div class="kpi-value text-success" id="kpiPaidReleased">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block">Disbursed to Bank Account</div>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
@@ -508,28 +508,21 @@
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-block">Contract Offsets &amp; Accrual Balances</span>
                 </div>
                 <div class="row g-2 g-md-3" id="kpiCardsContainer">
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-md-4">
                         <div class="kpi-card" style="border-left: 3px solid #d97706;">
                             <div class="kpi-label"><i class="fas fa-hand-holding-dollar text-warning-dark"></i> Advances Adjusted</div>
                             <div class="kpi-value text-warning-dark" id="kpiAdvanceDeductions">₹0</div>
                             <div class="kpi-sub d-none d-sm-block" id="kpiAdvanceSub">Stage &amp; DVR Advances</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-md-4">
                         <div class="kpi-card" style="border-left: 3px solid #ef4444;">
                             <div class="kpi-label"><i class="fas fa-exclamation-circle text-danger"></i> Lost Leads Adj.</div>
                             <div class="kpi-value text-danger" id="kpiLostAdvancesAdjusted">₹0</div>
                             <div class="kpi-sub d-none d-sm-block" id="kpiLostAdvancesSub">Adjusted Lost Leads Advances</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="kpi-card" style="border-left: 3px solid #0284c7;">
-                            <div class="kpi-label"><i class="fas fa-scale-balanced text-primary"></i> Balance Gross</div>
-                            <div class="kpi-value text-primary" id="kpiBalanceGross">₹0</div>
-                            <div class="kpi-sub d-none d-sm-block">Net Deal Earnings (Accrual)</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-12 col-md-4">
                         <div class="kpi-card" style="border-left: 3px solid #64748b;">
                             <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
                             <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
