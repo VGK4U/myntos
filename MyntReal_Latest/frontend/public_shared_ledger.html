@@ -465,55 +465,83 @@
                 </div>
             </div>
 
-            <!-- Summary KPI Data Labels / Metric Summary Cards -->
-            <div class="row g-2 g-md-3 mb-3" id="kpiCardsContainer">
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card">
-                        <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Overall Earning</div>
-                        <div class="kpi-value text-indigo" id="kpiGrossEarned">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block">Total Gross Income</div>
+            <!-- Summary KPI Data Labels: Two Distinct Accounting Reconciliation Sections -->
+            <!-- Section 1: Cash Flow & Payout Reconciliation (Earned • Paid • Pending) -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                    <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
+                        <i class="fas fa-money-bill-wave text-success me-1"></i> Section 1: Financial Cash Reconciliation (Earned • Paid • Pending)
+                    </span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle d-none d-md-inline-block">Cash Disbursed &amp; Held</span>
+                </div>
+                <div class="row g-2 g-md-3">
+                    <div class="col-12 col-md-4">
+                        <div class="kpi-card" style="border-left: 4px solid #4f46e5;">
+                            <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Overall Earning (Gross)</div>
+                            <div class="kpi-value text-indigo" id="kpiGrossEarned">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block">Total Gross Accrued Income</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="kpi-card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
+                            <div class="kpi-label"><i class="fas fa-hand-holding-usd text-success"></i> Total Paid / Disbursed</div>
+                            <div class="kpi-value text-success" id="kpiTotalDisbursed">₹0</div>
+                            <div class="kpi-sub" id="kpiTotalDisbursedSub">Bank: ₹1,10,539 + Advances: ₹15,881</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="kpi-card" style="border: 1.5px solid #fde68a; background: #fffdf5; border-left: 4px solid #f59e0b;">
+                            <div class="kpi-label"><i class="fas fa-hourglass-half text-amber"></i> Pending Balance</div>
+                            <div class="kpi-value text-amber" id="kpiPendingBalance">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block">Held / Pending Release</div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card">
-                        <div class="kpi-label"><i class="fas fa-hand-holding-dollar text-warning-dark"></i> Advances Adjusted</div>
-                        <div class="kpi-value text-warning-dark" id="kpiAdvanceDeductions">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block" id="kpiAdvanceSub">Stage &amp; DVR Advances</div>
-                    </div>
+            </div>
+
+            <!-- Section 2: Advances & Contract Adjustments Ledger -->
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                    <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
+                        <i class="fas fa-sliders-h text-primary me-1"></i> Section 2: Advances &amp; Balance Adjustments Ledger
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-block">Contract Offsets &amp; Accrual Balances</span>
                 </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card" style="border-left: 3px solid #ef4444;">
-                        <div class="kpi-label"><i class="fas fa-exclamation-circle text-danger"></i> Lost Leads Adj.</div>
-                        <div class="kpi-value text-danger" id="kpiLostAdvancesAdjusted">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block" id="kpiLostAdvancesSub">Adjusted Lost Leads Advances</div>
+                <div class="row g-2 g-md-3" id="kpiCardsContainer">
+                    <div class="col-6 col-md-3 col-xl">
+                        <div class="kpi-card" style="border-left: 3px solid #d97706;">
+                            <div class="kpi-label"><i class="fas fa-hand-holding-dollar text-warning-dark"></i> Advances Adjusted</div>
+                            <div class="kpi-value text-warning-dark" id="kpiAdvanceDeductions">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block" id="kpiAdvanceSub">Stage &amp; DVR Advances</div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card">
-                        <div class="kpi-label"><i class="fas fa-scale-balanced text-primary"></i> Balance Gross</div>
-                        <div class="kpi-value text-primary" id="kpiBalanceGross">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block">Net Deal Earnings</div>
+                    <div class="col-6 col-md-3 col-xl">
+                        <div class="kpi-card" style="border-left: 3px solid #ef4444;">
+                            <div class="kpi-label"><i class="fas fa-exclamation-circle text-danger"></i> Lost Leads Adj.</div>
+                            <div class="kpi-value text-danger" id="kpiLostAdvancesAdjusted">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block" id="kpiLostAdvancesSub">Adjusted Lost Leads Advances</div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card" style="border-left: 3px solid #10b981;">
-                        <div class="kpi-label"><i class="fas fa-university text-success"></i> Paid in Bank</div>
-                        <div class="kpi-value text-success" id="kpiPaidReleased">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block">Disbursed to Bank Account</div>
+                    <div class="col-6 col-md-3 col-xl">
+                        <div class="kpi-card" style="border-left: 3px solid #0284c7;">
+                            <div class="kpi-label"><i class="fas fa-scale-balanced text-primary"></i> Balance Gross</div>
+                            <div class="kpi-value text-primary" id="kpiBalanceGross">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block">Net Deal Earnings (Accrual)</div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card" style="border: 1.5px solid #fde68a; background: #fffdf5; border-left: 3px solid #f59e0b;">
-                        <div class="kpi-label"><i class="fas fa-hourglass-half text-amber"></i> Pending Balance</div>
-                        <div class="kpi-value text-amber" id="kpiPendingBalance">₹0</div>
-                        <div class="kpi-sub d-none d-sm-block">Held / Pending Release</div>
+                    <div class="col-6 col-md-3 col-xl">
+                        <div class="kpi-card" style="border-left: 3px solid #10b981;">
+                            <div class="kpi-label"><i class="fas fa-university text-success"></i> Paid in Bank</div>
+                            <div class="kpi-value text-success" id="kpiPaidReleased">₹0</div>
+                            <div class="kpi-sub d-none d-sm-block">Disbursed to Bank Account</div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-6 col-md-4 col-xl">
-                    <div class="kpi-card">
-                        <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
-                        <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
-                        <div class="kpi-sub d-none d-sm-block">Total Ledger Entries</div>
+                    <div class="col-6 col-md-3 col-xl">
+                        <div class="kpi-card" style="border-left: 3px solid #64748b;">
+                            <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
+                            <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
+                            <div class="kpi-sub d-none d-sm-block">Total Filtered Entries</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1246,10 +1274,23 @@
             const dispBal = (isFullScope && sm.net_earning !== undefined) ? sm.net_earning : (sumBal - (sumLostAdv || 0));
             const dispPaid = (isFullScope && sm.received !== undefined) ? sm.received : (sumPaid || 110538.51);
             const dispPending = (isFullScope && sm.pending !== undefined) ? sm.pending : (sumPending || 11153.61);
+            const dispTotalDisbursed = (isFullScope && sm.total_disbursed !== undefined) ? sm.total_disbursed : (dispPaid + dispAdvPaid);
 
+            // Section 1 Cards
             if (document.getElementById('kpiGrossEarned')) {
                 document.getElementById('kpiGrossEarned').textContent = '₹' + Math.round(dispGross).toLocaleString('en-IN');
             }
+            if (document.getElementById('kpiTotalDisbursed')) {
+                document.getElementById('kpiTotalDisbursed').textContent = '₹' + Math.round(dispTotalDisbursed).toLocaleString('en-IN');
+            }
+            if (document.getElementById('kpiTotalDisbursedSub')) {
+                document.getElementById('kpiTotalDisbursedSub').textContent = `Bank: ₹${Math.round(dispPaid).toLocaleString('en-IN')} + Advances: ₹${Math.round(dispAdvPaid).toLocaleString('en-IN')}`;
+            }
+            if (document.getElementById('kpiPendingBalance')) {
+                document.getElementById('kpiPendingBalance').textContent = '₹' + Math.round(dispPending).toLocaleString('en-IN');
+            }
+
+            // Section 2 Cards
             if (document.getElementById('kpiAdvanceDeductions')) {
                 document.getElementById('kpiAdvanceDeductions').textContent = '₹' + Math.round(dispAdvPaid).toLocaleString('en-IN');
             }
@@ -1261,9 +1302,6 @@
             }
             if (document.getElementById('kpiPaidReleased')) {
                 document.getElementById('kpiPaidReleased').textContent = '₹' + Math.round(dispPaid).toLocaleString('en-IN');
-            }
-            if (document.getElementById('kpiPendingBalance')) {
-                document.getElementById('kpiPendingBalance').textContent = '₹' + Math.round(dispPending).toLocaleString('en-IN');
             }
             if (document.getElementById('kpiActiveRecords')) {
                 document.getElementById('kpiActiveRecords').textContent = filtered.length;

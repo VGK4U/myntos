@@ -7754,6 +7754,17 @@ def fetch_member_income_entries_data(
             k_upper = (k or '').strip().upper()
             if getattr(r, 'source_lead_id', None) is None and k_upper in ('ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE'):
                 return 'Direct Advance'
+            # Option A: Role-based grouping for Team Levels (Senior, Extended, Field Support)
+            if _lvl_int == 2 or k_upper == 'SENIOR_COMM':
+                return 'Senior Commission'
+            if _lvl_int == 3:
+                return 'Extended Commission'
+            if _lvl_int == 4:
+                return 'Core Commission'
+            if _lvl_int == 5:
+                return 'Field Support'
+            if _lvl_int == 11 or k_upper in ('BRAND_COMMISSION', 'BRAND_ADVANCE'):
+                return 'Brand Commission'
             if k_upper in ('ADVANCE', 'STAGE1_ADVANCE', 'DVR_ADVANCE', 'STAGE2_ADVANCE'):
                 return 'Stage & DVR Advance'
             if k_upper == 'SLAB_BONUS':
@@ -7876,13 +7887,18 @@ def fetch_member_income_entries_data(
     else:
         dash_pnd = round(max(tot_pending, max(0.0, net_payable - tot_received)), 2)
 
+    adv_adj = round(sum(float(e.get("advance_paid") or 0) for e in non_can_entries), 2)
+    lost_adv_adj = 1500.0 if partner_id == 122 else round(sum(float(e.get("lost_lead_deduction") or 0) for e in non_can_entries), 2)
+    tot_disbursed = round(dash_rcv + adv_adj, 2)
+
     summary_obj = {
         "gross_earned": tot_gross,
         "net_earning": tot_bal_gross,
         "received": dash_rcv,
         "pending": dash_pnd,
-        "advances_adjusted": round(sum(float(e.get("advance_paid") or 0) for e in non_can_entries), 2),
-        "lost_advances_adjusted": 1500.0 if partner_id == 122 else round(sum(float(e.get("lost_lead_deduction") or 0) for e in non_can_entries), 2),
+        "total_disbursed": tot_disbursed,
+        "advances_adjusted": adv_adj,
+        "lost_advances_adjusted": lost_adv_adj,
         "l1_files": len(l1_f_set),
         "total_files": tot_f_count,
         "installed_files": len(inst_f_set)
