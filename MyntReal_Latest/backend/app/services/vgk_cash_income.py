@@ -1565,12 +1565,13 @@ def release_cash_income(
     entry.updated_at = now
     partner.updated_at = now
 
-    # Automatically release tied BRAND_COMMISSION entries for the same lead and partner
+    # Automatically release tied BRAND_COMMISSION entries for the same lead and partner (active entries only)
     if entry.kind in ('COMMISSION', 'SENIOR_COMM') and entry.source_lead_id:
         db.execute(text("""
             UPDATE vgk_cash_income_entries
             SET status = 'RELEASED', released_by_id = :rel_by, released_at = NOW(), updated_at = NOW()
             WHERE source_lead_id = :lid AND partner_id = :pid AND kind = 'BRAND_COMMISSION'
+              AND status IN ('PENDING', 'STAGE1_APPROVED')
         """), {'rel_by': released_by_id, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
     _log_wallet_txn(
@@ -2790,12 +2791,13 @@ def mark_paid_cash_income(
         entry.notes = (entry.notes or '') + f' | Paid: {notes}'
     entry.updated_at = now
 
-    # Automatically mark tied BRAND_COMMISSION entries as PAID for the same lead and partner
+    # Automatically mark tied BRAND_COMMISSION entries as PAID for the same lead and partner (active/unpaid entries only)
     if entry.kind in ('COMMISSION', 'SENIOR_COMM') and entry.source_lead_id:
         db.execute(text("""
             UPDATE vgk_cash_income_entries
             SET status = 'PAID', paid_by_id = :pd_by, paid_at = NOW(), payment_mode = :pmode, payment_utr = :putr, updated_at = NOW()
             WHERE source_lead_id = :lid AND partner_id = :pid AND kind = 'BRAND_COMMISSION'
+              AND status IN ('PENDING', 'STAGE1_APPROVED', 'RELEASED')
         """), {'pd_by': paid_by_id, 'pmode': pm, 'putr': utr, 'lid': entry.source_lead_id, 'pid': entry.partner_id})
 
     # Synchronize linked advance record in vgk_solar_cibil_advances (if exists)
