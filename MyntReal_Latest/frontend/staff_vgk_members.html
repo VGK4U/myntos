@@ -907,7 +907,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <h3 style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 4px 0;display:flex;align-items:center;gap:8px">
         <i class="fas fa-user-tag" style="color:#0284c7"></i> Freelancers Management
       </h3>
-      <p style="font-size:13px;color:#64748b;margin:0">Directly supported non-MLM field contributors and ground source originators</p>
+      <p style="font-size:13px;color:#64748b;margin:0">Directly supported field contributors and ground source originators (Reference System)</p>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
       <button id="addFreelancerBtn" onclick="openAddFreelancerModal()" style="background:#0284c7;color:white;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(2,132,199,0.3)">
@@ -1730,7 +1730,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
   </div>
   <div class="modal-body" style="padding:20px">
     <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#0369a1">
-      <i class="fas fa-info-circle me-1"></i> Freelancers are separate from the VGK hierarchy (no sponsor, no upline, no downline, no MLM commissions). They are tagged directly to a VGK Support ID. Code sequence starts at <strong>FL08180001</strong>.
+      <i class="fas fa-info-circle me-1"></i> Freelancers are separate from the VGK hierarchy (no sponsor, no upline, no downline, no reference system commissions). They are tagged directly to a VGK Support ID. Code sequence starts at <strong>FL08180001</strong>.
     </div>
     
     <div class="form-group" style="margin-bottom:14px">
@@ -1939,6 +1939,88 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
     </button>
   </div>
 </div>
+</div>
+
+<!-- Freelancer / Ground Source Full View System Modal -->
+<div id="freelancerFullViewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;overflow-y:auto;padding:20px 14px">
+  <div style="background:white;border-radius:16px;max-width:1240px;width:96%;margin:16px auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0284c7,#0369a1);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;color:white">
+      <div>
+        <div style="display:inline-flex;align-items:center;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:800;letter-spacing:0.06em;margin-bottom:4px">
+          GROUND SOURCE FULL VIEW SYSTEM
+        </div>
+        <h4 id="flFvTitle" style="color:white;font-size:19px;font-weight:800;margin:0"></h4>
+        <div id="flFvSubtitle" style="font-size:12.5px;color:#bae6fd;margin-top:2px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <a id="flFvMasterLink" href="#" target="_blank" style="background:white;color:#0284c7;font-size:12px;font-weight:700;padding:6px 14px;border-radius:8px;text-decoration:none;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,.15)">
+          <i class="fas fa-external-link-alt"></i> Open in CRM Master
+        </a>
+        <button onclick="closeFreelancerFullLeadModal()" style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:22px 24px">
+      <!-- Top Metrics Bar -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:20px">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+          <div id="flFvTotal" style="font-size:26px;font-weight:800;color:#0f172a">0</div>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Total Leads Originated</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;text-align:center">
+          <div id="flFvWon" style="font-size:26px;font-weight:800;color:#16a34a">0</div>
+          <div style="font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase">Won / Closed Leads</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;text-align:center">
+          <div id="flFvPipeline" style="font-size:26px;font-weight:800;color:#0284c7">0</div>
+          <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase">Active in Pipeline</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;text-align:center">
+          <div id="flFvLost" style="font-size:26px;font-weight:800;color:#dc2626">0</div>
+          <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase">Lost / Cancelled</div>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+        <div style="position:relative;flex:1;max-width:360px">
+          <i class="fas fa-search" style="position:absolute;left:12px;top:10px;color:#94a3b8;font-size:13px"></i>
+          <input type="text" id="flFvSearchInput" placeholder="Filter by customer name, phone, stage..." oninput="filterFlFvLeads()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+        </div>
+        <div id="flFvCountLabel" style="font-size:12.5px;color:#64748b;font-weight:700"></div>
+      </div>
+
+      <!-- Leads Table -->
+      <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px">
+        <table style="width:100%;min-width:960px;border-collapse:collapse;font-size:12.5px;text-align:left">
+          <thead>
+            <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap">
+              <th style="padding:10px 12px">Lead ID</th>
+              <th style="padding:10px 12px">Customer Name</th>
+              <th style="padding:10px 12px">Phone</th>
+              <th style="padding:10px 12px">CRM Status</th>
+              <th style="padding:10px 12px">Solar Stage</th>
+              <th style="padding:10px 12px">Deal Value / kW</th>
+              <th style="padding:10px 12px">Created Date</th>
+              <th style="padding:10px 12px;text-align:right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="flFvTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:12px 24px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;color:#64748b">
+        <i class="fas fa-info-circle me-1"></i> Reference System Ground Source Lead Registry
+      </div>
+      <button onclick="closeFreelancerFullLeadModal()" style="background:#64748b;color:white;border:none;padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- Full View Modal — full-screen team tree -->
@@ -3366,8 +3448,11 @@ async function loadFreelancers(page = 1) {
         <td style="font-size:11.5px;color:#64748b">${fmtDate(fl.created_at)}</td>
         <td style="text-align:right">
           <div style="display:inline-flex;gap:6px;align-items:center">
-            <button onclick="viewFreelancerDetails(${fl.id})" title="View Details" style="background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+            <button onclick="viewFreelancerDetails(${fl.id})" title="Quick View" style="background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
               <i class="fas fa-eye me-1"></i>View
+            </button>
+            <button onclick="openFreelancerFullLeadModal(${fl.id})" title="Full View System" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
+              <i class="fas fa-list-alt me-1"></i>Full View
             </button>
             <button onclick="openEditFreelancerModal(${fl.id})" title="Edit Freelancer" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;padding:4px 8px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer">
               <i class="fas fa-pencil-alt me-1"></i>Edit
@@ -3641,10 +3726,10 @@ async function viewFreelancerDetails(flId) {
     }
 
     const fl = data.data || {};
-    const support = data.support_partner || {};
-    const originatedLeads = data.originated_leads || [];
-    const leadStats = data.lead_stats || {};
-    const auditLogs = data.scope_logs || [];
+    const support = data.support_partner || fl.support || {};
+    const originatedLeads = data.originated_leads || fl.leads_summary?.recent_leads || [];
+    const leadStats = data.lead_stats || fl.leads_summary || {};
+    const auditLogs = data.scope_logs || fl.audit_trail || [];
 
     if (title) title.innerHTML = `<i class="fas fa-user-tag me-2"></i>${esc(fl.partner_code)} · ${esc(fl.partner_name)}`;
 
@@ -3655,8 +3740,8 @@ async function viewFreelancerDetails(flId) {
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
         <i class="fas fa-shield-alt" style="color:#0284c7;font-size:18px;margin-top:2px"></i>
         <div style="font-size:12px;color:#1e40af;line-height:1.4">
-          <strong>Non-MLM Ground Source Participant</strong><br>
-          Freelancers originate CRM leads directly. Strictly excluded from downlines, sponsor commissions, waterfall allocations, and career progression.
+          <strong>Independent Ground Source Participant</strong><br>
+          Freelancers originate CRM leads directly outside the reference system tree. Strictly excluded from downlines, sponsor commissions, waterfall allocations, and career progression.
         </div>
       </div>
 
@@ -3667,9 +3752,14 @@ async function viewFreelancerDetails(flId) {
             <h4 style="font-size:16px;font-weight:800;color:#0f172a;margin:0 0 2px 0">${esc(fl.partner_name)}</h4>
             <span style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.04em">${esc(fl.partner_code)}</span>
           </div>
-          <span style="background:${fl.is_active ? '#e0f2fe' : '#f1f5f9'};color:${fl.is_active ? '#0369a1' : '#64748b'};padding:3px 10px;border-radius:12px;font-size:11.5px;font-weight:700">
-            ${fl.is_active ? 'Active' : 'Inactive'}
-          </span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button onclick="resetFreelancerPassword(${fl.id}, '${esc(fl.partner_code)}')" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer" title="Reset password as ID">
+              <i class="fas fa-key me-1"></i>Reset Password
+            </button>
+            <span style="background:${fl.is_active ? '#e0f2fe' : '#f1f5f9'};color:${fl.is_active ? '#0369a1' : '#64748b'};padding:3px 10px;border-radius:12px;font-size:11.5px;font-weight:700">
+              ${fl.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
         </div>
         <div style="font-size:12.5px;color:#475569;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div><i class="fas fa-phone me-1" style="color:#64748b"></i> ${esc(fl.phone || '—')}</div>
@@ -3726,7 +3816,7 @@ async function viewFreelancerDetails(flId) {
           <div style="font-size:12px;font-weight:700;color:#334155;text-transform:uppercase">
             <i class="fas fa-bullseye me-1" style="color:#7c3aed"></i> Ground Source Lead Performance
           </div>
-          <span style="font-size:12px;font-weight:800;color:#7c3aed">${leadStats.total || 0} Total Leads</span>
+          <span style="font-size:12px;font-weight:800;color:#7c3aed">${leadStats.total || originatedLeads.length || 0} Total Leads</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;text-align:center;margin-bottom:12px">
           <div style="background:#f8fafc;padding:8px;border-radius:8px">
@@ -3744,19 +3834,36 @@ async function viewFreelancerDetails(flId) {
         </div>
 
         ${originatedLeads.length ? `
-          <div style="font-size:11.5px;font-weight:700;color:#64748b;margin-bottom:6px">Recent Originated Leads:</div>
-          <div style="max-height:160px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:8px">
-            ${originatedLeads.slice(0, 10).map(l => `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:11.5px;font-weight:700;color:#64748b">Originated Leads (${originatedLeads.length}):</span>
+          </div>
+          <div style="max-height:180px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:8px;margin-bottom:10px">
+            ${originatedLeads.slice(0, 10).map(l => {
+              const _stKey = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
+              const _stLabel = _SOLAR_STAGE_LABELS[_stKey] || l.stage || l.solar_pipeline_status || l.status || 'Lead';
+              return `
               <div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;font-size:12px">
                 <div>
-                  <strong style="color:#0f172a">${esc(l.lead_name || 'Unnamed Lead')}</strong>
+                  <strong style="color:#0f172a">${esc(l.lead_name || l.name || 'Unnamed Lead')}</strong>
                   <span style="color:#64748b;font-size:11px">(${esc(l.phone || '')})</span>
                 </div>
-                <span style="font-size:11px;padding:1px 6px;border-radius:6px;background:#f1f5f9;color:#334155">${esc(l.stage || 'Lead')}</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:11px;padding:2px 7px;border-radius:6px;background:#f1f5f9;color:#334155;font-weight:600">${esc(_stLabel)}</span>
+                  <a href="staff_mnr_leads_master.html?open_lead=${l.id}" target="_blank" style="color:#0284c7;font-size:11px" title="Open Lead in CRM"><i class="fas fa-external-link-alt"></i></a>
+                </div>
               </div>
-            `).join('')}
+            `;}).join('')}
           </div>
         ` : `<div style="font-size:12px;color:#94a3b8;text-align:center;padding:10px">No leads originated yet.</div>`}
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="openFreelancerFullLeadModal(${fl.id})" style="flex:1;background:#7c3aed;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-expand-alt"></i> Full View System
+          </button>
+          <a href="staff_mnr_leads_master.html?category=Solar&handler_emp_code=${encodeURIComponent(fl.partner_code)}" target="_blank" style="flex:1;background:#0284c7;color:#fff;text-decoration:none;padding:7px 10px;border-radius:6px;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-external-link-alt"></i> Open in CRM Master
+          </a>
+        </div>
       </div>
 
       <!-- Audit History -->
@@ -3779,6 +3886,239 @@ async function viewFreelancerDetails(flId) {
   } catch (err) {
     console.error('Error fetching freelancer details:', err);
     body.innerHTML = `<div style="padding:20px;color:#dc2626;text-align:center">Network error loading details</div>`;
+  }
+}
+
+// ─── Freelancer Full View System Modal Handlers ─────────────────────────────
+let _currentFlFvLeads = [];
+
+const _SOLAR_STAGE_LABELS = {
+  'pending_with_bank': 'With Bank',
+  'application_submitted': 'App Submitted',
+  'documents_pending': 'Docs Pending',
+  'documents_issue': 'Docs Issue',
+  'load_extension': 'Load Extension',
+  'eb_cust': 'EB Customer',
+  'eb_staff': 'EB Staff',
+  'installation_pending': 'Install Pending',
+  'installed': 'Installed',
+  'dcr_pending': 'DCR Pending',
+  'discom_pending': 'DISCOM Pending',
+  'net_meter_pending': 'Net Meter Pending',
+  'balance_pending': 'Balance Pending',
+  'balance_received': 'Balance Received',
+  'subsidy_pending': 'Subsidy Pending',
+  'completed': 'Completed',
+  'won': 'Won',
+  'loan_rejected': 'Loan Rejected',
+  'bank_loan_rejected': 'Bank Rejected',
+  'waiting_for_bank_loan': 'Waiting Bank',
+  'loan_process': 'Loan Process',
+  'not_interested': 'Not Interested',
+  'cancelled': 'Cancelled'
+};
+
+async function openFreelancerFullLeadModal(flId) {
+  const modal = document.getElementById('freelancerFullViewModal');
+  if (!modal) return;
+  modal.style.display = 'block';
+
+  const titleEl = document.getElementById('flFvTitle');
+  const subEl = document.getElementById('flFvSubtitle');
+  const totalEl = document.getElementById('flFvTotal');
+  const wonEl = document.getElementById('flFvWon');
+  const pipeEl = document.getElementById('flFvPipeline');
+  const lostEl = document.getElementById('flFvLost');
+  const tbody = document.getElementById('flFvTableBody');
+  const searchInput = document.getElementById('flFvSearchInput');
+
+  if (titleEl) titleEl.textContent = 'Loading Member Full View...';
+  if (subEl) subEl.textContent = 'Fetching originated leads from CRM registry...';
+  if (totalEl) totalEl.textContent = '...';
+  if (wonEl) wonEl.textContent = '...';
+  if (pipeEl) pipeEl.textContent = '...';
+  if (lostEl) lostEl.textContent = '...';
+  if (searchInput) searchInput.value = '';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
+
+  try {
+    const res = await staffFetch(API + '/vgk/freelancers/' + flId);
+    const data = await res.json();
+    if (!data.success || !data.data) {
+      alert(data.detail || data.message || 'Failed to load member details');
+      closeFreelancerFullLeadModal();
+      return;
+    }
+
+    const fl = data.data;
+    const stats = data.lead_stats || {};
+    const leads = data.originated_leads || [];
+    const support = data.support_partner;
+
+    if (titleEl) titleEl.textContent = `${fl.partner_name || 'Ground Source Member'} (${fl.partner_code || ''})`;
+    if (subEl) {
+      subEl.innerHTML = `
+        <i class="fas fa-phone me-1"></i> ${esc(fl.phone || '—')} &nbsp;|&nbsp; 
+        <i class="fas fa-hands-helping me-1"></i> Support Partner: <strong>${esc(support?.partner_name || 'None Assigned')}</strong> ${support?.partner_code ? `(${esc(support.partner_code)})` : ''} &nbsp;|&nbsp;
+        <i class="fas fa-calendar-alt me-1"></i> Enrolled: ${fmtDate(fl.created_at)}
+      `;
+    }
+
+    const masterLink = document.getElementById('flFvMasterLink');
+    if (masterLink) {
+      masterLink.href = `staff_mnr_leads_master.html?category=Solar&handler_emp_code=${encodeURIComponent(fl.partner_code)}`;
+    }
+
+    if (totalEl) totalEl.textContent = stats.total ?? leads.length;
+    if (wonEl) wonEl.textContent = stats.won ?? 0;
+    if (pipeEl) pipeEl.textContent = stats.pipeline ?? 0;
+    if (lostEl) lostEl.textContent = stats.lost ?? 0;
+
+    _currentFlFvLeads = leads;
+    renderFlFvTable(leads);
+  } catch (err) {
+    console.error('Error opening full lead modal:', err);
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leads from server.</td></tr>';
+    }
+  }
+}
+
+function closeFreelancerFullLeadModal() {
+  const modal = document.getElementById('freelancerFullViewModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function filterFlFvLeads() {
+  const query = (document.getElementById('flFvSearchInput')?.value || '').toLowerCase().trim();
+  if (!query) {
+    renderFlFvTable(_currentFlFvLeads);
+    return;
+  }
+  const filtered = _currentFlFvLeads.filter(l => {
+    const id = String(l.id || '').toLowerCase();
+    const name = String(l.lead_name || l.name || '').toLowerCase();
+    const phone = String(l.phone || '').toLowerCase();
+    const stage = String(l.stage || l.solar_pipeline_status || '').toLowerCase();
+    const status = String(l.status || '').toLowerCase();
+    const city = String(l.city || l.district || '').toLowerCase();
+    return id.includes(query) || name.includes(query) || phone.includes(query) || stage.includes(query) || status.includes(query) || city.includes(query);
+  });
+  renderFlFvTable(filtered);
+}
+
+function renderFlFvTable(leads) {
+  const tbody = document.getElementById('flFvTableBody');
+  const countLabel = document.getElementById('flFvCountLabel');
+  if (!tbody) return;
+
+  if (countLabel) {
+    countLabel.textContent = `Showing ${leads.length} of ${_currentFlFvLeads.length} lead${_currentFlFvLeads.length === 1 ? '' : 's'}`;
+  }
+
+  if (!leads || leads.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:#94a3b8">No originated leads found matching query.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = leads.map(l => {
+    const status = (l.status || 'NEW').toUpperCase();
+    let badgeBg = '#f1f5f9', badgeColor = '#475569';
+    if (status.includes('WON') || status.includes('COMPLETED') || status.includes('CLOSED')) {
+      badgeBg = '#dcfce7'; badgeColor = '#15803d';
+    } else if (status.includes('LOST') || status.includes('DROP') || status.includes('CANCEL')) {
+      badgeBg = '#fee2e2'; badgeColor = '#b91c1c';
+    } else {
+      badgeBg = '#e0f2fe'; badgeColor = '#0369a1';
+    }
+
+    const rawStage = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
+    const stageDisplay = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+
+    let stageBg = '#eff6ff', stageColor = '#1d4ed8';
+    if (rawStage.includes('won') || rawStage.includes('install') || rawStage.includes('complete')) {
+      stageBg = '#ecfdf5'; stageColor = '#047857';
+    } else if (rawStage.includes('bank')) {
+      stageBg = '#e0f2fe'; stageColor = '#0284c7';
+    } else if (rawStage.includes('pending') || rawStage.includes('doc') || rawStage.includes('app')) {
+      stageBg = '#fffbeb'; stageColor = '#b45309';
+    } else if (rawStage.includes('reject') || rawStage.includes('lost') || rawStage.includes('cancel')) {
+      stageBg = '#fef2f2'; stageColor = '#dc2626';
+    }
+
+    const dealVal = parseFloat(l.deal_value || l.deal_value_total || l.project_cost || l.budget_max || l.budget_min || 0);
+    const recVal = parseFloat(l.deal_value_received || 0);
+    const kw = l.kw_size ? `${esc(l.kw_size)} kW` : '';
+
+    let valDisplay = '—';
+    if (dealVal > 0) {
+      valDisplay = `<strong style="color:#0f172a;font-size:12.5px">₹${Number(dealVal).toLocaleString('en-IN')}</strong>`;
+      if (kw) {
+        valDisplay += `<div style="font-size:11px;color:#0284c7;font-weight:700">${kw}</div>`;
+      }
+      if (recVal > 0) {
+        valDisplay += `<div style="font-size:10px;color:#16a34a;font-weight:600">₹${Number(recVal).toLocaleString('en-IN')} Recv</div>`;
+      }
+    } else if (kw) {
+      valDisplay = `<strong style="color:#0284c7;font-size:12px">${kw}</strong><div style="font-size:10.5px;color:#64748b">₹2,00,000 est.</div>`;
+    }
+
+    const createdDate = l.created_at ? fmtDate(l.created_at) : '—';
+
+    return `
+      <tr style="border-bottom:1px solid #f1f5f9;transition:background .15s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <td style="padding:10px 12px;font-weight:700;color:#64748b;white-space:nowrap">#${esc(l.id)}</td>
+        <td style="padding:10px 12px;min-width:140px">
+          <strong style="color:#0f172a;font-size:13px">${esc(l.lead_name || l.name || 'Unnamed')}</strong>
+          ${l.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
+        </td>
+        <td style="padding:10px 12px;color:#334155;white-space:nowrap"><i class="fas fa-phone me-1" style="color:#94a3b8;font-size:11px"></i>${esc(l.phone || '—')}</td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <span style="background:${badgeBg};color:${badgeColor};padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700">
+            ${esc(status)}
+          </span>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <span style="background:${stageBg};color:${stageColor};padding:3px 9px;border-radius:10px;font-weight:700;font-size:11.5px">
+            ${esc(stageDisplay)}
+          </span>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          ${valDisplay}
+        </td>
+        <td style="padding:10px 12px;color:#64748b;font-size:12px;white-space:nowrap">
+          ${createdDate}
+        </td>
+        <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+          <a href="staff_mnr_leads_master.html?open_lead=${l.id}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:700;text-decoration:none">
+            <i class="fas fa-external-link-alt"></i> View Lead
+          </a>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function resetFreelancerPassword(flId, flCode) {
+  const codeDisplay = flCode || `ID #${flId}`;
+  if (!confirm(`Are you sure you want to reset password for ${codeDisplay} to their ID (${codeDisplay})?`)) {
+    return;
+  }
+  try {
+    const res = await staffFetch(API + '/vgk/members/' + flId + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reset_type: 'permanent' })
+    });
+    const d = await res.json();
+    if (d.success) {
+      alert(`Password successfully reset to: ${d.partner_code || flCode || flId}\nLogin is now active with 0 failed attempts.`);
+    } else {
+      alert('Password reset failed: ' + (d.detail || d.message || 'Unknown error'));
+    }
+  } catch (err) {
+    console.error('Password reset error:', err);
+    alert('Network error resetting password');
   }
 }
 
@@ -4779,6 +5119,7 @@ function _iedRenderKpis(rows, total){
   const totRcv      = rows.reduce((s,r)=>s+r.received,0);
   const totPot      = rows.reduce((s,r)=>s+(r.potential_earning||0),0);
   const totFiles    = rows.reduce((s,r)=>s+(r.total_files||0),0);
+  const totL1Files  = rows.reduce((s,r)=>s+(r.l1_files||0),0);
   const totInstalled= rows.reduce((s,r)=>s+(r.installed_files||0),0);
   const totL1       = rows.reduce((s,r)=>s+(r.l1_source||0),0);
   const totL2       = rows.reduce((s,r)=>s+(r.l2_senior||0),0);
@@ -4789,7 +5130,7 @@ function _iedRenderKpis(rows, total){
   const totPending  = rows.reduce((s, r) => s + (r.pending !== undefined ? r.pending : 0), 0);
   const kpis = [
     {label:'Total Members', val:total,             color:'#7c3aed'},
-    {label:'Total Files',   val:totFiles,          color:'#374151'},
+    {label:'Total Files',   val:(rows.length === 1 && totL1Files > 0) ? `Direct: ${totL1Files} | Team: ${totFiles}` : `${totFiles} (${totL1Files} Direct)`, color:'#374151', title: 'Direct Files vs Downline Team Files'},
     {label:'Installed',     val:totInstalled,      color:'#059669'},
     {label:'Gross Earned',  val:_meInr(totGross),  color:'#374151'},
     {label:'Net Earning',   val:_meInr(totNet),    color:'#059669'},
@@ -4835,7 +5176,7 @@ function _iedRenderTable(rows){
   const totalsRow = `<tr style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;position:sticky;top:0;z-index:1">
     <td style="padding:8px;text-align:center"><span style="font-size:9px;font-weight:800;color:#059669;background:#dcfce7;padding:2px 5px;border-radius:4px;white-space:nowrap">TOTAL</span></td>
     <td colspan="3" style="padding:8px 12px;font-size:11px;font-weight:700;color:#059669">${rows.length} member${rows.length!==1?'s':''} (page)</td>
-    <td style="padding:8px 12px;text-align:center;font-weight:800;color:#374151">${tFiles||'—'}</td>
+    <td style="padding:8px 12px;text-align:center;font-weight:800;color:#374151;white-space:nowrap">${tFiles > 0 ? (rows.length === 1 ? `Direct: ${tFiles} | Team: ${rows[0].total_files || tFiles}` : `${tFiles} Direct`) : '—'}</td>
     <td style="padding:8px 12px;text-align:center;font-weight:800;color:#059669">${tInstalled||'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#475569">${tL0>0?_meInr(tL0):'—'}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:800;color:#7c3aed">${tL1>0?_meInr(tL1):'—'}</td>
@@ -4898,8 +5239,8 @@ function _iedRenderTable(rows){
       <td style="padding:8px 12px"><strong style="color:#7c3aed;font-size:12px">${m.partner_code}</strong></td>
       <td style="padding:8px 12px"><div style="display:flex;align-items:center">${dot}<span style="font-size:12.5px;font-weight:600;color:#1f2937">${m.partner_name}</span></div></td>
       <td style="padding:8px;font-size:11px;color:#6b7280;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.registered_by_name || ''}">${regByHtml}</td>
-      <td style="padding:8px 12px;text-align:center">
-        ${files > 0 ? `<span style="font-weight:800;color:#374151">${files}</span>` : '<span style="color:#d1d5db">0</span>'}
+      <td style="padding:8px 12px;text-align:center;white-space:nowrap" title="Direct Files: ${files} | Team Files: ${m.total_files || files}">
+        <span style="font-weight:800;color:#374151">${files > 0 ? (m.total_files && m.total_files !== files ? `Direct: ${files} | Team: ${m.total_files}` : files) : '<span style="color:#d1d5db">0</span>'}</span>
       </td>
       <td style="padding:8px 12px;text-align:center">
         ${instFiles > 0 ? `<span style="font-weight:800;color:#059669">${instFiles}</span>` : '<span style="color:#d1d5db">0</span>'}

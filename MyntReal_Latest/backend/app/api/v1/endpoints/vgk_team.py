@@ -1378,15 +1378,16 @@ def list_freelancers(
 
     # Bulk fetch originated lead counts
     fl_ids = [f.id for f in freelancers]
+    fl_str_ids = [str(f.id) for f in freelancers]
     lead_counts = {}
     if fl_ids:
         lead_rows = db.execute(text("""
-            SELECT associated_partner_id, COUNT(*) 
-            FROM crm_leads 
-            WHERE associated_partner_id = ANY(:fids)
-            GROUP BY associated_partner_id
-        """), {'fids': fl_ids}).fetchall()
-        lead_counts = {r[0]: r[1] for r in lead_rows}
+            SELECT COALESCE(l.associated_partner_id, CASE WHEN l.source_ref_id ~ '^[0-9]+$' THEN l.source_ref_id::integer ELSE NULL END), COUNT(DISTINCT l.id)
+            FROM crm_leads l
+            WHERE l.associated_partner_id = ANY(:fids) OR l.source_ref_id = ANY(:str_fids)
+            GROUP BY 1
+        """), {'fids': fl_ids, 'str_fids': fl_str_ids}).fetchall()
+        lead_counts = {r[0]: r[1] for r in lead_rows if r[0]}
 
     # Calculate overall meta counts for freelancers
     total_with = db.query(func.count(OfficialPartner.id)).filter(
@@ -1400,9 +1401,9 @@ def list_freelancers(
         OfficialPartner.freelancer_classification == 'WITHOUT_COMMUNICATION'
     ).scalar() or 0
     total_originated = db.execute(text("""
-        SELECT COUNT(*) FROM crm_leads l
-        JOIN official_partners p ON l.associated_partner_id = p.id
-        WHERE p.category = 'VGK_TEAM' AND p.partner_type = 'FREELANCER'
+        SELECT COUNT(DISTINCT l.id) FROM crm_leads l
+        WHERE l.associated_partner_id IN (SELECT id FROM official_partners WHERE category = 'VGK_TEAM' AND partner_type = 'FREELANCER')
+           OR l.source_ref_id IN (SELECT id::text FROM official_partners WHERE category = 'VGK_TEAM' AND partner_type = 'FREELANCER')
     """)).scalar() or 0
 
     items = []
@@ -1625,30 +1626,66 @@ def get_freelancer_detail(
 
     support = db.query(OfficialPartner).filter(OfficialPartner.id == fl.vgk_support_id).first() if fl.vgk_support_id else None
 
-    # Fetch originated CRM leads
+    # Fetch originated CRM leads by associated_partner_id OR source_ref_id OR partner name
     leads_raw = db.execute(text("""
-        SELECT id, name, phone, status, solar_pipeline_status, deal_value_total, deal_value_received, created_at
+        SELECT id, name, phone, status, solar_pipeline_status, 
+               COALESCE(NULLIF(deal_value_total, 0), NULLIF(deal_value, 0), NULLIF(budget_max, 0), NULLIF(budget_min, 0), 0) as effective_deal_value,
+               COALESCE(deal_value_received, 0) as deal_value_received,
+               kw_size,
+               city,
+               created_at
         FROM crm_leads 
         WHERE associated_partner_id = :fid
+           OR source_ref_id = :fid_str
+           OR (source_ref_name IS NOT NULL AND LOWER(TRIM(source_ref_name)) = LOWER(TRIM(:pname)))
         ORDER BY id DESC
-    """), {'fid': fl.id}).fetchall()
+    """), {'fid': fl.id, 'fid_str': str(fl.id), 'pname': fl.partner_name or ''}).fetchall()
 
     status_counts = {}
-    recent_leads = []
+    won_count = 0
+    lost_count = 0
+    pipeline_count = 0
+    all_leads = []
+
+    _WON_STATUSES = {'won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed'}
+    _LOST_STATUSES = {'lost', 'cancelled', 'loan_rejected', 'not_interested', 'bank_not_interested'}
+
     for r in leads_raw:
         st = (r[3] or 'new').strip().lower()
+        sps = (r[4] or '').strip().lower()
         status_counts[st] = status_counts.get(st, 0) + 1
-        if len(recent_leads) < 15:
-            recent_leads.append({
-                "id": r[0],
-                "name": r[1],
-                "phone": r[2],
-                "status": r[3],
-                "solar_pipeline_status": r[4],
-                "deal_value_total": float(r[5] or 0),
-                "deal_value_received": float(r[6] or 0),
-                "created_at": r[7].isoformat() if r[7] else None
-            })
+
+        is_won = (st in _WON_STATUSES or sps in ('installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed')) and sps not in _LOST_STATUSES
+        is_lost = st in ('lost', 'cancelled') or sps in _LOST_STATUSES
+
+        if is_won:
+            won_count += 1
+        elif is_lost:
+            lost_count += 1
+        else:
+            pipeline_count += 1
+
+        deal_val = float(r[5] or 0)
+        kw = str(r[7] or '').strip()
+        if not deal_val and kw in ('3', '3.0', '3kw', '3 kw'):
+            deal_val = 200000.0  # Standard 3 kW benchmark
+
+        lead_item = {
+            "id": r[0],
+            "lead_name": r[1] or "Unnamed Lead",
+            "name": r[1] or "Unnamed Lead",
+            "phone": r[2] or "",
+            "stage": r[4] or r[3] or "Lead",
+            "status": r[3] or "new",
+            "solar_pipeline_status": r[4],
+            "deal_value": deal_val,
+            "deal_value_total": deal_val,
+            "deal_value_received": float(r[6] or 0),
+            "kw_size": kw if kw else None,
+            "city": r[8] or "",
+            "created_at": r[9].isoformat() if r[9] else None
+        }
+        all_leads.append(lead_item)
 
     # Fetch audit logs
     audit_logs = []
@@ -1671,39 +1708,57 @@ def get_freelancer_detail(
     except Exception as _ae:
         logger.debug(f"[FREELANCER-DETAIL] Audit logs lookup: {_ae}")
 
+    lead_stats = {
+        "total": len(leads_raw),
+        "total_count": len(leads_raw),
+        "won": won_count,
+        "lost": lost_count,
+        "pipeline": pipeline_count,
+        "status_counts": status_counts
+    }
+
+    support_dict = {
+        "id": support.id,
+        "partner_code": support.partner_code,
+        "partner_name": support.partner_name,
+        "phone": support.phone,
+        "email": support.email,
+        "designation_tier": getattr(support, 'designation_tier', None) or 'Channel Partner'
+    } if support else None
+
+    data_payload = {
+        "id": fl.id,
+        "partner_code": fl.partner_code,
+        "partner_name": fl.partner_name,
+        "phone": fl.phone,
+        "alternate_phone": fl.alternate_phone,
+        "email": fl.email,
+        "area": fl.area,
+        "city": fl.city,
+        "district": fl.district,
+        "state": fl.state,
+        "address": fl.address,
+        "pincode": fl.pincode,
+        "is_active": fl.is_active,
+        "freelancer_classification": fl.freelancer_classification or 'WITH_COMMUNICATION',
+        "support": support_dict,
+        "registered_by_emp_code": fl.registered_by_emp_code,
+        "created_at": fl.created_at.isoformat() if fl.created_at else None,
+        "leads_summary": {
+            "total_count": len(leads_raw),
+            "status_counts": status_counts,
+            "recent_leads": all_leads
+        },
+        "audit_trail": audit_logs
+    }
+
     return {
         "success": True,
-        "data": {
-            "id": fl.id,
-            "partner_code": fl.partner_code,
-            "partner_name": fl.partner_name,
-            "phone": fl.phone,
-            "alternate_phone": fl.alternate_phone,
-            "email": fl.email,
-            "area": fl.area,
-            "city": fl.city,
-            "district": fl.district,
-            "state": fl.state,
-            "address": fl.address,
-            "pincode": fl.pincode,
-            "is_active": fl.is_active,
-            "freelancer_classification": fl.freelancer_classification or 'WITH_COMMUNICATION',
-            "support": {
-                "id": support.id,
-                "partner_code": support.partner_code,
-                "partner_name": support.partner_name,
-                "phone": support.phone,
-                "email": support.email
-            } if support else None,
-            "registered_by_emp_code": fl.registered_by_emp_code,
-            "created_at": fl.created_at.isoformat() if fl.created_at else None,
-            "leads_summary": {
-                "total_count": len(leads_raw),
-                "status_counts": status_counts,
-                "recent_leads": recent_leads
-            },
-            "audit_trail": audit_logs
-        }
+        "data": data_payload,
+        "support_partner": support_dict,
+        "originated_leads": all_leads,
+        "lead_stats": lead_stats,
+        "scope_logs": audit_logs
     }
 
 
@@ -3033,7 +3088,7 @@ def get_vgk_member_tree(
         raise HTTPException(status_code=404, detail="VGK member not found")
 
     if getattr(member, 'partner_type', None) == 'FREELANCER':
-        raise HTTPException(status_code=400, detail="Freelancers do not participate in network hierarchy or MLM tree view.")
+        raise HTTPException(status_code=400, detail="Freelancers do not participate in network hierarchy or reference system tree view.")
 
     # [DC-VGK-RBAC-001] Strict visibility guard for tree view
     if not _has_full_vgk_visibility(current_user):
@@ -3445,6 +3500,7 @@ class VGKPasswordResetPayload(BaseModel):
 
 
 @router.post("/members/{member_id}/reset-password")
+@router.post("/freelancers/{member_id}/reset-password")
 def reset_vgk_member_password(
     member_id: int = Path(...),
     payload: VGKPasswordResetPayload = None,
@@ -6360,13 +6416,14 @@ def member_earnings_dashboard(
     else:
         status_sql = ""
 
-    cibil_join_sql = " JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id AND (e.kind != 'ADVANCE' OR _cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 650)) "
+    cibil_join_sql = " LEFT JOIN crm_leads _cbl ON _cbl.id = e.source_lead_id "
+    cibil_where_sql = " AND (e.source_lead_id IS NULL OR e.kind != 'ADVANCE' OR _cbl.cibil_confirmed IS TRUE OR (_cbl.cibil_score IS NOT NULL AND _cbl.cibil_score >= 650)) "
 
     if earners_only or status_val:
         if status_sql:
-            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE 1=1 {status_sql} {date_sql}"
+            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE 1=1 {cibil_where_sql} {status_sql} {date_sql}"
         else:
-            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE e.status != 'CANCELLED' {date_sql}"
+            earner_sql = f"SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e {cibil_join_sql} WHERE e.status != 'CANCELLED' {cibil_where_sql} {date_sql}"
         try:
             earner_rows = db.execute(text(earner_sql), date_params).fetchall()
             earner_ids = [r[0] for r in earner_rows]
@@ -6411,9 +6468,9 @@ def member_earnings_dashboard(
             combined_sql = (
                 "SELECT e.partner_id, e.status, e.level, e.source_lead_id, e.commission_amount, e.net_payout, "
                 "       (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) AS is_installed, "
-                "       COALESCE(e.advance_adjusted_amount, 0)::float AS adv_adj "
+                "       COALESCE(e.advance_adjusted_amount, 0)::float AS adv_adj, e.id "
                 "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) "
+                " WHERE e.partner_id = ANY(:ids) " + cibil_where_sql
                 + date_sql + (" " + status_sql if status_val else "")
             )
             combined_rows = db.execute(text(combined_sql), {"ids": member_ids, **date_params}).fetchall()
@@ -6422,7 +6479,7 @@ def member_earnings_dashboard(
             _l1_files_set = {}
             _inst_files_set = {}
 
-            for pid_raw, st, lv_raw, lead_id, comm_amt, net_p, is_inst, adv_adj in combined_rows:
+            for pid_raw, st, lv_raw, lead_id, comm_amt, net_p, is_inst, adv_adj, eid in combined_rows:
                 pid = int(pid_raw)
                 bal_amt = max(0.0, float(comm_amt or 0) - float(adv_adj or 0))
                 # 1. inc_map by status
@@ -6443,20 +6500,20 @@ def member_earnings_dashboard(
                     lv_entry["amount"] += bal_amt
                     lv_entry["net_amount"] += float(net_p or 0)
 
-                    if lead_id is not None:
-                        if pid not in _files_set:
-                            _files_set[pid] = set()
-                        _files_set[pid].add(lead_id)
+                    _file_ref = lead_id if lead_id is not None else f"direct_{pid_raw}_{eid}"
+                    if pid not in _files_set:
+                        _files_set[pid] = set()
+                    _files_set[pid].add(_file_ref)
 
-                        if lv == 1:
-                            if pid not in _l1_files_set:
-                                _l1_files_set[pid] = set()
-                            _l1_files_set[pid].add(lead_id)
+                    if lv == 1 and lead_id is not None:
+                        if pid not in _l1_files_set:
+                            _l1_files_set[pid] = set()
+                        _l1_files_set[pid].add(lead_id)
 
-                            if is_inst:
-                                if pid not in _inst_files_set:
-                                    _inst_files_set[pid] = set()
-                                _inst_files_set[pid].add(lead_id)
+                        if is_inst:
+                            if pid not in _inst_files_set:
+                                _inst_files_set[pid] = set()
+                            _inst_files_set[pid].add(lead_id)
 
             files_map = {p: len(s) for p, s in _files_set.items()}
             l1_files_map = {p: len(s) for p, s in _l1_files_set.items()}
@@ -6738,6 +6795,62 @@ def member_earnings_dashboard(
             except Exception:
                 pass
 
+        try:
+            _vsca_unmirr_sql = (
+                "SELECT a.partner_id, a.status, a.kind, a.level, a.lead_id, "
+                "COALESCE(a.advance_amount, 0)::float as gross, "
+                "COALESCE(a.advance_amount * 0.90, 0)::float as net, "
+                "a.id, 0.0::float as adv_adj "
+                "FROM vgk_solar_cibil_advances a "
+                "LEFT JOIN crm_leads l ON a.lead_id = l.id "
+                "WHERE a.partner_id = ANY(:ids) AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650)) "
+                "  AND a.status IN ('PENDING', 'RELEASED') "
+                "  AND NOT EXISTS ( "
+                "    SELECT 1 FROM vgk_cash_income_entries vci "
+                "    WHERE vci.partner_id    = a.partner_id "
+                "      AND vci.source_lead_id = a.lead_id "
+                "      AND vci.level          = a.level "
+                "      AND vci.kind           = a.kind "
+                "      AND vci.status        != 'CANCELLED' "
+                "  )"
+            )
+            vsca_unmirr_rows = db.execute(text(_vsca_unmirr_sql), {"ids": member_ids}).fetchall()
+            for vr in vsca_unmirr_rows:
+                pid = int(vr[0])
+                if pid not in raw_member_entries_map:
+                    raw_member_entries_map[pid] = []
+                _vg = float(vr[5] or 0)
+                raw_member_entries_map[pid].append({
+                    "id": int(vr[7]),
+                    "status": vr[1],
+                    "kind": (vr[2] or 'ADVANCE').upper(),
+                    "level": vr[3],
+                    "source_lead_id": vr[4],
+                    "gross": _vg,
+                    "net": float(vr[6] or 0),
+                    "adv_adj": 0.0,
+                    "bal_gross": _vg
+                })
+                v_lead_id = vr[4]
+                v_file_ref = v_lead_id if v_lead_id is not None else f"vsca_{vr[7]}"
+                if pid not in _files_set:
+                    _files_set[pid] = set()
+                _files_set[pid].add(v_file_ref)
+                if vr[3] == 1 and v_lead_id is not None:
+                    if pid not in _l1_files_set:
+                        _l1_files_set[pid] = set()
+                    _l1_files_set[pid].add(v_lead_id)
+
+            for p, s in _files_set.items():
+                files_map[p] = len(s)
+            for p, s in _l1_files_set.items():
+                l1_files_map[p] = len(s)
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
     bulk_all_entries_map = {}
     bulk_lost_adv_map = {}
     if member_ids:
@@ -6825,8 +6938,8 @@ def member_earnings_dashboard(
         pts_balance  = float(m.vgk_points_balance or 0)
         inc = inc_map.get(m.id, {})
         m_entries = raw_member_entries_map.get(m.id, [])
-        gross    = sum(e["bal_gross"] for e in m_entries)
-        received = sum(e["bal_gross"] for e in m_entries if e["status"] in ("RELEASED", "PAID"))
+        gross    = round(sum(e["gross"] for e in m_entries), 2)
+        received = 0.0
         
         pending_amt = 0.0
         net_earning = 0.0
@@ -6875,9 +6988,12 @@ def member_earnings_dashboard(
                 e_net = e["net"] if (e["net"] > 0) else max(0.0, round(bal_gross * 0.90, 2))
             
             net_earning += e_net
-            if st in ("DRAFT", "PENDING", "STAGE1_APPROVED"):
+            if st in ("RELEASED", "PAID"):
+                received += e_net
+            elif st in ("DRAFT", "PENDING", "STAGE1_APPROVED"):
                 pending_amt += e_net
 
+        received = round(received, 2)
         pending_amt = round(pending_amt, 2)
         net_earning = round(net_earning, 2)
         _lvl = lvl_map.get(m.id, {})

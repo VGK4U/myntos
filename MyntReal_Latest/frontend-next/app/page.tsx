@@ -164,7 +164,7 @@ export default function VGK4ULandingPage() {
                 <span className="font-bold text-lg text-white">VGK Network</span>
               </div>
               <p className="text-sm leading-relaxed max-w-sm mb-6">
-                Powering the MyntReal network. A cutting-edge, secure, and fully scalable enterprise resource planning and MLM management architecture.
+                Powering the MyntReal network. A cutting-edge, secure, and fully scalable enterprise resource planning and reference system management architecture.
               </p>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-colors">

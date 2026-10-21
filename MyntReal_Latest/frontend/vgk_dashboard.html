@@ -815,7 +815,7 @@
                                         Career Rank
                                     </span>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 14px; margin: 12px 0;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 14px; margin: 12px 0 6px 0;">
                                     <div>
                                         <div style="font-size: 10px; text-transform: uppercase; opacity: 0.75; font-weight: 700;" title="Cumulative lifetime files in Subsidy Pending or Completed stage">Own Qualifying Files <i class="fas fa-info-circle ms-1" style="opacity:0.8" title="Only files reaching Subsidy Pending or Completed stage qualify for Career rank"></i></div>
                                         <div style="font-size: 20px; font-weight: 800; color: #a7f3d0;" id="vgk4uOwnFilesCount">—</div>
@@ -824,6 +824,10 @@
                                         <div style="font-size: 10px; text-transform: uppercase; opacity: 0.75; font-weight: 700;" title="Direct frontline legs that have produced at least 1 qualifying file">Active Team Legs <i class="fas fa-info-circle ms-1" style="opacity:0.8" title="Frontline legs with at least 1 member producing a qualifying file"></i></div>
                                         <div style="font-size: 20px; font-weight: 800; color: #fde047;" id="vgk4uActiveLegsCount">—</div>
                                     </div>
+                                </div>
+                                <div style="font-size: 10.5px; opacity: 0.85; margin: 0 0 10px 2px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-layer-group" style="font-size: 10px; color: #93c5fd;"></i>
+                                    <span>Scope: <strong style="color: #ffffff;" id="vgk4uFilesScopeDisplay">Direct Files: 16 | Team Files: 30</strong></span>
                                 </div>
                             </div>
                             <div>
@@ -1598,6 +1602,7 @@
                                 </div>
                                 <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#6b7280;margin-top:3px">
                                     <span><i class="fas fa-certificate text-warning me-1"></i> <strong id="ciQualFiles" style="color:#1e1b4b">5</strong> Qualifying Files</span>
+                                    <span><i class="fas fa-layer-group text-primary me-1"></i> <strong id="ciDirectTeamFilesScope" style="color:#1e1b4b">Direct Files: 16 | Team Files: 30</strong></span>
                                     <span><i class="fas fa-percentage text-success me-1"></i> <strong id="ciBaseRate" style="color:#1e1b4b">6.50%</strong> Base Commission Rate</span>
                                 </div>
                             </div>
@@ -8083,22 +8088,25 @@
             }).map(e => e.source_lead_id || e.client_name).filter(Boolean));
             const totInstalled = instLeadSet.size;
 
+            const directFilesSet = new Set(nonCan.filter(e => e.level === 1 && e.source_lead_id).map(e => e.source_lead_id));
+            const directFilesCount = directFilesSet.size;
+
             const totGross = nonCan.reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
             const totNet = nonCan.reduce((s, e) => s + parseFloat(e.net_payout !== undefined && e.net_payout !== null ? e.net_payout : (e.commission_amount || 0) * 0.9), 0);
             const totRcv = nonCan.filter(e => ['PAID', 'RELEASED', 'VERIFIED'].includes(e.status)).reduce((s, e) => s + parseFloat(e.net_payout !== undefined && e.net_payout !== null ? e.net_payout : (e.commission_amount || 0) * 0.9), 0);
             const totPending = nonCan.filter(e => ['DRAFT', 'PENDING', 'STAGE1_APPROVED'].includes(e.status)).reduce((s, e) => s + parseFloat(e.net_payout !== undefined && e.net_payout !== null ? e.net_payout : (e.commission_amount || 0) * 0.9), 0);
             const totPot = nonCan.reduce((s, e) => s + parseFloat(e.potential_earning || e.potential_amount || 0), 0);
 
-            const totL0 = nonCan.filter(e => e.level === 0 || ['SLAB_BONUS', 'EXTRA_COMMISSION', 'ADVANCE', 'DVR_ADVANCE'].includes((e.kind || '').toUpperCase())).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
-            const totL1 = nonCan.filter(e => e.level === 1 && !['ADVANCE', 'DVR_ADVANCE'].includes((e.kind || '').toUpperCase())).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
-            const totL2 = nonCan.filter(e => e.level === 2 && !['ADVANCE', 'DVR_ADVANCE'].includes((e.kind || '').toUpperCase())).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
+            const totL0 = nonCan.filter(e => e.level === 0 || ['SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION'].includes((e.kind || '').toUpperCase())).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
+            const totL1 = nonCan.filter(e => e.level === 1).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
+            const totL2 = nonCan.filter(e => e.level === 2).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
             const totL3 = nonCan.filter(e => e.level === 3).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
             const totL4 = nonCan.filter(e => e.level === 4).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
             const totL5 = nonCan.filter(e => e.level === 5).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
 
             // Top KPI Strip: Excluding Net Payout per user requirements
             const kpis = [
-                { label: 'Total Files',   val: totFiles,            color: '#374151' },
+                { label: 'Total Files',   val: `Direct Files: ${directFilesCount} | Team Files: ${totFiles}`, color: '#374151', title: 'Direct Files vs Downline Team Files' },
                 { label: 'Installed',     val: totInstalled,        color: '#059669' },
                 { label: 'Gross Earned',  val: _fmtInr(totGross),   color: '#374151' },
                 { label: 'Released/Paid', val: _fmtInr(totRcv),     color: '#059669' },

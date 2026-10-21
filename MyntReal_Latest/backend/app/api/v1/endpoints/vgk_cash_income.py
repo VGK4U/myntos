@@ -633,12 +633,28 @@ def member_cash_income(
     # DC-FIX-ADV-WALLET-EARNED-001: Compute earned_total from VCI entries (RELEASED or PAID),
     # no company_id filter — ADVANCE entries sit under company_id=4 (MyntReal) regardless
     # of partner's own company_id. RELEASED included so wallet-credited advances show immediately.
+    # Also include standalone qualifying VSCA advances with no VCI mirror to ensure 100% reconciliation with My Earnings.
     _earned_row = db.execute(text("""
         SELECT COALESCE(SUM(commission_amount), 0) AS total
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid AND status IN ('RELEASED', 'PAID')
     """), {'pid': current_member.id}).fetchone()
-    earned_total = float(_earned_row.total if _earned_row else 0)
+    _vsca_unmirrored = db.execute(text("""
+        SELECT COALESCE(SUM(a.advance_amount), 0) AS total
+        FROM vgk_solar_cibil_advances a
+        LEFT JOIN crm_leads l ON a.lead_id = l.id
+        WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650))
+          AND a.status IN ('PENDING', 'RELEASED')
+          AND NOT EXISTS (
+            SELECT 1 FROM vgk_cash_income_entries vci
+            WHERE vci.partner_id    = a.partner_id
+              AND vci.source_lead_id = a.lead_id
+              AND vci.level          = a.level
+              AND vci.kind           = a.kind
+              AND vci.status        != 'CANCELLED'
+          )
+    """), {'pid': current_member.id}).fetchone()
+    earned_total = float((_earned_row.total if _earned_row else 0) + (_vsca_unmirrored.total if _vsca_unmirrored else 0))
 
     return {
         'success':        True,
@@ -730,14 +746,29 @@ def member_wallet(
     # Fix A — DC_VGK_EARNED_RELEASED_001: earned_total = income credited to wallet (RELEASED or PAID).
     # RELEASED is included so solar advances show in earned total as soon as wallet is credited,
     # not just when accounts process the bank payment.
-    # No company_id filter — solar advances sit under company_id=4 (MyntReal) regardless.
+    # Also include standalone qualifying VSCA advances with no VCI mirror to ensure 100% reconciliation with My Earnings.
     earned_row = db.execute(text("""
         SELECT COALESCE(SUM(commission_amount), 0) AS total
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid
           AND status     IN ('RELEASED', 'PAID')
     """), {'pid': current_member.id}).fetchone()
-    earned_total = float(earned_row.total if earned_row else 0)
+    vsca_unmirrored = db.execute(text("""
+        SELECT COALESCE(SUM(a.advance_amount), 0) AS total
+        FROM vgk_solar_cibil_advances a
+        LEFT JOIN crm_leads l ON a.lead_id = l.id
+        WHERE a.partner_id = :pid AND (l.cibil_confirmed IS TRUE OR (l.cibil_score IS NOT NULL AND l.cibil_score >= 650))
+          AND a.status IN ('PENDING', 'RELEASED')
+          AND NOT EXISTS (
+            SELECT 1 FROM vgk_cash_income_entries vci
+            WHERE vci.partner_id    = a.partner_id
+              AND vci.source_lead_id = a.lead_id
+              AND vci.level          = a.level
+              AND vci.kind           = a.kind
+              AND vci.status        != 'CANCELLED'
+          )
+    """), {'pid': current_member.id}).fetchone()
+    earned_total = float((earned_row.total if earned_row else 0) + (vsca_unmirrored.total if vsca_unmirrored else 0))
 
     def _enrich_txn(t):
         d = {**t.to_dict(), 'label': TXN_LABELS.get(t.txn_type, t.txn_type)}

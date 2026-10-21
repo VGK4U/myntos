@@ -6881,6 +6881,93 @@ def list_team_leads(
     }
 
 
+def build_ground_source_handler_filter(db: Session, handler_search_str: str):
+    """
+    Resolves Ground Source / Handler queries by name, code, phone, or ID across:
+    - OfficialPartner (partner_code e.g. VGK07102138, partner_name, contact_person, phone)
+    - User (id, name, email)
+    - StaffEmployee (emp_code e.g. MR10001, full_name, phone)
+    - Direct CRMLead fields (mnr_handler_id, source_ref_id, source_ref_name, handler_id)
+    Returns an OR SQLAlchemy expression.
+    """
+    if not handler_search_str or not str(handler_search_str).strip():
+        return None
+    val = str(handler_search_str).strip()
+    _hec = f'%{val}%'
+
+    conditions = [
+        CRMLead.mnr_handler_id.ilike(_hec),
+        CRMLead.source_ref_id.ilike(_hec),
+        CRMLead.source_ref_name.ilike(_hec),
+        CRMLead.handler_id.ilike(_hec),
+    ]
+
+    # 1. OfficialPartner (VGK/MNR partners, Dealers, Vendors)
+    try:
+        from app.models.staff_accounts import OfficialPartner as _OPModel
+        matched_partners = db.query(_OPModel.id).filter(
+            or_(
+                _OPModel.partner_code.ilike(_hec),
+                _OPModel.partner_name.ilike(_hec),
+                _OPModel.contact_person.ilike(_hec),
+                _OPModel.phone.ilike(_hec)
+            )
+        ).all()
+        if matched_partners:
+            p_ids = [p[0] for p in matched_partners]
+            p_str_ids = [str(p[0]) for p in matched_partners]
+            conditions.extend([
+                CRMLead.associated_partner_id.in_(p_ids),
+                CRMLead.source_ref_id.in_(p_str_ids),
+                CRMLead.vgk_field_support_id.in_(p_ids),
+            ])
+    except Exception as e:
+        logger.warning(f"[HANDLER-FILTER] Partner lookup error: {e}")
+
+    # 2. User table (MNR members / users)
+    try:
+        from app.models.user import User as _UserModel
+        matched_users = [
+            str(u[0])
+            for u in db.query(_UserModel.id).filter(
+                or_(
+                    _UserModel.id.ilike(_hec),
+                    _UserModel.name.ilike(_hec),
+                    _UserModel.email.ilike(_hec)
+                )
+            ).all()
+        ]
+        if matched_users:
+            conditions.extend([
+                CRMLead.mnr_handler_id.in_(matched_users),
+                CRMLead.source_ref_id.in_(matched_users),
+            ])
+    except Exception as e:
+        logger.warning(f"[HANDLER-FILTER] User lookup error: {e}")
+
+    # 3. StaffEmployee table
+    try:
+        from app.models.staff import StaffEmployee as _SEModel
+        matched_staff = db.query(_SEModel.id).filter(
+            or_(
+                _SEModel.emp_code.ilike(_hec),
+                _SEModel.full_name.ilike(_hec)
+            )
+        ).all()
+        if matched_staff:
+            s_ids = [s[0] for s in matched_staff]
+            s_str_ids = [str(s[0]) for s in matched_staff]
+            conditions.extend([
+                CRMLead.primary_owner_id.in_(s_ids),
+                CRMLead.handler_id.in_(s_str_ids),
+                CRMLead.source_ref_id.in_(s_str_ids),
+            ])
+    except Exception as e:
+        logger.warning(f"[HANDLER-FILTER] Staff lookup error: {e}")
+
+    return or_(*conditions)
+
+
 @router.get("/master-leads")
 def master_leads(
     category: Optional[str] = Query(None),
@@ -7195,22 +7282,9 @@ def master_leads(
         query = query.filter(CRMLead.source.ilike(f'%{source}%'))
 
     if handler_emp_code:
-        _hec = f'%{handler_emp_code}%'
-        # Also resolve User IDs by name so that leads whose mnr_handler_id is a
-        # numeric User.id (with no source_ref_name stored) are still matched when
-        # the caller searches by the person's name (e.g. "devada").
-        _mnr_user_ids = [
-            str(u.id)
-            for u in db.query(User.id).filter(User.name.ilike(_hec)).all()
-        ]
-        _hec_conditions = [
-            CRMLead.mnr_handler_id.ilike(_hec),
-            CRMLead.source_ref_id.ilike(_hec),
-            CRMLead.source_ref_name.ilike(_hec),
-        ]
-        if _mnr_user_ids:
-            _hec_conditions.append(CRMLead.mnr_handler_id.in_(_mnr_user_ids))
-        query = query.filter(or_(*_hec_conditions))
+        _hfilter = build_ground_source_handler_filter(db, handler_emp_code)
+        if _hfilter is not None:
+            query = query.filter(_hfilter)
 
     if telecaller_id:
         query = query.filter(CRMLead.telecaller_id == telecaller_id)
@@ -7291,6 +7365,23 @@ def master_leads(
         _mnr_uid_s = [str(u.id) for u in db.query(User.id).filter(User.name.ilike(st)).all()]
         if _mnr_uid_s:
             _search_clauses.append(CRMLead.mnr_handler_id.in_(_mnr_uid_s))
+        try:
+            from app.models.staff_accounts import OfficialPartner as _OPSearch
+            _op_match = db.query(_OPSearch.id).filter(
+                or_(
+                    _OPSearch.partner_code.ilike(st),
+                    _OPSearch.partner_name.ilike(st),
+                    _OPSearch.phone.ilike(st)
+                )
+            ).all()
+            if _op_match:
+                _op_ids = [p[0] for p in _op_match]
+                _op_str_ids = [str(p[0]) for p in _op_match]
+                _search_clauses.append(CRMLead.associated_partner_id.in_(_op_ids))
+                _search_clauses.append(CRMLead.source_ref_id.in_(_op_str_ids))
+                _search_clauses.append(CRMLead.vgk_field_support_id.in_(_op_ids))
+        except Exception as _ope:
+            pass
         query = query.filter(or_(*_search_clauses))
 
     def _parse_dt(s):
@@ -8071,6 +8162,7 @@ def lead_analytics(
     search: Optional[str] = Query(None),
     source: Optional[str] = Query(None),
     net_source: Optional[str] = Query(None),
+    handler_emp_code: Optional[str] = Query(None),
     guru_filter: Optional[str] = Query(None),
     z_guru_filter: Optional[str] = Query(None),
     telecaller_emp_code: Optional[str] = Query(None),
@@ -8120,7 +8212,7 @@ def lead_analytics(
     _ckey = (
         current_employee.id, tenant_id, tuple(sorted(effective_co_ids)), has_view_all,
         company_id_filter, category, status, search, source,
-        net_source, guru_filter, z_guru_filter, telecaller_emp_code,
+        net_source, handler_emp_code, guru_filter, z_guru_filter, telecaller_emp_code,
         field_staff_emp_code, pincode, created_from, created_to, closed_from,
         closed_to, accepted_date_from, accepted_date_to, installation_date_from,
         installation_date_to, material_reach_date_from, material_reach_date_to,
@@ -8147,6 +8239,7 @@ def lead_analytics(
     search = _str_val(search)
     source = _str_val(source)
     net_source = _str_val(net_source)
+    handler_emp_code = _str_val(handler_emp_code)
     guru_filter = _str_val(guru_filter)
     z_guru_filter = _str_val(z_guru_filter)
     telecaller_emp_code = _str_val(telecaller_emp_code)
@@ -8380,13 +8473,15 @@ def lead_analytics(
         if v:
             base = base.filter(CRMLead.created_at <= v)
 
+    if handler_emp_code:
+        _hec_flt = build_ground_source_handler_filter(db, handler_emp_code)
+        if _hec_flt is not None:
+            base = base.filter(_hec_flt)
+
     if net_source:
-        from sqlalchemy import or_ as _or2
-        base = base.filter(_or2(
-            CRMLead.source_ref_name.ilike(f'%{net_source}%'),
-            CRMLead.source_ref_id.ilike(f'%{net_source}%'),
-            CRMLead.mnr_handler_id.ilike(f'%{net_source}%')
-        ))
+        _ns_flt = build_ground_source_handler_filter(db, net_source)
+        if _ns_flt is not None:
+            base = base.filter(_ns_flt)
 
     if guru_filter:
         from sqlalchemy import or_ as _or_gf
