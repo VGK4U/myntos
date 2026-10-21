@@ -120,7 +120,7 @@
 
     /* Main Container */
     .dashboard-container {
-      max-width: 1360px;
+      max-width: 1380px;
       width: 100%;
       margin: 20px auto;
       padding: 0 18px 40px;
@@ -132,7 +132,7 @@
       background: white;
       border-radius: 14px;
       padding: 20px 24px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       border: 1px solid var(--slate-200);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       display: flex;
@@ -176,12 +176,56 @@
       gap: 5px;
     }
 
+    /* Main Tabs Bar */
+    .main-tab-bar {
+      display: flex;
+      gap: 12px;
+      border-bottom: 2px solid var(--slate-200);
+      margin-bottom: 18px;
+      padding-bottom: 2px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--slate-600);
+      font-size: 14px;
+      font-weight: 800;
+      padding: 10px 18px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-count-badge {
+      background: var(--slate-100);
+      color: var(--slate-700);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tab-btn.active .tab-count-badge {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
     /* Financial & Operational KPI Cards Grid */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     @media (max-width: 1100px) {
@@ -350,7 +394,7 @@
       outline: none;
     }
 
-    /* Leads Table */
+    /* Tables */
     .table-container {
       background: white;
       border: 1px solid var(--slate-200);
@@ -579,7 +623,7 @@
         <i class="fas fa-share-alt"></i>
         <span>Share Link</span>
       </button>
-      <button class="btn-nav" onclick="refreshDashboard()" title="Refresh Leads Data">
+      <button class="btn-nav" onclick="refreshDashboard()" title="Refresh Data">
         <i class="fas fa-sync-alt"></i>
         <span>Refresh</span>
       </button>
@@ -590,7 +634,7 @@
     </div>
   </nav>
 
-  <!-- Main Dashboard Content -->
+  <!-- Main Dashboard Container -->
   <main class="dashboard-container">
     
     <!-- Member Header Card -->
@@ -626,113 +670,248 @@
       </div>
     </div>
 
-    <!-- 6 KPI Financial & Operational Cards -->
-    <div class="kpi-grid">
-      <div class="kpi-card kpi-total">
-        <div class="kpi-label"><i class="fas fa-layer-group text-primary me-1"></i> Total Leads</div>
-        <div class="kpi-count" id="kpiTotal">0</div>
-        <div class="kpi-val text-primary" id="kpiTotalVal">₹0</div>
+    <!-- Main Navigation Tabs -->
+    <div class="main-tab-bar">
+      <button type="button" class="tab-btn active" id="tabBtnLeads" onclick="switchMainTab('leads')">
+        <i class="fas fa-list-ul"></i>
+        <span>Originated Leads Pipeline</span>
+        <span class="tab-count-badge" id="tabLeadsCountBadge">0</span>
+      </button>
+      <button type="button" class="tab-btn" id="tabBtnL5" onclick="switchMainTab('l5')">
+        <i class="fas fa-chart-line"></i>
+        <span>L5 Support Executive Dashboard</span>
+        <span class="tab-count-badge" id="tabL5CountBadge">0</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: ORIGINATED LEADS PIPELINE -->
+    <div id="tabContentLeads">
+      <!-- 6 KPI Financial & Operational Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-total">
+          <div class="kpi-label"><i class="fas fa-layer-group text-primary me-1"></i> Total Leads</div>
+          <div class="kpi-count" id="kpiTotal">0</div>
+          <div class="kpi-val text-primary" id="kpiTotalVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-won">
+          <div class="kpi-label"><i class="fas fa-trophy text-success me-1"></i> Won / Closed</div>
+          <div class="kpi-count text-success" id="kpiWon">0</div>
+          <div class="kpi-val text-success" id="kpiWonVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-pipeline">
+          <div class="kpi-label"><i class="fas fa-hourglass-half text-info me-1"></i> In Pipeline</div>
+          <div class="kpi-count text-primary" id="kpiPipeline">0</div>
+          <div class="kpi-val text-primary" id="kpiPipelineVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-lost">
+          <div class="kpi-label"><i class="fas fa-times-circle text-danger me-1"></i> Lost / Cancelled</div>
+          <div class="kpi-count text-danger" id="kpiLost">0</div>
+          <div class="kpi-val text-danger" id="kpiLostVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-received">
+          <div class="kpi-label"><i class="fas fa-hand-holding-usd text-success me-1"></i> Received Value</div>
+          <div class="kpi-count text-success" id="kpiReceivedVal" style="font-size:20px">₹0</div>
+          <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Collected from deals</div>
+        </div>
+
+        <div class="kpi-card kpi-pending">
+          <div class="kpi-label"><i class="fas fa-clock text-warning me-1"></i> Pending Value</div>
+          <div class="kpi-count text-warning" id="kpiPendingVal" style="font-size:20px">₹0</div>
+          <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Balance to collect</div>
+        </div>
       </div>
 
-      <div class="kpi-card kpi-won">
-        <div class="kpi-label"><i class="fas fa-trophy text-success me-1"></i> Won / Closed</div>
-        <div class="kpi-count text-success" id="kpiWon">0</div>
-        <div class="kpi-val text-success" id="kpiWonVal">₹0</div>
+      <!-- Dynamic Stage Pills -->
+      <div class="stage-pills-bar">
+        <div style="font-size:12px;font-weight:800;color:#64748b;margin-right:4px">
+          <i class="fas fa-filter me-1"></i> STAGE:
+        </div>
+        <div id="stagePillsContainer" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <!-- Rendered dynamically -->
+        </div>
       </div>
 
-      <div class="kpi-card kpi-pipeline">
-        <div class="kpi-label"><i class="fas fa-hourglass-half text-info me-1"></i> In Pipeline</div>
-        <div class="kpi-count text-primary" id="kpiPipeline">0</div>
-        <div class="kpi-val text-primary" id="kpiPipelineVal">₹0</div>
+      <!-- Search & Filter Toolbar -->
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="searchInput" placeholder="Search by lead name, phone, stage, support, city..." oninput="onSearchInput()">
+        </div>
+
+        <div class="toolbar-controls">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="supportSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Support:</label>
+            <select id="supportSelect" class="filter-select" onchange="onSupportChange(this.value)">
+              <option value="ALL">All Support</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="sortSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Sort by:</label>
+            <select id="sortSelect" class="filter-select" onchange="onSortChange(this.value)">
+              <option value="created_desc">Newest First</option>
+              <option value="created_asc">Oldest First</option>
+              <option value="deal_desc">Deal Value: High to Low</option>
+              <option value="deal_asc">Deal Value: Low to High</option>
+              <option value="name_asc">Name: A to Z</option>
+              <option value="name_desc">Name: Z to A</option>
+              <option value="support_asc">Support Name</option>
+              <option value="stage_asc">Stage</option>
+            </select>
+          </div>
+
+          <div id="countBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
+            Showing 0 leads
+          </div>
+        </div>
       </div>
 
-      <div class="kpi-card kpi-lost">
-        <div class="kpi-label"><i class="fas fa-times-circle text-danger me-1"></i> Lost / Cancelled</div>
-        <div class="kpi-count text-danger" id="kpiLost">0</div>
-        <div class="kpi-val text-danger" id="kpiLostVal">₹0</div>
-      </div>
-
-      <div class="kpi-card kpi-received">
-        <div class="kpi-label"><i class="fas fa-hand-holding-usd text-success me-1"></i> Received Value</div>
-        <div class="kpi-count text-success" id="kpiReceivedVal" style="font-size:20px">₹0</div>
-        <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Collected from deals</div>
-      </div>
-
-      <div class="kpi-card kpi-pending">
-        <div class="kpi-label"><i class="fas fa-clock text-warning me-1"></i> Pending Value</div>
-        <div class="kpi-count text-warning" id="kpiPendingVal" style="font-size:20px">₹0</div>
-        <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Balance to collect</div>
+      <!-- Leads Data Table -->
+      <div class="table-container">
+        <table class="leads-table">
+          <thead>
+            <tr>
+              <th onclick="toggleSort('id')">ID <span id="sortIcon_id">↕</span></th>
+              <th onclick="toggleSort('name')">Customer Name & Location <span id="sortIcon_name">↕</span></th>
+              <th onclick="toggleSort('support')">Support (L5) <span id="sortIcon_support">↕</span></th>
+              <th onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
+              <th onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
+              <th onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
+              <th onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
+              <th onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="leadsTbody">
+            <tr>
+              <td colspan="8" style="text-align:center;padding:40px;color:#64748b">
+                <i class="fas fa-spinner fa-spin me-2"></i> Initializing Ground Source registry...
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Dynamic Stage Pills -->
-    <div class="stage-pills-bar">
-      <div style="font-size:12px;font-weight:800;color:#64748b;margin-right:4px">
-        <i class="fas fa-filter me-1"></i> STAGE:
-      </div>
-      <div id="stagePillsContainer" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <!-- Rendered dynamically -->
-      </div>
-    </div>
-
-    <!-- Search & Filter Toolbar -->
-    <div class="filter-toolbar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search by lead name, phone, stage, support, city..." oninput="onSearchInput()">
-      </div>
-
-      <div class="toolbar-controls">
-        <div style="display:flex;align-items:center;gap:6px">
-          <label for="supportSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Support:</label>
-          <select id="supportSelect" class="filter-select" onchange="onSupportChange(this.value)">
-            <option value="ALL">All Support</option>
-          </select>
+    <!-- TAB 2: L5 SUPPORT EXECUTIVE DASHBOARD -->
+    <div id="tabContentL5" style="display:none">
+      <!-- L5 Executive KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-total">
+          <div class="kpi-label"><i class="fas fa-users-cog text-primary me-1"></i> L5 Members</div>
+          <div class="kpi-count" id="l5KpiTotalMembers">0</div>
+          <div class="kpi-val text-primary" id="l5KpiTotalFiles">0 Total Files</div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:6px">
-          <label for="sortSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Sort by:</label>
-          <select id="sortSelect" class="filter-select" onchange="onSortChange(this.value)">
-            <option value="created_desc">Newest First</option>
-            <option value="created_asc">Oldest First</option>
-            <option value="deal_desc">Deal Value: High to Low</option>
-            <option value="deal_asc">Deal Value: Low to High</option>
-            <option value="name_asc">Name: A to Z</option>
-            <option value="name_desc">Name: Z to A</option>
-            <option value="support_asc">Support Name</option>
-            <option value="stage_asc">Stage</option>
-          </select>
+        <div class="kpi-card kpi-won">
+          <div class="kpi-label"><i class="fas fa-award text-success me-1"></i> Won Portfolio</div>
+          <div class="kpi-count text-success" id="l5KpiWonCount">0</div>
+          <div class="kpi-val text-success" id="l5KpiWonVal">₹0</div>
         </div>
 
-        <div id="countBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
-          Showing 0 leads
+        <div class="kpi-card kpi-pipeline">
+          <div class="kpi-label"><i class="fas fa-tasks text-info me-1"></i> In Pipeline</div>
+          <div class="kpi-count text-primary" id="l5KpiPipelineCount">0</div>
+          <div class="kpi-val text-primary" id="l5KpiPipelineVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-lost">
+          <div class="kpi-label"><i class="fas fa-ban text-danger me-1"></i> Lost / Rejected</div>
+          <div class="kpi-count text-danger" id="l5KpiLostCount">0</div>
+          <div class="kpi-val text-danger" id="l5KpiLostVal">₹0</div>
+        </div>
+
+        <div class="kpi-card kpi-received">
+          <div class="kpi-label"><i class="fas fa-money-check-alt text-success me-1"></i> Total Received</div>
+          <div class="kpi-count text-success" id="l5KpiReceivedVal" style="font-size:20px">₹0</div>
+          <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Collected</div>
+        </div>
+
+        <div class="kpi-card kpi-pending">
+          <div class="kpi-label"><i class="fas fa-hourglass-end text-warning me-1"></i> Total Pending</div>
+          <div class="kpi-count text-warning" id="l5KpiPendingVal" style="font-size:20px">₹0</div>
+          <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Pending balance</div>
         </div>
       </div>
-    </div>
 
-    <!-- Leads Data Table -->
-    <div class="table-container">
-      <table class="leads-table">
-        <thead>
-          <tr>
-            <th onclick="toggleSort('id')">ID <span id="sortIcon_id">↕</span></th>
-            <th onclick="toggleSort('name')">Customer Name & Location <span id="sortIcon_name">↕</span></th>
-            <th onclick="toggleSort('support')">Support (L5) <span id="sortIcon_support">↕</span></th>
-            <th onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
-            <th onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
-            <th onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
-            <th onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
-            <th onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
-          </tr>
-        </thead>
-        <tbody id="leadsTbody">
-          <tr>
-            <td colspan="8" style="text-align:center;padding:40px;color:#64748b">
-              <i class="fas fa-spinner fa-spin me-2"></i> Initializing Ground Source registry...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- L5 Dynamic Stage Filter Pills -->
+      <div class="stage-pills-bar">
+        <div style="font-size:12px;font-weight:800;color:#64748b;margin-right:4px">
+          <i class="fas fa-filter me-1"></i> L5 STAGE BREAKDOWN:
+        </div>
+        <div id="l5StagePillsContainer" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- L5 Search & Controls Toolbar -->
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="l5SearchInput" placeholder="Search L5 member name or stage..." oninput="onL5SearchInput()">
+        </div>
+
+        <div class="toolbar-controls">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="l5PerfSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Scope:</label>
+            <select id="l5PerfSelect" class="filter-select" onchange="onL5PerfChange(this.value)">
+              <option value="ALL">All L5 Members</option>
+              <option value="WITH_FILES">With Files Only</option>
+              <option value="WITH_WON">With Won Files</option>
+              <option value="WITH_PENDING">With Pending Balance</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="l5SortSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Sort by:</label>
+            <select id="l5SortSelect" class="filter-select" onchange="onL5SortChange(this.value)">
+              <option value="files_desc">Files: High to Low</option>
+              <option value="files_asc">Files: Low to High</option>
+              <option value="total_desc">Total Value: High to Low</option>
+              <option value="total_asc">Total Value: Low to High</option>
+              <option value="won_desc">Won Value: High to Low</option>
+              <option value="recv_desc">Received Value: High to Low</option>
+              <option value="pend_desc">Pending Value: High to Low</option>
+              <option value="name_asc">Name: A to Z</option>
+            </select>
+          </div>
+
+          <div id="l5CountBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
+            Showing 0 L5 members
+          </div>
+        </div>
+      </div>
+
+      <!-- L5 Executive Data Table -->
+      <div class="table-container">
+        <table class="leads-table">
+          <thead>
+            <tr>
+              <th onclick="toggleL5Sort('rank')" style="width:50px">#</th>
+              <th onclick="toggleL5Sort('name')">L5 Support Member <span id="l5SortIcon_name">↕</span></th>
+              <th onclick="toggleL5Sort('files')">Files No. <span id="l5SortIcon_files">▼</span></th>
+              <th onclick="toggleL5Sort('total')">Total Value <span id="l5SortIcon_total">↕</span></th>
+              <th onclick="toggleL5Sort('won')">Won Deals <span id="l5SortIcon_won">↕</span></th>
+              <th onclick="toggleL5Sort('pipeline')">Pipeline <span id="l5SortIcon_pipeline">↕</span></th>
+              <th onclick="toggleL5Sort('lost')">Lost <span id="l5SortIcon_lost">↕</span></th>
+              <th onclick="toggleL5Sort('received')">Received Value <span id="l5SortIcon_received">↕</span></th>
+              <th onclick="toggleL5Sort('pending')">Pending Value <span id="l5SortIcon_pending">↕</span></th>
+              <th>Stage Breakdown</th>
+              <th style="text-align:right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="l5Tbody">
+            <tr>
+              <td colspan="11" style="text-align:center;padding:40px;color:#64748b">
+                <i class="fas fa-spinner fa-spin me-2"></i> Aggregating L5 performance data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </main>
@@ -795,11 +974,23 @@
   <script>
     // State management
     let _allLeads = [];
+    let _allL5Summary = [];
+    let _activeMainTab = 'leads';
+
+    // Leads Tab Filters
     let _activeStageFilter = 'ALL';
     let _activeSupportFilter = 'ALL';
     let _searchQuery = '';
     let _sortField = 'created_at';
     let _sortDir = 'desc';
+
+    // L5 Tab Filters
+    let _activeL5StageFilter = 'ALL';
+    let _activeL5PerfFilter = 'ALL';
+    let _l5SearchQuery = '';
+    let _l5SortField = 'files';
+    let _l5SortDir = 'desc';
+
     let _viewer = { is_staff: false, role: 'NONE', username: '', identifier: '' };
     let _activeAuthTab = 'partner';
     let _targetFreelancerId = null;
@@ -862,7 +1053,6 @@
     }
 
     function getAuthToken() {
-      // Check staff tokens first, then partner tokens
       return localStorage.getItem('staff_token') ||
              localStorage.getItem('access_token') ||
              localStorage.getItem('vgk_token') ||
@@ -1005,6 +1195,27 @@
       loadFreelancerData();
     }
 
+    function switchMainTab(tab) {
+      _activeMainTab = tab;
+      const btnLeads = document.getElementById('tabBtnLeads');
+      const btnL5 = document.getElementById('tabBtnL5');
+      const contentLeads = document.getElementById('tabContentLeads');
+      const contentL5 = document.getElementById('tabContentL5');
+
+      if (tab === 'leads') {
+        btnLeads.classList.add('active');
+        btnL5.classList.remove('active');
+        contentLeads.style.display = 'block';
+        contentL5.style.display = 'none';
+      } else {
+        btnL5.classList.add('active');
+        btnLeads.classList.remove('active');
+        contentL5.style.display = 'block';
+        contentLeads.style.display = 'none';
+        applyL5SortAndFilter();
+      }
+    }
+
     async function loadFreelancerData() {
       const tbody = document.getElementById('leadsTbody');
       const params = new URLSearchParams(window.location.search);
@@ -1024,7 +1235,6 @@
         });
 
         if (res.status === 401 || res.status === 403) {
-          // Token invalid, expired, or forbidden
           const errData = await res.json().catch(() => ({}));
           showAuthModal();
           const alertEl = document.getElementById('loginAlert');
@@ -1045,6 +1255,7 @@
 
         const fl = data.data;
         const leads = data.originated_leads || [];
+        const l5Summary = data.l5_summary || [];
         const support = data.support_partner;
 
         // Populate member header
@@ -1075,10 +1286,19 @@
           }
         }
 
+        // Tab count badges
+        document.getElementById('tabLeadsCountBadge').textContent = leads.length;
+        document.getElementById('tabL5CountBadge').textContent = l5Summary.length;
+
         _allLeads = leads;
+        _allL5Summary = l5Summary;
+
         renderStagePills(leads);
         renderSupportDropdown(leads);
         applySortAndFilter();
+
+        renderL5StagePills(leads, l5Summary);
+        applyL5SortAndFilter();
       } catch (err) {
         console.error('Failed to load freelancer leads:', err);
         if (tbody) {
@@ -1104,6 +1324,8 @@
         if (logoutBtn) logoutBtn.style.display = 'none';
       }
     }
+
+    /* ─── TAB 1: LEADS PIPELINE LOGIC ─── */
 
     function updateMetrics(leadsSubset) {
       let totCount = leadsSubset.length;
@@ -1294,7 +1516,6 @@
         const status = String(l.status || '').toLowerCase();
         const city = String(l.city || '').toLowerCase();
 
-        // Search match
         if (_searchQuery) {
           const match = id.includes(_searchQuery) || name.includes(_searchQuery) || phone.includes(_searchQuery) ||
                         supp.includes(_searchQuery) || rawStage.includes(_searchQuery) || stageDisplay.includes(_searchQuery) ||
@@ -1302,13 +1523,11 @@
           if (!match) return false;
         }
 
-        // Stage filter
         if (_activeStageFilter && _activeStageFilter !== 'ALL') {
           const currentStageLabel = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
           if (currentStageLabel !== _activeStageFilter) return false;
         }
 
-        // Support filter
         if (_activeSupportFilter && _activeSupportFilter !== 'ALL') {
           const currentSupp = (l.support_name || 'Direct').trim();
           if (currentSupp !== _activeSupportFilter) return false;
@@ -1317,10 +1536,8 @@
         return true;
       });
 
-      // Recalculate metrics in real-time
       updateMetrics(filtered);
 
-      // Sort
       filtered.sort((a, b) => {
         let vA, vB;
         if (_sortField === 'id') {
@@ -1423,11 +1640,7 @@
         }
 
         const createdDate = l.created_at ? fmtDate(l.created_at) : '—';
-
-        // Phone masking logic: If staff, always render strictly masked
-        const phoneToDisplay = _viewer.is_staff 
-          ? (l.masked_phone || maskPhoneStrict(l.phone)) 
-          : (l.phone || '—');
+        const phoneToDisplay = _viewer.is_staff ? (l.masked_phone || maskPhoneStrict(l.phone)) : (l.phone || '—');
 
         return `
           <tr>
@@ -1457,6 +1670,309 @@
           </tr>
         `;
       }).join('');
+    }
+
+    /* ─── TAB 2: L5 SUPPORT EXECUTIVE DASHBOARD LOGIC ─── */
+
+    function renderL5StagePills(leads, l5Summary) {
+      const container = document.getElementById('l5StagePillsContainer');
+      if (!container) return;
+
+      const stageCounts = {};
+      leads.forEach(l => {
+        const rawStage = (l.solar_pipeline_status || l.stage || l.status || 'lead').toLowerCase().trim();
+        const label = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+        stageCounts[label] = (stageCounts[label] || 0) + 1;
+      });
+
+      const sortedStages = Object.entries(stageCounts).sort((a, b) => b[1] - a[1]);
+
+      let html = `
+        <div class="stage-pill ${_activeL5StageFilter === 'ALL' ? 'active' : ''}" onclick="setL5StageFilter('ALL')">
+          <span>All Stages</span>
+          <span class="badge-count">${leads.length}</span>
+        </div>
+      `;
+
+      sortedStages.forEach(([label, cnt]) => {
+        const isAct = _activeL5StageFilter === label;
+        html += `
+          <div class="stage-pill ${isAct ? 'active' : ''}" onclick="setL5StageFilter('${esc(label)}')">
+            <span>${esc(label)}</span>
+            <span class="badge-count">${cnt}</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function setL5StageFilter(stageLabel) {
+      if (stageLabel === 'ALL' || _activeL5StageFilter === stageLabel) {
+        _activeL5StageFilter = 'ALL';
+      } else {
+        _activeL5StageFilter = stageLabel;
+      }
+      renderL5StagePills(_allLeads, _allL5Summary);
+      applyL5SortAndFilter();
+    }
+
+    function onL5SearchInput() {
+      _l5SearchQuery = (document.getElementById('l5SearchInput')?.value || '').toLowerCase().trim();
+      applyL5SortAndFilter();
+    }
+
+    function onL5PerfChange(val) {
+      _activeL5PerfFilter = val || 'ALL';
+      applyL5SortAndFilter();
+    }
+
+    function onL5SortChange(val) {
+      const parts = val.split('_');
+      if (parts.length === 2) {
+        _l5SortDir = parts[1];
+        const fieldKey = parts[0];
+        if (fieldKey === 'files') _l5SortField = 'files';
+        else if (fieldKey === 'total') _l5SortField = 'total';
+        else if (fieldKey === 'won') _l5SortField = 'won';
+        else if (fieldKey === 'recv') _l5SortField = 'received';
+        else if (fieldKey === 'pend') _l5SortField = 'pending';
+        else if (fieldKey === 'name') _l5SortField = 'name';
+      }
+      updateL5SortIcons();
+      applyL5SortAndFilter();
+    }
+
+    function toggleL5Sort(field) {
+      if (_l5SortField === field) {
+        _l5SortDir = _l5SortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        _l5SortField = field;
+        _l5SortDir = (field === 'files' || field === 'total' || field === 'won' || field === 'received' || field === 'pending') ? 'desc' : 'asc';
+      }
+
+      const sortSelect = document.getElementById('l5SortSelect');
+      if (sortSelect) {
+        let optVal = '';
+        if (field === 'files') optVal = `files_${_l5SortDir}`;
+        else if (field === 'total') optVal = `total_${_l5SortDir}`;
+        else if (field === 'won') optVal = `won_${_l5SortDir}`;
+        else if (field === 'received') optVal = `recv_${_l5SortDir}`;
+        else if (field === 'pending') optVal = `pend_${_l5SortDir}`;
+        else if (field === 'name') optVal = `name_${_l5SortDir}`;
+        if (optVal && [...sortSelect.options].some(o => o.value === optVal)) {
+          sortSelect.value = optVal;
+        }
+      }
+
+      updateL5SortIcons();
+      applyL5SortAndFilter();
+    }
+
+    function updateL5SortIcons() {
+      const fields = ['name', 'files', 'total', 'won', 'pipeline', 'lost', 'received', 'pending'];
+      fields.forEach(f => {
+        const el = document.getElementById(`l5SortIcon_${f}`);
+        if (el) {
+          if (_l5SortField === f) {
+            el.textContent = _l5SortDir === 'asc' ? '▲' : '▼';
+            el.style.color = '#0284c7';
+          } else {
+            el.textContent = '↕';
+            el.style.color = '#94a3b8';
+          }
+        }
+      });
+    }
+
+    function applyL5SortAndFilter() {
+      if (!_allL5Summary) return;
+
+      // Filter L5 summary
+      let filtered = _allL5Summary.filter(l5 => {
+        const name = String(l5.support_name || 'Direct').toLowerCase();
+
+        // Search query match
+        if (_l5SearchQuery) {
+          const matchName = name.includes(_l5SearchQuery);
+          const matchStages = Object.keys(l5.stages || {}).some(st => {
+            const lbl = (_SOLAR_STAGE_LABELS[st] || st).toLowerCase();
+            return lbl.includes(_l5SearchQuery);
+          });
+          if (!matchName && !matchStages) return false;
+        }
+
+        // Stage filter: L5 member must have at least 1 lead in this stage
+        if (_activeL5StageFilter && _activeL5StageFilter !== 'ALL') {
+          const hasStage = Object.entries(l5.stages || {}).some(([st, cnt]) => {
+            const lbl = _SOLAR_STAGE_LABELS[st] || st;
+            return lbl === _activeL5StageFilter && cnt > 0;
+          });
+          if (!hasStage) return false;
+        }
+
+        // Performance scope filter
+        if (_activeL5PerfFilter === 'WITH_FILES' && Number(l5.files_count || 0) <= 0) return false;
+        if (_activeL5PerfFilter === 'WITH_WON' && Number(l5.won_count || 0) <= 0) return false;
+        if (_activeL5PerfFilter === 'WITH_PENDING' && Number(l5.pending_value || 0) <= 0) return false;
+
+        return true;
+      });
+
+      // Update executive KPI summary for L5
+      updateL5Metrics(filtered);
+
+      // Sort
+      filtered.sort((a, b) => {
+        let vA, vB;
+        if (_l5SortField === 'files') {
+          vA = Number(a.files_count || 0); vB = Number(b.files_count || 0);
+        } else if (_l5SortField === 'total') {
+          vA = parseFloat(a.total_value || 0); vB = parseFloat(b.total_value || 0);
+        } else if (_l5SortField === 'won') {
+          vA = parseFloat(a.won_value || 0); vB = parseFloat(b.won_value || 0);
+        } else if (_l5SortField === 'pipeline') {
+          vA = parseFloat(a.pipeline_value || 0); vB = parseFloat(b.pipeline_value || 0);
+        } else if (_l5SortField === 'lost') {
+          vA = parseFloat(a.lost_value || 0); vB = parseFloat(b.lost_value || 0);
+        } else if (_l5SortField === 'received') {
+          vA = parseFloat(a.received_value || 0); vB = parseFloat(b.received_value || 0);
+        } else if (_l5SortField === 'pending') {
+          vA = parseFloat(a.pending_value || 0); vB = parseFloat(b.pending_value || 0);
+        } else if (_l5SortField === 'name') {
+          vA = String(a.support_name || 'Direct').toLowerCase();
+          vB = String(b.support_name || 'Direct').toLowerCase();
+        } else {
+          vA = Number(a.files_count || 0); vB = Number(b.files_count || 0);
+        }
+
+        if (vA < vB) return _l5SortDir === 'asc' ? -1 : 1;
+        if (vA > vB) return _l5SortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      renderL5Table(filtered);
+    }
+
+    function updateL5Metrics(l5Subset) {
+      let totMembers = l5Subset.length;
+      let totFiles = 0, wonCount = 0, wonVal = 0, pipeCount = 0, pipeVal = 0, lostCount = 0, lostVal = 0, recvVal = 0, pendVal = 0;
+
+      l5Subset.forEach(l5 => {
+        totFiles += Number(l5.files_count || 0);
+        wonCount += Number(l5.won_count || 0);
+        wonVal += parseFloat(l5.won_value || 0);
+        pipeCount += Number(l5.pipeline_count || 0);
+        pipeVal += parseFloat(l5.pipeline_value || 0);
+        lostCount += Number(l5.lost_count || 0);
+        lostVal += parseFloat(l5.lost_value || 0);
+        recvVal += parseFloat(l5.received_value || 0);
+        pendVal += parseFloat(l5.pending_value || 0);
+      });
+
+      document.getElementById('l5KpiTotalMembers').textContent = totMembers;
+      document.getElementById('l5KpiTotalFiles').textContent = `${totFiles} Total Files`;
+      document.getElementById('l5KpiWonCount').textContent = wonCount;
+      document.getElementById('l5KpiWonVal').textContent = `₹${Math.round(wonVal).toLocaleString('en-IN')}`;
+      document.getElementById('l5KpiPipelineCount').textContent = pipeCount;
+      document.getElementById('l5KpiPipelineVal').textContent = `₹${Math.round(pipeVal).toLocaleString('en-IN')}`;
+      document.getElementById('l5KpiLostCount').textContent = lostCount;
+      document.getElementById('l5KpiLostVal').textContent = `₹${Math.round(lostVal).toLocaleString('en-IN')}`;
+      document.getElementById('l5KpiReceivedVal').textContent = `₹${Math.round(recvVal).toLocaleString('en-IN')}`;
+      document.getElementById('l5KpiPendingVal').textContent = `₹${Math.round(pendVal).toLocaleString('en-IN')}`;
+    }
+
+    function renderL5Table(l5List) {
+      const tbody = document.getElementById('l5Tbody');
+      const countBadge = document.getElementById('l5CountBadge');
+      if (!tbody) return;
+
+      if (countBadge) {
+        countBadge.textContent = `Showing ${l5List.length} of ${_allL5Summary.length} L5 member${_allL5Summary.length === 1 ? '' : 's'}`;
+      }
+
+      if (l5List.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#94a3b8">No L5 members found matching query/filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = l5List.map((l5, idx) => {
+        const suppName = esc(l5.support_name || 'Direct');
+        const isDirect = !l5.support_name || l5.support_name === 'Direct';
+
+        const nameBadge = isDirect
+          ? `<strong style="color:#0f172a;font-size:13.5px">Direct Handling</strong><div style="font-size:11px;color:#64748b">Primary Member Pipeline</div>`
+          : `<div style="display:flex;align-items:center;gap:6px">
+               <span class="support-pill"><i class="fas fa-user-shield"></i> L5</span>
+               <strong style="color:#0f172a;font-size:13.5px">${suppName}</strong>
+             </div>`;
+
+        // Format stage badges
+        const stageBadges = Object.entries(l5.stages || {}).map(([rawSt, cnt]) => {
+          const display = _SOLAR_STAGE_LABELS[rawSt] || rawSt;
+          return `<span style="background:#f1f5f9;border:1px solid #cbd5e1;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:700;color:#334155;white-space:nowrap;margin:2px 3px 2px 0;display:inline-block">${esc(display)}: <strong>${cnt}</strong></span>`;
+        }).join('');
+
+        const totalVal = parseFloat(l5.total_value || 0);
+        const wonVal = parseFloat(l5.won_value || 0);
+        const pipeVal = parseFloat(l5.pipeline_value || 0);
+        const lostVal = parseFloat(l5.lost_value || 0);
+        const recvVal = parseFloat(l5.received_value || 0);
+        const pendVal = parseFloat(l5.pending_value || 0);
+
+        return `
+          <tr>
+            <td style="font-weight:700;color:#94a3b8;text-align:center">${idx + 1}</td>
+            <td style="min-width:180px">
+              ${nameBadge}
+            </td>
+            <td style="white-space:nowrap">
+              <span style="font-size:16px;font-weight:800;color:#0284c7">${l5.files_count || 0}</span>
+              <span style="font-size:11px;color:#64748b;margin-left:2px">files</span>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#0f172a;font-size:13px">₹${Math.round(totalVal).toLocaleString('en-IN')}</strong>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#15803d;font-size:12.5px">₹${Math.round(wonVal).toLocaleString('en-IN')}</strong>
+              <div style="font-size:10.5px;color:#16a34a;font-weight:600">${l5.won_count || 0} won</div>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#1d4ed8;font-size:12.5px">₹${Math.round(pipeVal).toLocaleString('en-IN')}</strong>
+              <div style="font-size:10.5px;color:#0284c7;font-weight:600">${l5.pipeline_count || 0} active</div>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#b91c1c;font-size:12.5px">₹${Math.round(lostVal).toLocaleString('en-IN')}</strong>
+              <div style="font-size:10.5px;color:#dc2626;font-weight:600">${l5.lost_count || 0} lost</div>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#059669;font-size:13px">₹${Math.round(recvVal).toLocaleString('en-IN')}</strong>
+            </td>
+            <td style="white-space:nowrap">
+              <strong style="color:#d97706;font-size:13px">₹${Math.round(pendVal).toLocaleString('en-IN')}</strong>
+            </td>
+            <td style="max-width:280px;line-height:1.6">
+              ${stageBadges || '<span style="color:#94a3b8;font-size:11px">—</span>'}
+            </td>
+            <td style="text-align:right;white-space:nowrap">
+              <button type="button" onclick="drillDownL5Leads('${esc(l5.support_name || 'Direct')}')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+                <i class="fas fa-filter"></i> View Leads
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function drillDownL5Leads(supportName) {
+      switchMainTab('leads');
+      const select = document.getElementById('supportSelect');
+      if (select) {
+        select.value = supportName;
+      }
+      _activeSupportFilter = supportName;
+      applySortAndFilter();
+      window.scrollTo({ top: 380, behavior: 'smooth' });
     }
 
     // Initialize on page load

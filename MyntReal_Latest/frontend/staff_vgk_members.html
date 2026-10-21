@@ -1969,6 +1969,22 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
     <!-- Body -->
     <div id="flFvBody" style="padding:22px 24px">
+      <!-- Modal Navigation Tabs -->
+      <div style="display:flex;gap:12px;border-bottom:2px solid #e2e8f0;margin-bottom:18px;padding-bottom:2px">
+        <button type="button" id="flFvTabBtnLeads" onclick="switchFlFvModalTab('leads')" style="background:transparent;border:none;border-bottom:3px solid #0284c7;color:#0284c7;font-size:13.5px;font-weight:800;padding:8px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s">
+          <i class="fas fa-list-ul"></i>
+          <span>Originated Leads Pipeline</span>
+          <span id="flFvTabLeadsCountBadge" style="background:#e0f2fe;color:#0369a1;padding:1px 7px;border-radius:10px;font-size:11px">0</span>
+        </button>
+        <button type="button" id="flFvTabBtnL5" onclick="switchFlFvModalTab('l5')" style="background:transparent;border:none;border-bottom:3px solid transparent;color:#64748b;font-size:13.5px;font-weight:800;padding:8px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s">
+          <i class="fas fa-chart-line"></i>
+          <span>L5 Support Executive Dashboard</span>
+          <span id="flFvTabL5CountBadge" style="background:#f1f5f9;color:#475569;padding:1px 7px;border-radius:10px;font-size:11px">0</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: ORIGINATED LEADS PIPELINE -->
+      <div id="flFvTabContentLeads">
       <!-- Top Metrics Bar (Overall Leads & Business Value Breakdown) -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-bottom:16px">
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;text-align:center">
@@ -2082,6 +2098,123 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
           <tbody id="flFvTableBody">
           </tbody>
         </table>
+      </div>
+      </div> <!-- End flFvTabContentLeads -->
+
+      <!-- TAB 2: L5 SUPPORT EXECUTIVE DASHBOARD -->
+      <div id="flFvTabContentL5" style="display:none">
+        <!-- L5 Executive Metric Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-bottom:16px">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiTotalMembers" style="font-size:24px;font-weight:800;color:#0f172a">0</div>
+            <div id="flFvL5KpiTotalFiles" style="font-size:12px;font-weight:700;color:#0369a1;margin-top:2px">0 Total Files</div>
+            <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:2px">L5 Members</div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiWonCount" style="font-size:24px;font-weight:800;color:#16a34a">0</div>
+            <div id="flFvL5KpiWonVal" style="font-size:12px;font-weight:700;color:#15803d;margin-top:2px">₹0</div>
+            <div style="font-size:10.5px;font-weight:700;color:#15803d;text-transform:uppercase;margin-top:2px">Won Portfolio</div>
+          </div>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiPipelineCount" style="font-size:24px;font-weight:800;color:#0284c7">0</div>
+            <div id="flFvL5KpiPipelineVal" style="font-size:12px;font-weight:700;color:#1d4ed8;margin-top:2px">₹0</div>
+            <div style="font-size:10.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-top:2px">Active in Pipeline</div>
+          </div>
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiLostCount" style="font-size:24px;font-weight:800;color:#dc2626">0</div>
+            <div id="flFvL5KpiLostVal" style="font-size:12px;font-weight:700;color:#991b1b;margin-top:2px">₹0</div>
+            <div style="font-size:10.5px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-top:2px">Lost / Cancelled</div>
+          </div>
+          <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiReceivedVal" style="font-size:20px;font-weight:800;color:#059669;margin-top:3px">₹0</div>
+            <div style="font-size:10.5px;font-weight:700;color:#047857;text-transform:uppercase;margin-top:7px">Received Amount</div>
+          </div>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;text-align:center">
+            <div id="flFvL5KpiPendingVal" style="font-size:20px;font-weight:800;color:#d97706;margin-top:3px">₹0</div>
+            <div style="font-size:10.5px;font-weight:700;color:#b45309;text-transform:uppercase;margin-top:7px">Pending Balance</div>
+          </div>
+        </div>
+
+        <!-- L5 Stage Breakdown Filter Pills -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:9px 14px;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+          <span style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;display:inline-flex;align-items:center;gap:5px;margin-right:2px">
+            <i class="fas fa-layer-group" style="color:#0284c7"></i> L5 Stages:
+          </span>
+          <div id="flFvL5StagePills" style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center">
+          </div>
+        </div>
+
+        <!-- L5 Toolbar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:820px;flex-wrap:wrap">
+            <div style="position:relative;flex:1;min-width:200px">
+              <i class="fas fa-search" style="position:absolute;left:12px;top:10px;color:#94a3b8;font-size:13px"></i>
+              <input type="text" id="flFvL5SearchInput" placeholder="Search L5 member name or stage..." oninput="filterFlFvL5()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label for="flFvL5PerfSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">Scope:</label>
+              <select id="flFvL5PerfSelect" onchange="onFlFvL5PerfChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer">
+                <option value="ALL">All L5 Members</option>
+                <option value="WITH_FILES">With Files Only</option>
+                <option value="WITH_WON">With Won Files</option>
+                <option value="WITH_PENDING">With Pending Balance</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label for="flFvL5SortSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">Sort:</label>
+              <select id="flFvL5SortSelect" onchange="onFlFvL5SortChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer">
+                <option value="files_desc">Files: High to Low</option>
+                <option value="files_asc">Files: Low to High</option>
+                <option value="total_desc">Total Value: High to Low</option>
+                <option value="total_asc">Total Value: Low to High</option>
+                <option value="won_desc">Won Value: High to Low</option>
+                <option value="recv_desc">Received Value: High to Low</option>
+                <option value="pend_desc">Pending Value: High to Low</option>
+                <option value="name_asc">Name: A → Z</option>
+              </select>
+            </div>
+          </div>
+          <div id="flFvL5CountLabel" style="font-size:12.5px;color:#64748b;font-weight:700"></div>
+        </div>
+
+        <!-- L5 Executive Table -->
+        <div id="flFvL5TableContainer" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:white">
+          <table style="width:100%;min-width:1040px;border-collapse:collapse;font-size:12.5px;text-align:left">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap;user-select:none">
+                <th style="padding:10px 12px;width:50px">#</th>
+                <th onclick="toggleFlFvL5Sort('name')" style="padding:10px 12px;cursor:pointer">
+                  L5 Support Member <span id="flSortIcon_l5_name" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('files')" style="padding:10px 12px;cursor:pointer">
+                  Files No. <span id="flSortIcon_l5_files" style="color:#0284c7;font-size:11px">▼</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('total')" style="padding:10px 12px;cursor:pointer">
+                  Total Value <span id="flSortIcon_l5_total" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('won')" style="padding:10px 12px;cursor:pointer">
+                  Won Deals <span id="flSortIcon_l5_won" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('pipeline')" style="padding:10px 12px;cursor:pointer">
+                  Pipeline <span id="flSortIcon_l5_pipeline" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('lost')" style="padding:10px 12px;cursor:pointer">
+                  Lost <span id="flSortIcon_l5_lost" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('received')" style="padding:10px 12px;cursor:pointer">
+                  Received Value <span id="flSortIcon_l5_received" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th onclick="toggleFlFvL5Sort('pending')" style="padding:10px 12px;cursor:pointer">
+                  Pending Value <span id="flSortIcon_l5_pending" style="color:#94a3b8;font-size:11px">↕</span>
+                </th>
+                <th style="padding:10px 12px">Stage Breakdown</th>
+                <th style="padding:10px 12px;text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="flFvL5TableBody">
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -3971,11 +4104,20 @@ async function viewFreelancerDetails(flId) {
 
 // ─── Freelancer Full View System Modal Handlers ─────────────────────────────
 let _currentFlFvLeads = [];
+let _currentFlFvL5Summary = [];
+let _flFvActiveModalTab = 'leads';
 let _flFvActiveStageFilter = 'ALL';
 let _flFvActiveSupportFilter = 'ALL';
 let _flFvSortField = 'created_at';
 let _flFvSortDir = 'desc';
 let _flFvCurrentId = null;
+
+// L5 Executive Filter State
+let _flFvActiveL5StageFilter = 'ALL';
+let _flFvActiveL5PerfFilter = 'ALL';
+let _flFvL5SearchQuery = '';
+let _flFvL5SortField = 'files';
+let _flFvL5SortDir = 'desc';
 
 const _SOLAR_STAGE_LABELS = {
   'pending_with_bank': 'With Bank',
@@ -4076,9 +4218,20 @@ async function openFreelancerFullLeadModal(flId) {
     }
 
     _currentFlFvLeads = leads;
+    _currentFlFvL5Summary = data.l5_summary || [];
+
+    const tabLeadsBadge = document.getElementById('flFvTabLeadsCountBadge');
+    if (tabLeadsBadge) tabLeadsBadge.textContent = leads.length;
+    const tabL5Badge = document.getElementById('flFvTabL5CountBadge');
+    if (tabL5Badge) tabL5Badge.textContent = _currentFlFvL5Summary.length;
+
+    switchFlFvModalTab('leads');
     renderFlFvStagePills(leads);
     renderFlFvSupportDropdown(leads);
     applyFlFvSortAndFilter();
+
+    renderFlFvL5StagePills(leads, _currentFlFvL5Summary);
+    applyFlFvL5SortAndFilter();
   } catch (err) {
     console.error('Error opening full lead modal:', err);
     if (tbody) {
@@ -4546,6 +4699,335 @@ function renderFlFvTable(leads) {
       </tr>
     `;
   }).join('');
+}
+
+function switchFlFvModalTab(tab) {
+  _flFvActiveModalTab = tab;
+  const btnLeads = document.getElementById('flFvTabBtnLeads');
+  const btnL5 = document.getElementById('flFvTabBtnL5');
+  const contentLeads = document.getElementById('flFvTabContentLeads');
+  const contentL5 = document.getElementById('flFvTabContentL5');
+
+  if (!btnLeads || !btnL5 || !contentLeads || !contentL5) return;
+
+  if (tab === 'leads') {
+    btnLeads.style.color = '#0284c7';
+    btnLeads.style.borderBottom = '3px solid #0284c7';
+    btnL5.style.color = '#64748b';
+    btnL5.style.borderBottom = '3px solid transparent';
+    contentLeads.style.display = 'block';
+    contentL5.style.display = 'none';
+  } else {
+    btnL5.style.color = '#0284c7';
+    btnL5.style.borderBottom = '3px solid #0284c7';
+    btnLeads.style.color = '#64748b';
+    btnLeads.style.borderBottom = '3px solid transparent';
+    contentL5.style.display = 'block';
+    contentLeads.style.display = 'none';
+    applyFlFvL5SortAndFilter();
+  }
+}
+
+function renderFlFvL5StagePills(leads, l5Summary) {
+  const container = document.getElementById('flFvL5StagePills');
+  if (!container) return;
+
+  const stageCounts = {};
+  leads.forEach(l => {
+    const rawStage = (l.solar_pipeline_status || l.stage || l.status || 'lead').toLowerCase().trim();
+    const label = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+    stageCounts[label] = (stageCounts[label] || 0) + 1;
+  });
+
+  const sortedStages = Object.entries(stageCounts).sort((a, b) => b[1] - a[1]);
+
+  let html = `
+    <button type="button" onclick="setFlFvL5StageFilter('ALL')" style="cursor:pointer;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:700;border:1px solid ${_flFvActiveL5StageFilter === 'ALL' ? '#0284c7' : '#cbd5e1'};background:${_flFvActiveL5StageFilter === 'ALL' ? '#0284c7' : 'white'};color:${_flFvActiveL5StageFilter === 'ALL' ? 'white' : '#475569'};transition:all .15s">
+      All Stages <span style="opacity:0.85;margin-left:2px">(${leads.length})</span>
+    </button>
+  `;
+
+  sortedStages.forEach(([label, cnt]) => {
+    const isAct = _flFvActiveL5StageFilter === label;
+    html += `
+      <button type="button" onclick="setFlFvL5StageFilter('${esc(label)}')" style="cursor:pointer;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:700;border:1px solid ${isAct ? '#0369a1' : '#e2e8f0'};background:${isAct ? '#0284c7' : '#f1f5f9'};color:${isAct ? 'white' : '#334155'};transition:all .15s" title="Filter L5 by ${esc(label)}">
+        ${esc(label)} <span style="background:${isAct ? 'rgba(255,255,255,0.25)' : '#e2e8f0'};color:${isAct ? 'white' : '#0f172a'};padding:1px 6px;border-radius:10px;font-size:10.5px;margin-left:3px">${cnt}</span>
+      </button>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function setFlFvL5StageFilter(stageLabel) {
+  if (stageLabel === 'ALL' || _flFvActiveL5StageFilter === stageLabel) {
+    _flFvActiveL5StageFilter = 'ALL';
+  } else {
+    _flFvActiveL5StageFilter = stageLabel;
+  }
+  renderFlFvL5StagePills(_currentFlFvLeads, _currentFlFvL5Summary);
+  applyFlFvL5SortAndFilter();
+}
+
+function filterFlFvL5() {
+  _flFvL5SearchQuery = (document.getElementById('flFvL5SearchInput')?.value || '').toLowerCase().trim();
+  applyFlFvL5SortAndFilter();
+}
+
+function onFlFvL5PerfChange(val) {
+  _flFvActiveL5PerfFilter = val || 'ALL';
+  applyFlFvL5SortAndFilter();
+}
+
+function onFlFvL5SortChange(val) {
+  const parts = val.split('_');
+  if (parts.length === 2) {
+    _flFvL5SortDir = parts[1];
+    const fieldKey = parts[0];
+    if (fieldKey === 'files') _flFvL5SortField = 'files';
+    else if (fieldKey === 'total') _flFvL5SortField = 'total';
+    else if (fieldKey === 'won') _flFvL5SortField = 'won';
+    else if (fieldKey === 'recv') _flFvL5SortField = 'received';
+    else if (fieldKey === 'pend') _flFvL5SortField = 'pending';
+    else if (fieldKey === 'name') _flFvL5SortField = 'name';
+  }
+  updateFlFvL5SortIcons();
+  applyFlFvL5SortAndFilter();
+}
+
+function toggleFlFvL5Sort(field) {
+  if (_flFvL5SortField === field) {
+    _flFvL5SortDir = _flFvL5SortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _flFvL5SortField = field;
+    _flFvL5SortDir = (field === 'files' || field === 'total' || field === 'won' || field === 'received' || field === 'pending') ? 'desc' : 'asc';
+  }
+
+  const sortSelect = document.getElementById('flFvL5SortSelect');
+  if (sortSelect) {
+    let optVal = '';
+    if (field === 'files') optVal = `files_${_flFvL5SortDir}`;
+    else if (field === 'total') optVal = `total_${_flFvL5SortDir}`;
+    else if (field === 'won') optVal = `won_${_flFvL5SortDir}`;
+    else if (field === 'received') optVal = `recv_${_flFvL5SortDir}`;
+    else if (field === 'pending') optVal = `pend_${_flFvL5SortDir}`;
+    else if (field === 'name') optVal = `name_${_flFvL5SortDir}`;
+    if (optVal && [...sortSelect.options].some(o => o.value === optVal)) {
+      sortSelect.value = optVal;
+    }
+  }
+
+  updateFlFvL5SortIcons();
+  applyFlFvL5SortAndFilter();
+}
+
+function updateFlFvL5SortIcons() {
+  const fields = ['name', 'files', 'total', 'won', 'pipeline', 'lost', 'received', 'pending'];
+  fields.forEach(f => {
+    const el = document.getElementById(`flSortIcon_l5_${f}`);
+    if (el) {
+      if (_flFvL5SortField === f) {
+        el.textContent = _flFvL5SortDir === 'asc' ? '▲' : '▼';
+        el.style.color = '#0284c7';
+      } else {
+        el.textContent = '↕';
+        el.style.color = '#94a3b8';
+      }
+    }
+  });
+}
+
+function updateFlFvL5Metrics(l5Subset) {
+  let totMembers = l5Subset.length;
+  let totFiles = 0, wonCount = 0, wonVal = 0, pipeCount = 0, pipeVal = 0, lostCount = 0, lostVal = 0, recvVal = 0, pendVal = 0;
+
+  l5Subset.forEach(l5 => {
+    totFiles += Number(l5.files_count || 0);
+    wonCount += Number(l5.won_count || 0);
+    wonVal += parseFloat(l5.won_value || 0);
+    pipeCount += Number(l5.pipeline_count || 0);
+    pipeVal += parseFloat(l5.pipeline_value || 0);
+    lostCount += Number(l5.lost_count || 0);
+    lostVal += parseFloat(l5.lost_value || 0);
+    recvVal += parseFloat(l5.received_value || 0);
+    pendVal += parseFloat(l5.pending_value || 0);
+  });
+
+  const mEl = document.getElementById('flFvL5KpiTotalMembers');
+  const fEl = document.getElementById('flFvL5KpiTotalFiles');
+  const wcEl = document.getElementById('flFvL5KpiWonCount');
+  const wvEl = document.getElementById('flFvL5KpiWonVal');
+  const pcEl = document.getElementById('flFvL5KpiPipelineCount');
+  const pvEl = document.getElementById('flFvL5KpiPipelineVal');
+  const lcEl = document.getElementById('flFvL5KpiLostCount');
+  const lvEl = document.getElementById('flFvL5KpiLostVal');
+  const rvEl = document.getElementById('flFvL5KpiReceivedVal');
+  const peEl = document.getElementById('flFvL5KpiPendingVal');
+
+  if (mEl) mEl.textContent = totMembers;
+  if (fEl) fEl.textContent = `${totFiles} Total Files`;
+  if (wcEl) wcEl.textContent = wonCount;
+  if (wvEl) wvEl.textContent = `₹${Math.round(wonVal).toLocaleString('en-IN')}`;
+  if (pcEl) pcEl.textContent = pipeCount;
+  if (pvEl) pvEl.textContent = `₹${Math.round(pipeVal).toLocaleString('en-IN')}`;
+  if (lcEl) lcEl.textContent = lostCount;
+  if (lvEl) lvEl.textContent = `₹${Math.round(lostVal).toLocaleString('en-IN')}`;
+  if (rvEl) rvEl.textContent = `₹${Math.round(recvVal).toLocaleString('en-IN')}`;
+  if (peEl) peEl.textContent = `₹${Math.round(pendVal).toLocaleString('en-IN')}`;
+}
+
+function applyFlFvL5SortAndFilter() {
+  if (!_currentFlFvL5Summary) return;
+
+  let filtered = _currentFlFvL5Summary.filter(l5 => {
+    const name = String(l5.support_name || 'Direct').toLowerCase();
+
+    if (_flFvL5SearchQuery) {
+      const matchName = name.includes(_flFvL5SearchQuery);
+      const matchStages = Object.keys(l5.stages || {}).some(st => {
+        const lbl = (_SOLAR_STAGE_LABELS[st] || st).toLowerCase();
+        return lbl.includes(_flFvL5SearchQuery);
+      });
+      if (!matchName && !matchStages) return false;
+    }
+
+    if (_flFvActiveL5StageFilter && _flFvActiveL5StageFilter !== 'ALL') {
+      const hasStage = Object.entries(l5.stages || {}).some(([st, cnt]) => {
+        const lbl = _SOLAR_STAGE_LABELS[st] || st;
+        return lbl === _flFvActiveL5StageFilter && cnt > 0;
+      });
+      if (!hasStage) return false;
+    }
+
+    if (_flFvActiveL5PerfFilter === 'WITH_FILES' && Number(l5.files_count || 0) <= 0) return false;
+    if (_flFvActiveL5PerfFilter === 'WITH_WON' && Number(l5.won_count || 0) <= 0) return false;
+    if (_flFvActiveL5PerfFilter === 'WITH_PENDING' && Number(l5.pending_value || 0) <= 0) return false;
+
+    return true;
+  });
+
+  updateFlFvL5Metrics(filtered);
+
+  filtered.sort((a, b) => {
+    let vA, vB;
+    if (_flFvL5SortField === 'files') {
+      vA = Number(a.files_count || 0); vB = Number(b.files_count || 0);
+    } else if (_flFvL5SortField === 'total') {
+      vA = parseFloat(a.total_value || 0); vB = parseFloat(b.total_value || 0);
+    } else if (_flFvL5SortField === 'won') {
+      vA = parseFloat(a.won_value || 0); vB = parseFloat(b.won_value || 0);
+    } else if (_flFvL5SortField === 'pipeline') {
+      vA = parseFloat(a.pipeline_value || 0); vB = parseFloat(b.pipeline_value || 0);
+    } else if (_flFvL5SortField === 'lost') {
+      vA = parseFloat(a.lost_value || 0); vB = parseFloat(b.lost_value || 0);
+    } else if (_flFvL5SortField === 'received') {
+      vA = parseFloat(a.received_value || 0); vB = parseFloat(b.received_value || 0);
+    } else if (_flFvL5SortField === 'pending') {
+      vA = parseFloat(a.pending_value || 0); vB = parseFloat(b.pending_value || 0);
+    } else if (_flFvL5SortField === 'name') {
+      vA = String(a.support_name || 'Direct').toLowerCase();
+      vB = String(b.support_name || 'Direct').toLowerCase();
+    } else {
+      vA = Number(a.files_count || 0); vB = Number(b.files_count || 0);
+    }
+
+    if (vA < vB) return _flFvL5SortDir === 'asc' ? -1 : 1;
+    if (vA > vB) return _flFvL5SortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  renderFlFvL5Table(filtered);
+}
+
+function renderFlFvL5Table(l5List) {
+  const tbody = document.getElementById('flFvL5TableBody');
+  const countLabel = document.getElementById('flFvL5CountLabel');
+  if (!tbody) return;
+
+  if (countLabel) {
+    countLabel.textContent = `Showing ${l5List.length} of ${_currentFlFvL5Summary.length} L5 member${_currentFlFvL5Summary.length === 1 ? '' : 's'}`;
+  }
+
+  if (l5List.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:36px;color:#94a3b8">No L5 members found matching query/filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = l5List.map((l5, idx) => {
+    const suppName = esc(l5.support_name || 'Direct');
+    const isDirect = !l5.support_name || l5.support_name === 'Direct';
+
+    const nameBadge = isDirect
+      ? `<strong style="color:#0f172a;font-size:13px">Direct Handling</strong><div style="font-size:11px;color:#64748b">Primary Member Pipeline</div>`
+      : `<div style="display:flex;align-items:center;gap:6px">
+           <span style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:800"><i class="fas fa-user-shield"></i> L5</span>
+           <strong style="color:#0f172a;font-size:13px">${suppName}</strong>
+         </div>`;
+
+    const stageBadges = Object.entries(l5.stages || {}).map(([rawSt, cnt]) => {
+      const display = _SOLAR_STAGE_LABELS[rawSt] || rawSt;
+      return `<span style="background:#f1f5f9;border:1px solid #cbd5e1;padding:2px 6px;border-radius:6px;font-size:10.5px;font-weight:700;color:#334155;white-space:nowrap;margin:2px 3px 2px 0;display:inline-block">${esc(display)}: <strong>${cnt}</strong></span>`;
+    }).join('');
+
+    const totalVal = parseFloat(l5.total_value || 0);
+    const wonVal = parseFloat(l5.won_value || 0);
+    const pipeVal = parseFloat(l5.pipeline_value || 0);
+    const lostVal = parseFloat(l5.lost_value || 0);
+    const recvVal = parseFloat(l5.received_value || 0);
+    const pendVal = parseFloat(l5.pending_value || 0);
+
+    return `
+      <tr style="border-bottom:1px solid #f1f5f9;transition:background .15s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <td style="padding:10px 12px;font-weight:700;color:#94a3b8;text-align:center">${idx + 1}</td>
+        <td style="padding:10px 12px;min-width:180px">
+          ${nameBadge}
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <span style="font-size:16px;font-weight:800;color:#0284c7">${l5.files_count || 0}</span>
+          <span style="font-size:11px;color:#64748b;margin-left:2px">files</span>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#0f172a;font-size:13px">₹${Math.round(totalVal).toLocaleString('en-IN')}</strong>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#15803d;font-size:12.5px">₹${Math.round(wonVal).toLocaleString('en-IN')}</strong>
+          <div style="font-size:10.5px;color:#16a34a;font-weight:600">${l5.won_count || 0} won</div>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#1d4ed8;font-size:12.5px">₹${Math.round(pipeVal).toLocaleString('en-IN')}</strong>
+          <div style="font-size:10.5px;color:#0284c7;font-weight:600">${l5.pipeline_count || 0} active</div>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#b91c1c;font-size:12.5px">₹${Math.round(lostVal).toLocaleString('en-IN')}</strong>
+          <div style="font-size:10.5px;color:#dc2626;font-weight:600">${l5.lost_count || 0} lost</div>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#059669;font-size:13px">₹${Math.round(recvVal).toLocaleString('en-IN')}</strong>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <strong style="color:#d97706;font-size:13px">₹${Math.round(pendVal).toLocaleString('en-IN')}</strong>
+        </td>
+        <td style="padding:10px 12px;max-width:280px;line-height:1.6">
+          ${stageBadges || '<span style="color:#94a3b8;font-size:11px">—</span>'}
+        </td>
+        <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+          <button type="button" onclick="drillDownFlFvL5Leads('${esc(l5.support_name || 'Direct')}')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-filter"></i> View Leads
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function drillDownFlFvL5Leads(supportName) {
+  switchFlFvModalTab('leads');
+  const select = document.getElementById('flFvSupportSelect');
+  if (select) {
+    select.value = supportName;
+  }
+  _flFvActiveSupportFilter = supportName;
+  applyFlFvSortAndFilter();
 }
 
 async function resetFreelancerPassword(flId, flCode) {

@@ -1780,6 +1780,65 @@ def get_freelancer_detail(
 
     pending_val = max(0.0, total_deal_val - total_received_val)
 
+    # L5 Support Executive Aggregation
+    l5_aggregates = {}
+    for r in leads_raw:
+        st = (r[3] or 'new').strip().lower()
+        sps = (r[4] or '').strip().lower()
+        stage_key = sps or st or 'lead'
+        supp_name = (r[10] or '').strip()
+        if not supp_name and r[12] and r[12] in fs_name_map:
+            supp_name = fs_name_map[r[12]]
+        if not supp_name:
+            supp_name = 'Direct'
+
+        is_won = (st in _WON_STATUSES or sps in ('installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed')) and sps not in _LOST_STATUSES
+        is_lost = st in ('lost', 'cancelled') or sps in _LOST_STATUSES
+
+        deal_val = float(r[5] or 0)
+        kw = str(r[7] or '').strip()
+        if not deal_val and kw in ('3', '3.0', '3kw', '3 kw'):
+            deal_val = 200000.0
+        rec_val = float(r[6] or 0)
+
+        if supp_name not in l5_aggregates:
+            l5_aggregates[supp_name] = {
+                "support_name": supp_name,
+                "support_id": r[12] or (str(r[11]) if r[11] is not None else None),
+                "files_count": 0,
+                "total_value": 0.0,
+                "won_count": 0,
+                "won_value": 0.0,
+                "lost_count": 0,
+                "lost_value": 0.0,
+                "pipeline_count": 0,
+                "pipeline_value": 0.0,
+                "received_value": 0.0,
+                "pending_value": 0.0,
+                "stages": {}
+            }
+        l5 = l5_aggregates[supp_name]
+        l5["files_count"] += 1
+        l5["total_value"] += deal_val
+        l5["received_value"] += rec_val
+        if is_won:
+            l5["won_count"] += 1
+            l5["won_value"] += deal_val
+        elif is_lost:
+            l5["lost_count"] += 1
+            l5["lost_value"] += deal_val
+        else:
+            l5["pipeline_count"] += 1
+            l5["pipeline_value"] += deal_val
+
+        l5["stages"][stage_key] = l5["stages"].get(stage_key, 0) + 1
+
+    for l5 in l5_aggregates.values():
+        l5["pending_value"] = max(0.0, l5["total_value"] - l5["received_value"])
+
+    l5_summary_list = list(l5_aggregates.values())
+    l5_summary_list.sort(key=lambda x: x["files_count"], reverse=True)
+
     # Fetch audit logs
     audit_logs = []
     try:
@@ -1875,6 +1934,7 @@ def get_freelancer_detail(
         "data": data_payload,
         "support_partner": support_dict,
         "originated_leads": all_leads,
+        "l5_summary": l5_summary_list,
         "lead_stats": lead_stats,
         "scope_logs": audit_logs
     }
