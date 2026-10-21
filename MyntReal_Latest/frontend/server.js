@@ -7822,9 +7822,20 @@ const server = http.createServer(async (req, res) => {
     }
 
 
+    // Public Request Details Given Short Redirect (WhatsApp Link)
+    if (url.startsWith('/req/') && url.includes('/details-given')) {
+      const reqMatch = url.match(/^\/req\/([A-Za-z0-9_-]+)\/details-given/i);
+      if (reqMatch) {
+        const alertCode = reqMatch[1];
+        res.writeHead(302, { 'Location': `/api/v1/vgk-quick-alerts/details-given/${alertCode}` });
+        res.end();
+        return;
+      }
+    }
+
     // DC Protocol Oct 2026: SaaS Tenant Short-Code URL Interceptor (myntreal.com/{shortCode}/staff/... or myntreal.com/{shortCode})
     const RESERVED_PREFIXES = new Set([
-      'app', 'apk', 'get-app', 'download-app', 'mobile-app', 'myntreal',
+      'req', 'app', 'apk', 'get-app', 'download-app', 'mobile-app', 'myntreal',
       'customer', 'recharge', 'scratch-card', 'public', 'assets', 'api', 'staff', 'health', 'healthz', 'ping',
       'scan', 'qr', 'whatsapp', 'whatsapp-qr', 'qr-data', 'user', 'user-home', 'rvz', 'admin', 'favicon.ico',
       'mobile', 'download', 'engineering', 'suryanz', 'suryanzsolar', 'solutions', 'location', 'calculator',

@@ -609,6 +609,7 @@
                             <option value="PENDING">Pending (Unclaimed)</option>
                             <option value="RECLAIMABLE">🔄 Open for Re-Claim (&gt;3h)</option>
                             <option value="RUNNING">Running / Claimed</option>
+                            <option value="WAITING_FOR_DETAILS">⏸️ Waiting for Details</option>
                             <option value="PROCESSED">Completed / Processed</option>
                             <option value="CANCELLED">❌ Cancelled</option>
                         </select>
@@ -8810,6 +8811,16 @@
                     </div>
                     <div style="font-size:11px; color:#64748b;">${a.processed_at_ist ? `At ${a.processed_at_ist}` : ''}</div>
                 `;
+            } else if (a.status === 'WAITING_FOR_DETAILS') {
+                const pausedSecs = a.handling_seconds || 0;
+                handlingHtml = `
+                    <div class="fw-bold" style="color:#d97706; font-size:13.5px;">
+                        <i class="fas fa-pause-circle me-1"></i><span>${formatMaDuration(pausedSecs)}</span>
+                        <span class="badge" style="background:#fef3c7; color:#b45309; font-size:9.5px; border:1px solid #fde68a;">Paused</span>
+                    </div>
+                    <div style="font-size:11px; color:#b45309; margin-top:2px;">Waiting for details</div>
+                    <div style="font-size:10px; color:#64748b;">Pickup wait: ${formatMaDuration(a.claim_wait_seconds)}</div>
+                `;
             } else if (a.claimed_at && (a.status === 'CLAIMED' || a.status === 'IN_PROGRESS')) {
                 const initHandlingSecs = a.handling_seconds || 0;
                 const isRunningOver3h = initHandlingSecs >= 10800;
@@ -8830,6 +8841,8 @@
                 statusHtml = `<span class="badge bg-primary"><i class="fas fa-hand-paper me-1"></i>CLAIMED</span>`;
             } else if (a.status === 'IN_PROGRESS') {
                 statusHtml = `<span class="badge" style="background:#4f46e5;color:#fff;"><i class="fas fa-spinner fa-spin me-1"></i>RUNNING</span>`;
+            } else if (a.status === 'WAITING_FOR_DETAILS') {
+                statusHtml = `<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;"><i class="fas fa-hourglass-half me-1"></i>WAITING FOR DETAILS</span>`;
             } else if (a.status === 'PROCESSED') {
                 statusHtml = `<span class="badge bg-success"><i class="fas fa-check-double me-1"></i>COMPLETED</span>`;
             } else if (a.status === 'CANCELLED') {
@@ -8863,6 +8876,23 @@
                     actionBtns.push(`
                         <button class="btn btn-sm btn-outline-primary fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'IN_PROGRESS')" style="border-radius:8px; font-size:11.5px;">
                             <i class="fas fa-play me-1"></i>Start Running
+                        </button>
+                    `);
+                    actionBtns.push(`
+                        <button class="btn btn-sm btn-outline-warning fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'WAITING_FOR_DETAILS')" style="border-radius:8px; font-size:11.5px; border-color:#d97706; color:#b45309;" title="Pause timer and request missing information/documents from member">
+                            <i class="fas fa-pause-circle me-1"></i>Waiting for Details
+                        </button>
+                    `);
+                } else if (a.status === 'IN_PROGRESS') {
+                    actionBtns.push(`
+                        <button class="btn btn-sm btn-outline-warning fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'WAITING_FOR_DETAILS')" style="border-radius:8px; font-size:11.5px; border-color:#d97706; color:#b45309;" title="Pause timer and request missing information/documents from member">
+                            <i class="fas fa-pause-circle me-1"></i>Waiting for Details
+                        </button>
+                    `);
+                } else if (a.status === 'WAITING_FOR_DETAILS') {
+                    actionBtns.push(`
+                        <button class="btn btn-sm btn-outline-success fw-bold" onclick="updateMemberAppStatus('${escapeMaHtml(a.claim_token)}', '${escapeMaHtml(a.alert_code)}', 'IN_PROGRESS')" style="border-radius:8px; font-size:11.5px;" title="Resume resolution clock and mark as actively running">
+                            <i class="fas fa-play me-1"></i>Resume Running
                         </button>
                     `);
                 }
@@ -8988,6 +9018,12 @@
         } else if (newStatus === 'CANCELLED') {
             defaultPrompt = `Enter reason for cancelling ${alertCode}:`;
             defaultVal = 'Cancelled as requested / duplicate entry.';
+        } else if (newStatus === 'WAITING_FOR_DETAILS') {
+            defaultPrompt = `Specify missing information or documents needed from member for ${alertCode} (Resolution clock will pause and WhatsApp request with confirmation button will be sent to requester):`;
+            defaultVal = 'Please provide copy of electricity bill and Aadhaar for verification.';
+        } else if (newStatus === 'IN_PROGRESS') {
+            defaultPrompt = `Enter update note to resume running on ${alertCode}:`;
+            defaultVal = 'Resumed running on request.';
         }
         const notes = prompt(defaultPrompt, defaultVal);
         if (notes === null) return; // User clicked cancel on prompt
@@ -8999,7 +9035,7 @@
                 body: JSON.stringify({
                     token: claimToken,
                     status: newStatus,
-                    notes: notes.trim() || (newStatus === 'PROCESSED' ? 'Completed' : (newStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'))
+                    notes: notes.trim() || (newStatus === 'PROCESSED' ? 'Completed' : (newStatus === 'CANCELLED' ? 'Cancelled' : (newStatus === 'WAITING_FOR_DETAILS' ? 'Waiting for details' : 'In Progress')))
                 })
             });
             const json = await res.json();

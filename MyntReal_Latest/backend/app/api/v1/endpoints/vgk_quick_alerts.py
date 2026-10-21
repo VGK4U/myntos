@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, status, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, desc
@@ -392,6 +393,11 @@ def sync_linked_service_ticket(
                 ticket.in_progress_date = now_ist
             if staff_id and not ticket.service_manager_id:
                 ticket.service_manager_id = staff_id
+        elif target_status == "WAITING_FOR_DETAILS":
+            ticket.status = "Waiting on Customer"
+            ticket.sub_status = "awaiting_details"
+            if notes:
+                ticket.admin_response = f"Waiting for details: {notes}"
         elif target_status == "PROCESSED":
             ticket.status = "Resolved"
             ticket.sub_status = "work_complete"
@@ -876,7 +882,7 @@ def get_staff_quick_alerts_dashboard(
         q = q.filter(
             or_(
                 VGKMemberQuickAlert.created_at >= today_start_ist,
-                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS"])
+                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS", "WAITING_FOR_DETAILS"])
             )
         )
     elif dr == "7d":
@@ -884,7 +890,7 @@ def get_staff_quick_alerts_dashboard(
         q = q.filter(
             or_(
                 VGKMemberQuickAlert.created_at >= cutoff_ist,
-                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS"])
+                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS", "WAITING_FOR_DETAILS"])
             )
         )
     elif dr == "30d":
@@ -892,7 +898,7 @@ def get_staff_quick_alerts_dashboard(
         q = q.filter(
             or_(
                 VGKMemberQuickAlert.created_at >= cutoff_ist,
-                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS"])
+                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS", "WAITING_FOR_DETAILS"])
             )
         )
     elif dr == "mtd":
@@ -900,7 +906,7 @@ def get_staff_quick_alerts_dashboard(
         q = q.filter(
             or_(
                 VGKMemberQuickAlert.created_at >= mtd_start_ist,
-                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS"])
+                VGKMemberQuickAlert.status.in_(["PENDING", "CLAIMED", "IN_PROGRESS", "WAITING_FOR_DETAILS"])
             )
         )
 
@@ -935,13 +941,14 @@ def get_staff_quick_alerts_dashboard(
     supp_cnt = sum(1 for d in all_dicts if d["alert_type"] != "APPLICATION")
     pending_cnt = sum(1 for d in all_dicts if d["status"] == "PENDING")
     running_cnt = sum(1 for d in all_dicts if d["status"] in ("CLAIMED", "IN_PROGRESS"))
+    waiting_cnt = sum(1 for d in all_dicts if d["status"] == "WAITING_FOR_DETAILS")
     completed_cnt = sum(1 for d in all_dicts if d["status"] == "PROCESSED")
     cancelled_cnt = sum(1 for d in all_dicts if d["status"] == "CANCELLED")
     reclaimable_cnt = sum(1 for d in all_dicts if d.get("is_reclaimable_3h"))
 
     # Support-specific sub-counts
     support_open_cnt = sum(1 for d in all_dicts if d["alert_type"] != "APPLICATION" and d["status"] == "PENDING")
-    support_running_cnt = sum(1 for d in all_dicts if d["alert_type"] != "APPLICATION" and d["status"] in ("CLAIMED", "IN_PROGRESS"))
+    support_running_cnt = sum(1 for d in all_dicts if d["alert_type"] != "APPLICATION" and d["status"] in ("CLAIMED", "IN_PROGRESS", "WAITING_FOR_DETAILS"))
     support_resolved_cnt = sum(1 for d in all_dicts if d["alert_type"] != "APPLICATION" and d["status"] == "PROCESSED")
 
     completed_handling_times = [
@@ -964,6 +971,8 @@ def get_staff_quick_alerts_dashboard(
         filtered_dicts = [d for d in all_dicts if d.get("is_reclaimable_3h")]
     elif sf in ("RUNNING", "IN_PROGRESS", "CLAIMED"):
         filtered_dicts = [d for d in all_dicts if d["status"] in ("CLAIMED", "IN_PROGRESS")]
+    elif sf in ("WAITING_FOR_DETAILS", "WAITING", "HOLD"):
+        filtered_dicts = [d for d in all_dicts if d["status"] == "WAITING_FOR_DETAILS"]
     elif sf in ("PROCESSED", "COMPLETED"):
         filtered_dicts = [d for d in all_dicts if d["status"] == "PROCESSED"]
     elif sf in ("CANCELLED", "CANCELED"):
@@ -994,6 +1003,7 @@ def get_staff_quick_alerts_dashboard(
             "reclaimable_over_3h": reclaimable_cnt,
             "running": running_cnt,
             "running_in_progress": running_cnt,
+            "waiting_for_details": waiting_cnt,
             "completed": completed_cnt,
             "completed_processed": completed_cnt,
             "cancelled": cancelled_cnt,
@@ -1222,13 +1232,29 @@ def update_quick_alert_status(
         raise HTTPException(status_code=404, detail="Alert request not found")
 
     new_status = payload.status.upper().strip()
-    if new_status not in ("IN_PROGRESS", "PROCESSED", "CANCELLED", "CLAIMED"):
+    if new_status not in ("IN_PROGRESS", "PROCESSED", "CANCELLED", "CLAIMED", "WAITING_FOR_DETAILS"):
         raise HTTPException(status_code=400, detail="Invalid status value")
 
     now_ist = get_indian_time()
     if not alert.claimed_by_staff_id and new_status != "CANCELLED":
         alert.claimed_by_staff_id = current_user.id
         alert.claimed_at = now_ist
+
+    # SLA Resolution Timer Pause / Resume Handling
+    if new_status == "WAITING_FOR_DETAILS":
+        if alert.status != "WAITING_FOR_DETAILS":
+            alert.waiting_for_details_at = now_ist
+            alert.waiting_notes = payload.notes
+    else:
+        # If moving out of WAITING_FOR_DETAILS, accumulate paused seconds so they are never counted in SLA
+        if alert.waiting_for_details_at:
+            w_at = alert.waiting_for_details_at.replace(tzinfo=None) if hasattr(alert.waiting_for_details_at, 'tzinfo') and alert.waiting_for_details_at.tzinfo else alert.waiting_for_details_at
+            n_ist = now_ist.replace(tzinfo=None) if hasattr(now_ist, 'tzinfo') and now_ist.tzinfo else now_ist
+            paused_secs = max(0, int((n_ist - w_at).total_seconds())) if (n_ist and w_at) else 0
+            alert.total_waiting_seconds = (alert.total_waiting_seconds or 0) + paused_secs
+            alert.waiting_for_details_at = None
+        if new_status in ("IN_PROGRESS", "PROCESSED") and not alert.details_received_at:
+            alert.details_received_at = now_ist
 
     alert.status = new_status
     staff_label = getattr(current_user, "full_name", "") or getattr(current_user, "username", "Staff")
@@ -1243,6 +1269,11 @@ def update_quick_alert_status(
         alert.processing_notes = f"{existing_notes}\n{new_entry}".strip() if existing_notes else new_entry
         alert.processed_by_staff_id = current_user.id
         alert.processed_at = now_ist
+    elif new_status == "WAITING_FOR_DETAILS":
+        wait_text = (payload.notes or "Waiting for missing details/documents").strip()
+        existing_notes = (alert.processing_notes or "").strip()
+        new_entry = f"[{timestamp_ist} - {staff_display}]: ⏸️ Waiting for details ({wait_text})"
+        alert.processing_notes = f"{existing_notes}\n{new_entry}".strip() if existing_notes else new_entry
     elif payload.notes:
         existing_notes = (alert.processing_notes or "").strip()
         new_entry = f"[{timestamp_ist} - {staff_display}]: {payload.notes.strip()}"
@@ -1284,12 +1315,29 @@ def update_quick_alert_status(
             trigger_type="quick_alert_cancelled",
             idempotency_prefix=f"qa_cancel_{alert.alert_code}_{int(now_ist.timestamp())}"
         )
+    elif new_status == "WAITING_FOR_DETAILS":
+        type_disp = "APPLICATION" if alert.alert_type == "APPLICATION" else "SUPPORT"
+        wait_msg = (
+            f"⏸️ *WAITING FOR DETAILS*: Request *{alert.alert_code}* ({type_disp}) for partner *{alert.partner_name}* "
+            f"is on hold by *{staff_display}* at {now_ist.strftime('%I:%M %p IST')}.\n"
+            f"📋 *Required:* {(payload.notes or 'Details/documents requested from member').strip()}\n"
+            f"⏱️ SLA timer has been paused."
+        )
+        dispatch_quick_alert_to_whatsapp_groups(
+            db=db,
+            message_text=wait_msg,
+            job_id="vgk_alert_waiting_details",
+            job_name="VGK4U Quick Alert Waiting Details",
+            trigger_type="quick_alert_waiting_details",
+            idempotency_prefix=f"qa_wait_{alert.alert_code}_{int(now_ist.timestamp())}"
+        )
 
     # Automated lifecycle notification directly to the requester
     try:
         from app.services.whatsapp_request_lifecycle_service import send_request_lifecycle_whatsapp_notification
         type_label = "Member Application" if alert.alert_type == "APPLICATION" else "Support Request"
         req_code_display = f"{type_label} {alert.alert_code}"
+        action_url = f"https://www.myntreal.com/api/v1/vgk-quick-alerts/details-given/{alert.alert_code}"
         send_request_lifecycle_whatsapp_notification(
             db=db,
             recipient_phone=alert.partner_phone,
@@ -1298,7 +1346,8 @@ def update_quick_alert_status(
             request_code=req_code_display,
             staff_employee=current_user,
             notes=payload.notes,
-            company_id=getattr(alert, "company_id", 1) or 1
+            company_id=getattr(alert, "company_id", 1) or 1,
+            action_link=action_url
         )
     except Exception as req_notif_err:
         logger.warning(f"[VGK-ALERT] Requester status update notification warning: {req_notif_err}")
@@ -1309,4 +1358,206 @@ def update_quick_alert_status(
         "message": f"Alert status updated to {new_status}",
         "alert": enriched[0] if enriched else alert.to_dict()
     }
+
+
+@router.get("/details-given/{alert_code}", response_class=HTMLResponse)
+@router.post("/details-given/{alert_code}")
+def confirm_member_details_given(
+    alert_code: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Public 1-Tap endpoint for customer/member to confirm requested details have been provided.
+    Resumes SLA resolution clock, updates status to IN_PROGRESS,
+    and alerts both the staff WhatsApp group and the assigned staff member.
+    """
+    alert = db.query(VGKMemberQuickAlert).filter(
+        VGKMemberQuickAlert.alert_code == alert_code.strip()
+    ).first()
+
+    if not alert:
+        return HTMLResponse(
+            status_code=404,
+            content="""<!DOCTYPE html>
+            <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Request Not Found</title>
+            <style>body{font-family:sans-serif;background:#0f172a;color:#fff;text-align:center;padding:40px 20px;}</style>
+            </head><body>
+            <h2>⚠️ Request Not Found</h2>
+            <p>We could not find the specified request. Please verify your reference number.</p>
+            </body></html>"""
+        )
+
+    now_ist = get_indian_time()
+    timestamp_ist = now_ist.strftime("%d %b, %I:%M %p IST")
+
+    # If it was in WAITING_FOR_DETAILS, resume the clock
+    already_resumed = False
+    if alert.status == "WAITING_FOR_DETAILS":
+        if alert.waiting_for_details_at:
+            w_at = alert.waiting_for_details_at.replace(tzinfo=None) if hasattr(alert.waiting_for_details_at, 'tzinfo') and alert.waiting_for_details_at.tzinfo else alert.waiting_for_details_at
+            n_ist = now_ist.replace(tzinfo=None) if hasattr(now_ist, 'tzinfo') and now_ist.tzinfo else now_ist
+            paused_secs = max(0, int((n_ist - w_at).total_seconds())) if (n_ist and w_at) else 0
+            alert.total_waiting_seconds = (alert.total_waiting_seconds or 0) + paused_secs
+            alert.waiting_for_details_at = None
+
+        alert.details_received_at = now_ist
+        alert.status = "IN_PROGRESS"
+
+        existing_notes = (alert.processing_notes or "").strip()
+        new_entry = f"[{timestamp_ist} - Member / Customer]: ✅ Details confirmed provided by requester."
+        alert.processing_notes = f"{existing_notes}\n{new_entry}".strip() if existing_notes else new_entry
+
+        # Synchronize linked service ticket
+        sync_linked_service_ticket(
+            db=db,
+            alert=alert,
+            new_status="IN_PROGRESS",
+            actor_name="Customer",
+            notes="Customer confirmed details provided"
+        )
+
+        db.commit()
+        db.refresh(alert)
+
+        # Flash notifications to group and assigned staff
+        try:
+            from app.services.whatsapp_request_lifecycle_service import send_details_received_notifications
+            send_details_received_notifications(db=db, alert=alert)
+        except Exception as notif_err:
+            logger.warning(f"[DETAILS-GIVEN] Notifications error: {notif_err}")
+    else:
+        already_resumed = True
+
+    staff_name = "Assigned Support Executive"
+    if alert.claimed_by_staff_id:
+        try:
+            from app.models.staff import StaffEmployee
+            emp = db.query(StaffEmployee).filter(StaffEmployee.id == alert.claimed_by_staff_id).first()
+            if emp:
+                staff_name = getattr(emp, "full_name", "") or getattr(emp, "name", staff_name)
+        except Exception:
+            pass
+
+    type_label = "Member Application" if alert.alert_type == "APPLICATION" else "Support Request"
+    return HTMLResponse(
+        content=f"""<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Details Received — {alert.alert_code}</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                * {{ box-sizing: border-box; margin:0; padding:0; }}
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    color: #fff;
+                }}
+                .card {{
+                    background: rgba(30, 41, 59, 0.85);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-radius: 20px;
+                    padding: 32px 24px;
+                    max-width: 480px;
+                    width: 100%;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+                }}
+                .icon-wrap {{
+                    width: 76px;
+                    height: 76px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 36px;
+                    color: #fff;
+                    margin-bottom: 20px;
+                    box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+                }}
+                h1 {{ font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #f8fafc; }}
+                p {{ font-size: 14.5px; color: #94a3b8; line-height: 1.5; margin-bottom: 20px; }}
+                .badge-box {{
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-bottom: 24px;
+                    text-align: left;
+                }}
+                .badge-row {{
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 13.5px;
+                    padding: 6px 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                }}
+                .badge-row:last-child {{ border-bottom: none; }}
+                .badge-label {{ color: #94a3b8; }}
+                .badge-val {{ color: #f1f5f9; font-weight: 700; }}
+                .status-chip {{
+                    display: inline-block;
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    background: #10b981;
+                    color: #fff;
+                }}
+                .btn-home {{
+                    display: inline-block;
+                    width: 100%;
+                    padding: 14px 20px;
+                    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+                    color: #fff;
+                    text-decoration: none;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    font-size: 15px;
+                    transition: transform 0.15s ease;
+                }}
+                .btn-home:active {{ transform: scale(0.98); }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon-wrap">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h1>Details Confirmed Received!</h1>
+                <p>
+                    Thank you <strong>{alert.partner_name}</strong>. Your requested information has been registered and the resolution clock has resumed.
+                </p>
+                <div class="badge-box">
+                    <div class="badge-row">
+                        <span class="badge-label">Request Ref:</span>
+                        <span class="badge-val">{type_label} {alert.alert_code}</span>
+                    </div>
+                    <div class="badge-row">
+                        <span class="badge-label">Assigned Executive:</span>
+                        <span class="badge-val">{staff_name}</span>
+                    </div>
+                    <div class="badge-row">
+                        <span class="badge-label">Current Status:</span>
+                        <span class="badge-val"><span class="status-chip"><i class="fas fa-play me-1"></i> IN PROGRESS</span></span>
+                    </div>
+                    <div class="badge-row">
+                        <span class="badge-label">Confirmed At:</span>
+                        <span class="badge-val">{timestamp_ist}</span>
+                    </div>
+                </div>
+                <a href="https://www.myntreal.com" class="btn-home"><i class="fas fa-arrow-left me-1"></i> Return to MyntReal Portal</a>
+            </div>
+        </body>
+        </html>"""
+    )
 

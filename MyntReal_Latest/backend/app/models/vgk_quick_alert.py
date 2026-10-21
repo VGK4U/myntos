@@ -54,7 +54,12 @@ class VGKMemberQuickAlert(Base):
     linked_crm_lead_id = Column(Integer, nullable=True, index=True)
     linked_ticket_id = Column(Integer, nullable=True, index=True)
 
-    
+    # Waiting for Customer Details & SLA Clock Pause
+    waiting_for_details_at = Column(DateTime, nullable=True)
+    details_received_at = Column(DateTime, nullable=True)
+    total_waiting_seconds = Column(Integer, default=0, nullable=True)
+    waiting_notes = Column(Text, nullable=True)
+
     # Timestamps & Hourly Escalation Tracking (Strictly IST per app.core.timezone)
     created_at = Column(DateTime, default=get_indian_time, nullable=False, index=True)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
@@ -84,6 +89,9 @@ class VGKMemberQuickAlert(Base):
 
     def to_dict(self, now_ist=None, now_utc=None):
         now_ist = now_ist or now_utc or get_indian_time()
+        if now_ist and hasattr(now_ist, 'tzinfo') and now_ist.tzinfo:
+            now_ist = now_ist.replace(tzinfo=None)
+
         claimed_staff_name = None
         claimed_emp_code = None
         if self.claimed_by_staff:
@@ -99,6 +107,7 @@ class VGKMemberQuickAlert(Base):
         created_dt = (self.created_at.replace(tzinfo=None) if self.created_at and self.created_at.tzinfo else self.created_at) or now_ist
         claimed_dt = (self.claimed_at.replace(tzinfo=None) if self.claimed_at and self.claimed_at.tzinfo else self.claimed_at)
         processed_dt = (self.processed_at.replace(tzinfo=None) if self.processed_at and self.processed_at.tzinfo else self.processed_at)
+        waiting_dt = (self.waiting_for_details_at.replace(tzinfo=None) if self.waiting_for_details_at and self.waiting_for_details_at.tzinfo else self.waiting_for_details_at)
 
         pending_since_seconds = max(0, int((now_ist - created_dt).total_seconds()))
 
@@ -109,31 +118,41 @@ class VGKMemberQuickAlert(Base):
             claim_wait_seconds = pending_since_seconds
 
         handling_seconds = None
-        if self.status in ('CLAIMED', 'IN_PROGRESS'):
+        acc_waiting_secs = self.total_waiting_seconds or 0
+
+        if self.status == 'WAITING_FOR_DETAILS':
             ref_start = claimed_dt or created_dt
-            handling_seconds = max(0, int((now_ist - ref_start).total_seconds()))
+            pause_pt = waiting_dt or now_ist
+            raw_elapsed = max(0, int((pause_pt - ref_start).total_seconds())) if ref_start else 0
+            handling_seconds = max(0, raw_elapsed - acc_waiting_secs)
+        elif self.status in ('CLAIMED', 'IN_PROGRESS'):
+            ref_start = claimed_dt or created_dt
+            raw_elapsed = max(0, int((now_ist - ref_start).total_seconds())) if ref_start else 0
+            handling_seconds = max(0, raw_elapsed - acc_waiting_secs)
         elif self.status == 'PROCESSED' and processed_dt:
             ref_start = claimed_dt or created_dt
-            handling_seconds = max(0, int((processed_dt - ref_start).total_seconds()))
+            raw_elapsed = max(0, int((processed_dt - ref_start).total_seconds())) if ref_start else 0
+            handling_seconds = max(0, raw_elapsed - acc_waiting_secs)
 
         total_turnaround_seconds = None
         if self.status == 'PROCESSED' and processed_dt and created_dt:
-            total_turnaround_seconds = max(0, int((processed_dt - created_dt).total_seconds()))
+            raw_total = max(0, int((processed_dt - created_dt).total_seconds()))
+            total_turnaround_seconds = max(0, raw_total - acc_waiting_secs)
 
         # 3-Hour (10,800 seconds) Re-Claim SLA Rule:
         # Any application/support request pending > 3h OR claimed/in-progress > 3h without completion
         # can be claimed / re-claimed by anyone else in eligible department staff.
+        # EXCLUSION: If currently in WAITING_FOR_DETAILS, SLA clock is frozen and cannot be re-claimed.
         is_reclaimable_3h = False
         reclaim_reason = None
         if self.status == 'PENDING' and pending_since_seconds >= 10800:
             is_reclaimable_3h = True
             reclaim_reason = "Unclaimed for over 3 hours"
         elif self.status in ('CLAIMED', 'IN_PROGRESS'):
-            ref_claim = claimed_dt or created_dt
-            elapsed_since_claim = max(0, int((now_ist - ref_claim).total_seconds()))
-            if elapsed_since_claim >= 10800 or pending_since_seconds >= 10800:
+            active_duration = handling_seconds if handling_seconds is not None else 0
+            if active_duration >= 10800:
                 is_reclaimable_3h = True
-                reclaim_reason = "Pending completion for over 3 hours"
+                reclaim_reason = "Pending completion for over 3 hours (excluding waiting time)"
 
         display_type = "APPLICATION" if self.alert_type == "APPLICATION" else "SUPPORT"
 
@@ -177,5 +196,10 @@ class VGKMemberQuickAlert(Base):
             "total_turnaround_seconds": total_turnaround_seconds,
             "is_reclaimable_3h": is_reclaimable_3h,
             "reclaim_reason": reclaim_reason,
+            "waiting_for_details_at": self._serialize_ist_iso(self.waiting_for_details_at),
+            "waiting_for_details_at_ist": self._format_ist_display(self.waiting_for_details_at),
+            "details_received_at": self._serialize_ist_iso(self.details_received_at),
+            "total_waiting_seconds": self.total_waiting_seconds or 0,
+            "waiting_notes": self.waiting_notes,
         }
 

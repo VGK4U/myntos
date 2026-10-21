@@ -44,6 +44,11 @@ TEMPLATE_MAP = {
         "meta_name": "mnr_request_update_v1",
         "slug": "request_update_notification",
         "text_template": "Dear {name}, update on your {request_code}: {notes}. Executive {staff_name} is handling your request. Contact {phone} for queries."
+    },
+    "WAITING_FOR_DETAILS": {
+        "meta_name": "mnr_request_waiting_details_v1",
+        "slug": "request_waiting_details_notification",
+        "text_template": "Dear {name}, we require additional details for your {request_code}: {notes}. Assigned executive: {staff_name} (Phone: {phone} Ext: {ext}). Once provided, tap to confirm: {action_link}"
     }
 }
 
@@ -110,7 +115,8 @@ def send_request_lifecycle_whatsapp_notification(
     staff_employee: Optional[Any] = None,
     notes: Optional[str] = None,
     company_id: int = 1,
-    job_id: Optional[str] = None
+    job_id: Optional[str] = None,
+    action_link: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends life-cycle notification to the requester via Meta Cloud API with fallback to Scanned Bot.
@@ -127,14 +133,17 @@ def send_request_lifecycle_whatsapp_notification(
         norm_event = "COMPLETED"
     elif event_key in ("CANCEL", "CANCELLED", "REJECTED"):
         norm_event = "CANCELLED"
+    elif event_key in ("WAITING_FOR_DETAILS", "WAITING", "DETAILS_REQUIRED", "HOLD"):
+        norm_event = "WAITING_FOR_DETAILS"
     else:
         norm_event = "UPDATED"
 
     cfg = TEMPLATE_MAP.get(norm_event, TEMPLATE_MAP["UPDATED"])
     staff_info = resolve_staff_contact_details(db, staff_employee, company_id=company_id)
     clean_name = (recipient_name or "Valued Member").strip()
-    clean_notes = (notes or ("Cancelled as requested" if norm_event == "CANCELLED" else "In progress")).strip()
+    clean_notes = (notes or ("Cancelled as requested" if norm_event == "CANCELLED" else ("Additional details required" if norm_event == "WAITING_FOR_DETAILS" else "In progress"))).strip()
     clean_notes = re.sub(r'[\r\n]+', ' ', clean_notes)[:120]
+    effective_link = action_link or f"https://www.myntreal.com/req/{request_code.split()[-1]}/details-given"
 
     # Format text for scanned/fallback
     rendered_text = cfg["text_template"].format(
@@ -143,7 +152,8 @@ def send_request_lifecycle_whatsapp_notification(
         staff_name=staff_info["staff_name"],
         phone=staff_info["staff_phone"],
         ext=staff_info["staff_ext"],
-        notes=clean_notes
+        notes=clean_notes,
+        action_link=effective_link
     )
 
     # Build Meta Cloud API parameters
@@ -163,6 +173,16 @@ def send_request_lifecycle_whatsapp_notification(
             clean_notes,
             staff_info["staff_phone"],
             staff_info["staff_ext"]
+        ]
+    elif norm_event == "WAITING_FOR_DETAILS":
+        body_vars = [
+            clean_name,
+            request_code,
+            clean_notes,
+            staff_info["staff_name"],
+            staff_info["staff_phone"],
+            staff_info["staff_ext"],
+            effective_link
         ]
     else:  # UPDATED
         body_vars = [
@@ -316,4 +336,98 @@ def send_ticket_lifecycle_whatsapp_notification(
         company_id=cid,
         job_id="support_ticket_requester_notif"
     )
+
+
+def send_details_received_notifications(
+    db: Session,
+    alert: Any,
+    staff_employee: Optional[Any] = None
+) -> Dict[str, Any]:
+    """
+    Flashes instant notification to:
+    1. The Staff WhatsApp Group (e.g. Mynt Sales New)
+    2. The specific assigned staff member's direct WhatsApp
+    when a member/customer confirms details have been submitted.
+    """
+    results = {"group": None, "staff": None}
+    if not alert:
+        return results
+
+    now_ist = get_indian_time()
+    type_label = "Member Application" if getattr(alert, "alert_type", "") == "APPLICATION" else "Support Request"
+    req_code = getattr(alert, "alert_code", "")
+    partner_name = getattr(alert, "partner_name", "Partner")
+    partner_phone = getattr(alert, "partner_phone", "")
+
+    staff_name = "Assigned Executive"
+    staff_phone = None
+    if not staff_employee and getattr(alert, "claimed_by_staff_id", None):
+        try:
+            from app.models.staff import StaffEmployee
+            staff_employee = db.query(StaffEmployee).filter(StaffEmployee.id == alert.claimed_by_staff_id).first()
+        except Exception:
+            pass
+
+    if staff_employee:
+        staff_name = (
+            getattr(staff_employee, "full_name", "")
+            or getattr(staff_employee, "name", "")
+            or getattr(staff_employee, "username", "")
+            or "Assigned Executive"
+        ).strip()
+        staff_phone = getattr(staff_employee, "phone", None) or getattr(staff_employee, "mobile", None)
+
+    # 1. Staff WhatsApp Group Broadcast
+    group_msg = (
+        f"🔔 *DETAILS RECEIVED: {type_label} {req_code}*\n\n"
+        f"👤 *Partner:* {partner_name} ({partner_phone})\n"
+        f"👨‍💼 *Assigned To:* {staff_name}\n"
+        f"⏰ *Time:* {now_ist.strftime('%I:%M %p IST')}\n"
+        f"▶️ *Clock Resumed:* Status updated to RUNNING / IN PROGRESS.\n\n"
+        f"Please check your Live Desk to proceed with this request."
+    )
+
+    try:
+        from app.services.whatsapp_group_alert_service import send_group_bot_message
+        grp_res = send_group_bot_message(
+            message_text=group_msg,
+            group_name="Mynt Sales New",
+            group_id="120363410784518818@g.us",
+            job_id="qa_details_received_notif",
+            trigger_type="quick_alert_details_received",
+            db=db,
+            force_queue=True
+        )
+        if grp_res.get("success"):
+            results["group"] = True
+            logger.info(f"[REQ-NOTIF] Group details-received notification enqueued successfully")
+    except Exception as g_err:
+        logger.warning(f"[REQ-NOTIF] Group details-received error: {g_err}")
+
+    # 2. Direct WhatsApp Notification to Specific Assigned Staff Member
+    if staff_phone:
+        clean_staff_phone = normalize_phone_number(staff_phone)
+        if clean_staff_phone:
+            staff_jid = f"91{clean_staff_phone}@s.whatsapp.net"
+            staff_direct_msg = (
+                f"👋 *Hi {staff_name}!* Requested details have been received.\n\n"
+                f"📋 *Request:* {type_label} *{req_code}*\n"
+                f"👤 *Partner:* {partner_name} ({partner_phone})\n"
+                f"▶️ The request has been resumed to *IN PROGRESS* in your Live Desk queue. Please review and continue processing."
+            )
+            try:
+                db.execute(
+                    text("""
+                        INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, job_id)
+                        VALUES ('individual', :target_jid, :msg, 'pending', :now_ist, 'qa_details_received_notif')
+                    """),
+                    {"target_jid": staff_jid, "msg": staff_direct_msg, "now_ist": now_ist}
+                )
+                db.commit()
+                results["staff"] = True
+                logger.info(f"[REQ-NOTIF] Staff direct details-received notification enqueued to {staff_jid}")
+            except Exception as s_err:
+                logger.warning(f"[REQ-NOTIF] Staff direct details-received error: {s_err}")
+
+    return results
 
