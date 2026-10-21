@@ -4005,7 +4005,7 @@ const _SOLAR_STAGE_LABELS = {
 
 function copyFlFvShareableLink() {
   if (!_flFvCurrentId) return;
-  const url = `${window.location.origin}/staff/vgk/members?open_freelancer=${encodeURIComponent(_flFvCurrentId)}`;
+  const url = `${window.location.origin}/vgk/ground-source?id=${encodeURIComponent(_flFvCurrentId)}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(() => {
       const btn = document.getElementById('flFvShareBtn');
@@ -4351,13 +4351,13 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Auto-open Ground Source Full View if shared link with open_freelancer parameter is detected
+// Redirect or open exclusive standalone Ground Source page if shared link parameter is detected
 document.addEventListener('DOMContentLoaded', function() {
   try {
     const params = new URLSearchParams(window.location.search);
     const flParam = params.get('open_freelancer') || params.get('freelancer_id');
     if (flParam) {
-      setTimeout(() => { openFreelancerFullLeadModal(parseInt(flParam)); }, 500);
+      window.location.replace(`${window.location.origin}/vgk/ground-source?id=${encodeURIComponent(flParam)}`);
     }
   } catch (_e) {}
 });

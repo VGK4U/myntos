@@ -17405,6 +17405,18 @@ async def serve_staff_progress():
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+@app.get("/vgk/ground-source", include_in_schema=False)
+@app.get("/staff/vgk/ground-source", include_in_schema=False)
+@app.get("/vgk_ground_source.html", include_in_schema=False)
+async def serve_vgk_ground_source():
+    from fastapi.responses import FileResponse
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_file = os.path.join(_workspace_root, "frontend", "vgk_ground_source.html")
+    if os.path.exists(target_file):
+        return FileResponse(target_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Ground Source page not found")
+
+
 @app.get("/staff/softphone", include_in_schema=False)
 @app.get("/staff/softphone-center", include_in_schema=False)
 @app.get("/staff/incoming-calls", include_in_schema=False)
@@ -17762,6 +17774,9 @@ async def serve_staff_dynamic_pages(page: str, request: Request):
         "vgk4u/real-estate": "staff_vgk4u_real_estate.html",
         "vgk4u/insurance": "staff_vgk4u_insurance.html",
         "vgk-members": "staff_vgk_members.html",
+        "vgk/ground-source": "vgk_ground_source.html",
+        "staff/vgk/ground-source": "vgk_ground_source.html",
+        "ground-source": "vgk_ground_source.html",
         "vgk/vendors": "staff_vgk_vendors.html",
         "vgk/vendor-categories": "staff_vgk_vendor_categories.html",
         "vgk/vendor-products": "staff_vgk_vendor_products.html",

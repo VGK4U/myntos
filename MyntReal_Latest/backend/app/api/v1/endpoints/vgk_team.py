@@ -1608,15 +1608,37 @@ def create_freelancer(
 
 @router.get("/freelancers/{freelancer_id}")
 def get_freelancer_detail(
+    request: Request,
     freelancer_id: int = Path(...),
-    current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
     Dedicated Freelancer detail view.
     Suppresses all MLM tree, commission, and MLM wallet cards.
     Provides originated leads list and audit history.
+    Accessible by authorized Staff or the Freelancer themselves.
     """
+    from app.api.v1.endpoints.staff_auth import get_current_staff_user
+    from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
+    import re
+
+    staff_user = None
+    partner_user = None
+    if request:
+        try:
+            staff_user = get_current_staff_user(request, db)
+        except Exception:
+            pass
+
+        if not staff_user:
+            try:
+                partner_user = get_current_vgk_member(request, db)
+            except Exception:
+                pass
+
+    if not staff_user and not partner_user:
+        raise HTTPException(status_code=401, detail="Authentication required (Staff or Freelancer login)")
+
     fl = db.query(OfficialPartner).filter(
         OfficialPartner.id == freelancer_id,
         OfficialPartner.category == 'VGK_TEAM',
@@ -1625,9 +1647,25 @@ def get_freelancer_detail(
     if not fl:
         raise HTTPException(status_code=404, detail="Freelancer not found")
 
-    if not _has_full_vgk_visibility(current_user):
-        if fl.assigned_staff_id != current_user.id and fl.registered_by_emp_code != current_user.emp_code:
-            raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to view this Freelancer.")
+    is_staff = bool(staff_user is not None)
+
+    if staff_user:
+        # User requirement: Any authenticated staff member can view ground source pipeline with phone masking enforced
+        pass
+    elif partner_user:
+        if partner_user.id != fl.id and partner_user.id != fl.vgk_support_id and partner_user.id != fl.parent_partner_id:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only view your own ground source pipeline.")
+
+    def _mask_phone(raw_phone: str) -> str:
+        if not raw_phone:
+            return "—"
+        clean = re.sub(r'\D', '', str(raw_phone).strip())
+        if len(clean) < 6:
+            return "—"
+        c10 = clean[-10:] if len(clean) >= 10 else clean
+        if len(c10) == 10:
+            return f"+91 {c10[:2]}••••{c10[-4:]}"
+        return f"{c10[:2]}••••{c10[-2:]}"
 
     support = db.query(OfficialPartner).filter(OfficialPartner.id == fl.vgk_support_id).first() if fl.vgk_support_id else None
 
@@ -1713,11 +1751,17 @@ def get_freelancer_detail(
             pipeline_count += 1
             pipeline_deal_val += deal_val
 
+        raw_phone = r[2] or ""
+        masked_phone = _mask_phone(raw_phone)
+        display_phone = masked_phone if is_staff else raw_phone
+
         lead_item = {
             "id": r[0],
             "lead_name": r[1] or "Unnamed Lead",
             "name": r[1] or "Unnamed Lead",
-            "phone": r[2] or "",
+            "phone": display_phone,
+            "masked_phone": masked_phone,
+            "raw_phone": raw_phone if not is_staff else None,
             "stage": r[4] or r[3] or "Lead",
             "status": r[3] or "new",
             "solar_pipeline_status": r[4],
@@ -1774,21 +1818,30 @@ def get_freelancer_detail(
         "support_counts": support_counts
     }
 
+    supp_phone = support.phone if support else ""
+    masked_supp_phone = _mask_phone(supp_phone) if supp_phone else ""
     support_dict = {
         "id": support.id,
         "partner_code": support.partner_code,
         "partner_name": support.partner_name,
-        "phone": support.phone,
+        "phone": masked_supp_phone if is_staff else supp_phone,
+        "masked_phone": masked_supp_phone,
         "email": support.email,
         "designation_tier": getattr(support, 'designation_tier', None) or 'Channel Partner'
     } if support else None
+
+    fl_phone = fl.phone or ""
+    fl_alt_phone = fl.alternate_phone or ""
+    masked_fl_phone = _mask_phone(fl_phone)
+    masked_fl_alt = _mask_phone(fl_alt_phone) if fl_alt_phone else ""
 
     data_payload = {
         "id": fl.id,
         "partner_code": fl.partner_code,
         "partner_name": fl.partner_name,
-        "phone": fl.phone,
-        "alternate_phone": fl.alternate_phone,
+        "phone": masked_fl_phone if is_staff else fl_phone,
+        "masked_phone": masked_fl_phone,
+        "alternate_phone": masked_fl_alt if is_staff else fl_alt_phone,
         "email": fl.email,
         "area": fl.area,
         "city": fl.city,
@@ -1809,8 +1862,16 @@ def get_freelancer_detail(
         "audit_trail": audit_logs
     }
 
+    viewer_info = {
+        "is_staff": is_staff,
+        "role": "STAFF" if is_staff else "FREELANCER",
+        "username": getattr(staff_user, 'full_name', '') if staff_user else getattr(partner_user, 'partner_name', ''),
+        "identifier": getattr(staff_user, 'emp_code', '') if staff_user else getattr(partner_user, 'partner_code', '')
+    }
+
     return {
         "success": True,
+        "viewer": viewer_info,
         "data": data_payload,
         "support_partner": support_dict,
         "originated_leads": all_leads,

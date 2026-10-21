@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ground Source Pipeline - Exclusive View</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/public/zynova-z-icon.png?v=zclean2">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --success: #16a34a;
+      --success-light: #dcfce7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --warning: #d97706;
+      --warning-light: #fef3c7;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      background: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--slate-900);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Brand Bar */
+    .top-navbar {
+      background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+      color: white;
+      padding: 12px 24px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .top-navbar .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .top-navbar .brand-logo {
+      background: white;
+      color: var(--primary-dark);
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .top-navbar .page-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f0f9ff;
+    }
+
+    .top-navbar .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-pill {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-nav {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-nav:hover {
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
+    }
+
+    /* Main Container */
+    .dashboard-container {
+      max-width: 1360px;
+      width: 100%;
+      margin: 20px auto;
+      padding: 0 18px 40px;
+      flex: 1;
+    }
+
+    /* Member Overview Header Card */
+    .member-header-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .member-info-col h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin: 0 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .member-code-badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .member-meta-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--slate-600);
+    }
+    .member-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Financial & Operational KPI Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    .kpi-total::before { background: #0284c7; }
+    .kpi-won::before { background: #16a34a; }
+    .kpi-pipeline::before { background: #0284c7; }
+    .kpi-lost::before { background: #dc2626; }
+    .kpi-received::before { background: #059669; }
+    .kpi-pending::before { background: #d97706; }
+
+    .kpi-card .kpi-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--slate-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .kpi-card .kpi-count {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1;
+    }
+
+    .kpi-card .kpi-val {
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 5px;
+    }
+
+    /* Dynamic Stage Pills Container */
+    .stage-pills-bar {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stage-pill {
+      cursor: pointer;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--slate-300);
+      background: white;
+      color: var(--slate-700);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .stage-pill:hover {
+      background: var(--slate-100);
+      border-color: var(--slate-400);
+    }
+    .stage-pill.active {
+      background: var(--primary);
+      border-color: var(--primary-dark);
+      color: white;
+    }
+    .stage-pill .badge-count {
+      background: rgba(0,0,0,0.08);
+      padding: 1px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+    .stage-pill.active .badge-count {
+      background: rgba(255,255,255,0.25);
+      color: white;
+    }
+
+    /* Filter Toolbar */
+    .filter-toolbar {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
+      max-width: 440px;
+    }
+    .search-box i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid var(--slate-300);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border 0.15s ease;
+    }
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .toolbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      padding: 7px 10px;
+      border: 1px solid var(--slate-300);
+      border-radius: 8px;
+      font-size: 12.5px;
+      background: white;
+      color: var(--slate-700);
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Leads Table */
+    .table-container {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      overflow-x: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .leads-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+
+    .leads-table th {
+      background: #f8fafc;
+      padding: 12px 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--slate-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--slate-200);
+      user-select: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .leads-table th:hover {
+      background: #f1f5f9;
+      color: var(--primary);
+    }
+
+    .leads-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--slate-100);
+      vertical-align: middle;
+    }
+
+    .leads-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .badge-status {
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .badge-stage {
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .support-pill {
+      background: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .phone-masked {
+      font-family: monospace;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #475569;
+    }
+
+    /* Auth Modal / Overlay */
+    .auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .auth-card {
+      background: white;
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    }
+
+    .auth-header {
+      background: linear-gradient(135deg, #0369a1, #0284c7);
+      padding: 24px;
+      text-align: center;
+      color: white;
+    }
+    .auth-header h4 {
+      font-size: 19px;
+      font-weight: 800;
+      margin: 0 0 4px;
+    }
+    .auth-header p {
+      font-size: 12.5px;
+      color: #bae6fd;
+      margin: 0;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--slate-200);
+      background: #f8fafc;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--slate-600);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .auth-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: white;
+    }
+
+    .auth-body {
+      padding: 24px;
+    }
+
+    .auth-body .form-group {
+      margin-bottom: 16px;
+    }
+    .auth-body label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--slate-700);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .auth-body input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--slate-300);
+      border-radius: 8px;
+      font-size: 13.5px;
+    }
+    .auth-body input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-login:hover {
+      background: var(--primary-dark);
+    }
+
+    .auth-alert {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .auth-alert-danger {
+      background: var(--danger-light);
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="top-navbar">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <i class="fas fa-solar-panel"></i>
+        <span>VGK4U</span>
+      </div>
+      <div class="page-title">
+        Ground Source Pipeline
+      </div>
+    </div>
+    <div class="actions">
+      <div id="viewerBadge" class="user-pill" style="display:none">
+        <i class="fas fa-user-circle"></i>
+        <span id="viewerNameText">Checking Auth...</span>
+      </div>
+      <button class="btn-nav" id="btnShare" onclick="copyShareLink()" title="Copy Shareable Link">
+        <i class="fas fa-share-alt"></i>
+        <span>Share Link</span>
+      </button>
+      <button class="btn-nav" onclick="refreshDashboard()" title="Refresh Leads Data">
+        <i class="fas fa-sync-alt"></i>
+        <span>Refresh</span>
+      </button>
+      <button class="btn-nav" id="btnLogout" onclick="logout()" style="display:none" title="Log out">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Dashboard Content -->
+  <main class="dashboard-container">
+    
+    <!-- Member Header Card -->
+    <div class="member-header-card" id="memberHeaderCard">
+      <div class="member-info-col">
+        <h3>
+          <span id="flName">Loading Ground Source Member...</span>
+          <span class="member-code-badge" id="flCode">---</span>
+        </h3>
+        <div class="member-meta-row" id="flMetaRow">
+          <div class="member-meta-item">
+            <i class="fas fa-phone text-muted"></i>
+            <span id="flPhone" class="phone-masked">—</span>
+          </div>
+          <div class="member-meta-item">
+            <i class="fas fa-user-shield text-primary"></i>
+            <span>Support: <strong id="flSupport">—</strong></span>
+          </div>
+          <div class="member-meta-item">
+            <i class="fas fa-calendar-alt text-muted"></i>
+            <span>Enrolled: <span id="flEnrolled">—</span></span>
+          </div>
+          <div class="member-meta-item" id="flLocationItem">
+            <i class="fas fa-map-marker-alt text-danger"></i>
+            <span id="flLocation">—</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span id="privacyStatusBadge" class="badge bg-light text-dark border px-3 py-2" style="font-size:12px;font-weight:700">
+          <i class="fas fa-shield-alt text-primary me-1"></i> Phone Protection Active
+        </span>
+      </div>
+    </div>
+
+    <!-- 6 KPI Financial & Operational Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-total">
+        <div class="kpi-label"><i class="fas fa-layer-group text-primary me-1"></i> Total Leads</div>
+        <div class="kpi-count" id="kpiTotal">0</div>
+        <div class="kpi-val text-primary" id="kpiTotalVal">₹0</div>
+      </div>
+
+      <div class="kpi-card kpi-won">
+        <div class="kpi-label"><i class="fas fa-trophy text-success me-1"></i> Won / Closed</div>
+        <div class="kpi-count text-success" id="kpiWon">0</div>
+        <div class="kpi-val text-success" id="kpiWonVal">₹0</div>
+      </div>
+
+      <div class="kpi-card kpi-pipeline">
+        <div class="kpi-label"><i class="fas fa-hourglass-half text-info me-1"></i> In Pipeline</div>
+        <div class="kpi-count text-primary" id="kpiPipeline">0</div>
+        <div class="kpi-val text-primary" id="kpiPipelineVal">₹0</div>
+      </div>
+
+      <div class="kpi-card kpi-lost">
+        <div class="kpi-label"><i class="fas fa-times-circle text-danger me-1"></i> Lost / Cancelled</div>
+        <div class="kpi-count text-danger" id="kpiLost">0</div>
+        <div class="kpi-val text-danger" id="kpiLostVal">₹0</div>
+      </div>
+
+      <div class="kpi-card kpi-received">
+        <div class="kpi-label"><i class="fas fa-hand-holding-usd text-success me-1"></i> Received Value</div>
+        <div class="kpi-count text-success" id="kpiReceivedVal" style="font-size:20px">₹0</div>
+        <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Collected from deals</div>
+      </div>
+
+      <div class="kpi-card kpi-pending">
+        <div class="kpi-label"><i class="fas fa-clock text-warning me-1"></i> Pending Value</div>
+        <div class="kpi-count text-warning" id="kpiPendingVal" style="font-size:20px">₹0</div>
+        <div class="kpi-val text-muted" style="font-size:11px;font-weight:600">Balance to collect</div>
+      </div>
+    </div>
+
+    <!-- Dynamic Stage Pills -->
+    <div class="stage-pills-bar">
+      <div style="font-size:12px;font-weight:800;color:#64748b;margin-right:4px">
+        <i class="fas fa-filter me-1"></i> STAGE:
+      </div>
+      <div id="stagePillsContainer" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <div class="filter-toolbar">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search by lead name, phone, stage, support, city..." oninput="onSearchInput()">
+      </div>
+
+      <div class="toolbar-controls">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label for="supportSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Support:</label>
+          <select id="supportSelect" class="filter-select" onchange="onSupportChange(this.value)">
+            <option value="ALL">All Support</option>
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px">
+          <label for="sortSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Sort by:</label>
+          <select id="sortSelect" class="filter-select" onchange="onSortChange(this.value)">
+            <option value="created_desc">Newest First</option>
+            <option value="created_asc">Oldest First</option>
+            <option value="deal_desc">Deal Value: High to Low</option>
+            <option value="deal_asc">Deal Value: Low to High</option>
+            <option value="name_asc">Name: A to Z</option>
+            <option value="name_desc">Name: Z to A</option>
+            <option value="support_asc">Support Name</option>
+            <option value="stage_asc">Stage</option>
+          </select>
+        </div>
+
+        <div id="countBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
+          Showing 0 leads
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads Data Table -->
+    <div class="table-container">
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th onclick="toggleSort('id')">ID <span id="sortIcon_id">↕</span></th>
+            <th onclick="toggleSort('name')">Customer Name & Location <span id="sortIcon_name">↕</span></th>
+            <th onclick="toggleSort('support')">Support (L5) <span id="sortIcon_support">↕</span></th>
+            <th onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
+            <th onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
+            <th onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
+            <th onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
+            <th onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="leadsTbody">
+          <tr>
+            <td colspan="8" style="text-align:center;padding:40px;color:#64748b">
+              <i class="fas fa-spinner fa-spin me-2"></i> Initializing Ground Source registry...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Login Overlay Modal (Displayed when unauthenticated) -->
+  <div class="auth-overlay" id="authModal" style="display:none">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div style="font-size:24px;margin-bottom:6px"><i class="fas fa-lock"></i></div>
+        <h4>Authentication Required</h4>
+        <p>Log in with your Freelancer or Staff credentials</p>
+      </div>
+
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tabPartner" onclick="switchAuthTab('partner')">
+          <i class="fas fa-user-tag me-1"></i> Freelancer / Partner
+        </div>
+        <div class="auth-tab" id="tabStaff" onclick="switchAuthTab('staff')">
+          <i class="fas fa-user-shield me-1"></i> Staff Login
+        </div>
+      </div>
+
+      <div class="auth-body">
+        <div class="auth-alert auth-alert-danger" id="loginAlert"></div>
+
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+          <!-- Partner Form Fields -->
+          <div id="partnerFields">
+            <div class="form-group">
+              <label for="partnerIdent">Partner Code or Mobile Number</label>
+              <input type="text" id="partnerIdent" placeholder="e.g. VGK07102138 or 9876543210" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="partnerPass">Password</label>
+              <input type="password" id="partnerPass" placeholder="Enter password" autocomplete="current-password">
+            </div>
+          </div>
+
+          <!-- Staff Form Fields -->
+          <div id="staffFields" style="display:none">
+            <div class="form-group">
+              <label for="staffIdent">Staff Employee Code / Email / Phone</label>
+              <input type="text" id="staffIdent" placeholder="e.g. EMP001 or admin@zynova.in" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="staffPass">Password</label>
+              <input type="password" id="staffPass" placeholder="Enter password" autocomplete="current-password">
+            </div>
+          </div>
+
+          <button type="submit" class="btn-login" id="btnLoginSubmit">
+            <i class="fas fa-sign-in-alt"></i>
+            <span>Log In to View Ground Source</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let _allLeads = [];
+    let _activeStageFilter = 'ALL';
+    let _activeSupportFilter = 'ALL';
+    let _searchQuery = '';
+    let _sortField = 'created_at';
+    let _sortDir = 'desc';
+    let _viewer = { is_staff: false, role: 'NONE', username: '', identifier: '' };
+    let _activeAuthTab = 'partner';
+    let _targetFreelancerId = null;
+
+    const _SOLAR_STAGE_LABELS = {
+      'pending_with_bank': 'With Bank',
+      'application_submitted': 'App Submitted',
+      'documents_pending': 'Docs Pending',
+      'documents_issue': 'Docs Issue',
+      'load_extension': 'Load Extension',
+      'eb_cust': 'EB Customer',
+      'eb_staff': 'EB Staff',
+      'installation_pending': 'Install Pending',
+      'installed': 'Installed',
+      'dcr_pending': 'DCR Pending',
+      'discom_pending': 'DISCOM Pending',
+      'net_meter_pending': 'Net Meter Pending',
+      'balance_pending': 'Balance Pending',
+      'balance_received': 'Balance Received',
+      'subsidy_pending': 'Subsidy Pending',
+      'completed': 'Completed',
+      'won': 'Won',
+      'loan_rejected': 'Loan Rejected',
+      'bank_loan_rejected': 'Bank Rejected',
+      'waiting_for_bank_loan': 'Waiting Bank',
+      'loan_process': 'Loan Process',
+      'not_interested': 'Not Interested',
+      'cancelled': 'Cancelled'
+    };
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function fmtDate(isoStr) {
+      if (!isoStr) return '—';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch (_e) {
+        return isoStr;
+      }
+    }
+
+    function maskPhoneStrict(phone) {
+      if (!phone) return '—';
+      const clean = String(phone).replace(/\D/g, '');
+      if (clean.length < 6) return '—';
+      const c10 = clean.length >= 10 ? clean.slice(-10) : clean;
+      if (c10.length === 10) {
+        return `+91 ${c10.slice(0, 2)}••••${c10.slice(-4)}`;
+      }
+      return `${c10.slice(0, 2)}••••${c10.slice(-2)}`;
+    }
+
+    function getAuthToken() {
+      // Check staff tokens first, then partner tokens
+      return localStorage.getItem('staff_token') ||
+             localStorage.getItem('access_token') ||
+             localStorage.getItem('vgk_token') ||
+             sessionStorage.getItem('staff_token') ||
+             sessionStorage.getItem('vgk_token') ||
+             sessionStorage.getItem('access_token');
+    }
+
+    function switchAuthTab(type) {
+      _activeAuthTab = type;
+      const tabP = document.getElementById('tabPartner');
+      const tabS = document.getElementById('tabStaff');
+      const pf = document.getElementById('partnerFields');
+      const sf = document.getElementById('staffFields');
+      const alertEl = document.getElementById('loginAlert');
+      if (alertEl) alertEl.style.display = 'none';
+
+      if (type === 'partner') {
+        tabP.classList.add('active');
+        tabS.classList.remove('active');
+        pf.style.display = 'block';
+        sf.style.display = 'none';
+      } else {
+        tabS.classList.add('active');
+        tabP.classList.remove('active');
+        sf.style.display = 'block';
+        pf.style.display = 'none';
+      }
+    }
+
+    function showAuthModal() {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function hideAuthModal() {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const alertEl = document.getElementById('loginAlert');
+      const submitBtn = document.getElementById('btnLoginSubmit');
+      if (alertEl) alertEl.style.display = 'none';
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Authenticating...';
+      }
+
+      try {
+        if (_activeAuthTab === 'partner') {
+          const ident = document.getElementById('partnerIdent').value.trim();
+          const pass = document.getElementById('partnerPass').value;
+          if (!ident || !pass) {
+            throw new Error('Please enter both Partner Code/Mobile and Password');
+          }
+
+          const res = await fetch('/api/v1/vgk/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: ident, password: pass })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success || !data.access_token) {
+            throw new Error(data.message || data.detail || 'Invalid Freelancer login credentials');
+          }
+
+          localStorage.setItem('vgk_token', data.access_token);
+          if (data.partner) {
+            localStorage.setItem('vgk_partner', JSON.stringify(data.partner));
+          }
+        } else {
+          const ident = document.getElementById('staffIdent').value.trim();
+          const pass = document.getElementById('staffPass').value;
+          if (!ident || !pass) {
+            throw new Error('Please enter both Staff ID and Password');
+          }
+
+          const res = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: ident, password: pass })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.access_token) {
+            throw new Error(data.detail || data.message || 'Invalid Staff login credentials');
+          }
+
+          localStorage.setItem('staff_token', data.access_token);
+          localStorage.setItem('access_token', data.access_token);
+        }
+
+        hideAuthModal();
+        await loadFreelancerData();
+      } catch (err) {
+        if (alertEl) {
+          alertEl.textContent = err.message || 'Login failed. Please check your credentials.';
+          alertEl.style.display = 'block';
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Log In to View Ground Source</span>';
+        }
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('staff_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('vgk_token');
+      localStorage.removeItem('vgk_partner');
+      sessionStorage.clear();
+      showAuthModal();
+      document.getElementById('viewerBadge').style.display = 'none';
+      document.getElementById('btnLogout').style.display = 'none';
+    }
+
+    function copyShareLink() {
+      const url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          const btn = document.getElementById('btnShare');
+          if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-success"></i> <span>Copied!</span>';
+            setTimeout(() => { btn.innerHTML = orig; }, 2200);
+          }
+        }).catch(() => {
+          prompt('Copy this Ground Source link:', url);
+        });
+      } else {
+        prompt('Copy this Ground Source link:', url);
+      }
+    }
+
+    function refreshDashboard() {
+      loadFreelancerData();
+    }
+
+    async function loadFreelancerData() {
+      const tbody = document.getElementById('leadsTbody');
+      const params = new URLSearchParams(window.location.search);
+      _targetFreelancerId = params.get('id') || params.get('freelancer_id') || params.get('open_freelancer') || '522';
+
+      const token = getAuthToken();
+      if (!token) {
+        showAuthModal();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/vgk/freelancers/${_targetFreelancerId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          // Token invalid, expired, or forbidden
+          const errData = await res.json().catch(() => ({}));
+          showAuthModal();
+          const alertEl = document.getElementById('loginAlert');
+          if (alertEl) {
+            alertEl.textContent = errData.detail || 'Session expired or unauthorized. Please log in.';
+            alertEl.style.display = 'block';
+          }
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success || !data.data) {
+          throw new Error(data.detail || data.message || 'Failed to load ground source pipeline');
+        }
+
+        _viewer = data.viewer || { is_staff: false };
+        updateViewerBadge();
+
+        const fl = data.data;
+        const leads = data.originated_leads || [];
+        const support = data.support_partner;
+
+        // Populate member header
+        document.getElementById('flName').textContent = fl.partner_name || 'Ground Source Member';
+        document.getElementById('flCode').textContent = fl.partner_code || `ID: ${fl.id}`;
+
+        const phoneDisplay = _viewer.is_staff ? (fl.masked_phone || maskPhoneStrict(fl.phone)) : (fl.phone || '—');
+        document.getElementById('flPhone').textContent = phoneDisplay;
+
+        const suppText = support?.partner_name 
+          ? `${support.partner_name} (${support.partner_code || ''})` 
+          : 'Direct / None Assigned';
+        document.getElementById('flSupport').textContent = suppText;
+
+        document.getElementById('flEnrolled').textContent = fmtDate(fl.created_at);
+
+        const locParts = [fl.city, fl.district, fl.state].filter(Boolean);
+        document.getElementById('flLocation').textContent = locParts.length > 0 ? locParts.join(', ') : 'Not Specified';
+
+        const privBadge = document.getElementById('privacyStatusBadge');
+        if (privBadge) {
+          if (_viewer.is_staff) {
+            privBadge.innerHTML = '<i class="fas fa-user-lock text-warning me-1"></i> Staff View (Customer Numbers Masked)';
+            privBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2';
+          } else {
+            privBadge.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> Partner View (Direct Pipeline)';
+            privBadge.className = 'badge bg-success-subtle text-success-emphasis border border-success px-3 py-2';
+          }
+        }
+
+        _allLeads = leads;
+        renderStagePills(leads);
+        renderSupportDropdown(leads);
+        applySortAndFilter();
+      } catch (err) {
+        console.error('Failed to load freelancer leads:', err);
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:36px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i> ${esc(err.message)}</td></tr>`;
+        }
+      }
+    }
+
+    function updateViewerBadge() {
+      const badge = document.getElementById('viewerBadge');
+      const text = document.getElementById('viewerNameText');
+      const logoutBtn = document.getElementById('btnLogout');
+
+      if (!badge || !text) return;
+      if (_viewer && _viewer.role && _viewer.role !== 'NONE') {
+        badge.style.display = 'inline-flex';
+        if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+        const label = _viewer.is_staff ? 'Staff' : 'Partner';
+        const name = _viewer.username || _viewer.identifier || 'User';
+        text.textContent = `${label}: ${name}`;
+      } else {
+        badge.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+    }
+
+    function updateMetrics(leadsSubset) {
+      let totCount = leadsSubset.length;
+      let wonCount = 0, pipeCount = 0, lostCount = 0;
+      let totVal = 0, wonVal = 0, pipeVal = 0, lostVal = 0, recvVal = 0;
+
+      const _WON_ST = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'];
+      const _LOST_ST = ['lost', 'cancelled', 'loan_rejected', 'not_interested', 'bank_not_interested'];
+
+      leadsSubset.forEach(l => {
+        const st = (l.status || 'new').toLowerCase().trim();
+        const sps = (l.solar_pipeline_status || l.stage || '').toLowerCase().trim();
+        const dv = parseFloat(l.deal_value || l.deal_value_total || (String(l.kw_size).includes('3') ? 200000 : 0) || 0);
+        const rv = parseFloat(l.deal_value_received || 0);
+
+        totVal += dv;
+        recvVal += rv;
+
+        const isWon = (_WON_ST.includes(st) || _WON_ST.includes(sps)) && !_LOST_ST.includes(sps);
+        const isLost = _LOST_ST.includes(st) || _LOST_ST.includes(sps);
+
+        if (isWon) {
+          wonCount++;
+          wonVal += dv;
+        } else if (isLost) {
+          lostCount++;
+          lostVal += dv;
+        } else {
+          pipeCount++;
+          pipeVal += dv;
+        }
+      });
+
+      const pendVal = Math.max(0, totVal - recvVal);
+
+      document.getElementById('kpiTotal').textContent = totCount;
+      document.getElementById('kpiTotalVal').textContent = `₹${Math.round(totVal).toLocaleString('en-IN')}`;
+      document.getElementById('kpiWon').textContent = wonCount;
+      document.getElementById('kpiWonVal').textContent = `₹${Math.round(wonVal).toLocaleString('en-IN')}`;
+      document.getElementById('kpiPipeline').textContent = pipeCount;
+      document.getElementById('kpiPipelineVal').textContent = `₹${Math.round(pipeVal).toLocaleString('en-IN')}`;
+      document.getElementById('kpiLost').textContent = lostCount;
+      document.getElementById('kpiLostVal').textContent = `₹${Math.round(lostVal).toLocaleString('en-IN')}`;
+      document.getElementById('kpiReceivedVal').textContent = `₹${Math.round(recvVal).toLocaleString('en-IN')}`;
+      document.getElementById('kpiPendingVal').textContent = `₹${Math.round(pendVal).toLocaleString('en-IN')}`;
+    }
+
+    function renderStagePills(leads) {
+      const container = document.getElementById('stagePillsContainer');
+      if (!container) return;
+
+      const stageCounts = {};
+      leads.forEach(l => {
+        const rawStage = (l.solar_pipeline_status || l.stage || l.status || 'lead').toLowerCase().trim();
+        const label = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+        stageCounts[label] = (stageCounts[label] || 0) + 1;
+      });
+
+      const sortedStages = Object.entries(stageCounts).sort((a, b) => b[1] - a[1]);
+
+      let html = `
+        <div class="stage-pill ${_activeStageFilter === 'ALL' ? 'active' : ''}" onclick="setStageFilter('ALL')">
+          <span>All</span>
+          <span class="badge-count">${leads.length}</span>
+        </div>
+      `;
+
+      sortedStages.forEach(([label, cnt]) => {
+        const isAct = _activeStageFilter === label;
+        html += `
+          <div class="stage-pill ${isAct ? 'active' : ''}" onclick="setStageFilter('${esc(label)}')">
+            <span>${esc(label)}</span>
+            <span class="badge-count">${cnt}</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function setStageFilter(stageLabel) {
+      if (stageLabel === 'ALL' || _activeStageFilter === stageLabel) {
+        _activeStageFilter = 'ALL';
+      } else {
+        _activeStageFilter = stageLabel;
+      }
+      renderStagePills(_allLeads);
+      applySortAndFilter();
+    }
+
+    function renderSupportDropdown(leads) {
+      const select = document.getElementById('supportSelect');
+      if (!select) return;
+
+      const supportCounts = {};
+      leads.forEach(l => {
+        const s = l.support_name || 'Direct';
+        supportCounts[s] = (supportCounts[s] || 0) + 1;
+      });
+
+      const sorted = Object.entries(supportCounts).sort((a, b) => b[1] - a[1]);
+
+      let html = `<option value="ALL">All Support (${leads.length})</option>`;
+      sorted.forEach(([name, count]) => {
+        html += `<option value="${esc(name)}">${esc(name)} (${count})</option>`;
+      });
+
+      select.innerHTML = html;
+      select.value = _activeSupportFilter || 'ALL';
+    }
+
+    function onSupportChange(val) {
+      _activeSupportFilter = val || 'ALL';
+      applySortAndFilter();
+    }
+
+    function onSearchInput() {
+      _searchQuery = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      applySortAndFilter();
+    }
+
+    function onSortChange(val) {
+      const parts = val.split('_');
+      if (parts.length === 2) {
+        _sortDir = parts[1];
+        const fieldKey = parts[0];
+        if (fieldKey === 'created') _sortField = 'created_at';
+        else if (fieldKey === 'deal') _sortField = 'deal_value';
+        else if (fieldKey === 'name') _sortField = 'name';
+        else if (fieldKey === 'support') _sortField = 'support';
+        else if (fieldKey === 'stage') _sortField = 'stage';
+      }
+      updateSortIcons();
+      applySortAndFilter();
+    }
+
+    function toggleSort(field) {
+      if (_sortField === field) {
+        _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        _sortField = field;
+        _sortDir = (field === 'created_at' || field === 'deal_value' || field === 'id') ? 'desc' : 'asc';
+      }
+
+      const sortSelect = document.getElementById('sortSelect');
+      if (sortSelect) {
+        let optVal = '';
+        if (field === 'created_at') optVal = `created_${_sortDir}`;
+        else if (field === 'deal_value') optVal = `deal_${_sortDir}`;
+        else if (field === 'name') optVal = `name_${_sortDir}`;
+        else if (field === 'support') optVal = `support_${_sortDir}`;
+        else if (field === 'stage') optVal = `stage_${_sortDir}`;
+        if (optVal && [...sortSelect.options].some(o => o.value === optVal)) {
+          sortSelect.value = optVal;
+        }
+      }
+
+      updateSortIcons();
+      applySortAndFilter();
+    }
+
+    function updateSortIcons() {
+      const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
+      fields.forEach(f => {
+        const el = document.getElementById(`sortIcon_${f}`);
+        if (el) {
+          if (_sortField === f) {
+            el.textContent = _sortDir === 'asc' ? '▲' : '▼';
+            el.style.color = '#0284c7';
+          } else {
+            el.textContent = '↕';
+            el.style.color = '#94a3b8';
+          }
+        }
+      });
+    }
+
+    function applySortAndFilter() {
+      if (!_allLeads) return;
+
+      let filtered = _allLeads.filter(l => {
+        const id = String(l.id || '').toLowerCase();
+        const name = String(l.lead_name || l.name || '').toLowerCase();
+        const phone = String(l.phone || '').toLowerCase();
+        const supp = String(l.support_name || 'Direct').toLowerCase();
+        const rawStage = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
+        const stageDisplay = (_SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead').toLowerCase();
+        const status = String(l.status || '').toLowerCase();
+        const city = String(l.city || '').toLowerCase();
+
+        // Search match
+        if (_searchQuery) {
+          const match = id.includes(_searchQuery) || name.includes(_searchQuery) || phone.includes(_searchQuery) ||
+                        supp.includes(_searchQuery) || rawStage.includes(_searchQuery) || stageDisplay.includes(_searchQuery) ||
+                        status.includes(_searchQuery) || city.includes(_searchQuery);
+          if (!match) return false;
+        }
+
+        // Stage filter
+        if (_activeStageFilter && _activeStageFilter !== 'ALL') {
+          const currentStageLabel = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+          if (currentStageLabel !== _activeStageFilter) return false;
+        }
+
+        // Support filter
+        if (_activeSupportFilter && _activeSupportFilter !== 'ALL') {
+          const currentSupp = (l.support_name || 'Direct').trim();
+          if (currentSupp !== _activeSupportFilter) return false;
+        }
+
+        return true;
+      });
+
+      // Recalculate metrics in real-time
+      updateMetrics(filtered);
+
+      // Sort
+      filtered.sort((a, b) => {
+        let vA, vB;
+        if (_sortField === 'id') {
+          vA = Number(a.id || 0); vB = Number(b.id || 0);
+        } else if (_sortField === 'name') {
+          vA = String(a.lead_name || a.name || '').toLowerCase();
+          vB = String(b.lead_name || b.name || '').toLowerCase();
+        } else if (_sortField === 'support') {
+          vA = String(a.support_name || 'Direct').toLowerCase();
+          vB = String(b.support_name || 'Direct').toLowerCase();
+        } else if (_sortField === 'phone') {
+          vA = String(a.phone || '').toLowerCase();
+          vB = String(b.phone || '').toLowerCase();
+        } else if (_sortField === 'status') {
+          vA = String(a.status || '').toLowerCase();
+          vB = String(b.status || '').toLowerCase();
+        } else if (_sortField === 'stage') {
+          const stA = (a.solar_pipeline_status || a.stage || a.status || '').toLowerCase();
+          const stB = (b.solar_pipeline_status || b.stage || b.status || '').toLowerCase();
+          vA = (_SOLAR_STAGE_LABELS[stA] || a.stage || '').toLowerCase();
+          vB = (_SOLAR_STAGE_LABELS[stB] || b.stage || '').toLowerCase();
+        } else if (_sortField === 'deal_value') {
+          vA = parseFloat(a.deal_value || a.deal_value_total || (String(a.kw_size).includes('3') ? 200000 : 0) || 0);
+          vB = parseFloat(b.deal_value || b.deal_value_total || (String(b.kw_size).includes('3') ? 200000 : 0) || 0);
+        } else if (_sortField === 'created_at') {
+          vA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          vB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        } else {
+          vA = a.id; vB = b.id;
+        }
+
+        if (vA < vB) return _sortDir === 'asc' ? -1 : 1;
+        if (vA > vB) return _sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(leads) {
+      const tbody = document.getElementById('leadsTbody');
+      const countBadge = document.getElementById('countBadge');
+      if (!tbody) return;
+
+      if (countBadge) {
+        countBadge.textContent = `Showing ${leads.length} of ${_allLeads.length} lead${_allLeads.length === 1 ? '' : 's'}`;
+      }
+
+      if (leads.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = leads.map(l => {
+        const status = (l.status || 'NEW').toUpperCase();
+        let badgeBg = '#f1f5f9', badgeColor = '#475569';
+        if (status.includes('WON') || status.includes('COMPLETED') || status.includes('CLOSED')) {
+          badgeBg = '#dcfce7'; badgeColor = '#15803d';
+        } else if (status.includes('LOST') || status.includes('DROP') || status.includes('CANCEL')) {
+          badgeBg = '#fee2e2'; badgeColor = '#b91c1c';
+        } else {
+          badgeBg = '#e0f2fe'; badgeColor = '#0369a1';
+        }
+
+        const rawStage = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
+        const stageDisplay = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+
+        let stageBg = '#eff6ff', stageColor = '#1d4ed8';
+        if (rawStage.includes('won') || rawStage.includes('install') || rawStage.includes('complete')) {
+          stageBg = '#ecfdf5'; stageColor = '#047857';
+        } else if (rawStage.includes('bank')) {
+          stageBg = '#e0f2fe'; stageColor = '#0284c7';
+        } else if (rawStage.includes('pending') || rawStage.includes('doc') || rawStage.includes('app')) {
+          stageBg = '#fffbeb'; stageColor = '#b45309';
+        } else if (rawStage.includes('reject') || rawStage.includes('lost') || rawStage.includes('cancel')) {
+          stageBg = '#fef2f2'; stageColor = '#dc2626';
+        }
+
+        const suppName = esc(l.support_name || 'Direct');
+        const isDirect = !l.support_name || l.support_name === 'Direct';
+        const suppBadge = isDirect 
+          ? `<span style="color:#64748b;font-weight:600;font-size:11.5px">Direct</span>`
+          : `<span class="support-pill"><i class="fas fa-user-shield" style="font-size:10px"></i>${suppName}</span>`;
+
+        const dealVal = parseFloat(l.deal_value || l.deal_value_total || 0);
+        const recVal = parseFloat(l.deal_value_received || 0);
+        const kw = l.kw_size ? `${esc(l.kw_size)} kW` : '';
+
+        let valDisplay = '—';
+        if (dealVal > 0) {
+          valDisplay = `<strong style="color:#0f172a;font-size:12.5px">₹${Number(dealVal).toLocaleString('en-IN')}</strong>`;
+          if (kw) {
+            valDisplay += `<div style="font-size:11px;color:#0284c7;font-weight:700">${kw}</div>`;
+          }
+          if (recVal > 0) {
+            valDisplay += `<div style="font-size:10px;color:#16a34a;font-weight:600">₹${Number(recVal).toLocaleString('en-IN')} Recv</div>`;
+          }
+        } else if (kw) {
+          valDisplay = `<strong style="color:#0284c7;font-size:12px">${kw}</strong><div style="font-size:10.5px;color:#64748b">₹2,00,000 est.</div>`;
+        }
+
+        const createdDate = l.created_at ? fmtDate(l.created_at) : '—';
+
+        // Phone masking logic: If staff, always render strictly masked
+        const phoneToDisplay = _viewer.is_staff 
+          ? (l.masked_phone || maskPhoneStrict(l.phone)) 
+          : (l.phone || '—');
+
+        return `
+          <tr>
+            <td style="font-weight:700;color:#64748b;white-space:nowrap">#${esc(l.id)}</td>
+            <td style="min-width:150px">
+              <strong style="color:#0f172a;font-size:13.5px">${esc(l.lead_name || l.name || 'Unnamed')}</strong>
+              ${l.city ? `<div style="font-size:11.5px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
+            </td>
+            <td style="white-space:nowrap">
+              ${suppBadge}
+            </td>
+            <td style="white-space:nowrap">
+              <span class="phone-masked"><i class="fas fa-phone me-1" style="color:#94a3b8;font-size:11px"></i>${esc(phoneToDisplay)}</span>
+            </td>
+            <td style="white-space:nowrap">
+              <span class="badge-status" style="background:${badgeBg};color:${badgeColor}">${esc(status)}</span>
+            </td>
+            <td style="white-space:nowrap">
+              <span class="badge-stage" style="background:${stageBg};color:${stageColor}">${esc(stageDisplay)}</span>
+            </td>
+            <td style="white-space:nowrap">
+              ${valDisplay}
+            </td>
+            <td style="color:#64748b;font-size:12px;white-space:nowrap">
+              ${createdDate}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadFreelancerData();
+    });
+  </script>
+</body>
+</html>

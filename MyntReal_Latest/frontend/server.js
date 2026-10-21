@@ -19921,6 +19921,16 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
+    return;
+  } else if (url.startsWith('/vgk/ground-source') || url.startsWith('/staff/vgk/ground-source') || url.startsWith('/vgk_ground_source.html')) {
+    const filePath = path.join(__dirname, 'vgk_ground_source.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Ground Source page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
   } else if (url.startsWith('/staff/claim-alert') || url.startsWith('/staff_claim_alert.html')) {
     const filePath = path.join(__dirname, 'staff_claim_alert.html');
     readFileWithRetry(filePath, (err, data) => {
