@@ -40,7 +40,7 @@ def create_zip():
         'check_imports.py', '.antigravity_deploy_lock',
         '.env', '.env.local', '.env.production', '.env.development', '.env.staging',
         '.env.test', '.env.backup', 'credentials', 'credentials.json', 'id_rsa', 'id_ed25519',
-        'build_aws_zip.py', 'build_zip_fix_yaml.py'
+        'build_aws_zip.py', 'build_zip_fix_yaml.py', '01_env.config'
     }
 
     print(f"[PACKAGING] Packaging Canonical Slim AWS Deploy Zip (< 50MB) from: {source_dir}")
@@ -141,7 +141,7 @@ def create_zip():
 
     # Post-packaging Automated Security Audit
     print("\n[SECURITY AUDIT] Scanning deployment bundle for sensitive data and credentials...")
-    forbidden_file_patterns = ['.env', 'credentials.json', 'id_rsa', 'id_ed25519', '.pem', '.key', 'Secrets']
+    forbidden_file_patterns = ['.env', '01_env.config', 'credentials.json', 'id_rsa', 'id_ed25519', '.pem', '.key', 'Secrets']
     suspicious_patterns = [
         b'AWS_SECRET_ACCESS_KEY=',
         b'ghp_',
