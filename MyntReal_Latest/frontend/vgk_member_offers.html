@@ -144,6 +144,39 @@
         .rm-cat-label{display:flex;align-items:center;gap:7px}
         .rm-footer-cta{padding:9px 16px 10px;background:linear-gradient(90deg,rgba(124,58,237,.18),rgba(245,158,11,.12));border-top:1px solid rgba(255,255,255,.1);font-size:11.5px;font-weight:700;color:#fde68a;text-align:center;line-height:1.5}
 
+        /* ── DUAL-TRACK ARCHITECTURE (MATCHING VGK4U.COM) ── */
+        .dt-section-wrapper{margin-bottom:24px}
+        .dt-banner-header{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+        .dt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+        @media(max-width:860px){.dt-grid{grid-template-columns:1fr}}
+        .dt-card{border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:rgba(15,23,42,.7);border:1.5px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);transition:transform .2s ease,box-shadow .2s ease}
+        .dt-card:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+        .dt-card-t1{border-color:rgba(59,130,246,.45)}
+        .dt-card-t2{border-color:rgba(16,185,129,.45)}
+        .dt-header-t1{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+        .dt-header-t2{background:linear-gradient(135deg,#065f46 0%,#059669 100%);padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+        .dt-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.22);color:#fff}
+        .dt-title{font-size:14.5px;font-weight:800;color:#fff;margin:4px 0 0;display:flex;align-items:center;gap:8px}
+        .dt-callout{background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.25);padding:8px 16px;font-size:11.5px;color:#fde68a;font-weight:600;display:flex;align-items:center;gap:8px}
+        .dt-table{width:100%;border-collapse:collapse}
+        .dt-table th{padding:10px 14px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.6);background:rgba(0,0,0,.2);border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+        .dt-table td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+        .dt-tier-tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin-right:6px}
+        .dt-tier-1{background:rgba(59,130,246,.25);color:#93c5fd;border:1px solid rgba(59,130,246,.4)}
+        .dt-tier-2{background:rgba(16,185,129,.25);color:#86efac;border:1px solid rgba(16,185,129,.4)}
+        .dt-tier-3{background:rgba(168,85,247,.25);color:#d8b4fe;border:1px solid rgba(168,85,247,.4)}
+        .dt-tier-4{background:rgba(245,158,11,.25);color:#fde68a;border:1px solid rgba(245,158,11,.4)}
+        .dt-bonus-chip{font-size:10px;font-weight:800;color:#86efac;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.35);padding:1px 5px;border-radius:4px;margin-left:6px}
+        .dt-footer{padding:10px 16px;background:rgba(0,0,0,.25);border-top:1px solid rgba(255,255,255,.08);font-size:11.5px;color:rgba(255,255,255,.75);line-height:1.5;display:flex;align-items:center;gap:8px;margin-top:auto}
+        .zc-banner{background:linear-gradient(135deg,rgba(30,58,138,.25) 0%,rgba(124,58,237,.2) 100%);border:1.5px solid rgba(167,139,250,.4);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px}
+        .zc-icon{width:38px;height:38px;border-radius:10px;background:rgba(124,58,237,.35);display:flex;align-items:center;justify-content:center;color:#c4b5fd;font-size:18px;flex-shrink:0}
+        .rules-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+        @media(max-width:768px){.rules-strip{grid-template-columns:1fr}}
+        .rule-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;display:flex;gap:10px}
+        .rule-icon{font-size:18px;flex-shrink:0;margin-top:2px}
+        .ecosystem-matrix{margin-top:20px;border:1.5px solid rgba(255,255,255,.14);border-radius:16px;overflow:hidden;background:rgba(15,23,42,.5)}
+        .em-title{padding:12px 18px;background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
         /* ── CALCULATION SECTION ── */
         .calc-section{margin-top:20px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden}
         .calc-header{padding:14px 20px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
@@ -541,6 +574,7 @@
         <div class="lang-toggle no-print" id="langToggle"><button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button><button class="lang-btn active" id="btnTE" onclick="setLang('te')">తెలుగు</button></div>
         <button class="btn-share no-print" onclick="openShare()"><i class="fas fa-share-alt"></i> Share</button>
         <button class="btn-share no-print" onclick="openWAText()" style="background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.4)" title="Share as Text Summary"><i class="fas fa-comment-alt" style="color:#fcd34d"></i> <span class="d-none d-sm-inline">Text</span></button>
+        <a href="https://www.vgk4u.com/catalog/vgk4u" target="_blank" rel="noopener" class="btn-nav btn-outline no-print" style="border-color:rgba(245,158,11,.45);color:#fde68a" title="Explore VGK4U Full Presentation Catalog"><i class="fas fa-book-open"></i> <span class="d-none d-md-inline">Interactive Catalog</span></a>
         <a href="/vgk/login?tab=signup" class="btn-nav btn-outline no-print"><i class="fas fa-user-plus"></i> <span data-i18n="nav_join">Join as Channel Partner</span></a>
         <a href="/vgk/login" class="btn-nav btn-solid no-print"><i class="fas fa-sign-in-alt"></i> Sign In</a>
     </div>
@@ -586,6 +620,10 @@
         <button class="vo-menu-tab" data-vtab="faq" onclick="switchVTab('faq')">
             <span class="vo-menu-icon">❓</span><span class="vo-menu-label" data-i18n="itab_faq">FAQ</span>
         </button>
+        <div class="vo-menu-divider"></div>
+        <a href="https://www.vgk4u.com/catalog/vgk4u" target="_blank" rel="noopener" class="vo-menu-tab" style="text-decoration:none;color:#93c5fd">
+            <span class="vo-menu-icon">🌐</span><span class="vo-menu-label">vgk4u.com Catalog ↗</span>
+        </a>
     </div>
 </nav>
 
@@ -623,19 +661,300 @@
 
     <!-- COMMISSION RATES & CALCULATOR -->
     <div class="section-title">
-        <h2><span class="live-dot"></span>5-Step Career Ladder &amp; Personal Production Fast-Track</h2>
+        <h2><span class="live-dot"></span>Official Commission Slabs &amp; Career Leadership Tiers</h2>
         <p id="regBonusSub">
-            All commission rates are live and verified — synced directly with the authoritative VGK4U Career &amp; Personal Production engine.
-            Earn up to <strong style="color:#c4b5fd">9.00% Personal Sales</strong>, <strong style="color:#86efac">+3.00% Team Differential Overrides</strong>, and <strong style="color:var(--amber)">+1.50% Direct Full-Service Closing Incentives</strong>.
+            <strong>Dual-Track Architecture:</strong> Your personal commission increases strictly from your self-closed files (<span style="color:#c4b5fd">5.00% – 8.00%</span> + <span style="color:var(--amber)">1.50% Direct Support</span>), while leadership overrides unlock from active direct team members (<span style="color:#86efac">+0.50% – +1.50%</span>) — with <strong style="color:#fff">100% Zero Cannibalization!</strong>
         </p>
     </div>
 
     <!-- RATE MATRIX — quick reference table, populated from same API -->
     <div id="rateMatrix">
-        <div class="rate-matrix">
-            <div class="rate-matrix-title"><i class="fas fa-table" style="color:#a78bfa"></i> Commission Rate Matrix — All Categories</div>
-            <div class="rate-matrix-wrap">
-                <div class="skel" style="height:140px;border-radius:0"></div>
+        <div class="dt-section-wrapper">
+            <!-- Dual-Track Header Banner -->
+            <div class="dt-banner-header">
+                <div>
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:20px;padding:3px 12px;font-size:10.5px;font-weight:800;color:#fde68a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+                        <i class="fas fa-layer-group"></i> OFFICIAL COMMISSION SLABS &amp; RANK PROMOTIONS
+                    </div>
+                    <div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:-.2px">
+                        Direct Producer Slabs &amp; Career Leadership Tiers
+                    </div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,.75);margin-top:4px;max-width:720px;line-height:1.5">
+                        <strong>Dual-Track Architecture:</strong> Your personal commission increases strictly from your self-closed files, while leadership overrides unlock from active direct team members — with <strong>100% Zero Cannibalization!</strong>
+                    </div>
+                </div>
+                <a href="https://www.vgk4u.com/catalog/vgk4u#slabs" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;font-size:12px;font-weight:700;color:#e9d5ff;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s">
+                    <i class="fas fa-external-link-alt" style="color:#a78bfa"></i> View on vgk4u.com
+                </a>
+            </div>
+
+            <!-- Decoupled 2-Card Layout: Track 1 & Track 2 -->
+            <div class="dt-grid">
+                <!-- TRACK 1: PERSONAL SALES COMMISSION -->
+                <div class="dt-card dt-card-t1">
+                    <div class="dt-header-t1">
+                        <div>
+                            <span class="dt-tag">Track 1</span>
+                            <h4 class="dt-title"><i class="fas fa-user-check"></i> Personal Sales Commission</h4>
+                        </div>
+                        <span class="dt-tag" style="background:rgba(255,255,255,.18)">Self Performance</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table class="dt-table">
+                            <thead>
+                                <tr>
+                                    <th>Tier Level</th>
+                                    <th>Personal Files (1st Paid)</th>
+                                    <th style="text-align:right">Direct Commission %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-1">Tier 1</span>
+                                        <strong style="color:#fff">Channel Partner</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">1 – 4 Files</span></td>
+                                    <td style="text-align:right"><strong style="font-size:15px;color:#93c5fd">5.00%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-2">Tier 2</span>
+                                        <strong style="color:#fff">Senior</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">5 – 9 Files</span></td>
+                                    <td style="text-align:right">
+                                        <strong style="font-size:15px;color:#86efac">6.50%</strong>
+                                        <span class="dt-bonus-chip">+1.50%</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-3">Tier 3</span>
+                                        <strong style="color:#fff">Extended</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">10 – 15 Files</span></td>
+                                    <td style="text-align:right">
+                                        <strong style="font-size:15px;color:#c084fc">7.50%</strong>
+                                        <span class="dt-bonus-chip">+2.50%</span>
+                                    </td>
+                                </tr>
+                                <tr style="background:rgba(245,158,11,.08)">
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-4"><i class="fas fa-star" style="font-size:9px;margin-right:2px"></i>Tier 4</span>
+                                        <strong style="color:#fde68a">Core</strong>
+                                    </td>
+                                    <td><span style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:800;color:#fde68a">16+ Files</span></td>
+                                    <td style="text-align:right">
+                                        <strong style="font-size:16px;color:#fde68a">8.00%</strong>
+                                        <span class="dt-bonus-chip" style="background:rgba(245,158,11,.25);border-color:rgba(245,158,11,.5);color:#fde68a">+3.00%</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="dt-footer">
+                        <i class="fas fa-check-double" style="color:#60a5fa;flex-shrink:0"></i>
+                        <span>Higher slabs unlock upon receiving 1st customer advance &amp; apply automatically to all future files. Plus <strong>+1.50% Direct Support</strong> for full self-closing (up to <strong style="color:#86efac">9.50%</strong> total direct earning)!</span>
+                    </div>
+                </div>
+
+                <!-- TRACK 2: DIRECT TEAM LEADERSHIP OVERRIDES -->
+                <div class="dt-card dt-card-t2">
+                    <div class="dt-header-t2">
+                        <div>
+                            <span class="dt-tag">Track 2</span>
+                            <h4 class="dt-title"><i class="fas fa-users-cog"></i> Direct Team Leadership Overrides</h4>
+                        </div>
+                        <span class="dt-tag" style="background:rgba(255,255,255,.18)">Direct Team</span>
+                    </div>
+                    <div class="dt-callout">
+                        <i class="fas fa-info-circle" style="color:#f59e0b;font-size:14px;flex-shrink:0"></i>
+                        <span><strong>Active Direct Member</strong> = Direct sponsored partner with ≥ 3 files (1st payment received).</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table class="dt-table">
+                            <thead>
+                                <tr>
+                                    <th>Leadership Level</th>
+                                    <th>Active Direct Team</th>
+                                    <th style="text-align:right">Team Overrides %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-2">Level 1</span>
+                                        <strong style="color:#fff">Manager Override</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">1 Active Member</span></td>
+                                    <td style="text-align:right"><strong style="font-size:15px;color:#38bdf8">+ 0.50%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-3">Level 2</span>
+                                        <strong style="color:#fff">GM Royalties</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">5 Active Members</span></td>
+                                    <td style="text-align:right"><strong style="font-size:15px;color:#c084fc">+ 1.00%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="dt-tier-tag dt-tier-4">Level 3</span>
+                                        <strong style="color:#fff">RM Depth &amp; Lifetime</strong>
+                                    </td>
+                                    <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">10 Active Members</span></td>
+                                    <td style="text-align:right"><strong style="font-size:15px;color:#fbbf24">+ 1.50%</strong></td>
+                                </tr>
+                                <tr style="background:rgba(16,185,129,.12)">
+                                    <td>
+                                        <span style="display:inline-flex;align-items:center;gap:4px;color:#86efac;font-weight:900">
+                                            <i class="fas fa-crown" style="color:#f59e0b"></i> Total Overrides Pool
+                                        </span>
+                                    </td>
+                                    <td><span style="background:rgba(16,185,129,.25);border:1px solid rgba(16,185,129,.5);padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:800;color:#86efac">10+ Active</span></td>
+                                    <td style="text-align:right">
+                                        <span style="background:#10b981;color:#fff;font-weight:900;font-size:13.5px;padding:3px 10px;border-radius:8px">3.00% Pool</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="dt-footer">
+                        <i class="fas fa-shield-alt" style="color:#34d399;flex-shrink:0"></i>
+                        <span><strong>Permanent Rank Lock:</strong> No monthly reset, zero demotions, and lifetime override eligibility.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zero Cannibalization Guarantee Box -->
+            <div class="zc-banner">
+                <div class="zc-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                        <div style="font-size:13.5px;font-weight:900;color:#fff;letter-spacing:.4px">ZERO CANNIBALIZATION GUARANTEE</div>
+                        <span style="font-size:10px;font-weight:800;color:#fde68a;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);padding:2px 8px;border-radius:12px;letter-spacing:.05em">DECOUPLED EARNING ARCHITECTURE</span>
+                    </div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,.85);line-height:1.6">
+                        A personal producer earning an increased direct commission (<strong style="color:#fff">6.50%</strong>, <strong style="color:#fff">7.50%</strong>, or <strong style="color:#fff">8.00%</strong>) is 100% self-earned from company margins and <strong style="color:#f87171">NEVER reduces, blocks, or absorbs upline leadership overrides (+0.50%, +1.00%, +1.50%)</strong>. Both personal sales and team leadership tracks operate simultaneously and independently!
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 Golden Rules Strip -->
+            <div class="rules-strip">
+                <div class="rule-card">
+                    <div class="rule-icon" style="color:#34d399"><i class="fas fa-check-circle"></i></div>
+                    <div>
+                        <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">1st Payment Qualification</strong>
+                        <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">Every deal automatically counts toward qualifying file count as soon as 1st customer advance or token is received.</span>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon" style="color:#fbbf24"><i class="fas fa-bolt"></i></div>
+                    <div>
+                        <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">Future Files Application</strong>
+                        <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">Once qualified, higher direct commission slabs apply automatically to all future files. Past closed payouts remain locked.</span>
+                    </div>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon" style="color:#60a5fa"><i class="fas fa-lock"></i></div>
+                    <div>
+                        <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">Permanent Lifetime Lock</strong>
+                        <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">No demotions, no time limits, and no reset. An active direct member requires at least 3 files with 1st payment received.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All 7 Verticals Ecosystem Matrix Table -->
+            <div class="ecosystem-matrix">
+                <div class="em-title">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:#fff">
+                        <i class="fas fa-cubes" style="color:#a78bfa"></i>
+                        All 7 Verticals Ecosystem Commission Matrix
+                    </div>
+                    <div style="font-size:11px;color:rgba(255,255,255,.55);font-weight:600">
+                        Unified 5.00% – 8.00% Direct + 3.00% Overrides Pool + 1.50% Support
+                    </div>
+                </div>
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+                    <table style="width:100%;border-collapse:collapse;min-width:680px">
+                        <thead>
+                            <tr style="background:rgba(0,0,0,.25)">
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:left;border-bottom:1px solid rgba(255,255,255,.1)">Vertical / Product Line</th>
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Personal Direct Slab</th>
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Full Support Bonus</th>
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Direct Team Overrides</th>
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Max Earning Capacity</th>
+                                <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:left;border-bottom:1px solid rgba(255,255,255,.1)">Special Partner Benefit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">☀️</span>Har Ghar Solar (PM Surya Ghar)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">₹1,000 CIBIL Validation Advance</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🛵</span>Manthra EV 2W (Vehicle Sales)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Instant booking credit</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🛡️</span>VGK Care Insurance (Bajaj Capital)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Life, Health, Motor &amp; General</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🏡</span>VGK Real Dreams (Real Estate)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Open Plots, Farmland &amp; Villas</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🎓</span>EVolution (ETC) Labs (Training)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Skill Certification Referrals</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">⚡</span>EV Spares &amp; Components</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)"><strong style="color:#86efac">Up to 25%</strong> Member Discount at checkout</td>
+                            </tr>
+                            <tr style="background:rgba(245,158,11,.08)">
+                                <td style="padding:10px 14px;font-weight:800;color:#fde68a"><span style="font-size:16px;margin-right:8px">🏢</span>MyntReal Business Hub (5-in-1 Franchise)</td>
+                                <td colspan="3" style="padding:10px 14px;text-align:center;font-weight:900;color:#fde68a">
+                                    1.00% Lifetime Referral on Every Billing Cycle
+                                </td>
+                                <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">1.00% Repeat</td>
+                                <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Lifetime Income from 2nd billing onwards</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="rm-footer-cta">
+                    🏢 Refer <strong>Myntreal Business Hub</strong> and get lifetime income —
+                    <span style="color:#fbbf24">1% on every billing from 2nd billing onwards</span> ★
+                </div>
             </div>
         </div>
     </div>
@@ -882,104 +1201,134 @@
         </div>
     </div>
 
-    <!-- SECTORS YOU CAN EARN FROM -->
+    <!-- SECTORS YOU CAN EARN FROM (ALL 7 VERTICALS) -->
     <div style="margin-bottom:30px">
-        <p class="pi-section-label" data-i18n="cp_sec_label">Sectors You Can Earn From</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        <p class="pi-section-label" data-i18n="cp_sec_label">All 7 Verticals You Can Earn From</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
             <div style="background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(251,191,36,.04));border:1.5px solid rgba(251,191,36,.4);border-radius:16px;padding:20px 18px">
                 <div style="font-size:30px;margin-bottom:10px">☀️</div>
-                <div style="font-size:14px;font-weight:900;color:#fde68a;margin-bottom:6px" data-i18n="cp_sec_solar_title">Solar Energy</div>
+                <div style="font-size:14px;font-weight:900;color:#fde68a;margin-bottom:6px" data-i18n="cp_sec_solar_title">Har Ghar Solar</div>
                 <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
-                    <li data-i18n="cp_sec_solar_li1">Rooftop Solar installations</li>
-                    <li data-i18n="cp_sec_solar_li2">On-Grid &amp; Off-Grid systems</li>
-                    <li data-i18n="cp_sec_solar_li3">Residential &amp; Commercial</li>
-                    <li data-i18n="cp_sec_solar_li4">CIBIL advance on application</li>
+                    <li data-i18n="cp_sec_solar_li1">PM Surya Ghar Yojana installations</li>
+                    <li data-i18n="cp_sec_solar_li2">On-Grid &amp; Commercial rooftop plants</li>
+                    <li data-i18n="cp_sec_solar_li4">₹1,000 CIBIL advance on application</li>
                 </ul>
             </div>
             <div style="background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(52,211,153,.04));border:1.5px solid rgba(52,211,153,.4);border-radius:16px;padding:20px 18px">
-                <div style="font-size:30px;margin-bottom:10px">⚡</div>
-                <div style="font-size:14px;font-weight:900;color:#6ee7b7;margin-bottom:6px" data-i18n="cp_sec_ev_title">Electric Vehicles</div>
+                <div style="font-size:30px;margin-bottom:10px">🛵</div>
+                <div style="font-size:14px;font-weight:900;color:#6ee7b7;margin-bottom:6px" data-i18n="cp_sec_ev_title">Manthra EV 2W</div>
                 <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
-                    <li data-i18n="cp_sec_ev_li1">2W, 3W, 4W EV purchases</li>
-                    <li data-i18n="cp_sec_ev_li2">B2B EV fleet deals</li>
-                    <li data-i18n="cp_sec_ev_li3">EV Spares marketplace orders</li>
-                    <li data-i18n="cp_sec_ev_li4">Lifetime B2B billing income</li>
+                    <li data-i18n="cp_sec_ev_li1">High-speed 2W electric mobility</li>
+                    <li data-i18n="cp_sec_ev_li2">B2B fleet &amp; delivery partnerships</li>
+                    <li>Instant booking commissions</li>
                 </ul>
             </div>
             <div style="background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(167,139,250,.04));border:1.5px solid rgba(167,139,250,.4);border-radius:16px;padding:20px 18px">
                 <div style="font-size:30px;margin-bottom:10px">🛡️</div>
-                <div style="font-size:14px;font-weight:900;color:#c4b5fd;margin-bottom:6px" data-i18n="cp_sec_ins_title">Insurance</div>
+                <div style="font-size:14px;font-weight:900;color:#c4b5fd;margin-bottom:6px" data-i18n="cp_sec_ins_title">VGK Care Insurance</div>
                 <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
-                    <li data-i18n="cp_sec_ins_li1">Health &amp; Life policies</li>
-                    <li data-i18n="cp_sec_ins_li2">Motor &amp; Vehicle cover</li>
-                    <li data-i18n="cp_sec_ins_li3">Commercial &amp; Property</li>
-                    <li data-i18n="cp_sec_ins_li4">Commission on policy issuance</li>
+                    <li data-i18n="cp_sec_ins_li1">Health, Life &amp; Critical illness (Bajaj Capital)</li>
+                    <li data-i18n="cp_sec_ins_li2">Comprehensive motor &amp; vehicle coverage</li>
+                    <li data-i18n="cp_sec_ins_li4">Paperless digital policy issuance</li>
+                </ul>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(59,130,246,.04));border:1.5px solid rgba(59,130,246,.4);border-radius:16px;padding:20px 18px">
+                <div style="font-size:30px;margin-bottom:10px">🏡</div>
+                <div style="font-size:14px;font-weight:900;color:#93c5fd;margin-bottom:6px">VGK Real Dreams</div>
+                <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
+                    <li>RERA-approved open plots &amp; ventures</li>
+                    <li>Managed farmland &amp; villa projects</li>
+                    <li>High ticket size earnings per referral</li>
+                </ul>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(236,72,153,.12),rgba(236,72,153,.04));border:1.5px solid rgba(236,72,153,.4);border-radius:16px;padding:20px 18px">
+                <div style="font-size:30px;margin-bottom:10px">🎓</div>
+                <div style="font-size:14px;font-weight:900;color:#f472b6;margin-bottom:6px">EVolution (ETC) Labs</div>
+                <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
+                    <li>EV technical training &amp; skill certification</li>
+                    <li>Hands-on battery &amp; powertrain diagnostics</li>
+                    <li>Referral fee on every student enrollment</li>
+                </ul>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.04));border:1.5px solid rgba(16,185,129,.4);border-radius:16px;padding:20px 18px">
+                <div style="font-size:30px;margin-bottom:10px">⚡</div>
+                <div style="font-size:14px;font-weight:900;color:#86efac;margin-bottom:6px">EV Spares &amp; Tech</div>
+                <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
+                    <li>Batteries, motors, chargers &amp; controllers</li>
+                    <li>Up to 25% exclusive member discount</li>
+                    <li>Direct delivery across certified service hubs</li>
+                </ul>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1.5px solid rgba(245,158,11,.5);border-radius:16px;padding:20px 18px">
+                <div style="font-size:30px;margin-bottom:10px">🏢</div>
+                <div style="font-size:14px;font-weight:900;color:#fbbf24;margin-bottom:6px">MyntReal Business Hub</div>
+                <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.65;list-style:disc">
+                    <li>5-in-1 Physical Franchise Hub referral</li>
+                    <li><strong style="color:#fbbf24">1.00% Lifetime Income</strong> on every billing</li>
+                    <li>Passive monthly recurring royalty</li>
                 </ul>
             </div>
         </div>
     </div>
 
-    <!-- 5-STEP CAREER LADDER & FAST-TRACK -->
+    <!-- DUAL-TRACK ARCHITECTURE: PERSONAL SLABS & CAREER LEADERSHIP -->
     <div style="margin-bottom:30px">
-        <p class="pi-section-label">VGK4U Career Progression Ladder &amp; Fast-Track Tiers</p>
+        <p class="pi-section-label">Official Dual-Track Performance Slabs &amp; Career Leadership Tiers</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-            <!-- ORGANIZATIONAL CAREER LADDER -->
-            <div style="background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(76,29,149,.08));border:2px solid rgba(167,139,250,.45);border-radius:18px;padding:24px 20px;position:relative;overflow:hidden">
-                <div style="position:absolute;top:12px;right:12px;background:rgba(124,58,237,.25);border:1px solid rgba(167,139,250,.5);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800;color:#ddd6fe;letter-spacing:.4px">TEAM LADDER</div>
-                <div style="font-size:28px;margin-bottom:8px">🏛️</div>
-                <div style="font-size:16px;font-weight:900;color:#ddd6fe;margin-bottom:4px">5-Step Career Ladder</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px">Build active direct team legs to earn differential overrides across your entire organization.</div>
+            <!-- TRACK 1: PERSONAL SALES SLABS -->
+            <div style="background:linear-gradient(135deg,rgba(30,58,138,.16),rgba(37,99,235,.08));border:2px solid rgba(59,130,246,.45);border-radius:18px;padding:24px 20px;position:relative;overflow:hidden;box-shadow:0 4px 24px rgba(37,99,235,.12)">
+                <div style="position:absolute;top:12px;right:12px;background:rgba(59,130,246,.25);border:1px solid rgba(59,130,246,.5);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800;color:#93c5fd;letter-spacing:.4px">TRACK 1 · SELF PERFORMANCE</div>
+                <div style="font-size:28px;margin-bottom:8px">👤</div>
+                <div style="font-size:16px;font-weight:900;color:#93c5fd;margin-bottom:4px">Personal Sales Commission</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px">Your personal commission increases strictly from your self-closed files — 100% self-earned!</div>
                 <div style="display:flex;flex-direction:column;gap:10px">
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <span style="background:rgba(107,114,128,.3);color:#9ca3af;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">L0</span>
-                        <div><strong style="color:#e5e7eb">Member: 0.00%</strong> (0 Files, 0 Legs) — <span style="color:#9ca3af;font-size:11.5px">Free Joining</span></div>
+                        <span style="background:rgba(59,130,246,.25);color:#93c5fd;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Tier 1</span>
+                        <div><strong style="color:#fff">Channel Partner: 5.00%</strong> — <span style="color:#cbd5e1;font-size:11.5px">1 – 4 Files (1st payment received)</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <span style="background:rgba(59,130,246,.25);color:#93c5fd;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">L1</span>
-                        <div><strong style="color:#93c5fd">Channel Partner: 6.00%</strong> — <span style="color:#cbd5e1;font-size:11.5px">Close 1st Personal File</span></div>
+                        <span style="background:rgba(16,185,129,.25);color:#86efac;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Tier 2</span>
+                        <div><strong style="color:#86efac">Senior: 6.50%</strong> (+1.50% jump) — <span style="color:#d1fae5;font-size:11.5px">5 – 9 Files</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <span style="background:rgba(124,58,237,.3);color:#c4b5fd;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">L2</span>
-                        <div><strong style="color:#c4b5fd">Manager: 7.50%</strong> — <span style="color:#e9d5ff;font-size:11.5px">1 Own File + 1 Active Team Leg (+1.50% Override)</span></div>
+                        <span style="background:rgba(168,85,247,.25);color:#d8b4fe;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Tier 3</span>
+                        <div><strong style="color:#d8b4fe">Extended: 7.50%</strong> (+2.50% jump) — <span style="color:#f3e8ff;font-size:11.5px">10 – 15 Files</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <span style="background:rgba(16,185,129,.25);color:#86efac;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">L3</span>
-                        <div><strong style="color:#86efac">General Manager: 8.50%</strong> — <span style="color:#d1fae5;font-size:11.5px">1 Own File + 5 Active Team Legs (+1.00% Override)</span></div>
+                        <span style="background:rgba(245,158,11,.25);color:#fde68a;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Tier 4</span>
+                        <div><strong style="color:#fde68a">Core: 8.00%</strong> (+3.00% jump) — <span style="color:#fef3c7;font-size:11.5px">16+ Files</span></div>
                     </div>
-                    <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <span style="background:rgba(245,158,11,.25);color:#fde68a;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">L4</span>
-                        <div><strong style="color:#fde68a">Regional Manager: 9.00%</strong> — <span style="color:#fef3c7;font-size:11.5px">1 Own File + 10 Active Team Legs (+0.50% Override)</span></div>
-                    </div>
-                    <div style="margin-top:4px;padding:8px 12px;background:rgba(124,58,237,.2);border:1px solid rgba(167,139,250,.3);border-radius:10px;font-size:11.5px;color:#e9d5ff">
-                        <i class="fas fa-bolt text-warning me-1"></i><strong>Accelerated Leadership Unlock:</strong> Have team legs ready? Close your 1st personal file and jump directly to Manager, GM, or RM immediately!
+                    <div style="margin-top:4px;padding:8px 12px;background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.35);border-radius:10px;font-size:11.5px;color:#dbeafe">
+                        <i class="fas fa-plus-circle text-warning me-1"></i><strong>+1.50% Direct Support Bonus:</strong> Handle technical field closing independently without company staff to earn up to <strong style="color:#86efac">9.50%</strong> total direct earning!
                     </div>
                 </div>
             </div>
-            <!-- PERSONAL PRODUCTION FAST-TRACK -->
-            <div style="background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(5,150,105,.08));border:2px solid rgba(52,211,153,.45);border-radius:18px;padding:24px 20px;position:relative;overflow:hidden;box-shadow:0 4px 24px rgba(16,185,129,.15)">
-                <div style="position:absolute;top:12px;right:12px;background:rgba(16,185,129,.22);border:1px solid rgba(52,211,153,.45);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800;color:#86efac;letter-spacing:.4px">SOLO FAST-TRACK</div>
-                <div style="font-size:28px;margin-bottom:8px">🚀</div>
-                <div style="font-size:16px;font-weight:900;color:#a7f3d0;margin-bottom:4px">Personal Production Fast-Track</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px">Earn executive rates purely on your personal sales volume — zero team legs required!</div>
+
+            <!-- TRACK 2: TEAM LEADERSHIP OVERRIDES -->
+            <div style="background:linear-gradient(135deg,rgba(6,95,70,.16),rgba(5,150,105,.08));border:2px solid rgba(16,185,129,.45);border-radius:18px;padding:24px 20px;position:relative;overflow:hidden;box-shadow:0 4px 24px rgba(16,185,129,.12)">
+                <div style="position:absolute;top:12px;right:12px;background:rgba(16,185,129,.22);border:1px solid rgba(52,211,153,.45);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800;color:#86efac;letter-spacing:.4px">TRACK 2 · DIRECT TEAM</div>
+                <div style="font-size:28px;margin-bottom:8px">👥</div>
+                <div style="font-size:16px;font-weight:900;color:#86efac;margin-bottom:4px">Career Leadership Overrides</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px">Earn permanent leadership overrides from your active direct team members — zero monthly demotions!</div>
                 <div style="display:flex;flex-direction:column;gap:10px">
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <i class="fas fa-check-circle" style="color:#86efac;margin-top:2px;flex-shrink:0"></i>
-                        <div><strong style="color:#fff">1–4 Closed Files: 6.00% Base Rate</strong><div style="font-size:11.5px;color:rgba(255,255,255,.6)">Standard Channel Partner commission on all solar deals</div></div>
+                        <span style="background:rgba(2,132,199,.25);color:#38bdf8;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Level 1</span>
+                        <div><strong style="color:#38bdf8">Manager Override: +0.50%</strong> — <span style="color:#cbd5e1;font-size:11.5px">1 Active Direct Member (≥3 files)</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <i class="fas fa-fire" style="color:#fde68a;margin-top:2px;flex-shrink:0"></i>
-                        <div><strong style="color:#fde68a">5–9 Closed Files: 8.50% (GM Rate)</strong><div style="font-size:11.5px;color:rgba(255,255,255,.6)">Earn General Manager rate on your personal deals automatically!</div></div>
+                        <span style="background:rgba(124,58,237,.3);color:#c4b5fd;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Level 2</span>
+                        <div><strong style="color:#c4b5fd">GM Royalties: +1.00%</strong> — <span style="color:#e9d5ff;font-size:11.5px">5 Active Direct Members</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <i class="fas fa-crown" style="color:#fcd34d;margin-top:2px;flex-shrink:0"></i>
-                        <div><strong style="color:#fcd34d">10+ Closed Files: 9.00% (RM Top Rate)</strong><div style="font-size:11.5px;color:rgba(255,255,255,.6)">Highest commission slab unlocked permanently on personal volume</div></div>
+                        <span style="background:rgba(245,158,11,.25);color:#fde68a;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Level 3</span>
+                        <div><strong style="color:#fde68a">RM Depth &amp; Lifetime: +1.50%</strong> — <span style="color:#fef3c7;font-size:11.5px">10 Active Direct Members</span></div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
-                        <i class="fas fa-tools" style="color:#93c5fd;margin-top:2px;flex-shrink:0"></i>
-                        <div><strong style="color:#93c5fd">+1.50% Direct Full-Service Closing:</strong><div style="font-size:11.5px;color:rgba(255,255,255,.6)">Handle technical field closing without company staff to earn an extra +1.50% outside network pool!</div></div>
+                        <span style="background:rgba(16,185,129,.3);color:#86efac;padding:2px 8px;border-radius:6px;font-weight:800;font-size:11px">Pool</span>
+                        <div><strong style="color:#86efac">Total Overrides Pool: 3.00%</strong> — <span style="color:#d1fae5;font-size:11.5px">10+ Active Direct Members</span></div>
                     </div>
                     <div style="margin-top:4px;padding:8px 12px;background:rgba(16,185,129,.18);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:11.5px;color:#d1fae5">
-                        <i class="fas fa-gem text-warning me-1"></i><strong>Best-Of Rate Guarantee:</strong> You always receive the higher rate between your Career Designation and Personal Production volume!
+                        <i class="fas fa-shield-alt text-success me-1"></i><strong>Zero Cannibalization:</strong> Direct sales commissions NEVER reduce or block team leadership overrides. Both operate independently!
                     </div>
                 </div>
             </div>
@@ -1142,13 +1491,13 @@
                     <div class="vgk-abbr-card"><div class="vgk-abbr-letter">K</div><div class="vgk-abbr-word">Kinetics</div></div>
                     <div class="vgk-abbr-card"><div class="vgk-abbr-letter">4U</div><div class="vgk-abbr-word">For You</div></div>
                 </div>
-                <p class="vgk-abbr-tagline">A loyalty &amp; commission platform connecting genuine customers to certified Solar, EV &amp; Insurance execution teams — built entirely for you.</p>
+                <p class="vgk-abbr-tagline">A loyalty &amp; commission platform connecting genuine customers to certified execution teams across Har Ghar Solar, Manthra EV 2W, VGK Care Insurance, VGK Real Dreams, EVolution ETC Labs, MyntReal Business Hub &amp; EV Spares — built entirely for you.</p>
             </div>
             <div class="vgk-abbr-divider"></div>
 
             <div class="section-title" style="margin-bottom:24px">
                 <h2>📋 How the VGK4U Program Works</h2>
-                <p>A transparent, real-work earning model — connecting genuine customers to certified execution teams across Solar, EV, and Insurance.</p>
+                <p>A transparent, real-work earning model — connecting genuine customers to certified execution teams across all 7 product verticals.</p>
             </div>
 
             <p class="pi-section-label">How You Earn</p>
@@ -1202,7 +1551,7 @@
                         <li>20,000 Welcome Points on joining (₹20,000 wallet value)</li>
                         <li>+10,000 bonus points if you join via a referral link</li>
                         <li class="note">Total up to 30,000 Points &nbsp;|&nbsp; 1 Point = ₹1 value</li>
-                        <li>Earn 6.00% to 9.00% personal commission + leadership overrides</li>
+                        <li>Earn 5.00% to 8.00% direct personal commission (+1.50% Direct Support) + up to +3.00% team leadership overrides</li>
                     </ul>
                 </div>
                 <div class="pi-card" style="border-color:rgba(139,92,246,.4);background:rgba(139,92,246,.08)">
@@ -2091,19 +2440,12 @@ function setLang(lang) {
 
 /* Shared helper — applies banner/diff text from loaded cats */
 function _applyDynamicBanner(cats, T) {
-    const _frCfg = cats[0] && cats[0].registered;
-    if (!_frCfg) return;
-    const _rLvls = _configuredLevels(_frCfg);
-    const _rStr  = _levelStr(_rLvls);
     const _banEl = document.getElementById('regBonusSub');
-    if (_banEl) _banEl.innerHTML = T.js_rates_live
-        + ' <strong style="color:#c4b5fd">' + T.js_reg_earn + ' ' + _rStr + ' &nbsp;|&nbsp;'
-        + ' <strong style="color:#86efac">' + T.js_act_earn
-        + ' &nbsp;<span style="color:var(--amber);font-weight:700">★ ' + T.js_l4_sup + '</span> — highlighted separately.';
+    if (_banEl) _banEl.innerHTML = '<strong>Dual-Track Architecture:</strong> Your personal commission increases strictly from your self-closed files (<span style="color:#c4b5fd">5.00% – 8.00%</span> + <span style="color:var(--amber)">1.50% Direct Support</span>), while leadership overrides unlock from active direct team members (<span style="color:#86efac">+0.50% – +1.50%</span>) — with <strong style="color:#fff">100% Zero Cannibalization!</strong>';
     const _dsEl = document.getElementById('regDiffSub');
-    if (_dsEl) _dsEl.textContent = T.js_diff_sub + ' ' + _rStr + ' ' + T.js_diff_sub2;
+    if (_dsEl) _dsEl.textContent = 'Earn up to 8.00% direct personal sales + 3.00% team leadership overrides + 1.50% closing support across all 7 verticals.';
     const _bbEl = document.getElementById('regBonusBullet');
-    if (_bbEl) _bbEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + _rStr + ' ' + T.js_ref_bonus_bullet;
+    if (_bbEl) _bbEl.innerHTML = '<i class="fas fa-check-circle"></i> Dual-Track Personal Sales (5%–8%) &amp; Leadership Overrides (0.5%–1.5%)';
 }
 
 /* Language detection on load — script runs at page bottom so DOM is ready */
@@ -2404,68 +2746,297 @@ function downloadPDF(){
     }, 400);
 }
 
-/* Build the compact rate matrix table — all categories × all 5 levels */
+/* Build the official Dual-Track Commission Matrix & 7-Vertical Ecosystem Table (Authoritative Standard matching vgk4u.com) */
 function buildRateMatrix(cats) {
-    function _fmt(pct, cls) {
-        if (!pct || pct === 0) return `<span class="rm-pct-zero">—</span>`;
-        return `<span class="${cls}">${+parseFloat(pct).toFixed(2)}%</span>`;
-    }
-    const CAT_ICONS = { Solar: '☀️', 'EV B2B': '🏪', 'EV B2C': '🛵' };
-    const CAT_DISPLAY = { 'EV B2B': 'Showroom Setup', 'EV B2C': 'Vehicle Sales' };
-    let rows = '';
-    cats.forEach((cat, idx) => {
-        const icon = CAT_ICONS[cat.category_name] || '📊';
-        const displayName = CAT_DISPLAY[cat.category_name] || cat.category_name;
-        const r = cat.registered || {};
-        const a = cat.activated  || {};
-        if (idx > 0) rows += `<tr class="rm-sep"><td colspan="7"></td></tr>`;
-        rows += `
-        <tr class="rm-cat-reg">
-            <td rowspan="2"><div class="rm-cat-label"><span style="font-size:15px">${icon}</span>${escHtml(displayName)}</div></td>
-            <td><span class="rm-badge-reg">🔵 Registered</span></td>
-            <td>${_fmt(r.level1_pct,'rm-pct-l1')}</td>
-            <td>${_fmt(r.level2_pct,'rm-pct-l2')}</td>
-            <td>${_fmt(r.level3_pct,'rm-pct-l3')}</td>
-            <td>${_fmt(r.level4_core_pct,'rm-pct-l4c')}</td>
-            <td>${_fmt(r.level4_pct,'rm-pct-l5')}</td>
-        </tr>
-        <tr class="rm-cat-act">
-            <td><span class="rm-badge-act">🟢 Activated</span></td>
-            <td>${_fmt(a.level1_pct,'rm-pct-l1')}</td>
-            <td>${_fmt(a.level2_pct,'rm-pct-l2')}</td>
-            <td>${_fmt(a.level3_pct,'rm-pct-l3')}</td>
-            <td>${_fmt(a.level4_core_pct,'rm-pct-l4c')}</td>
-            <td>${_fmt(a.level4_pct,'rm-pct-l5')}</td>
-        </tr>`;
-    });
     const el = document.getElementById('rateMatrix');
     if (!el) return;
     el.innerHTML = `
-    <div class="rate-matrix">
-        <div class="rate-matrix-title">
-            <i class="fas fa-table" style="color:#a78bfa"></i>
-            Commission Rate Matrix — All Categories
-            <span style="margin-left:auto;font-size:10px;font-weight:600;color:rgba(255,255,255,.4);text-transform:none;letter-spacing:0">% of deal value · excl. taxes</span>
+    <div class="dt-section-wrapper">
+        <!-- Dual-Track Header Banner -->
+        <div class="dt-banner-header">
+            <div>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:20px;padding:3px 12px;font-size:10.5px;font-weight:800;color:#fde68a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+                    <i class="fas fa-layer-group"></i> OFFICIAL COMMISSION SLABS &amp; RANK PROMOTIONS
+                </div>
+                <div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:-.2px">
+                    Direct Producer Slabs &amp; Career Leadership Tiers
+                </div>
+                <div style="font-size:12.5px;color:rgba(255,255,255,.75);margin-top:4px;max-width:720px;line-height:1.5">
+                    <strong>Dual-Track Architecture:</strong> Your personal commission increases strictly from your self-closed files, while leadership overrides unlock from active direct team members — with <strong>100% Zero Cannibalization!</strong>
+                </div>
+            </div>
+            <a href="https://www.vgk4u.com/catalog/vgk4u#slabs" target="_blank" rel="noopener" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;font-size:12px;font-weight:700;color:#e9d5ff;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s">
+                <i class="fas fa-external-link-alt" style="color:#a78bfa"></i> View on vgk4u.com
+            </a>
         </div>
-        <div class="rate-matrix-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Member State</th>
-                        <th style="text-align:center"><span class="level-dot ld1" style="width:20px;height:20px;font-size:9px;margin-right:3px;display:inline-flex">L1</span>Source</th>
-                        <th style="text-align:center"><span class="level-dot ld2" style="width:20px;height:20px;font-size:9px;margin-right:3px;display:inline-flex">L2</span>Senior</th>
-                        <th style="text-align:center"><span class="level-dot ld3" style="width:20px;height:20px;font-size:9px;margin-right:3px;display:inline-flex">L3</span>Extended</th>
-                        <th style="text-align:center"><span class="level-dot ld4c" style="width:20px;height:20px;font-size:9px;margin-right:3px;display:inline-flex">L4</span>Core</th>
-                        <th style="text-align:center"><span class="level-dot ld4" style="width:20px;height:20px;font-size:9px;margin-right:3px;display:inline-flex">L5</span>Support ★</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
+
+        <!-- Decoupled 2-Card Layout: Track 1 & Track 2 -->
+        <div class="dt-grid">
+            <!-- TRACK 1: PERSONAL SALES COMMISSION -->
+            <div class="dt-card dt-card-t1">
+                <div class="dt-header-t1">
+                    <div>
+                        <span class="dt-tag">Track 1</span>
+                        <h4 class="dt-title"><i class="fas fa-user-check"></i> Personal Sales Commission</h4>
+                    </div>
+                    <span class="dt-tag" style="background:rgba(255,255,255,.18)">Self Performance</span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="dt-table">
+                        <thead>
+                            <tr>
+                                <th>Tier Level</th>
+                                <th>Personal Files (1st Paid)</th>
+                                <th style="text-align:right">Direct Commission %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-1">Tier 1</span>
+                                    <strong style="color:#fff">Channel Partner</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">1 – 4 Files</span></td>
+                                <td style="text-align:right"><strong style="font-size:15px;color:#93c5fd">5.00%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-2">Tier 2</span>
+                                    <strong style="color:#fff">Senior</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">5 – 9 Files</span></td>
+                                <td style="text-align:right">
+                                    <strong style="font-size:15px;color:#86efac">6.50%</strong>
+                                    <span class="dt-bonus-chip">+1.50%</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-3">Tier 3</span>
+                                    <strong style="color:#fff">Extended</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">10 – 15 Files</span></td>
+                                <td style="text-align:right">
+                                    <strong style="font-size:15px;color:#c084fc">7.50%</strong>
+                                    <span class="dt-bonus-chip">+2.50%</span>
+                                </td>
+                            </tr>
+                            <tr style="background:rgba(245,158,11,.08)">
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-4"><i class="fas fa-star" style="font-size:9px;margin-right:2px"></i>Tier 4</span>
+                                    <strong style="color:#fde68a">Core</strong>
+                                </td>
+                                <td><span style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:800;color:#fde68a">16+ Files</span></td>
+                                <td style="text-align:right">
+                                    <strong style="font-size:16px;color:#fde68a">8.00%</strong>
+                                    <span class="dt-bonus-chip" style="background:rgba(245,158,11,.25);border-color:rgba(245,158,11,.5);color:#fde68a">+3.00%</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="dt-footer">
+                    <i class="fas fa-check-double" style="color:#60a5fa;flex-shrink:0"></i>
+                    <span>Higher slabs unlock upon receiving 1st customer advance &amp; apply automatically to all future files. Plus <strong>+1.50% Direct Support</strong> for full self-closing (up to <strong style="color:#86efac">9.50%</strong> total direct earning)!</span>
+                </div>
+            </div>
+
+            <!-- TRACK 2: DIRECT TEAM LEADERSHIP OVERRIDES -->
+            <div class="dt-card dt-card-t2">
+                <div class="dt-header-t2">
+                    <div>
+                        <span class="dt-tag">Track 2</span>
+                        <h4 class="dt-title"><i class="fas fa-users-cog"></i> Direct Team Leadership Overrides</h4>
+                    </div>
+                    <span class="dt-tag" style="background:rgba(255,255,255,.18)">Direct Team</span>
+                </div>
+                <div class="dt-callout">
+                    <i class="fas fa-info-circle" style="color:#f59e0b;font-size:14px;flex-shrink:0"></i>
+                    <span><strong>Active Direct Member</strong> = Direct sponsored partner with ≥ 3 files (1st payment received).</span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="dt-table">
+                        <thead>
+                            <tr>
+                                <th>Leadership Level</th>
+                                <th>Active Direct Team</th>
+                                <th style="text-align:right">Team Overrides %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-2">Level 1</span>
+                                    <strong style="color:#fff">Manager Override</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">1 Active Member</span></td>
+                                <td style="text-align:right"><strong style="font-size:15px;color:#38bdf8">+ 0.50%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-3">Level 2</span>
+                                    <strong style="color:#fff">GM Royalties</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">5 Active Members</span></td>
+                                <td style="text-align:right"><strong style="font-size:15px;color:#c084fc">+ 1.00%</strong></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="dt-tier-tag dt-tier-4">Level 3</span>
+                                    <strong style="color:#fff">RM Depth &amp; Lifetime</strong>
+                                </td>
+                                <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">10 Active Members</span></td>
+                                <td style="text-align:right"><strong style="font-size:15px;color:#fbbf24">+ 1.50%</strong></td>
+                            </tr>
+                            <tr style="background:rgba(16,185,129,.12)">
+                                <td>
+                                    <span style="display:inline-flex;align-items:center;gap:4px;color:#86efac;font-weight:900">
+                                        <i class="fas fa-crown" style="color:#f59e0b"></i> Total Overrides Pool
+                                    </span>
+                                </td>
+                                <td><span style="background:rgba(16,185,129,.25);border:1px solid rgba(16,185,129,.5);padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:800;color:#86efac">10+ Active</span></td>
+                                <td style="text-align:right">
+                                    <span style="background:#10b981;color:#fff;font-weight:900;font-size:13.5px;padding:3px 10px;border-radius:8px">3.00% Pool</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="dt-footer">
+                    <i class="fas fa-shield-alt" style="color:#34d399;flex-shrink:0"></i>
+                    <span><strong>Permanent Rank Lock:</strong> No monthly reset, zero demotions, and lifetime override eligibility.</span>
+                </div>
+            </div>
         </div>
-        <div class="rm-footer-cta">
-            🏢 Refer <strong>Myntreal Business Hub</strong> and get lifetime income —
-            <span style="color:#fbbf24">1% on every billing from 2nd billing onwards</span> ★
+
+        <!-- Zero Cannibalization Guarantee Box -->
+        <div class="zc-banner">
+            <div class="zc-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                    <div style="font-size:13.5px;font-weight:900;color:#fff;letter-spacing:.4px">ZERO CANNIBALIZATION GUARANTEE</div>
+                    <span style="font-size:10px;font-weight:800;color:#fde68a;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);padding:2px 8px;border-radius:12px;letter-spacing:.05em">DECOUPLED EARNING ARCHITECTURE</span>
+                </div>
+                <div style="font-size:12.5px;color:rgba(255,255,255,.85);line-height:1.6">
+                    A personal producer earning an increased direct commission (<strong style="color:#fff">6.50%</strong>, <strong style="color:#fff">7.50%</strong>, or <strong style="color:#fff">8.00%</strong>) is 100% self-earned from company margins and <strong style="color:#f87171">NEVER reduces, blocks, or absorbs upline leadership overrides (+0.50%, +1.00%, +1.50%)</strong>. Both personal sales and team leadership tracks operate simultaneously and independently!
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 Golden Rules Strip -->
+        <div class="rules-strip">
+            <div class="rule-card">
+                <div class="rule-icon" style="color:#34d399"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">1st Payment Qualification</strong>
+                    <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">Every deal automatically counts toward qualifying file count as soon as 1st customer advance or token is received.</span>
+                </div>
+            </div>
+            <div class="rule-card">
+                <div class="rule-icon" style="color:#fbbf24"><i class="fas fa-bolt"></i></div>
+                <div>
+                    <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">Future Files Application</strong>
+                    <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">Once qualified, higher direct commission slabs apply automatically to all future files. Past closed payouts remain locked.</span>
+                </div>
+            </div>
+            <div class="rule-card">
+                <div class="rule-icon" style="color:#60a5fa"><i class="fas fa-lock"></i></div>
+                <div>
+                    <strong style="color:#fff;font-size:12.5px;display:block;margin-bottom:2px">Permanent Lifetime Lock</strong>
+                    <span style="font-size:11.5px;color:rgba(255,255,255,.7);line-height:1.45;display:block">No demotions, no time limits, and no reset. An active direct member requires at least 3 files with 1st payment received.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- All 7 Verticals Ecosystem Matrix Table -->
+        <div class="ecosystem-matrix">
+            <div class="em-title">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:#fff">
+                    <i class="fas fa-cubes" style="color:#a78bfa"></i>
+                    All 7 Verticals Ecosystem Commission Matrix
+                </div>
+                <div style="font-size:11px;color:rgba(255,255,255,.55);font-weight:600">
+                    Unified 5.00% – 8.00% Direct + 3.00% Overrides Pool + 1.50% Support
+                </div>
+            </div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+                <table style="width:100%;border-collapse:collapse;min-width:680px">
+                    <thead>
+                        <tr style="background:rgba(0,0,0,.25)">
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:left;border-bottom:1px solid rgba(255,255,255,.1)">Vertical / Product Line</th>
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Personal Direct Slab</th>
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Full Support Bonus</th>
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Direct Team Overrides</th>
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:center;border-bottom:1px solid rgba(255,255,255,.1)">Max Earning Capacity</th>
+                            <th style="padding:10px 14px;font-size:11px;font-weight:800;color:rgba(255,255,255,.75);text-align:left;border-bottom:1px solid rgba(255,255,255,.1)">Special Partner Benefit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">☀️</span>Har Ghar Solar (PM Surya Ghar)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">₹1,000 CIBIL Validation Advance</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🛵</span>Manthra EV 2W (Vehicle Sales)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Instant booking credit</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🛡️</span>VGK Care Insurance (Bajaj Capital)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Life, Health, Motor &amp; General</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🏡</span>VGK Real Dreams (Real Estate)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Open Plots, Farmland &amp; Villas</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">🎓</span>EVolution (ETC) Labs (Training)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Skill Certification Referrals</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fff"><span style="font-size:16px;margin-right:8px">⚡</span>EV Spares &amp; Components</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#93c5fd">5.00% – 8.00%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#fbbf24">+1.50%</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:800;color:#c084fc">+0.50% – +1.50% (3% Pool)</td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">Up to 12.50%</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)"><strong style="color:#86efac">Up to 25%</strong> Member Discount at checkout</td>
+                        </tr>
+                        <tr style="background:rgba(245,158,11,.08)">
+                            <td style="padding:10px 14px;font-weight:800;color:#fde68a"><span style="font-size:16px;margin-right:8px">🏢</span>MyntReal Business Hub (5-in-1 Franchise)</td>
+                            <td colspan="3" style="padding:10px 14px;text-align:center;font-weight:900;color:#fde68a">
+                                1.00% Lifetime Referral on Every Billing Cycle
+                            </td>
+                            <td style="padding:10px 14px;text-align:center;font-weight:900;color:#86efac">1.00% Repeat</td>
+                            <td style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.8)">Lifetime Income from 2nd billing onwards</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="rm-footer-cta">
+                🏢 Refer <strong>Myntreal Business Hub</strong> and get lifetime income —
+                <span style="color:#fbbf24">1% on every billing from 2nd billing onwards</span> ★
+            </div>
         </div>
     </div>`;
 }

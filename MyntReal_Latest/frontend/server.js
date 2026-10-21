@@ -7842,7 +7842,8 @@ const server = http.createServer(async (req, res) => {
       'about', 'contact', 'why-suryanz', 'customer-protection', 'technology', 'projects', 'faqs', 'legal',
       'sitemap.xml', 'robots.txt', 'hub', 'catalog', 'vgk4u', 'mnrcatalog', 'zynovaos', 'dashboard', 'status',
       'marketplace', 'reclaim', 'reconnect', 'login', 'logout', 'ecom', 'ads', 'ach', 'arch', 'architecture',
-      'audio', 'css', 'js', 'images', 'storage', 'data', 'seo', 'layouts', 'vendor', 'partner', 'terms', 'privacy'
+      'audio', 'css', 'js', 'images', 'storage', 'data', 'seo', 'layouts', 'vendor', 'partner', 'terms', 'privacy',
+      'voffers', 'offerst'
     ]);
     const shortCodeMatch = urlParts.pathname.match(/^\/([A-Za-z0-9_-]{2,20})(\/staff\/.*|\/landing|\/?$)/);
     
