@@ -683,11 +683,16 @@ def list_vgk_members(
                 OfficialPartner.member_status.in_(['INACTIVE', 'BLOCKED'])
             ))
         elif st in ('active',):
-            query = query.filter(
-                OfficialPartner.is_active == True,
-                or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
-                or_(OfficialPartner.member_status.is_(None), OfficialPartner.member_status != 'BLOCKED')
-            )
+            # DC-SEARCH-STATUS-001: If user searches by keyword (phone/code/name) or filters today/yesterday,
+            # do not restrict to active-only so newly registered non-activated members appear.
+            _has_search = isinstance(search, str) and bool(search.strip())
+            _has_recent_reg = isinstance(reg_period, str) and reg_period.strip().lower() in ('today', 'yesterday')
+            if not (_has_search or _has_recent_reg):
+                query = query.filter(
+                    OfficialPartner.is_active == True,
+                    or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
+                    or_(OfficialPartner.member_status.is_(None), OfficialPartner.member_status != 'BLOCKED')
+                )
         elif st in ('all', '*'):
             pass  # Show all members without status restriction
     elif isinstance(is_active, bool):

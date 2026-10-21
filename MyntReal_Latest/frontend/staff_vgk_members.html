@@ -7244,8 +7244,13 @@ async function loadMembers(page = 1) {
   const insuranceGivenFilter = (document.getElementById('insuranceGivenFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
+  const curRegPeriod = _regPeriod || window._regPeriod || '';
   if (status) {
-    url += '&status=' + encodeURIComponent(status);
+    if (status === 'active' && (search || curRegPeriod === 'today' || curRegPeriod === 'yesterday')) {
+      url += '&status=all';
+    } else {
+      url += '&status=' + encodeURIComponent(status);
+    }
   }
   if (assignedStaffFilter) url += '&assigned_staff_id=' + encodeURIComponent(assignedStaffFilter);
   if (contactedDaysFilter) url += '&contacted_days=' + encodeURIComponent(contactedDaysFilter);
@@ -7257,7 +7262,6 @@ async function loadMembers(page = 1) {
   if (tShirtSizeFilter) url += '&t_shirt_size=' + encodeURIComponent(tShirtSizeFilter);
   if (kitGivenFilter) url += '&kit_given=' + encodeURIComponent(kitGivenFilter);
   if (insuranceGivenFilter) url += '&insurance_given=' + encodeURIComponent(insuranceGivenFilter);
-  const curRegPeriod = _regPeriod || window._regPeriod || '';
   if (curRegPeriod) url += '&reg_period=' + encodeURIComponent(curRegPeriod);
   const curRegMonth = _regMonth || window._regMonth || '';
   if (curRegMonth) {

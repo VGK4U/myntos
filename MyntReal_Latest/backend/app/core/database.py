@@ -136,11 +136,15 @@ else:
         )
     else:
         _is_eb_env = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+        _force_testing = (os.getenv("FORCE_TESTING_SCHEMA") or os.getenv("USE_SANDBOX_SCHEMA") or "").strip() == "1"
         _is_prod_env = (
-            _is_eb_env
-            or os.getenv("ENVIRONMENT", "").lower() == "production"
-            or os.getenv("NODE_ENV", "").lower() == "production"
-            or (os.getenv("FORCE_PUBLIC_SCHEMA") or "").strip() == "1"
+            not _force_testing and (
+                _is_eb_env
+                or os.getenv("ENVIRONMENT", "").lower() == "production"
+                or os.getenv("NODE_ENV", "").lower() == "production"
+                or (os.getenv("FORCE_PUBLIC_SCHEMA") or "").strip() == "1"
+                or (os.getenv("ALLOW_PROD_DB_ACCESS") or "").strip() == "1"
+            )
         )
         _pg_options = "-c idle_in_transaction_session_timeout=30000 -c statement_timeout=30000 -c lock_timeout=5000"
         if not _is_prod_env:
