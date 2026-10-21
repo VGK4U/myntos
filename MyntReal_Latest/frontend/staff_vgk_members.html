@@ -2043,12 +2043,26 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
             </select>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
+            <label for="flFvDocFilterSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">
+              <i class="fas fa-file-alt me-1" style="color:#0284c7"></i>Docs:
+            </label>
+            <select id="flFvDocFilterSelect" onchange="onFlFvDocFilterChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer">
+              <option value="ALL">All Documents</option>
+              <option value="WITH_DOCS">With Docs (1+)</option>
+              <option value="NO_DOCS">Docs Missing (0)</option>
+              <option value="BANK_DOCS">Bank Docs</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
             <label for="flFvSortSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">
               <i class="fas fa-sort-amount-down me-1" style="color:#0284c7"></i>Sort:
             </label>
             <select id="flFvSortSelect" onchange="onFlFvSortDropdownChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer">
               <option value="created_desc">Created Date (Newest first)</option>
               <option value="created_asc">Created Date (Oldest first)</option>
+              <option value="docs_desc">Docs Count (High to Low)</option>
+              <option value="docs_asc">Docs Count (Low to High)</option>
               <option value="deal_desc">Deal Value (High to Low)</option>
               <option value="deal_asc">Deal Value (Low to High)</option>
               <option value="name_asc">Customer Name (A → Z)</option>
@@ -2065,7 +2079,7 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
       <!-- Leads Table Container -->
       <div id="flFvTableContainer" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:white">
-        <table style="width:100%;min-width:1040px;border-collapse:collapse;font-size:12.5px;text-align:left">
+        <table style="width:100%;min-width:1120px;border-collapse:collapse;font-size:12.5px;text-align:left">
           <thead>
             <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap;user-select:none">
               <th onclick="toggleFlFvSort('id')" style="padding:10px 12px;cursor:pointer" title="Sort by Lead ID">
@@ -2085,6 +2099,9 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
               </th>
               <th onclick="toggleFlFvSort('stage')" style="padding:10px 12px;cursor:pointer" title="Sort by Solar Stage">
                 Solar Stage <span id="flSortIcon_stage" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('docs')" style="padding:10px 12px;cursor:pointer" title="Sort by Documents Count">
+                Documents <span id="flSortIcon_docs" style="color:#94a3b8;font-size:11px">↕</span>
               </th>
               <th onclick="toggleFlFvSort('deal_value')" style="padding:10px 12px;cursor:pointer" title="Sort by Deal Value">
                 Deal Value / kW <span id="flSortIcon_deal_value" style="color:#94a3b8;font-size:11px">↕</span>
@@ -2229,6 +2246,95 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         </button>
         <button onclick="closeFreelancerFullLeadModal()" style="background:#64748b;color:white;border:none;padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">Close</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Freelancer Full View Document Viewer Modal -->
+<div id="flFvLeadDocsModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(4px);z-index:2100;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeFlFvLeadDocsModal()">
+  <div style="background:white;border-radius:16px;width:100%;max-width:840px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);overflow:hidden">
+    <div style="padding:16px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+      <div style="min-width:0">
+        <div style="font-size:16px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px" id="flFvLdmTitle">
+          <i class="fas fa-folder-open text-primary"></i> Solar Documents
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <span id="flFvLdmStageBadge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700">Stage</span>
+          <span id="flFvLdmCountBadge" style="font-size:12px;color:#64748b;font-weight:600">0 documents</span>
+        </div>
+      </div>
+      <button type="button" onclick="closeFlFvLeadDocsModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Category Filter Pills -->
+    <div style="padding:10px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;gap:6px;overflow-x:auto;align-items:center">
+      <button type="button" class="flfv-doc-cat-pill active" data-cat="ALL" onclick="filterFlFvLeadDocsCategory('ALL')" style="border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #0284c7;background:#0284c7;color:white;transition:all .15s">All Documents</button>
+      <button type="button" class="flfv-doc-cat-pill" data-cat="kyc" onclick="filterFlFvLeadDocsCategory('kyc')" style="border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;transition:all .15s">Identity & KYC</button>
+      <button type="button" class="flfv-doc-cat-pill" data-cat="financial" onclick="filterFlFvLeadDocsCategory('financial')" style="border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;transition:all .15s">Financial / Bank</button>
+      <button type="button" class="flfv-doc-cat-pill" data-cat="technical" onclick="filterFlFvLeadDocsCategory('technical')" style="border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;transition:all .15s">Site & Technical</button>
+      <button type="button" class="flfv-doc-cat-pill" data-cat="certificates" onclick="filterFlFvLeadDocsCategory('certificates')" style="border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;transition:all .15s">Certificates & Agreement</button>
+    </div>
+
+    <!-- Documents Body -->
+    <div style="padding:18px 20px;overflow-y:auto;flex:1" id="flFvLdmBody">
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="font-size:11.5px;color:#64748b">
+        <i class="fas fa-shield-alt text-success me-1"></i> Read-only Solar Document Records
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="flFvLdmShareBtn" onclick="shareFlFvLeadDocs(_flFvActiveDocsLead ? _flFvActiveDocsLead.id : null)" style="background:#15803d;color:white;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          <i class="fas fa-share-alt"></i> Share Link (6-hr)
+        </button>
+        <button type="button" onclick="closeFlFvLeadDocsModal()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Freelancer Full View Share Link Popup Modal -->
+<div id="flFvShareLinkPopupModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(4px);z-index:2200;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeFlFvShareLinkModal()">
+  <div style="background:white;border-radius:16px;width:100%;max-width:520px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);overflow:hidden">
+    <div style="padding:16px 20px;background:#0f172a;color:white;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:800;color:white"><i class="fas fa-share-alt me-2" style="color:#38bdf8"></i>Document Share Link</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:2px" id="flFvSlpLeadName">—</div>
+      </div>
+      <button type="button" onclick="closeFlFvShareLinkModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div style="padding:20px">
+      <label style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;display:block">
+        Public Read-Only Share URL
+      </label>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <input type="text" id="flFvSlpUrlInput" readonly onclick="this.select()" style="flex:1;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-family:monospace;background:#f8fafc">
+        <button type="button" id="flFvSlpCopyBtn" onclick="copyFlFvShareLinkFromModal()" style="background:#0284c7;color:white;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#92400e;display:flex;gap:8px;align-items:flex-start">
+        <i class="fas fa-clock" style="margin-top:2px;color:#d97706"></i>
+        <div>
+          <div id="flFvSlpExpiry" style="font-weight:700">Expires in 6 hours</div>
+          <div style="margin-top:2px;color:#b45309">Anyone with this link can view the solar document dockets and download attachments.</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+      <a id="flFvSlpWaBtn" href="#" target="_blank" style="background:#25d366;color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">
+        <i class="fab fa-whatsapp" style="font-size:14px"></i> Share on WhatsApp
+      </a>
+      <button type="button" onclick="closeFlFvShareLinkModal()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+        Done
+      </button>
     </div>
   </div>
 </div>
@@ -4108,6 +4214,7 @@ let _currentFlFvL5Summary = [];
 let _flFvActiveModalTab = 'leads';
 let _flFvActiveStageFilter = 'ALL';
 let _flFvActiveSupportFilter = 'ALL';
+let _flFvActiveDocFilter = 'ALL';
 let _flFvSortField = 'created_at';
 let _flFvSortDir = 'desc';
 let _flFvCurrentId = null;
@@ -4182,13 +4289,16 @@ async function openFreelancerFullLeadModal(flId) {
   if (searchInput) searchInput.value = '';
   if (sortSelect) sortSelect.value = 'created_desc';
   if (supportSelect) supportSelect.innerHTML = '<option value="ALL">All Support</option>';
+  const docFilterSelect = document.getElementById('flFvDocFilterSelect');
+  if (docFilterSelect) docFilterSelect.value = 'ALL';
   _flFvActiveStageFilter = 'ALL';
   _flFvActiveSupportFilter = 'ALL';
+  _flFvActiveDocFilter = 'ALL';
   _flFvSortField = 'created_at';
   _flFvSortDir = 'desc';
   updateFlFvSortIcons();
 
-  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
 
   try {
     const res = await staffFetch(API + '/vgk/freelancers/' + flId);
@@ -4364,6 +4474,11 @@ function setFlFvStageFilter(stageLabel) {
   applyFlFvSortAndFilter();
 }
 
+function onFlFvDocFilterChange(val) {
+  _flFvActiveDocFilter = val || 'ALL';
+  applyFlFvSortAndFilter();
+}
+
 function onFlFvSortDropdownChange(val) {
   const parts = val.split('_');
   if (parts.length === 2) {
@@ -4375,6 +4490,7 @@ function onFlFvSortDropdownChange(val) {
     else if (fieldKey === 'support') _flFvSortField = 'support';
     else if (fieldKey === 'id') _flFvSortField = 'id';
     else if (fieldKey === 'stage') _flFvSortField = 'stage';
+    else if (fieldKey === 'docs') _flFvSortField = 'docs';
   }
   updateFlFvSortIcons();
   applyFlFvSortAndFilter();
@@ -4385,7 +4501,7 @@ function toggleFlFvSort(field) {
     _flFvSortDir = _flFvSortDir === 'asc' ? 'desc' : 'asc';
   } else {
     _flFvSortField = field;
-    _flFvSortDir = (field === 'created_at' || field === 'deal_value' || field === 'id') ? 'desc' : 'asc';
+    _flFvSortDir = (field === 'created_at' || field === 'deal_value' || field === 'docs' || field === 'id') ? 'desc' : 'asc';
   }
 
   const sortSelect = document.getElementById('flFvSortSelect');
@@ -4393,6 +4509,7 @@ function toggleFlFvSort(field) {
     let optVal = '';
     if (field === 'created_at') optVal = `created_${_flFvSortDir}`;
     else if (field === 'deal_value') optVal = `deal_${_flFvSortDir}`;
+    else if (field === 'docs') optVal = `docs_${_flFvSortDir}`;
     else if (field === 'name') optVal = `name_${_flFvSortDir}`;
     else if (field === 'support') optVal = `support_${_flFvSortDir}`;
     else if (field === 'id') optVal = `id_${_flFvSortDir}`;
@@ -4407,7 +4524,7 @@ function toggleFlFvSort(field) {
 }
 
 function updateFlFvSortIcons() {
-  const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
+  const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'docs', 'deal_value', 'created_at'];
   fields.forEach(f => {
     const el = document.getElementById(`flSortIcon_${f}`);
     if (el) {
@@ -4552,6 +4669,18 @@ function applyFlFvSortAndFilter() {
       if (currentSupp !== _flFvActiveSupportFilter) return false;
     }
 
+    // Check docs filter
+    if (_flFvActiveDocFilter && _flFvActiveDocFilter !== 'ALL') {
+      const dc = Number(l.docs_count || (l.documents ? l.documents.length : 0) || 0);
+      if (_flFvActiveDocFilter === 'WITH_DOCS' && dc <= 0) return false;
+      if (_flFvActiveDocFilter === 'NO_DOCS' && dc > 0) return false;
+      if (_flFvActiveDocFilter === 'BANK_DOCS') {
+        const isBankStage = rawStage.includes('bank');
+        const hasBankDoc = (l.documents || []).some(d => (d.doc_category || '').toLowerCase().includes('bank') || ['bank_book', 'bank_statement', 'cibil_report'].includes(d.doc_type));
+        if (!isBankStage && !hasBankDoc) return false;
+      }
+    }
+
     return true;
   });
 
@@ -4581,6 +4710,9 @@ function applyFlFvSortAndFilter() {
       const stB = (b.solar_pipeline_status || b.stage || b.status || '').toLowerCase();
       vA = (_SOLAR_STAGE_LABELS[stA] || a.stage || '').toLowerCase();
       vB = (_SOLAR_STAGE_LABELS[stB] || b.stage || '').toLowerCase();
+    } else if (_flFvSortField === 'docs') {
+      vA = Number(a.docs_count || (a.documents ? a.documents.length : 0) || 0);
+      vB = Number(b.docs_count || (b.documents ? b.documents.length : 0) || 0);
     } else if (_flFvSortField === 'deal_value') {
       vA = parseFloat(a.deal_value || a.deal_value_total || a.project_cost || (String(a.kw_size).includes('3') ? 200000 : 0) || 0);
       vB = parseFloat(b.deal_value || b.deal_value_total || b.project_cost || (String(b.kw_size).includes('3') ? 200000 : 0) || 0);
@@ -4610,7 +4742,7 @@ function renderFlFvTable(leads) {
   }
 
   if (!leads || leads.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:36px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
     return;
   }
 
@@ -4639,6 +4771,26 @@ function renderFlFvTable(leads) {
       stageBg = '#fef2f2'; stageColor = '#dc2626';
     }
 
+    const docsCount = Number(l.docs_count || (l.documents ? l.documents.length : 0) || 0);
+    let docBadge = '';
+    if (rawStage.includes('bank')) {
+      docBadge = `<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-university me-1"></i>Bank Docs (${docsCount})</span>`;
+    } else if (rawStage.includes('app')) {
+      docBadge = `<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-paper-plane me-1"></i>App Docs (${docsCount})</span>`;
+    } else if (rawStage.includes('doc') && rawStage.includes('pending')) {
+      docBadge = `<span style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-clock me-1"></i>Docs Pending (${docsCount})</span>`;
+    } else if (rawStage.includes('doc') && rawStage.includes('issue')) {
+      docBadge = `<span style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-exclamation-triangle me-1"></i>Docs Issue (${docsCount})</span>`;
+    } else if (rawStage.includes('install')) {
+      docBadge = `<span style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-solar-panel me-1"></i>Install Docs (${docsCount})</span>`;
+    } else if (rawStage.includes('won') || rawStage.includes('subsidy') || rawStage.includes('complete')) {
+      docBadge = `<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-check-circle me-1"></i>Verified (${docsCount})</span>`;
+    } else if (docsCount > 0) {
+      docBadge = `<span style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-folder me-1"></i>${docsCount} Doc${docsCount === 1 ? '' : 's'}</span>`;
+    } else {
+      docBadge = `<span style="background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap"><i class="fas fa-file me-1"></i>0 Docs</span>`;
+    }
+
     const suppName = esc(l.support_name || 'Direct');
     const isDirect = !l.support_name || l.support_name === 'Direct';
     const suppBadge = isDirect 
@@ -4663,12 +4815,14 @@ function renderFlFvTable(leads) {
     }
 
     const createdDate = l.created_at ? fmtDate(l.created_at) : '—';
+    const rawLeadName = l.lead_name || l.name || 'Lead #' + l.id;
+    const escLeadName = rawLeadName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     return `
       <tr style="border-bottom:1px solid #f1f5f9;transition:background .15s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
         <td style="padding:10px 12px;font-weight:700;color:#64748b;white-space:nowrap">#${esc(l.id)}</td>
         <td style="padding:10px 12px;min-width:140px">
-          <strong style="color:#0f172a;font-size:13px">${esc(l.lead_name || l.name || 'Unnamed')}</strong>
+          <strong style="color:#0f172a;font-size:13px">${esc(rawLeadName)}</strong>
           ${l.city ? `<div style="font-size:11px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
         </td>
         <td style="padding:10px 12px;white-space:nowrap">
@@ -4684,6 +4838,19 @@ function renderFlFvTable(leads) {
           <span style="background:${stageBg};color:${stageColor};padding:3px 9px;border-radius:10px;font-weight:700;font-size:11.5px">
             ${esc(stageDisplay)}
           </span>
+        </td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+            <div>${docBadge}</div>
+            <div style="display:inline-flex;gap:4px;align-items:center">
+              <button type="button" class="btn-doc-view" onclick="openFlFvLeadDocsModal(${l.id})" title="Manage / View Solar Documents (${docsCount})" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+                <i class="fas fa-folder-open"></i> Docs
+              </button>
+              <button type="button" class="btn-doc-share" id="flFvSlkBtn_${l.id}" onclick="shareFlFvLeadDocs(${l.id}, '${escLeadName}')" title="Generate 6-hour Share Link" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                <i class="fas fa-share-alt"></i>
+              </button>
+            </div>
+          </div>
         </td>
         <td style="padding:10px 12px;white-space:nowrap">
           ${valDisplay}
@@ -5028,6 +5195,254 @@ function drillDownFlFvL5Leads(supportName) {
   }
   _flFvActiveSupportFilter = supportName;
   applyFlFvSortAndFilter();
+}
+
+/* ─── Freelancer Full View Solar Documents Modal Logic ─── */
+let _flFvActiveDocsLead = null;
+let _flFvActiveDocsCategory = 'ALL';
+
+function openFlFvLeadDocsModal(leadId) {
+  const lead = (_currentFlFvLeads || []).find(x => Number(x.id) === Number(leadId));
+  if (!lead) return;
+  _flFvActiveDocsLead = lead;
+  _flFvActiveDocsCategory = 'ALL';
+
+  const modal = document.getElementById('flFvLeadDocsModal');
+  const titleEl = document.getElementById('flFvLdmTitle');
+  const stageBadgeEl = document.getElementById('flFvLdmStageBadge');
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fas fa-solar-panel text-primary me-2"></i><strong>${esc(lead.lead_name || lead.name || 'Lead #' + lead.id)}</strong> <span style="font-family:monospace;color:#64748b;font-size:13px">(#${lead.id})</span>`;
+  }
+
+  const rawStage = (lead.solar_pipeline_status || lead.stage || lead.status || '').toLowerCase().trim();
+  const stageDisplay = _SOLAR_STAGE_LABELS[rawStage] || lead.stage || lead.solar_pipeline_status || 'Lead';
+  if (stageBadgeEl) {
+    stageBadgeEl.textContent = stageDisplay;
+  }
+
+  document.querySelectorAll('.flfv-doc-cat-pill').forEach(btn => {
+    if (btn.dataset.cat === 'ALL') {
+      btn.style.background = '#0284c7';
+      btn.style.color = 'white';
+      btn.style.borderColor = '#0284c7';
+    } else {
+      btn.style.background = '#f1f5f9';
+      btn.style.color = '#475569';
+      btn.style.borderColor = '#e2e8f0';
+    }
+  });
+
+  renderFlFvLeadDocsModalBody();
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFlFvLeadDocsModal() {
+  const modal = document.getElementById('flFvLeadDocsModal');
+  if (modal) modal.style.display = 'none';
+  _flFvActiveDocsLead = null;
+}
+
+function filterFlFvLeadDocsCategory(cat) {
+  _flFvActiveDocsCategory = cat || 'ALL';
+  document.querySelectorAll('.flfv-doc-cat-pill').forEach(btn => {
+    if (btn.dataset.cat === _flFvActiveDocsCategory) {
+      btn.style.background = '#0284c7';
+      btn.style.color = 'white';
+      btn.style.borderColor = '#0284c7';
+    } else {
+      btn.style.background = '#f1f5f9';
+      btn.style.color = '#475569';
+      btn.style.borderColor = '#e2e8f0';
+    }
+  });
+  renderFlFvLeadDocsModalBody();
+}
+
+function renderFlFvLeadDocsModalBody() {
+  const bodyEl = document.getElementById('flFvLdmBody');
+  const countBadge = document.getElementById('flFvLdmCountBadge');
+  if (!bodyEl || !_flFvActiveDocsLead) return;
+
+  const docs = _flFvActiveDocsLead.documents || [];
+  if (countBadge) countBadge.textContent = `${docs.length} uploaded file${docs.length === 1 ? '' : 's'}`;
+
+  let filteredDocs = docs;
+  if (_flFvActiveDocsCategory !== 'ALL') {
+    filteredDocs = docs.filter(d => {
+      const cat = (d.doc_category || '').toLowerCase();
+      const dt = (d.doc_type || '').toLowerCase();
+      if (_flFvActiveDocsCategory === 'kyc') {
+        return cat.includes('identity') || cat.includes('ownership') || ['adhar', 'pan', 'passport_photo', 'powerbill', 'signature'].includes(dt);
+      } else if (_flFvActiveDocsCategory === 'financial') {
+        return cat.includes('financial') || cat.includes('bank') || ['bank_book', 'bank_statement', 'cibil_report', 'payment_receipt', 'quotation'].includes(dt);
+      } else if (_flFvActiveDocsCategory === 'technical') {
+        return cat.includes('technical') || cat.includes('site') || ['roof_top_photo', 'geotagging_photo', 'installation_photo', 'solar_rooftop_registration'].includes(dt);
+      } else if (_flFvActiveDocsCategory === 'certificates') {
+        return cat.includes('certificate') || cat.includes('completion') || dt.includes('annexure') || ['invoice', 'dcr_certificate', 'synchronisation_certificate'].includes(dt);
+      }
+      return true;
+    });
+  }
+
+  if (!filteredDocs || filteredDocs.length === 0) {
+    bodyEl.innerHTML = `
+      <div style="text-align:center;padding:45px 20px;color:#94a3b8">
+        <i class="fas fa-folder-open fa-3x mb-3" style="opacity:0.35"></i>
+        <div style="font-weight:700;font-size:14px;color:#475569">No documents found in this category</div>
+        <p style="font-size:12px;margin:4px 0 0;color:#94a3b8">Documents uploaded in solar workflow appear here automatically.</p>
+      </div>
+    `;
+    return;
+  }
+
+  bodyEl.innerHTML = filteredDocs.map(d => {
+    const viewUrl = d.view_url || (d.file_name ? `/storage/${d.file_name}` : '#');
+    const origName = d.original_name || d.file_name || 'Document';
+    const isPdf = origName.toLowerCase().endsWith('.pdf') || (d.doc_type || '').includes('pdf');
+    const iconClass = isPdf ? 'fas fa-file-pdf text-danger' : 'fas fa-file-image text-primary';
+    const sizeStr = d.file_size ? `${Math.round(d.file_size / 1024)} KB` : '';
+    const uploadedStr = d.uploaded_at ? fmtDate(d.uploaded_at) : '';
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;background:white;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0">
+          <div style="font-size:24px;width:32px;text-align:center">
+            <i class="${iconClass}"></i>
+          </div>
+          <div style="min-width:0">
+            <div style="font-weight:700;color:#0f172a;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${esc(d.doc_label || d.doc_type || 'Document')}
+            </div>
+            <div style="font-size:11.5px;color:#64748b;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span style="font-family:monospace;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(origName)}</span>
+              ${sizeStr ? `<span>• ${sizeStr}</span>` : ''}
+              ${uploadedStr ? `<span>• ${uploadedStr}</span>` : ''}
+              <span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${esc(d.doc_category || 'General')}</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:inline-flex;gap:6px;align-items:center;margin-left:12px">
+          <a href="${viewUrl}" target="_blank" style="text-decoration:none;padding:5px 12px;font-size:11.5px;background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:6px;font-weight:700;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-eye"></i> View
+          </a>
+          <a href="${viewUrl}" download="${esc(origName)}" style="text-decoration:none;padding:5px 10px;font-size:11.5px;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;border-radius:6px;font-weight:700;display:inline-flex;align-items:center;gap:4px" title="Download Document">
+            <i class="fas fa-download"></i>
+          </a>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function shareFlFvLeadDocs(leadId, leadName) {
+  leadName = leadName || (_flFvActiveDocsLead ? (_flFvActiveDocsLead.lead_name || _flFvActiveDocsLead.name) : `Lead #${leadId}`);
+  const btn = document.getElementById(`flFvSlkBtn_${leadId}`) || document.getElementById('flFvLdmShareBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  }
+
+  try {
+    let res = await staffFetch(`/api/v1/vgk/leads/${leadId}/share-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    if (!res.ok) {
+      res = await staffFetch(`/api/v1/crm/leads/${leadId}/share-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+    }
+
+    let shareUrl = '';
+    let expiresAt = '';
+    if (res.ok) {
+      const data = await res.json();
+      shareUrl = data.share_url;
+      expiresAt = data.expires_at;
+    } else {
+      shareUrl = `${window.location.origin}/lead-share.html?lead_id=${leadId}`;
+    }
+
+    openFlFvShareLinkModal(leadName, shareUrl, expiresAt);
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast('✅ 6-Hour Share Link copied to clipboard!', 'success');
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('Share link error:', err);
+    const fallbackUrl = `${window.location.origin}/lead-share.html?lead_id=${leadId}`;
+    openFlFvShareLinkModal(leadName, fallbackUrl);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-share-alt"></i>';
+    }
+  }
+}
+
+function openFlFvShareLinkModal(leadName, url, expiresAt) {
+  const modal = document.getElementById('flFvShareLinkPopupModal');
+  const nameEl = document.getElementById('flFvSlpLeadName');
+  const urlInput = document.getElementById('flFvSlpUrlInput');
+  const expiryEl = document.getElementById('flFvSlpExpiry');
+  const waBtn = document.getElementById('flFvSlpWaBtn');
+
+  if (nameEl) nameEl.textContent = leadName;
+  if (urlInput) urlInput.value = url;
+  if (expiryEl && expiresAt) {
+    const d = new Date(expiresAt);
+    expiryEl.textContent = `Expires at ${d.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString('en-IN', {day:'numeric', month:'short'})}`;
+  } else if (expiryEl) {
+    expiryEl.textContent = 'Expires in 6 hours';
+  }
+
+  if (waBtn) {
+    const msg = encodeURIComponent(`Please review the solar documents for ${leadName}:\n${url}\n(Link active for 6 hours)`);
+    waBtn.href = `https://web.whatsapp.com/send?text=${msg}`;
+  }
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFlFvShareLinkModal() {
+  const modal = document.getElementById('flFvShareLinkPopupModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function copyFlFvShareLinkFromModal() {
+  const input = document.getElementById('flFvSlpUrlInput');
+  const btn = document.getElementById('flFvSlpCopyBtn');
+  if (!input) return;
+
+  input.select();
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(input.value).then(() => {
+      if (btn) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.style.background = '#15803d';
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          btn.style.background = '#0284c7';
+        }, 2000);
+      }
+    });
+  } else {
+    document.execCommand('copy');
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+      }, 2000);
+    }
+  }
+  showToast('Link copied to clipboard', 'success');
 }
 
 async function resetFreelancerPassword(flId, flCode) {

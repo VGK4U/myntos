@@ -476,6 +476,136 @@
       color: #475569;
     }
 
+    /* Document Badges & Buttons */
+    .doc-badge-chip {
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .btn-doc-view {
+      background: #e0e7ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-doc-view:hover {
+      background: #c7d2fe;
+      color: #3730a3;
+    }
+    .btn-doc-share {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-doc-share:hover {
+      background: #bbf7d0;
+      color: #166534;
+    }
+
+    /* Document & Share Modal */
+    .lead-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .lead-modal-card {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 840px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .lead-modal-header {
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .lead-modal-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .lead-modal-footer {
+      padding: 12px 20px;
+      background: #f8fafc;
+      border-top: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .doc-cat-pill {
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+      background: #f1f5f9;
+      color: #475569;
+      transition: all 0.15s;
+    }
+    .doc-cat-pill.active {
+      background: #0284c7;
+      color: white;
+      border-color: #0284c7;
+    }
+    .doc-card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: white;
+      margin-bottom: 8px;
+      transition: all 0.15s;
+    }
+    .doc-card-row:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
     /* Auth Modal / Overlay */
     .auth-overlay {
       position: fixed;
@@ -751,10 +881,22 @@
           </div>
 
           <div style="display:flex;align-items:center;gap:6px">
+            <label for="docFilterSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Docs:</label>
+            <select id="docFilterSelect" class="filter-select" onchange="onDocFilterChange(this.value)">
+              <option value="ALL">All Documents</option>
+              <option value="WITH_DOCS">With Docs (1+)</option>
+              <option value="NO_DOCS">Docs Missing (0)</option>
+              <option value="BANK_DOCS">Bank Docs</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
             <label for="sortSelect" style="font-size:12px;font-weight:700;color:#64748b;margin:0">Sort by:</label>
             <select id="sortSelect" class="filter-select" onchange="onSortChange(this.value)">
               <option value="created_desc">Newest First</option>
               <option value="created_asc">Oldest First</option>
+              <option value="docs_desc">Docs: High to Low</option>
+              <option value="docs_asc">Docs: Low to High</option>
               <option value="deal_desc">Deal Value: High to Low</option>
               <option value="deal_asc">Deal Value: Low to High</option>
               <option value="name_asc">Name: A to Z</option>
@@ -781,13 +923,14 @@
               <th onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
               <th onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
               <th onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
+              <th onclick="toggleSort('docs')">Documents <span id="sortIcon_docs">↕</span></th>
               <th onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
               <th onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
             </tr>
           </thead>
           <tbody id="leadsTbody">
             <tr>
-              <td colspan="8" style="text-align:center;padding:40px;color:#64748b">
+              <td colspan="9" style="text-align:center;padding:40px;color:#64748b">
                 <i class="fas fa-spinner fa-spin me-2"></i> Initializing Ground Source registry...
               </td>
             </tr>
@@ -980,6 +1123,7 @@
     // Leads Tab Filters
     let _activeStageFilter = 'ALL';
     let _activeSupportFilter = 'ALL';
+    let _activeDocFilter = 'ALL';
     let _searchQuery = '';
     let _sortField = 'created_at';
     let _sortDir = 'desc';
@@ -1447,6 +1591,11 @@
       applySortAndFilter();
     }
 
+    function onDocFilterChange(val) {
+      _activeDocFilter = val || 'ALL';
+      applySortAndFilter();
+    }
+
     function onSortChange(val) {
       const parts = val.split('_');
       if (parts.length === 2) {
@@ -1457,6 +1606,7 @@
         else if (fieldKey === 'name') _sortField = 'name';
         else if (fieldKey === 'support') _sortField = 'support';
         else if (fieldKey === 'stage') _sortField = 'stage';
+        else if (fieldKey === 'docs') _sortField = 'docs';
       }
       updateSortIcons();
       applySortAndFilter();
@@ -1467,7 +1617,7 @@
         _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
       } else {
         _sortField = field;
-        _sortDir = (field === 'created_at' || field === 'deal_value' || field === 'id') ? 'desc' : 'asc';
+        _sortDir = (field === 'created_at' || field === 'deal_value' || field === 'docs' || field === 'id') ? 'desc' : 'asc';
       }
 
       const sortSelect = document.getElementById('sortSelect');
@@ -1475,6 +1625,7 @@
         let optVal = '';
         if (field === 'created_at') optVal = `created_${_sortDir}`;
         else if (field === 'deal_value') optVal = `deal_${_sortDir}`;
+        else if (field === 'docs') optVal = `docs_${_sortDir}`;
         else if (field === 'name') optVal = `name_${_sortDir}`;
         else if (field === 'support') optVal = `support_${_sortDir}`;
         else if (field === 'stage') optVal = `stage_${_sortDir}`;
@@ -1488,7 +1639,7 @@
     }
 
     function updateSortIcons() {
-      const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
+      const fields = ['id', 'name', 'support', 'phone', 'status', 'stage', 'docs', 'deal_value', 'created_at'];
       fields.forEach(f => {
         const el = document.getElementById(`sortIcon_${f}`);
         if (el) {
@@ -1533,6 +1684,17 @@
           if (currentSupp !== _activeSupportFilter) return false;
         }
 
+        if (_activeDocFilter && _activeDocFilter !== 'ALL') {
+          const dc = Number(l.docs_count || (l.documents ? l.documents.length : 0) || 0);
+          if (_activeDocFilter === 'WITH_DOCS' && dc <= 0) return false;
+          if (_activeDocFilter === 'NO_DOCS' && dc > 0) return false;
+          if (_activeDocFilter === 'BANK_DOCS') {
+            const isBankStage = rawStage.includes('bank');
+            const hasBankDoc = (l.documents || []).some(d => (d.doc_category || '').toLowerCase().includes('bank') || ['bank_book', 'bank_statement', 'cibil_report'].includes(d.doc_type));
+            if (!isBankStage && !hasBankDoc) return false;
+          }
+        }
+
         return true;
       });
 
@@ -1559,6 +1721,9 @@
           const stB = (b.solar_pipeline_status || b.stage || b.status || '').toLowerCase();
           vA = (_SOLAR_STAGE_LABELS[stA] || a.stage || '').toLowerCase();
           vB = (_SOLAR_STAGE_LABELS[stB] || b.stage || '').toLowerCase();
+        } else if (_sortField === 'docs') {
+          vA = Number(a.docs_count || (a.documents ? a.documents.length : 0) || 0);
+          vB = Number(b.docs_count || (b.documents ? b.documents.length : 0) || 0);
         } else if (_sortField === 'deal_value') {
           vA = parseFloat(a.deal_value || a.deal_value_total || (String(a.kw_size).includes('3') ? 200000 : 0) || 0);
           vB = parseFloat(b.deal_value || b.deal_value_total || (String(b.kw_size).includes('3') ? 200000 : 0) || 0);
@@ -1587,7 +1752,7 @@
       }
 
       if (leads.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">No originated leads found matching query/filter.</td></tr>`;
         return;
       }
 
@@ -1616,6 +1781,26 @@
           stageBg = '#fef2f2'; stageColor = '#dc2626';
         }
 
+        const docsCount = Number(l.docs_count || (l.documents ? l.documents.length : 0) || 0);
+        let docBadge = '';
+        if (rawStage.includes('bank')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe"><i class="fas fa-university me-1"></i>Bank Docs (${docsCount})</span>`;
+        } else if (rawStage.includes('app')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0"><i class="fas fa-paper-plane me-1"></i>App Docs (${docsCount})</span>`;
+        } else if (rawStage.includes('doc') && rawStage.includes('pending')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a"><i class="fas fa-clock me-1"></i>Docs Pending (${docsCount})</span>`;
+        } else if (rawStage.includes('doc') && rawStage.includes('issue')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa"><i class="fas fa-exclamation-triangle me-1"></i>Docs Issue (${docsCount})</span>`;
+        } else if (rawStage.includes('install')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe"><i class="fas fa-solar-panel me-1"></i>Install Docs (${docsCount})</span>`;
+        } else if (rawStage.includes('won') || rawStage.includes('subsidy') || rawStage.includes('complete')) {
+          docBadge = `<span class="doc-badge-chip" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0"><i class="fas fa-check-circle me-1"></i>Verified (${docsCount})</span>`;
+        } else if (docsCount > 0) {
+          docBadge = `<span class="doc-badge-chip" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1"><i class="fas fa-folder me-1"></i>${docsCount} Doc${docsCount === 1 ? '' : 's'}</span>`;
+        } else {
+          docBadge = `<span class="doc-badge-chip" style="background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0"><i class="fas fa-file me-1"></i>0 Docs</span>`;
+        }
+
         const suppName = esc(l.support_name || 'Direct');
         const isDirect = !l.support_name || l.support_name === 'Direct';
         const suppBadge = isDirect 
@@ -1641,12 +1826,14 @@
 
         const createdDate = l.created_at ? fmtDate(l.created_at) : '—';
         const phoneToDisplay = _viewer.is_staff ? (l.masked_phone || maskPhoneStrict(l.phone)) : (l.phone || '—');
+        const rawLeadName = l.lead_name || l.name || 'Lead #' + l.id;
+        const escLeadName = rawLeadName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
         return `
           <tr>
             <td style="font-weight:700;color:#64748b;white-space:nowrap">#${esc(l.id)}</td>
             <td style="min-width:150px">
-              <strong style="color:#0f172a;font-size:13.5px">${esc(l.lead_name || l.name || 'Unnamed')}</strong>
+              <strong style="color:#0f172a;font-size:13.5px">${esc(rawLeadName)}</strong>
               ${l.city ? `<div style="font-size:11.5px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
             </td>
             <td style="white-space:nowrap">
@@ -1660,6 +1847,19 @@
             </td>
             <td style="white-space:nowrap">
               <span class="badge-stage" style="background:${stageBg};color:${stageColor}">${esc(stageDisplay)}</span>
+            </td>
+            <td style="white-space:nowrap">
+              <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+                <div>${docBadge}</div>
+                <div style="display:inline-flex;gap:4px;align-items:center">
+                  <button class="btn-doc-view" onclick="openLeadDocsModal(${l.id})" title="Manage / View Solar Documents (${docsCount})">
+                    <i class="fas fa-folder-open"></i> Docs
+                  </button>
+                  <button class="btn-doc-share" id="slkBtn_${l.id}" onclick="shareLeadDocs(${l.id}, '${escLeadName}')" title="Generate 6-hour Share Link">
+                    <i class="fas fa-share-alt"></i>
+                  </button>
+                </div>
+              </div>
             </td>
             <td style="white-space:nowrap">
               ${valDisplay}
@@ -1975,10 +2175,368 @@
       window.scrollTo({ top: 380, behavior: 'smooth' });
     }
 
+    /* ─── SOLAR DOCUMENTS MODAL & SHARING LOGIC ─── */
+    let _activeDocsLead = null;
+    let _activeDocsCategory = 'ALL';
+
+    function openLeadDocsModal(leadId) {
+      const lead = (_allLeads || []).find(x => Number(x.id) === Number(leadId));
+      if (!lead) return;
+      _activeDocsLead = lead;
+      _activeDocsCategory = 'ALL';
+
+      const modal = document.getElementById('leadDocsModal');
+      const titleEl = document.getElementById('ldmTitle');
+      const stageBadgeEl = document.getElementById('ldmStageBadge');
+
+      if (titleEl) {
+        titleEl.innerHTML = `<i class="fas fa-solar-panel text-primary me-2"></i><strong>${esc(lead.lead_name || lead.name || 'Lead #' + lead.id)}</strong> <span style="font-family:monospace;color:#64748b;font-size:13px">(#${lead.id})</span>`;
+      }
+
+      const rawStage = (lead.solar_pipeline_status || lead.stage || lead.status || '').toLowerCase().trim();
+      const stageDisplay = _SOLAR_STAGE_LABELS[rawStage] || lead.stage || lead.solar_pipeline_status || 'Lead';
+      if (stageBadgeEl) {
+        stageBadgeEl.textContent = stageDisplay;
+      }
+
+      // Reset category filter pills to ALL
+      document.querySelectorAll('.doc-cat-pill').forEach(btn => {
+        if (btn.dataset.cat === 'ALL') btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+
+      renderLeadDocsModalBody();
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeLeadDocsModal() {
+      const modal = document.getElementById('leadDocsModal');
+      if (modal) modal.style.display = 'none';
+      _activeDocsLead = null;
+    }
+
+    function filterLeadDocsCategory(cat) {
+      _activeDocsCategory = cat || 'ALL';
+      document.querySelectorAll('.doc-cat-pill').forEach(btn => {
+        if (btn.dataset.cat === _activeDocsCategory) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      renderLeadDocsModalBody();
+    }
+
+    function renderLeadDocsModalBody() {
+      const bodyEl = document.getElementById('ldmBody');
+      const countBadge = document.getElementById('ldmCountBadge');
+      if (!bodyEl || !_activeDocsLead) return;
+
+      const docs = _activeDocsLead.documents || [];
+      if (countBadge) countBadge.textContent = `${docs.length} uploaded file${docs.length === 1 ? '' : 's'}`;
+
+      let filteredDocs = docs;
+      if (_activeDocsCategory !== 'ALL') {
+        filteredDocs = docs.filter(d => {
+          const cat = (d.doc_category || '').toLowerCase();
+          const dt = (d.doc_type || '').toLowerCase();
+          if (_activeDocsCategory === 'kyc') {
+            return cat.includes('identity') || cat.includes('ownership') || ['adhar', 'pan', 'passport_photo', 'powerbill', 'signature'].includes(dt);
+          } else if (_activeDocsCategory === 'financial') {
+            return cat.includes('financial') || cat.includes('bank') || ['bank_book', 'bank_statement', 'cibil_report', 'payment_receipt', 'quotation'].includes(dt);
+          } else if (_activeDocsCategory === 'technical') {
+            return cat.includes('technical') || cat.includes('site') || ['roof_top_photo', 'geotagging_photo', 'installation_photo', 'solar_rooftop_registration'].includes(dt);
+          } else if (_activeDocsCategory === 'certificates') {
+            return cat.includes('certificate') || cat.includes('completion') || dt.includes('annexure') || ['invoice', 'dcr_certificate', 'synchronisation_certificate'].includes(dt);
+          }
+          return true;
+        });
+      }
+
+      if (!filteredDocs || filteredDocs.length === 0) {
+        bodyEl.innerHTML = `
+          <div style="text-align:center;padding:45px 20px;color:#94a3b8">
+            <i class="fas fa-folder-open fa-3x mb-3" style="opacity:0.35"></i>
+            <div style="font-weight:700;font-size:14px;color:#475569">No documents found in this section</div>
+            <p style="font-size:12px;margin:4px 0 0;color:#94a3b8">Documents uploaded in solar workflow appear here automatically.</p>
+          </div>
+        `;
+        return;
+      }
+
+      bodyEl.innerHTML = filteredDocs.map(d => {
+        const viewUrl = d.view_url || (d.file_name ? `/storage/${d.file_name}` : '#');
+        const origName = d.original_name || d.file_name || 'Document';
+        const isPdf = origName.toLowerCase().endsWith('.pdf') || (d.doc_type || '').includes('pdf');
+        const iconClass = isPdf ? 'fas fa-file-pdf text-danger' : 'fas fa-file-image text-primary';
+        const sizeStr = d.file_size ? `${Math.round(d.file_size / 1024)} KB` : '';
+        const uploadedStr = d.uploaded_at ? fmtDate(d.uploaded_at) : '';
+
+        return `
+          <div class="doc-card-row">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0">
+              <div style="font-size:24px;width:32px;text-align:center">
+                <i class="${iconClass}"></i>
+              </div>
+              <div style="min-width:0">
+                <div style="font-weight:700;color:#0f172a;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  ${esc(d.doc_label || d.doc_type || 'Document')}
+                </div>
+                <div style="font-size:11.5px;color:#64748b;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <span style="font-family:monospace;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(origName)}</span>
+                  ${sizeStr ? `<span>• ${sizeStr}</span>` : ''}
+                  ${uploadedStr ? `<span>• ${uploadedStr}</span>` : ''}
+                  <span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${esc(d.doc_category || 'General')}</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:inline-flex;gap:6px;align-items:center;margin-left:12px">
+              <a href="${viewUrl}" target="_blank" class="btn-doc-view" style="text-decoration:none;padding:5px 12px;font-size:11.5px">
+                <i class="fas fa-eye"></i> View
+              </a>
+              <a href="${viewUrl}" download="${esc(origName)}" class="btn-doc-share" style="text-decoration:none;padding:5px 10px;font-size:11.5px" title="Download Document">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function shareLeadDocs(leadId, leadName) {
+      leadName = leadName || (_activeDocsLead ? (_activeDocsLead.lead_name || _activeDocsLead.name) : `Lead #${leadId}`);
+      const btn = document.getElementById(`slkBtn_${leadId}`) || document.getElementById('ldmShareBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+
+      try {
+        const token = getAuthToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        let shareUrl = '';
+        let expiresAt = '';
+
+        // Try dedicated VGK share endpoint first
+        let res = await fetch(`/api/v1/vgk/leads/${leadId}/share-link`, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({})
+        });
+
+        // Fallback to CRM share endpoint if needed
+        if (!res.ok) {
+          res = await fetch(`/api/v1/crm/leads/${leadId}/share-link`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({})
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          shareUrl = data.share_url;
+          expiresAt = data.expires_at;
+        } else {
+          shareUrl = `${window.location.origin}/lead-share.html?lead_id=${leadId}`;
+        }
+
+        // Open share modal
+        openShareLinkModal(leadName, shareUrl, expiresAt);
+
+        // Auto-copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('✅ 6-Hour Share Link copied to clipboard!', 'success');
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Share link error:', err);
+        const fallbackUrl = `${window.location.origin}/lead-share.html?lead_id=${leadId}`;
+        openShareLinkModal(leadName, fallbackUrl);
+        showToast('Link generated', 'success');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        }
+      }
+    }
+
+    function openShareLinkModal(leadName, url, expiresAt) {
+      const modal = document.getElementById('shareLinkPopupModal');
+      const nameEl = document.getElementById('slpLeadName');
+      const urlInput = document.getElementById('slpUrlInput');
+      const expiryEl = document.getElementById('slpExpiry');
+      const waBtn = document.getElementById('slpWaBtn');
+
+      if (nameEl) nameEl.textContent = leadName;
+      if (urlInput) urlInput.value = url;
+      if (expiryEl && expiresAt) {
+        const d = new Date(expiresAt);
+        expiryEl.textContent = `Expires at ${d.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}, ${d.toLocaleDateString('en-IN', {day:'numeric', month:'short'})}`;
+      } else if (expiryEl) {
+        expiryEl.textContent = 'Expires in 6 hours';
+      }
+
+      if (waBtn) {
+        const msg = encodeURIComponent(`Please review the solar documents for ${leadName}:\n${url}\n(Link active for 6 hours)`);
+        waBtn.href = `https://web.whatsapp.com/send?text=${msg}`;
+      }
+
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeShareLinkModal() {
+      const modal = document.getElementById('shareLinkPopupModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function copyShareLinkFromModal() {
+      const input = document.getElementById('slpUrlInput');
+      const btn = document.getElementById('slpCopyBtn');
+      if (!input) return;
+
+      input.select();
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          if (btn) {
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.style.background = '#15803d';
+            setTimeout(() => {
+              btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+              btn.style.background = '#0284c7';
+            }, 2000);
+          }
+        });
+      } else {
+        document.execCommand('copy');
+        if (btn) {
+          btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          }, 2000);
+        }
+      }
+      showToast('Link copied to clipboard', 'success');
+    }
+
+    function showToast(msg, type = 'info') {
+      let toast = document.getElementById('gsToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'gsToast';
+        toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#0f172a;color:white;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.3);z-index:99999;transition:all 0.25s ease;display:flex;align-items:center;gap:8px';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = msg;
+      toast.style.display = 'flex';
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => { toast.style.display = 'none'; }, 250);
+      }, 3000);
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
       loadFreelancerData();
     });
   </script>
+
+  <!-- Document Viewer Modal -->
+  <div class="lead-modal-overlay" id="leadDocsModal" style="display:none" onclick="if(event.target===this)closeLeadDocsModal()">
+    <div class="lead-modal-card">
+      <div class="lead-modal-header">
+        <div style="min-width:0">
+          <div style="font-size:16px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px" id="ldmTitle">
+            <i class="fas fa-folder-open text-primary"></i> Solar Documents
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <span id="ldmStageBadge" class="doc-badge-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">Stage</span>
+            <span id="ldmCountBadge" style="font-size:12px;color:#64748b;font-weight:600">0 documents</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeLeadDocsModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:6px" onmouseover="this.style.color='#0f172a'" onmouseout="this.style.color='#94a3b8'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div style="padding:10px 20px;background:#f8fafc;border-bottom:1px solid var(--slate-200);display:flex;gap:6px;overflow-x:auto;align-items:center">
+        <button type="button" class="doc-cat-pill active" data-cat="ALL" onclick="filterLeadDocsCategory('ALL')">All Documents</button>
+        <button type="button" class="doc-cat-pill" data-cat="kyc" onclick="filterLeadDocsCategory('kyc')">Identity & KYC</button>
+        <button type="button" class="doc-cat-pill" data-cat="financial" onclick="filterLeadDocsCategory('financial')">Financial / Bank</button>
+        <button type="button" class="doc-cat-pill" data-cat="technical" onclick="filterLeadDocsCategory('technical')">Site & Technical</button>
+        <button type="button" class="doc-cat-pill" data-cat="certificates" onclick="filterLeadDocsCategory('certificates')">Certificates & Agreement</button>
+      </div>
+
+      <!-- Documents Body -->
+      <div class="lead-modal-body" id="ldmBody">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Footer -->
+      <div class="lead-modal-footer">
+        <div style="font-size:11.5px;color:#64748b">
+          <i class="fas fa-shield-alt text-success me-1"></i> Read-only Solar Document Records
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" id="ldmShareBtn" onclick="shareLeadDocs(_activeDocsLead ? _activeDocsLead.id : null)" style="background:#15803d;color:white;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            <i class="fas fa-share-alt"></i> Share Link (6-hr)
+          </button>
+          <button type="button" onclick="closeLeadDocsModal()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Link Popup Modal -->
+  <div class="lead-modal-overlay" id="shareLinkPopupModal" style="display:none" onclick="if(event.target===this)closeShareLinkModal()">
+    <div class="lead-modal-card" style="max-width:520px">
+      <div class="lead-modal-header" style="background:#0f172a;color:white">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:white"><i class="fas fa-share-alt me-2" style="color:#38bdf8"></i>Document Share Link</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px" id="slpLeadName">—</div>
+        </div>
+        <button type="button" onclick="closeShareLinkModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer" onmouseover="this.style.color='white'" onmouseout="this.style.color='#94a3b8'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="lead-modal-body" style="padding:20px">
+        <label style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;display:block">
+          Public Read-Only Share URL
+        </label>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <input type="text" id="slpUrlInput" readonly onclick="this.select()" style="flex:1;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-family:monospace;background:#f8fafc">
+          <button type="button" id="slpCopyBtn" onclick="copyShareLinkFromModal()" style="background:#0284c7;color:white;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-copy"></i> Copy
+          </button>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#92400e;display:flex;gap:8px;align-items:flex-start">
+          <i class="fas fa-clock" style="margin-top:2px;color:#d97706"></i>
+          <div>
+            <div id="slpExpiry" style="font-weight:700">Expires in 6 hours</div>
+            <div style="margin-top:2px;color:#b45309">Anyone with this link can view the solar document dockets and download attachments.</div>
+          </div>
+        </div>
+      </div>
+      <div class="lead-modal-footer" style="background:#f8fafc">
+        <a id="slpWaBtn" href="#" target="_blank" style="background:#25d366;color:white;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">
+          <i class="fab fa-whatsapp" style="font-size:14px"></i> Share on WhatsApp
+        </a>
+        <button type="button" onclick="closeShareLinkModal()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

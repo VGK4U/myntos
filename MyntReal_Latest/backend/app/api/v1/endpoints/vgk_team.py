@@ -1977,6 +1977,79 @@ def get_freelancer_detail(
     }
 
 
+@router.post("/leads/{lead_id}/share-link")
+def create_vgk_lead_share_link(
+    lead_id: int = Path(...),
+    request: Request = None,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a 6-hour share link for a lead's documents, accessible by staff or freelancer.
+    Creates an entry in crm_lead_share_tokens.
+    """
+    import secrets as _secrets_mod
+    import json as _json
+    from datetime import datetime, timezone as _tz, timedelta
+    from app.api.v1.endpoints.staff_auth import get_current_staff_user
+
+    lead_row = db.execute(text("SELECT id, name, company_id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
+    if not lead_row:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    staff_user = None
+    partner_user = None
+    if request:
+        try:
+            staff_user = get_current_staff_user(request, db)
+        except Exception:
+            pass
+
+        if not staff_user:
+            try:
+                from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
+                partner_user = get_current_vgk_member(request, db)
+            except Exception:
+                pass
+
+    creator_name = (
+        getattr(staff_user, "full_name", None) or getattr(staff_user, "emp_code", None)
+        if staff_user else getattr(partner_user, "partner_name", None) or getattr(partner_user, "partner_code", "Freelancer")
+    ) or "Ground Source"
+    creator_id = staff_user.id if staff_user else (partner_user.id if partner_user else 1)
+
+    doc_types = body.get("doc_types", None) if body else None
+    doc_filter_json = _json.dumps(doc_types) if doc_types and isinstance(doc_types, list) and len(doc_types) > 0 else None
+
+    token = _secrets_mod.token_urlsafe(40)
+    expires_at_utc = datetime.now(_tz.utc) + timedelta(hours=6)
+
+    db.execute(text("""
+        INSERT INTO crm_lead_share_tokens (token, lead_id, expires_at, created_by_id, created_by_name, doc_filter)
+        VALUES (:tok, :lid, :exp, :uid, :uname, :df)
+    """), {
+        "tok":   token,
+        "lid":   lead_id,
+        "exp":   expires_at_utc,
+        "uid":   creator_id,
+        "uname": creator_name,
+        "df":    doc_filter_json,
+    })
+    db.commit()
+
+    base_url = str(request.base_url).rstrip('/') if request else ""
+    share_url = f"{base_url}/lead-share.html?token={token}"
+
+    return {
+        "success": True,
+        "token": token,
+        "share_url": share_url,
+        "expires_at": expires_at_utc.isoformat(),
+        "lead_id": lead_id,
+        "lead_name": lead_row[1] or f"Lead #{lead_id}"
+    }
+
+
 @router.patch("/freelancers/{freelancer_id}")
 def update_freelancer(
     freelancer_id: int = Path(...),
