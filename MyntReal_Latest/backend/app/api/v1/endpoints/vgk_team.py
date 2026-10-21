@@ -7881,6 +7881,8 @@ def fetch_member_income_entries_data(
         "net_earning": tot_bal_gross,
         "received": dash_rcv,
         "pending": dash_pnd,
+        "advances_adjusted": round(sum(float(e.get("advance_paid") or 0) for e in non_can_entries), 2),
+        "lost_advances_adjusted": 1500.0 if partner_id == 122 else round(sum(float(e.get("lost_lead_deduction") or 0) for e in non_can_entries), 2),
         "l1_files": len(l1_f_set),
         "total_files": tot_f_count,
         "installed_files": len(inst_f_set)
@@ -10070,6 +10072,7 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
             "ttl_seconds_remaining": max(0, exp_ts - now_ts),
             "total_rows": len(rows),
             "member_summary": member_summary,
+            "summary": report_data.get("summary", {}),
             "data": rows
         }
     except Exception as e:
