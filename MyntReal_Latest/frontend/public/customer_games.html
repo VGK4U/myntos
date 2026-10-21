@@ -570,8 +570,8 @@
       </div>
     </div>
 
-    <!-- 1. GAME SELECTOR CARDS (6 3D ARCADE GAMES) -->
-    <div class="row row-cols-3 row-cols-md-6 g-2 mb-3" id="game-selection-grid">
+    <!-- 1. GAME SELECTOR CARDS (7 3D ARCADE GAMES) -->
+    <div class="row row-cols-3 row-cols-md-4 row-cols-lg-7 g-2 mb-3" id="game-selection-grid">
       <div class="col">
         <div class="game-tab-btn active" id="tab-snake" onclick="selectGame('SNAKE')">
           <div class="game-tab-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">
@@ -640,6 +640,18 @@
           <div class="w-100 text-truncate">
             <div class="fw-bold text-white">Red Bounce</div>
             <div class="small text-muted">Nokia hoop classic</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="game-tab-btn" id="tab-ev-racer" onclick="selectGame('EV_RACER')">
+          <div class="game-tab-icon" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+            <i class="fa-solid fa-bolt-lightning"></i>
+          </div>
+          <div class="w-100 text-truncate">
+            <div class="fw-bold text-white">EV Racer 3D</div>
+            <div class="small text-muted">Energy highway dash</div>
           </div>
         </div>
       </div>
@@ -1065,6 +1077,24 @@
       </div>
     </div>
 
+    <!-- EV Racer Mobile Touch Bar -->
+    <div class="mobile-controls-bar d-none" id="mobile-controls-ev-racer">
+      <div class="d-flex align-items-center justify-content-center gap-2 w-100" style="max-width: 440px;">
+        <button type="button" class="dpad-btn" onpointerdown="triggerEVSteer('LEFT', true)" onpointerup="triggerEVSteer('LEFT', false)" style="width: 58px; height: 50px;" title="Steer Left">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button type="button" class="btn btn-outline-danger rounded-pill px-3 py-2 fw-bold" onpointerdown="triggerEVBrake(true)" onpointerup="triggerEVBrake(false)" style="font-size: 0.82rem;" title="Regenerative Brake">
+          <i class="fa-solid fa-shield-halved me-1"></i> REGEN
+        </button>
+        <button type="button" class="btn btn-info text-dark rounded-pill px-3 py-2 fw-bold flex-grow-1" onpointerdown="triggerEVBoost(true)" onpointerup="triggerEVBoost(false)" style="font-size: 0.84rem; box-shadow: 0 2px 10px rgba(56, 189, 248, 0.45);" title="Turbo Boost">
+          <i class="fa-solid fa-bolt me-1"></i> BOOST
+        </button>
+        <button type="button" class="dpad-btn" onpointerdown="triggerEVSteer('RIGHT', true)" onpointerup="triggerEVSteer('RIGHT', false)" style="width: 58px; height: 50px;" title="Steer Right">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- UNIVERSAL MOUSE & TOUCH HINT -->
     <div class="text-center mt-3">
       <span class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e2e8f0; font-size: 0.82rem; font-weight: 500;">
@@ -1207,6 +1237,7 @@
   <script src="/public/js/games/bubble_blaster_game.js"></script>
   <script src="/public/js/games/bouncing_ball_game.js"></script>
   <script src="/public/js/games/bounce_classic_game.js"></script>
+  <script src="/public/js/games/ev_racer_game.js"></script>
 
   <script>
     let activeFramework = null;
@@ -1216,6 +1247,7 @@
     let bubbleEngine = null;
     let ballEngine = null;
     let bounceEngine = null;
+    let evRacerEngine = null;
     let currentGameType = 'SNAKE';
     let resumeModalInstance = null;
 
@@ -1268,13 +1300,14 @@
       bubbleEngine = new BubbleBlasterGame(canvas, activeFramework);
       ballEngine = new BouncingBallGame(canvas, activeFramework);
       bounceEngine = new BounceClassicGame(canvas, activeFramework);
+      evRacerEngine = new EVRacerGame(canvas, activeFramework);
 
       activeFramework.setGameEngine(snakeEngine);
 
-      // Check URL query parameters (e.g. ?game=BUBBLE_BLASTER, ?game=BOUNCING_BALL, ?game=BOUNCE_CLASSIC)
+      // Check URL query parameters (e.g. ?game=BUBBLE_BLASTER, ?game=BOUNCING_BALL, ?game=EV_RACER)
       const urlParams = new URLSearchParams(window.location.search);
       const reqGame = (urlParams.get('game') || 'SNAKE').toUpperCase();
-      const allowedGames = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER', 'BUBBLE_BLASTER', 'BOUNCING_BALL', 'BOUNCE_CLASSIC'];
+      const allowedGames = ['SNAKE', 'BLOCK_DROP', 'ENDLESS_RUNNER', 'BUBBLE_BLASTER', 'BOUNCING_BALL', 'BOUNCE_CLASSIC', 'EV_RACER'];
       const initialGame = allowedGames.includes(reqGame) ? reqGame : 'SNAKE';
       selectGame(initialGame);
 
@@ -1449,6 +1482,7 @@
       if (bubbleEngine && typeof bubbleEngine.reset === 'function') bubbleEngine.reset();
       if (ballEngine && typeof ballEngine.reset === 'function') ballEngine.reset();
       if (bounceEngine && typeof bounceEngine.reset === 'function') bounceEngine.reset();
+      if (evRacerEngine && typeof evRacerEngine.reset === 'function') evRacerEngine.reset();
       if (activeFramework) {
         activeFramework.state = 'READY';
         activeFramework._stopTimer();
@@ -1473,6 +1507,7 @@
       if (type === 'BUBBLE_BLASTER') document.getElementById('tab-bubble').classList.add('active');
       if (type === 'BOUNCING_BALL') document.getElementById('tab-bouncing').classList.add('active');
       if (type === 'BOUNCE_CLASSIC') document.getElementById('tab-bounce-classic').classList.add('active');
+      if (type === 'EV_RACER') document.getElementById('tab-ev-racer').classList.add('active');
 
       // Speed pickers, Character picker & Side HUD visibility
       const snakeSpeed = document.getElementById('snake-speed-picker');
@@ -1500,6 +1535,7 @@
       document.getElementById('mobile-controls-bubble').classList.toggle('d-none', type !== 'BUBBLE_BLASTER');
       document.getElementById('mobile-controls-ball').classList.toggle('d-none', type !== 'BOUNCING_BALL');
       document.getElementById('mobile-controls-bounce').classList.toggle('d-none', type !== 'BOUNCE_CLASSIC');
+      document.getElementById('mobile-controls-ev-racer').classList.toggle('d-none', type !== 'EV_RACER');
 
       // Set engine
       if (type === 'SNAKE') activeFramework.setGameEngine(snakeEngine);
@@ -1508,6 +1544,7 @@
       if (type === 'BUBBLE_BLASTER') activeFramework.setGameEngine(bubbleEngine);
       if (type === 'BOUNCING_BALL') activeFramework.setGameEngine(ballEngine);
       if (type === 'BOUNCE_CLASSIC') activeFramework.setGameEngine(bounceEngine);
+      if (type === 'EV_RACER') activeFramework.setGameEngine(evRacerEngine);
 
       // Update Ready Overlay texts
       const titleEl = document.getElementById('ready-game-title');
@@ -1530,6 +1567,9 @@
       } else if (type === 'BOUNCE_CLASSIC') {
         titleEl.textContent = 'Red Bounce 3D';
         descEl.textContent = 'Inspired by the Nokia classic! Steer the bouncy red rubber ball, pass through all golden hoops, dodge sharp spikes, and reach the glowing exit warp.';
+      } else if (type === 'EV_RACER') {
+        titleEl.textContent = 'EV Racer 3D';
+        descEl.textContent = 'Steer your Electric Supercar down the cyber-highway! Collect ⚡ battery packs & solar orbs, use Regenerative Braking to recharge, and hit Turbo Boost to overtake traffic!';
       }
 
       activeFramework._hideAllOverlays();
@@ -1542,6 +1582,7 @@
       if (type === 'BUBBLE_BLASTER') bubbleEngine.resizeCanvas();
       if (type === 'BOUNCING_BALL') ballEngine.resizeCanvas();
       if (type === 'BOUNCE_CLASSIC') bounceEngine.resizeCanvas();
+      if (type === 'EV_RACER') evRacerEngine.resizeCanvas();
     }
 
     // ── GAME SPEED SYSTEM & SLIDERS ──
@@ -1700,6 +1741,7 @@
       if (bubbleEngine && typeof bubbleEngine.reset === 'function') bubbleEngine.reset();
       if (ballEngine && typeof ballEngine.reset === 'function') ballEngine.reset();
       if (bounceEngine && typeof bounceEngine.reset === 'function') bounceEngine.reset();
+      if (evRacerEngine && typeof evRacerEngine.reset === 'function') evRacerEngine.reset();
       if (activeFramework) {
         activeFramework.state = 'READY';
         activeFramework._stopTimer();
@@ -1767,6 +1809,20 @@
       if (bounceEngine && typeof bounceEngine.superBounce === 'function') {
         bounceEngine.superBounce();
       }
+    }
+
+    function triggerEVSteer(dir, active) {
+      if (!evRacerEngine) return;
+      if (dir === 'LEFT') evRacerEngine.steerLeft(active);
+      if (dir === 'RIGHT') evRacerEngine.steerRight(active);
+    }
+
+    function triggerEVBoost(active) {
+      if (evRacerEngine) evRacerEngine.triggerBoost(active);
+    }
+
+    function triggerEVBrake(active) {
+      if (evRacerEngine) evRacerEngine.triggerBrake(active);
     }
 
     // Stop music on page navigation / unload

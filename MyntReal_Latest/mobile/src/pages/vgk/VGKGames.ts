@@ -85,6 +85,20 @@ export class VGKGames {
               <i class="fa-solid fa-chevron-right" style="color: #64748b; font-size: 12px;"></i>
             </div>
           </a>
+
+          <!-- 4. EV Racer -->
+          <a href="/vgk_games.html?game=EV_RACER" style="text-decoration: none; color: inherit;">
+            <div style="background: #15122b; border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="fa-solid fa-bolt-lightning"></i>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 800; font-size: 15px; color: #fff;">EV Racer 3D</div>
+                <div style="font-size: 12px; color: #94a3b8;">Drive electric supercar, collect energy cells & hit turbo boost.</div>
+              </div>
+              <i class="fa-solid fa-chevron-right" style="color: #64748b; font-size: 12px;"></i>
+            </div>
+          </a>
         </div>
 
       </div>

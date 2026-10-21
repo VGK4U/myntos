@@ -212,6 +212,47 @@
             }
         },
 
+        _notify: function(title, text = '', icon = 'info') {
+            if (window.Swal) {
+                return Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: icon,
+                    confirmButtonColor: '#059669',
+                    customClass: {
+                        popup: 'rounded-4 shadow-lg border-0',
+                        confirmButton: 'btn btn-brand px-4 py-2'
+                    }
+                });
+            } else {
+                alert(text ? `${title}: ${text}` : title);
+            }
+        },
+
+        _confirm: async function(title, text = '', confirmButtonText = 'Confirm') {
+            if (window.Swal) {
+                const res = await Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: confirmButtonText,
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        popup: 'rounded-4 shadow-lg border-0',
+                        confirmButton: 'btn btn-brand px-4 py-2 me-2',
+                        cancelButton: 'btn btn-secondary px-4 py-2'
+                    }
+                });
+                return res.isConfirmed;
+            } else {
+                return confirm(`${title}\n\n${text}`);
+            }
+        },
+
+
         // ─────────────────────────────────────────────────────────────────────
         // 2. Overview Dashboard
         // ─────────────────────────────────────────────────────────────────────
@@ -411,10 +452,10 @@
                 if (authUrl) {
                     window.open(authUrl, '_blank', 'width=600,height=700');
                 } else {
-                    alert('Hosted OAuth link generated: ' + (res.message || 'Authorization ready.'));
+                    this._notify('OAuth Connect', res.message || 'Authorization ready.', 'info');
                 }
             } catch (err) {
-                alert('OAuth Initiation Error: ' + err.message);
+                this._notify('OAuth Initiation Error', err.message, 'error');
             }
         },
 
@@ -432,14 +473,15 @@
                 bootstrap.Modal.getInstance(document.getElementById('connectAccountModal')).hide();
                 await this.loadAccounts();
                 await this.loadOverview();
-                alert(`Channel ${platform.toUpperCase()} connected successfully in Local Sandbox Mode!`);
+                this._notify('Channel Connected', `Channel ${platform.toUpperCase()} connected successfully in Local Sandbox Mode!`, 'success');
             } catch (err) {
-                alert('Mock Connect Error: ' + err.message);
+                this._notify('Mock Connect Error', err.message, 'error');
             }
         },
 
         initSandboxDemo: async function() {
-            if (!confirm('This will connect sample mock channels (Facebook, Instagram, LinkedIn, X) and generate an authentic 15-post bi-daily calendar for this company. Proceed?')) {
+            const confirmed = await this._confirm('Initialize Sandbox Demo?', 'This will connect sample mock channels (Facebook, Instagram, LinkedIn, X) and generate an authentic 15-post bi-daily calendar for this company.');
+            if (!confirmed) {
                 return;
             }
             try {
@@ -449,14 +491,15 @@
                     this.loadAccounts(),
                     this.loadCalendar()
                 ]);
-                alert(res.message || 'Sandbox demo initialized successfully!');
+                this._notify('Demo Initialized', res.message || 'Sandbox demo initialized successfully!', 'success');
             } catch (err) {
-                alert('Demo Initialization Error: ' + err.message);
+                this._notify('Demo Initialization Error', err.message, 'error');
             }
         },
 
         disconnectAccount: async function(accountId) {
-            if (!confirm('Are you sure you want to disconnect this channel? Scheduled dispatches to this channel will pause.')) {
+            const confirmed = await this._confirm('Disconnect Channel?', 'Are you sure you want to disconnect this channel? Scheduled dispatches to this channel will pause.');
+            if (!confirmed) {
                 return;
             }
 
@@ -464,8 +507,9 @@
                 await this._apiCall(`/accounts/${accountId}`, 'DELETE');
                 await this.loadAccounts();
                 await this.loadOverview();
+                this._notify('Channel Disconnected', 'The selected channel has been disconnected.', 'success');
             } catch (err) {
-                alert('Disconnect Error: ' + err.message);
+                this._notify('Disconnect Error', err.message, 'error');
             }
         },
 
@@ -598,9 +642,24 @@
             const y = parseInt(document.getElementById('genYear').value, 10);
             const startDateStr = `${y}-${String(m).padStart(2, '0')}-01`;
 
+            const focus = document.getElementById('genFocus')?.value.trim() || '';
+            const tone = document.getElementById('genTone')?.value || '';
+            const cta = document.getElementById('genCTA')?.value || '';
+            const chans = [];
+            if (document.getElementById('genChanFB')?.checked) chans.push('Facebook');
+            if (document.getElementById('genChanIG')?.checked) chans.push('Instagram');
+            if (document.getElementById('genChanLI')?.checked) chans.push('LinkedIn');
+            if (document.getElementById('genChanX')?.checked) chans.push('Twitter/X');
+
+            let customInstructions = '';
+            if (focus) customInstructions += `Focus: ${focus}. `;
+            if (tone) customInstructions += `Tone: ${tone}. `;
+            if (cta) customInstructions += `Call-to-Action: ${cta}. `;
+            if (chans.length > 0) customInstructions += `Target channels: ${chans.join(', ')}.`;
+
             const payload = {
                 start_date: startDateStr,
-                custom_instructions: document.getElementById('genFocus').value.trim()
+                custom_instructions: customInstructions.trim()
             };
 
             try {
@@ -610,10 +669,10 @@
                 bootstrap.Modal.getInstance(document.getElementById('generateCalendarModal')).hide();
                 await this.loadCalendar();
                 await this.loadOverview();
-                alert(`Success! Generated ${res.count || 15} strategic posts for ${startDateStr.slice(0,7)}.`);
+                this._notify('AI Calendar Generated', `Success! Generated ${res.count || 15} strategic posts for ${startDateStr.slice(0,7)}.`, 'success');
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                alert('AI Generation Error: ' + err.message);
+                this._notify('AI Generation Error', err.message, 'error');
             }
         },
 
@@ -625,7 +684,7 @@
                 const data = await this._apiCall(`/posts/${postId}`);
                 this.openPostEditor(data.post);
             } catch (err) {
-                alert('Could not load post details: ' + err.message);
+                this._notify('Could not load post details', err.message, 'error');
             }
         },
 
@@ -952,9 +1011,9 @@
             const sched = document.getElementById('editScheduledAt').value;
             const baseCaption = document.getElementById('editCaptionBase').value.trim();
 
-            if (!title) { alert('Please enter a post title.'); return; }
-            if (!sched) { alert('Please select a scheduled date and time.'); return; }
-            if (!baseCaption) { alert('Please enter base caption text.'); return; }
+            if (!title) { this._notify('Validation', 'Please enter a post title.', 'warning'); return; }
+            if (!sched) { this._notify('Validation', 'Please select a scheduled date and time.', 'warning'); return; }
+            if (!baseCaption) { this._notify('Validation', 'Please enter base caption text.', 'warning'); return; }
 
             const mediaUrl = document.getElementById('editMediaUrl').value.trim();
             const mediaUrls = mediaUrl ? [mediaUrl] : [];
@@ -999,9 +1058,10 @@
                 bootstrap.Modal.getInstance(document.getElementById('postEditorModal')).hide();
                 await this.loadCalendar();
                 await this.loadOverview();
+                this._notify('Post Saved', shouldApprove ? 'Post approved and scheduled!' : 'Post saved successfully!', 'success');
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                alert('Save Post Error: ' + err.message);
+                this._notify('Save Post Error', err.message, 'error');
             }
         },
 
@@ -1012,11 +1072,12 @@
         publishPostNow: async function() {
             const postId = document.getElementById('editPostId').value;
             if (!postId) {
-                alert('Please save the post first before publishing.');
+                this._notify('Publish Post', 'Please save the post first before publishing.', 'warning');
                 return;
             }
 
-            if (!confirm('Are you sure you want to publish this post immediately across all connected channels?')) {
+            const confirmed = await this._confirm('Publish Now?', 'Are you sure you want to publish this post immediately across all connected channels?');
+            if (!confirmed) {
                 return;
             }
 
@@ -1036,10 +1097,10 @@
                 bootstrap.Modal.getInstance(document.getElementById('postEditorModal')).hide();
                 await this.loadCalendar();
                 await this.loadOverview();
-                alert(`Publication dispatches triggered! Success: ${res.successful_channels?.length || 0} channels.`);
+                this._notify('Published Successfully', `Publication dispatches triggered! Success: ${res.successful_channels?.length || 0} channels.`, 'success');
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                alert('Publish Now Error: ' + err.message);
+                this._notify('Publish Now Error', err.message, 'error');
             }
         },
 
@@ -1047,7 +1108,8 @@
             const postId = document.getElementById('editPostId').value;
             if (!postId) return;
 
-            if (!confirm('Are you sure you want to permanently delete this post and cancel its schedule?')) {
+            const confirmed = await this._confirm('Delete Post?', 'Are you sure you want to permanently delete this post and cancel its schedule?');
+            if (!confirmed) {
                 return;
             }
 
@@ -1056,15 +1118,16 @@
                 bootstrap.Modal.getInstance(document.getElementById('postEditorModal')).hide();
                 await this.loadCalendar();
                 await this.loadOverview();
+                this._notify('Post Deleted', 'The post has been deleted.', 'success');
             } catch (err) {
-                alert('Delete Error: ' + err.message);
+                this._notify('Delete Error', err.message, 'error');
             }
         },
 
         generatePostImage: async function() {
             const postId = document.getElementById('editPostId').value;
             if (!postId) {
-                alert('Please save draft post first before generating AI image.');
+                this._notify('AI Visual', 'Please save draft post first before generating AI image.', 'warning');
                 return;
             }
 
@@ -1082,17 +1145,18 @@
                 if (res.image_url) {
                     document.getElementById('editMediaUrl').value = res.image_url;
                     this._setMediaPreview(res.image_url);
+                    this._notify('Visual Generated', 'AI visual generated and attached!', 'success');
                 }
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                alert('AI Image Generation: ' + err.message);
+                this._notify('AI Image Generation', err.message, 'error');
             }
         },
 
         regeneratePostCaption: async function() {
             const postId = document.getElementById('editPostId').value;
             if (!postId) {
-                alert('Please save draft post first before regenerating copy.');
+                this._notify('Regenerate Copy', 'Please save draft post first before regenerating copy.', 'warning');
                 return;
             }
 
@@ -1116,10 +1180,11 @@
                     document.getElementById('editCaptionLI').value = caps.linkedin || '';
                     document.getElementById('editCaptionX').value = caps.x || '';
                     document.getElementById('charCountX').innerText = (caps.x || '').length;
+                    this._notify('Copy Updated', 'Multi-platform copy regenerated!', 'success');
                 }
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                alert('Copy Regeneration Error: ' + err.message);
+                this._notify('Copy Regeneration Error', err.message, 'error');
             }
         },
 
@@ -1157,7 +1222,7 @@
 
         syncAnalyticsNow: async function() {
             await this.loadAnalytics(true);
-            alert('Analytics sync requested! Real-time metrics updated.');
+            this._notify('Analytics Synced', 'Real-time performance metrics updated across all channels.', 'success');
         },
 
         _formatMetric: function(val, availability) {
@@ -1280,9 +1345,9 @@
 
             try {
                 await this._apiCall('/settings', 'PUT', payload);
-                alert('Calendar schedule settings updated successfully!');
+                this._notify('Settings Saved', 'Calendar schedule settings updated successfully!', 'success');
             } catch (err) {
-                alert('Save Settings Error: ' + err.message);
+                this._notify('Save Settings Error', err.message, 'error');
             }
         },
 
@@ -1449,7 +1514,7 @@
         applyTonePreset: function(tone) {
             const base = document.getElementById('editCaptionBase')?.value?.trim();
             if (!base) {
-                alert('Please enter your core message into Base Copy first!');
+                this._notify('Base Copy Required', 'Please enter your core message into Base Copy first!', 'warning');
                 return;
             }
 
@@ -1469,9 +1534,9 @@
         },
 
         exportCalendarCSV: function() {
-            const posts = this.state.calendarPosts || [];
+            const posts = this.state.posts || [];
             if (posts.length === 0) {
-                alert('No scheduled posts to export. Generate a calendar first!');
+                this._notify('Export Notice', 'No scheduled posts to export. Generate a calendar first!', 'info');
                 return;
             }
 

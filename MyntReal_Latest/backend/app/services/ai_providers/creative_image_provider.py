@@ -67,7 +67,76 @@ class MockProductionCreativeProvider(CreativeImageProvider):
         resolution: str = "1080x1080",
         seed: Optional[int] = None
     ) -> Dict[str, Any]:
-        # Parse width and height from resolution or aspect ratio
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        creatives_dir = os.path.join(backend_dir, "uploads", "social_creatives")
+        os.makedirs(creatives_dir, exist_ok=True)
+
+        import hashlib
+        import requests
+        import base64
+
+        img_hash = hashlib.md5((prompt + str(seed or "")).encode("utf-8")).hexdigest()[:12]
+
+        # 1. Attempt OpenAI DALL-E 3 if API key is present
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key and openai_key.strip() and not openai_key.startswith("mock_"):
+            try:
+                logger.info(f"[CREATIVE-AI] Attempting OpenAI DALL-E 3 image generation for prompt: {prompt[:80]}...")
+                headers = {
+                    "Authorization": f"Bearer {openai_key.strip()}",
+                    "Content-Type": "application/json"
+                }
+                dalle_payload = {
+                    "model": "dall-e-3",
+                    "prompt": prompt[:1000],
+                    "n": 1,
+                    "size": "1024x1024",
+                    "response_format": "b64_json"
+                }
+                res = requests.post("https://api.openai.com/v1/images/generations", headers=headers, json=dalle_payload, timeout=25)
+                if res.status_code == 200:
+                    data = res.json().get("data", [])
+                    if data and "b64_json" in data[0]:
+                        raw_bytes = base64.b64decode(data[0]["b64_json"])
+                        filename = f"creative_dalle_{img_hash}.png"
+                        filepath = os.path.join(creatives_dir, filename)
+                        with open(filepath, "wb") as f:
+                            f.write(raw_bytes)
+                        image_url = f"/uploads/social_creatives/{filename}"
+                        logger.info(f"✅ [CREATIVE-AI] Successfully generated commercial image with OpenAI DALL-E 3: {image_url}")
+                        return {
+                            "success": True,
+                            "provider": "OpenAI DALL-E 3",
+                            "aspect_ratio": aspect_ratio,
+                            "resolution": "1024x1024",
+                            "image_url": image_url,
+                            "prompt_used": prompt,
+                            "negative_prompt_used": negative_prompt
+                        }
+                    elif data and "url" in data[0]:
+                        img_download = requests.get(data[0]["url"], timeout=15)
+                        if img_download.status_code == 200:
+                            filename = f"creative_dalle_{img_hash}.png"
+                            filepath = os.path.join(creatives_dir, filename)
+                            with open(filepath, "wb") as f:
+                                f.write(img_download.content)
+                            image_url = f"/uploads/social_creatives/{filename}"
+                            return {
+                                "success": True,
+                                "provider": "OpenAI DALL-E 3",
+                                "aspect_ratio": aspect_ratio,
+                                "resolution": "1024x1024",
+                                "image_url": image_url,
+                                "prompt_used": prompt,
+                                "negative_prompt_used": negative_prompt
+                            }
+                else:
+                    logger.warning(f"⚠️ [CREATIVE-AI] OpenAI DALL-E generation failed (HTTP {res.status_code}). Falling back to Pillow engine.")
+            except Exception as openai_err:
+                logger.warning(f"⚠️ [CREATIVE-AI] OpenAI image generation exception: {openai_err}. Falling back to Pillow engine.")
+
+        # 2. Resilient Fallback: High-Resolution Python Pillow Creative Engine
+        logger.info("[CREATIVE-AI] Rendering commercial graphic with Python Pillow Canvas Engine.")
         dim_map = {
             "1:1": (1080, 1080),
             "4:5": (1080, 1350),
@@ -118,12 +187,18 @@ class MockProductionCreativeProvider(CreativeImageProvider):
         # Draw ambient sun flare accent
         draw.ellipse([int(w * 0.70), int(h * 0.08), int(w * 0.88), int(h * 0.22)], fill=(255, 230, 180))
 
+        filename = f"creative_pillow_{img_hash}.png"
+        filepath = os.path.join(creatives_dir, filename)
+        base_img.save(filepath, format="PNG")
+        image_url = f"/uploads/social_creatives/{filename}"
+
         return {
             "success": True,
-            "provider": self.provider_name,
+            "provider": "Python Pillow Canvas Engine",
             "aspect_ratio": aspect_ratio,
             "resolution": f"{w}x{h}",
             "base_image": base_img,
+            "image_url": image_url,
             "prompt_used": prompt,
             "negative_prompt_used": negative_prompt
         }

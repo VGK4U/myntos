@@ -54,6 +54,11 @@ GAME_REWARD_RULES = {
         "score_per_point": 1000,       # 1,000 score = 1 point
         "max_points_per_session": 50,  # Capped up to daily cap
         "min_seconds_per_hoop": 0.15,  # Anti-cheat: cannot pass rings faster than 150ms per ring
+    },
+    "EV_RACER": {
+        "score_per_point": 1000,       # 1,000 score = 1 point
+        "max_points_per_session": 50,  # Capped up to daily cap
+        "min_seconds_per_100m": 0.5,   # Anti-cheat: cannot drive faster than 0.5s per 100m
     }
 }
 
@@ -218,6 +223,12 @@ def validate_anti_cheat_physics(
         min_time = items_collected * rules.get("min_seconds_per_hoop", 0.15)
         if dur < min_time:
             logger.warning(f"[ANTI-CHEAT] Bounce Classic anomaly: {items_collected} hoops in {dur}s (min: {min_time}s)")
+            return False
+
+    elif game_type == "EV_RACER":
+        min_time = (distance_travelled / 100.0) * rules.get("min_seconds_per_100m", 0.5)
+        if dur < min_time:
+            logger.warning(f"[ANTI-CHEAT] EV Racer speed anomaly: {distance_travelled}m in {dur}s (min: {min_time}s)")
             return False
 
     return True
