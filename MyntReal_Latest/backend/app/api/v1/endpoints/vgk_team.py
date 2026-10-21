@@ -1647,9 +1647,15 @@ def get_freelancer_detail(
     """), {'fid': fl.id, 'fid_str': str(fl.id), 'pname': fl.partner_name or ''}).fetchall()
 
     status_counts = {}
+    stage_counts = {}
     won_count = 0
     lost_count = 0
     pipeline_count = 0
+    total_deal_val = 0.0
+    won_deal_val = 0.0
+    lost_deal_val = 0.0
+    pipeline_deal_val = 0.0
+    total_received_val = 0.0
     all_leads = []
 
     _WON_STATUSES = {'won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed'}
@@ -1660,20 +1666,30 @@ def get_freelancer_detail(
         sps = (r[4] or '').strip().lower()
         status_counts[st] = status_counts.get(st, 0) + 1
 
+        stage_key = sps or st or 'lead'
+        stage_counts[stage_key] = stage_counts.get(stage_key, 0) + 1
+
         is_won = (st in _WON_STATUSES or sps in ('installed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed')) and sps not in _LOST_STATUSES
         is_lost = st in ('lost', 'cancelled') or sps in _LOST_STATUSES
-
-        if is_won:
-            won_count += 1
-        elif is_lost:
-            lost_count += 1
-        else:
-            pipeline_count += 1
 
         deal_val = float(r[5] or 0)
         kw = str(r[7] or '').strip()
         if not deal_val and kw in ('3', '3.0', '3kw', '3 kw'):
             deal_val = 200000.0  # Standard 3 kW benchmark
+
+        rec_val = float(r[6] or 0)
+        total_deal_val += deal_val
+        total_received_val += rec_val
+
+        if is_won:
+            won_count += 1
+            won_deal_val += deal_val
+        elif is_lost:
+            lost_count += 1
+            lost_deal_val += deal_val
+        else:
+            pipeline_count += 1
+            pipeline_deal_val += deal_val
 
         lead_item = {
             "id": r[0],
@@ -1685,12 +1701,14 @@ def get_freelancer_detail(
             "solar_pipeline_status": r[4],
             "deal_value": deal_val,
             "deal_value_total": deal_val,
-            "deal_value_received": float(r[6] or 0),
+            "deal_value_received": rec_val,
             "kw_size": kw if kw else None,
             "city": r[8] or "",
             "created_at": r[9].isoformat() if r[9] else None
         }
         all_leads.append(lead_item)
+
+    pending_val = max(0.0, total_deal_val - total_received_val)
 
     # Fetch audit logs
     audit_logs = []
@@ -1716,10 +1734,17 @@ def get_freelancer_detail(
     lead_stats = {
         "total": len(leads_raw),
         "total_count": len(leads_raw),
+        "total_business_value": total_deal_val,
         "won": won_count,
+        "won_business_value": won_deal_val,
         "lost": lost_count,
+        "lost_business_value": lost_deal_val,
         "pipeline": pipeline_count,
-        "status_counts": status_counts
+        "pipeline_business_value": pipeline_deal_val,
+        "received_value": total_received_val,
+        "pending_value": pending_val,
+        "status_counts": status_counts,
+        "stage_counts": stage_counts
     }
 
     support_dict = {

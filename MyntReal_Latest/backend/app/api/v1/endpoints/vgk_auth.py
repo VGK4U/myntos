@@ -90,8 +90,7 @@ def get_current_vgk_member(request: Request, db: Session = Depends(get_db)) -> O
         try:
             partner = db.query(OfficialPartner).filter(
                 OfficialPartner.id == partner_id,
-                OfficialPartner.category == 'VGK_TEAM',
-                or_(OfficialPartner.partner_type.is_(None), OfficialPartner.partner_type != 'FREELANCER')
+                OfficialPartner.category == 'VGK_TEAM'
             ).first()
         except SQLAlchemyError as db_err:
             logger.error(f"[VGK-AUTH-DB] Database failure in get_current_vgk_member: {db_err}")
@@ -131,7 +130,7 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
         )
     ).first()
 
-    if not partner or getattr(partner, 'partner_type', None) == 'FREELANCER':
+    if not partner:
         return VGKLoginResponse(success=False, message="Invalid credentials")
 
     # [DC-VGK-BLOCKED-001] Prevent login for blocked partners
@@ -196,6 +195,8 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
         "partner_code": partner.partner_code,
         "partner_name": partner.partner_name,
         "category": "VGK_TEAM",
+        "partner_type": partner.partner_type,
+        "is_freelancer": getattr(partner, 'partner_type', None) == 'FREELANCER',
         "vgk_role": partner.vgk_role,
         "company_id": partner.company_id,
         "exp": get_indian_time() + timedelta(hours=24)
@@ -247,6 +248,8 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
             "id": partner.id,
             "partner_code": partner.partner_code,
             "partner_name": partner.partner_name,
+            "partner_type": partner.partner_type,
+            "is_freelancer": getattr(partner, 'partner_type', None) == 'FREELANCER',
             "vgk_role": partner.vgk_role,
             "company_id": partner.company_id,
             "rank_code": rpos.get('rank_code', 'RANK_1'),

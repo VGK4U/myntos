@@ -1966,31 +1966,71 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
     <!-- Body -->
     <div id="flFvBody" style="padding:22px 24px">
-      <!-- Top Metrics Bar -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:20px">
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
-          <div id="flFvTotal" style="font-size:26px;font-weight:800;color:#0f172a">0</div>
-          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Total Leads Originated</div>
+      <!-- Top Metrics Bar (Overall Leads & Business Value Breakdown) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-bottom:16px">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvTotal" style="font-size:24px;font-weight:800;color:#0f172a">0</div>
+          <div id="flFvTotalVal" style="font-size:12px;font-weight:700;color:#0369a1;margin-top:2px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:2px">Total Leads & Value</div>
         </div>
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;text-align:center">
-          <div id="flFvWon" style="font-size:26px;font-weight:800;color:#16a34a">0</div>
-          <div style="font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase">Won / Closed Leads</div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvWon" style="font-size:24px;font-weight:800;color:#16a34a">0</div>
+          <div id="flFvWonVal" style="font-size:12px;font-weight:700;color:#15803d;margin-top:2px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#15803d;text-transform:uppercase;margin-top:2px">Won Leads & Value</div>
         </div>
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;text-align:center">
-          <div id="flFvPipeline" style="font-size:26px;font-weight:800;color:#0284c7">0</div>
-          <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase">Active in Pipeline</div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvPipeline" style="font-size:24px;font-weight:800;color:#0284c7">0</div>
+          <div id="flFvPipelineVal" style="font-size:12px;font-weight:700;color:#1d4ed8;margin-top:2px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-top:2px">Active in Pipeline</div>
         </div>
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;text-align:center">
-          <div id="flFvLost" style="font-size:26px;font-weight:800;color:#dc2626">0</div>
-          <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase">Lost / Cancelled</div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvLost" style="font-size:24px;font-weight:800;color:#dc2626">0</div>
+          <div id="flFvLostVal" style="font-size:12px;font-weight:700;color:#991b1b;margin-top:2px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-top:2px">Lost / Cancelled</div>
+        </div>
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvReceivedVal" style="font-size:20px;font-weight:800;color:#059669;margin-top:3px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#047857;text-transform:uppercase;margin-top:7px">Received Amount</div>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 14px;text-align:center">
+          <div id="flFvPendingVal" style="font-size:20px;font-weight:800;color:#d97706;margin-top:3px">₹0</div>
+          <div style="font-size:10.5px;font-weight:700;color:#b45309;text-transform:uppercase;margin-top:7px">Pending Balance</div>
         </div>
       </div>
 
-      <!-- Search & Filters -->
+      <!-- Dynamic Data Labels / Filter Chips per Stage -->
+      <div id="flFvStagePillsContainer" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:9px 14px;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:0.04em;display:inline-flex;align-items:center;gap:5px;margin-right:2px">
+          <i class="fas fa-layer-group" style="color:#0284c7"></i> Stages:
+        </span>
+        <div id="flFvStagePills" style="display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <!-- Dynamic stage pills injected via JS -->
+        </div>
+      </div>
+
+      <!-- Search, Sorting & Filters -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
-        <div style="position:relative;flex:1;max-width:360px">
-          <i class="fas fa-search" style="position:absolute;left:12px;top:10px;color:#94a3b8;font-size:13px"></i>
-          <input type="text" id="flFvSearchInput" placeholder="Filter by customer name, phone, stage..." oninput="filterFlFvLeads()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+        <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:680px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:240px">
+            <i class="fas fa-search" style="position:absolute;left:12px;top:10px;color:#94a3b8;font-size:13px"></i>
+            <input type="text" id="flFvSearchInput" placeholder="Filter by customer name, phone, stage..." oninput="filterFlFvLeads()" style="width:100%;padding:8px 12px 8px 34px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="flFvSortSelect" style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">
+              <i class="fas fa-sort-amount-down me-1" style="color:#0284c7"></i>Sort:
+            </label>
+            <select id="flFvSortSelect" onchange="onFlFvSortDropdownChange(this.value)" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;background:white;color:#334155;font-weight:600;cursor:pointer">
+              <option value="created_desc">Created Date (Newest first)</option>
+              <option value="created_asc">Created Date (Oldest first)</option>
+              <option value="deal_desc">Deal Value (High to Low)</option>
+              <option value="deal_asc">Deal Value (Low to High)</option>
+              <option value="name_asc">Customer Name (A → Z)</option>
+              <option value="name_desc">Customer Name (Z → A)</option>
+              <option value="id_desc">Lead ID (High to Low)</option>
+              <option value="id_asc">Lead ID (Low to High)</option>
+              <option value="stage_asc">Solar Stage (A → Z)</option>
+            </select>
+          </div>
         </div>
         <div id="flFvCountLabel" style="font-size:12.5px;color:#64748b;font-weight:700"></div>
       </div>
@@ -1999,14 +2039,28 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
       <div id="flFvTableContainer" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:white">
         <table style="width:100%;min-width:960px;border-collapse:collapse;font-size:12.5px;text-align:left">
           <thead>
-            <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap">
-              <th style="padding:10px 12px">Lead ID</th>
-              <th style="padding:10px 12px">Customer Name</th>
-              <th style="padding:10px 12px">Phone</th>
-              <th style="padding:10px 12px">CRM Status</th>
-              <th style="padding:10px 12px">Solar Stage</th>
-              <th style="padding:10px 12px">Deal Value / kW</th>
-              <th style="padding:10px 12px">Created Date</th>
+            <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#475569;font-weight:700;white-space:nowrap;user-select:none">
+              <th onclick="toggleFlFvSort('id')" style="padding:10px 12px;cursor:pointer" title="Sort by Lead ID">
+                Lead ID <span id="flSortIcon_id" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('name')" style="padding:10px 12px;cursor:pointer" title="Sort by Customer Name">
+                Customer Name <span id="flSortIcon_name" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('phone')" style="padding:10px 12px;cursor:pointer" title="Sort by Phone">
+                Phone <span id="flSortIcon_phone" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('status')" style="padding:10px 12px;cursor:pointer" title="Sort by CRM Status">
+                CRM Status <span id="flSortIcon_status" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('stage')" style="padding:10px 12px;cursor:pointer" title="Sort by Solar Stage">
+                Solar Stage <span id="flSortIcon_stage" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('deal_value')" style="padding:10px 12px;cursor:pointer" title="Sort by Deal Value">
+                Deal Value / kW <span id="flSortIcon_deal_value" style="color:#94a3b8;font-size:11px">↕</span>
+              </th>
+              <th onclick="toggleFlFvSort('created_at')" style="padding:10px 12px;cursor:pointer" title="Sort by Created Date">
+                Created Date <span id="flSortIcon_created_at" style="color:#0284c7;font-size:11px">↓</span>
+              </th>
               <th style="padding:10px 12px;text-align:right">Action</th>
             </tr>
           </thead>
@@ -3902,6 +3956,9 @@ async function viewFreelancerDetails(flId) {
 
 // ─── Freelancer Full View System Modal Handlers ─────────────────────────────
 let _currentFlFvLeads = [];
+let _flFvActiveStageFilter = 'ALL';
+let _flFvSortField = 'created_at';
+let _flFvSortDir = 'desc';
 
 const _SOLAR_STAGE_LABELS = {
   'pending_with_bank': 'With Bank',
@@ -3937,19 +3994,38 @@ async function openFreelancerFullLeadModal(flId) {
   const titleEl = document.getElementById('flFvTitle');
   const subEl = document.getElementById('flFvSubtitle');
   const totalEl = document.getElementById('flFvTotal');
+  const totalValEl = document.getElementById('flFvTotalVal');
   const wonEl = document.getElementById('flFvWon');
+  const wonValEl = document.getElementById('flFvWonVal');
   const pipeEl = document.getElementById('flFvPipeline');
+  const pipeValEl = document.getElementById('flFvPipelineVal');
   const lostEl = document.getElementById('flFvLost');
+  const lostValEl = document.getElementById('flFvLostVal');
+  const recvValEl = document.getElementById('flFvReceivedVal');
+  const pendValEl = document.getElementById('flFvPendingVal');
   const tbody = document.getElementById('flFvTableBody');
   const searchInput = document.getElementById('flFvSearchInput');
+  const sortSelect = document.getElementById('flFvSortSelect');
 
   if (titleEl) titleEl.textContent = 'Loading Member Full View...';
   if (subEl) subEl.textContent = 'Fetching originated leads from CRM registry...';
   if (totalEl) totalEl.textContent = '...';
+  if (totalValEl) totalValEl.textContent = '...';
   if (wonEl) wonEl.textContent = '...';
+  if (wonValEl) wonValEl.textContent = '...';
   if (pipeEl) pipeEl.textContent = '...';
+  if (pipeValEl) pipeValEl.textContent = '...';
   if (lostEl) lostEl.textContent = '...';
+  if (lostValEl) lostValEl.textContent = '...';
+  if (recvValEl) recvValEl.textContent = '...';
+  if (pendValEl) pendValEl.textContent = '...';
   if (searchInput) searchInput.value = '';
+  if (sortSelect) sortSelect.value = 'created_desc';
+  _flFvActiveStageFilter = 'ALL';
+  _flFvSortField = 'created_at';
+  _flFvSortDir = 'desc';
+  updateFlFvSortIcons();
+
   if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#64748b"><i class="fas fa-spinner fa-spin me-2"></i>Loading originated leads...</td></tr>';
 
   try {
@@ -3980,19 +4056,157 @@ async function openFreelancerFullLeadModal(flId) {
       masterLink.href = `staff_mnr_leads_master.html?category=Solar&handler_emp_code=${encodeURIComponent(fl.partner_code)}`;
     }
 
-    if (totalEl) totalEl.textContent = stats.total ?? leads.length;
-    if (wonEl) wonEl.textContent = stats.won ?? 0;
-    if (pipeEl) pipeEl.textContent = stats.pipeline ?? 0;
-    if (lostEl) lostEl.textContent = stats.lost ?? 0;
+    // Calculate aggregated business metrics
+    let totCount = leads.length;
+    let wonCount = 0, pipeCount = 0, lostCount = 0;
+    let totVal = 0, wonVal = 0, pipeVal = 0, lostVal = 0, recvVal = 0;
+
+    const _WON_ST = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed', 'dcr_pending', 'discom_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending'];
+    const _LOST_ST = ['lost', 'cancelled', 'loan_rejected', 'not_interested', 'bank_not_interested'];
+
+    leads.forEach(l => {
+      const st = (l.status || 'new').toLowerCase().trim();
+      const sps = (l.solar_pipeline_status || l.stage || '').toLowerCase().trim();
+      const dv = parseFloat(l.deal_value || l.deal_value_total || l.project_cost || (String(l.kw_size).includes('3') ? 200000 : 0) || 0);
+      const rv = parseFloat(l.deal_value_received || 0);
+
+      totVal += dv;
+      recvVal += rv;
+
+      const isWon = (_WON_ST.includes(st) || _WON_ST.includes(sps)) && !_LOST_ST.includes(sps);
+      const isLost = _LOST_ST.includes(st) || _LOST_ST.includes(sps);
+
+      if (isWon) {
+        wonCount++;
+        wonVal += dv;
+      } else if (isLost) {
+        lostCount++;
+        lostVal += dv;
+      } else {
+        pipeCount++;
+        pipeVal += dv;
+      }
+    });
+
+    const pendVal = Math.max(0, totVal - recvVal);
+
+    if (totalEl) totalEl.textContent = stats.total ?? totCount;
+    if (totalValEl) totalValEl.textContent = `₹${Math.round(stats.total_business_value ?? totVal).toLocaleString('en-IN')}`;
+    if (wonEl) wonEl.textContent = stats.won ?? wonCount;
+    if (wonValEl) wonValEl.textContent = `₹${Math.round(stats.won_business_value ?? wonVal).toLocaleString('en-IN')}`;
+    if (pipeEl) pipeEl.textContent = stats.pipeline ?? pipeCount;
+    if (pipeValEl) pipeValEl.textContent = `₹${Math.round(stats.pipeline_business_value ?? pipeVal).toLocaleString('en-IN')}`;
+    if (lostEl) lostEl.textContent = stats.lost ?? lostCount;
+    if (lostValEl) lostValEl.textContent = `₹${Math.round(stats.lost_business_value ?? lostVal).toLocaleString('en-IN')}`;
+    if (recvValEl) recvValEl.textContent = `₹${Math.round(stats.received_value ?? recvVal).toLocaleString('en-IN')}`;
+    if (pendValEl) pendValEl.textContent = `₹${Math.round(stats.pending_value ?? pendVal).toLocaleString('en-IN')}`;
 
     _currentFlFvLeads = leads;
-    renderFlFvTable(leads);
+    renderFlFvStagePills(leads);
+    applyFlFvSortAndFilter();
   } catch (err) {
     console.error('Error opening full lead modal:', err);
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leads from server.</td></tr>';
     }
   }
+}
+
+function renderFlFvStagePills(leads) {
+  const container = document.getElementById('flFvStagePills');
+  if (!container) return;
+
+  const stageCounts = {};
+  leads.forEach(l => {
+    const rawStage = (l.solar_pipeline_status || l.stage || l.status || 'lead').toLowerCase().trim();
+    const label = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+    stageCounts[label] = (stageCounts[label] || 0) + 1;
+  });
+
+  const sortedStages = Object.entries(stageCounts).sort((a, b) => b[1] - a[1]);
+
+  let html = `
+    <button type="button" onclick="setFlFvStageFilter('ALL')" style="cursor:pointer;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:700;border:1px solid ${_flFvActiveStageFilter === 'ALL' ? '#0284c7' : '#cbd5e1'};background:${_flFvActiveStageFilter === 'ALL' ? '#0284c7' : 'white'};color:${_flFvActiveStageFilter === 'ALL' ? 'white' : '#475569'};transition:all .15s">
+      All <span style="opacity:0.85;margin-left:2px">(${leads.length})</span>
+    </button>
+  `;
+
+  sortedStages.forEach(([label, cnt]) => {
+    const isAct = _flFvActiveStageFilter === label;
+    html += `
+      <button type="button" onclick="setFlFvStageFilter('${esc(label)}')" style="cursor:pointer;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:700;border:1px solid ${isAct ? '#0369a1' : '#e2e8f0'};background:${isAct ? '#0284c7' : '#f1f5f9'};color:${isAct ? 'white' : '#334155'};transition:all .15s" title="Filter by ${esc(label)}">
+        ${esc(label)} <span style="background:${isAct ? 'rgba(255,255,255,0.25)' : '#e2e8f0'};color:${isAct ? 'white' : '#0f172a'};padding:1px 6px;border-radius:10px;font-size:10.5px;margin-left:3px">${cnt}</span>
+      </button>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function setFlFvStageFilter(stageLabel) {
+  if (stageLabel === 'ALL' || _flFvActiveStageFilter === stageLabel) {
+    _flFvActiveStageFilter = 'ALL';
+  } else {
+    _flFvActiveStageFilter = stageLabel;
+  }
+  renderFlFvStagePills(_currentFlFvLeads);
+  applyFlFvSortAndFilter();
+}
+
+function onFlFvSortDropdownChange(val) {
+  const parts = val.split('_');
+  if (parts.length === 2) {
+    const [fieldKey, dir] = parts;
+    _flFvSortDir = dir;
+    if (fieldKey === 'created') _flFvSortField = 'created_at';
+    else if (fieldKey === 'deal') _flFvSortField = 'deal_value';
+    else if (fieldKey === 'name') _flFvSortField = 'name';
+    else if (fieldKey === 'id') _flFvSortField = 'id';
+    else if (fieldKey === 'stage') _flFvSortField = 'stage';
+  }
+  updateFlFvSortIcons();
+  applyFlFvSortAndFilter();
+}
+
+function toggleFlFvSort(field) {
+  if (_flFvSortField === field) {
+    _flFvSortDir = _flFvSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _flFvSortField = field;
+    _flFvSortDir = (field === 'created_at' || field === 'deal_value' || field === 'id') ? 'desc' : 'asc';
+  }
+
+  const sortSelect = document.getElementById('flFvSortSelect');
+  if (sortSelect) {
+    let optVal = '';
+    if (field === 'created_at') optVal = `created_${_flFvSortDir}`;
+    else if (field === 'deal_value') optVal = `deal_${_flFvSortDir}`;
+    else if (field === 'name') optVal = `name_${_flFvSortDir}`;
+    else if (field === 'id') optVal = `id_${_flFvSortDir}`;
+    else if (field === 'stage') optVal = `stage_${_flFvSortDir}`;
+    if (optVal && [...sortSelect.options].some(o => o.value === optVal)) {
+      sortSelect.value = optVal;
+    }
+  }
+
+  updateFlFvSortIcons();
+  applyFlFvSortAndFilter();
+}
+
+function updateFlFvSortIcons() {
+  const fields = ['id', 'name', 'phone', 'status', 'stage', 'deal_value', 'created_at'];
+  fields.forEach(f => {
+    const el = document.getElementById(`flSortIcon_${f}`);
+    if (el) {
+      if (_flFvSortField === f) {
+        el.textContent = _flFvSortDir === 'asc' ? '▲' : '▼';
+        el.style.color = '#0284c7';
+      } else {
+        el.textContent = '↕';
+        el.style.color = '#94a3b8';
+      }
+    }
+  });
 }
 
 let _flFvIsFullscreen = false;
@@ -4078,20 +4292,74 @@ document.addEventListener('keydown', function(e) {
 });
 
 function filterFlFvLeads() {
+  applyFlFvSortAndFilter();
+}
+
+function applyFlFvSortAndFilter() {
+  if (!_currentFlFvLeads) return;
   const query = (document.getElementById('flFvSearchInput')?.value || '').toLowerCase().trim();
-  if (!query) {
-    renderFlFvTable(_currentFlFvLeads);
-    return;
-  }
-  const filtered = _currentFlFvLeads.filter(l => {
+
+  let filtered = _currentFlFvLeads.filter(l => {
     const id = String(l.id || '').toLowerCase();
     const name = String(l.lead_name || l.name || '').toLowerCase();
     const phone = String(l.phone || '').toLowerCase();
-    const stage = String(l.stage || l.solar_pipeline_status || '').toLowerCase();
+    const rawStage = (l.solar_pipeline_status || l.stage || l.status || '').toLowerCase().trim();
+    const stageDisplay = (_SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead').toLowerCase();
     const status = String(l.status || '').toLowerCase();
     const city = String(l.city || l.district || '').toLowerCase();
-    return id.includes(query) || name.includes(query) || phone.includes(query) || stage.includes(query) || status.includes(query) || city.includes(query);
+
+    // Check search query
+    if (query) {
+      const matchQuery = id.includes(query) || name.includes(query) || phone.includes(query) || 
+                         rawStage.includes(query) || stageDisplay.includes(query) || status.includes(query) || city.includes(query);
+      if (!matchQuery) return false;
+    }
+
+    // Check stage filter
+    if (_flFvActiveStageFilter && _flFvActiveStageFilter !== 'ALL') {
+      const currentStageLabel = _SOLAR_STAGE_LABELS[rawStage] || l.stage || l.solar_pipeline_status || 'Lead';
+      if (currentStageLabel !== _flFvActiveStageFilter) return false;
+    }
+
+    return true;
   });
+
+  // Sort filtered list
+  filtered.sort((a, b) => {
+    let vA, vB;
+    if (_flFvSortField === 'id') {
+      vA = Number(a.id || 0);
+      vB = Number(b.id || 0);
+    } else if (_flFvSortField === 'name') {
+      vA = String(a.lead_name || a.name || '').toLowerCase();
+      vB = String(b.lead_name || b.name || '').toLowerCase();
+    } else if (_flFvSortField === 'phone') {
+      vA = String(a.phone || '').toLowerCase();
+      vB = String(b.phone || '').toLowerCase();
+    } else if (_flFvSortField === 'status') {
+      vA = String(a.status || '').toLowerCase();
+      vB = String(b.status || '').toLowerCase();
+    } else if (_flFvSortField === 'stage') {
+      const stA = (a.solar_pipeline_status || a.stage || a.status || '').toLowerCase();
+      const stB = (b.solar_pipeline_status || b.stage || b.status || '').toLowerCase();
+      vA = (_SOLAR_STAGE_LABELS[stA] || a.stage || '').toLowerCase();
+      vB = (_SOLAR_STAGE_LABELS[stB] || b.stage || '').toLowerCase();
+    } else if (_flFvSortField === 'deal_value') {
+      vA = parseFloat(a.deal_value || a.deal_value_total || a.project_cost || (String(a.kw_size).includes('3') ? 200000 : 0) || 0);
+      vB = parseFloat(b.deal_value || b.deal_value_total || b.project_cost || (String(b.kw_size).includes('3') ? 200000 : 0) || 0);
+    } else if (_flFvSortField === 'created_at') {
+      vA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      vB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    } else {
+      vA = a.id;
+      vB = b.id;
+    }
+
+    if (vA < vB) return _flFvSortDir === 'asc' ? -1 : 1;
+    if (vA > vB) return _flFvSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   renderFlFvTable(filtered);
 }
 
