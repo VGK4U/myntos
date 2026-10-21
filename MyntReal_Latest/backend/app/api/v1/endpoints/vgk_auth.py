@@ -4045,98 +4045,240 @@ def vgk_earning_capacity(
 def vgk_public_commission_rates(db: Session = Depends(get_db)):
     """
     Public endpoint — no auth required.
-    Returns commission rate structure (Registered + Activated) per product category.
-    DC Protocol: NO company_id restriction — VGK rates are universal across all companies.
-    Reads all active configs, deduplicates by (category_name, is_paid_member) keeping
-    the most recently updated record so admin changes reflect immediately everywhere.
+    Authoritative VGK4U 7-Vertical Ecosystem & Dual-Track Commission Engine.
+    Reads active configs from vgk4u_category_commission_configs to dynamically
+    serve all 7 verticals (Solar, EV, Insurance, Real Estate, Training, Spares, Hub Franchise)
+    with Dual-Track Tiers, Leadership Overrides, presets, and backward-compatible rate blocks.
     """
-    from app.models.staff_accounts import VGKTeamCommissionConfig
-    from app.models.signup_category import SignupCategory
+    from app.models.vgk4u_models import VGK4UCategoryCommissionConfig
 
-    # No company_id filter — VGK rates are global. Order by updated_at DESC so the
-    # most recently edited config wins when deduplicating across companies.
-    configs = (
-        db.query(VGKTeamCommissionConfig, SignupCategory)
-        .join(SignupCategory, VGKTeamCommissionConfig.category_id == SignupCategory.id)
-        .filter(
-            VGKTeamCommissionConfig.is_active == True,
-        )
-        .order_by(
-            SignupCategory.display_order,
-            SignupCategory.name,
-            VGKTeamCommissionConfig.is_paid_member,
-            VGKTeamCommissionConfig.updated_at.desc(),
-        )
+    # Query authoritative category configs from vgk4u_category_commission_configs
+    cat_configs = (
+        db.query(VGK4UCategoryCommissionConfig)
+        .filter(VGK4UCategoryCommissionConfig.is_active == True)
         .all()
     )
+    db_map = {c.category_slug: c for c in cat_configs}
 
-    def _rate_block(cfg):
-        l1p  = float(cfg.level1_pct  or 0)
-        l2p  = float(cfg.level2_pct  or 0)
-        l3p  = float(cfg.level3_pct  or 0)
-        l4cp = float(getattr(cfg, 'level4_core_pct', None) or 0)
-        l5p  = float(cfg.level4_pct  or 0)   # L5 Support (stored as level4_pct)
-        l1a  = float(cfg.level1_amt  or 0)
-        l2a  = float(cfg.level2_amt  or 0)
-        l3a  = float(cfg.level3_amt  or 0)
-        l4ca = float(getattr(cfg, 'level4_core_amt', None) or 0)
-        l5a  = float(cfg.level4_amt  or 0)
-        has_rates = any(v > 0 for v in [l1p, l2p, l3p, l4cp, l5p, l1a, l2a, l3a, l4ca, l5a])
-        return {
-            "level1_pct":      l1p,
-            "level2_pct":      l2p,
-            "level3_pct":      l3p,
-            "level4_core_pct": l4cp,
-            "level4_pct":      l5p,
-            "level1_type":     cfg.level1_type or "PCT",
-            "level2_type":     cfg.level2_type or "PCT",
-            "level3_type":     cfg.level3_type or "PCT",
-            "level4_core_type": getattr(cfg, 'level4_core_type', None) or "PCT",
-            "level4_type":     cfg.level4_type or "PCT",
-            "level1_amt":      l1a,
-            "level2_amt":      l2a,
-            "level3_amt":      l3a,
-            "level4_core_amt": l4ca,
-            "level4_amt":      l5a,
-            "bonus_pct":       float(cfg.bonus_pct   or 0),
-            "markup_pct":      float(cfg.markup_pct  or 0),
-            "has_rates":       has_rates,
+    canonical_verticals = [
+        {
+            "id": 1,
+            "category_slug": "solar",
+            "category_name": "Har Ghar Solar",
+            "display_name": "Har Ghar Solar EPC",
+            "icon": "☀️",
+            "display_order": 1,
+            "deal_default": 200000,
+            "deal_presets": [
+                {"label": "1 kW Solar", "val": 50000},
+                {"label": "3 kW Rooftop", "val": 200000},
+                {"label": "Commercial", "val": 500000},
+                {"label": "Mini Plant", "val": 1000000}
+            ],
+            "special_badge": "₹1,000 CIBIL Advance",
+            "special_note": "Advance of ₹1,000 released upon CIBIL validation. Zero deduction on project commission."
+        },
+        {
+            "id": 2,
+            "category_slug": "ev",
+            "category_name": "Manthra EV 2W",
+            "display_name": "Manthra EV Smart 2W",
+            "icon": "🛵",
+            "display_order": 2,
+            "deal_default": 75000,
+            "deal_presets": [
+                {"label": "Pro GT", "val": 59758},
+                {"label": "Power Plus", "val": 67000},
+                {"label": "M99 Flagship", "val": 80782},
+                {"label": "Beast Pro", "val": 99058}
+            ],
+            "special_badge": "Instant Booking Credit",
+            "special_note": "Non-RTO convenience: No driving license, no registration, ₹0.20/km running cost."
+        },
+        {
+            "id": 3,
+            "category_slug": "insurance",
+            "category_name": "VGK Care Insurance",
+            "display_name": "VGK Care Insurance (Bajaj Capital)",
+            "icon": "🛡️",
+            "display_order": 3,
+            "deal_default": 25000,
+            "deal_presets": [
+                {"label": "2W Motor Cover", "val": 3500},
+                {"label": "Family Health", "val": 25000},
+                {"label": "Term Life", "val": 45000},
+                {"label": "Commercial Asset", "val": 150000}
+            ],
+            "special_badge": "10+ Tier-1 Insurers",
+            "special_note": "Paperless digital issuance for Health, Life, Motor & Asset insurance."
+        },
+        {
+            "id": 4,
+            "category_slug": "real-dreams",
+            "category_name": "VGK Real Dreams",
+            "display_name": "VGK Real Dreams (Real Estate)",
+            "icon": "🏡",
+            "display_order": 4,
+            "deal_default": 1500000,
+            "deal_presets": [
+                {"label": "Open Plot (150 sq.yd)", "val": 1500000},
+                {"label": "Farmland Plot", "val": 2500000},
+                {"label": "Gated Villa", "val": 5000000},
+                {"label": "Commercial Plot", "val": 10000000}
+            ],
+            "special_badge": "High Ticket Earnings",
+            "special_note": "RERA-approved open plots, farmland ventures, and Anandas Royal Imperia luxury residences."
+        },
+        {
+            "id": 5,
+            "category_slug": "etc-training",
+            "category_name": "EVolution (ETC) Labs",
+            "display_name": "EVolution (ETC) Technical Labs",
+            "icon": "🎓",
+            "display_order": 5,
+            "deal_default": 25000,
+            "deal_presets": [
+                {"label": "Solar Tech (15d)", "val": 15000},
+                {"label": "EV Tech (30d)", "val": 25000},
+                {"label": "Battery Master (45d)", "val": 45000},
+                {"label": "Corporate Batch", "val": 100000}
+            ],
+            "special_badge": "95% Placement Record",
+            "special_note": "Practical hands-on technical training, EV diagnostics lab & battery technician certification."
+        },
+        {
+            "id": 6,
+            "category_slug": "ev-spares",
+            "category_name": "EV Spares & Tech",
+            "display_name": "EV Spares Marketplace",
+            "icon": "⚡",
+            "display_order": 6,
+            "deal_default": 15000,
+            "deal_presets": [
+                {"label": "Smart Fast Charger", "val": 4500},
+                {"label": "Smart Controller", "val": 8500},
+                {"label": "LFP Battery Pack", "val": 28000},
+                {"label": "Bulk Service Spares", "val": 100000}
+            ],
+            "special_badge": "Up to 25% Member Discount",
+            "special_note": "Exclusive channel partner discount up to 25% applied automatically at checkout."
+        },
+        {
+            "id": 7,
+            "category_slug": "hub",
+            "category_name": "MyntReal Business Hub",
+            "display_name": "MyntReal Business Hub (5-in-1 Franchise)",
+            "icon": "🏢",
+            "display_order": 7,
+            "deal_default": 500000,
+            "deal_presets": [
+                {"label": "Monthly Billing", "val": 200000},
+                {"label": "Standard Hub", "val": 500000},
+                {"label": "High Volume Hub", "val": 1000000},
+                {"label": "Franchise Expansion", "val": 2500000}
+            ],
+            "is_hub": True,
+            "repeat_billing_pct": 1.00,
+            "special_badge": "1.00% Lifetime Recurring",
+            "special_note": "1% lifetime income on every billing from 2nd billing onwards."
+        }
+    ]
+
+    result = []
+    for vert in canonical_verticals:
+        slug = vert["category_slug"]
+        db_cfg = db_map.get(slug)
+        base_pct = float(db_cfg.producer_base_pct) if db_cfg else (1.0 if vert.get("is_hub") else 5.0)
+        support_pct = float(db_cfg.support_end_to_end_pct) if db_cfg else 1.50
+        max_pool_pct = float(db_cfg.max_network_pool_pct) if db_cfg else 8.00
+
+        # Dual-track tiers
+        if vert.get("is_hub"):
+            tiers = [
+                {"tier": 1, "name": "Tier 1 Referral", "files": "1st Hub Deal", "pct": 1.00, "bonus": 0.0},
+                {"tier": 2, "name": "Tier 2 Senior", "files": "2nd Billing Onwards", "pct": 1.00, "bonus": 0.0},
+                {"tier": 3, "name": "Tier 3 Extended", "files": "Repeat Invoicing", "pct": 1.00, "bonus": 0.0},
+                {"tier": 4, "name": "Tier 4 Lifetime", "files": "Permanent Lock", "pct": 1.00, "bonus": 0.0},
+            ]
+            leadership = [
+                {"level": 1, "name": "Hub Franchise Override", "team": "Direct Franchise", "pct": 0.50},
+                {"level": 2, "name": "Regional Hub Royalty", "team": "Regional Network", "pct": 0.50},
+                {"level": 3, "name": "Territory Master", "team": "Master Hub", "pct": 0.50},
+                {"level": "pool", "name": "Total Hub Pool", "team": "Franchise Network", "pct": 1.50, "is_pool": True},
+            ]
+        else:
+            tiers = [
+                {"tier": 1, "name": "Tier 1 Channel Partner", "files": "1 – 4 Files", "pct": base_pct, "bonus": 0.0},
+                {"tier": 2, "name": "Tier 2 Senior", "files": "5 – 9 Files", "pct": round(base_pct + 1.50, 2), "bonus": 1.50},
+                {"tier": 3, "name": "Tier 3 Extended", "files": "10 – 15 Files", "pct": round(base_pct + 2.50, 2), "bonus": 2.50},
+                {"tier": 4, "name": "Tier 4 Core", "files": "16+ Files", "pct": round(base_pct + 3.00, 2), "bonus": 3.00},
+            ]
+            leadership = [
+                {"level": 1, "name": "Level 1 Manager Override", "team": "1 Active Member", "pct": 0.50},
+                {"level": 2, "name": "Level 2 GM Royalties", "team": "5 Active Members", "pct": 1.00},
+                {"level": 3, "name": "Level 3 RM Depth & Lifetime", "team": "10 Active Members", "pct": 1.50},
+                {"level": "pool", "name": "Total Overrides Pool", "team": "10+ Active", "pct": 3.00, "is_pool": True},
+            ]
+
+        # Backward compatibility rate block for legacy consumers
+        rate_block = {
+            "level1_pct": tiers[0]["pct"],
+            "level2_pct": tiers[1]["pct"],
+            "level3_pct": tiers[2]["pct"],
+            "level4_core_pct": tiers[3]["pct"],
+            "level4_pct": support_pct,
+            "level1_type": "PCT",
+            "level2_type": "PCT",
+            "level3_type": "PCT",
+            "level4_core_type": "PCT",
+            "level4_type": "PCT",
+            "level1_amt": 0.0,
+            "level2_amt": 0.0,
+            "level3_amt": 0.0,
+            "level4_core_amt": 0.0,
+            "level4_amt": 0.0,
+            "bonus_pct": 0.0,
+            "markup_pct": 0.0,
+            "has_rates": True,
         }
 
-    # Deduplicate: first occurrence per (category_name, is_paid_member) = latest updated
-    seen: set = set()
-    cat_map: dict = {}
-    for cfg, cat in configs:
-        cname = cat.name
-        key = (cname, bool(cfg.is_paid_member))
-        if key in seen:
-            continue
-        seen.add(key)
-        if cname not in cat_map:
-            cat_map[cname] = {
-                "category_id":    cat.id,
-                "category_name":  cname,
-                "display_order":  cat.display_order or 0,
-                "registered":     None,
-                "activated":      None,
-            }
-        if cfg.is_paid_member:
-            cat_map[cname]["activated"]  = _rate_block(cfg)
-        else:
-            cat_map[cname]["registered"] = _rate_block(cfg)
+        vert_data = {
+            "category_id": vert["id"],
+            "category_slug": slug,
+            "category_name": vert["category_name"],
+            "display_name": vert["display_name"],
+            "icon": vert["icon"],
+            "display_order": vert["display_order"],
+            "deal_default": vert["deal_default"],
+            "deal_presets": vert["deal_presets"],
+            "producer_base_pct": base_pct,
+            "support_pct": support_pct,
+            "max_network_pool_pct": max_pool_pct,
+            "tiers": tiers,
+            "leadership": leadership,
+            "is_hub": vert.get("is_hub", False),
+            "repeat_billing_pct": vert.get("repeat_billing_pct", 0.0),
+            "special_badge": vert["special_badge"],
+            "special_note": vert["special_note"],
+            "registered": rate_block,
+            "activated": rate_block,
+        }
+        result.append(vert_data)
 
-    # Only return categories where at least one config (registered or activated)
-    # has at least one non-zero rate — skips "No Config" categories shown in admin.
-    def _cat_has_rates(entry):
-        reg = entry.get("registered")
-        act = entry.get("activated")
-        return (reg and reg.get("has_rates")) or (act and act.get("has_rates"))
-
-    result = sorted(
-        [e for e in cat_map.values() if _cat_has_rates(e)],
-        key=lambda x: (x["display_order"], x["category_name"])
-    )
-    return {"success": True, "data": result}
+    return {
+        "success": True,
+        "count": len(result),
+        "data": result,
+        "summary": {
+            "category_count": 7,
+            "tier1_rate": 5.0,
+            "tier4_core_rate": 8.0,
+            "support_bonus": 1.5,
+            "max_direct_with_support": 9.5,
+            "leadership_pool": 3.0,
+            "max_total_potential": 12.5,
+        }
+    }
 
 
 @router.get("/member/staff-search")

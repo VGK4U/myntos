@@ -1985,7 +1985,15 @@
 </div><!-- /vo-layout -->
 
 <script>
-const CAT_DEFAULTS = { 'EV B2B':100000, 'EV B2C':100000, 'Solar':240000 };
+const CAT_DEFAULTS = {
+    'solar': 200000, 'Har Ghar Solar': 200000, 'Har Ghar Solar EPC': 200000, 'Solar': 200000,
+    'ev': 75000, 'Manthra EV 2W': 75000, 'EV B2C': 75000,
+    'insurance': 25000, 'VGK Care Insurance': 25000,
+    'real-dreams': 1500000, 'VGK Real Dreams': 1500000,
+    'etc-training': 25000, 'EVolution (ETC) Labs': 25000,
+    'ev-spares': 15000, 'EV Spares & Tech': 15000,
+    'hub': 500000, 'MyntReal Business Hub': 500000, 'EV B2B': 500000
+};
 
 function numFmt(v){ return '\u20b9'+Math.round(v).toLocaleString('en-IN'); }
 function escHtml(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
@@ -2417,8 +2425,14 @@ function setLang(lang) {
         _applyDynamicBanner(window._vgkCats, T);
         /* Rebuild card panels so subtitle text updates */
         if (document.getElementById('commPanels')) {
+            const activePanel = document.querySelector('.cat-panel.active');
+            let activeIdx = 0;
+            if (activePanel && activePanel.id) {
+                const m = activePanel.id.match(/\d+$/);
+                if (m) activeIdx = parseInt(m[0], 10);
+            }
             document.getElementById('commPanels').innerHTML = window._vgkCats.map((cat, i) =>
-                `<div class="cat-panel ${i===0?'active':''}" id="panel-${i}">${buildPanel(cat, i)}</div>`
+                `<div class="cat-panel ${i===activeIdx?'active':''}" id="panel-${i}">${buildPanel(cat, i)}</div>`
             ).join('');
         }
     }
@@ -2459,129 +2473,158 @@ function _applyDynamicBanner(cats, T) {
 })();
 /* END BILINGUAL ENGINE */
 
-function buildRows(cfg, dealAmt) {
-    if (!cfg) return '<tr><td colspan="3" style="text-align:center;color:rgba(255,255,255,.4);font-size:12px;padding:14px">Not configured</td></tr>';
-    const LEVELS = [
-        {n:1, dot:'ld1', role:'Source (Direct)',       pct:cfg.level1_pct, type:cfg.level1_type||'PCT', amt:cfg.level1_amt||0},
-        {n:2, dot:'ld2', role:'Senior Partner',        pct:cfg.level2_pct, type:cfg.level2_type||'PCT', amt:cfg.level2_amt||0},
-        {n:3, dot:'ld3', role:'Extended Team',         pct:cfg.level3_pct, type:cfg.level3_type||'PCT', amt:cfg.level3_amt||0},
-        {n:4, dot:'ld4c', role:'Core Network',         pct:cfg.level4_core_pct||0, type:cfg.level4_core_type||'PCT', amt:cfg.level4_core_amt||0},
-        {n:5, dot:'ld4', role:'Support System \u2605', pct:cfg.level4_pct, type:cfg.level4_type||'PCT', amt:cfg.level4_amt||0},
+function buildTrack1Rows(dealAmt) {
+    const TIERS = [
+        { tier: 1, name: 'Channel Partner', tag: 'dt-tier-1', files: '1 – 4 Files', pct: 5.0, bonus: null },
+        { tier: 2, name: 'Senior', tag: 'dt-tier-2', files: '5 – 9 Files', pct: 6.5, bonus: '+1.50%' },
+        { tier: 3, name: 'Extended', tag: 'dt-tier-3', files: '10 – 15 Files', pct: 7.5, bonus: '+2.50%' },
+        { tier: 4, name: 'Core', tag: 'dt-tier-4', files: '16+ Files', pct: 8.0, bonus: '+3.00%' }
     ];
-    let total = 0;
-    const rows = LEVELS.map(l => {
-        const isAmt = l.type === 'AMOUNT';
-        const earn  = isAmt ? l.amt : dealAmt * (l.pct / 100);
-        const hasVal = isAmt ? l.amt > 0 : l.pct > 0;
-        total += earn;
-        const isL4 = l.n === 5;
-        const eqPct   = (isAmt && l.amt > 0 && dealAmt > 0) ? (l.amt / dealAmt * 100) : 0;
-        const eqPctStr = eqPct > 0 ? `<div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:600;margin-top:2px">&#x2248; ${+eqPct.toFixed(2)}% of deal</div>` : '';
-        const rateStr = isAmt
-            ? (l.amt > 0 ? '\u20b9' + Number(l.amt).toLocaleString('en-IN') + ' flat/deal' + eqPctStr : '<span style="color:rgba(255,255,255,.3)">\u2014</span>')
-            : (l.pct > 0 ? (+l.pct.toFixed(2)) + '%' : '<span style="color:rgba(255,255,255,.3)">\u2014</span>');
-        const earnHtml = earn > 0
-            ? `<span style="font-weight:800;color:${isL4?'var(--amber)':'#e9d5ff'}">${numFmt(earn)}</span>`
-            : '<span style="color:rgba(255,255,255,.28)">\u2014</span>';
-        const supportTag = isL4 ? ' <span class="support-tag"><i class="fas fa-star" style="font-size:8px"></i> SUPPORT</span>' : '';
-        return `<tr class="${isL4?'tr-l4':''}">
-            <td><div style="display:flex;align-items:center">
-                <div class="level-dot ${l.dot}">L${l.n}</div>
-                <span style="font-size:12.5px;font-weight:700;color:${isL4?'var(--amber)':'#fff'}">${l.role}${supportTag}</span>
-            </div></td>
-            <td style="font-size:13px;font-weight:700;color:${hasVal?'#e9d5ff':'rgba(255,255,255,.3)'}">${rateStr}</td>
-            <td>${earnHtml}</td>
+    return TIERS.map(t => {
+        const earn = dealAmt * (t.pct / 100);
+        const isCore = t.tier === 4;
+        return `
+        <tr style="${isCore ? 'background:rgba(245,158,11,.08)' : ''}">
+            <td>
+                <span class="dt-tier-tag ${t.tag}">${isCore ? '<i class="fas fa-star" style="font-size:9px;margin-right:2px"></i>' : ''}Tier ${t.tier}</span>
+                <strong style="color:${isCore ? '#fde68a' : '#fff'}">${t.name}</strong>
+            </td>
+            <td><span style="background:${isCore ? 'rgba(245,158,11,.2)' : 'rgba(255,255,255,.08)'};border:${isCore ? '1px solid rgba(245,158,11,.4)' : 'none'};padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:${isCore ? '800' : '600'};color:${isCore ? '#fde68a' : 'rgba(255,255,255,.85)'}">${t.files}</span></td>
+            <td style="text-align:right">
+                <strong style="font-size:${isCore ? '15.5px' : '14.5px'};color:${isCore ? '#fde68a' : t.tier === 1 ? '#93c5fd' : t.tier === 2 ? '#86efac' : '#c084fc'}">${t.pct.toFixed(2)}%</strong>
+                ${t.bonus ? `<span class="dt-bonus-chip" style="${isCore ? 'background:rgba(245,158,11,.25);border-color:rgba(245,158,11,.5);color:#fde68a' : ''}">${t.bonus}</span>` : ''}
+            </td>
+            <td style="text-align:right;font-size:13px;font-weight:900;color:${isCore ? '#fde68a' : '#86efac'}">${numFmt(earn)}</td>
         </tr>`;
     }).join('');
-    const totalRow = `<tr style="border-top:2px solid rgba(255,255,255,.15)">
-        <td colspan="2" style="font-size:12px;font-weight:700;color:rgba(255,255,255,.6)">Total Earning Capacity</td>
-        <td style="font-size:13px;font-weight:900;color:#86efac">${numFmt(total)}</td>
-    </tr>`;
-    return rows + totalRow;
 }
 
-/* Build a single rate card (Registered or Activated) with merged Rate + Example columns */
-function buildCard(cat, type, dealAmt, pid) {
-    const cfg        = type==='reg' ? cat.registered : cat.activated;
-    const badgeClass = type==='reg' ? 'badge-reg' : 'badge-act';
-    const badgeText  = type==='reg' ? '\ud83d\udd35 Registered' : '\ud83d\udfe2 Activated';
-    const regLvls  = type==='reg' ? _configuredLevels(cfg) : [];
-    const T = TRANSLATIONS[window._vgkLang||'en'];
-    const subtitle   = type==='reg' ? T.js_card_reg_sub1 + _levelStr(regLvls) + T.js_card_reg_sub2 : T.js_card_act_sub;
-    return `<div class="comm-card">
-        <div class="comm-card-header">
-            <span class="comm-badge ${badgeClass}">${badgeText}</span>
-            <div style="flex:1">
-                <div class="comm-card-title">${escHtml({'EV B2B':'Showroom Setup','EV B2C':'Vehicle Sales'}[cat.category_name]||cat.category_name)}</div>
-                <div class="comm-card-sub">${subtitle}</div>
+function buildTrack2Rows(dealAmt) {
+    const LEVELS = [
+        { level: 1, name: 'Manager Override', tag: 'dt-tier-2', team: '1 Active Member', pct: 0.5 },
+        { level: 2, name: 'GM Royalties', tag: 'dt-tier-3', team: '5 Active Members', pct: 1.0 },
+        { level: 3, name: 'RM Depth & Lifetime', tag: 'dt-tier-4', team: '10 Active Members', pct: 1.5 }
+    ];
+    const rows = LEVELS.map(l => {
+        const earn = dealAmt * (l.pct / 100);
+        const color = l.level === 1 ? '#38bdf8' : l.level === 2 ? '#c084fc' : '#fbbf24';
+        return `
+        <tr>
+            <td>
+                <span class="dt-tier-tag ${l.tag}">Level ${l.level}</span>
+                <strong style="color:#fff">${l.name}</strong>
+            </td>
+            <td><span style="background:rgba(255,255,255,.08);padding:3px 8px;border-radius:6px;font-size:11.5px;color:rgba(255,255,255,.85)">${l.team}</span></td>
+            <td style="text-align:right"><strong style="font-size:14.5px;color:${color}">+ ${l.pct.toFixed(2)}%</strong></td>
+            <td style="text-align:right;font-size:13px;font-weight:900;color:#86efac">${numFmt(earn)}</td>
+        </tr>`;
+    }).join('');
+
+    const poolEarn = dealAmt * 0.03;
+    const poolRow = `
+    <tr style="background:rgba(16,185,129,.12)">
+        <td>
+            <span style="display:inline-flex;align-items:center;gap:4px;color:#86efac;font-weight:900">
+                <i class="fas fa-crown" style="color:#f59e0b"></i> Total Overrides Pool
+            </span>
+        </td>
+        <td><span style="background:rgba(16,185,129,.25);border:1px solid rgba(16,185,129,.5);padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:800;color:#86efac">10+ Active</span></td>
+        <td style="text-align:right">
+            <span style="background:#10b981;color:#fff;font-weight:900;font-size:12.5px;padding:3px 8px;border-radius:6px">3.00% Pool</span>
+        </td>
+        <td style="text-align:right;font-size:13px;font-weight:900;color:#86efac">${numFmt(poolEarn)}</td>
+    </tr>`;
+    return rows + poolRow;
+}
+
+function buildDualTrackSummary(dealAmt) {
+    const baseDirect = dealAmt * 0.05;
+    const maxDirect  = dealAmt * 0.08;
+    const supportAmt = dealAmt * 0.015;
+    const totalDir   = dealAmt * 0.095;
+    const poolAmt    = dealAmt * 0.030;
+    const totalMax   = dealAmt * 0.125;
+    return `
+    <div class="calc-summary" style="margin-top:14px;border-radius:12px;overflow:hidden">
+        <div class="sum-chip source-chip">
+            <div class="sum-icon">🎯</div>
+            <div>
+                <div class="sum-label" style="color:#93c5fd">Personal Direct Slabs</div>
+                <div class="sum-val source-val">${numFmt(baseDirect)} – ${numFmt(maxDirect)}</div>
+                <div class="sum-note" style="font-size:10px;color:rgba(255,255,255,.55)">5.00% (Tier 1) to 8.00% (Tier 4)</div>
             </div>
         </div>
-        <table class="comm-table">
-            <thead><tr><th>Referral Level &amp; Role</th><th>Rate</th><th>\u20b9 Example</th></tr></thead>
-            <tbody id="tbody_${type}_${pid}">${buildRows(cfg, dealAmt)}</tbody>
-        </table>
+        <div class="sum-chip support-chip">
+            <div class="sum-icon">★</div>
+            <div>
+                <div class="sum-label" style="color:var(--amber)">Direct Support Bonus (+1.50%)</div>
+                <div class="sum-val support-val">${numFmt(supportAmt)}</div>
+                <div class="sum-note" style="font-size:10px;color:rgba(255,255,255,.55)">Max Direct Earning: up to ${numFmt(totalDir)} (9.50%)</div>
+            </div>
+        </div>
+        <div class="sum-chip" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35)">
+            <div class="sum-icon">👑</div>
+            <div>
+                <div class="sum-label" style="color:#86efac">Leadership Overrides Pool</div>
+                <div class="sum-val" style="color:#86efac">${numFmt(poolAmt)}</div>
+                <div class="sum-note" style="font-size:10px;color:rgba(255,255,255,.55)">3.00% Direct Team Override Pool</div>
+            </div>
+        </div>
+        <div class="sum-chip total-chip">
+            <div class="sum-icon">💰</div>
+            <div>
+                <div class="sum-label">Max Ecosystem Capacity</div>
+                <div class="sum-val total-val">${numFmt(totalMax)}</div>
+                <div class="sum-note" style="font-size:10px;color:rgba(255,255,255,.55)">Up to 12.50% combined pool</div>
+            </div>
+        </div>
     </div>`;
 }
 
-/* Recalculate all earning cells when deal amount changes */
+function applyPreset(pid, idx, val) {
+    const inp = document.getElementById('dealAmt_' + pid);
+    if (inp) {
+        inp.value = Number(val).toLocaleString('en-IN');
+        recalc(pid, window._vgkCats[idx]);
+    }
+}
+
 function recalc(pid, catData) {
-    const inp = document.getElementById('dealAmt_'+pid);
+    const inp = document.getElementById('dealAmt_' + pid);
     if (!inp) return;
-    const amt = parseFloat(inp.value.replace(/[^0-9.]/g,'')) || 0;
-    document.getElementById('tbody_reg_'+pid).innerHTML = buildRows(catData.registered, amt);
-    document.getElementById('tbody_act_'+pid).innerHTML = buildRows(catData.activated,  amt);
-    document.getElementById('sum_reg_'+pid).innerHTML   = buildSummary(catData.registered, amt);
-    document.getElementById('sum_act_'+pid).innerHTML   = buildSummary(catData.activated,  amt);
+    const amt = parseFloat(inp.value.replace(/[^0-9.]/g, '')) || 0;
+    const tbodyT1 = document.getElementById('tbody_t1_' + pid);
+    if (tbodyT1) tbodyT1.innerHTML = buildTrack1Rows(amt);
+    const tbodyT2 = document.getElementById('tbody_t2_' + pid);
+    if (tbodyT2) tbodyT2.innerHTML = buildTrack2Rows(amt);
+    const supEl = document.getElementById('t1_support_' + pid);
+    if (supEl) supEl.textContent = numFmt(amt * 0.015);
+    const maxEl = document.getElementById('t1_max_' + pid);
+    if (maxEl) maxEl.textContent = numFmt(amt * 0.095) + ' (9.50%)';
+    const sumEl = document.getElementById('sum_dual_' + pid);
+    if (sumEl) sumEl.innerHTML = buildDualTrackSummary(amt);
 }
 
-function buildSummary(cfg, dealAmt) {
-    if (!cfg) return '';
-    const _T = TRANSLATIONS[window._vgkLang||'en'];
-    const src  = dealAmt*(cfg.level1_pct/100);
-    const supp = dealAmt*(cfg.level4_pct/100);
-    const tot  = dealAmt*((
-        cfg.level1_pct +
-        cfg.level2_pct +
-        cfg.level3_pct +
-        (cfg.level4_core_pct||0) +
-        cfg.level4_pct
-    )/100);
-    return `
-        <div class="sum-chip source-chip">
-            <div class="sum-icon">\ud83c\udfaf</div>
-            <div><div class="sum-label">${_T.js_sum_src_label}</div><div class="sum-val source-val">${numFmt(src)}</div><div class="sum-note">${_T.js_sum_src_note}</div></div>
-        </div>
-        <div class="sum-chip support-chip">
-            <div class="sum-icon">\u2605</div>
-            <div><div class="sum-label" style="color:var(--amber)">${_T.js_sum_sup_label}</div><div class="sum-val support-val">${numFmt(supp)}</div><div class="sum-note">${_T.js_sum_sup_note}</div></div>
-        </div>
-        <div class="sum-chip total-chip">
-            <div class="sum-icon">\ud83d\udcb0</div>
-            <div><div class="sum-label">${_T.js_sum_tot_label}</div><div class="sum-val total-val">${numFmt(tot)}</div><div class="sum-note">${_T.js_sum_tot_note}</div></div>
-        </div>`;
-}
-
-/* Build the full panel — deal input above, merged cards, summaries below */
+/* Build the full panel — deal input & presets above, Track 1 & Track 2 cards, dual-track summaries below */
 function buildPanel(cat, idx) {
-    const defaultAmt = CAT_DEFAULTS[cat.category_name] || 100000;
-    const pid = 'p'+idx;
-    const reg = cat.registered;
-    const act = cat.activated;
-    return `
-        <div class="calc-row" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <i class="fas fa-calculator" style="color:#a78bfa;font-size:13px"></i>
-            <span style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.6)">Example deal value (\u20b9)</span>
-            <input class="deal-input" id="dealAmt_${pid}" type="text" value="${defaultAmt.toLocaleString('en-IN')}"
-                oninput="this.value=this.value.replace(/[^0-9]/g,'');recalc('${pid}',window._vgkCats[${idx}])"
-                onblur="if(!this.value||this.value==='0')this.value='${defaultAmt}';recalc('${pid}',window._vgkCats[${idx}])"
-                placeholder="1,00,000">
-        </div>
-        <div class="commission-grid">
-            ${buildCard(cat,'reg',defaultAmt,pid)}
-            ${buildCard(cat,'act',defaultAmt,pid)}
-        </div>
-        ${cat.category_name === 'Solar' ? (function(){ const _T = TRANSLATIONS[window._vgkLang||'en']; return `
-        <div style="margin-top:12px;background:rgba(34,197,94,.06);border:1.5px solid rgba(34,197,94,.35);border-radius:14px;overflow:hidden">
+    const slug = cat.category_slug || '';
+    const defaultAmt = cat.deal_default || CAT_DEFAULTS[slug] || CAT_DEFAULTS[cat.category_name] || 100000;
+    const pid = 'p' + idx;
+    const presets = cat.deal_presets && cat.deal_presets.length ? cat.deal_presets : [
+        { label: 'Standard', val: defaultAmt }
+    ];
+    const presetsHtml = presets.map(p => `
+        <button type="button" class="preset-pill" onclick="applyPreset('${pid}', ${idx}, ${p.val})" style="padding:4px 9px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#e9d5ff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">
+            ₹${Number(p.val).toLocaleString('en-IN')} <span style="opacity:.7">(${escHtml(p.label)})</span>
+        </button>
+    `).join('');
+
+    /* Special category banner */
+    let specialBannerHtml = '';
+    if (slug === 'solar' || cat.category_name === 'Har Ghar Solar' || cat.category_name === 'Solar') {
+        const _T = TRANSLATIONS[window._vgkLang||'en'];
+        specialBannerHtml = `
+        <div style="margin-top:14px;background:rgba(34,197,94,.06);border:1.5px solid rgba(34,197,94,.35);border-radius:14px;overflow:hidden">
             <div style="padding:12px 16px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(34,197,94,.2)">
                 <i class="fas fa-check-circle" style="color:#86efac;font-size:15px"></i>
                 <span style="font-size:13.5px;font-weight:800;color:#86efac">${_T.solar_cibil_title}</span>
@@ -2589,55 +2632,156 @@ function buildPanel(cat, idx) {
             </div>
             <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:14px">
                 <div style="flex-shrink:0;text-align:center">
-                    <div style="font-size:28px;font-weight:900;color:#86efac">₹1,000</div>
+                    <div style="font-size:26px;font-weight:900;color:#86efac">₹1,000</div>
                     <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">${_T.solar_cibil_label}</div>
                 </div>
                 <div style="font-size:12.5px;color:rgba(255,255,255,.8);line-height:1.7">${_T.solar_cibil_text}</div>
             </div>
-        </div>`; })() : ''}
-        ${cat.category_name === 'EV B2B' ? `
-        <div style="margin-top:12px;background:rgba(245,158,11,.06);border:1.5px solid var(--amber-border);border-radius:14px;overflow:hidden">
+        </div>`;
+    } else if (slug === 'hub' || cat.category_name === 'MyntReal Business Hub' || cat.category_name === 'EV B2B') {
+        specialBannerHtml = `
+        <div style="margin-top:14px;background:rgba(245,158,11,.06);border:1.5px solid var(--amber-border);border-radius:14px;overflow:hidden">
             <div style="padding:12px 16px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--amber-border)">
                 <i class="fas fa-infinity" style="color:var(--amber);font-size:15px"></i>
-                <span style="font-size:13.5px;font-weight:800;color:var(--amber)">🏪 Showroom Setup — Tiered Commission Structure</span>
-                <span style="margin-left:auto;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:800;color:var(--amber)">Showroom Setup Only</span>
+                <span style="font-size:13.5px;font-weight:800;color:var(--amber)">🏢 MyntReal Business Hub — Lifetime Repeat Referral Income</span>
+                <span style="margin-left:auto;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:800;color:var(--amber)">Hub Franchise</span>
             </div>
-            <div style="padding:12px 16px">
-                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🧾 1st Invoice (First billing cycle)</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div style="padding:14px 16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                     <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px">
-                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#93c5fd;margin-bottom:4px">🔵 Registered</div>
-                        <div style="font-size:26px;font-weight:900;color:#93c5fd">2%</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">On 1st invoice value</div>
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#93c5fd;margin-bottom:4px">1st Billing Cycle</div>
+                        <div style="font-size:24px;font-weight:900;color:#93c5fd">5% – 8%</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Standard direct commission on initial franchisee fee / setup</div>
                     </div>
-                    <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px">
-                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#86efac;margin-bottom:4px">🟢 Activated</div>
-                        <div style="font-size:26px;font-weight:900;color:#86efac">3%</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">On 1st invoice value</div>
-                    </div>
-                </div>
-                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">♻️ From 2nd Invoice onwards (Lifetime · Repeat billing)</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-                    <div style="background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px">
-                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#93c5fd;margin-bottom:4px">🔵 Registered</div>
-                        <div style="font-size:26px;font-weight:900;color:#93c5fd">0.5%</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Lifetime · Per billing cycle</div>
-                    </div>
-                    <div style="background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px">
-                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#86efac;margin-bottom:4px">🟢 Activated</div>
-                        <div style="font-size:26px;font-weight:900;color:#86efac">1%</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Lifetime · Per billing cycle</div>
+                    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px">
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#86efac;margin-bottom:4px">2nd Billing Cycle Onwards</div>
+                        <div style="font-size:24px;font-weight:900;color:#86efac">1.00% Lifetime</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Paid on recurring turnover &amp; repeat franchise billings</div>
                     </div>
                 </div>
-                <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.6">
-                    <strong style="color:#fff">How it works:</strong> In Showroom Setup (EV B2B), you earn on the 1st invoice at the higher rate, then continue earning a <strong>lifetime referral bonus</strong> on repeat orders from the same client — paid every billing cycle for as long as orders continue.
-                </div>
-                <div style="margin-top:10px;background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;font-size:11.5px;color:rgba(255,255,255,.65);display:flex;align-items:flex-start;gap:8px">
-                    <i class="fas fa-exclamation-circle" style="color:var(--amber);margin-top:2px;flex-shrink:0"></i>
-                    <span><strong style="color:var(--amber)">Conditions apply:</strong> A minimum of <strong style="color:#fff">5 vehicles must be ordered every 2 months</strong> to remain eligible for lifetime income. If the order frequency drops below this threshold, the lifetime income may be paused.</span>
+                <div style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.6">
+                    <strong style="color:#fff">Eligibility:</strong> Maintain a minimum active order frequency (e.g., 5 vehicles or equivalent equipment orders every 2 months) to keep receiving perpetual 1% lifetime royalties on the entire franchise turnover.
                 </div>
             </div>
-        </div>` : ''}
+        </div>`;
+    } else if (slug === 'ev-spares') {
+        specialBannerHtml = `
+        <div style="margin-top:14px;background:rgba(59,130,246,.08);border:1.5px solid rgba(59,130,246,.35);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+            <div style="font-size:26px">⚡</div>
+            <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:800;color:#93c5fd;margin-bottom:2px">Up to 25% Member Checkout Discount on EV Spares &amp; Batteries</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.5">Registered and Activated Channel Partners enjoy wholesale member discounts on high-performance batteries, motors, chargers, and spare parts.</div>
+            </div>
+        </div>`;
+    } else if (cat.special_benefit) {
+        specialBannerHtml = `
+        <div style="margin-top:14px;background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.3);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+            <div style="font-size:20px">${cat.icon || '🎁'}</div>
+            <div style="font-size:12.5px;color:rgba(255,255,255,.8);line-height:1.5">
+                <strong style="color:#c4b5fd">Partner Benefit:</strong> ${escHtml(cat.special_benefit)}
+            </div>
+        </div>`;
+    }
+
+    return `
+        <!-- Deal input and presets -->
+        <div class="calc-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:22px">${cat.icon || '📦'}</span>
+                <div>
+                    <div style="font-size:15px;font-weight:900;color:#fff">${escHtml(cat.display_name || cat.category_name)}</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,.6)">Dual-Track Simulator · 5%–8% Direct + 1.5% Support + 3% Overrides</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.6)">Deal Value (₹):</span>
+                <input class="deal-input" id="dealAmt_${pid}" type="text" value="${defaultAmt.toLocaleString('en-IN')}"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'');recalc('${pid}',window._vgkCats[${idx}])"
+                    onblur="if(!this.value||this.value==='0')this.value='${defaultAmt}';recalc('${pid}',window._vgkCats[${idx}])"
+                    placeholder="${defaultAmt.toLocaleString('en-IN')}">
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    ${presetsHtml}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-Card Dual-Track Grid -->
+        <div class="commission-grid" style="grid-template-columns:1fr 1fr;gap:16px">
+            <!-- TRACK 1 CARD -->
+            <div class="dt-card dt-card-t1">
+                <div class="dt-header-t1">
+                    <div>
+                        <span class="dt-tag">Track 1</span>
+                        <h4 class="dt-title"><i class="fas fa-user-check"></i> Personal Sales Commission</h4>
+                    </div>
+                    <span class="dt-tag" style="background:rgba(255,255,255,.18)">Self Performance</span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="dt-table">
+                        <thead>
+                            <tr>
+                                <th>Tier Level</th>
+                                <th>Personal Files (1st Paid)</th>
+                                <th style="text-align:right">Direct %</th>
+                                <th style="text-align:right">₹ Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_t1_${pid}">${buildTrack1Rows(defaultAmt)}</tbody>
+                    </table>
+                </div>
+                <div style="background:rgba(245,158,11,.1);border-top:1px solid rgba(245,158,11,.25);padding:9px 14px;display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <span style="font-size:11.5px;font-weight:800;color:#fde68a"><i class="fas fa-bolt" style="color:var(--amber)"></i> +1.50% Direct Support Bonus:</span>
+                        <span style="font-size:11px;color:rgba(255,255,255,.6);margin-left:4px">Full self-closing assistance</span>
+                    </div>
+                    <strong id="t1_support_${pid}" style="font-size:13px;font-weight:900;color:#fde68a">${numFmt(defaultAmt * 0.015)}</strong>
+                </div>
+                <div class="dt-footer">
+                    <i class="fas fa-check-double" style="color:#60a5fa;flex-shrink:0"></i>
+                    <span>Higher slabs unlock upon receiving 1st customer advance &amp; apply automatically to all future files. Max Direct: <strong id="t1_max_${pid}" style="color:#86efac">${numFmt(defaultAmt * 0.095)} (9.50%)</strong></span>
+                </div>
+            </div>
+
+            <!-- TRACK 2 CARD -->
+            <div class="dt-card dt-card-t2">
+                <div class="dt-header-t2">
+                    <div>
+                        <span class="dt-tag">Track 2</span>
+                        <h4 class="dt-title"><i class="fas fa-users-cog"></i> Direct Team Leadership Overrides</h4>
+                    </div>
+                    <span class="dt-tag" style="background:rgba(255,255,255,.18)">Direct Team</span>
+                </div>
+                <div class="dt-callout">
+                    <i class="fas fa-info-circle" style="color:#f59e0b;font-size:13px;flex-shrink:0"></i>
+                    <span><strong>Active Direct Member</strong> = Direct sponsored partner with ≥ 3 files (1st payment received).</span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="dt-table">
+                        <thead>
+                            <tr>
+                                <th>Leadership Level</th>
+                                <th>Active Direct Team</th>
+                                <th style="text-align:right">Overrides %</th>
+                                <th style="text-align:right">₹ Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_t2_${pid}">${buildTrack2Rows(defaultAmt)}</tbody>
+                    </table>
+                </div>
+                <div class="dt-footer">
+                    <i class="fas fa-shield-alt" style="color:#34d399;flex-shrink:0"></i>
+                    <span><strong>Permanent Rank Lock:</strong> No monthly reset, zero demotions, and lifetime override eligibility.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Dual-Track Summary Chips -->
+        <div id="sum_dual_${pid}">
+            ${buildDualTrackSummary(defaultAmt)}
+        </div>
+
+        <!-- Special category banner -->
+        ${specialBannerHtml}
     `;
 }
 
@@ -2707,29 +2851,21 @@ function openWA(){
 function openWAText(){
     const cats = window._vgkCats || [];
     const link = window.location.origin + '/voffers';
-    let lines = ['*VGK4U — Referral Bonus Sheet*', ''];
+    let lines = ['*VGK4U — Official Dual-Track Commission Matrix*', ''];
     cats.forEach(c => {
-        const r = c.registered, a = c.activated;
-        lines.push('*' + c.category_name + '*');
-        if (r) {
-            const _regLvls = _configuredLevels(r);
-            let _regLine = '  Registered  →  L1: ' + _fmtRate(r.level1_pct,r.level1_type,r.level1_amt);
-            if (_regLvls.includes(2)) _regLine += '  L2: ' + _fmtRate(r.level2_pct,r.level2_type,r.level2_amt);
-            if (_regLvls.includes(3)) _regLine += '  L3: ' + _fmtRate(r.level3_pct,r.level3_type,r.level3_amt);
-            _regLine += '  L4: ' + _fmtRate(r.level4_pct,r.level4_type,r.level4_amt);
-            lines.push(_regLine);
+        lines.push('*' + (c.display_name || c.category_name) + '*');
+        lines.push('  • Direct Sales (Track 1): 5.00% – 8.00% (+1.50% Direct Support)');
+        lines.push('  • Leadership Overrides (Track 2): +0.50% – +1.50% (3.00% Pool)');
+        if (c.special_benefit) {
+            lines.push('  • Special: ' + c.special_benefit);
         }
-        if (a) lines.push('  Activated   \u2192  L1: ' + _fmtRate(a.level1_pct,a.level1_type,a.level1_amt) + '  L2: ' + _fmtRate(a.level2_pct,a.level2_type,a.level2_amt) + '  L3: ' + _fmtRate(a.level3_pct,a.level3_type,a.level3_amt) + '  L4: ' + _fmtRate(a.level4_pct,a.level4_type,a.level4_amt));
     });
     lines.push('');
-    lines.push('*EV Spares Discount*');
-    lines.push('  Registered: 2%  |  Activated: 3%');
-    lines.push('');
     lines.push('*Welcome Points*');
-    lines.push('  Join (free): 20,000 pts  |  Activate: 70,000 pts (20K + 50K)');
+    lines.push('  Join Free: 20,000 pts  |  Referral Link Bonus: +10,000 pts (=30,000 total)');
     lines.push('');
-    lines.push('Full details & live calculator: ' + link);
-    lines.push('_*Conditions apply. Rates subject to change without notice.*_');
+    lines.push('Full details & dynamic live calculator: ' + link);
+    lines.push('_*100% Zero Cannibalization Guarantee. Conditions apply.*_');
     _openWhatsApp(lines.join('\n'));
 }
 
@@ -3051,39 +3187,33 @@ async function loadRates(_attempt) {
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
         if (!data.success || !data.data || !data.data.length) throw new Error('No data');
-        const tabOrder = ['Solar', 'EV B2C', 'EV B2B'];
+        const tabOrder = ['solar', 'ev', 'insurance', 'real-dreams', 'etc-training', 'ev-spares', 'hub'];
         const cats = data.data.slice().sort((a, b) => {
-            const ai = tabOrder.indexOf(a.category_name);
-            const bi = tabOrder.indexOf(b.category_name);
-            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+            const aslug = a.category_slug || '';
+            const bslug = b.category_slug || '';
+            const ai = tabOrder.indexOf(aslug);
+            const bi = tabOrder.indexOf(bslug);
+            if (ai !== -1 && bi !== -1) return ai - bi;
+            return (a.display_order || 99) - (b.display_order || 99);
         });
         window._vgkCats = cats;
 
         /* Rate matrix table — quick reference above the calculator */
         buildRateMatrix(cats);
 
-        /* Dynamically update banner & diff section based on registered config */
+        /* Dynamically update banner & diff section based on dual-track config */
         _applyDynamicBanner(cats, TRANSLATIONS[window._vgkLang||'en']);
-
 
         const _scEl = document.getElementById('statCatCount');
         if (_scEl) _scEl.textContent = cats.length;
-        let maxRate = 0;
-        cats.forEach(c => {
-            [c.registered, c.activated].forEach(cfg => {
-                if (!cfg) return;
-                [cfg.level1_pct, cfg.level2_pct, cfg.level3_pct, cfg.level4_core_pct||0, cfg.level4_pct].forEach(v => { if (v > maxRate) maxRate = v; });
-            });
-        });
         const _smEl = document.getElementById('statMaxRate');
-        if (_smEl) _smEl.textContent = (+maxRate.toFixed(1)) + '%';
-        window._vgkMaxRate = +maxRate.toFixed(1);
+        if (_smEl) _smEl.textContent = '9.5%';
+        window._vgkMaxRate = 9.5;
         const _heroRateEl = document.getElementById('heroMaxRate');
-        if (_heroRateEl) _heroRateEl.textContent = window._vgkMaxRate + (TRANSLATIONS[window._vgkLang||'en'].js_heromax_suffix);
+        if (_heroRateEl) _heroRateEl.textContent = '9.5' + (TRANSLATIONS[window._vgkLang||'en'].js_heromax_suffix);
 
-        const _CAT_DISPLAY = { 'EV B2B': 'Showroom Setup', 'EV B2C': 'Vehicle Sales' };
         document.getElementById('catTabs').innerHTML = cats.map((c, i) =>
-            `<button class="cat-tab ${i===0?'active':''}" onclick="switchCat(${i})" id="tab-${i}">${escHtml(_CAT_DISPLAY[c.category_name] || c.category_name)}</button>`
+            `<button class="cat-tab ${i===0?'active':''}" onclick="switchCat(${i})" id="tab-${i}"><span style="font-size:14px;margin-right:5px">${c.icon || '📦'}</span>${escHtml(c.display_name || c.category_name)}</button>`
         ).join('');
 
         document.getElementById('commPanels').innerHTML = cats.map((cat, i) =>
