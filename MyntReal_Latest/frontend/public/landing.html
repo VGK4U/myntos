@@ -1235,24 +1235,24 @@
                     </ul>
                 </div>
 
-                <!-- RIGHT: ANNOUNCEMENTS -->
+                <!-- RIGHT: SHOUTOUTS -->
                 <div class="announcements-col">
                     <div class="col-header">
-                        <div class="col-label" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.4);box-shadow:0 3px 12px rgba(79,70,229,0.4);"><i class="fas fa-bullhorn"></i> Public Announcements</div>
+                        <div class="col-label" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.4);box-shadow:0 3px 12px rgba(79,70,229,0.4);"><i class="fas fa-bullhorn"></i> Public Shoutouts</div>
                     </div>
 
                     <div class="announce-card">
                         <div class="announce-header">
                             <div class="announce-icon"><i class="fas fa-bullhorn"></i></div>
                             <div>
-                                <div class="announce-title">Recent Announcements</div>
+                                <div class="announce-title">Recent Shoutouts</div>
                             </div>
                             <div class="announce-live-dot" title="Live updates"></div>
                         </div>
                         <div class="announce-body">
                             <div id="landingAnnouncementsContainer">
                                 <div id="landingAnnouncementsLoading" style="display: block; text-align: center; color: rgba(255,255,255,0.45); padding: 1.5rem 1rem; font-size: 0.85rem;">
-                                    <i class="fas fa-spinner fa-spin" style="color: #f97316;"></i> Loading announcements...
+                                    <i class="fas fa-spinner fa-spin" style="color: #f97316;"></i> Loading shoutouts...
                                 </div>
 
                                 <div id="landingAnnouncementsCarousel" style="display: none;">
@@ -1276,7 +1276,7 @@
                                 </div>
 
                                 <div id="landingNoAnnouncements" style="display: none; text-align: center; color: rgba(255,255,255,0.35); padding: 1.5rem 1rem; font-size: 0.82rem;">
-                                    <i class="fas fa-info-circle"></i> No public announcements at this time
+                                    <i class="fas fa-info-circle"></i> No shoutouts at this time
                                 </div>
                             </div>
                         </div>
@@ -1749,12 +1749,12 @@
             let starsHtml = '';
             for (let i = 1; i <= 5; i++) starsHtml += '<i class="' + (i <= rating ? 'fas' : 'far') + ' fa-star" style="color: ' + (i <= rating ? '#f59e0b' : '#d1d5db') + '; font-size: 1.25rem; margin: 0 2px;"></i>';
             const announcement = landingAnnouncements.find(a => a.id === announcementId);
-            const announcementTitle = announcement ? announcement.title : 'Announcement';
+            const announcementTitle = announcement ? announcement.title : 'Shoutout';
             modalContent.innerHTML =
                 '<div style="text-align: center; margin-bottom: 1rem;">' +
                 '<div style="width: 60px; height: 60px; background: linear-gradient(135deg, #2ECC71 0%, #27ae60 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">' +
                 '<i class="fas fa-star" style="font-size: 1.5rem; color: white;"></i></div>' +
-                '<h3 style="font-size: 1.15rem; font-weight: 600; color: #1f2937; margin: 0 0 0.25rem 0;">Rate This Announcement</h3>' +
+                '<h3 style="font-size: 1.15rem; font-weight: 600; color: #1f2937; margin: 0 0 0.25rem 0;">Rate This Shoutout</h3>' +
                 '<p style="color: #6b7280; font-size: 0.85rem; margin: 0;">Login with your MyntReal ID to submit rating</p></div>' +
                 '<div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 0.5rem;">' +
                 '<span style="font-size: 0.85rem; color: #92400e;">Your Rating: </span>' + starsHtml + '</div>' +
@@ -1881,7 +1881,7 @@
             const msgLines = [
                 '🏠 *MyntReal*',
                 '',
-                '*' + (title || 'Announcement') + '*',
+                '*' + (title || 'Shoutout') + '*',
                 desc || null,
                 '',
                 memberLine || null,
@@ -1896,13 +1896,13 @@
             if (typeof MyntShareModal !== 'undefined' && MyntShareModal.show) {
                 MyntShareModal.show({
                     type: 'announcement',
-                    title: title || 'Announcement',
+                    title: title || 'Shoutout',
                     url: pubUrl,
                     text: richText,
                     subtitle: memberLine || '',
                 });
             } else if (navigator.share) {
-                navigator.share({ title: title || 'Announcement', url: pubUrl, text: richText }).catch(console.error);
+                navigator.share({ title: title || 'Shoutout', url: pubUrl, text: richText }).catch(console.error);
             } else {
                 window.open('https://wa.me/?text=' + encodeURIComponent(richText), '_blank');
             }

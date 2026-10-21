@@ -505,12 +505,15 @@
 
         <div id="staffAnnouncementSection" style="display: none;">
             <div style="background: rgba(255,255,255,0.12); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.18); backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0,0,0,0.25);">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
-                    <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse-dot 2s infinite;"></div>
-                    <span style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 1px;">Announcements</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-bullhorn" style="color: #a5b4fc; font-size: 0.95rem;"></i>
+                        <span style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 1px;">Shoutouts</span>
+                    </div>
+                    <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse-dot 2s infinite;" title="Live updates active"></div>
                 </div>
                 <div id="staffAnnLoading" style="text-align: center; color: rgba(255,255,255,0.6); padding: 20px 12px; font-size: 13px;">
-                    <i class="fas fa-spinner fa-spin"></i> Loading announcements...
+                    <i class="fas fa-spinner fa-spin"></i> Loading shoutouts...
                 </div>
                 <div id="staffAnnContent" style="display:none;"></div>
                 <div id="staffAnnControls" style="display:none; justify-content: center; align-items: center; gap: 10px; margin-top: 12px;">
@@ -1024,7 +1027,7 @@
                 }
             }
             var catName = ann.category && ann.category.name ? escH(ann.category.name) : '';
-            var title = escH(ann.title || 'Announcement');
+            var title = escH(ann.title || 'Shoutout');
             var desc = (ann.description||'');
             var shortDesc = escH(desc.length > 220 ? desc.substring(0,220)+'…' : desc);
             var dateStr = relD(ann.approved_at || ann.created_at);
@@ -1093,7 +1096,7 @@
                     }
                 }
             } catch(e){
-                document.getElementById('staffAnnLoading').innerHTML = '<span style="color:rgba(255,255,255,0.5);font-size:12px;">Unable to load announcements</span>';
+                document.getElementById('staffAnnLoading').innerHTML = '<span style="color:rgba(255,255,255,0.5);font-size:12px;">Unable to load shoutouts</span>';
             }
         }
         window.staffShareAnn = function(annId) {
