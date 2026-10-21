@@ -609,6 +609,7 @@ export class CategoryLeadsMasterPage {
             phone,
             name,
             leadId,
+            category: context,
             context
           });
         }

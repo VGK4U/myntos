@@ -8263,7 +8263,7 @@ def poll_bot_queue(
                       target_jid NOT LIKE '%8875551666%'
                       AND target_jid NOT LIKE '%8897797667%'
                       AND target_jid NOT LIKE '%8019045667%'
-                      AND COALESCE(job_id, result_payload->>'job_id', '') NOT IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
+                      AND COALESCE(job_id, result_payload->>'job_id', '') NOT IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned', 'qa_claimed_requester_notif', 'qa_completed_requester_notif', 'qa_cancelled_requester_notif', 'qa_updated_requester_notif', 'support_ticket_requester_notif', 'request_lifecycle_scanned')
                   )
             """))
             db.commit()
@@ -8282,7 +8282,7 @@ def poll_bot_queue(
                       OR target_jid LIKE '%8897797667%'
                       OR target_jid LIKE '%8019045667%'
                       OR COALESCE(instance_id, '') LIKE 'test-%'
-                      OR COALESCE(job_id, result_payload->>'job_id', '') IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned')
+                      OR COALESCE(job_id, result_payload->>'job_id', '') IN ('internal_staff_alert', 'staff_morning_leadership', 'staff_morning_leadership_scanned', 'qa_claimed_requester_notif', 'qa_completed_requester_notif', 'qa_cancelled_requester_notif', 'qa_updated_requester_notif', 'support_ticket_requester_notif', 'request_lifecycle_scanned')
                   )
                 ORDER BY id ASC
                 LIMIT :limit

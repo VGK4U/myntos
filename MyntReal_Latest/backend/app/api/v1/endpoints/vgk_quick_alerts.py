@@ -366,13 +366,15 @@ def _save_support_ticket_images(
 def sync_linked_service_ticket(
     db: Session,
     alert: VGKMemberQuickAlert,
-    new_alert_status: str,
-    actor_name: str,
+    new_alert_status: Optional[str] = None,
+    actor_name: str = "",
     notes: Optional[str] = None,
-    staff_id: Optional[int] = None
+    staff_id: Optional[int] = None,
+    new_status: Optional[str] = None
 ) -> None:
     """Synchronize VGKMemberQuickAlert status changes with the Service Module (ServiceTicket)."""
-    if not alert.linked_ticket_id:
+    target_status = (new_status or new_alert_status or "").strip().upper()
+    if not alert.linked_ticket_id or not target_status:
         return
     try:
         from app.models.ticket import ServiceTicket, TicketLog
@@ -383,21 +385,21 @@ def sync_linked_service_ticket(
         now_ist = get_indian_time()
         old_status = ticket.status
 
-        if new_alert_status in ("CLAIMED", "IN_PROGRESS"):
+        if target_status in ("CLAIMED", "IN_PROGRESS"):
             ticket.status = "In Progress"
             ticket.sub_status = "acknowledged"
             if not ticket.in_progress_date:
                 ticket.in_progress_date = now_ist
             if staff_id and not ticket.service_manager_id:
                 ticket.service_manager_id = staff_id
-        elif new_alert_status == "PROCESSED":
+        elif target_status == "PROCESSED":
             ticket.status = "Resolved"
             ticket.sub_status = "work_complete"
             ticket.resolved_date = now_ist
             ticket.work_completed_at = now_ist
             if notes:
                 ticket.resolution_summary = notes
-        elif new_alert_status == "CANCELLED":
+        elif target_status == "CANCELLED":
             ticket.status = "Closed"
             ticket.sub_status = "closed"
             ticket.closed_date = now_ist
@@ -411,7 +413,7 @@ def sync_linked_service_ticket(
         log_entry = TicketLog(
             ticket_id=ticket.id,
             action_type=f"Status -> {ticket.status}",
-            action_description=f"[{actor_name}] {notes or new_alert_status}",
+            action_description=f"[{actor_name}] {notes or target_status}",
             performed_at=now_ist,
             old_value=old_status,
             new_value=ticket.status
@@ -786,6 +788,23 @@ def cancel_member_quick_alert(
         idempotency_prefix=f"qa_cancel_{alert.alert_code}_{int(now_ist.timestamp())}"
     )
 
+    # Automated lifecycle notification directly to the requester
+    try:
+        from app.services.whatsapp_request_lifecycle_service import send_request_lifecycle_whatsapp_notification
+        type_label = "Member Application" if alert.alert_type == "APPLICATION" else "Support Request"
+        req_code_display = f"{type_label} {alert.alert_code}"
+        send_request_lifecycle_whatsapp_notification(
+            db=db,
+            recipient_phone=alert.partner_phone,
+            recipient_name=alert.partner_name,
+            event_type="CANCELLED",
+            request_code=req_code_display,
+            notes=reason_str,
+            company_id=getattr(alert, "company_id", 1) or 1
+        )
+    except Exception as req_notif_err:
+        logger.warning(f"[VGK-ALERT] Member cancellation notification warning: {req_notif_err}")
+
     return {
         "success": True,
         "message": f"Request {alert.alert_code} has been cancelled.",
@@ -1155,6 +1174,23 @@ def claim_quick_alert(
         idempotency_prefix=f"qa_claim_{alert.alert_code}_{current_user.id}_{int(now_ist.timestamp())}"
     )
 
+    # Automated lifecycle notification directly to the requester
+    try:
+        from app.services.whatsapp_request_lifecycle_service import send_request_lifecycle_whatsapp_notification
+        type_label = "Member Application" if alert.alert_type == "APPLICATION" else "Support Request"
+        req_code_display = f"{type_label} {alert.alert_code}"
+        send_request_lifecycle_whatsapp_notification(
+            db=db,
+            recipient_phone=alert.partner_phone,
+            recipient_name=alert.partner_name,
+            event_type="CLAIMED",
+            request_code=req_code_display,
+            staff_employee=current_user,
+            company_id=getattr(alert, "company_id", 1) or 1
+        )
+    except Exception as req_notif_err:
+        logger.warning(f"[VGK-ALERT] Requester claim notification warning: {req_notif_err}")
+
     enriched = enrich_alerts_with_service_tickets(db, [alert.to_dict()])
     return {
         "success": True,
@@ -1248,6 +1284,24 @@ def update_quick_alert_status(
             trigger_type="quick_alert_cancelled",
             idempotency_prefix=f"qa_cancel_{alert.alert_code}_{int(now_ist.timestamp())}"
         )
+
+    # Automated lifecycle notification directly to the requester
+    try:
+        from app.services.whatsapp_request_lifecycle_service import send_request_lifecycle_whatsapp_notification
+        type_label = "Member Application" if alert.alert_type == "APPLICATION" else "Support Request"
+        req_code_display = f"{type_label} {alert.alert_code}"
+        send_request_lifecycle_whatsapp_notification(
+            db=db,
+            recipient_phone=alert.partner_phone,
+            recipient_name=alert.partner_name,
+            event_type=new_status,
+            request_code=req_code_display,
+            staff_employee=current_user,
+            notes=payload.notes,
+            company_id=getattr(alert, "company_id", 1) or 1
+        )
+    except Exception as req_notif_err:
+        logger.warning(f"[VGK-ALERT] Requester status update notification warning: {req_notif_err}")
 
     enriched = enrich_alerts_with_service_tickets(db, [alert.to_dict()])
     return {

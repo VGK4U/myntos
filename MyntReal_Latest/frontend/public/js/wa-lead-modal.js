@@ -615,7 +615,8 @@
     fetch(url, { credentials: 'include' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        var list = (d.templates || d.data || d || []);
+        var rawData = (d && d.data) ? d.data : d;
+        var list = Array.isArray(rawData) ? rawData : (rawData && rawData.templates ? rawData.templates : (d.templates || []));
         _s.tpls = Array.isArray(list) ? list : [];
 
         if (!_s.tpls.length) {
@@ -1866,42 +1867,51 @@
     var catLower = String(passedCategory || '').toLowerCase();
 
     if (!forcedCatKey) {
-      if (cIdStr === '4' || catLower.indexOf('solar') !== -1 || ctxClean.indexOf('solar') !== -1) {
-        initialSeg = 'solar';
-        initialCatKey = 'solar';
-      } else if (cIdStr === '2' || catLower.indexOf('ev') !== -1 || ctxClean.indexOf('ev') !== -1) {
-        if (catLower.indexOf('spare') !== -1 || ctxClean.indexOf('spare') !== -1) {
-          initialSeg = 'EV_SPARES';
-          initialCatKey = 'ev_spares';
-        } else if (catLower.indexOf('b2b') !== -1 || ctxClean.indexOf('b2b') !== -1 || ctxClean.indexOf('cargo') !== -1 || ctxClean.indexOf('fleet') !== -1) {
-          initialSeg = 'ev_b2b';
-          initialCatKey = 'ev_b2b';
-        } else {
-          initialSeg = 'ev_b2c';
-          initialCatKey = 'ev_b2c';
-        }
-      } else if (cIdStr === '1' || catLower.indexOf('real') !== -1 || catLower.indexOf('dream') !== -1 || ctxClean.indexOf('real') !== -1 || ctxClean.indexOf('property') !== -1) {
-        initialSeg = 'real_estate';
-        initialCatKey = 'real_estate';
+      if (catLower.indexOf('etc') !== -1 || catLower.indexOf('train') !== -1 || ctxClean.indexOf('etc') !== -1 || ctxClean.indexOf('train') !== -1) {
+        initialSeg = 'etc_training';
+        initialCatKey = 'etc_training';
       } else if (catLower.indexOf('insur') !== -1 || ctxClean.indexOf('insur') !== -1) {
         initialSeg = 'insurance';
         initialCatKey = 'insurance';
-      } else if (catLower.indexOf('etc') !== -1 || catLower.indexOf('train') !== -1 || ctxClean.indexOf('etc') !== -1 || ctxClean.indexOf('train') !== -1) {
-        initialSeg = 'etc_training';
-        initialCatKey = 'etc_training';
+      } else if (catLower.indexOf('real') !== -1 || catLower.indexOf('dream') !== -1 || ctxClean.indexOf('real') !== -1 || ctxClean.indexOf('property') !== -1) {
+        initialSeg = 'real_estate';
+        initialCatKey = 'real_estate';
+      } else if (catLower.indexOf('spare') !== -1 || ctxClean.indexOf('spare') !== -1) {
+        initialSeg = 'EV_SPARES';
+        initialCatKey = 'ev_spares';
+      } else if (catLower.indexOf('b2b') !== -1 || ctxClean.indexOf('b2b') !== -1 || ctxClean.indexOf('cargo') !== -1 || ctxClean.indexOf('fleet') !== -1) {
+        initialSeg = 'ev_b2b';
+        initialCatKey = 'ev_b2b';
+      } else if (catLower.indexOf('ev') !== -1 || ctxClean.indexOf('ev') !== -1) {
+        initialSeg = 'ev_b2c';
+        initialCatKey = 'ev_b2c';
       } else if (ctxClean.indexOf('pricing') !== -1 || ctxClean.indexOf('margin') !== -1) {
         initialSeg = 'HUB_PRICING';
         initialCatKey = 'hub_pricing';
       } else if (ctxClean === 'industrial_hub' || ctxClean.indexOf('franchise') !== -1) {
         initialSeg = 'HUB';
         initialCatKey = 'industrial_hub';
-      } else if (cIdStr === '88' || catLower.indexOf('vgk') !== -1 || ctxClean.indexOf('vgk') !== -1) {
+      } else if (catLower.indexOf('solar') !== -1 || ctxClean.indexOf('solar') !== -1) {
+        initialSeg = 'solar';
+        initialCatKey = 'solar';
+      } else if (catLower.indexOf('vgk') !== -1 || ctxClean.indexOf('vgk') !== -1) {
+        initialSeg = 'vgk';
+        initialCatKey = 'vgk4u';
+      } else if (cIdStr === '1') {
+        initialSeg = 'real_estate';
+        initialCatKey = 'real_estate';
+      } else if (cIdStr === '2') {
+        initialSeg = 'ev_b2c';
+        initialCatKey = 'ev_b2c';
+      } else if (cIdStr === '4') {
+        initialSeg = 'solar';
+        initialCatKey = 'solar';
+      } else if (cIdStr === '88') {
         initialSeg = 'vgk';
         initialCatKey = 'vgk4u';
       } else {
-        // Universal default for retail consumers: VGK4U 5-Vertical Catalog (NEVER investor franchise)
-        initialSeg = 'vgk';
-        initialCatKey = 'vgk4u';
+        initialSeg = 'solar';
+        initialCatKey = 'solar';
       }
     } else {
       if (forcedCatKey === 'solar') initialSeg = 'solar';
@@ -1930,17 +1940,27 @@
             var mCat = String(matched.category || '').toLowerCase();
             var detectedKey = '';
             var detectedSeg = '';
-            if (mCid === '4' || mCat.indexOf('solar') !== -1) {
-              detectedKey = 'solar'; detectedSeg = 'solar';
-            } else if (mCid === '2' || mCat.indexOf('ev') !== -1) {
-              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
-            } else if (mCid === '1' || mCat.indexOf('real') !== -1 || mCat.indexOf('dream') !== -1) {
-              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            if (mCat.indexOf('etc') !== -1 || mCat.indexOf('train') !== -1) {
+              detectedKey = 'etc_training'; detectedSeg = 'etc_training';
             } else if (mCat.indexOf('insur') !== -1) {
               detectedKey = 'insurance'; detectedSeg = 'insurance';
-            } else if (mCat.indexOf('etc') !== -1 || mCat.indexOf('train') !== -1) {
-              detectedKey = 'etc_training'; detectedSeg = 'etc_training';
-            } else if (mCid === '88' || mCat.indexOf('vgk') !== -1) {
+            } else if (mCat.indexOf('real') !== -1 || mCat.indexOf('dream') !== -1) {
+              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            } else if (mCat.indexOf('spare') !== -1) {
+              detectedKey = 'ev_spares'; detectedSeg = 'EV_SPARES';
+            } else if (mCat.indexOf('ev') !== -1) {
+              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
+            } else if (mCat.indexOf('solar') !== -1) {
+              detectedKey = 'solar'; detectedSeg = 'solar';
+            } else if (mCat.indexOf('vgk') !== -1) {
+              detectedKey = 'vgk4u'; detectedSeg = 'vgk';
+            } else if (mCid === '1') {
+              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            } else if (mCid === '2') {
+              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
+            } else if (mCid === '4') {
+              detectedKey = 'solar'; detectedSeg = 'solar';
+            } else if (mCid === '88') {
               detectedKey = 'vgk4u'; detectedSeg = 'vgk';
             }
             if (detectedKey && detectedKey !== _selectedCatalogKey) {

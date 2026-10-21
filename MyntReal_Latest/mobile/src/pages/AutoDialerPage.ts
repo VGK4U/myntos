@@ -2007,6 +2007,7 @@ export class AutoDialerPage {
             phone,
             name,
             leadId: id,
+            category: context,
             context
           });
         }
@@ -3718,6 +3719,7 @@ export class AutoDialerPage {
             phone,
             name,
             leadId,
+            category: context,
             context
           });
         }

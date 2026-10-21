@@ -284,6 +284,26 @@ class TicketService:
             
             db.commit()
             
+            # Automated WhatsApp lifecycle notification to requester
+            try:
+                from app.services.whatsapp_request_lifecycle_service import send_ticket_lifecycle_whatsapp_notification
+                from app.models.staff import StaffEmployee
+                staff_emp = None
+                if assigned_to and str(assigned_to).isdigit():
+                    staff_emp = db.query(StaffEmployee).filter(StaffEmployee.id == int(assigned_to)).first()
+                if not staff_emp and assigned_to:
+                    staff_emp = db.query(StaffEmployee).filter(StaffEmployee.emp_code == str(assigned_to)).first()
+
+                send_ticket_lifecycle_whatsapp_notification(
+                    db=db,
+                    ticket=ticket,
+                    event_type="CLAIMED",
+                    staff_employee=staff_emp,
+                    notes=reason
+                )
+            except Exception as w_err:
+                logger.warning(f"[TICKET-WA] Assign notification note: {w_err}")
+
             logger.info(f"✅ Ticket {ticket.ticket_id} assigned to {assigned_to}")
             return {"success": True, "message": "Ticket assigned successfully"}
             
@@ -418,6 +438,18 @@ class TicketService:
 
             db.commit()
             
+            # Automated WhatsApp lifecycle notification to requester
+            try:
+                from app.services.whatsapp_request_lifecycle_service import send_ticket_lifecycle_whatsapp_notification
+                send_ticket_lifecycle_whatsapp_notification(
+                    db=db,
+                    ticket=ticket,
+                    event_type="COMPLETED",
+                    notes=resolution_summary
+                )
+            except Exception as w_err:
+                logger.warning(f"[TICKET-WA] Resolve notification note: {w_err}")
+
             logger.info(f"✅ Ticket {ticket.ticket_id} resolved in {resolution_time:.2f} hours")
             msg = "Ticket resolved successfully"
             if _stock_confirmed:
@@ -478,6 +510,18 @@ class TicketService:
             
             db.commit()
             
+            # Automated WhatsApp lifecycle notification to requester
+            try:
+                from app.services.whatsapp_request_lifecycle_service import send_ticket_lifecycle_whatsapp_notification
+                send_ticket_lifecycle_whatsapp_notification(
+                    db=db,
+                    ticket=ticket,
+                    event_type="COMPLETED",
+                    notes="Ticket closed and completed"
+                )
+            except Exception as w_err:
+                logger.warning(f"[TICKET-WA] Close notification note: {w_err}")
+
             logger.info(f"✅ Ticket {ticket.ticket_id} closed")
             return {"success": True, "message": "Ticket closed successfully"}
             

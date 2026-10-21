@@ -412,11 +412,12 @@
         const json = await res.json();
 
         if (json.success) {
-          alert('Success: ' + json.message);
+          alert('Success: ' + (json.message || 'Request claimed successfully.'));
           window.location.reload();
         } else {
-          alert(json.message || 'Could not claim this request.');
-          window.location.reload();
+          alert(json.message || json.detail || 'Could not claim this request.');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-bolt"></i> Claim This Request Now';
         }
       } catch (err) {
         alert('Network error while claiming request.');

@@ -255,20 +255,48 @@ class UnifiedWAModal {
     const curCatKey = (this.selectedCatalogKey || '').toLowerCase();
     
     let vertical: 'solar' | 'real_estate' | 'insurance' | 'ev' | 'etc' | 'industrial_hub' | 'vgk4u' | 'general' = 'general';
-    if (cId === '4' || cat.includes('solar') || ctx.includes('solar') || curCatKey === 'solar') {
-      vertical = 'solar';
-    } else if (cId === '2' || cat.includes('ev') || ctx.includes('ev') || ctx.includes('spare') || curCatKey.includes('ev')) {
-      vertical = 'ev';
-    } else if (cId === '1' || cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate') || curCatKey === 'real_estate') {
-      vertical = 'real_estate';
-    } else if (cat.includes('insur') || cat.includes('care') || ctx.includes('insur') || ctx.includes('care') || curCatKey === 'insurance') {
-      vertical = 'insurance';
-    } else if (cat.includes('etc') || cat.includes('train') || cat.includes('skill') || ctx.includes('etc') || ctx.includes('train') || curCatKey === 'etc_training') {
+
+    // 1. Explicit user selection / detected catalog key takes HIGHEST precedence
+    if (curCatKey === 'etc_training') {
       vertical = 'etc';
-    } else if (curCatKey === 'industrial_hub' || ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.includes('franchise') && !ctx.includes('softphone'))) {
+    } else if (curCatKey === 'insurance') {
+      vertical = 'insurance';
+    } else if (curCatKey === 'real_estate') {
+      vertical = 'real_estate';
+    } else if (curCatKey === 'ev_b2c' || curCatKey === 'ev_b2b' || curCatKey === 'ev_spares') {
+      vertical = 'ev';
+    } else if (curCatKey === 'industrial_hub' || curCatKey === 'hub_pricing') {
       vertical = 'industrial_hub';
-    } else if (curCatKey === 'vgk4u' || cId === '88' || cat.includes('vgk')) {
+    } else if (curCatKey === 'solar') {
+      vertical = 'solar';
+    } else if (curCatKey === 'vgk4u') {
       vertical = 'vgk4u';
+    // 2. Lead Category & Context keywords
+    } else if (cat.includes('etc') || cat.includes('train') || cat.includes('skill') || ctx.includes('etc') || ctx.includes('train')) {
+      vertical = 'etc';
+    } else if (cat.includes('insur') || cat.includes('care') || cat.includes('policy') || ctx.includes('insur') || ctx.includes('care')) {
+      vertical = 'insurance';
+    } else if (cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate')) {
+      vertical = 'real_estate';
+    } else if (cat.includes('spare') || ctx.includes('spare') || cat.includes('ev') || ctx.includes('ev') || ctx.includes('zynova') || ctx.includes('vehicle')) {
+      vertical = 'ev';
+    } else if (ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.includes('franchise') && !ctx.includes('softphone'))) {
+      vertical = 'industrial_hub';
+    } else if (cat.includes('solar') || ctx.includes('solar')) {
+      vertical = 'solar';
+    } else if (cat.includes('vgk') || ctx.includes('vgk')) {
+      vertical = 'vgk4u';
+    // 3. Fallback to Company ID only when category and context are absent/unmatched
+    } else if (cId === '1') {
+      vertical = 'real_estate';
+    } else if (cId === '2') {
+      vertical = 'ev';
+    } else if (cId === '4') {
+      vertical = 'solar';
+    } else if (cId === '88') {
+      vertical = 'vgk4u';
+    } else {
+      vertical = 'solar';
     }
 
     if (action === 'thanks_connecting') {
@@ -287,9 +315,6 @@ class UnifiedWAModal {
           return `నమస్కారం ${cName} గారు! 🙏 MyntReal Hub (5-in-1 ఇన్వెస్టర్ ఫ్రాంచైజ్) గురించి మాట్లాడినందుకు ధన్యవాదాలు. ఒకే హబ్‌లో EV, Solar, Insurance, Real Estate & Training వ్యాపార అవకాశాలు మరియు ₹12–15 లక్షల పెట్టుబడిపై అత్యుత్తమ రాబడుల వివరాలు మా ఫ్రాంచైజ్ టీమ్ మీకు అందిస్తారు.\n\n🏢 మా అధికారిక హబ్ ఫ్రాంచైజ్ క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te`;
         case 'vgk4u':
         default:
-          if (cId === '4') {
-            return `నమస్కారం ${cName} గారు! 🙏 MyntReal Solar Rooftop గురించి మాతో మాట్లాడినందుకు ధన్యవాదాలు. మీ ఇంటి లేదా కమర్షియల్ కరెంట్ బిల్లును 90% వరకు తగ్గించుకుంటూ, Government Subsidy పొందే పూర్తి వివరాలు & Customized Solar Quotation త్వరలోనే మా సోలార్ ఎక్స్‌పర్ట్ మీకు షేర్ చేస్తారు. ఏవైనా డౌట్స్ ఉంటే దయచేసి ఇక్కడ మెసేజ్ చేయండి.\n\n☀️ మా అధికారిక సోలార్ క్యాటలాగ్ & సబ్సిడీ వివరాలు:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te`;
-          }
           return `నమస్కారం ${cName} గారు! 🙏 MyntReal & VGK4U తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\n👉 https://www.myntreal.com/catalog/vgk4u?lang=te\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!`;
       }
     } else {
@@ -308,9 +333,6 @@ class UnifiedWAModal {
           return `నమస్కారం ${cName} గారు! 📞 మీ MyntReal Hub ఫ్రాంచైజ్ ఎంక్వైరీ కోసం ఇప్పుడే కాల్ చేశాము, కానీ మాట్లాడటం వీలుపడలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి.\n\n🏢 మా హబ్ ఫ్రాంచైజ్ వివరాలు:\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te`;
         case 'vgk4u':
         default:
-          if (cId === '4') {
-            return `నమస్కారం ${cName} గారు! 📞 మీ Solar Rooftop ఎంక్వైరీ కోసం MyntReal నుండి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి. సోలార్ సబ్సిడీ మరియు సేవింగ్స్ వివరాలు తెలియజేస్తాము.\n\n☀️ మా సోలార్ క్యాటలాగ్ ఇక్కడ చూడండి:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te`;
-          }
           return `నమస్కారం ${cName} గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\n👉 https://www.myntreal.com/catalog/vgk4u?lang=te\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!`;
       }
     }
@@ -346,7 +368,7 @@ class UnifiedWAModal {
     return '';
   }
 
-  private onDigitalCatalogSelect(catKey?: string): void {
+  private onDigitalCatalogSelect(catKey?: string, updateText: boolean = false): void {
     if (catKey && DIGITAL_CATALOGS[catKey]) {
       this.selectedCatalogKey = catKey;
     }
@@ -355,6 +377,10 @@ class UnifiedWAModal {
     if (descEl) descEl.textContent = cat.desc;
     const btnLabelEl = document.getElementById('uwaDigitalCatBtnLabel');
     if (btnLabelEl) btnLabelEl.textContent = `Insert Personalized ${cat.btnLabel || cat.name} Catalog Link`;
+
+    if (updateText) {
+      this.applyDigitalCatalog();
+    }
   }
 
   private getDigitalCatalogMessage(catKey: string, lang: string): string {
@@ -443,19 +469,24 @@ class UnifiedWAModal {
     const ctx = rawCtx.replace(/softphone_[a-z_]+/g, '').replace(/softphone/g, '').trim();
     const seg = (this.currentOptions?.segment || '').toLowerCase();
 
-    if (cId === '4' || cat.includes('solar') || ctx.includes('solar') || seg === 'solar') return 'solar';
-    if (cId === '2' || cat.includes('ev') || ctx.includes('ev') || ctx.includes('spare') || ctx.includes('zynova') || ctx.includes('vehicle') || seg.includes('ev')) {
-      if (cat.includes('spare') || ctx.includes('spare') || seg === 'ev_spares') return 'ev_spares';
-      if (cat.includes('cargo') || cat.includes('fleet') || cat.includes('b2b') || ctx.includes('cargo') || ctx.includes('fleet') || ctx.includes('b2b') || seg === 'ev_b2b') return 'ev_b2b';
-      return 'ev_b2c';
-    }
-    if (cId === '1' || cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate') || seg === 'myntreal_real') return 'real_estate';
-    if (cat.includes('insur') || cat.includes('policy') || cat.includes('care') || ctx.includes('insur') || ctx.includes('policy') || ctx.includes('care')) return 'insurance';
+    // 1. Check specific categories and context FIRST before companyId fallback!
     if (cat.includes('train') || cat.includes('skill') || cat.includes('etc') || ctx.includes('train') || ctx.includes('skill') || ctx.includes('etc') || seg === 'etc_training') return 'etc_training';
+    if (cat.includes('insur') || cat.includes('policy') || cat.includes('care') || ctx.includes('insur') || ctx.includes('policy') || ctx.includes('care') || seg === 'insurance') return 'insurance';
+    if (cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate') || seg === 'myntreal_real' || seg === 'real-dreams') return 'real_estate';
+    if (cat.includes('spare') || ctx.includes('spare') || seg === 'ev_spares') return 'ev_spares';
+    if (cat.includes('cargo') || cat.includes('fleet') || cat.includes('b2b') || ctx.includes('cargo') || ctx.includes('fleet') || ctx.includes('b2b') || seg === 'ev_b2b') return 'ev_b2b';
+    if (cat.includes('ev') || ctx.includes('ev') || ctx.includes('zynova') || ctx.includes('vehicle') || ctx.includes('manthra') || seg.includes('ev')) return 'ev_b2c';
     if (ctx.includes('pricing') || ctx.includes('margin') || ctx.includes('commercial') || seg === 'hub_pricing') return 'hub_pricing';
-    if (ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.includes('franchise') && !rawCtx.includes('softphone'))) return 'industrial_hub';
-    if (cId === '88' || cat.includes('vgk') || ctx.includes('vgk')) return 'vgk4u';
-    return 'vgk4u';
+    if (ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.includes('franchise') && !rawCtx.includes('softphone')) || seg === 'industrial-hub') return 'industrial_hub';
+    if (cat.includes('solar') || ctx.includes('solar') || seg === 'solar' || seg === 'har_ghar_solar') return 'solar';
+    if (cat.includes('vgk') || ctx.includes('vgk') || seg === 'vgk4u') return 'vgk4u';
+
+    // 2. Company ID Fallback (ONLY when category/context are unspecified or ambiguous)
+    if (cId === '1') return 'real_estate';
+    if (cId === '2') return 'ev_b2c';
+    if (cId === '4') return 'solar';
+    if (cId === '88') return 'vgk4u';
+    return 'solar';
   }
 
   private async loadCanonicalTemplates(selectId?: string | number): Promise<void> {
@@ -471,7 +502,8 @@ class UnifiedWAModal {
 
     try {
       const res = await apiService.get<any>(url);
-      const list = res?.templates || res?.data || res || [];
+      const rawData = res?.data || res;
+      const list = Array.isArray(rawData) ? rawData : (rawData?.templates || res?.templates || []);
       this.allCanonicalTemplates = Array.isArray(list) ? list : [];
       this.filterCanonicalTemplates(selectId);
     } catch {
@@ -495,10 +527,16 @@ class UnifiedWAModal {
     let filtered = this.allCanonicalTemplates || [];
 
     if (seg) {
-      filtered = filtered.filter(t => (t.segment || '').toLowerCase() === seg);
+      filtered = filtered.filter(t => {
+        const tSeg = (t.segment || '').toLowerCase();
+        if (seg === 'etc_training') {
+          return tSeg === 'etc_training' || tSeg === 'training' || tSeg.includes('etc');
+        }
+        return tSeg === seg;
+      });
     }
     if (cat) {
-      filtered = filtered.filter(t => (t.category || '').toUpperCase() === cat);
+      filtered = filtered.filter(t => (t.category || t.meta_category || '').toUpperCase() === cat);
     }
     if (query) {
       filtered = filtered.filter(t => {
@@ -616,14 +654,25 @@ class UnifiedWAModal {
     const rawCtx = (this.currentOptions?.context || '').toLowerCase();
     const ctx = rawCtx.replace(/softphone_[a-z_]+/g, '').replace(/softphone/g, '').trim();
 
-    if (cId === '4' || cat.includes('solar') || ctx.includes('solar')) return 'solar';
-    if (cId === '1' || cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate')) return 'myntreal_real';
-    if (cat.includes('spare') || ctx.includes('spare')) return 'EV_SPARES';
-    if (cId === '2' || cat.includes('ev') || cat.includes('vehicle') || ctx.includes('ev') || ctx.includes('vehicle') || ctx.includes('zynova')) return 'ev_b2c';
+    // Check specific categories and context FIRST before companyId fallback!
     if (cat.includes('train') || cat.includes('skill') || cat.includes('etc') || ctx.includes('train') || ctx.includes('skill') || ctx.includes('etc')) return 'etc_training';
+    if (cat.includes('insur') || cat.includes('policy') || cat.includes('care') || ctx.includes('insur') || ctx.includes('policy') || ctx.includes('care')) return 'insurance';
+    if (cat.includes('real') || cat.includes('property') || cat.includes('estate') || cat.includes('dream') || ctx.includes('real') || ctx.includes('property') || ctx.includes('estate')) return 'myntreal_real';
+    if (cat.includes('spare') || ctx.includes('spare')) return 'EV_SPARES';
+    if (cat.includes('cargo') || cat.includes('fleet') || cat.includes('b2b') || ctx.includes('cargo') || ctx.includes('fleet') || ctx.includes('b2b')) return 'ev_b2b';
+    if (cat.includes('ev') || cat.includes('vehicle') || ctx.includes('ev') || ctx.includes('vehicle') || ctx.includes('zynova') || ctx.includes('manthra')) return 'ev_b2c';
+    if (ctx.includes('pricing') || ctx.includes('margin') || ctx.includes('commercial')) return 'hub_pricing';
+    if (ctx === 'industrial_hub' || ctx === 'hub_franchise' || (ctx.includes('franchise') && !rawCtx.includes('softphone'))) return 'industrial-hub';
+    if (cat.includes('solar') || ctx.includes('solar')) return 'solar';
     if (ctx.includes('partner')) return 'partner';
     if (ctx.includes('staff')) return 'staff';
-    if (cId === '88' || cat.includes('vgk') || ctx.includes('vgk')) return 'vgk';
+    if (cat.includes('vgk') || ctx.includes('vgk')) return 'vgk';
+
+    // Company ID Fallback
+    if (cId === '1') return 'myntreal_real';
+    if (cId === '2') return 'ev_b2c';
+    if (cId === '4') return 'solar';
+    if (cId === '88') return 'vgk';
     return 'general';
   }
 
@@ -708,7 +757,12 @@ class UnifiedWAModal {
 
   open(options: WAModalOptions): void {
     this.currentOptions = options;
+    if (!this.currentOptions.category && this.currentOptions.context) {
+      this.currentOptions.category = this.currentOptions.context;
+    }
     this.activeMode = 'scanned';
+    this.selectedCatalogKey = this.detectCatalogKey();
+    this.selectedCatalogLang = 'te';
     this.render();
 
     const cleanP = (options.phone || '').replace(/\D/g, '').slice(-10);
@@ -731,24 +785,36 @@ class UnifiedWAModal {
             const mCat = String(matched.category || '').toLowerCase();
             let detectedKey = '';
             let detectedSeg = '';
-            if (mCid === '4' || mCat.includes('solar')) {
-              detectedKey = 'solar'; detectedSeg = 'solar';
-            } else if (mCid === '2' || mCat.includes('ev')) {
-              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
-            } else if (mCid === '1' || mCat.includes('real') || mCat.includes('dream')) {
-              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
-            } else if (mCat.includes('insur')) {
-              detectedKey = 'insurance'; detectedSeg = 'insurance';
-            } else if (mCat.includes('etc') || mCat.includes('train')) {
+            if (mCat.includes('etc') || mCat.includes('train') || mCat.includes('skill')) {
               detectedKey = 'etc_training'; detectedSeg = 'etc_training';
-            } else if (mCid === '88' || mCat.includes('vgk')) {
+            } else if (mCat.includes('insur') || mCat.includes('care') || mCat.includes('policy')) {
+              detectedKey = 'insurance'; detectedSeg = 'insurance';
+            } else if (mCat.includes('real') || mCat.includes('dream') || mCat.includes('property')) {
+              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            } else if (mCat.includes('spare')) {
+              detectedKey = 'ev_spares'; detectedSeg = 'EV_SPARES';
+            } else if (mCat.includes('cargo') || mCat.includes('fleet') || mCat.includes('b2b')) {
+              detectedKey = 'ev_b2b'; detectedSeg = 'ev_b2b';
+            } else if (mCat.includes('ev') || mCat.includes('vehicle')) {
+              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
+            } else if (mCat.includes('solar') || mCat.includes('rooftop')) {
+              detectedKey = 'solar'; detectedSeg = 'solar';
+            } else if (mCat.includes('vgk')) {
+              detectedKey = 'vgk4u'; detectedSeg = 'vgk';
+            } else if (mCid === '1') {
+              detectedKey = 'real_estate'; detectedSeg = 'real_estate';
+            } else if (mCid === '2') {
+              detectedKey = 'ev_b2c'; detectedSeg = 'ev_b2c';
+            } else if (mCid === '4') {
+              detectedKey = 'solar'; detectedSeg = 'solar';
+            } else if (mCid === '88') {
               detectedKey = 'vgk4u'; detectedSeg = 'vgk';
             }
             if (detectedKey && detectedKey !== this.selectedCatalogKey) {
               this.selectedCatalogKey = detectedKey;
               const cSel = document.getElementById('uwaDigitalCatSel') as HTMLSelectElement;
               if (cSel) cSel.value = detectedKey;
-              this.onDigitalCatalogSelect(detectedKey);
+              this.onDigitalCatalogSelect(detectedKey, true);
               if (detectedSeg) {
                 const sSel = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
                 if (sSel) { sSel.value = detectedSeg; this.filterCanonicalTemplates(); }
@@ -772,10 +838,15 @@ class UnifiedWAModal {
 
     if (!this.currentOptions) return;
 
+    // Detect catalog key and segment upfront so initial message matches selected category
+    this.selectedCatalogKey = this.detectCatalogKey();
+    const detectedSeg = this.detectSegment();
+
     const { phone, name, context, defaultMessage, catalogKey } = this.currentOptions;
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
     const signature = this.getSenderSignature();
-    const initialText = (defaultMessage || (catalogKey ? this.getDigitalCatalogMessage(catalogKey, this.selectedCatalogLang) : this.getVerticalQuickMessage('thanks_connecting'))) + signature;
+    const effectiveCatKey = catalogKey || this.selectedCatalogKey;
+    const initialText = (defaultMessage || this.getDigitalCatalogMessage(effectiveCatKey, this.selectedCatalogLang)) + signature;
 
     this.modalEl = document.createElement('div');
     this.modalEl.id = 'unifiedWAModal';
@@ -990,18 +1061,16 @@ class UnifiedWAModal {
 
     document.body.appendChild(this.modalEl);
 
-    const detected = this.detectSegment();
     const segEl = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
-    if (segEl && detected) {
-      segEl.value = detected;
+    if (segEl && detectedSeg) {
+      segEl.value = detectedSeg;
     }
 
-    const detectedCatKey = this.detectCatalogKey();
     const catSel = document.getElementById('uwaDigitalCatSel') as HTMLSelectElement;
-    if (catSel && detectedCatKey) {
-      catSel.value = detectedCatKey;
+    if (catSel && this.selectedCatalogKey) {
+      catSel.value = this.selectedCatalogKey;
     }
-    this.onDigitalCatalogSelect(detectedCatKey);
+    this.onDigitalCatalogSelect(this.selectedCatalogKey, false);
 
     this.attachEvents();
     this.updateModeUI();
@@ -1037,7 +1106,7 @@ class UnifiedWAModal {
 
     // Digital Catalog Events
     document.getElementById('uwaDigitalCatSel')?.addEventListener('change', (e) => {
-      this.onDigitalCatalogSelect((e.target as HTMLSelectElement).value);
+      this.onDigitalCatalogSelect((e.target as HTMLSelectElement).value, true);
     });
     this.modalEl.querySelectorAll('.uwa-cat-lang-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1302,6 +1371,7 @@ class UnifiedWAModal {
         recipient_type: 'individual',
         recipient_name: name || 'Customer',
         channel: 'scanned',
+        send_mode: 'scanned',
         lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
       });
 
