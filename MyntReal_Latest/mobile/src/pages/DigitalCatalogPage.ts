@@ -1253,10 +1253,20 @@ export class DigitalCatalogPage {
           if (res && res.success) {
             this.fetchSegmentTelemetry(cat.segment_code);
             this.fetchQuickDispatchCount();
+
+            const ch = res.delivery_channel || "";
+            const chLabel = res.channel_label || "WhatsApp";
+
+            if (ch === "meta_api") {
+              alert(`✅ Proposal dispatched successfully via Official WhatsApp Cloud API!`);
+            } else if (ch === "scanned_bot") {
+              alert(`✅ Meta API unavailable — proposal dispatched successfully via Scanned WhatsApp Gateway!`);
+            } else {
+              alert(`📲 Proposal queued and logged! Launching WhatsApp for direct delivery...`);
+            }
+
             if (res.wa_me_url) {
               window.open(res.wa_me_url, "_blank");
-            } else {
-              alert("Catalog proposal queued successfully for WhatsApp delivery!");
             }
           } else {
             alert("Notice: " + (res?.message || "Dispatch completed"));

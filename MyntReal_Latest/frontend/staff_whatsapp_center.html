@@ -55,6 +55,16 @@
     .wa-tab-btn.active{background:#059669;color:#fff;box-shadow:0 2px 6px rgba(5,150,105,.25)}
     .wa-tab-btn .badge-num{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700}
 
+    /* ── Catalog & Click History Sub-tabs & Tables ─────────────────────── */
+    .cathist-subtab-bar{display:flex;align-items:center;gap:6px;background:#f8fafc;border-radius:10px;padding:6px;border:1px solid #e2e8f0;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .cathist-subtab-btn{padding:7px 14px;font-size:12px;font-weight:600;color:#475569;border:1px solid transparent;background:none;cursor:pointer;border-radius:7px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+    .cathist-subtab-btn:hover{background:#e2e8f0;color:#0f172a}
+    .cathist-subtab-btn.active{background:#059669;color:#fff;box-shadow:0 2px 6px rgba(5,150,105,.25)}
+    .cathist-table{width:100%;border-collapse:collapse;font-size:12px}
+    .cathist-table th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:700;color:#64748b;border-bottom:1px solid #e2e8f0;text-transform:uppercase;font-size:10.5px;letter-spacing:.3px}
+    .cathist-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;color:#1e293b}
+    .cathist-table tr:hover td{background:#f0fdf4}
+
     /* ── Tab Panes ────────────────────────────────────────────────────── */
     .tab-pane{display:none}
     .tab-pane.active{display:flex;flex-direction:column;flex:1;min-height:0}
@@ -308,6 +318,7 @@
         <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')" style="display:none !important"><i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches</button>
         <button class="wa-tab-btn" id="btn-tab-general-broadcast" onclick="switchCenterTab('general-broadcast')" style="display:none;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#065f46;border:1px solid #6ee7b7;font-weight:700"><i class="fas fa-paper-plane"></i> General Broadcast</button>
         <button class="wa-tab-btn" id="btn-tab-catalog" onclick="switchCenterTab('catalog')"><i class="fas fa-book-open"></i> Catalog Library</button>
+        <button class="wa-tab-btn" id="btn-tab-catalog-history" onclick="switchCenterTab('catalog-history')"><i class="fas fa-chart-line"></i> 📊 Catalog &amp; Click History</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')" style="display:none !important"><i class="fas fa-robot"></i> WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> Templates</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> Automations</button>
@@ -847,6 +858,245 @@
         <div style="border-radius:14px;overflow:hidden;border:1px solid #1e293b;background:#0f172a;box-shadow:0 6px 24px rgba(15,23,42,0.12)">
           <iframe id="iframeCatalogLibrary" src="about:blank" style="width:100%;height:calc(100vh - 235px);min-height:820px;border:none;display:block;background:#0f172a" title="Digital Catalog Library"></iframe>
         </div>
+      </div>
+
+      <!-- ═══ TAB: CATALOG & CLICK HISTORY (3 SUB-TABS) ═══════════════════════ -->
+      <div class="tab-pane" id="pane-catalog-history">
+        <!-- Header Banner -->
+        <div style="background:linear-gradient(135deg,#064e3b 0%,#047857 60%,#059669 100%);border-radius:14px;padding:14px 18px;color:#fff;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;box-shadow:0 4px 14px rgba(6,78,59,0.16)">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.18);color:#fff;font-size:18px">
+              <i class="fas fa-chart-line"></i>
+            </span>
+            <div>
+              <div style="font-size:15px;font-weight:800;letter-spacing:-0.2px;display:flex;align-items:center;gap:8px">
+                📊 Catalog &amp; Click History Hub
+                <span class="status-badge" style="font-size:10.5px;padding:2px 8px;background:rgba(255,255,255,0.2)">3-Tier Delivery Telemetry</span>
+              </div>
+              <div style="font-size:11.5px;color:#d1fae5;margin-top:2px">
+                Track all team catalog proposals, real-time link click telemetry, and staff outreach uniques analytics
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="display:inline-flex;background:rgba(0,0,0,0.2);padding:3px;border-radius:8px;border:1px solid rgba(255,255,255,0.2)">
+              <button type="button" class="btn-custom" id="btnCathistScopeTeam" onclick="setCathistScope('team')" style="padding:4px 10px;font-size:11.5px;background:#fff;color:#065f46;border-radius:6px;font-weight:700">
+                <i class="fas fa-users"></i> Entire Team
+              </button>
+              <button type="button" class="btn-custom" id="btnCathistScopeMy" onclick="setCathistScope('my')" style="padding:4px 10px;font-size:11.5px;background:transparent;color:#fff;border-radius:6px">
+                <i class="fas fa-user"></i> My Dispatches
+              </button>
+            </div>
+            <button type="button" class="btn-custom" onclick="loadCatalogHistoryHub()" style="background:rgba(255,255,255,.9);color:#065f46;border:none;padding:6px 12px;font-size:12px;font-weight:600" title="Refresh">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button type="button" class="btn-custom" onclick="triggerCatalogEmbedCommand('dispatch')" style="background:#10b981;color:#fff;border:none;padding:6px 12px;font-size:12px;font-weight:700" title="Open Dispatch Modal">
+              <i class="fab fa-whatsapp"></i> Send Proposal
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Sub-tabs Navigation Bar -->
+        <div class="cathist-subtab-bar">
+          <button class="cathist-subtab-btn active" id="btnCathistSubtabProposals" onclick="switchCathistSubtab('proposals')">
+            <i class="fas fa-file-invoice"></i> 1. Team Catalog Proposals History
+          </button>
+          <button class="cathist-subtab-btn" id="btnCathistSubtabTelemetry" onclick="switchCathistSubtab('telemetry')">
+            <i class="fas fa-fire" style="color:#ef4444"></i> 2. Click &amp; View Telemetry
+            <span class="badge-num" id="cathistBadgeTelemetry" style="background:#ef4444;color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;display:none">0</span>
+          </button>
+          <button class="cathist-subtab-btn" id="btnCathistSubtabAnalytics" onclick="switchCathistSubtab('analytics')">
+            <i class="fas fa-chart-pie" style="color:#0284c7"></i> 3. Team Summary &amp; Uniques Analytics
+          </button>
+        </div>
+
+        <!-- ═══ SUB-TAB 1: TEAM CATALOG PROPOSALS HISTORY ═══════════════════════ -->
+        <div class="cathist-subpane" id="cathistSubpaneProposals">
+          <div class="filter-wrap" style="margin-bottom:10px">
+            <div style="position:relative;flex:1;min-width:180px">
+              <input type="text" id="cathistSearchInput" placeholder="Search recipient, phone, or ref code..." style="width:100%;padding-left:28px" oninput="onCathistSearchInput(this.value)">
+              <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:11px"></i>
+            </div>
+            <select id="cathistSegmentFilter" onchange="loadCatalogHistoryHub()" style="min-width:140px">
+              <option value="">All Catalog Segments</option>
+              <option value="SOLAR">☀️ Solar Commercial &amp; Residential</option>
+              <option value="ETC_TRAINING">⚡ ETC EV Technician Course</option>
+              <option value="EV_B2C">🛵 Manthra EV 2W &amp; Fleet</option>
+              <option value="REAL_ESTATE">🏠 Real Dreams Real Estate</option>
+              <option value="INDUSTRIAL_HUB">🏭 Industrial Hub</option>
+              <option value="HUB_PRICING">💼 Commercial Pricing</option>
+              <option value="VGK4U">🌟 VGK Master</option>
+            </select>
+            <select id="cathistStaffFilter" onchange="loadCatalogHistoryHub()" style="min-width:140px">
+              <option value="">All Team Members</option>
+            </select>
+            <select id="cathistChannelFilter" onchange="loadCatalogHistoryHub()" style="min-width:130px">
+              <option value="all">All Delivery Formats</option>
+              <option value="web_link">🌐 Tracked Web Link</option>
+              <option value="pdf_document">📄 PDF Document</option>
+              <option value="both">📦 Link + PDF Both</option>
+            </select>
+            <select id="cathistTimeframeFilter" onchange="loadCatalogHistoryHub()" style="min-width:110px">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
+            <button type="button" class="btn-custom btn-outline-custom" onclick="resetCathistFilters()" style="padding:6px 10px;font-size:12px">
+              <i class="fas fa-undo"></i> Reset
+            </button>
+          </div>
+
+          <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0;overflow:hidden">
+            <div style="overflow-x:auto">
+              <table class="cathist-table">
+                <thead>
+                  <tr>
+                    <th>Recipient</th>
+                    <th>Catalog &amp; Segment</th>
+                    <th>Sent By</th>
+                    <th>Channel &amp; Status</th>
+                    <th>Sent At (IST)</th>
+                    <th>Clicks / Views</th>
+                    <th style="text-align:right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="cathistProposalsTbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:30px;color:#94a3b8">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Loading catalog proposals...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination Footer -->
+            <div style="padding:10px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div id="cathistProposalsPageInfo" style="font-size:12px;color:#64748b">Showing 0 of 0 dispatches</div>
+              <div style="display:flex;gap:6px">
+                <button type="button" class="btn-custom btn-outline-custom" id="btnCathistPrev" onclick="prevCathistPage()" style="padding:4px 10px;font-size:11.5px" disabled>
+                  <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <button type="button" class="btn-custom btn-outline-custom" id="btnCathistNext" onclick="nextCathistPage()" style="padding:4px 10px;font-size:11.5px" disabled>
+                  Next <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ SUB-TAB 2: CLICK & VIEW TELEMETRY ═══════════════════════════════ -->
+        <div class="cathist-subpane" id="cathistSubpaneTelemetry" style="display:none">
+          <div class="filter-wrap" style="margin-bottom:10px">
+            <div style="position:relative;flex:1;min-width:180px">
+              <input type="text" id="cathistTelemetrySearch" placeholder="Search clicked lead name or phone..." style="width:100%;padding-left:28px" oninput="onCathistSearchInput(this.value)">
+              <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:11px"></i>
+            </div>
+            <select id="cathistTelemetryStaff" onchange="loadCatalogHistoryHub()" style="min-width:140px">
+              <option value="">All Team Members</option>
+            </select>
+            <select id="cathistTelemetryEngagement" onchange="loadCatalogHistoryHub()" style="min-width:150px">
+              <option value="viewed">All Clicked Links (1+ Clicks)</option>
+              <option value="high">🔥 Hot Leads (2+ Clicks)</option>
+            </select>
+            <button type="button" class="btn-custom btn-outline-custom" onclick="resetCathistFilters()" style="padding:6px 10px;font-size:12px">
+              <i class="fas fa-undo"></i> Reset
+            </button>
+          </div>
+
+          <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0;overflow:hidden">
+            <div style="overflow-x:auto">
+              <table class="cathist-table">
+                <thead>
+                  <tr>
+                    <th>Lead Contact</th>
+                    <th>Catalog Viewed</th>
+                    <th>Sent By Staff</th>
+                    <th>Total Views</th>
+                    <th>First Opened (IST)</th>
+                    <th>Last Active (IST)</th>
+                    <th style="text-align:right">Follow-Up Action</th>
+                  </tr>
+                </thead>
+                <tbody id="cathistTelemetryTbody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:30px;color:#94a3b8">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Loading click telemetry...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ SUB-TAB 3: TEAM SUMMARY & UNIQUES ANALYTICS ═════════════════════ -->
+        <div class="cathist-subpane" id="cathistSubpaneAnalytics" style="display:none">
+          <!-- KPI Cards -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:10px;margin-bottom:14px">
+            <div class="stat-card" style="cursor:default">
+              <div class="stat-val" id="kpiTotalProposals" style="color:#059669">0</div>
+              <div class="stat-lbl"><i class="fas fa-paper-plane me-1"></i> Proposals Sent</div>
+            </div>
+            <div class="stat-card" style="cursor:default;border-color:#60a5fa">
+              <div class="stat-val" id="kpiUniqueLeads" style="color:#2563eb">0</div>
+              <div class="stat-lbl"><i class="fas fa-users me-1"></i> Unique Leads Reached</div>
+            </div>
+            <div class="stat-card" style="cursor:default;border-color:#f59e0b">
+              <div class="stat-val" id="kpiTotalViews" style="color:#d97706">0</div>
+              <div class="stat-lbl"><i class="fas fa-eye me-1"></i> Total Views / Clicks</div>
+            </div>
+            <div class="stat-card" style="cursor:default;border-color:#10b981">
+              <div class="stat-val" id="kpiCtrRate" style="color:#059669">0%</div>
+              <div class="stat-lbl"><i class="fas fa-percentage me-1"></i> View CTR %</div>
+            </div>
+            <div class="stat-card" style="cursor:default;border-color:#f87171">
+              <div class="stat-val" id="kpiHighViews" style="color:#dc2626">0</div>
+              <div class="stat-lbl"><i class="fas fa-fire me-1"></i> Hot Leads (2+ Views)</div>
+            </div>
+            <div class="stat-card" style="cursor:default;border-color:#c084fc">
+              <div class="stat-val" id="kpiAllMessages" style="color:#7c3aed">0</div>
+              <div class="stat-lbl"><i class="fab fa-whatsapp me-1"></i> All WA Messages</div>
+            </div>
+          </div>
+
+          <!-- Staff-Wise Outreach Leaderboard Table -->
+          <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0;overflow:hidden">
+            <div style="padding:12px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div style="font-weight:700;font-size:13px;color:#0f172a;display:flex;align-items:center;gap:6px">
+                <i class="fas fa-trophy" style="color:#eab308"></i> Team Outreach Leaderboard &amp; Unique Engagement Breakdown
+              </div>
+              <div style="font-size:11.5px;color:#64748b" id="cathistActiveStaffCount">0 active team members</div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="cathist-table">
+                <thead>
+                  <tr>
+                    <th>Rank &amp; Staff Member</th>
+                    <th>Role &amp; Code</th>
+                    <th style="text-align:center">Proposals Sent</th>
+                    <th style="text-align:center;background:#eff6ff">Unique Leads</th>
+                    <th style="text-align:center">Total Views</th>
+                    <th style="text-align:center">Viewed</th>
+                    <th style="text-align:center">CTR %</th>
+                    <th>Top Segment</th>
+                    <th>Last Active (IST)</th>
+                    <th style="text-align:right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="cathistAnalyticsStaffTbody">
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:30px;color:#94a3b8">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Loading leaderboard analytics...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <!-- ═══ TAB 6B: GENERAL BROADCAST & CAMPAIGN HUB (MR10001 & ASHWANTH ONLY) ═══ -->
@@ -2386,6 +2636,11 @@ function switchCenterTab(tabName) {
     if (f && (f.src === 'about:blank' || !f.src.includes('/staff/catalog-library'))) {
       f.src = '/staff/catalog-library?embed=1';
     }
+  } else if (tabName === 'catalog-history' || tabName === 'catalog_history') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
+    document.getElementById('pane-catalog-history')?.classList.add('active');
+    loadCatalogHistoryHub();
   } else if (tabName === 'inbox') {
     document.getElementById('pane-inbox')?.classList.add('active');
     loadInbox(1);
@@ -2428,6 +2683,523 @@ function reloadCatalogEmbedFrame() {
     f.contentWindow.postMessage({ type: 'CATALOG_EMBED_COMMAND', action: 'refresh' }, '*');
   }
   showToast('Catalog Library refreshed', 'green');
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ── CATALOG & CLICK HISTORY HUB (3 SUB-TABS: PROPOSALS, TELEMETRY, ANALYTICS) ──
+// ═════════════════════════════════════════════════════════════════════════════
+let cathistActiveSubtab = 'proposals'; // 'proposals' | 'telemetry' | 'analytics'
+let cathistCurrentScope = 'team';      // 'team' | 'my'
+let cathistOffset = 0;
+const cathistLimit = 50;
+let cathistTotalCount = 0;
+let cathistSearchDebounceTimer = null;
+let cathistDropdownsPopulated = false;
+
+function formatCathistIST(dtStr) {
+  if (!dtStr) return '—';
+  try {
+    const d = new Date(dtStr);
+    if (isNaN(d.getTime())) return String(dtStr);
+    return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch {
+    return String(dtStr);
+  }
+}
+
+function switchCathistSubtab(subtab) {
+  cathistActiveSubtab = subtab;
+  document.querySelectorAll('.cathist-subtab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.cathist-subpane').forEach(p => p.style.display = 'none');
+
+  if (subtab === 'proposals') {
+    document.getElementById('btnCathistSubtabProposals')?.classList.add('active');
+    document.getElementById('cathistSubpaneProposals')?.style.setProperty('display', 'block');
+  } else if (subtab === 'telemetry') {
+    document.getElementById('btnCathistSubtabTelemetry')?.classList.add('active');
+    document.getElementById('cathistSubpaneTelemetry')?.style.setProperty('display', 'block');
+  } else if (subtab === 'analytics') {
+    document.getElementById('btnCathistSubtabAnalytics')?.classList.add('active');
+    document.getElementById('cathistSubpaneAnalytics')?.style.setProperty('display', 'block');
+  }
+  loadCatalogHistoryHub();
+}
+
+function setCathistScope(scope) {
+  cathistCurrentScope = scope;
+  const btnTeam = document.getElementById('btnCathistScopeTeam');
+  const btnMy = document.getElementById('btnCathistScopeMy');
+  if (btnTeam && btnMy) {
+    if (scope === 'team') {
+      btnTeam.style.background = '#fff';
+      btnTeam.style.color = '#065f46';
+      btnTeam.style.fontWeight = '700';
+      btnMy.style.background = 'transparent';
+      btnMy.style.color = '#fff';
+      btnMy.style.fontWeight = 'normal';
+    } else {
+      btnMy.style.background = '#fff';
+      btnMy.style.color = '#065f46';
+      btnMy.style.fontWeight = '700';
+      btnTeam.style.background = 'transparent';
+      btnTeam.style.color = '#fff';
+      btnTeam.style.fontWeight = 'normal';
+    }
+  }
+  cathistOffset = 0;
+  loadCatalogHistoryHub();
+}
+
+function onCathistSearchInput(val) {
+  clearTimeout(cathistSearchDebounceTimer);
+  cathistSearchDebounceTimer = setTimeout(() => {
+    cathistOffset = 0;
+    loadCatalogHistoryHub();
+  }, 280);
+}
+
+function resetCathistFilters() {
+  const sInp = document.getElementById('cathistSearchInput');
+  const sSeg = document.getElementById('cathistSegmentFilter');
+  const sStf = document.getElementById('cathistStaffFilter');
+  const sChn = document.getElementById('cathistChannelFilter');
+  const sTmf = document.getElementById('cathistTimeframeFilter');
+  const tInp = document.getElementById('cathistTelemetrySearch');
+  const tStf = document.getElementById('cathistTelemetryStaff');
+  const tEng = document.getElementById('cathistTelemetryEngagement');
+
+  if (sInp) sInp.value = '';
+  if (sSeg) sSeg.value = '';
+  if (sStf) sStf.value = '';
+  if (sChn) sChn.value = 'all';
+  if (sTmf) sTmf.value = 'all';
+  if (tInp) tInp.value = '';
+  if (tStf) tStf.value = '';
+  if (tEng) tEng.value = 'viewed';
+
+  cathistOffset = 0;
+  loadCatalogHistoryHub();
+}
+
+function prevCathistPage() {
+  if (cathistOffset >= cathistLimit) {
+    cathistOffset -= cathistLimit;
+    loadCatalogHistoryHub();
+  }
+}
+
+function nextCathistPage() {
+  if (cathistOffset + cathistLimit < cathistTotalCount) {
+    cathistOffset += cathistLimit;
+    loadCatalogHistoryHub();
+  }
+}
+
+function copyCathistLink(url) {
+  if (!url) return;
+  const full = url.startsWith('http') ? url : (window.location.origin + url);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(full).then(() => {
+      showToast('Tracked proposal link copied to clipboard!', 'green');
+    }).catch(() => {
+      prompt('Copy proposal link:', full);
+    });
+  } else {
+    prompt('Copy proposal link:', full);
+  }
+}
+
+function drillDownCathistStaff(staffId) {
+  const staffSelect = document.getElementById('cathistStaffFilter');
+  if (staffSelect) {
+    staffSelect.value = String(staffId || '');
+  }
+  setCathistScope('team');
+  switchCathistSubtab('proposals');
+}
+
+function populateCathistDropdowns(teamMembers, availableModels) {
+  if (cathistDropdownsPopulated) return;
+  const staffSelects = [
+    document.getElementById('cathistStaffFilter'),
+    document.getElementById('cathistTelemetryStaff')
+  ];
+
+  staffSelects.forEach(sel => {
+    if (!sel) return;
+    const curVal = sel.value;
+    sel.innerHTML = '<option value="">All Team Members</option>';
+    teamMembers.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = String(m.id);
+      opt.textContent = `${m.name || m.code} (${m.code || 'ID-' + m.id})`;
+      sel.appendChild(opt);
+    });
+    if (curVal) sel.value = curVal;
+  });
+
+  const segSelect = document.getElementById('cathistSegmentFilter');
+  if (segSelect && availableModels && availableModels.length > 0) {
+    const curSeg = segSelect.value;
+    segSelect.innerHTML = '<option value="">All Catalog Segments</option>';
+    availableModels.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.segment_code;
+      opt.textContent = `${m.title || m.segment_code}`;
+      segSelect.appendChild(opt);
+    });
+    if (curSeg) segSelect.value = curSeg;
+  }
+
+  if (teamMembers && teamMembers.length > 0) {
+    cathistDropdownsPopulated = true;
+  }
+}
+
+async function loadCatalogHistoryHub() {
+  const q = (cathistActiveSubtab === 'telemetry')
+    ? (document.getElementById('cathistTelemetrySearch')?.value?.trim() || '')
+    : (document.getElementById('cathistSearchInput')?.value?.trim() || '');
+
+  const segment = (cathistActiveSubtab === 'telemetry')
+    ? ''
+    : (document.getElementById('cathistSegmentFilter')?.value || '');
+
+  const staffId = (cathistActiveSubtab === 'telemetry')
+    ? (document.getElementById('cathistTelemetryStaff')?.value || '')
+    : (document.getElementById('cathistStaffFilter')?.value || '');
+
+  const channel = (cathistActiveSubtab === 'telemetry')
+    ? 'all'
+    : (document.getElementById('cathistChannelFilter')?.value || 'all');
+
+  const timeframe = (cathistActiveSubtab === 'telemetry')
+    ? 'all'
+    : (document.getElementById('cathistTimeframeFilter')?.value || 'all');
+
+  const engagement = (cathistActiveSubtab === 'telemetry')
+    ? (document.getElementById('cathistTelemetryEngagement')?.value || 'viewed')
+    : 'all';
+
+  const params = new URLSearchParams({
+    scope: cathistCurrentScope,
+    limit: String(cathistLimit),
+    offset: String(cathistOffset)
+  });
+  if (q) params.set('q', q);
+  if (segment) params.set('segment_code', segment);
+  if (staffId) params.set('staff_id', staffId);
+  if (channel && channel !== 'all') params.set('delivery_method', channel);
+  if (timeframe && timeframe !== 'all') params.set('timeframe', timeframe);
+  if (engagement && engagement !== 'all') params.set('engagement', engagement);
+
+  try {
+    const res = await apiFetch(`${API}/digital-catalogs/dispatches/history?${params.toString()}`);
+    cathistTotalCount = res.total || 0;
+
+    populateCathistDropdowns(res.team_members || [], res.available_models || []);
+
+    // Telemetry count badge on sub-tab
+    const viewedCount = res.stats?.viewed_count || 0;
+    const badge = document.getElementById('cathistBadgeTelemetry');
+    if (badge) {
+      badge.textContent = String(viewedCount);
+      badge.style.display = viewedCount > 0 ? 'inline-block' : 'none';
+    }
+
+    if (cathistActiveSubtab === 'proposals') {
+      renderCathistProposals(res.dispatches || []);
+    } else if (cathistActiveSubtab === 'telemetry') {
+      renderCathistTelemetry(res.dispatches || []);
+    } else if (cathistActiveSubtab === 'analytics') {
+      renderCathistAnalytics(res);
+    }
+  } catch (err) {
+    console.error('Error loading catalog history:', err);
+    showToast('Failed to load catalog history. Check network.', 'red');
+  }
+}
+
+function renderCathistProposals(dispatches) {
+  const tbody = document.getElementById('cathistProposalsTbody');
+  const pageInfo = document.getElementById('cathistProposalsPageInfo');
+  const btnPrev = document.getElementById('btnCathistPrev');
+  const btnNext = document.getElementById('btnCathistNext');
+
+  if (!tbody) return;
+
+  if (!dispatches || dispatches.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:36px 16px;color:#94a3b8">
+          <i class="fas fa-inbox" style="font-size:28px;opacity:0.6;margin-bottom:8px;display:block"></i>
+          <span style="font-weight:600;font-size:13px;color:#64748b">No catalog proposal dispatches found</span>
+          <p style="font-size:11.5px;margin:4px 0 0 0">Try clearing your search query or switching scope to Entire Team</p>
+        </td>
+      </tr>
+    `;
+    if (pageInfo) pageInfo.textContent = 'Showing 0 of 0 dispatches';
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = true;
+    return;
+  }
+
+  const startIdx = cathistOffset + 1;
+  const endIdx = Math.min(cathistOffset + dispatches.length, cathistTotalCount);
+  if (pageInfo) pageInfo.textContent = `Showing ${startIdx}–${endIdx} of ${cathistTotalCount} dispatches`;
+  if (btnPrev) btnPrev.disabled = (cathistOffset <= 0);
+  if (btnNext) btnNext.disabled = (endIdx >= cathistTotalCount);
+
+  tbody.innerHTML = dispatches.map(d => {
+    const rName = escapeHtml(d.recipient_name || 'Valued Client');
+    const rPhone = escapeHtml(d.recipient_phone || '—');
+    const ref = escapeHtml(d.ref_code || '');
+    const cTitle = escapeHtml(d.catalog_title || d.segment_code || 'General Catalog');
+    const cSeg = escapeHtml(d.segment_code || 'PROPOSAL');
+    const stName = escapeHtml(d.staff_name || 'System / Auto');
+    const stCode = escapeHtml(d.staff_code || '');
+    const sentTime = formatCathistIST(d.sent_at);
+    const views = d.view_count || 0;
+    const trackedUrl = d.tracked_url || '';
+
+    // Channel badge
+    let channelBadge = `<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700"><i class="fab fa-whatsapp text-success me-1"></i> Tier 1: Meta API</span>`;
+    if (d.delivery_method === 'pdf_document') {
+      channelBadge = `<span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-file-pdf text-danger me-1"></i> PDF Brochure</span>`;
+    } else if (d.delivery_method === 'both') {
+      channelBadge = `<span class="badge" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700"><i class="fas fa-layer-group me-1"></i> Link + PDF</span>`;
+    }
+
+    // Engagement badge
+    let viewBadge = `<span style="color:#94a3b8;font-size:11px;font-weight:600">0 clicks</span>`;
+    if (views >= 2) {
+      viewBadge = `<span style="background:#fee2e2;color:#b91c1c;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid #fca5a5"><i class="fas fa-fire me-1"></i> ${views} clicks</span>`;
+    } else if (views > 0) {
+      viewBadge = `<span style="background:#ecfdf5;color:#047857;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid #a7f3d0"><i class="fas fa-check me-1"></i> ${views} click${views > 1 ? 's' : ''}</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700;color:#0f172a">${rName}</div>
+          <div style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px">
+            <i class="fas fa-phone-alt" style="font-size:9.5px"></i> ${rPhone}
+            ${ref ? `<span style="background:#f1f5f9;color:#475569;padding:1px 5px;border-radius:4px;font-size:9.5px;font-family:monospace">#${ref}</span>` : ''}
+          </div>
+        </td>
+        <td>
+          <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;margin-bottom:2px;display:inline-block">${cSeg}</span>
+          <div style="font-weight:600;color:#334155;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${cTitle}">${cTitle}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;color:#0f172a">${stName}</div>
+          ${stCode ? `<div style="font-size:10.5px;color:#64748b">${stCode}</div>` : ''}
+        </td>
+        <td>
+          ${channelBadge}
+        </td>
+        <td style="white-space:nowrap;color:#475569;font-size:11.5px">
+          ${sentTime}
+        </td>
+        <td>
+          ${viewBadge}
+        </td>
+        <td style="text-align:right;white-space:nowrap">
+          <div style="display:inline-flex;gap:4px">
+            <button type="button" class="btn-custom btn-green" onclick="openChatFromInbox('${rPhone}')" style="padding:4px 8px;font-size:11px" title="Chat with Lead in WhatsApp Center">
+              <i class="fab fa-whatsapp"></i> Chat
+            </button>
+            ${trackedUrl ? `
+              <button type="button" class="btn-custom btn-outline-custom" onclick="copyCathistLink('${trackedUrl}')" style="padding:4px 8px;font-size:11px" title="Copy Tracked Proposal Link">
+                <i class="fas fa-copy"></i>
+              </button>
+              <a href="${trackedUrl}" target="_blank" class="btn-custom btn-outline-custom" style="padding:4px 8px;font-size:11px;text-decoration:none" title="Open Catalog Link in New Tab">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCathistTelemetry(dispatches) {
+  const tbody = document.getElementById('cathistTelemetryTbody');
+  if (!tbody) return;
+
+  const viewedItems = (dispatches || []).filter(d => (d.view_count || 0) > 0);
+
+  if (viewedItems.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:36px 16px;color:#94a3b8">
+          <i class="fas fa-chart-line" style="font-size:28px;opacity:0.6;margin-bottom:8px;display:block"></i>
+          <span style="font-weight:600;font-size:13px;color:#64748b">No viewed proposal links found</span>
+          <p style="font-size:11.5px;margin:4px 0 0 0">Links will appear here as soon as recipients click and open them</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = viewedItems.map(d => {
+    const rName = escapeHtml(d.recipient_name || 'Valued Client');
+    const rPhone = escapeHtml(d.recipient_phone || '—');
+    const cTitle = escapeHtml(d.catalog_title || d.segment_code || 'General Catalog');
+    const cSeg = escapeHtml(d.segment_code || 'PROPOSAL');
+    const stName = escapeHtml(d.staff_name || 'System / Auto');
+    const views = d.view_count || 0;
+    const firstView = formatCathistIST(d.first_viewed_at);
+    const lastView = formatCathistIST(d.last_viewed_at || d.first_viewed_at);
+
+    let viewBadge = `<span style="background:#ecfdf5;color:#047857;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid #a7f3d0"><i class="fas fa-check me-1"></i> ${views} click${views > 1 ? 's' : ''}</span>`;
+    if (views >= 2) {
+      viewBadge = `<span style="background:#fee2e2;color:#b91c1c;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid #fca5a5"><i class="fas fa-fire me-1"></i> Hot Lead (${views} clicks)</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700;color:#0f172a">${rName}</div>
+          <div style="font-size:11px;color:#64748b"><i class="fas fa-phone-alt me-1" style="font-size:9.5px"></i> ${rPhone}</div>
+        </td>
+        <td>
+          <span class="badge" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;margin-bottom:2px;display:inline-block">${cSeg}</span>
+          <div style="font-weight:600;color:#334155;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${cTitle}">${cTitle}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;color:#0f172a">${stName}</div>
+        </td>
+        <td>
+          ${viewBadge}
+        </td>
+        <td style="white-space:nowrap;color:#475569;font-size:11.5px">
+          ${firstView}
+        </td>
+        <td style="white-space:nowrap;color:#059669;font-weight:600;font-size:11.5px">
+          ${lastView}
+        </td>
+        <td style="text-align:right">
+          <button type="button" class="btn-custom btn-green" onclick="openChatFromInbox('${rPhone}')" style="padding:5px 10px;font-size:11.5px;font-weight:700" title="Open Chat with Hot Lead">
+            <i class="fab fa-whatsapp"></i> Follow Up
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCathistAnalytics(data) {
+  const stats = data.stats || {};
+  const summary = data.staff_summary || [];
+
+  // Update KPI Cards
+  const elProposals = document.getElementById('kpiTotalProposals');
+  const elUniqueLeads = document.getElementById('kpiUniqueLeads');
+  const elViews = document.getElementById('kpiTotalViews');
+  const elCtr = document.getElementById('kpiCtrRate');
+  const elHigh = document.getElementById('kpiHighViews');
+  const elMsg = document.getElementById('kpiAllMessages');
+  const elStaffCount = document.getElementById('cathistActiveStaffCount');
+
+  if (elProposals) elProposals.textContent = Number(stats.total_dispatches || 0).toLocaleString();
+  if (elUniqueLeads) elUniqueLeads.textContent = Number(stats.unique_recipients || 0).toLocaleString();
+  if (elViews) elViews.textContent = Number(stats.total_views || 0).toLocaleString();
+  if (elCtr) elCtr.textContent = `${stats.view_rate_percent || 0}%`;
+  if (elHigh) elHigh.textContent = Number(stats.high_engagement_count || 0).toLocaleString();
+  if (elMsg) {
+    const allTotal = Number(stats.all_messages_total || 0).toLocaleString();
+    const allUniq = Number(stats.all_messages_uniques || 0).toLocaleString();
+    elMsg.textContent = `${allTotal} (${allUniq} uniques)`;
+  }
+  if (elStaffCount) elStaffCount.textContent = `${summary.length} active team members`;
+
+  // Populate Staff Leaderboard Table
+  const tbody = document.getElementById('cathistAnalyticsStaffTbody');
+  if (!tbody) return;
+
+  if (summary.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10" style="text-align:center;padding:36px 16px;color:#94a3b8">
+          <i class="fas fa-users-slash" style="font-size:28px;opacity:0.6;margin-bottom:8px;display:block"></i>
+          <span style="font-weight:600;font-size:13px;color:#64748b">No staff outreach summary records found</span>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = summary.map((s, idx) => {
+    const rank = idx + 1;
+    let rankBadge = `<span style="font-weight:700;color:#64748b">#${rank}</span>`;
+    if (rank === 1) rankBadge = `<span style="background:#fef08a;color:#854d0e;padding:2px 8px;border-radius:999px;font-weight:800;font-size:11px">🥇 #1</span>`;
+    else if (rank === 2) rankBadge = `<span style="background:#e2e8f0;color:#334155;padding:2px 8px;border-radius:999px;font-weight:800;font-size:11px">🥈 #2</span>`;
+    else if (rank === 3) rankBadge = `<span style="background:#ffedd5;color:#9a3412;padding:2px 8px;border-radius:999px;font-weight:800;font-size:11px">🥉 #3</span>`;
+
+    const name = escapeHtml(s.staff_name || 'Staff');
+    const code = escapeHtml(s.staff_code || '');
+    const desig = escapeHtml(s.designation || 'Staff');
+    const totalSent = s.total_dispatches || 0;
+    const uniqueRecipients = s.unique_recipients || 0;
+    const totalViews = s.total_views || 0;
+    const viewedCount = s.viewed_dispatches || 0;
+    const ctr = s.ctr_percent || 0;
+    const topModel = escapeHtml(s.top_model || 'SOLAR');
+    const lastActive = formatCathistIST(s.last_sent_at);
+
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${rankBadge}
+            <div>
+              <div style="font-weight:700;color:#0f172a">${name}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight:600;color:#475569;font-size:11.5px">${desig}</div>
+          <div style="font-size:10.5px;color:#94a3b8">${code}</div>
+        </td>
+        <td style="text-align:center;font-weight:700;color:#0f172a">
+          ${totalSent}
+        </td>
+        <td style="text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff">
+          ${uniqueRecipients}
+        </td>
+        <td style="text-align:center;font-weight:700;color:#059669">
+          ${totalViews}
+        </td>
+        <td style="text-align:center;color:#475569">
+          ${viewedCount}
+        </td>
+        <td style="text-align:center">
+          <span style="background:#ecfdf5;color:#047857;padding:2px 7px;border-radius:6px;font-weight:700;font-size:11px">${ctr}%</span>
+        </td>
+        <td>
+          <span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:10.5px;padding:2px 6px;border-radius:4px">${topModel}</span>
+        </td>
+        <td style="white-space:nowrap;color:#64748b;font-size:11px">
+          ${lastActive}
+        </td>
+        <td style="text-align:right">
+          <button type="button" class="btn-custom btn-outline-custom" onclick="drillDownCathistStaff(${s.staff_id || 0})" style="padding:4px 8px;font-size:11px" title="View Dispatches by this staff member">
+            <i class="fas fa-search me-1"></i> Dispatches
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 const EMOJI_DATA = {
   smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😋','😛','😜','🤪','😎','🤩','🥳','😏','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','😱','🤗','🤔','🤫','😴','😷'],

@@ -553,7 +553,12 @@ def member_cash_income(
             SUM(CASE WHEN kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE') THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END) AS stage_advances_total,
             SUM(CASE WHEN kind IN ('SLAB_BONUS', 'EXTRA_COMMISSION', 'BRAND_COMMISSION') THEN GREATEST(0, commission_amount - COALESCE(advance_adjusted_amount, 0)) ELSE 0 END) AS stage_bonuses_total
         FROM vgk_cash_income_entries
-        WHERE partner_id = :pid AND status != 'CANCELLED'
+        WHERE partner_id = :pid 
+          AND status != 'CANCELLED'
+          AND NOT (
+              (kind IN ('ADVANCE', 'PARTNER_ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE') OR kind IS NULL)
+              AND source_lead_id IS NULL
+          )
     """), {'pid': partner_id}).fetchone()
 
     # Category breakdown for member
@@ -562,7 +567,12 @@ def member_cash_income(
                SUM(vci.commission_amount) as total_amt
         FROM vgk_cash_income_entries vci
         LEFT JOIN signup_categories sc ON sc.id = vci.category_id
-        WHERE vci.partner_id = :pid AND vci.status != 'CANCELLED'
+        WHERE vci.partner_id = :pid 
+          AND vci.status != 'CANCELLED'
+          AND NOT (
+              (vci.kind IN ('ADVANCE', 'PARTNER_ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE') OR vci.kind IS NULL)
+              AND vci.source_lead_id IS NULL
+          )
         GROUP BY sc.name
         ORDER BY total_amt DESC
     """), {'pid': partner_id}).fetchall()
@@ -752,6 +762,10 @@ def member_wallet(
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid
           AND status     IN ('RELEASED', 'PAID')
+          AND NOT (
+              (kind IN ('ADVANCE', 'PARTNER_ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE') OR kind IS NULL)
+              AND source_lead_id IS NULL
+          )
     """), {'pid': current_member.id}).fetchone()
     vsca_unmirrored = db.execute(text("""
         SELECT COALESCE(SUM(a.advance_amount), 0) AS total

@@ -1034,7 +1034,7 @@
 
                     <!-- 5. Result Confirmation Box -->
                     <div class="p-3 rounded-3 border border-success border-opacity-35 small" id="dispatchResultBox" style="background: rgba(16, 185, 129, 0.08); display: none;">
-                        <div class="fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> Link Generated Successfully!</div>
+                        <div class="fw-bold text-success mb-1" id="dispatchStatusBadge"><i class="fas fa-check-circle me-1"></i> Proposal Dispatched Successfully!</div>
                         <div class="text-light text-break mb-2 p-2 rounded bg-dark font-mono small border border-secondary border-opacity-25" id="dispatchLinkDisplay"></div>
                         <a href="#" target="_blank" class="btn btn-sm btn-brand-wa w-100" id="btnOpenWhatsAppDirect">
                             <i class="fab fa-whatsapp me-1"></i> Open in WhatsApp Web / App
@@ -2699,6 +2699,16 @@
                 const result = await res.json();
 
                 document.getElementById('dispatchResultBox').style.display = 'block';
+                const statusBadge = document.getElementById('dispatchStatusBadge');
+                if (statusBadge) {
+                    if (result.delivery_channel === 'meta_api') {
+                        statusBadge.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> Dispatched via Official WhatsApp Cloud API!';
+                    } else if (result.delivery_channel === 'scanned_bot') {
+                        statusBadge.innerHTML = '<i class="fas fa-check-circle me-1 text-info"></i> Dispatched via Scanned WhatsApp Gateway!';
+                    } else {
+                        statusBadge.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> Link Generated &amp; Prepared for WhatsApp!';
+                    }
+                }
                 document.getElementById('dispatchLinkDisplay').textContent = result.web_catalog_url;
                 document.getElementById('btnOpenWhatsAppDirect').href = result.wa_me_url;
                 btn.style.display = 'none';

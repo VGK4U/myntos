@@ -540,6 +540,121 @@ _TEMPLATES = [
             "Warm Regards, Team MyntReal & VGK4U"
         ],
     },
+    {
+        "slug": "mnr_catalog_proposal_v1",
+        "name": "MyntReal Catalog Proposal V1",
+        "meta_template_name": "mnr_catalog_proposal_v1",
+        "body_text": (
+            "Dear {{name}}! 👋\n\n"
+            "Here is your personalized *{{catalog_title}}* proposal prepared by *{{staff_name}}*:\n\n"
+            "📖 *Interactive Web Proposal & Calculator:*\n"
+            "👉 {{url}}\n\n"
+            "For queries or an immediate consultation, feel free to reply directly.\n\n"
+            "Best regards,\n"
+            "*{{staff_name}}*\n"
+            "📞 Helpline: {{helpline}}\n"
+            "MYNTREAL"
+        ),
+        "segment": "customer",
+        "meta_category": "MARKETING",
+        "event_key": "catalog_proposal_en",
+        "event_label": "Digital Catalog Proposal (English)",
+        "event_category": "crm",
+        "example_values": [
+            "Anil Kumar",
+            "EVolution Training Centre — Professional EV Certifications",
+            "Rahul Sharma",
+            "https://www.myntreal.com/c/sample123",
+            "+91 858585 2738"
+        ],
+    },
+    {
+        "slug": "mnr_catalog_proposal_te_v1",
+        "name": "MyntReal Catalog Proposal Telugu V1",
+        "meta_template_name": "mnr_catalog_proposal_te_v1",
+        "meta_template_language": "te",
+        "body_text": (
+            "నమస్కారం {{name}} గారు! 👋\n\n"
+            "మీ కోసం సిద్ధం చేసిన *{{catalog_title}}* ప్రతిపాదన వివరాలు ఇక్కడ ఉన్నాయి (తయారు చేసిన వారు: *{{staff_name}}*):\n\n"
+            "📖 *ఆన్‌లైన్ ప్రతిపాదన మరియు వివరాలు:*\n"
+            "👉 {{url}}\n\n"
+            "ఏవైనా సందేహాలు ఉంటే నేరుగా మాకు సమాధానం ఇవ్వవచ్చు.\n\n"
+            "ధన్యవాదాలు,\n"
+            "*{{staff_name}}*\n"
+            "📞 హెల్ప్‌లైన్: {{helpline}}\n"
+            "MYNTREAL"
+        ),
+        "segment": "customer",
+        "meta_category": "MARKETING",
+        "event_key": "catalog_proposal_te",
+        "event_label": "Digital Catalog Proposal (Telugu)",
+        "event_category": "crm",
+        "example_values": [
+            "అనిల్ కుమార్",
+            "EVolution Training Centre — Professional EV Certifications",
+            "రాహుల్ శర్మ",
+            "https://www.myntreal.com/c/sample123",
+            "+91 858585 2738"
+        ],
+    },
+    {
+        "slug": "mnr_catalog_brochure_v1",
+        "name": "MyntReal Catalog With Brochure V1",
+        "meta_template_name": "mnr_catalog_brochure_v1",
+        "body_text": (
+            "Dear {{name}}! 👋\n\n"
+            "Here is your personalized *{{catalog_title}}* proposal prepared by *{{staff_name}}*:\n\n"
+            "📖 *Interactive Web Proposal:*\n"
+            "👉 {{url}}\n\n"
+            "📄 *Official PDF Brochure (Direct Download):*\n"
+            "👉 {{pdf_url}}\n\n"
+            "For queries or an immediate consultation, feel free to reply directly.\n\n"
+            "Best regards,\n"
+            "*{{staff_name}}*\n"
+            "📞 Helpline: {{helpline}}\n"
+            "MYNTREAL"
+        ),
+        "segment": "customer",
+        "meta_category": "MARKETING",
+        "event_key": "catalog_proposal_brochure",
+        "event_label": "Digital Catalog With PDF Brochure",
+        "event_category": "crm",
+        "example_values": [
+            "Anil Kumar",
+            "Commercial & Residential Solar",
+            "Rahul Sharma",
+            "https://www.myntreal.com/c/sample123",
+            "https://www.myntreal.com/catalog/mnr-catalog-web.pdf",
+            "+91 858585 2738"
+        ],
+    },
+    {
+        "slug": "mnr_catalog_etc_training_v1",
+        "name": "EVolution Training Centre Proposal V1",
+        "meta_template_name": "mnr_catalog_etc_training_v1",
+        "body_text": (
+            "Dear {{name}}! 👋\n\n"
+            "Here is your *EVolution Training Centre (ETC)* Certification Course Proposal prepared by *{{staff_name}}*:\n\n"
+            "🎓 *Explore Course Modules, Syllabus & Pricing:*\n"
+            "👉 {{url}}\n\n"
+            "For admissions or batched schedules, feel free to reply directly.\n\n"
+            "Best regards,\n"
+            "*{{staff_name}}*\n"
+            "📞 Admissions Helpline: {{helpline}}\n"
+            "EVolution Training Centre — MYNTREAL"
+        ),
+        "segment": "customer",
+        "meta_category": "MARKETING",
+        "event_key": "catalog_proposal_etc",
+        "event_label": "ETC Training Center Catalog Proposal",
+        "event_category": "crm",
+        "example_values": [
+            "Anil Kumar",
+            "Rahul Sharma",
+            "https://www.myntreal.com/c/sample123",
+            "+91 858585 2738"
+        ],
+    },
 ]
 
 

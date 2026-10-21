@@ -5643,12 +5643,17 @@ def send_manual_whatsapp_message(
             "timestamp": (now_utc + timedelta(hours=5, minutes=30)).strftime("%d %b %Y, %I:%M %p")
         }
     else:
+        import urllib.parse
+        clean_10 = clean_target[-10:] if len(clean_target) >= 10 else clean_target
+        wa_me_url = f"https://wa.me/91{clean_10}?text={urllib.parse.quote(msg_text or '')}"
         return {
             "success": False,
-            "error": error_msg or "Failed to send WhatsApp message",
+            "error": error_msg or "Failed to send WhatsApp message via API and Scanned Gateway",
             "status": "failed",
             "wamid": wamid,
-            "phone": clean_target
+            "phone": clean_target,
+            "wa_me_url": wa_me_url,
+            "fallback_available": True
         }
 
 

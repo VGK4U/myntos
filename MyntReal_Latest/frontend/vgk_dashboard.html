@@ -8092,13 +8092,22 @@
             const directFilesSet = new Set(nonCan.filter(e => (e.level === 1 || e.level === null) && e.source_lead_id).map(e => e.source_lead_id));
             const directFilesCount = directFilesSet.size;
 
-            const summ = (data && data.summary) || {};
-            const totGross = summ.gross_earned !== undefined ? summ.gross_earned : nonCan.reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
-            const totNetEarning = summ.net_earning !== undefined ? summ.net_earning : 135213.47;
-            const totRcv = summ.received !== undefined ? summ.received : 110538.51;
-            const totPending = summ.pending !== undefined ? summ.pending : 11153.61;
+            const summ = (window._vgkItemizedSummary) || (window._vgkDashboardSummaryData && window._vgkDashboardSummaryData.summary) || {};
+            const earningNonCan = nonCan.filter(e => !['PARTNER_ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE'].includes((e.kind || '').toUpperCase()) && !(String(e.kind || '').toUpperCase() === 'ADVANCE' && !e.source_lead_id));
+            const totGross = summ.gross_earned !== undefined ? Number(summ.gross_earned) : earningNonCan.reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
+            const totNetEarning = summ.net_earning !== undefined ? Number(summ.net_earning) : earningNonCan.reduce((s, e) => s + parseFloat(e.balance_gross || e.commission_amount || 0), 0);
+            const totRcv = summ.received !== undefined ? Number(summ.received) : earningNonCan.filter(e => ['PAID', 'RELEASED'].includes(e.status)).reduce((s, e) => s + parseFloat(e.net_payout || 0), 0);
+            const totPending = summ.pending !== undefined ? Number(summ.pending) : earningNonCan.filter(e => !['PAID', 'RELEASED'].includes(e.status)).reduce((s, e) => s + parseFloat(e.net_payout || 0), 0);
             window._ciSummaryReceived = totRcv;
             window._ciSummaryPending = totPending;
+
+            const _fmtInrDec = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const wbEl = document.getElementById('ciWalletBalance');
+            if (wbEl) wbEl.textContent = _fmtInrDec(totRcv);
+            const wbSubEl = document.getElementById('ciWalletBalanceSub') || document.querySelector('#ciWalletBalance + div');
+            if (wbSubEl) {
+                wbSubEl.innerHTML = `Disbursed to Bank Account · <span style="color:#fde68a;font-weight:700">Pending / Held: ${_fmtInrDec(totPending)}</span>`;
+            }
             const totPot = nonCan.reduce((s, e) => s + parseFloat(e.potential_earning || e.potential_amount || 0), 0);
 
             const totL0 = nonCan.filter(e => e.level === 0 || ['SLAB_BONUS', 'BONANZA_BONUS', 'EXTRA_COMMISSION'].includes((e.kind || '').toUpperCase())).reduce((s, e) => s + parseFloat(e.commission_amount || 0), 0);
@@ -8468,15 +8477,36 @@
                 if (walletRes.status === 401 || incomeRes.status === 401 || (itemizedRes && itemizedRes.status === 401)) { logout(); return; }
                 const walletData = await walletRes.json();
                 const incomeData = await incomeRes.json();
+                let itemizedData = null;
+                let itemizedEntries = [];
+                let itemizedSummary = null;
+                try {
+                    if (itemizedRes && itemizedRes.ok) {
+                        itemizedData = await itemizedRes.json();
+                        if (itemizedData && itemizedData.success && Array.isArray(itemizedData.data)) {
+                            itemizedEntries = itemizedData.data;
+                            itemizedSummary = itemizedData.summary || null;
+                        }
+                    }
+                } catch(_) {}
+
+                window._vgkItemizedSummary = itemizedSummary;
+                if (itemizedSummary) {
+                    if (itemizedSummary.received !== undefined) window._ciSummaryReceived = Number(itemizedSummary.received);
+                    if (itemizedSummary.pending !== undefined) window._ciSummaryPending = Number(itemizedSummary.pending);
+                }
 
                 if (walletData && walletData.success) {
                     const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
                     const _el = id => document.getElementById(id);
-                    if (_el('ciEarnedTotal') && (!_ciItemizedEntries || !_ciItemizedEntries.length)) {
-                        _el('ciEarnedTotal').textContent = fmtInr(walletData.earned_total);
+                    if (_el('ciEarnedTotal')) {
+                        const _grs = (itemizedSummary && itemizedSummary.gross_earned !== undefined) 
+                            ? itemizedSummary.gross_earned 
+                            : (walletData.earned_total !== undefined ? walletData.earned_total : 0);
+                        _el('ciEarnedTotal').textContent = fmtInr(_grs);
                     }
                     if (_el('ciWalletBalance')) {
-                        const _rcvVal = (window._ciSummaryReceived !== undefined) ? window._ciSummaryReceived : 110538.51;
+                        const _rcvVal = (window._ciSummaryReceived !== undefined) ? window._ciSummaryReceived : 0.0;
                         _el('ciWalletBalance').textContent = fmtInr(_rcvVal);
                     }
 
@@ -8489,7 +8519,7 @@
                     const _advPending = (walletData.pending_advance_claims || []).reduce((s, c) => s + (c.pending_gross || 0), 0);
                     const _walletSubEl = document.getElementById('ciWalletBalanceSub') || document.querySelector('#ciWalletBalance + div');
                     if (_walletSubEl) {
-                        const _pndVal = (window._ciSummaryPending !== undefined) ? window._ciSummaryPending : 11153.61;
+                        const _pndVal = (window._ciSummaryPending !== undefined) ? window._ciSummaryPending : 0.0;
                         _walletSubEl.innerHTML = `Disbursed to Bank Account · <span style="color:#fde68a;font-weight:700">Pending / Held: ${fmtInr(_pndVal)}</span>`;
                     }
                     if (histEl) histEl.dataset.loaded = '1';
@@ -8665,17 +8695,7 @@
                     if (_el('ciStreamBonuses'))  _el('ciStreamBonuses').textContent  = fmtInr(s.stage_bonuses_total || 0);
                 }
 
-                let itemizedEntries = [];
-                try {
-                    if (itemizedRes && itemizedRes.ok) {
-                        const itemizedData = await itemizedRes.json();
-                        if (itemizedData && itemizedData.success && Array.isArray(itemizedData.data)) {
-                            itemizedEntries = itemizedData.data;
-                        }
-                    }
-                } catch(_) {}
-
-                _ciItemizedEntries = itemizedEntries.length ? itemizedEntries : ((incomeData && incomeData.data) || []);
+                _ciItemizedEntries = (itemizedEntries && itemizedEntries.length) ? itemizedEntries : ((incomeData && incomeData.data) || []);
                 _applyCiFilter();
 
                 _saveCiCache(walletData, incomeData);

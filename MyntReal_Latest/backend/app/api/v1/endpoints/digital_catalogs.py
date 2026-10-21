@@ -721,10 +721,26 @@ def get_dispatch_history(
     # Calculate overall KPIs for current filtered query
     all_sends = query.all()
     total_count = len(all_sends)
+    unique_recipients_count = len({(s.recipient_phone or "").strip() for s in all_sends if s.recipient_phone})
     total_views = sum((s.view_count or 0) for s in all_sends)
     viewed_count = sum(1 for s in all_sends if (s.view_count or 0) > 0)
     high_count = sum(1 for s in all_sends if (s.view_count or 0) >= 2)
     view_rate = round((viewed_count / total_count * 100), 1) if total_count > 0 else 0.0
+
+    # Also fetch team-wide overall WhatsApp message totals from MessageLog for cross-channel summary
+    total_msg_count = total_count
+    unique_msg_phones = unique_recipients_count
+    try:
+        from app.models.whatsapp import MessageLog
+        from sqlalchemy import func
+        t_count = db.query(func.count(MessageLog.id)).scalar()
+        u_count = db.query(func.count(func.distinct(MessageLog.mobile_number))).scalar()
+        if t_count is not None and t_count > 0:
+            total_msg_count = int(t_count)
+        if u_count is not None and u_count > 0:
+            unique_msg_phones = int(u_count)
+    except Exception as _ml_err:
+        logger.debug(f"[CATALOG-STATS] Note querying message_log totals: {_ml_err}")
 
     # Top model
     model_counts = Counter(s.catalog.segment_code for s in all_sends if s.catalog)
@@ -869,13 +885,16 @@ def get_dispatch_history(
         "staff_summary": staff_summary,
         "stats": {
             "total_dispatches": total_count,
+            "unique_recipients": unique_recipients_count,
             "total_views": total_views,
             "viewed_count": viewed_count,
             "unviewed_count": total_count - viewed_count,
             "high_engagement_count": high_count,
             "view_rate_percent": view_rate,
             "top_model": top_model,
-            "active_staff_count": len(staff_summary)
+            "active_staff_count": len(staff_summary),
+            "all_messages_total": total_msg_count,
+            "all_messages_uniques": unique_msg_phones
         },
         "team_members": team_members,
         "available_models": available_models
@@ -1528,29 +1547,109 @@ def dispatch_catalog_whatsapp(
     db.commit()
     db.refresh(lead_send)
 
-    # Attempt Meta Cloud API dispatch
+    # ── Meta Template Resolution ─────────────────────────────────────────────
+    from app.models.whatsapp import WhatsAppTemplate
+    meta_template = None
+    lang_code = (payload.language_code or "en").lower().strip()
+
+    candidate_slugs = []
+    if lang_code == "te":
+        candidate_slugs.extend(["mnr_catalog_proposal_te_v1", "crm_status_proposal"])
+    if catalog.segment_code == "ETC_TRAINING":
+        candidate_slugs.append("mnr_catalog_etc_training_v1")
+    elif catalog.segment_code == "SOLAR":
+        candidate_slugs.append("lead_welcome_solar_catalog")
+    if (payload.delivery_method in ("pdf_document", "both") or pdf_candidate) and pdf_candidate:
+        candidate_slugs.append("mnr_catalog_brochure_v1")
+    candidate_slugs.extend(["mnr_catalog_proposal_v1", "crm_status_proposal"])
+
+    for cand_slug in candidate_slugs:
+        t_cand = db.query(WhatsAppTemplate).filter(
+            WhatsAppTemplate.slug == cand_slug,
+            WhatsAppTemplate.is_active == True
+        ).first()
+        if t_cand and t_cand.is_meta_approved:
+            meta_template = t_cand
+            break
+
+    # Context values for Meta Template component resolution (positional 1..6 & named)
+    tpl_context = {
+        "1": recip_display,
+        "2": catalog.title,
+        "3": staff_name,
+        "4": short_catalog_url,
+        "5": (pdf_full_url if (meta_template and meta_template.slug == "mnr_catalog_brochure_v1" and 'pdf_full_url' in locals()) else helpline),
+        "6": helpline,
+        "name": recip_display,
+        "catalog_title": catalog.title,
+        "category_name": catalog.title,
+        "staff_name": staff_name,
+        "url": short_catalog_url,
+        "pdf_url": pdf_full_url if 'pdf_full_url' in locals() else "",
+        "helpline": helpline
+    }
+
+    # ── Step 1: Attempt Meta Cloud API Dispatch ──────────────────────────────
     wa_result = {"success": False, "reason": "Not attempted"}
+    delivery_channel_used = "pending"
+
     try:
         from app.services.whatsapp_auto_service import send_direct_whatsapp
         wa_result = send_direct_whatsapp(
             db=db,
             phone=full_phone,
             message=full_message,
+            template_id=meta_template.id if meta_template else None,
             lead_id=payload.lead_id,
-            staff_id=current_user.id
+            staff_id=current_user.id,
+            context=tpl_context
         )
         if wa_result.get("success"):
             lead_send.status = "sent"
+            lead_send.delivery_channel = "meta_api"
             lead_send.whatsapp_message_id = wa_result.get("wamid")
-        else:
-            lead_send.status = "failed"
-            lead_send.failure_reason = str(wa_result.get("reason", "Meta API Error"))
-        db.commit()
+            delivery_channel_used = "meta_api"
+            db.commit()
     except Exception as wa_err:
-        logger.warning(f"WhatsApp direct send error (non-fatal, staff link available): {wa_err}")
-        lead_send.status = "pending_staff_send"
-        lead_send.failure_reason = str(wa_err)
-        db.commit()
+        logger.warning(f"[CATALOG-DISPATCH] Meta API send error: {wa_err}")
+
+    # ── Step 2: Fallback to Scanned WhatsApp Bot ─────────────────────────────
+    if not wa_result.get("success"):
+        logger.info(
+            f"[CATALOG-DISPATCH] Meta Cloud API unavailable or unapproved ({wa_result.get('reason')}). "
+            f"Failing over to Scanned WhatsApp Bot Gateway for {full_phone}..."
+        )
+        try:
+            from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+            scanned_res = dispatch_scanned_lead_fallback(
+                db=db,
+                phone=full_phone,
+                message=full_message,
+                lead_id=payload.lead_id,
+                staff_id=current_user.id,
+                event_key="catalog_proposal",
+                reason=wa_result.get("reason", "Meta API not approved / 24h window closed")
+            )
+            if scanned_res.get("success"):
+                lead_send.status = "sent_via_scanned"
+                lead_send.delivery_channel = "scanned_bot"
+                lead_send.whatsapp_message_id = scanned_res.get("wamid")
+                delivery_channel_used = "scanned_bot"
+                wa_result = scanned_res
+                db.commit()
+            else:
+                lead_send.status = "pending_staff_send"
+                lead_send.delivery_channel = "whatsapp_manual"
+                lead_send.failure_reason = f"Meta: {wa_result.get('reason')} | Scanned: {scanned_res.get('reason')}"
+                delivery_channel_used = "whatsapp_manual"
+                db.commit()
+        except Exception as sc_err:
+            logger.warning(f"[CATALOG-DISPATCH] Scanned WhatsApp fallback error: {sc_err}")
+            lead_send.status = "pending_staff_send"
+            lead_send.delivery_channel = "whatsapp_manual"
+            lead_send.failure_reason = str(sc_err)
+            delivery_channel_used = "whatsapp_manual"
+            db.commit()
 
     # Log to CRM Lead Timeline if lead exists
     if payload.lead_id:
@@ -1577,6 +1676,8 @@ def dispatch_catalog_whatsapp(
     encoded_text = urllib.parse.quote(full_message)
     wa_me_url = f"https://wa.me/{full_phone}?text={encoded_text}"
 
+    channel_label = "WhatsApp Cloud API" if delivery_channel_used == "meta_api" else ("Scanned WhatsApp Gateway" if delivery_channel_used == "scanned_bot" else "Direct WhatsApp Link")
+
     return {
         "success": True,
         "send_id": lead_send.id,
@@ -1585,6 +1686,8 @@ def dispatch_catalog_whatsapp(
         "web_catalog_url": web_catalog_url,
         "wa_me_url": wa_me_url,
         "delivery_status": lead_send.status,
+        "delivery_channel": delivery_channel_used,
+        "channel_label": channel_label,
         "whatsapp_api_result": wa_result
     }
 

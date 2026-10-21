@@ -19,7 +19,15 @@ import { DigitalCatalogPage } from './DigitalCatalogPage';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
-  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'catalog' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'catalog' | 'catalog-history' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+
+  // ── Catalog & Click History State ──────────────────────────────────────────
+  private cathistSubtab: 'proposals' | 'telemetry' | 'analytics' = 'proposals';
+  private cathistScope: 'team' | 'my' = 'team';
+  private cathistSearch: string = '';
+  private cathistSegment: string = '';
+  private cathistData: any = null;
+  private cathistLoading: boolean = false;
 
   // ── Gateway & QR State ─────────────────────────────────────────────────────
   private gatewayConnected: boolean = true;
@@ -202,6 +210,8 @@ export class StaffWhatsAppInboxPage {
         const catalogPage = new DigitalCatalogPage(mountEl);
         await catalogPage.init({ embedded: true });
       }
+    } else if (this.activeTab === 'catalog-history') {
+      await this.loadCatalogHistory();
     } else if (this.activeTab === 'inbox') {
       await this.loadInbox();
     } else if (this.activeTab === 'templates') {
@@ -362,6 +372,9 @@ export class StaffWhatsAppInboxPage {
           <button class="wa-nav-tab ${this.activeTab === 'catalog' ? 'active' : ''}" data-tab="catalog" style="${this.getTabBtnStyle(this.activeTab === 'catalog')}">
             <i class="fas fa-book-open"></i> Catalog Library
           </button>
+          <button class="wa-nav-tab ${this.activeTab === 'catalog-history' ? 'active' : ''}" data-tab="catalog-history" style="${this.getTabBtnStyle(this.activeTab === 'catalog-history')}">
+            <i class="fas fa-chart-line"></i> Catalog History
+          </button>
           ${isKeyLeadership ? `
             <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
               <i class="fas fa-robot"></i> WhatsApp API Bot
@@ -384,6 +397,7 @@ export class StaffWhatsAppInboxPage {
         <!-- Tab Content Panes -->
         ${(this.activeTab === 'messenger' || this.activeTab === 'team' || this.activeTab === 'company' || this.activeTab === 'all' || this.activeTab === 'groups' || this.activeTab === 'broadcasts') ? this.renderMessengerTab() : ''}
         ${this.activeTab === 'catalog' ? `<div id="waMobileCatalogMount"></div>` : ''}
+        ${this.activeTab === 'catalog-history' ? this.renderCatalogHistoryTab() : ''}
         ${this.activeTab === 'inbox' ? this.renderInboxTab() : ''}
         ${this.activeTab === 'templates' && isAdmin ? this.renderTemplatesTab() : ''}
         ${this.activeTab === 'automations' && isAdmin ? this.renderAutomationsTab() : ''}
@@ -1213,6 +1227,243 @@ export class StaffWhatsAppInboxPage {
     `;
   }
 
+  // ── Catalog & Click History Tab ─────────────────────────────────────────────
+
+  private async loadCatalogHistory(): Promise<void> {
+    this.cathistLoading = true;
+    this.render();
+
+    try {
+      const params = new URLSearchParams({
+        scope: this.cathistScope,
+        limit: '60'
+      });
+      if (this.cathistSearch) params.set('q', this.cathistSearch);
+      if (this.cathistSegment) params.set('segment_code', this.cathistSegment);
+
+      const res = await apiService.get<any>(`/digital-catalogs/dispatches/history?${params.toString()}`);
+      this.cathistData = res?.data || res || {};
+    } catch (err) {
+      console.error('Failed to load mobile catalog history:', err);
+      this.cathistData = null;
+    } finally {
+      this.cathistLoading = false;
+      this.render();
+      this.attachCatalogHistoryListeners();
+    }
+  }
+
+  private renderCatalogHistoryTab(): string {
+    const data = this.cathistData || {};
+    const stats = data.stats || {};
+    const dispatches: any[] = data.dispatches || [];
+    const staffSummary: any[] = data.staff_summary || [];
+
+    const formatIST = (dtStr: string) => {
+      if (!dtStr) return '—';
+      try {
+        const d = new Date(dtStr);
+        if (isNaN(d.getTime())) return dtStr;
+        return d.toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch {
+        return dtStr;
+      }
+    };
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Scope & Sub-tab Controls Header -->
+        <div style="background: #1e293b; border-radius: 12px; padding: 10px; border: 1px solid #334155;">
+          <!-- Scope Toggle -->
+          <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+            <button id="btnCathistMobileScopeTeam" style="flex: 1; padding: 6px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; ${this.cathistScope === 'team' ? 'background: #059669; color: #fff;' : 'background: #0f172a; color: #94a3b8; border: 1px solid #334155;'}">
+              <i class="fas fa-users"></i> Entire Team
+            </button>
+            <button id="btnCathistMobileScopeMy" style="flex: 1; padding: 6px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; ${this.cathistScope === 'my' ? 'background: #059669; color: #fff;' : 'background: #0f172a; color: #94a3b8; border: 1px solid #334155;'}">
+              <i class="fas fa-user"></i> My Dispatches
+            </button>
+          </div>
+
+          <!-- 3 Sub-tabs Pills -->
+          <div style="display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <button class="cathist-mobile-subtab ${this.cathistSubtab === 'proposals' ? 'active' : ''}" data-subtab="proposals" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${this.cathistSubtab === 'proposals' ? 'background: #3b82f6; color: #fff;' : 'background: #0f172a; color: #94a3b8; border: 1px solid #334155;'}">
+              <i class="fas fa-file-invoice"></i> 1. Proposals (${dispatches.length})
+            </button>
+            <button class="cathist-mobile-subtab ${this.cathistSubtab === 'telemetry' ? 'active' : ''}" data-subtab="telemetry" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${this.cathistSubtab === 'telemetry' ? 'background: #ef4444; color: #fff;' : 'background: #0f172a; color: #94a3b8; border: 1px solid #334155;'}">
+              <i class="fas fa-fire"></i> 2. Telemetry (${stats.viewed_count || 0})
+            </button>
+            <button class="cathist-mobile-subtab ${this.cathistSubtab === 'analytics' ? 'active' : ''}" data-subtab="analytics" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${this.cathistSubtab === 'analytics' ? 'background: #10b981; color: #fff;' : 'background: #0f172a; color: #94a3b8; border: 1px solid #334155;'}">
+              <i class="fas fa-chart-pie"></i> 3. Analytics
+            </button>
+          </div>
+        </div>
+
+        ${this.cathistLoading ? `
+          <div style="text-align: center; padding: 40px 16px; color: #94a3b8;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 26px; color: #25d366; margin-bottom: 8px;"></i>
+            <div style="font-size: 13px; font-weight: 600;">Loading Catalog History...</div>
+          </div>
+        ` : ''}
+
+        ${!this.cathistLoading && this.cathistSubtab === 'proposals' ? `
+          <!-- Search input -->
+          <div style="position: relative;">
+            <input type="text" id="cathistMobileSearchInput" value="${this.cathistSearch}" placeholder="Search lead, phone, or ref code..." style="width: 100%; padding: 8px 12px 8px 32px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-size: 12px; outline: none;" />
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 11px;"></i>
+          </div>
+
+          <!-- Proposals List -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${dispatches.length === 0 ? `
+              <div style="text-align: center; padding: 32px 16px; background: #1e293b; border-radius: 12px; border: 1px solid #334155; color: #94a3b8;">
+                <i class="fas fa-inbox" style="font-size: 28px; opacity: 0.5; margin-bottom: 8px;"></i>
+                <div style="font-size: 13px; font-weight: 600;">No Catalog Proposals Found</div>
+              </div>
+            ` : dispatches.map(d => {
+              const rName = d.recipient_name || 'Valued Client';
+              const rPhone = d.recipient_phone || '';
+              const cleanPhone = rPhone.replace(/[^0-9]/g, '').slice(-10);
+              const cTitle = d.catalog_title || d.segment_code || 'Proposal';
+              const stName = d.staff_name || 'Team Member';
+              const views = d.view_count || 0;
+              const sentTime = formatIST(d.sent_at);
+
+              let viewBadge = `<span style="font-size: 10px; color: #64748b;">0 views</span>`;
+              if (views >= 2) {
+                viewBadge = `<span style="font-size: 10px; font-weight: 700; background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 10px;"><i class="fas fa-fire me-1"></i>${views} clicks</span>`;
+              } else if (views > 0) {
+                viewBadge = `<span style="font-size: 10px; font-weight: 700; background: #ecfdf5; color: #047857; padding: 2px 6px; border-radius: 10px;"><i class="fas fa-check me-1"></i>${views} click</span>`;
+              }
+
+              return `
+                <div style="background: #1e293b; border-radius: 10px; padding: 10px 12px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                      <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">${rName}</div>
+                      <div style="font-size: 11px; color: #94a3b8;">+91 ${cleanPhone} ${d.ref_code ? `· <span style="font-family: monospace; color: #cbd5e1;">#${d.ref_code}</span>` : ''}</div>
+                    </div>
+                    ${viewBadge}
+                  </div>
+                  <div style="font-size: 11.5px; color: #a7f3d0; font-weight: 600;">
+                    <i class="fas fa-book-open me-1"></i> ${cTitle}
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; border-top: 1px dashed #334155; padding-top: 6px; margin-top: 2px;">
+                    <div>Sent by <strong>${stName}</strong> · ${sentTime}</div>
+                    <button class="cathist-mobile-chat-btn" data-phone="${cleanPhone}" data-name="${rName}" style="background: #059669; color: #fff; border: none; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                      <i class="fab fa-whatsapp"></i> Chat
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
+
+        ${!this.cathistLoading && this.cathistSubtab === 'telemetry' ? `
+          <!-- Telemetry Click Feed -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${(dispatches.filter(d => (d.view_count || 0) > 0)).length === 0 ? `
+              <div style="text-align: center; padding: 32px 16px; background: #1e293b; border-radius: 12px; border: 1px solid #334155; color: #94a3b8;">
+                <i class="fas fa-fire" style="font-size: 28px; opacity: 0.5; margin-bottom: 8px;"></i>
+                <div style="font-size: 13px; font-weight: 600;">No Viewed Proposal Links Yet</div>
+                <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Links will appear here when leads click and view them</div>
+              </div>
+            ` : (dispatches.filter(d => (d.view_count || 0) > 0)).map(d => {
+              const rName = d.recipient_name || 'Valued Client';
+              const cleanPhone = (d.recipient_phone || '').replace(/[^0-9]/g, '').slice(-10);
+              const cTitle = d.catalog_title || d.segment_code || 'Proposal';
+              const views = d.view_count || 0;
+              const lastView = formatIST(d.last_viewed_at || d.first_viewed_at);
+
+              return `
+                <div style="background: #1e293b; border-radius: 10px; padding: 10px 12px; border: 1px solid #334155; border-left: 3px solid ${views >= 2 ? '#ef4444' : '#10b981'};">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <div>
+                      <div style="font-size: 13px; font-weight: 700; color: #f8fafc;">${rName}</div>
+                      <div style="font-size: 11px; color: #94a3b8;">+91 ${cleanPhone}</div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px; ${views >= 2 ? 'background: #fee2e2; color: #b91c1c;' : 'background: #ecfdf5; color: #047857;'}">
+                      ${views >= 2 ? '🔥 HOT' : '✓'} ${views} click${views > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div style="font-size: 11.5px; color: #a7f3d0; margin-bottom: 6px;">
+                    ${cTitle}
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; border-top: 1px dashed #334155; padding-top: 6px;">
+                    <div>Last active: <strong style="color: #cbd5e1;">${lastView}</strong></div>
+                    <button class="cathist-mobile-chat-btn" data-phone="${cleanPhone}" data-name="${rName}" style="background: #25d366; color: #0f172a; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                      <i class="fab fa-whatsapp"></i> Follow Up
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
+
+        ${!this.cathistLoading && this.cathistSubtab === 'analytics' ? `
+          <!-- KPI Summary Cards Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #10b981;">${stats.total_dispatches || 0}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Proposals Sent</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #3b82f6;">${stats.unique_recipients || 0}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Unique Leads</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #f59e0b;">${stats.total_views || 0}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Total Views</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #059669;">${stats.view_rate_percent || 0}%</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">View CTR %</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${stats.high_engagement_count || 0}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Hot Leads (2+)</div>
+            </div>
+            <div style="background: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155; text-align: center;">
+              <div style="font-size: 16px; font-weight: 800; color: #a855f7;">${stats.all_messages_total || 0}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">All WA (${stats.all_messages_uniques || 0} Uniq)</div>
+            </div>
+          </div>
+
+          <!-- Staff Leaderboard Cards -->
+          <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">
+            <i class="fas fa-trophy" style="color: #eab308; margin-right: 4px;"></i> Staff Outreach Leaderboard (${staffSummary.length})
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${staffSummary.map((s, idx) => `
+              <div style="background: #1e293b; border-radius: 8px; padding: 8px 10px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 12px; font-weight: 700; color: #f8fafc;">
+                    #${idx + 1} ${s.staff_name || 'Staff'} <span style="font-size: 10px; color: #64748b;">(${s.staff_code || ''})</span>
+                  </div>
+                  <div style="font-size: 10.5px; color: #94a3b8;">
+                    ${s.total_dispatches || 0} sent · <strong style="color: #60a5fa;">${s.unique_recipients || 0} unique leads</strong> · ${s.total_views || 0} views (${s.ctr_percent || 0}%)
+                  </div>
+                </div>
+                <button class="cathist-mobile-drilldown-btn" data-staff="${s.staff_id || 0}" style="background: #0f172a; color: #38bdf8; border: 1px solid #334155; border-radius: 6px; padding: 3px 8px; font-size: 10.5px; font-weight: 600; cursor: pointer;">
+                  View
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+      </div>
+    `;
+  }
+
   // ── Data Fetching Methods ───────────────────────────────────────────────────
 
   private async loadInbox(): Promise<void> {
@@ -1901,6 +2152,68 @@ export class StaffWhatsAppInboxPage {
       btn.addEventListener('click', (e) => {
         const text = (e.currentTarget as HTMLElement).dataset.text || '';
         this.openNewMessageModal(undefined, text);
+      });
+    });
+
+    this.attachCatalogHistoryListeners();
+  }
+
+  private attachCatalogHistoryListeners(): void {
+    if (this.activeTab !== 'catalog-history') return;
+
+    // Scope toggle
+    document.getElementById('btnCathistMobileScopeTeam')?.addEventListener('click', () => {
+      this.cathistScope = 'team';
+      this.loadCatalogHistory();
+    });
+    document.getElementById('btnCathistMobileScopeMy')?.addEventListener('click', () => {
+      this.cathistScope = 'my';
+      this.loadCatalogHistory();
+    });
+
+    // Sub-tabs
+    this.container.querySelectorAll('.cathist-mobile-subtab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const sub = (e.currentTarget as HTMLElement).dataset.subtab as any;
+        if (sub && sub !== this.cathistSubtab) {
+          this.cathistSubtab = sub;
+          this.render();
+          this.attachCatalogHistoryListeners();
+        }
+      });
+    });
+
+    // Search input
+    const sInput = document.getElementById('cathistMobileSearchInput') as HTMLInputElement;
+    if (sInput) {
+      let t: any;
+      sInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          this.cathistSearch = sInput.value;
+          this.loadCatalogHistory();
+        }, 300);
+      });
+    }
+
+    // 1-Tap Chat Buttons
+    this.container.querySelectorAll('.cathist-mobile-chat-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const phone = target.dataset.phone;
+        const name = target.dataset.name || 'Lead';
+        if (phone) {
+          this.loadChat(phone, name, 'messenger');
+        }
+      });
+    });
+
+    // Drilldown Button
+    this.container.querySelectorAll('.cathist-mobile-drilldown-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.cathistSubtab = 'proposals';
+        this.cathistScope = 'team';
+        this.loadCatalogHistory();
       });
     });
   }

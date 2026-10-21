@@ -1228,25 +1228,27 @@
             filtered.forEach(r => {
                 const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
                 if (!isCancelled) {
-                    const isDirectAdv = (r.display_kind === 'Direct Advance' || (!r.source_lead_id && (r.kind || '').toUpperCase() === 'ADVANCE'));
+                    const isDirectAdv = (r.display_kind === 'Direct Advance' || r.kind === 'DIRECT_ADVANCE' || (!r.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes((r.kind || '').toUpperCase())));
                     sumDeal += Number(r.deal_value) || 0;
                     sumRecv += Number(r.received_value) || 0;
                     if (!isDirectAdv) {
                         sumGross += Number(r.commission_amount) || 0;
+                        sumBal += Number(r.balance_gross) || 0;
+                        sumAdmin += Number(r.admin_charges) || 0;
+                        sumTds += Number(r.tds_amount) || 0;
+                        sumNet += Number(r.net_payout) || 0;
                     }
                     sumStg1 += Number(r.stage1_adv) || 0;
                     sumStg2 += Number(r.stage2_adv) || 0;
                     sumAdvPaid += Number(r.advance_paid) || 0;
-                    sumBal += Number(r.balance_gross) || 0;
-                    sumAdmin += Number(r.admin_charges) || 0;
-                    sumTds += Number(r.tds_amount) || 0;
-                    sumNet += Number(r.net_payout) || 0;
 
                     const st = (r.status || '').toUpperCase();
-                    if (['PAID', 'RELEASED', 'VERIFIED'].includes(st)) {
-                        sumPaid += Number(r.net_payout) || 0;
-                    } else if (['DRAFT', 'PENDING', 'STAGE1_APPROVED'].includes(st)) {
-                        sumPending += Number(r.net_payout) || 0;
+                    if (!isDirectAdv) {
+                        if (['PAID', 'RELEASED', 'VERIFIED'].includes(st)) {
+                            sumPaid += Number(r.net_payout) || 0;
+                        } else if (['DRAFT', 'PENDING', 'STAGE1_APPROVED'].includes(st)) {
+                            sumPending += Number(r.net_payout) || 0;
+                        }
                     }
                     sumLostAdv += Number(r.lost_lead_deduction || r.lost_lead_adv_deduction || 0);
                 }
@@ -1257,7 +1259,7 @@
             const isFullScope = (filtered.length === allLedgerData.length);
 
             // Overall Earning (Gross)
-            const dispGross = (isFullScope && sm.gross_earned !== undefined) ? sm.gross_earned : sumBal;
+            const dispGross = (isFullScope && sm.gross_earned !== undefined) ? sm.gross_earned : sumGross;
             const dispAdvPaid = (isFullScope && sm.advances_adjusted !== undefined) ? sm.advances_adjusted : sumAdvPaid;
             const dispLostAdv = (isFullScope && sm.lost_advances_adjusted !== undefined) ? sm.lost_advances_adjusted : sumLostAdv;
             const dispBal = (isFullScope && sm.net_earning !== undefined) ? sm.net_earning : (sumBal - (sumLostAdv || 0));

@@ -1788,7 +1788,13 @@ export class AutoDialerPage {
         console.warn('[DC_DIALER] skip: no session — skipping locally without logging');
         dialerService.skipToEnd(leadId);
         this._closePopup(overlay);
-        this.currentLead = dialerService.getCurrentLead();
+        const effective = this._getEffectiveQueue();
+        if (effective.length > 0) {
+          this.currentLead = effective[0];
+          dialerService.setCurrentLeadId(effective[0].lead_id);
+        } else {
+          this.currentLead = null;
+        }
         this._render();
         if (this.currentLead?.phone) this._maybeActivityThenDial(this.currentLead);
         return;
@@ -1807,7 +1813,13 @@ export class AutoDialerPage {
       });
       void dialerService.releaseReservation(leadId);
       this._closePopup(overlay);
-      this.currentLead = dialerService.getCurrentLead();
+      const effective = this._getEffectiveQueue();
+      if (effective.length > 0) {
+        this.currentLead = effective[0];
+        dialerService.setCurrentLeadId(effective[0].lead_id);
+      } else {
+        this.currentLead = null;
+      }
       this._render();
       if (this.currentLead?.phone) this._maybeActivityThenDial(this.currentLead);
     });
@@ -1965,9 +1977,15 @@ export class AutoDialerPage {
       // DC_SAME_DAY_EXCLUDE: Immediately remove this dialed/updated lead from the in-memory queue
       // so it never appears again during this session or today!
       dialerService.removeFromQueue(leadId);
-      this.currentLead = dialerService.getCurrentLead();
+      const effective = this._getEffectiveQueue();
+      if (effective.length > 0) {
+        this.currentLead = effective[0];
+        dialerService.setCurrentLeadId(effective[0].lead_id);
+      } else {
+        this.currentLead = null;
+      }
 
-      if (!this.currentLead) {
+      if (!this.currentLead && !this.activePriorityFilter) {
         this._showQueueComplete();
       } else {
         this._render();
@@ -2402,15 +2420,59 @@ export class AutoDialerPage {
     PageHeader.attachListeners({ title: 'Auto Dialer', showBack: true });
   }
 
+  private _getEffectiveQueue(): QueueItem[] {
+    const rawQueue = dialerService.getQueue();
+    if (!this.activePriorityFilter || this.activePriorityFilter === 'total') {
+      return rawQueue;
+    }
+    if (this.activePriorityFilter === 'upcoming') {
+      return rawQueue.filter(q => q.queue_priority === 'upcoming' || (q as any).queue_priority === 'upcoming_today');
+    }
+    return rawQueue.filter(q => q.queue_priority === this.activePriorityFilter);
+  }
+
+  private _renderEmptyFilteredQueue(): string {
+    const labelMap: Record<string, string> = {
+      overdue: 'Overdue',
+      due_today: 'Due Today',
+      new: 'New',
+      second_contact: '2nd Call',
+      upcoming: 'Upcoming',
+    };
+    const name = labelMap[this.activePriorityFilter || ''] || 'selected';
+    return `
+      <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:24px 16px;text-align:center;margin:12px 0;">
+        <div style="font-size:28px;margin-bottom:6px;">📋</div>
+        <div style="font-weight:700;color:#334155;font-size:14px;margin-bottom:4px;">No ${name} leads in queue</div>
+        <div style="color:#64748b;font-size:12px;margin-bottom:12px;">All leads in this priority bucket have been dialed or completed.</div>
+        <button id="dc-reset-filter-btn" style="background:#0284c7;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">
+          Show All Leads (${dialerService.getQueue().length})
+        </button>
+      </div>`;
+  }
+
   private _render(): void {
-    const queue = dialerService.getQueue();
-    const idx = dialerService.getCurrentIndex();
+    const queue = this._getEffectiveQueue();
+    let effectiveIdx = 0;
+    if (this.currentLead) {
+      const foundIdx = queue.findIndex(q => q.lead_id === this.currentLead?.lead_id);
+      effectiveIdx = foundIdx >= 0 ? foundIdx : 0;
+    }
     let lead = this.currentLead;
     if (!lead && (this.sessionActive || this.sessionPaused) && queue.length > 0) {
-      lead = dialerService.getCurrentLead() || queue[0];
+      lead = queue[0];
       this.currentLead = lead;
+      dialerService.setCurrentLeadId(lead.lead_id);
+    } else if (lead && (this.sessionActive || this.sessionPaused) && queue.length > 0) {
+      const inQueue = queue.some(q => q.lead_id === lead!.lead_id);
+      if (!inQueue) {
+        lead = queue[0];
+        this.currentLead = lead;
+        dialerService.setCurrentLeadId(lead.lead_id);
+        effectiveIdx = 0;
+      }
     }
-    const remaining = queue.length - idx;
+    const remaining = Math.max(0, queue.length - effectiveIdx);
 
     this.container.innerHTML = `
       ${PageHeader.render({ title: 'Auto Dialer', showBack: true })}
@@ -2422,8 +2484,9 @@ export class AutoDialerPage {
         ${this._renderMissedCallbacks()}
         ${this._renderSearchBar()}
         ${this.sessionPaused ? this._renderPausedBanner(remaining) : ''}
-        ${(this.sessionActive || this.sessionPaused) && lead ? this._renderLeadCard(lead) : ''}
-        ${(this.sessionActive || this.sessionPaused) ? this._renderQueueList(queue, idx) : ''}
+        ${(this.sessionActive || this.sessionPaused) && lead && queue.length > 0 ? this._renderLeadCard(lead, effectiveIdx, queue.length) : ''}
+        ${(this.sessionActive || this.sessionPaused) && queue.length === 0 && this.activePriorityFilter ? this._renderEmptyFilteredQueue() : ''}
+        ${(this.sessionActive || this.sessionPaused) && queue.length > 0 ? this._renderQueueList(queue, effectiveIdx) : ''}
         ${!this.sessionActive && !this.sessionPaused ? this._renderIdleState() : ''}
       </div>`;
 
@@ -2633,11 +2696,11 @@ export class AutoDialerPage {
       </div>`;
   }
 
-  private _renderLeadCard(lead: QueueItem): string {
+  private _renderLeadCard(lead: QueueItem, effectiveIdx?: number, totalInQueue?: number): string {
     const priorityClass = lead.queue_priority || 'upcoming';
     const lastContact = _fmtLastContact(lead.last_contact_date, lead.last_contact_days);
-    const queueIdx = dialerService.getCurrentIndex();
-    const total = dialerService.getQueue().length;
+    const queueIdx = effectiveIdx !== undefined ? effectiveIdx : dialerService.getCurrentIndex();
+    const total = totalInQueue !== undefined ? totalInQueue : dialerService.getQueue().length;
     // DC_CURRENT_NMC: Show "Not my segment" on the active card only for unassigned leads.
     // Assigned leads are specifically allocated to this agent — they cannot NMC those.
     const isUnassigned = lead.slot_type === 'unassigned';
@@ -2790,7 +2853,13 @@ export class AutoDialerPage {
             current_index: dialerService.getCurrentIndex(),
           });
           dialerService.removeFromQueue(leadId);
-          this.currentLead = dialerService.getCurrentLead();
+          const effective = this._getEffectiveQueue();
+          if (effective.length > 0) {
+            this.currentLead = effective[0];
+            dialerService.setCurrentLeadId(effective[0].lead_id);
+          } else {
+            this.currentLead = null;
+          }
           this._render();
           if (this.currentLead?.phone) this._maybeActivityThenDial(this.currentLead);
         } catch (_) {
@@ -3660,10 +3729,20 @@ export class AutoDialerPage {
       el.addEventListener('click', () => {
         const priority = el.getAttribute('data-badge-priority');
         if (!priority) return;
-        if (this.activePriorityFilter === priority) {
+        if (this.activePriorityFilter === priority || priority === 'total') {
           this.activePriorityFilter = null;
         } else {
           this.activePriorityFilter = priority;
+        }
+        const filtered = this._getEffectiveQueue();
+        if (filtered.length > 0) {
+          const exists = this.currentLead && filtered.some(q => q.lead_id === this.currentLead?.lead_id);
+          if (!exists) {
+            this.currentLead = filtered[0];
+            dialerService.setCurrentLeadId(filtered[0].lead_id);
+          }
+        } else {
+          this.currentLead = null;
         }
         this._render();
       });
@@ -3672,6 +3751,22 @@ export class AutoDialerPage {
     // Clear priority filter button
     this.container.querySelector('#dc-clear-priority-btn')?.addEventListener('click', () => {
       this.activePriorityFilter = null;
+      const full = dialerService.getQueue();
+      if (full.length > 0) {
+        this.currentLead = full[0];
+        dialerService.setCurrentLeadId(full[0].lead_id);
+      }
+      this._render();
+    });
+
+    // Reset filter button inside empty state
+    this.container.querySelector('#dc-reset-filter-btn')?.addEventListener('click', () => {
+      this.activePriorityFilter = null;
+      const full = dialerService.getQueue();
+      if (full.length > 0) {
+        this.currentLead = full[0];
+        dialerService.setCurrentLeadId(full[0].lead_id);
+      }
       this._render();
     });
   }

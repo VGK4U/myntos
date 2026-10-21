@@ -300,6 +300,19 @@ class DialerService {
       .map(id => Number(id));
   }
   getCurrentIndex(): number { return this.currentIndex; }
+  setCurrentIndex(idx: number): void {
+    if (this.queue.length === 0) {
+      this.currentIndex = 0;
+      return;
+    }
+    this.currentIndex = Math.max(0, Math.min(idx, this.queue.length - 1));
+  }
+  setCurrentLeadId(leadId: number): void {
+    const idx = this.queue.findIndex(q => q.lead_id === leadId);
+    if (idx >= 0) {
+      this.currentIndex = idx;
+    }
+  }
   getSession(): DialerSession | null { return this.session; }
   isActive(): boolean { return this.session?.status === 'active'; }
   isPaused(): boolean { return this.session?.status === 'paused'; }

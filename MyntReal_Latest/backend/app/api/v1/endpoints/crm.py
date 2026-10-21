@@ -10,7 +10,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, text, extract
+from sqlalchemy import func, or_, and_, text, extract, distinct
 from typing import Optional, List, Tuple, Any, Set
 from datetime import datetime, timedelta, date
 import pytz as _pytz
@@ -1332,23 +1332,23 @@ def get_crm_dashboard(
     today_end = datetime.combine(today, datetime.max.time())
     this_month_start = today.replace(day=1)
     
-    # Followup queries within filtered lead set
-    today_followups = db.query(CRMLeadFollowUp).join(
+    # Followup queries within filtered lead set (DC Protocol: count distinct leads, not raw task rows)
+    today_followups = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(
         CRMLead, CRMLeadFollowUp.lead_id == CRMLead.id
     ).filter(
         *lead_filters,
         CRMLeadFollowUp.scheduled_date >= today_start,
         CRMLeadFollowUp.scheduled_date <= today_end,
         CRMLeadFollowUp.status == 'scheduled'
-    ).count()
+    ).scalar() or 0
     
-    overdue_followups = db.query(CRMLeadFollowUp).join(
+    overdue_followups = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(
         CRMLead, CRMLeadFollowUp.lead_id == CRMLead.id
     ).filter(
         *lead_filters,
         CRMLeadFollowUp.scheduled_date < today_start,
         CRMLeadFollowUp.status == 'scheduled'
-    ).count()
+    ).scalar() or 0
     
     won_this_month = base_query.filter(
         CRMLead.status == 'won',
@@ -1495,7 +1495,7 @@ def get_staff_handler_dashboard(
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
     
-    today_followups_q = db.query(CRMLeadFollowUp).join(CRMLead).filter(
+    today_followups_q = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(CRMLead).filter(
         or_(*handler_conditions),
         CRMLeadFollowUp.scheduled_date >= today_start,
         CRMLeadFollowUp.scheduled_date <= today_end,
@@ -1503,16 +1503,16 @@ def get_staff_handler_dashboard(
     )
     if parsed_company_id is not None:
         today_followups_q = today_followups_q.filter(CRMLead.company_id == parsed_company_id)
-    today_followups = today_followups_q.count()
+    today_followups = today_followups_q.scalar() or 0
     
-    overdue_followups_q = db.query(CRMLeadFollowUp).join(CRMLead).filter(
+    overdue_followups_q = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(CRMLead).filter(
         or_(*handler_conditions),
         CRMLeadFollowUp.scheduled_date < today_start,
         CRMLeadFollowUp.status == 'scheduled'
     )
     if parsed_company_id is not None:
         overdue_followups_q = overdue_followups_q.filter(CRMLead.company_id == parsed_company_id)
-    overdue_followups = overdue_followups_q.count()
+    overdue_followups = overdue_followups_q.scalar() or 0
     
     # Revenue stats based on primary ownership (not handler-based)
     # DC Protocol (Jan 1, 2026): User requested ownership-based revenue calculation
@@ -1842,22 +1842,22 @@ def get_my_crm_dashboard(
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
     
-    today_followups = db.query(CRMLeadFollowUp).join(CRMLead).filter(
+    today_followups = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(CRMLead).filter(
         CRMLead.company_id == company_id,
         CRMLead.handler_type == 'staff',
         CRMLead.handler_id.in_(handler_ids),
         CRMLeadFollowUp.scheduled_date >= today_start,
         CRMLeadFollowUp.scheduled_date <= today_end,
         CRMLeadFollowUp.status == 'scheduled'
-    ).count()
+    ).scalar() or 0
     
-    overdue_followups = db.query(CRMLeadFollowUp).join(CRMLead).filter(
+    overdue_followups = db.query(func.count(distinct(CRMLeadFollowUp.lead_id))).join(CRMLead).filter(
         CRMLead.company_id == company_id,
         CRMLead.handler_type == 'staff',
         CRMLead.handler_id.in_(handler_ids),
         CRMLeadFollowUp.scheduled_date < today_start,
         CRMLeadFollowUp.status == 'scheduled'
-    ).count()
+    ).scalar() or 0
     
     this_month_start = today.replace(day=1)
     won_this_month = base_query.filter(

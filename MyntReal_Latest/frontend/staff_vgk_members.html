@@ -2881,6 +2881,9 @@ window.updateMemberSummaryRowAndKpis = function(partnerId) {
     let gross = 0, net = 0, rcv = 0, pnd = 0;
     
     activeEntries.forEach(e => {
+        const _k = String(e.kind || '').toUpperCase();
+        const isDirAdv = (e.display_kind === 'Direct Advance' || e.kind === 'DIRECT_ADVANCE' || (!e.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(_k)));
+        if (isDirAdv) return;
         const commAmt = parseFloat(e.commission_amount || 0);
         const advAdj = parseFloat(e.advance_adjusted_amount || 0);
         const balGross = (e.balance_gross !== undefined && e.balance_gross !== null) 
@@ -5656,7 +5659,8 @@ function _renderMeDetailTable(partnerId){
     6:{lbl:'Showroom',bg:'#fdf4ff',c:'#c026d3'},
   };
 
-    const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.commission_amount||0)),0);
+    const _isDirectAdv    = (e) => (e.display_kind === 'Direct Advance' || e.kind === 'DIRECT_ADVANCE' || (!e.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(String(e.kind || '').toUpperCase())));
+    const totGross        = rows.reduce((s,e)=>(e.status==='CANCELLED'||_isDirectAdv(e)?s:s+parseFloat(e.commission_amount||0)),0);
     const totDealVal      = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.deal_value||e.base_value||0)),0);
     const totRcvVal       = rows.reduce((s,e)=>(e.status==='CANCELLED'?s:s+parseFloat(e.received_value||(e.commission_pct>0?Math.round(e.commission_amount/(e.commission_pct/100)):e.calc_base)||0)),0);
     const totStg1         = rows.reduce((s,e)=>{
@@ -5683,7 +5687,7 @@ function _renderMeDetailTable(partnerId){
       return s;
     }, 0);
     const totBalGross     = rows.reduce((s,e)=>{
-      if (e.status === 'CANCELLED') return s;
+      if (e.status === 'CANCELLED' || _isDirectAdv(e)) return s;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -5694,7 +5698,7 @@ function _renderMeDetailTable(partnerId){
       return s + bal;
     }, 0);
     const totAdmin        = rows.reduce((s,e)=>{
-      if (e.status === 'CANCELLED') return s;
+      if (e.status === 'CANCELLED' || _isDirectAdv(e)) return s;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -5706,7 +5710,7 @@ function _renderMeDetailTable(partnerId){
       return s + adm;
     }, 0);
     const totTds          = rows.reduce((s,e)=>{
-      if (e.status === 'CANCELLED') return s;
+      if (e.status === 'CANCELLED' || _isDirectAdv(e)) return s;
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -5718,7 +5722,7 @@ function _renderMeDetailTable(partnerId){
       return s + tds;
     }, 0);
     const totNet          = Math.max(0, totBalGross - totAdmin - totTds);
-    const totRcvNet       = rows.filter(e=>['RELEASED','PAID'].includes(e.status)).reduce((s,e) => {
+    const totRcvNet       = rows.filter(e=>['RELEASED','PAID'].includes(e.status) && !_isDirectAdv(e)).reduce((s,e) => {
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();
@@ -5733,7 +5737,7 @@ function _renderMeDetailTable(partnerId){
       const tds = (e.tds_amount !== undefined && e.tds_amount !== null) ? parseFloat(e.tds_amount) : Math.round(bal * 0.02);
       return s + Math.max(0, Math.round(bal - adm - tds));
     }, 0);
-    const totPendingNet   = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status)).reduce((s,e) => {
+    const totPendingNet   = rows.filter(e=>['DRAFT','PENDING','STAGE1_APPROVED'].includes(e.status) && !_isDirectAdv(e)).reduce((s,e) => {
       const gross = parseFloat(e.commission_amount || 0);
       const lostDed = parseFloat(e.lost_lead_deduction || e.lost_lead_adv_deduction || 0);
       const _k = String(e.kind || 'COMMISSION').toUpperCase();

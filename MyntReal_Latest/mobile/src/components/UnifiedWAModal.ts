@@ -29,11 +29,11 @@ export interface WAModalOptions {
 const QUICK_TEMPLATES: Record<string, { label: string; text: string }> = {
   greeting: {
     label: '👋 Welcome & Introduction',
-    text: 'Namaskaram! Thank you for connecting with MyntReal. I am your dedicated relationship manager. Please let me know how I may assist you with your project today.\n\n☀️ Official Digital Catalog:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te'
+    text: '' // Dynamically bound to selected catalog vertical & language
   },
-  bank_update: {
-    label: '🏦 Bank Loan Update',
-    text: 'Dear Customer, your bank file is currently under active processing. Our team is following up with the branch for swift approval and sanction.'
+  bank_docs: {
+    label: '🏦 Bank Loan Documents',
+    text: '' // Dynamically generates bank document checklist in chosen language
   },
   net_meter: {
     label: '⚡ Net Meter & EB',
@@ -324,6 +324,26 @@ class UnifiedWAModal {
       textEl.value = text + sig;
       textEl.focus();
     }
+  }
+
+  private getQuickChipText(key: string): string {
+    const cName = (this.currentOptions?.name || 'Customer').trim();
+    const isTe = (this.selectedCatalogLang || 'te') === 'te';
+
+    if (key === 'greeting') {
+      return this.getVerticalQuickMessage('thanks_connecting');
+    }
+    if (key === 'bank_docs' || key === 'bank_update') {
+      if (isTe) {
+        return `నమస్కారం ${cName} గారు! 🙏\nమీ బ్యాంక్ లోన్ & సబ్సిడీ వెరిఫికేషన్ కోసం అవసరమైన డాక్యుమెంట్ల జాబితా:\n1. ఆధార్ కార్డు (ముందూ, వెనక స్పష్టమైన కాపీ)\n2. పాన్ కార్డు\n3. కరెంట్ బిల్లు (గత 3 నెలలది)\n4. బ్యాంక్ స్టేట్‌మెంట్ (గత 6 నెలలు)\n5. క్యాన్సిల్డ్ చెక్ లేదా బ్యాంక్ పాస్‌బుక్ కాపీ\n6. ప్రాపర్టీ/టాక్స్ రసీదు కాపీ\n\nదయచేసి ఈ డాక్యుమెంట్లను వెంటనే ఫోటో లేదా PDF రూపంలో ఇక్కడ షేర్ చేయగలరు. మా బ్యాంకింగ్ టీమ్ తక్షణమే ఫైల్ ప్రాసెసింగ్ ప్రారంభిస్తుంది.`;
+      } else {
+        return `Dear ${cName}! 🙏\nHere is the checklist of required Bank Loan & Subsidy Verification Documents:\n1. Aadhaar Card (Clear Front & Back Copy)\n2. PAN Card\n3. Electricity Bill (Latest 3 Months)\n4. Bank Statement (Last 6 Months)\n5. Cancelled Cheque / Bank Passbook Copy\n6. Property Document / Municipal Tax Receipt\n\nPlease share clear photos or PDF copies here for immediate loan file processing and approval.`;
+      }
+    }
+    if (QUICK_TEMPLATES[key]) {
+      return QUICK_TEMPLATES[key].text;
+    }
+    return '';
   }
 
   private onDigitalCatalogSelect(catKey?: string): void {
@@ -1055,12 +1075,15 @@ class UnifiedWAModal {
     this.modalEl.querySelectorAll('.uwa-chip-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const key = (e.currentTarget as HTMLElement).dataset.tplKey;
-        if (key && QUICK_TEMPLATES[key]) {
-          const signature = this.getSenderSignature();
-          const textEl = document.getElementById('uwaMessageText') as HTMLTextAreaElement;
-          if (textEl) {
-            textEl.value = QUICK_TEMPLATES[key].text + signature;
-            textEl.focus();
+        if (key) {
+          const content = this.getQuickChipText(key);
+          if (content) {
+            const signature = this.getSenderSignature();
+            const textEl = document.getElementById('uwaMessageText') as HTMLTextAreaElement;
+            if (textEl) {
+              textEl.value = content + signature;
+              textEl.focus();
+            }
           }
         }
       });
@@ -1184,8 +1207,41 @@ class UnifiedWAModal {
           this.showFeedback('✅ Dispatched via WhatsApp Meta Cloud API (Official Business)', 'success');
           setTimeout(() => this.close(), 2000);
         } else {
-          const errorMsg = response.error || response.data?.reason || 'Meta API not available.';
-          this.showFeedback(`❌ Meta API Error: ${errorMsg}`, 'error');
+          console.warn('[UnifiedWAModal] Meta API failed, attempting Scanned WhatsApp fallback...');
+          this.showFeedback('⚠️ Meta API window closed/pending. Failing over to Scanned WhatsApp Bot...', 'info');
+          
+          // Automatic Failover to Tier 2: Scanned WhatsApp Bot
+          try {
+            const scanFallback = await apiService.post<any>('/whatsapp/send-message', {
+              recipient: cleanPhone.length >= 10 ? cleanPhone : 'LEAD_RESOLVE',
+              message: msg,
+              recipient_type: 'individual',
+              recipient_name: name || 'Customer',
+              lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
+            });
+
+            if (scanFallback && scanFallback.success) {
+              this.showFeedback('✅ Delivered via Scanned WhatsApp Bot Gateway (Failover)!', 'success');
+              if (sendScanBtn) sendScanBtn.innerHTML = '<i class="fas fa-check me-1"></i> Sent via Scan ✓';
+              setTimeout(() => this.close(), 2000);
+              return;
+            }
+          } catch (scanErr) {
+            console.warn('[UnifiedWAModal] Scanned fallback also failed:', scanErr);
+          }
+
+          // Automatic Tier 3: Direct WhatsApp Handshake Link (wa.me)
+          const waMeUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+          this.showFeedback(`
+            <div style="text-align:left; font-size:12px;">
+              <div style="font-weight:700; color:#f87171; margin-bottom:4px;">❌ API &amp; Scanned Gateway Unavailable</div>
+              <div style="color:#cbd5e1; font-size:11px; margin-bottom:8px;">Send directly from your WhatsApp with 1 tap:</div>
+              <a href="${waMeUrl}" target="_blank" id="uwaDirectWaMeBtn" style="display:inline-flex; align-items:center; gap:6px; background:#25d366; color:#0f172a; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; box-shadow:0 2px 8px rgba(37,211,102,0.4);">
+                <i class="fab fa-whatsapp" style="font-size:15px;"></i> Send via WhatsApp App Directly
+              </a>
+            </div>
+          `, 'error');
+
           if (sendApiBtn) {
             sendApiBtn.disabled = false;
             sendApiBtn.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="uwaApiBotBadge" style="background:#1e40af; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:600;">Meta</span>';
@@ -1193,8 +1249,37 @@ class UnifiedWAModal {
           if (sendScanBtn) sendScanBtn.disabled = false;
         }
       } catch (err: any) {
-        console.warn('[UnifiedWAModal] Meta API failed:', err);
-        this.showFeedback(`❌ Meta API Network error: ${err.message || 'Server unreachable'}`, 'error');
+        console.warn('[UnifiedWAModal] Meta API failed, attempting Scanned WhatsApp fallback...');
+        this.showFeedback('⚠️ Meta API unreachable. Failing over to Scanned WhatsApp Bot...', 'info');
+
+        // Automatic Failover to Tier 2: Scanned WhatsApp Bot
+        try {
+          const scanFallback = await apiService.post<any>('/whatsapp/send-message', {
+            recipient: cleanPhone.length >= 10 ? cleanPhone : 'LEAD_RESOLVE',
+            message: msg,
+            recipient_type: 'individual',
+            recipient_name: name || 'Customer',
+            lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
+          });
+
+          if (scanFallback && scanFallback.success) {
+            this.showFeedback('✅ Delivered via Scanned WhatsApp Bot Gateway (Failover)!', 'success');
+            setTimeout(() => this.close(), 2000);
+            return;
+          }
+        } catch (_e) {}
+
+        const waMeUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+        this.showFeedback(`
+          <div style="text-align:left; font-size:12px;">
+            <div style="font-weight:700; color:#f87171; margin-bottom:4px;">❌ API &amp; Scanned Gateway Unavailable</div>
+            <div style="color:#cbd5e1; font-size:11px; margin-bottom:8px;">Send directly from your WhatsApp with 1 tap:</div>
+            <a href="${waMeUrl}" target="_blank" id="uwaDirectWaMeBtn" style="display:inline-flex; align-items:center; gap:6px; background:#25d366; color:#0f172a; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; box-shadow:0 2px 8px rgba(37,211,102,0.4);">
+              <i class="fab fa-whatsapp" style="font-size:15px;"></i> Send via WhatsApp App Directly
+            </a>
+          </div>
+        `, 'error');
+
         if (sendApiBtn) {
           sendApiBtn.disabled = false;
           sendApiBtn.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="uwaApiBotBadge" style="background:#1e40af; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:600;">Meta</span>';
@@ -1233,7 +1318,16 @@ class UnifiedWAModal {
         setTimeout(() => this.close(), 2000);
       } else {
         const errorMsg = response.error || 'Personal WhatsApp Web is disconnected or unlinked.';
-        this.showFeedback(`❌ Personal WA: ${errorMsg}. You can switch to "API" mode to send via Official Meta Business.`, 'error');
+        const waMeUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+        this.showFeedback(`
+          <div style="text-align:left; font-size:12px;">
+            <div style="font-weight:700; color:#f87171; margin-bottom:4px;">❌ Scanned WA Offline: ${this.escapeHtml(errorMsg)}</div>
+            <div style="color:#cbd5e1; font-size:11px; margin-bottom:8px;">Switch to "API" mode or send directly via WhatsApp:</div>
+            <a href="${waMeUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#25d366; color:#0f172a; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; box-shadow:0 2px 8px rgba(37,211,102,0.4);">
+              <i class="fab fa-whatsapp" style="font-size:15px;"></i> Send via WhatsApp App Directly
+            </a>
+          </div>
+        `, 'error');
         if (sendScanBtn) {
           sendScanBtn.disabled = false;
           sendScanBtn.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="uwaScanBotBadge" style="background:#047857; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:700;">● Active</span>';
@@ -1242,7 +1336,16 @@ class UnifiedWAModal {
       }
     } catch (err: any) {
       console.error('[UnifiedWAModal] Send error:', err);
-      this.showFeedback('❌ Personal WhatsApp Gateway offline. You can switch to "API" to send via Meta Cloud.', 'error');
+      const waMeUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+      this.showFeedback(`
+        <div style="text-align:left; font-size:12px;">
+          <div style="font-weight:700; color:#f87171; margin-bottom:4px;">❌ WhatsApp Bot Gateway Offline (503)</div>
+          <div style="color:#cbd5e1; font-size:11px; margin-bottom:8px;">Switch to "API" or tap below to send directly:</div>
+          <a href="${waMeUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#25d366; color:#0f172a; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:800; font-size:12px; box-shadow:0 2px 8px rgba(37,211,102,0.4);">
+            <i class="fab fa-whatsapp" style="font-size:15px;"></i> Send via WhatsApp App Directly
+          </a>
+        </div>
+      `, 'error');
       if (sendScanBtn) {
         sendScanBtn.disabled = false;
         sendScanBtn.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="uwaScanBotBadge" style="background:#047857; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:700;">● Active</span>';
