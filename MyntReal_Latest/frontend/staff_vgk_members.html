@@ -15327,7 +15327,7 @@ function openShareLedgerModal(viewType, partnerId, leadId) {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius:16px;overflow:hidden;border:none;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
                 <div class="modal-header" style="background:linear-gradient(135deg,#4f46e5,#3730a3);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
-                    <h6 class="modal-title fw-bold" id="slmTitle" style="margin:0"><i class="fas fa-share-alt me-2"></i> Generate 3-Hour Shared Ledger Link</h6>
+                    <h6 class="modal-title fw-bold" id="slmTitle" style="margin:0"><i class="fas fa-share-alt me-2"></i> Share Member Breakdown (Valid 3 hrs)</h6>
                     <button type="button" class="btn-close btn-close-white" onclick="closeShareLedgerModal()" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;opacity:0.9"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body p-4" style="font-size:13px">
@@ -15343,14 +15343,14 @@ function openShareLedgerModal(viewType, partnerId, leadId) {
                     <div class="mb-3">
                         <label class="fw-bold text-dark mb-2">Payment Status Column Visibility:</label>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmShowStatus" value="show" checked>
-                            <label class="form-check-label fw-bold text-dark" for="slmShowStatus">
+                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmShowStatus" value="show" checked onchange="submitGenerateLedgerLink(true)">
+                            <label class="form-check-label fw-bold text-dark" for="slmShowStatus" style="cursor:pointer">
                                 <i class="fas fa-eye text-success me-1"></i> Show Payment Status Column (Includes Paid, Pending, Stage 1 Approved)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmHideStatus" value="hide">
-                            <label class="form-check-label fw-bold text-dark" for="slmHideStatus">
+                            <input class="form-check-input" type="radio" name="slmStatusOpt" id="slmHideStatus" value="hide" onchange="submitGenerateLedgerLink(true)">
+                            <label class="form-check-label fw-bold text-dark" for="slmHideStatus" style="cursor:pointer">
                                 <i class="fas fa-eye-slash text-danger me-1"></i> Hide Payment Status Column (Omits Status Column)
                             </label>
                         </div>
@@ -15361,19 +15361,36 @@ function openShareLedgerModal(viewType, partnerId, leadId) {
                         <input type="text" id="slmPhone" class="form-control form-control-sm" placeholder="e.g. 9876543210">
                     </div>
 
-                    <div id="slmResult" class="d-none mt-3 p-3 bg-light rounded border">
-                        <div class="fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> 3-Hour Share Link Generated</div>
-                        <input type="text" id="slmGeneratedUrl" class="form-control form-control-sm bg-white font-monospace mb-2" readonly>
+                    <div id="slmResult" class="mt-3 p-3 bg-light rounded border">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="fw-bold text-success small" id="slmResultStatus"><i class="fas fa-check-circle me-1"></i> 3-Hour Share Link Ready</div>
+                            <span class="badge bg-secondary" id="slmExpiryBadge" style="font-size:10px">Valid 3 hrs</span>
+                        </div>
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="text" id="slmGeneratedUrl" class="form-control form-control-sm bg-white font-monospace" placeholder="Generating share link..." readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="copySlmUrl()" title="Copy Link"><i class="fas fa-copy"></i></button>
+                            <button class="btn btn-primary" type="button" onclick="viewSlmUrl()" title="Open in separate window" style="background:#4f46e5;border-color:#4f46e5"><i class="fas fa-external-link-alt"></i></button>
+                        </div>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="copySlmUrl()"><i class="fas fa-copy me-1"></i> Copy Link</button>
-                            <button type="button" class="btn btn-sm btn-success flex-fill" onclick="openUniversalWa()"><i class="fab fa-whatsapp me-1"></i> Open WhatsApp (App/Web)</button>
+                            <button type="button" class="btn btn-sm btn-primary flex-fill" id="slmResultViewBtn" onclick="viewSlmUrl()" style="background:linear-gradient(135deg,#4f46e5,#3730a3);border:none;font-weight:600"><i class="fas fa-external-link-alt me-1"></i> View in New Window</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary flex-fill" id="slmResultCopyBtn" onclick="copySlmUrl()" style="font-weight:600"><i class="fas fa-copy me-1"></i> Copy Link</button>
+                            <button type="button" class="btn btn-sm btn-success flex-fill" onclick="openUniversalWa()"><i class="fab fa-whatsapp me-1"></i> WhatsApp</button>
                             <button type="button" class="btn btn-sm btn-outline-success flex-fill" onclick="dispatchSlmWa()"><i class="fas fa-paper-plane me-1"></i> API Dispatch</button>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light p-3">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeShareLedgerModal()" data-bs-dismiss="modal" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="submitGenerateLedgerLink()"><i class="fas fa-link me-1"></i> Generate Share Link</button>
+                <div class="modal-footer bg-light p-3" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="closeShareLedgerModal()" data-bs-dismiss="modal" data-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Close
+                    </button>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="slmCopyBtn" onclick="copySlmUrl()" style="font-weight:600">
+                            <i class="fas fa-copy me-1"></i> Copy
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" id="slmViewBtn" onclick="viewSlmUrl()" style="background:linear-gradient(135deg,#4f46e5,#3730a3);border:none;font-weight:700;box-shadow:0 2px 6px rgba(79,70,229,0.35)">
+                            <i class="fas fa-external-link-alt me-1"></i> View
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>`;
@@ -15383,8 +15400,13 @@ function openShareLedgerModal(viewType, partnerId, leadId) {
     document.getElementById('slmViewType').value = viewType || 'member';
     document.getElementById('slmPartnerId').value = partnerId || '';
     document.getElementById('slmLeadId').value = leadId || '';
-    document.getElementById('slmResult').classList.add('d-none');
-    document.getElementById('slmGeneratedUrl').value = '';
+    window._latestSlmFullUrl = null;
+    window._latestSlmShareUrl = null;
+
+    const urlInput = document.getElementById('slmGeneratedUrl');
+    if (urlInput) urlInput.value = 'Generating secure 3-hour share link...';
+    const resultStatus = document.getElementById('slmResultStatus');
+    if (resultStatus) resultStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-1 text-primary"></i> Generating 3-Hour Share Link...';
 
     const titleEl = document.getElementById('slmTitle');
     if (viewType === 'lead') {
@@ -15402,61 +15424,134 @@ function openShareLedgerModal(viewType, partnerId, leadId) {
         modalEl.style.display = 'block';
         modalEl.classList.add('show');
     }
+
+    // Auto-generate immediately so Copy & View are instantly active!
+    submitGenerateLedgerLink(false);
 }
 
-async function submitGenerateLedgerLink() {
-    const viewType = document.getElementById('slmViewType').value;
-    const partnerId = document.getElementById('slmPartnerId').value ? parseInt(document.getElementById('slmPartnerId').value) : null;
-    const leadId = document.getElementById('slmLeadId').value ? parseInt(document.getElementById('slmLeadId').value) : null;
-    const showStatus = document.getElementById('slmShowStatus').checked;
+let _slmGenerateInFlight = false;
+async function submitGenerateLedgerLink(isSettingChange) {
+    if (_slmGenerateInFlight) return window._slmGeneratingPromise;
 
-    try {
-        const payload = {
-            view_type: viewType,
-            partner_id: partnerId,
-            lead_id: leadId,
-            show_status: showStatus
-        };
+    const viewType = document.getElementById('slmViewType')?.value || 'member';
+    const partnerId = document.getElementById('slmPartnerId')?.value ? parseInt(document.getElementById('slmPartnerId').value) : null;
+    const leadId = document.getElementById('slmLeadId')?.value ? parseInt(document.getElementById('slmLeadId').value) : null;
+    const showStatus = document.getElementById('slmShowStatus')?.checked !== false;
 
-        const res = await staffFetch('/api/v1/vgk/ledger/generate-link', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
+    const urlInput = document.getElementById('slmGeneratedUrl');
+    const resultStatus = document.getElementById('slmResultStatus');
+    if (resultStatus) {
+        resultStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-1 text-primary"></i> ' + (isSettingChange ? 'Updating link visibility...' : 'Generating 3-Hour Share Link...');
+    }
 
-        const data = await res.json();
+    _slmGenerateInFlight = true;
+    window._slmGeneratingPromise = (async () => {
+        try {
+            const payload = {
+                view_type: viewType,
+                partner_id: partnerId,
+                lead_id: leadId,
+                show_status: showStatus
+            };
 
-        if (data && data.success) {
-            const fullUrl = window.location.origin + data.share_url;
-            document.getElementById('slmGeneratedUrl').value = fullUrl;
-            document.getElementById('slmResult').classList.remove('d-none');
-            window._latestSlmShareUrl = data.share_url;
-            window._latestSlmFullUrl = fullUrl;
-            window._latestSlmExpiresAt = data.expires_at || '3 hours';
-            window._latestSlmShowStatus = data.show_status;
-            window._latestSlmTargetName = data.target_name || (viewType === 'lead' ? `Lead #${leadId}` : `Member #${partnerId}`);
-        } else {
-            alert('Could not generate share link: ' + (data?.detail || data?.error || 'Unknown error'));
+            const res = await staffFetch('/api/v1/vgk/ledger/generate-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (data && data.success) {
+                const fullUrl = window.location.origin + data.share_url;
+                if (urlInput) urlInput.value = fullUrl;
+                if (resultStatus) resultStatus.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> 3-Hour Share Link Ready';
+                const expBadge = document.getElementById('slmExpiryBadge');
+                if (expBadge) expBadge.textContent = 'Valid 3 hrs';
+
+                window._latestSlmShareUrl = data.share_url;
+                window._latestSlmFullUrl = fullUrl;
+                window._latestSlmExpiresAt = data.expires_at || '3 hours';
+                window._latestSlmShowStatus = data.show_status;
+                window._latestSlmTargetName = data.target_name || (viewType === 'lead' ? `Lead #${leadId}` : `Member #${partnerId}`);
+                return fullUrl;
+            } else {
+                const errMsg = data?.detail || data?.error || 'Unknown error';
+                if (resultStatus) resultStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> Generation failed';
+                console.error('Could not generate share link:', errMsg);
+                return null;
+            }
+        } catch (err) {
+            if (resultStatus) resultStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i> ' + err.message;
+            console.error('Error generating share link:', err);
+            return null;
+        } finally {
+            _slmGenerateInFlight = false;
         }
-    } catch (err) {
-        alert('Error generating share link: ' + err.message);
+    })();
+
+    return await window._slmGeneratingPromise;
+}
+
+async function viewSlmUrl() {
+    let fullUrl = window._latestSlmFullUrl || document.getElementById('slmGeneratedUrl')?.value;
+    if (!fullUrl || fullUrl.includes('Generating') || fullUrl.startsWith('Generating')) {
+        const viewBtns = document.querySelectorAll('#slmViewBtn, #slmResultViewBtn');
+        viewBtns.forEach(b => { b.disabled = true; b.dataset.origHtml = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Opening...'; });
+        fullUrl = await submitGenerateLedgerLink(false);
+        viewBtns.forEach(b => { b.disabled = false; if (b.dataset.origHtml) b.innerHTML = b.dataset.origHtml; });
+    }
+    if (fullUrl && !fullUrl.includes('Generating') && !fullUrl.startsWith('Generating')) {
+        window.open(fullUrl, '_blank');
+    } else {
+        alert('Unable to open view. Please check your network connection and try again.');
     }
 }
 
-function copySlmUrl() {
-    const input = document.getElementById('slmGeneratedUrl');
-    input.select();
-    document.execCommand('copy');
-    alert('Shareable 3-hour ledger link copied to clipboard!');
+async function copySlmUrl() {
+    let fullUrl = window._latestSlmFullUrl || document.getElementById('slmGeneratedUrl')?.value;
+    if (!fullUrl || fullUrl.includes('Generating') || fullUrl.startsWith('Generating')) {
+        const copyBtns = document.querySelectorAll('#slmCopyBtn, #slmResultCopyBtn');
+        copyBtns.forEach(b => { b.disabled = true; b.dataset.origHtml = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...'; });
+        fullUrl = await submitGenerateLedgerLink(false);
+        copyBtns.forEach(b => { b.disabled = false; if (b.dataset.origHtml) b.innerHTML = b.dataset.origHtml; });
+    }
+    if (fullUrl && !fullUrl.includes('Generating') && !fullUrl.startsWith('Generating')) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(fullUrl);
+            } else {
+                const input = document.getElementById('slmGeneratedUrl');
+                if (input) {
+                    input.value = fullUrl;
+                    input.select();
+                    document.execCommand('copy');
+                }
+            }
+            const copyBtns = document.querySelectorAll('#slmCopyBtn, #slmResultCopyBtn');
+            copyBtns.forEach(b => {
+                const orig = b.dataset.origHtml || b.innerHTML;
+                b.innerHTML = '<i class="fas fa-check me-1 text-success"></i> Copied!';
+                setTimeout(() => { b.innerHTML = orig; }, 2000);
+            });
+        } catch (e) {
+            prompt('Copy link:', fullUrl);
+        }
+    } else {
+        alert('Could not copy: link is still generating. Please try again in a moment.');
+    }
 }
 
-function openUniversalWa() {
-    const fullUrl = window._latestSlmFullUrl || document.getElementById('slmGeneratedUrl').value;
-    if (!fullUrl) {
-        alert('Please click "Generate Share Link" first.');
+async function openUniversalWa() {
+    let fullUrl = window._latestSlmFullUrl || document.getElementById('slmGeneratedUrl')?.value;
+    if (!fullUrl || fullUrl.includes('Generating') || fullUrl.startsWith('Generating')) {
+        fullUrl = await submitGenerateLedgerLink(false);
+    }
+    if (!fullUrl || fullUrl.includes('Generating') || fullUrl.startsWith('Generating')) {
+        alert('Please wait for the link to finish generating.');
         return;
     }
-    const phone = document.getElementById('slmPhone').value.trim();
+    const phone = document.getElementById('slmPhone')?.value?.trim() || '';
     const targetName = window._latestSlmTargetName || 'VGK Channel Partners Ledger';
     const expiresAt = window._latestSlmExpiresAt || '3 hours';
 
