@@ -2679,6 +2679,12 @@ def vgk_points_ledger(
     held_total_amount   = sum(float(e.commission_amount or 0) + float(e.bonus_amount or 0) for e in held_entries)
     held_points_needed  = sum(float(e.required_points_debit or 0) for e in held_entries)
 
+    # Determine initial opening balance (migration, welcome grant, or first credit entry)
+    first_grant = next((e for e in visible_entries if (e.points_credit or 0) > 0 and e.reason_code in ('MIGRATION_BALANCE', 'WELCOME_BONUS', 'REGISTRATION_V2', 'ONBOARDING_V2')), None)
+    if not first_grant:
+        first_grant = next((e for e in visible_entries if (e.points_credit or 0) > 0), None)
+    opening_balance = float(first_grant.points_credit or 0) if first_grant else 0.0
+
     return {
         "success": True,
         "label": "VGK Points Balance",
@@ -2690,6 +2696,7 @@ def vgk_points_ledger(
             "Points are for your account only and cannot be transferred to others."
         ),
         "summary": {
+            "opening_balance": opening_balance,
             "total_credits": total_credits,
             "total_debits": total_debits,
             "income_debits": income_debits,

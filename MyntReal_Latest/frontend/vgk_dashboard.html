@@ -49,6 +49,202 @@
         .ci-period-btn.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
         .stage-dropdown-menu { display:none; position:absolute; top:100%; left:0; margin-top:4px; z-index:9999; background:#fff; border:1.5px solid #e5e7eb; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.14); padding:8px; min-width:190px; }
 
+        /* ── Shared Member Ledger Styles (Parity with public_shared_ledger.html) ── */
+        .card-custom {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .kpi-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 14px 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+        .kpi-sub {
+            font-size: 11.5px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .text-indigo { color: #4f46e5 !important; }
+        .text-warning-dark { color: #d97706 !important; }
+        .text-slate { color: #334155 !important; }
+        .bg-indigo-subtle { background-color: #e0e7ff !important; }
+        .border-indigo-subtle { border-color: #c7d2fe !important; }
+        .bg-purple-subtle { background-color: #f3e8ff !important; }
+        .text-purple { color: #7e22ce !important; }
+        .border-purple-subtle { border-color: #e9d5ff !important; }
+        .table-custom {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        .table-custom thead tr#headerRow th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 12px 10px;
+            white-space: nowrap;
+            border-bottom: 1px solid #cbd5e1;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .table-custom thead tr.table-totals-row th {
+            position: sticky;
+            top: 40px;
+            z-index: 9;
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 800;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 2px solid #64748b;
+            padding: 9px 10px;
+            white-space: nowrap;
+            font-size: 12.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .table-custom th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .table-custom th.sortable:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .table-custom th.sorted-asc,
+        .table-custom th.sorted-desc {
+            background: #e0e7ff;
+            color: #3730a3;
+            border-bottom: 2px solid #4f46e5;
+        }
+        .sort-icon {
+            font-size: 11px;
+            opacity: 0.5;
+            transition: opacity 0.15s ease;
+        }
+        .table-custom th.sortable:hover .sort-icon {
+            opacity: 1;
+        }
+        .table-custom th.sorted-asc .sort-icon,
+        .table-custom th.sorted-desc .sort-icon {
+            opacity: 1;
+            color: #4f46e5;
+        }
+        .table-custom td {
+            padding: 11px 10px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .badge-kind {
+            background: #ede9fe;
+            color: #6d28d9;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11.5px;
+        }
+        .badge-status-paid {
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .badge-status-pending {
+            background: #ffedd5;
+            color: #c2410c;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .badge-status-stage1 {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .badge-status-cancelled {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        tr.row-cancelled {
+            background-color: #fef2f2 !important;
+            color: #991b1b;
+        }
+        tr.row-cancelled td {
+            opacity: 0.75;
+        }
+        .income-type-mini {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .income-type-mini:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        }
+        .income-type-team-highlight {
+            background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+            border: 1.5px solid #818cf8;
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .income-type-team-highlight:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
+        }
+
         /* ── Topbar ── */
         .topbar { background: #fff; color: #1f2937; padding: 0 14px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 6px rgba(0,0,0,.08); border-bottom: 1.5px solid #e5e7eb; }
         .topbar-brand { font-size: 18px; font-weight: 800; letter-spacing: .3px; display: flex; align-items: center; gap: 10px; }
@@ -1655,162 +1851,242 @@
                         <div style="font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">
                             <i class="fas fa-coins text-warning me-1"></i> Income Earned — By Income Type (Gross Breakdown)
                         </div>
-                        <div id="ciIncomeByTypeContainer" style="display:flex;gap:10px;flex-wrap:wrap">
-                            <!-- Dynamic income type cards -->
+                        <div id="ciIncomeByTypeContainer" class="row g-2">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Hero banner: 3 metrics grid (Gross Income, Advances Tracking, Spendable Wallet & Points) -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:12px;margin-bottom:16px">
-                    <div style="background:linear-gradient(135deg,#78350f,#d97706);border-radius:14px;padding:18px 20px;color:#fff;box-shadow:0 2px 6px rgba(120,53,15,0.15)">
-                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.85;margin-bottom:6px"><i class="fas fa-star me-1"></i>Lifetime Earning (Gross)</div>
-                        <div style="font-size:28px;font-weight:900;letter-spacing:-1px" id="ciEarnedTotal">—</div>
-                        <div style="font-size:11px;opacity:.9;margin-top:4px" id="ciEarnedSub">Net Earning: ₹— · Deal value after advance adjustments</div>
+                <!-- Section 1: Financial Cash Reconciliation (Earned • Paid • Pending) -->
+                <div class="mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
+                            <i class="fas fa-money-bill-wave text-success me-1"></i> Section 1: Financial Cash Reconciliation (Earned • Paid • Pending)
+                        </span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle d-none d-md-inline-block">Cash Disbursed &amp; Held</span>
                     </div>
-                    <div onclick="_showAdvancesBreakdownModal()" style="background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:14px;padding:18px 20px;color:#fff;box-shadow:0 2px 6px rgba(30,58,138,0.15);cursor:pointer;transition:transform 0.15s ease" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Click to view detailed advances and lost leads breakdown">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.85"><i class="fas fa-hand-holding-usd me-1"></i>Stage &amp; DVR Advances</div>
-                            <span style="background:rgba(255,255,255,0.22);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700"><i class="fas fa-list-ul me-1"></i>Breakdown</span>
-                        </div>
-                        <div style="font-size:28px;font-weight:900;letter-spacing:-1px" id="ciAdvancesTotal">—</div>
-                        <div style="font-size:11px;opacity:.9;margin-top:4px" id="ciAdvancesSub">
-                            <span id="ciAdvInProgTxt">Yet to adjust: —</span> · 
-                            <span id="ciAdvDeficitTxt">Lost file deficit: ₹0</span>
-                        </div>
-                    </div>
-                    <div style="background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:18px 20px;color:#fff;box-shadow:0 2px 6px rgba(6,78,59,0.15)">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.85"><i class="fas fa-university me-1"></i>Received in Bank</div>
-                            <span id="ciPointsBadge" style="background:rgba(255,255,255,0.22);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:.03em"><i class="fas fa-coins me-1"></i>Points: —</span>
-                        </div>
-                        <div style="font-size:28px;font-weight:900;letter-spacing:-1px" id="ciWalletBalance">—</div>
-                        <div style="font-size:11px;opacity:.9;margin-top:4px" id="ciWalletBalanceSub">Disbursed to Bank Account · <span style="color:#fde68a;font-weight:700">Pending / Held: ₹0</span></div>
-                    </div>
-                </div>
-
-                <!-- Points threshold alert banner (shown when points are too low to receive pending income) -->
-                <div id="ciPointsAlertBanner" style="display:none;background:linear-gradient(135deg,#7f1d1d,#dc2626);border-radius:12px;padding:16px 20px;margin-bottom:16px;color:#fff">
-                    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
-                        <div style="flex:1;min-width:220px">
-                            <div style="font-size:13px;font-weight:800;margin-bottom:4px"><i class="fas fa-exclamation-triangle me-2"></i>Points Balance Too Low to Receive Income</div>
-                            <div style="font-size:12px;opacity:.9;line-height:1.5" id="ciPointsAlertMsg">Your current Points Balance is below the threshold required for your pending income release. Add more points to unlock your earnings.</div>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0">
-                            <div style="background:rgba(255,255,255,0.18);border-radius:8px;padding:8px 16px;text-align:center">
-                                <div style="font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Points Needed</div>
-                                <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px" id="ciPointsAlertShortfall">—</div>
+                    <div class="row g-2 g-md-3">
+                        <div class="col-12 col-md-4">
+                            <div class="kpi-card" style="border-left: 4px solid #4f46e5;">
+                                <div class="kpi-label"><i class="fas fa-coins text-indigo"></i> Overall Earning</div>
+                                <div class="kpi-value text-indigo" id="kpiGrossEarned">₹0</div>
+                                <div class="kpi-sub d-none d-sm-block">Total Lifetime Earning (Matches Poster)</div>
                             </div>
-                            <button onclick="showTab('points')" style="background:#fff;color:#dc2626;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap"><i class="fas fa-plus-circle me-1"></i>Want to Add Points?</button>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="kpi-card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
+                                <div class="kpi-label"><i class="fas fa-university text-success"></i> Paid in Bank</div>
+                                <div class="kpi-value text-success" id="kpiPaidReleased">₹0</div>
+                                <div class="kpi-sub d-none d-sm-block">Disbursed to Bank Account</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="kpi-card" style="border: 1.5px solid #fde68a; background: #fffdf5; border-left: 4px solid #f59e0b;">
+                                <div class="kpi-label"><i class="fas fa-hourglass-half text-amber" style="color: #d97706;"></i> Pending Balance</div>
+                                <div class="kpi-value" style="color: #d97706;" id="kpiPendingBalance">₹0</div>
+                                <div class="kpi-sub d-none d-sm-block">Held / Pending Release</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Period quick-select (Replica of Staff Member View) -->
-                <div style="background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-                    <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-right:4px;flex-shrink:0"><i class="fas fa-calendar-check me-1"></i>Period:</span>
-                    <button class="ci-period-btn active" id="ciP_overall"   onclick="_ciPeriodClick('overall',this)">Overall</button>
-                    <button class="ci-period-btn" id="ciP_today"     onclick="_ciPeriodClick('today',this)">Today</button>
-                    <button class="ci-period-btn" id="ciP_yesterday" onclick="_ciPeriodClick('yesterday',this)">Yesterday</button>
-                    <button class="ci-period-btn" id="ciP_week"      onclick="_ciPeriodClick('week',this)">This Week</button>
-                    <button class="ci-period-btn" id="ciP_month"     onclick="_ciPeriodClick('month',this)">This Month</button>
-                    <button class="ci-period-btn" id="ciP_fy"        onclick="_ciPeriodClick('fy',this)">This FY</button>
-                    <button class="ci-period-btn" id="ciP_custom"    onclick="_ciPeriodClick('custom',this)" style="border-style:dashed">Custom Range</button>
+                <!-- Section 2: Advances & Contract Adjustments Ledger -->
+                <div class="mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
+                            <i class="fas fa-sliders-h text-primary me-1"></i> Section 2: Advances &amp; Balance Adjustments Ledger
+                        </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-block">Contract Offsets &amp; Accrual Balances</span>
+                    </div>
+                    <div class="row g-2 g-md-3" id="kpiCardsContainer">
+                        <div class="col-6 col-md-4">
+                            <div class="kpi-card" style="border-left: 3px solid #d97706;">
+                                <div class="kpi-label"><i class="fas fa-hand-holding-dollar text-warning-dark"></i> Advances Adjusted</div>
+                                <div class="kpi-value text-warning-dark" id="kpiAdvanceDeductions">₹0</div>
+                                <div class="kpi-sub d-none d-sm-block" id="kpiAdvanceSub">Stage &amp; DVR Advances</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="kpi-card" style="border-left: 3px solid #ef4444;">
+                                <div class="kpi-label"><i class="fas fa-exclamation-circle text-danger"></i> Lost Leads Adj.</div>
+                                <div class="kpi-value text-danger" id="kpiLostAdvancesAdjusted">₹0</div>
+                                <div class="kpi-sub d-none d-sm-block" id="kpiLostAdvancesSub">Adjusted Lost Leads Advances</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="kpi-card" style="border-left: 3px solid #64748b;">
+                                <div class="kpi-label"><i class="fas fa-file-invoice text-slate"></i> Active Records</div>
+                                <div class="kpi-value text-slate" id="kpiActiveRecords">0</div>
+                                <div class="kpi-sub d-none d-sm-block">Total Filtered Entries</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Filter bar (Date + Customer + Stage + Level + Cancelled) -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
-                        <i class="fas fa-calendar-alt"></i>
-                        <input type="date" id="ciDateFrom" onchange="_ciDateChange()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
-                        <span>—</span>
-                        <input type="date" id="ciDateTo" onchange="_ciDateChange()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none">
+                <!-- Section 3: Points Balance Ledger (Option A confirmed) -->
+                <div class="mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                        <span class="text-uppercase fw-bold text-dark small" style="letter-spacing: 0.6px; font-size: 11.5px;">
+                            <i class="fas fa-coins text-purple me-1"></i> Section 3: Points Balance Ledger (Opening • Credited • Debited • Final)
+                        </span>
+                        <span class="badge bg-purple-subtle text-purple border border-purple-subtle d-none d-md-inline-block">1 PT = ₹1 Promotional Discount</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
-                        <i class="fas fa-user"></i>
-                        <input type="text" id="ciCustSearch" placeholder="Customer name/mobile…" oninput="_debounceCiFilter()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;width:180px;outline:none">
+                    <div class="row g-2 g-md-3">
+                        <div class="col-6 col-md-3">
+                            <div class="kpi-card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
+                                <div class="kpi-label"><i class="fas fa-play-circle text-success"></i> Opening Balance</div>
+                                <div class="kpi-value text-success" id="kpiPointsOpening">0 pts</div>
+                                <div class="kpi-sub d-none d-sm-block">Initial Grant / Migration</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="kpi-card" style="border-left: 4px solid #7c3aed; background: #f5f3ff;">
+                                <div class="kpi-label"><i class="fas fa-arrow-circle-down text-purple"></i> Total Credited</div>
+                                <div class="kpi-value text-purple" id="kpiPointsCredited">0 pts</div>
+                                <div class="kpi-sub d-none d-sm-block">Total Points In</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="kpi-card" style="border-left: 4px solid #ef4444; background: #fef2f2;">
+                                <div class="kpi-label"><i class="fas fa-arrow-circle-up text-danger"></i> Total Debited</div>
+                                <div class="kpi-value text-danger" id="kpiPointsDebited">0 pts</div>
+                                <div class="kpi-sub d-none d-sm-block">Income / Service Offsets</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="kpi-card" style="border-left: 4px solid #4f46e5; background: linear-gradient(135deg, #eef2ff, #f5f3ff);">
+                                <div class="kpi-label"><i class="fas fa-wallet text-indigo"></i> Final Balance</div>
+                                <div class="kpi-value text-indigo" id="kpiPointsFinal">0 pts</div>
+                                <div class="kpi-sub d-none d-sm-block">Available Active Points</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
-                        <i class="fas fa-layer-group"></i>
-                        <input type="hidden" id="ciStageFilter" value="">
-                        <div class="stage-multi-wrapper" style="position:relative;display:inline-block">
-                            <button type="button" id="ciStageBtn" onclick="_toggleCiStageDropdown(event)" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:145px;justify-content:space-between">
-                                <span id="ciStageBtnText" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">All Payment Stages</span>
-                                <i class="fas fa-chevron-down" style="font-size:10px;color:#9ca3af"></i>
+                </div>
+
+                <!-- Team-Wise, Lead-Wise, Level & Status Filters Toolbar -->
+                <div class="card-custom p-3 mb-3 bg-white">
+                    <div class="row g-2 align-items-center">
+                        <!-- Team Member (Lead Owner) Filter -->
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-users me-1 text-indigo"></i> Team / Team Member</label>
+                            <select id="filterTeamMember" class="form-select form-select-sm">
+                                <option value="ALL">All Team &amp; Self</option>
+                            </select>
+                        </div>
+                        <!-- Customer / Lead Filter (Cascades with Team Member) -->
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user me-1 text-primary"></i> Customer / Lead</label>
+                            <select id="filterCustomer" class="form-select form-select-sm">
+                                <option value="ALL">All Customers / Leads</option>
+                            </select>
+                        </div>
+                        <!-- Level Filter -->
+                        <div class="col-lg-1 col-md-4 col-sm-6">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-layer-group me-1 text-purple"></i> Level</label>
+                            <select id="filterLevel" class="form-select form-select-sm">
+                                <option value="ALL">All</option>
+                            </select>
+                        </div>
+                        <!-- Status Filter -->
+                        <div class="col-lg-2 col-md-4 col-sm-6" id="statusFilterCol">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-tags me-1 text-info"></i> Status</label>
+                            <select id="filterStatus" class="form-select form-select-sm">
+                                <option value="ALL">All Statuses</option>
+                                <option value="PAID">Paid / Released</option>
+                                <option value="STAGE1_APPROVED">Stage 1 Approved</option>
+                                <option value="PENDING">Pending</option>
+                            </select>
+                        </div>
+                        <!-- Real-time Search -->
+                        <div class="col-lg-2 col-md-5 col-sm-8">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1 text-secondary"></i> Search Entries</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="filterSearch" class="form-control" placeholder="Search lead, team, entry #...">
+                                <button class="btn btn-outline-secondary" type="button" id="btnClearSearch" title="Clear search"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- Reset Button -->
+                        <div class="col-lg-1 col-md-3 col-sm-4 d-flex align-items-center justify-content-end pt-lg-3 mt-1">
+                            <button class="btn btn-sm btn-outline-primary w-100" id="btnResetFilters" type="button" title="Reset all filters">
+                                <i class="fas fa-redo-alt me-1"></i> Reset
                             </button>
-                            <div id="ciStageDropdown" class="stage-dropdown-menu">
-                                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:6px;border-bottom:1px solid #f3f4f6;font-size:11px;font-weight:700">
-                                    <span style="color:#6b7280">Payment Stages</span>
-                                    <div>
-                                        <a href="javascript:void(0)" onclick="_selectAllCiStages(true)" style="color:#7c3aed;margin-right:8px;text-decoration:none">All</a>
-                                        <a href="javascript:void(0)" onclick="_selectAllCiStages(false)" style="color:#9ca3af;text-decoration:none">Clear</a>
-                                    </div>
-                                </div>
-                                <div style="display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;padding-right:4px">
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#059669;font-weight:700" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="INSTALLED" onchange="_updateCiStageFilter()"> ⚡ Installed
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="WON" onchange="_updateCiStageFilter()"> 🏆 Won Business
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="SUBMITTED" onchange="_updateCiStageFilter()"> 📄 Application Submitted
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="STAGE1_APPROVED" onchange="_updateCiStageFilter()"> Stage 1 Approved
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="RELEASED" onchange="_updateCiStageFilter()"> Released
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="PAID" onchange="_updateCiStageFilter()"> Completed (Paid)
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="BALANCE_RECEIVED_PLUS" onchange="_updateCiStageFilter()"> Balance Received +
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="PENDING" onchange="_updateCiStageFilter()"> Pending
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="DRAFT" onchange="_updateCiStageFilter()"> Draft
-                                    </label>
-                                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:5px;color:#374151" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                                        <input type="checkbox" class="ci-stage-cb" value="CANCELLED" onchange="_updateCiStageFilter()"> Cancelled
-                                    </label>
-                                </div>
-                            </div>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
-                        <i class="fas fa-sitemap"></i>
-                        <select id="ciLevelFilter" onchange="_applyCiFilter()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
-                            <option value="">All Levels</option>
-                            <option value="0">L0 — Bonus</option>
-                            <option value="1">L1 — Source</option>
-                            <option value="2">L2 — Senior</option>
-                            <option value="3">L3 — Extended</option>
-                            <option value="4">L4 — Core</option>
-                            <option value="5">L5 — Support</option>
-                        </select>
+                    <!-- Filter Status Strip -->
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top small text-muted">
+                        <div class="d-flex align-items-center flex-wrap gap-1">
+                            <span id="entriesFilterInfo">Showing all entries</span>
+                            <span id="activeFilterPills" class="d-inline-flex align-items-center flex-wrap gap-1 ms-1"></span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted"><i class="fas fa-sort me-1"></i> Click column header to sort</span>
+                        </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280">
-                        <i class="fas fa-ban"></i>
-                        <select id="ciCancelFilter" onchange="_applyCiFilter()" style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer">
-                            <option value="HIDE_CANCELLED">Hide Cancelled</option>
-                            <option value="">All (incl. Cancelled)</option>
-                            <option value="ONLY_CANCELLED">Only Cancelled</option>
-                        </select>
-                    </div>
-                    <button onclick="_resetCiFilters()" style="padding:6px 14px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:12px;cursor:pointer">Reset All</button>
-                    <button onclick="loadCashIncome(true)" style="padding:6px 14px;background:#ede9fe;color:#7c3aed;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-left:auto"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
                 </div>
 
-                <!-- Summary KPI strip (Exact Staff Member View Replica) -->
-                <div id="ciKpiRow" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+                <!-- Ledger Table with Sticky Totals Row Above Data Rows -->
+                <div class="card-custom">
+                    <div class="d-flex d-md-none align-items-center justify-content-between px-3 py-2 bg-light border-bottom text-muted" style="font-size: 11px;">
+                        <span><i class="fas fa-arrows-left-right text-primary me-1"></i> Swipe table horizontally</span>
+                        <span class="badge bg-secondary-subtle text-secondary border">21 Columns</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="table table-custom table-hover align-middle mb-0" id="ledgerTable">
+                            <thead>
+                                <tr id="headerRow">
+                                    <th class="sortable" data-col="submit_date" data-type="date">Submit Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="trigger_date" data-type="date">Trigger Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="payment_date" data-type="date">Payment Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="entry_number" data-type="text">Entry # <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="level_label" data-type="text">Level / Role <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="client_name" data-type="text">Customer / Member <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="lead_owner_name" data-type="text">Team Member (Lead Owner) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="level" data-type="text">Level <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="display_kind" data-type="text">Entry Kind <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="received_value" data-type="number">Received Value ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="commission_pct" data-type="number">Calc % <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="commission_amount" data-type="number">Gross ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="stage1_adv" data-type="number">Stage 1 Adv. <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="stage2_adv" data-type="number">Stage 2 Adv. <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="lost_lead_deduction" data-type="number" style="color: #dc2626;">Lost Adv. ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="advance_paid" data-type="number">Advance Paid ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="balance_gross" data-type="number">Balance Gross ₹ <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="admin_charges" data-type="number">Admin (8%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="tds_amount" data-type="number">TDS (2%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="net_payout" data-type="number">Net (90%) <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable" data-col="status" data-type="text" id="thStatus">Status <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                </tr>
+                                <!-- Totals Row with Totals for All Value Columns -->
+                                <tr id="totalsHeaderRow" class="table-totals-row">
+                                    <!-- Populated dynamically based on filtered active rows -->
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr>
+                                    <td colspan="21" class="text-center py-4 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading income ledger...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                <!-- Date-wise Lead & Income Breakdown Table (Main Section matching Staff Portal) -->
-                <div id="ciEntriesContent">
-                    <div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                <!-- Hidden legacy stubs so background prefill scripts continue cleanly -->
+                <div style="display:none">
+                    <span id="ciEarnedTotal"></span>
+                    <span id="ciEarnedSub"></span>
+                    <span id="ciAdvancesTotal"></span>
+                    <span id="ciAdvancesSub"></span>
+                    <span id="ciWalletBalance"></span>
+                    <span id="ciWalletBalanceSub"></span>
+                    <span id="ciPointsBadge"></span>
+                    <span id="ciDraftTotal"></span>
+                    <span id="ciPendingTotal"></span>
+                    <span id="ciReleasedTotal"></span>
+                    <div id="ciKpiRow"></div>
+                    <div id="ciEntriesContent"></div>
                 </div>
 
                 <!-- Collapsible Legacy Wallet Transaction History (Archived / Supplemental) -->
@@ -5419,18 +5695,23 @@
                     : '';
                 document.getElementById('pointsSummaryBanner').innerHTML = `
                     ${heldBanner}
-                    <div style="flex:1;min-width:110px;background:#ede9fe;border-radius:12px;padding:14px 18px">
-                        <div style="font-size:10px;text-transform:uppercase;color:#4c1d95;font-weight:700;margin-bottom:4px"><i class="fas fa-plus-circle me-1"></i>Points In Total</div>
-                        <div style="font-size:22px;font-weight:900;color:#7c3aed">${parseFloat(s.total_credits||0).toLocaleString('en-IN')}</div>
-                        <div style="font-size:10px;color:#7c3aed;opacity:.7;margin-top:2px">pts</div>
+                    <div style="flex:1;min-width:110px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px">
+                        <div style="font-size:10px;text-transform:uppercase;color:#166534;font-weight:700;margin-bottom:4px"><i class="fas fa-play-circle me-1"></i>Opening Balance</div>
+                        <div style="font-size:22px;font-weight:900;color:#15803d">${parseFloat(s.opening_balance||0).toLocaleString('en-IN')}</div>
+                        <div style="font-size:10px;color:#166534;opacity:.7;margin-top:2px">pts · initial grant/migration</div>
                     </div>
-                    <div style="flex:1;min-width:110px;background:#fee2e2;border-radius:12px;padding:14px 18px">
-                        <div style="font-size:10px;text-transform:uppercase;color:#991b1b;font-weight:700;margin-bottom:4px"><i class="fas fa-minus-circle me-1"></i>Points Used Total</div>
-                        <div style="font-size:22px;font-weight:900;color:#dc2626">${parseFloat(s.income_debits||0).toLocaleString('en-IN')}</div>
-                        <div style="font-size:10px;color:#dc2626;opacity:.7;margin-top:2px">pts</div>
+                    <div style="flex:1;min-width:110px;background:#ede9fe;border:1px solid #ddd6fe;border-radius:12px;padding:14px 18px">
+                        <div style="font-size:10px;text-transform:uppercase;color:#4c1d95;font-weight:700;margin-bottom:4px"><i class="fas fa-arrow-circle-down me-1"></i>Total Credited</div>
+                        <div style="font-size:22px;font-weight:900;color:#7c3aed">${parseFloat(s.total_credits||0).toLocaleString('en-IN')}</div>
+                        <div style="font-size:10px;color:#7c3aed;opacity:.7;margin-top:2px">pts · credited</div>
+                    </div>
+                    <div style="flex:1;min-width:110px;background:#fee2e2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px">
+                        <div style="font-size:10px;text-transform:uppercase;color:#991b1b;font-weight:700;margin-bottom:4px"><i class="fas fa-arrow-circle-up me-1"></i>Total Debited</div>
+                        <div style="font-size:22px;font-weight:900;color:#dc2626">${parseFloat(s.total_debits||s.income_debits||0).toLocaleString('en-IN')}</div>
+                        <div style="font-size:10px;color:#dc2626;opacity:.7;margin-top:2px">pts · used/debited</div>
                     </div>
                     <div style="flex:1;min-width:130px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:12px;padding:14px 18px;color:#fff">
-                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:4px"><i class="fas fa-wallet me-1"></i>Points Final Balance</div>
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:4px"><i class="fas fa-wallet me-1"></i>Final Balance</div>
                         <div style="font-size:24px;font-weight:900">${bal.toLocaleString('en-IN')}</div>
                         <div style="font-size:10px;opacity:.7;margin-top:2px">pts &nbsp;(1 pt = ₹1 discount)</div>
                     </div>
@@ -8322,157 +8603,697 @@
             }
         };
 
-        function _applyCiFilter() {
-            const df = (document.getElementById('ciDateFrom')?.value || '').trim();
-            const dt = (document.getElementById('ciDateTo')?.value || '').trim();
-            const cust = (document.getElementById('ciCustSearch')?.value || '').trim().toLowerCase();
-            const stageFilterVal = (document.getElementById('ciStageFilter')?.value || '').trim();
-            const stages = stageFilterVal ? stageFilterVal.split(',').map(s => s.trim().toUpperCase()) : [];
-            const lvl = (document.getElementById('ciLevelFilter')?.value || '').trim();
-            const cancelMode = document.getElementById('ciCancelFilter')?.value || 'HIDE_CANCELLED';
+        // ── Shared Member Ledger Architecture (100% Parity with public_shared_ledger.html) ──
+        let currentSort = { col: 'submit_date', dir: 'desc' };
+        let showStatusColumn = true;
+        let ledgerListenersInitialized = false;
 
-            let list = (_ciItemizedEntries || []).slice();
+        function getTeamMemberKey(row) {
+            const ownerName = (row.lead_owner_name || '').trim();
+            if (!ownerName || ownerName === '—') return 'UNASSIGNED';
+            return ownerName;
+        }
 
-            // Date filtering
-            if (df || dt) {
-                list = list.filter(e => {
-                    const rawDate = e.trigger_date || e.income_date || e.submit_date || e.created_at || '';
-                    const dStr = rawDate.slice(0, 10);
-                    if (df && dStr < df) return false;
-                    if (dt && dStr > dt) return false;
-                    return true;
-                });
+        function getRowLevelCode(row) {
+            if (row.level_code) return row.level_code;
+            if (row.level !== null && row.level !== undefined && Number(row.level) > 0) {
+                return 'L' + row.level;
             }
+            return row.level_label || '—';
+        }
 
-            // Customer / Search
-            if (cust) {
-                list = list.filter(e =>
-                    (e.client_name || '').toLowerCase().includes(cust) ||
-                    (e.client_mobile || '').toLowerCase().includes(cust) ||
-                    (e.entry_number || '').toLowerCase().includes(cust)
-                );
-            }
+        function isRowDownlineTeamLead(row) {
+            if (typeof row.is_team_lead === 'boolean') return row.is_team_lead;
+            const lvl = Number(row.level);
+            if (!isNaN(lvl) && lvl >= 2 && lvl !== 5 && lvl !== 6) return true;
+            const curPid = window._currentPartnerId || (JSON.parse(localStorage.getItem('vgk_partner') || '{}')).id;
+            if (row.lead_owner_id && curPid && Number(row.lead_owner_id) !== Number(curPid) && lvl !== 1) return true;
+            return false;
+        }
 
-            // Level filtering
-            if (lvl !== '') {
-                const targetLvl = parseInt(lvl, 10);
-                list = list.filter(e => e.level === targetLvl);
-            }
+        function populateTeamMemberDropdown(data) {
+            const teamMap = {};
+            let downlineCount = 0;
+            let downlineGross = 0;
+            let downlineBal = 0;
+            let selfCount = 0;
+            let selfGross = 0;
+            let selfBal = 0;
 
-            // Cancelled filtering
-            if (cancelMode === 'HIDE_CANCELLED') {
-                list = list.filter(e => e.status !== 'CANCELLED');
-            } else if (cancelMode === 'ONLY_CANCELLED') {
-                list = list.filter(e => e.status === 'CANCELLED');
-            }
-
-            // Stages filtering
-            if (stages.length > 0) {
-                list = list.filter(e => {
-                    const st = (e.status || '').toUpperCase();
-                    const solSt = (e.solar_pipeline_status || '').toUpperCase();
-                    const ldSt = (e.lead_status || '').toUpperCase();
-
-                    return stages.some(stage => {
-                        if (stage === 'INSTALLED') {
-                            return ['COMPLETED', 'INSTALLED', 'SUBSIDY_PENDING', 'NET_METER_DONE', 'BALANCE_RECEIVED'].includes(solSt) || ['COMPLETED', 'INSTALLED'].includes(ldSt);
-                        }
-                        if (stage === 'WON') {
-                            return ldSt === 'WON' || ['WON', 'ORDER_PLACED', 'DISPATCHED', 'DELIVERED'].includes(solSt);
-                        }
-                        if (stage === 'SUBMITTED') {
-                            return ['SUBMITTED', 'APPLICATION_SUBMITTED'].includes(ldSt) || ['APPLICATION_SUBMITTED', 'PENDING_WITH_BANK', 'DOCUMENTS_ISSUE'].includes(solSt);
-                        }
-                        if (stage === 'BALANCE_RECEIVED_PLUS') {
-                            return ['BALANCE_RECEIVED', 'SUBSIDY_PENDING', 'COMPLETED'].includes(solSt);
-                        }
-                        return st === stage;
-                    });
-                });
-            }
-
-            // Sorting
-            const col = _ciSortCol;
-            const dir = _ciSortDir;
-            list.sort((a, b) => {
-                let va, vb;
-                if (col === 'submit_date') {
-                    va = a.submit_date || ''; vb = b.submit_date || '';
-                } else if (col === 'trigger_date' || col === 'date') {
-                    va = a.trigger_date || a.income_date || a.created_at || '';
-                    vb = b.trigger_date || b.income_date || b.created_at || '';
-                } else if (col === 'payment_date') {
-                    va = a.payment_date || ''; vb = b.payment_date || '';
-                } else if (col === 'entry_number') {
-                    va = a.entry_number || ''; vb = b.entry_number || '';
-                } else if (col === 'level') {
-                    va = a.level || 0; vb = b.level || 0;
-                } else if (col === 'client_name' || col === 'name') {
-                    va = (a.client_name || '').toLowerCase(); vb = (b.client_name || '').toLowerCase();
-                } else if (col === 'kind') {
-                    va = a.kind || ''; vb = b.kind || '';
-                } else if (col === 'balance_gross') {
-                    va = parseFloat(a.balance_gross || a.commission_amount || 0); vb = parseFloat(b.balance_gross || b.commission_amount || 0);
-                } else if (col === 'net') {
-                    va = parseFloat(a.net_payout || 0); vb = parseFloat(b.net_payout || 0);
-                } else if (col === 'status') {
-                    va = a.status || ''; vb = b.status || '';
-                } else if (col === 'deal_value') {
-                    va = parseFloat(a.deal_value || 0); vb = parseFloat(b.deal_value || 0);
-                } else if (col === 'gross') {
-                    va = parseFloat(a.commission_amount || 0); vb = parseFloat(b.commission_amount || 0);
-                } else if (col === 'advance_paid') {
-                    va = parseFloat(a.advance_paid || 0); vb = parseFloat(b.advance_paid || 0);
-                } else {
-                    va = a.submit_date || ''; vb = b.submit_date || '';
+            (data || []).forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const key = getTeamMemberKey(r);
+                const isDownline = isRowDownlineTeamLead(r);
+                const gross = isCancelled ? 0 : (Number(r.commission_amount) || 0);
+                const bal = isCancelled ? 0 : ((r.balance_gross !== undefined && r.balance_gross !== null) ? Number(r.balance_gross) : gross);
+                if (!isCancelled) {
+                    if (isDownline) {
+                        downlineCount++;
+                        downlineGross += gross;
+                        downlineBal += bal;
+                    } else {
+                        selfCount++;
+                        selfGross += gross;
+                        selfBal += bal;
+                    }
                 }
-
-                if (typeof va === 'string') {
-                    return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+                if (key === 'UNASSIGNED') return;
+                if (!teamMap[key]) {
+                    teamMap[key] = {
+                        name: key,
+                        code: r.lead_owner_code || '',
+                        levelCode: getRowLevelCode(r),
+                        isDownline: isDownline,
+                        leads: new Set(),
+                        activeEntries: 0,
+                        gross: 0,
+                        balance_gross: 0
+                    };
                 }
-                return dir === 'asc' ? va - vb : vb - va;
+                const cName = (r.client_name || r.member_name || '').trim();
+                if (cName && !isCancelled) teamMap[key].leads.add(cName);
+                if (!isCancelled) {
+                    teamMap[key].activeEntries++;
+                    teamMap[key].gross += gross;
+                    teamMap[key].balance_gross += bal;
+                }
+                if (isDownline) teamMap[key].isDownline = true;
             });
 
-            _ciRenderKpis(list);
-            renderMemberEarningsTable(list, 'ciEntriesContent', false);
+            const selectEl = document.getElementById('filterTeamMember');
+            if (!selectEl) return;
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="ALL">All Team &amp; Self (${Object.keys(teamMap).length} Members)</option>`;
+            selectEl.innerHTML += `<option value="TEAM_ONLY">⚡ Downline Team Leads Only (L2+) — ₹${Math.round(downlineBal).toLocaleString('en-IN')}</option>`;
+            selectEl.innerHTML += `<option value="SELF_ONLY">👤 Self / Direct Leads Only (L1) — ₹${Math.round(selfBal).toLocaleString('en-IN')}</option>`;
+
+            const sortedMembers = Object.values(teamMap).sort((a, b) => {
+                if (a.isDownline !== b.isDownline) return a.isDownline ? -1 : 1;
+                return (b.balance_gross || b.gross) - (a.balance_gross || a.gross);
+            });
+
+            sortedMembers.forEach(tm => {
+                const opt = document.createElement('option');
+                opt.value = tm.name;
+                const tag = tm.isDownline ? `[${tm.levelCode || 'Team'}]` : `[L1 Self]`;
+                const codeStr = tm.code ? ` (${tm.code})` : '';
+                opt.textContent = `${tag} ${tm.name}${codeStr} — ${tm.leads.size} Leads • ₹${Math.round(tm.balance_gross || tm.gross).toLocaleString('en-IN')}`;
+                selectEl.appendChild(opt);
+            });
+
+            if (currentVal && (currentVal === 'ALL' || currentVal === 'TEAM_ONLY' || currentVal === 'SELF_ONLY' || teamMap[currentVal])) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        function populateLevelDropdown(data) {
+            const levelMap = {};
+            (data || []).forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const lvlCode = getRowLevelCode(r);
+                if (!lvlCode || lvlCode === '—') return;
+                if (!levelMap[lvlCode]) levelMap[lvlCode] = 0;
+                if (!isCancelled) levelMap[lvlCode]++;
+            });
+
+            const selectEl = document.getElementById('filterLevel');
+            if (!selectEl) return;
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="ALL">All Levels</option>`;
+            Object.keys(levelMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).forEach(lvl => {
+                const opt = document.createElement('option');
+                opt.value = lvl;
+                opt.textContent = `${lvl} (${levelMap[lvl]})`;
+                selectEl.appendChild(opt);
+            });
+            if (currentVal && levelMap[currentVal]) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        function doesRowMatchTeamFilter(row, selectedTeamMember) {
+            if (!selectedTeamMember || selectedTeamMember === 'ALL') return true;
+            if (selectedTeamMember === 'TEAM_ONLY') return isRowDownlineTeamLead(row);
+            if (selectedTeamMember === 'SELF_ONLY') return !isRowDownlineTeamLead(row);
+            return getTeamMemberKey(row) === selectedTeamMember;
+        }
+
+        function populateCustomerDropdown(data) {
+            const selectedTeamMember = document.getElementById('filterTeamMember') ? document.getElementById('filterTeamMember').value : 'ALL';
+            const selectedLevel = document.getElementById('filterLevel') ? document.getElementById('filterLevel').value : 'ALL';
+
+            const customerMap = {};
+            (data || []).forEach(r => {
+                if (!doesRowMatchTeamFilter(r, selectedTeamMember)) return;
+                if (selectedLevel !== 'ALL' && getRowLevelCode(r) !== selectedLevel) return;
+
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                const cName = (r.client_name || r.member_name || '').trim();
+                if (!cName) return;
+                if (!customerMap[cName]) {
+                    customerMap[cName] = { total: 0, active: 0, gross: 0, balance_gross: 0 };
+                }
+                customerMap[cName].total++;
+                if (!isCancelled) {
+                    customerMap[cName].active++;
+                    customerMap[cName].gross += Number(r.commission_amount) || 0;
+                    const bal = (r.balance_gross !== undefined && r.balance_gross !== null)
+                        ? Number(r.balance_gross)
+                        : (Number(r.commission_amount) || 0);
+                    customerMap[cName].balance_gross += bal;
+                }
+            });
+
+            const selectEl = document.getElementById('filterCustomer');
+            if (!selectEl) return;
+            const currentVal = selectEl.value;
+            const totalLeads = Object.keys(customerMap).length;
+            const scopeLabel = selectedTeamMember === 'ALL'
+                ? `All Customers / Leads (${totalLeads})`
+                : `Leads in Selected Team (${totalLeads})`;
+            selectEl.innerHTML = `<option value="ALL">${escHtml(scopeLabel)}</option>`;
+
+            Object.keys(customerMap).sort((a,b) => a.localeCompare(b)).forEach(cName => {
+                const opt = document.createElement('option');
+                opt.value = cName;
+                const stats = customerMap[cName];
+                opt.textContent = `${cName} (${stats.active} entries • ₹${Math.round(stats.balance_gross !== undefined ? stats.balance_gross : stats.gross).toLocaleString('en-IN')})`;
+                selectEl.appendChild(opt);
+            });
+
+            if (currentVal && customerMap[currentVal]) {
+                selectEl.value = currentVal;
+            } else {
+                selectEl.value = 'ALL';
+            }
+        }
+
+        function selectTeamFilterQuick(val) {
+            const teamSelect = document.getElementById('filterTeamMember');
+            if (!teamSelect) return;
+            teamSelect.value = (teamSelect.value === val && val !== 'ALL') ? 'ALL' : val;
+            populateCustomerDropdown(window._allMemberLedgerData || []);
+            applyFiltersAndRender();
+        }
+
+        function setupLedgerEventListeners() {
+            if (ledgerListenersInitialized) return;
+            ledgerListenersInitialized = true;
+
+            document.querySelectorAll('#headerRow th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = th.getAttribute('data-col');
+                    const colType = th.getAttribute('data-type');
+                    if (currentSort.col === col) {
+                        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.col = col;
+                        currentSort.dir = (colType === 'number' || colType === 'date') ? 'desc' : 'asc';
+                    }
+                    applyFiltersAndRender();
+                });
+            });
+
+            const ftm = document.getElementById('filterTeamMember');
+            if (ftm) ftm.addEventListener('change', () => {
+                populateCustomerDropdown(window._allMemberLedgerData || []);
+                applyFiltersAndRender();
+            });
+            const flv = document.getElementById('filterLevel');
+            if (flv) flv.addEventListener('change', () => {
+                populateCustomerDropdown(window._allMemberLedgerData || []);
+                applyFiltersAndRender();
+            });
+            const fc = document.getElementById('filterCustomer');
+            if (fc) fc.addEventListener('change', () => applyFiltersAndRender());
+            const fs = document.getElementById('filterStatus');
+            if (fs) fs.addEventListener('change', () => applyFiltersAndRender());
+            const fse = document.getElementById('filterSearch');
+            if (fse) fse.addEventListener('input', () => applyFiltersAndRender());
+            const bcs = document.getElementById('btnClearSearch');
+            if (bcs) bcs.addEventListener('click', () => {
+                const sEl = document.getElementById('filterSearch');
+                if (sEl) sEl.value = '';
+                applyFiltersAndRender();
+            });
+            const brf = document.getElementById('btnResetFilters');
+            if (brf) brf.addEventListener('click', () => resetAllFilters());
+        }
+
+        function resetAllFilters() {
+            if (document.getElementById('filterTeamMember')) document.getElementById('filterTeamMember').value = 'ALL';
+            if (document.getElementById('filterLevel')) document.getElementById('filterLevel').value = 'ALL';
+            populateCustomerDropdown(window._allMemberLedgerData || []);
+            if (document.getElementById('filterCustomer')) document.getElementById('filterCustomer').value = 'ALL';
+            if (document.getElementById('filterStatus')) document.getElementById('filterStatus').value = 'ALL';
+            if (document.getElementById('filterSearch')) document.getElementById('filterSearch').value = '';
+            currentSort = { col: 'submit_date', dir: 'desc' };
+            applyFiltersAndRender();
+        }
+
+        function getSortValue(row, col) {
+            if (col === 'submit_date') return row.submit_date || '';
+            if (col === 'trigger_date') return row.trigger_date || row.income_date || '';
+            if (col === 'payment_date') return row.payment_date || '';
+            if (col === 'entry_number') return row.entry_number || '';
+            if (col === 'level_label') return row.level_label || ('L' + (row.level || ''));
+            if (col === 'level') return getRowLevelCode(row);
+            if (col === 'client_name') return (row.client_name || row.member_name || '').toLowerCase();
+            if (col === 'lead_owner_name') return (row.lead_owner_name || '').toLowerCase();
+            if (col === 'display_kind') return (row.display_kind || row.entry_kind_label || row.kind || '').toLowerCase();
+            if (col === 'status') return (row.status || '').toLowerCase();
+            if (col === 'lost_lead_deduction') return Number(row.lost_lead_deduction || row.lost_lead_adv_deduction) || 0;
+            return Number(row[col]) || 0;
+        }
+
+        function doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery) {
+            const isCancelled = (row.status || '').toUpperCase() === 'CANCELLED';
+            if (avoidCancelled && isCancelled) return false;
+
+            if (selectedStatus !== 'ALL') {
+                const rowStatus = (row.status || '').toUpperCase();
+                if (selectedStatus === 'STAGE1_APPROVED') {
+                    if (rowStatus !== 'STAGE1_APPROVED') return false;
+                } else if (selectedStatus === 'PAID') {
+                    if (rowStatus !== 'PAID' && rowStatus !== 'RELEASED') return false;
+                } else if (selectedStatus === 'PENDING') {
+                    if (rowStatus === 'PAID' || rowStatus === 'RELEASED' || rowStatus === 'STAGE1_APPROVED' || rowStatus === 'CANCELLED') return false;
+                } else if (rowStatus !== selectedStatus) {
+                    return false;
+                }
+            }
+
+            if (searchQuery) {
+                const matchStr = [
+                    row.client_name,
+                    row.member_name,
+                    row.lead_owner_name,
+                    row.lead_owner_code,
+                    getRowLevelCode(row),
+                    row.entry_number,
+                    row.display_kind,
+                    row.kind,
+                    row.level_label,
+                    row.location,
+                    row.payment_utr,
+                    row.submit_date
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                if (!matchStr.includes(searchQuery)) return false;
+            }
+
+            return true;
+        }
+
+        function applyFiltersAndRender() {
+            const avoidCancelled = true;
+            const selectedTeamMember = document.getElementById('filterTeamMember') ? document.getElementById('filterTeamMember').value : 'ALL';
+            const selectedLevel = document.getElementById('filterLevel') ? document.getElementById('filterLevel').value : 'ALL';
+            const selectedCustomer = document.getElementById('filterCustomer') ? document.getElementById('filterCustomer').value : 'ALL';
+            const selectedStatus = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'ALL';
+            const searchQuery = ((document.getElementById('filterSearch') && document.getElementById('filterSearch').value) || '').trim().toLowerCase();
+
+            const allRows = window._allMemberLedgerData || [];
+
+            // 1. Filter rows
+            let filtered = allRows.filter(row => {
+                if (!doesRowMatchBaseFilters(row, avoidCancelled, selectedStatus, searchQuery)) {
+                    return false;
+                }
+                if (!doesRowMatchTeamFilter(row, selectedTeamMember)) {
+                    return false;
+                }
+                if (selectedLevel !== 'ALL' && getRowLevelCode(row) !== selectedLevel) {
+                    return false;
+                }
+                if (selectedCustomer !== 'ALL') {
+                    const rowCust = (row.client_name || row.member_name || '').trim();
+                    if (rowCust !== selectedCustomer) return false;
+                }
+                return true;
+            });
+
+            // Active filter pills
+            const pillsEl = document.getElementById('activeFilterPills');
+            if (pillsEl) {
+                const pills = [];
+                if (selectedTeamMember !== 'ALL') {
+                    const label = selectedTeamMember === 'TEAM_ONLY' ? 'Downline Team (L2+)' : (selectedTeamMember === 'SELF_ONLY' ? 'Self Direct (L1)' : `Team: ${selectedTeamMember}`);
+                    pills.push(`<span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle">${escHtml(label)}</span>`);
+                }
+                if (selectedLevel !== 'ALL') {
+                    pills.push(`<span class="badge bg-purple-subtle text-purple border border-purple-subtle">Level: ${escHtml(selectedLevel)}</span>`);
+                }
+                if (selectedCustomer !== 'ALL') {
+                    pills.push(`<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Lead: ${escHtml(selectedCustomer)}</span>`);
+                }
+                if (selectedStatus !== 'ALL') {
+                    pills.push(`<span class="badge bg-info-subtle text-info border border-info-subtle">Status: ${escHtml(selectedStatus)}</span>`);
+                }
+                pillsEl.innerHTML = pills.join('');
+            }
+
+            // 2. Compute Totals
+            let sumDeal = 0, sumRecv = 0, sumGross = 0, sumStg1 = 0, sumStg2 = 0;
+            let sumAdvPaid = 0, sumBal = 0, sumAdmin = 0, sumTds = 0, sumNet = 0;
+            let sumPaid = 0, sumPending = 0, sumLostAdv = 0;
+
+            filtered.forEach(r => {
+                const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                if (!isCancelled) {
+                    const isDirectAdv = (r.display_kind === 'Direct Advance' || r.kind === 'DIRECT_ADVANCE' || (!r.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes((r.kind || '').toUpperCase())));
+                    sumDeal += Number(r.deal_value) || 0;
+                    sumRecv += Number(r.received_value) || 0;
+                    if (!isDirectAdv) {
+                        sumGross += Number(r.commission_amount) || 0;
+                        sumBal += Number(r.balance_gross) || 0;
+                        sumAdmin += Number(r.admin_charges) || 0;
+                        sumTds += Number(r.tds_amount) || 0;
+                        sumNet += Number(r.net_payout) || 0;
+                    }
+                    sumStg1 += Number(r.stage1_adv) || 0;
+                    sumStg2 += Number(r.stage2_adv) || 0;
+                    sumAdvPaid += Number(r.advance_paid) || 0;
+
+                    const st = (r.status || '').toUpperCase();
+                    if (!isDirectAdv) {
+                        if (['PAID', 'RELEASED', 'VERIFIED'].includes(st)) {
+                            sumPaid += Number(r.net_payout) || 0;
+                        } else if (['DRAFT', 'PENDING', 'STAGE1_APPROVED'].includes(st)) {
+                            sumPending += Number(r.net_payout) || 0;
+                        }
+                    }
+                    sumLostAdv += Number(r.lost_lead_deduction || r.lost_lead_adv_deduction || 0);
+                }
+            });
+
+            // 3. Update Summary Data Labels
+            const sm = window._memberLedgerSummary || {};
+            const isFullScope = (filtered.length === allRows.length);
+
+            const dispGross = (isFullScope && sm.gross_earned !== undefined) ? sm.gross_earned : sumGross;
+            const dispAdvPaid = (isFullScope && sm.advances_adjusted !== undefined) ? sm.advances_adjusted : sumAdvPaid;
+            const dispLostAdv = (isFullScope && sm.lost_advances_adjusted !== undefined) ? sm.lost_advances_adjusted : sumLostAdv;
+            const dispBal = (isFullScope && sm.net_earning !== undefined) ? sm.net_earning : (sumBal - (sumLostAdv || 0));
+            const dispPaid = (isFullScope && sm.received !== undefined) ? sm.received : sumPaid;
+            const dispPending = (isFullScope && sm.pending !== undefined) ? sm.pending : sumPending;
+
+            // Section 1
+            if (document.getElementById('kpiGrossEarned')) {
+                document.getElementById('kpiGrossEarned').textContent = '₹' + Math.round(dispGross).toLocaleString('en-IN');
+            }
+            if (document.getElementById('kpiPaidReleased')) {
+                document.getElementById('kpiPaidReleased').textContent = '₹' + Math.round(dispPaid).toLocaleString('en-IN');
+            }
+            if (document.getElementById('kpiPendingBalance')) {
+                document.getElementById('kpiPendingBalance').textContent = '₹' + Math.round(dispPending).toLocaleString('en-IN');
+            }
+
+            // Section 2
+            if (document.getElementById('kpiAdvanceDeductions')) {
+                document.getElementById('kpiAdvanceDeductions').textContent = '₹' + Math.round(dispAdvPaid).toLocaleString('en-IN');
+            }
+            if (document.getElementById('kpiLostAdvancesAdjusted')) {
+                document.getElementById('kpiLostAdvancesAdjusted').textContent = '₹' + Math.round(dispLostAdv).toLocaleString('en-IN');
+            }
+            if (document.getElementById('kpiActiveRecords')) {
+                document.getElementById('kpiActiveRecords').textContent = filtered.length;
+            }
+
+            // Section 3 (Points)
+            const pts = window._memberPointsSummary || {};
+            if (document.getElementById('kpiPointsOpening')) {
+                document.getElementById('kpiPointsOpening').textContent = Math.round(pts.opening_balance || 0).toLocaleString('en-IN') + ' pts';
+            }
+            if (document.getElementById('kpiPointsCredited')) {
+                document.getElementById('kpiPointsCredited').textContent = Math.round(pts.total_credits || 0).toLocaleString('en-IN') + ' pts';
+            }
+            if (document.getElementById('kpiPointsDebited')) {
+                document.getElementById('kpiPointsDebited').textContent = Math.round(pts.total_debits || pts.income_debits || 0).toLocaleString('en-IN') + ' pts';
+            }
+            if (document.getElementById('kpiPointsFinal')) {
+                document.getElementById('kpiPointsFinal').textContent = Math.round(pts.available_balance || 0).toLocaleString('en-IN') + ' pts';
+            }
+
+            if (document.getElementById('entriesFilterInfo')) {
+                document.getElementById('entriesFilterInfo').textContent = `Showing ${filtered.length} of ${allRows.length} total entries`;
+            }
+
+            // Income by Type
+            const incCont = document.getElementById('ciIncomeByTypeContainer') || document.getElementById('incomeByTypeContainer');
+            if (incCont) {
+                const typeMap = {};
+                let teamIncomeCount = 0;
+                let teamIncomeGross = 0;
+
+                filtered.forEach(r => {
+                    const isCancelled = (r.status || '').toUpperCase() === 'CANCELLED';
+                    if (isCancelled && avoidCancelled) return;
+                    const kLabel = r.display_kind || r.entry_kind_label || r.kind || 'Commission';
+                    if (kLabel === 'Direct Advance' || (!r.source_lead_id && (r.kind || '').toUpperCase() === 'ADVANCE')) return;
+                    if (!typeMap[kLabel]) {
+                        typeMap[kLabel] = { type: kLabel, count: 0, gross: 0, advance: 0, balance: 0, net: 0 };
+                    }
+                    typeMap[kLabel].count++;
+                    if (!isCancelled) {
+                        const grossVal = Number(r.commission_amount) || 0;
+                        typeMap[kLabel].gross += grossVal;
+                        typeMap[kLabel].advance += Number(r.advance_paid) || 0;
+                        typeMap[kLabel].balance += Number(r.balance_gross) || 0;
+                        typeMap[kLabel].net += Number(r.net_payout) || 0;
+
+                        if (isRowDownlineTeamLead(r)) {
+                            teamIncomeCount++;
+                            teamIncomeGross += grossVal;
+                        }
+                    }
+                });
+
+                const typeKeys = Object.keys(typeMap);
+                if (typeKeys.length === 0) {
+                    incCont.innerHTML = '<div class="col-12 text-muted small p-2">No income entries match the selected filter.</div>';
+                } else {
+                    const typeCardsHtml = typeKeys.map(k => {
+                        const item = typeMap[k];
+                        return `
+                            <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                <div class="income-type-mini h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-dark text-truncate" style="font-size: 11.5px;" title="${escHtml(item.type)}">${escHtml(item.type)}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary" style="font-size: 10px;">${item.count}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <small class="text-muted" style="font-size: 10.5px;">Gross Earned:</small>
+                                        <strong class="text-indigo" style="font-size: 13px; font-weight: 800;">₹${Math.round(item.gross).toLocaleString('en-IN')}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    const teamIncomeCardHtml = `
+                        <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                            <div class="income-type-team-highlight h-100" style="cursor: pointer;" onclick="selectTeamFilterQuick('TEAM_ONLY')" title="Click to filter by Downline Team Income (L2, L3, L4...)">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-indigo text-truncate" style="font-size: 11.5px;">
+                                        <i class="fas fa-sitemap me-1"></i>Team Income
+                                    </span>
+                                    <span class="badge bg-indigo-subtle text-indigo border border-indigo-subtle" style="font-size: 10px;">${teamIncomeCount}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-baseline">
+                                    <small class="text-indigo" style="font-size: 10px; opacity: 0.85;">Downline Leads:</small>
+                                    <strong class="text-indigo" style="font-size: 13.5px; font-weight: 800;">₹${Math.round(teamIncomeGross).toLocaleString('en-IN')}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    incCont.innerHTML = typeCardsHtml + teamIncomeCardHtml;
+                }
+            }
+
+            // 4. Update Table Top Totals Row
+            const totalsRow = document.getElementById('totalsHeaderRow');
+            if (totalsRow) {
+                if (filtered.length === 0) {
+                    totalsRow.innerHTML = '';
+                } else {
+                    totalsRow.innerHTML = `
+                        <th><span class="badge bg-dark px-2 py-1"><i class="fas fa-calculator me-1"></i>TOTAL</span></th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th class="font-monospace text-primary fw-bold">${filtered.length} Entries</th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th>—</th>
+                        <th class="text-center">—</th>
+                        <th class="fw-bold text-indigo">₹${Math.round(sumGross).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-dark">₹${Math.round(sumStg1).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-dark">₹${Math.round(sumStg2).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-danger">${sumLostAdv > 0 ? ('-₹' + Math.round(sumLostAdv).toLocaleString('en-IN')) : '—'}</th>
+                        <th class="fw-bold text-warning-dark">₹${Math.round(sumAdvPaid).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-primary">₹${Math.round(sumBal).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-muted">₹${Math.round(sumAdmin).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-muted">₹${(sumTds % 1 === 0 ? sumTds : sumTds.toFixed(1)).toLocaleString('en-IN')}</th>
+                        <th class="fw-bold text-success">₹${Math.round(sumNet).toLocaleString('en-IN')}</th>
+                        ${showStatusColumn ? `<th>—</th>` : ''}
+                    `;
+                }
+            }
+
+            // 5. Sort rows
+            filtered.sort((a, b) => {
+                let va = getSortValue(a, currentSort.col);
+                let vb = getSortValue(b, currentSort.col);
+                let cmp = 0;
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    cmp = va - vb;
+                } else {
+                    cmp = String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' });
+                }
+                return currentSort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            // 6. Header sort icons
+            document.querySelectorAll('#headerRow th.sortable').forEach(th => {
+                const col = th.getAttribute('data-col');
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort ms-1 sort-icon';
+                if (col === currentSort.col) {
+                    th.classList.add(currentSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    if (icon) icon.className = `fas fa-sort-${currentSort.dir === 'asc' ? 'up' : 'down'} ms-1 text-primary sort-icon`;
+                }
+            });
+
+            // 7. Render Table Rows
+            renderTableRows(filtered);
+        }
+
+        function renderTableRows(rows) {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const colSpan = showStatusColumn ? 21 : 20;
+
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${colSpan}" class="text-center py-5 text-muted">
+                            <i class="fas fa-filter fa-2x text-muted mb-2 d-block"></i>
+                            No entries match your filter or search criteria.
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-link" onclick="resetAllFilters()">Reset all filters</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                const displayKind = row.display_kind || row.entry_kind_label || row.kind || 'Income';
+                const st = (row.status || '').toUpperCase();
+                const isCancelled = st === 'CANCELLED';
+
+                if (isCancelled) tr.classList.add('row-cancelled');
+
+                let statusBadge = '—';
+                if (showStatusColumn) {
+                    if (isCancelled) {
+                        statusBadge = `<span class="badge-status-cancelled"><i class="fas fa-ban me-1"></i>CANCELLED</span>`;
+                    } else if (st === 'PAID' || st === 'RELEASED') {
+                        statusBadge = `<span class="badge-status-paid"><i class="fas fa-check-circle me-1"></i>${st}</span>`;
+                    } else if (st === 'STAGE1_APPROVED') {
+                        statusBadge = `<span class="badge-status-stage1"><i class="fas fa-check me-1"></i>STAGE 1 APPROVED</span>`;
+                    } else {
+                        statusBadge = `<span class="badge-status-pending"><i class="fas fa-clock me-1"></i>${st || 'PENDING'}</span>`;
+                    }
+                }
+
+                const ownerName = (row.lead_owner_name && row.lead_owner_name !== '—') ? row.lead_owner_name : '';
+                const ownerCode = row.lead_owner_code || '';
+                const isTeamLead = isRowDownlineTeamLead(row);
+                let ownerCellHtml = '<span class="text-muted">—</span>';
+                if (ownerName) {
+                    const codeBadge = ownerCode ? `<code class="ms-1 px-1 bg-light text-secondary border rounded" style="font-size: 10px;">${escHtml(ownerCode)}</code>` : '';
+                    const selfTag = (!isTeamLead && Number(row.level) === 1)
+                        ? `<span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 9.5px;">Self</span>`
+                        : '';
+                    ownerCellHtml = `<span class="${isTeamLead ? 'fw-semibold text-indigo' : 'text-dark'}">${escHtml(ownerName)}</span>${codeBadge}${selfTag}`;
+                }
+
+                const lvlCode = getRowLevelCode(row);
+                let lvlBadgeStyle = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;';
+                if (lvlCode === 'L1') {
+                    lvlBadgeStyle = 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;';
+                } else if (lvlCode === 'L2') {
+                    lvlBadgeStyle = 'background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe;';
+                } else if (lvlCode === 'L3') {
+                    lvlBadgeStyle = 'background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff;';
+                } else if (lvlCode === 'L4' || lvlCode === 'L5') {
+                    lvlBadgeStyle = 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
+                }
+                const levelCodeCellHtml = `<span class="badge fw-bold" style="${lvlBadgeStyle} font-size: 11px; padding: 4px 8px;">${escHtml(lvlCode)}</span>`;
+
+                const lostDedVal = Number(row.lost_lead_deduction || row.lost_lead_adv_deduction || 0);
+                const lostDedHtml = lostDedVal > 0 
+                    ? `<span class="text-danger fw-bold">-₹${Math.round(lostDedVal).toLocaleString('en-IN')}</span>` 
+                    : '—';
+
+                tr.innerHTML = `
+                    <td>${row.submit_date || '—'}</td>
+                    <td>${row.trigger_date || row.income_date || '—'}</td>
+                    <td>${row.payment_date || '—'}</td>
+                    <td class="font-monospace text-primary fw-bold">${row.entry_number || '—'}</td>
+                    <td><span class="badge bg-secondary">${row.level_label || ('L' + row.level)}</span></td>
+                    <td class="fw-bold">${row.client_name || row.member_name || '—'}</td>
+                    <td>${ownerCellHtml}</td>
+                    <td>${levelCodeCellHtml}</td>
+                    <td><span class="badge-kind">${displayKind}</span></td>
+                    <td>₹${(row.received_value || 0).toLocaleString('en-IN')}</td>
+                    <td>${row.commission_pct || 0}%</td>
+                    <td class="fw-bold text-dark">₹${(row.commission_amount || 0).toLocaleString('en-IN')}</td>
+                    <td>${row.stage1_adv ? '₹' + Number(row.stage1_adv).toLocaleString('en-IN') : '—'}</td>
+                    <td>${row.stage2_adv ? '₹' + Number(row.stage2_adv).toLocaleString('en-IN') : '—'}</td>
+                    <td>${lostDedHtml}</td>
+                    <td>₹${(row.advance_paid || 0).toLocaleString('en-IN')}</td>
+                    <td class="fw-bold text-primary">₹${(row.balance_gross || 0).toLocaleString('en-IN')}</td>
+                    <td class="text-muted">₹${(row.admin_charges || 0).toLocaleString('en-IN')}</td>
+                    <td class="text-muted">₹${(row.tds_amount || 0).toLocaleString('en-IN')}</td>
+                    <td class="fw-bold text-success">₹${(row.net_payout || 0).toLocaleString('en-IN')}</td>
+                    ${showStatusColumn ? `<td>${statusBadge}</td>` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function _applyCiFilter() {
+            applyFiltersAndRender();
         }
 
         async function loadCashIncome(force) {
             if (_ciLoading && !force) return;
-            if (!force && _ciItemizedEntries && _ciItemizedEntries.length > 0) return;
+            if (!force && window._allMemberLedgerData && window._allMemberLedgerData.length > 0) return;
             _ciLoading = true;
             _renderCiMemberOverview(window._vgkDashboardSummaryData);
             const histEl    = document.getElementById('ciWalletHistory');
-            const entriesEl = document.getElementById('ciEntriesContent');
-
-            // Pre-fill stat cards instantly from last-known data
-            const _fmtIc = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-            try {
-                const _raw = sessionStorage.getItem(_CI_CACHE_KEY);
-                if (_raw) {
-                    const _c = JSON.parse(_raw);
-                    if (Date.now() - (_c._ts||0) < _CI_CACHE_TTL) {
-                        const _s = ((_c.incomeData||{}).summary) || {};
-                        const _w = _c.walletData || {};
-                        const _el = id => document.getElementById(id);
-                        if (_el('ciEarnedTotal'))   _el('ciEarnedTotal').textContent   = _fmtIc(_w.earned_total||0);
-                        if (_el('ciDraftTotal'))    _el('ciDraftTotal').textContent    = _fmtIc((_s.draft_total||0)+(_s.pending_total||0));
-                        if (_el('ciPendingTotal'))  _el('ciPendingTotal').textContent  = _fmtIc(_s.stage1_approved_total||0);
-                        if (_el('ciReleasedTotal')) _el('ciReleasedTotal').textContent = _fmtIc(_s.released_total||0);
-                        if (_el('ciWalletBalance')) _el('ciWalletBalance').textContent = _fmtIc(_w.wallet_balance||0);
-                    }
-                }
-            } catch(_ic_e) {}
+            const tbody     = document.getElementById('tableBody');
 
             if (histEl) histEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-            if (entriesEl) entriesEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="21" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading income ledger...</td></tr>';
             const _payoutsFetchPromise = fetch(BASE + '/member/company-payouts', { headers: authHeaders() });
 
             try {
-                const [walletRes, incomeRes, itemizedRes] = await Promise.all([
+                const [walletRes, incomeRes, itemizedRes, pointsRes] = await Promise.all([
                     fetch(BASE + '/member/wallet?per_page=30', { headers: authHeaders() }),
                     fetch(BASE + '/member/cash-income?per_page=20', { headers: authHeaders() }),
                     fetch(BASE + '/member/income-entries', { headers: authHeaders() }),
+                    fetch(BASE + '/dashboard/points', { headers: authHeaders() }),
                 ]);
                 if (walletRes.status === 401 || incomeRes.status === 401 || (itemizedRes && itemizedRes.status === 401)) { logout(); return; }
                 const walletData = await walletRes.json();
@@ -8490,54 +9311,27 @@
                     }
                 } catch(_) {}
 
-                window._vgkItemizedSummary = itemizedSummary;
-                if (itemizedSummary) {
-                    if (itemizedSummary.received !== undefined) window._ciSummaryReceived = Number(itemizedSummary.received);
-                    if (itemizedSummary.pending !== undefined) window._ciSummaryPending = Number(itemizedSummary.pending);
-                }
+                let pointsData = null;
+                try {
+                    if (pointsRes && pointsRes.ok) {
+                        pointsData = await pointsRes.json();
+                    }
+                } catch(_) {}
 
-                if (walletData && walletData.success) {
+                window._currentPartnerId = (JSON.parse(localStorage.getItem('vgk_partner') || '{}')).id || null;
+                window._allMemberLedgerData = (itemizedEntries || []).filter(r => (r.status || '').toUpperCase() !== 'CANCELLED');
+                window._memberLedgerSummary = itemizedSummary || {};
+                window._memberPointsSummary = (pointsData && pointsData.summary) || {};
+
+                // Render Member Shared Ledger View
+                populateTeamMemberDropdown(window._allMemberLedgerData);
+                populateLevelDropdown(window._allMemberLedgerData);
+                populateCustomerDropdown(window._allMemberLedgerData);
+                setupLedgerEventListeners();
+                applyFiltersAndRender();
+
+                if (walletData && walletData.success && histEl) {
                     const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-                    const _el = id => document.getElementById(id);
-                    if (_el('ciEarnedTotal')) {
-                        const _grs = (itemizedSummary && itemizedSummary.gross_earned !== undefined) 
-                            ? itemizedSummary.gross_earned 
-                            : (walletData.earned_total !== undefined ? walletData.earned_total : 0);
-                        _el('ciEarnedTotal').textContent = fmtInr(_grs);
-                    }
-                    if (_el('ciWalletBalance')) {
-                        const _rcvVal = (window._ciSummaryReceived !== undefined) ? window._ciSummaryReceived : 0.0;
-                        _el('ciWalletBalance').textContent = fmtInr(_rcvVal);
-                    }
-
-                    const pts = walletData.points_balance !== undefined ? walletData.points_balance : (walletData.points_alert ? walletData.points_alert.points_balance : null);
-                    if (pts !== null && _el('ciPointsBadge')) {
-                        _el('ciPointsBadge').innerHTML = `<i class="fas fa-coins me-1"></i>Points: ${Number(pts).toLocaleString('en-IN')} pts`;
-                    }
-
-                    const _bnzPending = (walletData.pending_bonanza_claims || []).reduce((s, c) => s + (c.amount || 0), 0);
-                    const _advPending = (walletData.pending_advance_claims || []).reduce((s, c) => s + (c.pending_gross || 0), 0);
-                    const _walletSubEl = document.getElementById('ciWalletBalanceSub') || document.querySelector('#ciWalletBalance + div');
-                    if (_walletSubEl) {
-                        const _pndVal = (window._ciSummaryPending !== undefined) ? window._ciSummaryPending : 0.0;
-                        _walletSubEl.innerHTML = `Disbursed to Bank Account · <span style="color:#fde68a;font-weight:700">Pending / Held: ${fmtInr(_pndVal)}</span>`;
-                    }
-                    if (histEl) histEl.dataset.loaded = '1';
-
-                    const pa = walletData.points_alert || {};
-                    const alertBanner = document.getElementById('ciPointsAlertBanner');
-                    if (pa.has_alert && alertBanner) {
-                        const fmtPts = n => Number(n||0).toLocaleString('en-IN') + ' pts';
-                        const alertMsgEl = document.getElementById('ciPointsAlertMsg');
-                        if (alertMsgEl) alertMsgEl.textContent =
-                            `Your current Points Balance is ${fmtPts(pa.points_balance)}, but your next pending income release needs ${fmtPts(pa.min_net_pending)}. Earn more points to unlock your income.`;
-                        const shortfallEl = document.getElementById('ciPointsAlertShortfall');
-                        if (shortfallEl) shortfallEl.textContent = fmtPts(pa.shortfall);
-                        alertBanner.style.display = '';
-                    } else if (alertBanner) {
-                        alertBanner.style.display = 'none';
-                    }
-
                     const TXN_LABELS_CI = {
                         INCOME_CREDIT:        'Cash Income Credited',
                         INCOME_DEDUCTION:     'Admin Charges & TDS',
@@ -8551,9 +9345,9 @@
                         ADVANCE_CASH_PAID:    'Cash Paid Out',
                     };
                     const txns = walletData.transactions || [];
-                    if (!txns.length && histEl) {
+                    if (!txns.length) {
                         histEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-inbox fa-2x" style="margin-bottom:8px"></i><br>No wallet transactions yet</div>';
-                    } else if (histEl) {
+                    } else {
                         const asc = [...txns].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                         let _running = 0;
                         const _cumMap = {};
@@ -8605,98 +9399,9 @@
                                 <tbody>${rows}${totalRow}</tbody>
                             </table>
                         </div>` + (walletData.total > 30 ? `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing last 30 of ${walletData.total} transactions</div>` : '');
-
-                        const pendingBnz = walletData.pending_bonanza_claims || [];
-                        if (pendingBnz.length) {
-                            const bnzRows = pendingBnz.map(c => {
-                                const dt = c.claimed_date ? new Date(c.claimed_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-                                const statusLabel = c.processed_status === 'Pending'
-                                    ? 'Awaiting Staff Approval'
-                                    : c.processed_status === 'Payment Released'
-                                    ? 'Approved — Payment Pending'
-                                    : c.processed_status;
-                                const breakdown = c.slab_extra_amount && c.deal_count > 1
-                                    ? `${c.deal_count} files × ₹${Number(c.slab_extra_amount).toLocaleString('en-IN')}`
-                                    : '';
-                                return `<tr style="background:#fefce8">
-                                    <td style="padding:10px 12px;font-size:12px;color:#6b7280;white-space:nowrap">${dt}</td>
-                                    <td style="padding:10px 12px;font-size:12px;font-weight:700;color:#92400e"><i class="fas fa-trophy me-1"></i>Bonanza Reward</td>
-                                    <td style="padding:10px 12px;font-size:11px;color:#78350f;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.bonanza_name}${breakdown ? ' — ' + breakdown : ''}</td>
-                                    <td style="text-align:right"><span style="color:#d97706;font-weight:700">+${fmtInr(c.amount)}</span></td>
-                                    <td colspan="2" style="text-align:center"><span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800"><i class="fas fa-clock me-1"></i>${statusLabel}</span></td>
-                                    <td style="text-align:right;font-size:11px;color:#9ca3af">—</td>
-                                </tr>`;
-                            }).join('');
-                            histEl.innerHTML += `<div style="margin-top:12px;border:1.5px solid #fde68a;border-radius:10px;overflow:hidden">
-                                <div style="background:#fffbeb;padding:10px 14px;font-size:12px;font-weight:800;color:#78350f;border-bottom:1px solid #fde68a"><i class="fas fa-hourglass-half me-1"></i>Bonanza Rewards — Awaiting Payment (Gross Amount)</div>
-                                <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-                                    <thead><tr style="background:#fef9c3;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#92400e">
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Date</th>
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Type</th>
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Description</th>
-                                        <th style="padding:8px 12px;text-align:right;font-weight:700">Amount</th>
-                                        <th colspan="2" style="padding:8px 12px;text-align:center;font-weight:700">Status</th>
-                                        <th style="padding:8px 12px;text-align:right;font-weight:700">Balance</th>
-                                    </tr></thead>
-                                    <tbody>${bnzRows}</tbody>
-                                </table></div>
-                            </div>`;
-                        }
-
-                        const pendingAdv = walletData.pending_advance_claims || [];
-                        if (pendingAdv.length) {
-                            const advRows = pendingAdv.map(a => {
-                                const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-                                const breakdown = a.slab_amount > 0
-                                    ? `Advance ₹${Number(a.advance_amount).toLocaleString('en-IN')} + Slab ₹${Number(a.slab_amount).toLocaleString('en-IN')}`
-                                    : `Advance ₹${Number(a.advance_amount).toLocaleString('en-IN')}`;
-                                return `<tr style="background:#f0fdf4">
-                                    <td style="padding:10px 12px;font-size:12px;color:#6b7280;white-space:nowrap">${dt}</td>
-                                    <td style="padding:10px 12px;font-size:12px;font-weight:700;color:#065f46"><i class="fas fa-solar-panel me-1"></i>Solar Advance</td>
-                                    <td style="padding:10px 12px;font-size:11px;color:#064e3b;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.entry_number} — ${breakdown}</td>
-                                    <td style="text-align:right"><span style="color:#059669;font-weight:700">+${fmtInr(a.pending_gross)}</span></td>
-                                    <td colspan="2" style="text-align:center"><span style="background:#d1fae5;color:#065f46;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800"><i class="fas fa-clock me-1"></i>Released — Awaiting Payment</span></td>
-                                    <td style="text-align:right;font-size:11px;color:#9ca3af">—</td>
-                                </tr>`;
-                            }).join('');
-                            histEl.innerHTML += `<div style="margin-top:12px;border:1.5px solid #6ee7b7;border-radius:10px;overflow:hidden">
-                                <div style="background:#ecfdf5;padding:10px 14px;font-size:12px;font-weight:800;color:#064e3b;border-bottom:1px solid #6ee7b7"><i class="fas fa-hand-holding-usd me-1"></i>Solar Advances — Released, Awaiting Accounts Payment</div>
-                                <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-                                    <thead><tr style="background:#d1fae5;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#065f46">
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Date</th>
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Type</th>
-                                        <th style="padding:8px 12px;text-align:left;font-weight:700">Description</th>
-                                        <th style="padding:8px 12px;text-align:right;font-weight:700">Gross Amount</th>
-                                        <th colspan="2" style="padding:8px 12px;text-align:center;font-weight:700">Status</th>
-                                        <th style="padding:8px 12px;text-align:right;font-weight:700">Balance</th>
-                                    </tr></thead>
-                                    <tbody>${advRows}</tbody>
-                                </table></div>
-                            </div>`;
-                        }
                     }
+                    histEl.dataset.loaded = '1';
                 }
-
-                if (incomeData && incomeData.success) {
-                    const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-                    const s = incomeData.summary || {};
-                    const underReviewTotal   = (s.draft_total || 0) + (s.pending_total || 0);
-                    const awaitingRelTotal   = (s.stage1_approved_total || 0);
-                    const _el = id => document.getElementById(id);
-                    if (_el('ciDraftTotal'))    _el('ciDraftTotal').textContent    = fmtInr(underReviewTotal);
-                    if (_el('ciPendingTotal'))  _el('ciPendingTotal').textContent  = fmtInr(awaitingRelTotal);
-                    if (_el('ciReleasedTotal')) _el('ciReleasedTotal').textContent = fmtInr(s.released_total);
-
-                    if (_el('ciStreamPersonal')) _el('ciStreamPersonal').textContent = fmtInr(s.personal_producer_total || 0);
-                    if (_el('ciStreamTeam'))     _el('ciStreamTeam').textContent     = fmtInr(s.team_differential_total || 0);
-                    if (_el('ciStreamSupport'))  _el('ciStreamSupport').textContent  = fmtInr(s.support_total || 0);
-                    if (_el('ciStreamShowroom')) _el('ciStreamShowroom').textContent = fmtInr(s.showroom_total || 0);
-                    if (_el('ciStreamAdvances')) _el('ciStreamAdvances').textContent = fmtInr(s.stage_advances_total || 0);
-                    if (_el('ciStreamBonuses'))  _el('ciStreamBonuses').textContent  = fmtInr(s.stage_bonuses_total || 0);
-                }
-
-                _ciItemizedEntries = (itemizedEntries && itemizedEntries.length) ? itemizedEntries : ((incomeData && incomeData.data) || []);
-                _applyCiFilter();
 
                 _saveCiCache(walletData, incomeData);
 
