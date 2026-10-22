@@ -957,17 +957,18 @@ def process_payment_stage2_advance(
                     + (f" [Stage 1 Adj: ₹{float(layer_adj):.2f}]" if layer_adj > 0 else "")
                 )
 
+            skip_tds_adv = bool(dhamaka_bz and getattr(dhamaka_bz, 'waive_tds_and_admin', False))
             db.execute(text("""
                 INSERT INTO vgk_solar_cibil_advances
                     (company_id, lead_id, partner_id, entry_number, advance_amount,
                      adjustment_amount, status, stage_at_eligibility, cibil_score_at_check,
                      level, kind, notes, source_transaction_id, earning_basis_type,
-                     earning_basis_amount, underlying_value, created_at, updated_at)
+                     earning_basis_amount, underlying_value, skip_tds_admin, created_at, updated_at)
                 VALUES
                     (:cid, :lid, :pid, :en, :amt,
                      :adj, 'PENDING', 'payment_validated', NULL,
                      :lv, 'DVR_ADVANCE', :notes, :tid, :ebt,
-                     :eba, :uv, :now, :now)
+                     :eba, :uv, :skip_tds, :now, :now)
             """), {
                 'cid': lead.company_id or 4,
                 'lid': lead_id,
@@ -981,6 +982,7 @@ def process_payment_stage2_advance(
                 'ebt': earning_basis_type,
                 'eba': float(amt),
                 'uv': float(underlying_val),
+                'skip_tds': skip_tds_adv,
                 'now': now_ist,
             })
             db.flush()

@@ -8372,7 +8372,7 @@ def fetch_member_income_entries_data(
         tot_f_count = max(len(set(e["source_lead_id"] for e in result if e.get("source_lead_id"))), len(all_vci_lids))
     except Exception:
         tot_f_count = len(set(e["source_lead_id"] for e in result if e.get("source_lead_id")))
-    inst_f_set = set(e["source_lead_id"] for e in non_can_entries if e.get("source_lead_id") and (
+    inst_f_set = set(e["source_lead_id"] for e in non_can_entries if e.get("source_lead_id") and e.get("level") == 1 and (
         e.get("installation_date") or 
         str(e.get("solar_pipeline_status") or e.get("lead_status") or "").lower() in ("completed", "installed", "subsidy_pending", "subsidy_received", "net_meter_done", "net_meter_pending", "balance_pending", "balance_received")
     ))
