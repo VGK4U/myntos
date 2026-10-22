@@ -7742,8 +7742,11 @@ async function previewGbcRecipients(openModalAfter = false) {
     });
     gbcPreviewRecipientsList = res.recipients || [];
     const activeRecipients = gbcPreviewRecipientsList.filter(r => !gbcExcludedPhones.has(r.phone));
-    const grpExtra = payload.include_default_groups ? 7 : 0;
-    const totalSelected = activeRecipients.length + grpExtra;
+    const totalSelected = activeRecipients.length;
+
+    const indivCount = activeRecipients.filter(r => r.entity_type !== 'whatsapp_group' && r.entity_type !== 'whatsapp_channel').length;
+    const grpCount = activeRecipients.length - indivCount;
+    const grpText = grpCount > 0 ? ` + ${grpCount} WA Group(s)` : '';
 
     const hdrBadge = document.getElementById('gbcHeaderCountBadge');
     const lblCount = document.getElementById('gbcMatchedCountLabel');
@@ -7752,7 +7755,7 @@ async function previewGbcRecipients(openModalAfter = false) {
 
     if (hdrBadge) hdrBadge.textContent = totalSelected;
     if (lblCount) lblCount.textContent = totalSelected;
-    if (sumText) sumText.textContent = `${res.summary_label || 'Selected Filters'} — ${activeRecipients.length} Individual(s)${grpExtra ? ' + 7 WA Groups' : ''}`;
+    if (sumText) sumText.textContent = `${res.summary_label || 'Selected Filters'} — ${indivCount} Individual(s)${grpText} (Total: ${totalSelected})`;
 
     if (bdBadges) {
       const bd = res.breakdown || {};
@@ -7789,13 +7792,20 @@ function renderGbcPreviewModalTable() {
 
   tbody.innerHTML = gbcPreviewRecipientsList.map(r => {
     const checked = !gbcExcludedPhones.has(r.phone) ? 'checked' : '';
+    const isGroup = r.entity_type === 'whatsapp_group' || r.entity_type === 'whatsapp_channel';
+    const icon = isGroup
+      ? (r.entity_type === 'whatsapp_channel' ? '<i class="fas fa-bullhorn text-primary me-1"></i>' : '<i class="fas fa-users text-success me-1"></i>')
+      : '<i class="fas fa-user text-muted me-1"></i>';
+    const displayPhone = isGroup
+      ? `<span class="badge bg-light text-dark border"><i class="fab fa-whatsapp text-success me-1"></i>${escapeHtml(r.display_phone || 'WhatsApp Group')}</span>`
+      : `<span style="color:#059669;font-weight:700">${escapeHtml(r.phone)}</span>`;
     return `
-      <tr style="border-bottom:1px solid #f1f5f9">
+      <tr style="border-bottom:1px solid #f1f5f9; ${isGroup ? 'background:#f8fafc;' : ''}">
         <td style="padding:7px 8px"><input type="checkbox" ${checked} onchange="toggleGbcSingleRecipient('${escapeHtml(r.phone)}', this.checked)"></td>
-        <td style="padding:7px 8px;font-weight:700;color:#0f172a">${escapeHtml(r.name || 'Recipient')}</td>
+        <td style="padding:7px 8px;font-weight:700;color:#0f172a">${icon} ${escapeHtml(r.name || 'Recipient')}</td>
         <td style="padding:7px 8px;color:#475569;font-family:monospace">${escapeHtml(r.code || '—')}</td>
-        <td style="padding:7px 8px;color:#059669;font-weight:700">${escapeHtml(r.phone)}</td>
-        <td style="padding:7px 8px"><span style="background:#f1f5f9;padding:2px 7px;border-radius:5px;font-size:11px">${escapeHtml(r.category_label || '')} • ${escapeHtml(r.segment || '')}</span></td>
+        <td style="padding:7px 8px">${displayPhone}</td>
+        <td style="padding:7px 8px"><span style="background:${isGroup ? '#e0e7ff;color:#3730a3' : '#f1f5f9;color:#334155'};padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600">${escapeHtml(r.category_label || '')} • ${escapeHtml(r.segment || '')}</span></td>
         <td style="padding:7px 8px;font-size:11px;color:#334155">${escapeHtml(r.status_label || '')} / ${escapeHtml(r.stage_label || '')}</td>
       </tr>
     `;
@@ -7806,10 +7816,9 @@ function toggleGbcSingleRecipient(phone, isChecked) {
   if (isChecked) gbcExcludedPhones.delete(phone);
   else gbcExcludedPhones.add(phone);
   const activeCount = gbcPreviewRecipientsList.filter(r => !gbcExcludedPhones.has(r.phone)).length;
-  const grpExtra = document.getElementById('gbcIncludeGroups')?.checked ? 7 : 0;
   if (document.getElementById('gbcPrevModalCount')) document.getElementById('gbcPrevModalCount').textContent = activeCount;
-  if (document.getElementById('gbcHeaderCountBadge')) document.getElementById('gbcHeaderCountBadge').textContent = activeCount + grpExtra;
-  if (document.getElementById('gbcMatchedCountLabel')) document.getElementById('gbcMatchedCountLabel').textContent = activeCount + grpExtra;
+  if (document.getElementById('gbcHeaderCountBadge')) document.getElementById('gbcHeaderCountBadge').textContent = activeCount;
+  if (document.getElementById('gbcMatchedCountLabel')) document.getElementById('gbcMatchedCountLabel').textContent = activeCount;
 }
 
 function toggleAllGbcPreviewChecks(selectAll) {
@@ -7820,9 +7829,8 @@ function toggleAllGbcPreviewChecks(selectAll) {
   }
   renderGbcPreviewModalTable();
   const activeCount = gbcPreviewRecipientsList.filter(r => !gbcExcludedPhones.has(r.phone)).length;
-  const grpExtra = document.getElementById('gbcIncludeGroups')?.checked ? 7 : 0;
-  if (document.getElementById('gbcHeaderCountBadge')) document.getElementById('gbcHeaderCountBadge').textContent = activeCount + grpExtra;
-  if (document.getElementById('gbcMatchedCountLabel')) document.getElementById('gbcMatchedCountLabel').textContent = activeCount + grpExtra;
+  if (document.getElementById('gbcHeaderCountBadge')) document.getElementById('gbcHeaderCountBadge').textContent = activeCount;
+  if (document.getElementById('gbcMatchedCountLabel')) document.getElementById('gbcMatchedCountLabel').textContent = activeCount;
 }
 
 // ── SIGNATURE PRESETS CRUD (ADD / EDIT / DELETE DROPDOWN + MESSAGE CUSTOMIZATION) ──
@@ -8488,10 +8496,13 @@ function populateGbcTestRecipientDropdown(activeList = []) {
     }
   } catch (_) {}
 
-  activeList.slice(0, 150).forEach(r => {
-    const ph10 = String(r.phone || '').replace(/\D/g, '').slice(-10);
-    html += `<option value="${escapeHtml(ph10)}" data-name="${escapeHtml(r.name || 'Recipient')}" data-code="${escapeHtml(r.code || '')}" data-segment="${escapeHtml(r.segment || '')}" data-stage="${escapeHtml(r.stage_label || '')}" data-city="${escapeHtml(r.city || '')}">👤 ${escapeHtml(r.name || 'Recipient')} (+${escapeHtml(r.phone)}) — ${escapeHtml(r.category_label || r.segment || '')}</option>`;
-  });
+  activeList
+    .filter(r => r.entity_type !== 'whatsapp_group' && r.entity_type !== 'whatsapp_channel')
+    .slice(0, 150)
+    .forEach(r => {
+      const ph10 = String(r.phone || '').replace(/\D/g, '').slice(-10);
+      html += `<option value="${escapeHtml(ph10)}" data-name="${escapeHtml(r.name || 'Recipient')}" data-code="${escapeHtml(r.code || '')}" data-segment="${escapeHtml(r.segment || '')}" data-stage="${escapeHtml(r.stage_label || '')}" data-city="${escapeHtml(r.city || '')}">👤 ${escapeHtml(r.name || 'Recipient')} (+${escapeHtml(r.phone)}) — ${escapeHtml(r.category_label || r.segment || '')}</option>`;
+    });
   sel.innerHTML = html;
   if (currentVal) sel.value = currentVal;
 }
@@ -8653,8 +8664,9 @@ function triggerGbcCampaignWithMode(mode) {
 
 async function triggerGbcCampaign(overrideMode = null) {
   const activeRecipients = gbcPreviewRecipientsList.filter(r => !gbcExcludedPhones.has(r.phone));
-  const includeGroups = Boolean(document.getElementById('gbcIncludeGroups')?.checked);
-  const totalTargets = activeRecipients.length + (includeGroups ? 7 : 0);
+  const indivCount = activeRecipients.filter(r => r.entity_type !== 'whatsapp_group' && r.entity_type !== 'whatsapp_channel').length;
+  const grpCount = activeRecipients.length - indivCount;
+  const totalTargets = activeRecipients.length;
 
   if (totalTargets === 0) {
     showToast('No recipients selected! Please adjust your Message To filter.', 'red');
@@ -8684,7 +8696,11 @@ async function triggerGbcCampaign(overrideMode = null) {
   }
 
   const modeBadge = channelMode === 'scanned_safe' ? '📱 Scanned WhatsApp (Full Formatting, Line Spacing & Flyer)' : '🏢 Official Meta Cloud API';
-  if (!confirm(`🚀 Ready to trigger this General Broadcast to ${totalTargets} recipient(s) via ${modeBadge}?`)) {
+  const countDesc = grpCount > 0
+    ? `${indivCount} Individual(s) + ${grpCount} WhatsApp Group(s) (Total: ${totalTargets})`
+    : `${totalTargets} recipient(s)`;
+
+  if (!confirm(`🚀 Ready to trigger this General Broadcast to ${countDesc} via ${modeBadge}?`)) {
     return;
   }
 

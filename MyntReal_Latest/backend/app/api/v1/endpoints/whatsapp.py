@@ -9463,10 +9463,21 @@ def _clean_10_digit_phone(raw_val: Any) -> Optional[str]:
     return None
 
 
+DEFAULT_BROADCAST_GROUPS: List[Dict[str, str]] = [
+    {"id": "0029Vb7Vb5f9cDDXf3zWtf0m", "name": "VGK4U Official Channel", "type": "channel"},
+    {"id": "HNQQoKXFfCm5PQngGdrlcY", "name": "VGK Community Group", "type": "group"},
+    {"id": "LfX8mGootXa7SpwNIz7P5C", "name": "Executive Announcements", "type": "group"},
+    {"id": "GRP_NAME:Ev scooty. MNR (royal ev ) stars", "name": "Ev scooty. MNR (royal ev ) stars", "type": "group"},
+    {"id": "GRP_NAME:MNR General Group", "name": "MNR General Group", "type": "group"},
+    {"id": "GRP_NAME:VGK4U - Vijayawada", "name": "VGK4U - Vijayawada", "type": "group"},
+    {"id": "GRP_NAME:VGK4U General", "name": "VGK4U General", "type": "group"},
+]
+
+
 def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) -> Dict[str, Any]:
     """
     Resolves deduplicated recipients across:
-    - Category 1 ('associations'): VGK Members, Freelancers (with/without communication), MNR Members, Staff, Tenants, Vendors
+    - Category 1 ('associations'): VGK Members, Freelancers (with/without communication), MNR Members, Staff, Tenants, Vendors, WhatsApp Groups
     - Category 2 ('leads'): All CRM Lead segments, status groups (Won+, Still In Process Before Won+, Lost, etc.), and stages (Before/After Installation)
     - Custom added numbers & explicit exclusions
     """
@@ -9481,6 +9492,10 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
         cp = _clean_10_digit_phone(ep)
         if cp:
             excluded_set.add(cp)
+        else:
+            s_ep = str(ep).strip()
+            if s_ep:
+                excluded_set.add(s_ep)
 
     def _add_recipient(
         phone_raw: Any,
@@ -9564,7 +9579,7 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
         else:
             assoc_types = [str(x).strip().lower() for x in assoc_types_raw if str(x).strip()]
         if not assoc_types or "all" in assoc_types:
-            assoc_types = ["vgk_members", "freelancers", "mnr_members", "staff", "tenants", "vendors"]
+            assoc_types = ["vgk_members", "freelancers", "mnr_members", "staff", "tenants", "vendors", "wa_groups"]
 
         status_mode = str(filters.get("status_mode") or "active").strip().lower()  # 'active' | 'all'
         freelancer_mode = str(filters.get("freelancer_mode") or "with_comm_only").strip().lower()
@@ -9580,8 +9595,30 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
         elif freelancer_mode == "exclude_all" and "freelancers" in assoc_types:
             assoc_types = [a for a in assoc_types if a != "freelancers"]
 
+        # 0. WhatsApp Groups & Channels
         if "wa_groups" in assoc_types or filters.get("include_default_groups"):
-            breakdown["WhatsApp Group"] = 7
+            grp_added = 0
+            for g in DEFAULT_BROADCAST_GROUPS:
+                gid = g["id"]
+                if gid not in excluded_set and gid not in recipients_map:
+                    recipients_map[gid] = {
+                        "phone": gid,
+                        "display_phone": "WhatsApp Channel" if g.get("type") == "channel" else "WhatsApp Group",
+                        "clean_phone": gid,
+                        "name": g["name"],
+                        "code": "CHANNEL" if g.get("type") == "channel" else "GROUP",
+                        "category_label": "WhatsApp Group",
+                        "segment": "Broadcast Group",
+                        "status_label": "Active",
+                        "stage_label": "Channel" if g.get("type") == "channel" else "Group",
+                        "city": "",
+                        "entity_type": "whatsapp_channel" if g.get("type") == "channel" else "whatsapp_group",
+                        "entity_id": None,
+                        "recipient_type": g.get("type", "group"),
+                    }
+                    grp_added += 1
+            if grp_added > 0:
+                breakdown["WhatsApp Group"] = grp_added
 
         summary_parts.append(f"Category: Associations ({', '.join(assoc_types).upper()})")
         summary_parts.append(f"Status: {status_mode.upper()}")
@@ -10017,9 +10054,11 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
             r for r in recipients_list
             if sq in str(r.get("name") or "").lower()
             or sq in str(r.get("phone") or "").lower()
+            or sq in str(r.get("display_phone") or "").lower()
             or sq in str(r.get("code") or "").lower()
             or sq in str(r.get("city") or "").lower()
             or sq in str(r.get("segment") or "").lower()
+            or sq in str(r.get("category_label") or "").lower()
         ]
 
     # Apply optional explicit selected_phones subset
@@ -10031,7 +10070,14 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
             if cp:
                 sel_clean.add(f"91{cp}")
                 sel_clean.add(cp)
-        recipients_list = [r for r in recipients_list if r.get("phone") in sel_clean]
+            else:
+                s_sp = str(sp).strip()
+                if s_sp:
+                    sel_clean.add(s_sp)
+        recipients_list = [
+            r for r in recipients_list
+            if r.get("phone") in sel_clean or r.get("clean_phone") in sel_clean
+        ]
 
     return {
         "total": len(recipients_list),
@@ -11817,19 +11863,21 @@ def trigger_general_broadcast_campaign(
     resolved = _resolve_general_broadcast_recipients(db, payload)
     recipients = resolved["recipients"]
 
-    default_groups = []
-    if include_default_groups:
-        default_groups = [
-            {"id": "0029Vb7Vb5f9cDDXf3zWtf0m", "name": "VGK4U Official Channel", "type": "channel"},
-            {"id": "HNQQoKXFfCm5PQngGdrlcY", "name": "VGK Community Group", "type": "group"},
-            {"id": "LfX8mGootXa7SpwNIz7P5C", "name": "Executive Announcements", "type": "group"},
-            {"id": "GRP_NAME:Ev scooty. MNR (royal ev ) stars", "name": "Ev scooty. MNR (royal ev ) stars", "type": "group"},
-            {"id": "GRP_NAME:MNR General Group", "name": "MNR General Group", "type": "group"},
-            {"id": "GRP_NAME:VGK4U - Vijayawada", "name": "VGK4U - Vijayawada", "type": "group"},
-            {"id": "GRP_NAME:VGK4U General", "name": "VGK4U General", "type": "group"},
-        ]
+    individual_recipients = [r for r in recipients if r.get("entity_type") not in ("whatsapp_group", "whatsapp_channel")]
+    group_recipients = [r for r in recipients if r.get("entity_type") in ("whatsapp_group", "whatsapp_channel")]
 
-    total_targets = len(recipients) + len(default_groups)
+    if include_default_groups and not group_recipients:
+        for g in DEFAULT_BROADCAST_GROUPS:
+            group_recipients.append({
+                "id": g["id"],
+                "phone": g["id"],
+                "name": g["name"],
+                "type": g.get("type", "group"),
+                "recipient_type": g.get("type", "group"),
+                "entity_type": "whatsapp_channel" if g.get("type") == "channel" else "whatsapp_group",
+            })
+
+    total_targets = len(individual_recipients) + len(group_recipients)
     if total_targets == 0:
         raise HTTPException(status_code=400, detail="No matching recipients found for the selected filter criteria.")
 
@@ -11891,7 +11939,7 @@ def trigger_general_broadcast_campaign(
     db.add(exec_row)
     db.flush()
 
-    for r in recipients:
+    for r in individual_recipients:
         d = AutomationDispatch(
             execution_id=exec_id,
             job_id="general_broadcast_campaign",
@@ -11913,13 +11961,15 @@ def trigger_general_broadcast_campaign(
         )
         db.add(d)
 
-    for g in default_groups:
+    for g in group_recipients:
+        g_id = g.get("phone") or g.get("id")
+        g_type = g.get("recipient_type") or g.get("type") or "group"
         d = AutomationDispatch(
             execution_id=exec_id,
             job_id="general_broadcast_campaign",
-            recipient_type=g["type"],
-            recipient_identifier=g["id"],
-            recipient_name=g["name"],
+            recipient_type=g_type,
+            recipient_identifier=g_id,
+            recipient_name=g.get("name") or "WhatsApp Group",
             target_entity_type="whatsapp_group",
             provider="SCANNED_WA",
             status="QUEUED",
