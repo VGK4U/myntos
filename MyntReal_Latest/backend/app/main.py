@@ -17743,6 +17743,13 @@ async def serve_staff_dynamic_pages(page: str, request: Request):
     }
     if clean_page in segment_redirects:
         return RedirectResponse(url=segment_redirects[clean_page], status_code=302)
+    if (
+        clean_page.endswith("-leads")
+        and "/" not in clean_page
+        and clean_page not in ("my-leads", "team-leads", "mnr-leads", "category-leads", "workflow-leads", "bank-wise-leads", "at-bank-leads", "import-leads")
+    ):
+        _dyn_slug = clean_page[:-6]
+        return RedirectResponse(url=f"/staff/mnr-leads-master?tab={_dyn_slug}&status=won_plus", status_code=302)
 
     mapping = {
         "my-tenant": "staff_my_tenant.html",

@@ -20436,7 +20436,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
 
-  } else if (url.startsWith('/staff/solar-leads') || url.startsWith('/staff/ev-b2b-leads') || url.startsWith('/staff/ev-b2c-leads') || url.startsWith('/staff/ev-spares-leads') || url.startsWith('/staff/real-dreams-leads') || url.startsWith('/staff/insurance-leads')) {
+  } else if (url.startsWith('/staff/solar-leads') || url.startsWith('/staff/ev-b2b-leads') || url.startsWith('/staff/ev-b2c-leads') || url.startsWith('/staff/ev-spares-leads') || url.startsWith('/staff/real-dreams-leads') || url.startsWith('/staff/insurance-leads') || (/^\/staff\/([a-z0-9-]+)-leads(\?|$)/.test(url) && !url.startsWith('/staff/import-leads'))) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const _segTabMap = {
@@ -20445,7 +20445,9 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       '/staff/real-dreams-leads': 'real-dreams', '/staff/insurance-leads': 'insurance'
     };
     const _segKey = Object.keys(_segTabMap).find(k => url.startsWith(k));
-    res.writeHead(302, { 'Location': '/staff/mnr-leads-master?tab=' + (_segTabMap[_segKey] || 'solar') + '&status=won_plus' });
+    const _dynMatch = url.match(/^\/staff\/([a-z0-9-]+)-leads(\?|$)/);
+    const _resolvedTab = (_segKey && _segTabMap[_segKey]) || (_dynMatch && _dynMatch[1]) || 'solar';
+    res.writeHead(302, { 'Location': '/staff/mnr-leads-master?tab=' + _resolvedTab + '&status=won_plus' });
     res.end();
     return;
 

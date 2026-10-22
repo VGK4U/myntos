@@ -23,7 +23,7 @@ from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.models.staff import StaffEmployee
 from app.models.staff_accounts import AssociatedCompany
 from app.models.platform_b2b import PlatformClient
-from app.models.signup_category import SignupCategory
+from app.models.signup_category import SignupCategory, DEFAULT_SIGNUP_CATEGORIES
 from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
 from app.services.saas_tenant_resolver import resolve_tenant_context, TenantContext
 
@@ -33,12 +33,61 @@ router = APIRouter()
 
 
 # ── Authorization Helper ───────────────────────────────────────────────────────
+def _ensure_tenant_standard_and_starter_segments(
+    db: Session,
+    company_id: int,
+    current_user_id: Optional[str] = None
+) -> None:
+    """
+    Ensures that a tenant company has all 7 standard DEFAULT_SIGNUP_CATEGORIES (including Solar)
+    plus the 3 starter categories (General Inquiries, Sales Pipeline, Support & Service) if missing.
+    """
+    if not company_id:
+        return
+    existing = db.query(SignupCategory).filter(SignupCategory.company_id == company_id).all()
+    existing_slugs = {(c.slug or '').strip().lower() for c in existing}
+    existing_names = {(c.name or '').strip().lower() for c in existing}
+
+    combined_defs = [
+        (cat['name'], cat['slug'], cat.get('description', ''), cat.get('icon', 'fa-layer-group'), cat.get('display_order', idx))
+        for idx, cat in enumerate(DEFAULT_SIGNUP_CATEGORIES, start=1)
+    ] + [
+        ("General Inquiries", "general-inquiries", "Standard customer inquiries", "fa-headset", 8),
+        ("Sales Pipeline", "sales-pipeline", "Primary operational sales workflow", "fa-bullseye", 9),
+        ("Support & Service", "support-service", "Customer support and follow-up requests", "fa-wrench", 10),
+    ]
+
+    added = False
+    for name, slug, desc, icon, order in combined_defs:
+        if slug.lower() not in existing_slugs and name.lower() not in existing_names:
+            db.add(SignupCategory(
+                company_id=company_id,
+                name=name,
+                slug=slug,
+                description=desc,
+                icon=icon,
+                display_order=order,
+                is_active=True,
+                requires_documents=False,
+                created_by_id=current_user_id
+            ))
+            existing_slugs.add(slug.lower())
+            existing_names.add(name.lower())
+            added = True
+    if added:
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+
 def get_authorized_tenant(
     db: Session,
-    current_user: StaffEmployee
+    current_user: StaffEmployee,
+    require_admin: bool = True
 ) -> Tuple[PlatformClient, List[int]]:
     """
-    Validates that current_user is authorized to manage tenant CRM setup.
+    Validates that current_user is authorized to access/manage tenant CRM setup.
     Returns (PlatformClient, list_of_accessible_company_ids).
     """
     ctx = resolve_tenant_context(db, current_user)
@@ -53,8 +102,8 @@ def get_authorized_tenant(
     client = None
     if ctx.client:
         client = ctx.client
-    elif current_user.client_id:
-        client = db.query(PlatformClient).filter(PlatformClient.id == current_user.client_id).first()
+    elif getattr(current_user, 'tenant_id', None) and current_user.tenant_id > 1:
+        client = db.query(PlatformClient).filter(PlatformClient.id == current_user.tenant_id).first()
     elif current_user.base_company_id:
         # Check if company belongs to a client
         co = db.query(AssociatedCompany).filter(AssociatedCompany.id == current_user.base_company_id).first()
@@ -71,14 +120,14 @@ def get_authorized_tenant(
                 detail="SaaS tenant account not found for current session."
             )
 
-    # RBAC check: Must be tenant admin or superadmin
+    # RBAC check: Must be tenant admin or superadmin when require_admin is True
     user_type = (getattr(current_user, 'staff_type', '') or '').upper()
     is_admin = (
         is_superadmin or
         ctx.is_tenant_admin or
         user_type in ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_SEGMENT_ADMIN', 'ADMIN']
     )
-    if not is_admin:
+    if require_admin and not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Only SaaS Tenant Administrators can configure CRM / Workflow Setup."
@@ -210,36 +259,12 @@ def get_crm_setup_overview(
     ]
 
     # 2. Segments (Categories) scoped strictly to tenant companies
+    if company_ids:
+        _ensure_tenant_standard_and_starter_segments(db, company_ids[0], str(current_user.id))
+
     segments = db.query(SignupCategory).filter(
         SignupCategory.company_id.in_(company_ids)
     ).order_by(SignupCategory.display_order, SignupCategory.name).all()
-
-    # If tenant has 0 categories, auto-seed standard starter segments for their primary company
-    if not segments and company_ids:
-        default_co_id = company_ids[0]
-        starter_cats = [
-            ("General Inquiries", "general-inquiries", "Standard customer inquiries", "fa-headset", 1),
-            ("Sales Pipeline", "sales-pipeline", "Primary operational sales workflow", "fa-bullseye", 2),
-            ("Support & Service", "support-service", "Customer support and follow-up requests", "fa-wrench", 3),
-        ]
-        created_cats = []
-        for name, slug, desc, icon, order in starter_cats:
-            cat = SignupCategory(
-                company_id=default_co_id,
-                name=name,
-                slug=slug,
-                description=desc,
-                icon=icon,
-                display_order=order,
-                is_active=True,
-                created_by_id=str(current_user.id)
-            )
-            db.add(cat)
-            created_cats.append(cat)
-        db.commit()
-        for cat in created_cats:
-            db.refresh(cat)
-        segments = created_cats
 
     segments_data = [
         {
@@ -635,8 +660,10 @@ def list_tenant_segments(
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
-    client, company_ids = get_authorized_tenant(db, current_user)
+    client, company_ids = get_authorized_tenant(db, current_user, require_admin=False)
     target_cos = [company_id] if company_id and company_id in company_ids else company_ids
+    if target_cos:
+        _ensure_tenant_standard_and_starter_segments(db, target_cos[0], str(current_user.id))
 
     segments = db.query(SignupCategory).filter(
         SignupCategory.company_id.in_(target_cos)

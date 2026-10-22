@@ -2649,6 +2649,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         return true;
       });
       if (isSaaS) {
+        document.querySelectorAll('button[onclick*="openHarGharTriggerModal"]').forEach(b => b.style.display = 'none');
+        document.querySelectorAll('span[title*="Har ghar support"]').forEach(s => s.style.display = 'none');
+        ['dashNetSource', 'dashGuruFilter', 'dashZGuruFilter'].forEach(id => {
+          const fg = document.getElementById(id)?.closest('.fgroup');
+          if (fg) fg.style.display = 'none';
+        });
+        ['htBtn_ground', 'htBtn_guru', 'htBtn_zguru', 'htBtn_adguru', 'swBtn_ground', 'swBtn_guru', 'swBtn_zguru', 'swBtn_adguru'].forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) btn.style.display = 'none';
+        });
+        const fsCardTitle = document.getElementById('dashByFieldStaff')?.previousElementSibling;
+        if (fsCardTitle) fsCardTitle.innerHTML = '<i class="fas fa-user-tie"></i> By Assigned Staff';
         const subP = document.querySelector('.page-banner p');
         if (subP) {
           subP.textContent = segs.length > 0 

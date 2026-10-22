@@ -1428,8 +1428,9 @@
             const uid = document.getElementById('companyAdminUid').textContent;
             const name = document.getElementById('companyAdminName').textContent;
             const pwd = document.getElementById('companyAdminPwd').textContent;
+            const email = (currentCompanyAdminData && currentCompanyAdminData.admin_email) ? `\nEmail / Username: ${currentCompanyAdminData.admin_email}` : '';
             const origin = window.location.origin || 'http://localhost:5001';
-            const text = `Company Admin Master Login:\n---------------------------\nCompany ID: ${uid}\nAdmin: ${name}\nDefault Password: ${pwd}\nLogin Portal: ${origin}/staff/login\n\n(Staff & Users can log in directly with their Mobile Numbers)`;
+            const text = `Company Admin Master Login:\n---------------------------\nCompany ID: ${uid}\nAdmin: ${name}${email}\nDefault Password: ${pwd}\nLogin Portal: ${origin}/saas/login\n\n(Staff & Users can log in directly with their Mobile Numbers)`;
             
             navigator.clipboard.writeText(text).then(() => {
                 alert('Copied Company Master Credentials to clipboard!\n\n' + text);

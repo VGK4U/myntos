@@ -805,6 +805,14 @@ window.StaffHeader = window.StaffHeader || {
         const badgeContainer = document.getElementById('activeCommunitySevaBadges');
         const bannerContainer = document.getElementById('headerCampaignBannerContainer');
         if (!badgeContainer) return;
+        try {
+            const u = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            if (u.is_saas_tenant || u.company_segment === 'SEGMENT_B_SAAS' || Number(u.tenant_id || 1) > 1 || (u.base_company_id && ![1, 2, 3, 4, 88].includes(Number(u.base_company_id)))) {
+                badgeContainer.style.display = 'none';
+                if (bannerContainer) bannerContainer.style.display = 'none';
+                return;
+            }
+        } catch (_) {}
         
         fetch('/api/v1/community-services/public/active-headers')
             .then(res => res.json())
@@ -927,11 +935,20 @@ window.StaffHeader = window.StaffHeader || {
         }
 
         // For SaaS tenant workspaces, dynamically render customer's company logo & name, hide internal widgets
-        const isTenant = isTenantAdmin || userData.is_tenant_admin || (userData.base_company_id && ![1, 2, 3, 4, 88].includes(Number(userData.base_company_id))) || ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT'].includes(staffType);
+        const isTenant = Boolean(
+            isTenantAdmin ||
+            userData.is_tenant_admin ||
+            userData.is_saas_tenant ||
+            userData.company_segment === 'SEGMENT_B_SAAS' ||
+            (Number(userData.tenant_id || 1) > 1) ||
+            (userData.base_company_id && ![1, 2, 3, 4, 88].includes(Number(userData.base_company_id))) ||
+            ['TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT'].includes(staffType)
+        );
+        const resolvedCompName = userData.base_company_name || userData.company_name || userData.tenant_name || '';
         if (isTenant) {
             const logoEl = document.querySelector('.header-logo');
             if (logoEl) {
-                const compName = userData.base_company_name || 'My Tenant';
+                const compName = resolvedCompName || 'My Workspace';
                 const compLogo = userData.company_logo || window.__TENANT_LOGO_URL || null;
                 const parent = logoEl.parentElement;
                 
@@ -970,15 +987,35 @@ window.StaffHeader = window.StaffHeader || {
             if (campaign) campaign.style.display = 'none';
         }
         
-        this.showStaffTypeBanner(staffType, empId, userData.base_company_name);
+        this.showStaffTypeBanner(staffType, empId, resolvedCompName, isTenant, role);
     },
     
-    showStaffTypeBanner: function(staffType, empId, compName) {
+    showStaffTypeBanner: function(staffType, empId, compName, isTenant, roleName) {
         const existingBanner = document.getElementById('staffTypeBanner');
         if (existingBanner) {
             existingBanner.remove();
         }
         
+        if (isTenant) {
+            const badgeText = (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT')
+                ? 'TENANT ADMIN'
+                : (roleName ? String(roleName).toUpperCase() : 'STAFF MEMBER');
+            const bannerHtml = `
+                <div id="staffTypeBanner" class="staff-type-banner mn-employee-banner">
+                    <i class="fas fa-building"></i>
+                    <span>You are logged in as</span>
+                    <span class="mn-employee-badge">${badgeText}</span>
+                    <span>(${empId})</span>
+                    <span>- Welcome to ${compName || 'your Workspace'}!</span>
+                </div>
+            `;
+            const header = document.querySelector('.top-header');
+            if (header) {
+                header.insertAdjacentHTML('afterend', bannerHtml);
+            }
+            return;
+        }
+
         const bannerConfig = {
             'TENANT_ADMIN': {
                 icon: 'fas fa-shield-halved',

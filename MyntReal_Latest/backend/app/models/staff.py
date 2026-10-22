@@ -314,6 +314,18 @@ class StaffEmployee(Base):
         except Exception:
             add_depts = []
 
+        eff_tenant_id = getattr(self, 'tenant_id', 1) or 1
+        comp_segment = getattr(comp_obj, 'company_segment', None) if comp_obj else None
+        comp_client_id = getattr(comp_obj, 'client_id', None) if comp_obj else None
+        if eff_tenant_id <= 1 and comp_client_id and comp_client_id > 1:
+            eff_tenant_id = comp_client_id
+        is_saas_tenant = bool(
+            eff_tenant_id > 1
+            or comp_segment == 'SEGMENT_B_SAAS'
+            or (self.staff_type or '').upper() in ('TENANT_ADMIN', 'SAAS_CLIENT', 'SAAS_TENANT')
+            or ((role_obj.role_code if role_obj else '') or '').lower().startswith('tenant_')
+        )
+
         data = {
             "id": self.id,
             "emp_code": self.emp_code,
@@ -360,11 +372,14 @@ class StaffEmployee(Base):
             "base_company_id": self.base_company_id,
             "base_company_name": comp_obj.company_name if comp_obj else None,
             "base_company_code": comp_obj.company_code if comp_obj else None,
+            "company_name": comp_obj.company_name if comp_obj else None,
+            "company_segment": comp_segment or ('SEGMENT_B_SAAS' if is_saas_tenant else 'SEGMENT_A_INTERNAL'),
+            "is_saas_tenant": is_saas_tenant,
             "company_logo": comp_obj.logo_path if comp_obj else None,
             "assigned_modules": self.assigned_modules or [],
             "data_companies": self._get_data_companies_info(company_lookup=company_lookup),
             # Stage 1 / Stage 2A Multi-Tenant Context
-            "tenant_id": getattr(self, 'tenant_id', 1) or 1,
+            "tenant_id": eff_tenant_id,
             "token_version": getattr(self, 'token_version', 1) or 1,
             # DC Protocol (Dec 21, 2025): Additional Departments (multi-department support)
             "additional_departments": add_depts,

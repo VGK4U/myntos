@@ -1849,6 +1849,10 @@
         }
         
         function isSaasTenantCompany(targetCid) {
+            try {
+                const u = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                if (u.is_saas_tenant || u.company_segment === 'SEGMENT_B_SAAS' || Number(u.tenant_id || 1) > 1) return true;
+            } catch (_) {}
             const cid = parseInt(targetCid || document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId);
             if (!cid || isNaN(cid)) return false;
             const compObj = companiesList.find(c => c.id === cid);
@@ -1866,7 +1870,9 @@
             const formCid = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
             const isTenant = isSaasTenantCompany(formCid);
 
-            const mnrLabel = document.getElementById('leadMnrHandlerSearch')?.closest('.col-md-3')?.querySelector('.form-label');
+            const mnrCol = document.getElementById('leadMnrHandlerSearch')?.closest('.col-md-3');
+            const onGroundRow = document.getElementById('leadMnrHandlerSearch')?.closest('.row');
+            const mnrLabel = mnrCol?.querySelector('.form-label');
             const mnrInput = document.getElementById('leadMnrHandlerSearch');
 
             const guruCol = document.getElementById('leadGuruSearch')?.closest('.col-md-3');
@@ -1875,21 +1881,29 @@
             const adiGuruCol = document.getElementById('leadAdiGuruSearch')?.closest('.col-md-3');
             const communityCol = document.getElementById('leadCommunitySearch')?.closest('.col-md-3');
             const vgkRow = document.getElementById('leadIsVgkProgram')?.closest('.row');
+            const gsFilterBtn = document.querySelector('#handlerFilterGroup button[data-role="mnr_handler"]');
+            const dealIdsRow = document.getElementById('dealSourceId')?.closest('.row');
 
             if (isTenant) {
                 const vgkEditBanner = document.getElementById('sl_vgkEditBanner');
                 if (vgkEditBanner) vgkEditBanner.innerHTML = '';
-
-                if (mnrLabel) mnrLabel.innerHTML = 'Referral Agent (Ved Member)';
-                if (mnrInput) mnrInput.placeholder = 'Search Ved Member...';
-
+                const vgkBanner = document.getElementById('sl_vgkBanner');
+                if (vgkBanner) vgkBanner.innerHTML = '';
+                if (gsFilterBtn) gsFilterBtn.style.display = 'none';
+                const bannerP = document.querySelector('.page-header p');
+                if (bannerP) bannerP.textContent = 'View and manage leads assigned to you as Telecaller or Field Staff';
+                if (onGroundRow) onGroundRow.style.display = 'none';
                 if (guruCol) guruCol.style.display = 'none';
                 if (zGuruCol) zGuruCol.style.display = 'none';
                 if (coreCol) coreCol.style.display = 'none';
                 if (adiGuruCol) adiGuruCol.style.display = 'none';
                 if (communityCol) communityCol.style.display = 'none';
                 if (vgkRow) vgkRow.style.display = 'none';
+                if (dealIdsRow) dealIdsRow.style.display = 'none';
             } else {
+                if (onGroundRow) onGroundRow.style.display = '';
+                if (gsFilterBtn) gsFilterBtn.style.display = '';
+                if (dealIdsRow) dealIdsRow.style.display = '';
                 if (mnrLabel) mnrLabel.innerHTML = 'Ground Source <span class="text-muted" style="font-size:11px">(MNR / VGK / Partner)</span>';
                 if (mnrInput) mnrInput.placeholder = 'Search MNR / VGK / Partner...';
 
@@ -3558,7 +3572,9 @@
                     if (_slVeb) _slVeb.innerHTML = '';
                     adjustLeadFormForCompanyContext();
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('leadModal')).show();
-                    setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
+                    if (!isSaasTenantCompany(effectiveCompanyId)) {
+                        setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
+                    }
                 }
             } catch (error) {
                 const msg = error?.message && !error.message.startsWith('HTTP ')
@@ -4803,7 +4819,9 @@
                     const _slVb = document.getElementById('sl_vgkBanner');
                     if (_slVb) _slVb.innerHTML = '';
                     new bootstrap.Modal(document.getElementById('leadDetailModal')).show();
-                    setTimeout(() => loadSlVgkBanner(lead.id, lead.company_id || effectiveCompanyId), 200);
+                    if (!isSaasTenantCompany(lead.company_id || effectiveCompanyId)) {
+                        setTimeout(() => loadSlVgkBanner(lead.id, lead.company_id || effectiveCompanyId), 200);
+                    }
                 }
             } catch (error) {
                 showToast('Failed to load lead details', 'error');

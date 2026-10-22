@@ -62,6 +62,7 @@ export class CategoryLeadsMasterPage {
   private totalCount: number = 0;
   private revealedPhones: Set<string> = new Set();
   private loadSeq: number = 0;
+  private isSaaSTenant: boolean = false;
 
   private tabs: CategoryTab[] = [
     { key: 'solar', label: 'Solar', category: 'Solar', icon: 'fa-solar-panel', badgeColor: '#f59e0b' },
@@ -77,15 +78,68 @@ export class CategoryLeadsMasterPage {
 
   constructor(container: HTMLElement) {
     this.container = container;
+    try {
+      const rawUser = localStorage.getItem('staff_user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser) || {};
+        const rCode = String(u.role?.role_code || u.role_code || '').toLowerCase();
+        const sType = String(u.staff_type || '').toUpperCase();
+        const tid = Number(u.tenant_id || u.client_id || 1);
+        const bcid = Number(u.base_company_id || 1);
+        if (
+          tid > 1 ||
+          (bcid > 1 && ![1, 2, 3, 4, 88].includes(bcid)) ||
+          u.is_saas_tenant === true ||
+          u.company_segment === 'SEGMENT_B_SAAS' ||
+          rCode.startsWith('tenant_') ||
+          sType === 'TENANT_ADMIN' ||
+          sType === 'SAAS_CLIENT' ||
+          sType === 'SAAS_TENANT'
+        ) {
+          this.isSaaSTenant = true;
+          this.tabs = this.tabs.filter(t => t.key !== 'mnr');
+        }
+      }
+    } catch (_) {}
     this.init();
   }
 
-  private init(): void {
+  private async init(): Promise<void> {
     const params = routerService.getRouteParams();
-    if (params && params.tab) {
-      const rawTab = String(params.tab).trim().toLowerCase().replace(/_/g, '-');
-      const normTab = rawTab === 'etc-training' ? 'etc' : rawTab;
-      const matched = this.tabs.find(t => t.key.toLowerCase() === normTab || t.category.toLowerCase() === String(params.tab).trim().toLowerCase());
+    const rawParamTab = params && params.tab ? String(params.tab).trim().toLowerCase().replace(/_/g, '-') : '';
+    const normParamTab = rawParamTab === 'etc-training' ? 'etc' : rawParamTab;
+
+    try {
+      const segResp = await apiService.get<any>('/saas/crm-setup/segments');
+      if (segResp && segResp.success !== false) {
+        const segData = segResp.data || segResp;
+        if (segData && segData.is_saas_tenant) {
+          this.isSaaSTenant = true;
+          this.tabs = this.tabs.filter(t => t.key !== 'mnr');
+          if (Array.isArray(segData.segments)) {
+            const existingKeys = new Set(this.tabs.map(t => t.key.toLowerCase()));
+            for (const s of segData.segments) {
+              let slug = String(s.slug || s.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+              if (slug === 'etc-training') slug = 'etc';
+              if (slug && !existingKeys.has(slug)) {
+                existingKeys.add(slug);
+                const cleanIcon = String(s.icon || 'fa-folder').replace(/^fa[srb]?\s+/, '');
+                this.tabs.splice(Math.max(0, this.tabs.length - 1), 0, {
+                  key: slug,
+                  label: s.name || slug,
+                  category: s.name || slug,
+                  icon: cleanIcon,
+                  badgeColor: '#0ea5e9'
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (normParamTab) {
+      const matched = this.tabs.find(t => t.key.toLowerCase() === normParamTab || t.category.toLowerCase() === String(params?.tab || '').trim().toLowerCase());
       if (matched) {
         this.currentTab = matched.key;
       }
@@ -371,10 +425,10 @@ export class CategoryLeadsMasterPage {
             <div><strong style="color:#cbd5e1;">Insurance:</strong> <span style="color:${insColor}; font-weight:700;">${insLabel}</span>${lead.insurance_policy_no ? ` <span style="font-family:monospace; color:#cbd5e1;">(${lead.insurance_policy_no})</span>` : ''}</div>
           ` : ''}
 
-          <!-- L1 to L6 Handlers Section -->
+          <!-- Handlers / Assigned Team Section -->
           <div style="margin-top:6px; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:6px 8px;">
             <div style="font-size:10px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-              <i class="fas fa-users" style="font-size:9px;"></i> Handlers (L1–L6)
+              <i class="fas fa-users" style="font-size:9px;"></i> ${this.isSaaSTenant ? 'Assigned Team' : 'Handlers (L1–L6)'}
             </div>
             ${this.renderMobileHandlerLevels(lead)}
           </div>
@@ -398,6 +452,37 @@ export class CategoryLeadsMasterPage {
 
   private renderMobileHandlerLevels(lead: LeadItem): string {
     const levels: { lvl: string; label: string; name: string; id: string; type: string; isAuto?: boolean; confirmed?: boolean | null }[] = [];
+
+    if (this.isSaaSTenant) {
+      if (lead.field_staff_name || lead.field_staff_emp_code) {
+        levels.push({ lvl: 'Staff', label: 'Assigned Staff', name: lead.field_staff_name || '', id: lead.field_staff_emp_code || '', type: 'staff', confirmed: lead.showroom_supported });
+      }
+      if (lead.telecaller_name || lead.telecaller_emp_code) {
+        levels.push({ lvl: 'Staff', label: 'Telecaller', name: lead.telecaller_name || '', id: lead.telecaller_emp_code || '', type: 'staff', confirmed: lead.telecaller_supported });
+      }
+      if (lead.support_staff_name || lead.support_staff_id) {
+        levels.push({ lvl: 'Staff', label: 'Support Staff', name: lead.support_staff_name || '', id: String(lead.support_staff_id || ''), type: 'staff', confirmed: null });
+      }
+      if (lead.technical_staff1_name || lead.technical_staff1_id) {
+        levels.push({ lvl: 'Staff', label: 'Tech Staff 1', name: lead.technical_staff1_name || '', id: String(lead.technical_staff1_id || ''), type: 'staff', confirmed: null });
+      }
+      if (lead.technical_name || lead.technical_id) {
+        levels.push({ lvl: 'Staff', label: 'Tech Staff 2', name: lead.technical_name || '', id: String(lead.technical_id || ''), type: 'staff', confirmed: lead.technical_supported });
+      }
+      if (levels.length === 0) {
+        return `<div style="font-size:10px; color:#64748b; font-style:italic;">No staff assigned</div>`;
+      }
+      return levels.map(item => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; padding:2px 0; border-bottom:1px solid #1e293b;">
+          <span style="color:#94a3b8; display:flex; align-items:center; gap:3px; flex-shrink:0;">
+            <span>${item.label}:</span>
+          </span>
+          <span style="color:#e2e8f0; font-weight:600; text-align:right; display:flex; align-items:center; gap:3px; flex-wrap:wrap; justify-content:flex-end;">
+            <span>${item.name || ('#' + item.id)}</span>
+          </span>
+        </div>
+      `).join('');
+    }
 
     // L1: Source
     const l1Name = lead.source_ref_name || lead.guru_name || lead.mnr_handler_id || '';

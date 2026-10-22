@@ -86,3 +86,22 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
      - Transient `401` disconnects on live sockets MUST re-sync from S3 (`restoreSessionFromDatabase()` / `s3_last_good`) and retry with backoff before declaring terminal logout.
   2. **Strict Local vs. Production Isolation (`backend/app/core/database.py`, `backend/app/main.py`)**:
      - Non-production local environments MUST default to `search_path=testing,public` (sandbox schema), bounded connection pool (`pool_size=3, max_overflow=2`), disabled duplicate background APScheduler, and `dev_standby` WhatsApp mode (`SESSION_ID = "dev_baileys"`).
+
+
+---
+
+### 9. FROZEN SAAS TENANT & WORKFLOW ARCHITECTURE (EXPLICIT RECONFIRMATION LOCK)
+- **Rule**: The SaaS Tenant & Workflow module is **STRICTLY LOCKED**. DO NOT modify, overwrite, or alter any SaaS tenant architecture, menu resolution, segment/category tab rendering, or VGK/L1–L6 isolation logic unless explicitly requested by the user.
+- **Protected SaaS Components**:
+  1. **SaaS Menu & Entitlement Resolver** (`backend/app/services/saas_tenant_resolver.py`, `backend/app/api/v1/endpoints/saas_crm_setup.py`):
+     - `WORKFLOWS` (`ZS WORKFLOWS`) menu generation (`Executive Dashboard`, `Category-wise Leads`, and dynamic Won-category workflow tabs including `Solar`).
+     - Dynamic tenant segment resolution (`/api/v1/saas/crm-setup/segments`).
+  2. **SaaS Identity & Tenant Isolation** (`backend/app/models/staff.py`, `backend/app/api/v1/endpoints/staff_auth.py`, `backend/app/api/v1/endpoints/crm.py`):
+     - `is_saas_tenant=True` and `company_segment="SEGMENT_B_SAAS"` serialization for `tenant_id > 1`.
+     - Strict tenant scoping in `/api/v1/crm/network-search` (zero VGK/MNR leakage).
+  3. **SaaS Workflow & CRM Clean UI** (`frontend/staff_mnr_leads_master.html`, `frontend/staff_lead_category.html`, `frontend/staff_my_leads.html`, `frontend/staff_leads.html`, `frontend/staff_executive_dashboard.html`, `frontend/staff_header.js`, `mobile/src/pages/CategoryLeadsMasterPage.ts`):
+     - All active tenant category tabs (`#tabNav`) must always remain visible in `Category-wise Leads` and category workflow views.
+     - Zero VGK / MNR / L1–L5 hierarchy display for SaaS tenants (`L6: Showroom` relabeled to `Assigned Staff`).
+     - Full Solar workflow functionality (Stage filters, Pipeline Stats cards, Export buttons, Documents modal, Edit modal, Inline editing) preserved end-to-end.
+- **Mandatory Reconfirmation Protocol**:
+  - Before making ANY change that touches the SaaS module—or if a `git pull` / merge / rebase introduces changes to any of the protected SaaS files above—you MUST stop, present the exact diff/impact to the user, and **reconfirm with the user before proceeding**.

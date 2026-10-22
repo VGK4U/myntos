@@ -1856,6 +1856,48 @@
             }
         }
         
+        function isSaasTenantCompany(targetCid) {
+            try {
+                const u = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                if (u.is_saas_tenant || u.company_segment === 'SEGMENT_B_SAAS' || Number(u.tenant_id || 1) > 1) return true;
+            } catch (_) {}
+            const cid = parseInt(targetCid || document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId);
+            if (!cid || isNaN(cid)) return false;
+            const compObj = companiesList.find(c => c.id === cid);
+            if (compObj) {
+                const code = (compObj.company_code || '').toUpperCase();
+                if (cid === 1 || cid === 2 || code === 'MNR' || code === 'VGK' || code === 'VGK4U' || compObj.is_book_keeper) {
+                    return false;
+                }
+                return true;
+            }
+            return cid > 2;
+        }
+
+        function adjustLeadFormForCompanyContext() {
+            const formCid = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
+            const isTenant = isSaasTenantCompany(formCid);
+            const onGroundRow = document.getElementById('leadMnrHandlerSearch')?.closest('.row');
+            const vgkRow = document.getElementById('leadIsVgkProgram')?.closest('.row');
+            const dealIdsRow = document.getElementById('dealSourceId')?.closest('.row');
+            const gsFilterBtn = document.querySelector('#handlerFilterGroup button[data-role="mnr_handler"]');
+            if (isTenant) {
+                const vgkEditBanner = document.getElementById('sl_vgkEditBanner');
+                if (vgkEditBanner) vgkEditBanner.innerHTML = '';
+                const vgkBanner = document.getElementById('sl_vgkBanner');
+                if (vgkBanner) vgkBanner.innerHTML = '';
+                if (onGroundRow) onGroundRow.style.display = 'none';
+                if (vgkRow) vgkRow.style.display = 'none';
+                if (dealIdsRow) dealIdsRow.style.display = 'none';
+                if (gsFilterBtn) gsFilterBtn.style.display = 'none';
+            } else {
+                if (onGroundRow) onGroundRow.style.display = '';
+                if (vgkRow) vgkRow.style.display = '';
+                if (dealIdsRow) dealIdsRow.style.display = '';
+                if (gsFilterBtn) gsFilterBtn.style.display = '';
+            }
+        }
+
         // DC Protocol (Dec 31, 2025): Sync form company selection with header
         function onLeadFormCompanyChange() {
             const formSelect = document.getElementById('leadFormCompany');
@@ -1867,6 +1909,7 @@
                     onCompanyChange();
                 }
             }
+            adjustLeadFormForCompanyContext();
         }
         
         // DC Protocol (Dec 31, 2025): Sync form when opening modal
@@ -3454,8 +3497,11 @@
                     // DC Protocol N001: clear then lazy-load VGK banner in edit modal
                     const _slVeb = document.getElementById('sl_vgkEditBanner');
                     if (_slVeb) _slVeb.innerHTML = '';
+                    adjustLeadFormForCompanyContext();
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('leadModal')).show();
-                    setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
+                    if (!isSaasTenantCompany(effectiveCompanyId)) {
+                        setTimeout(() => loadSlVgkBanner(id, effectiveCompanyId, 'edit'), 200);
+                    }
                 }
             } catch (error) {
                 const msg = error?.message && !error.message.startsWith('HTTP ')
@@ -4699,7 +4745,9 @@
                     if (_detailModal && !_detailModalEl.classList.contains('show')) {
                         _detailModal.show();
                     }
-                    setTimeout(() => loadSlVgkBanner(lead.id, lead.company_id || effectiveCompanyId), 200);
+                    if (!isSaasTenantCompany(lead.company_id || effectiveCompanyId)) {
+                        setTimeout(() => loadSlVgkBanner(lead.id, lead.company_id || effectiveCompanyId), 200);
+                    }
                 }
             } catch (error) {
                 showToast('Failed to load lead details', 'error');

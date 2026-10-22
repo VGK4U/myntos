@@ -106,11 +106,13 @@ def resolve_tenant_context(db: Session, staff: StaffEmployee) -> TenantContext:
     admin_scope = (getattr(staff, "admin_scope", "") or "").upper()
     staff_type = (getattr(staff, "staff_type", "") or "").upper()
 
+    hierarchy_level = getattr(staff.role, "hierarchy_level", None) if staff.role else None
     is_admin = (
-        role_code in ("tenant_admin", "tenant_administrator", "super_admin", "admin", "saas_segment_admin", "ceo", "cto", "founder") or
+        role_code in ("tenant_admin", "tenant_administrator", "super_admin", "admin", "saas_segment_admin", "ceo", "cto", "founder", "director") or
         "tenant admin" in role_name or
+        (hierarchy_level is not None and hierarchy_level >= 75) or
         staff_type in ("TENANT_ADMIN", "SAAS_CLIENT", "SAAS_SEGMENT_ADMIN") or
-        admin_scope in ("TENANT_ADMIN", "SAAS_CLIENT", "CLIENT_SPECIFIC", "SUPER_ADMIN", "SAAS_SEGMENT_ADMIN") or
+        admin_scope in ("TENANT_ADMIN", "SAAS_CLIENT", "SUPER_ADMIN", "SAAS_SEGMENT_ADMIN") or
         getattr(staff, "is_tenant_admin", False) or
         getattr(staff, "is_super_admin", False) or
         (staff.emp_code and ("ADM" in staff.emp_code or "ADMIN" in staff.emp_code or staff.emp_code.endswith("_ADMIN")))
@@ -328,8 +330,8 @@ def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tupl
         allowed_routes.add('/staff/crm/followups')
         allowed_routes.add('/staff/whatsapp-center')
 
-    # 3. WORKFLOWS (Product Display: ZS WORKFLOWS, module code: SOLAR_EV)
-    if ctx.has_module('SOLAR_EV'):
+    # 3. WORKFLOWS (Product Display: ZS WORKFLOWS, module code: SOLAR_EV or CRM_LEADS)
+    if ctx.has_module('SOLAR_EV') or ctx.has_module('CRM_LEADS'):
         workflow_items = [
             {
                 'id': 99201,
@@ -391,12 +393,24 @@ def get_saas_menu_tree(ctx: TenantContext, db: Optional[Session] = None) -> Tupl
                     FROM crm_leads l
                     JOIN signup_categories c ON l.category_id = c.id
                     WHERE l.company_id = :cid
-                      AND l.status IN ('won', 'won_plus', 'closed_won')
+                      AND l.status IN ('won', 'won_plus', 'closed_won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed')
+                    UNION
+                    SELECT DISTINCT c.slug, c.name
+                    FROM crm_leads l
+                    JOIN crm_lead_deals d ON d.lead_id = l.id
+                    JOIN signup_categories c ON d.revenue_category_id = c.id
+                    WHERE l.company_id = :cid
+                      AND (
+                        l.status IN ('won', 'won_plus', 'closed_won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed')
+                        OR d.deal_status IN ('won', 'won_plus', 'closed_won', 'completed', 'active')
+                      )
                 """), {"cid": ctx.company.id}).fetchall()
             except Exception as e:
                 pass
 
         won_cat_slugs = { (r[0] or '').lower().strip().replace('_', '-'): r[1] for r in won_cat_rows if r[0] }
+        if ctx.has_module('SOLAR_EV') and 'solar' not in won_cat_slugs:
+            won_cat_slugs['solar'] = 'Solar'
 
         display_idx = 3
         for slug, cat_name in won_cat_slugs.items():

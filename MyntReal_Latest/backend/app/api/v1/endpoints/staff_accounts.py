@@ -478,8 +478,16 @@ async def get_company_logins(
             "default_password": "MR10001"
         }
 
+        import re as _re
+        raw_co_prefix = _re.sub(r"-[0-9A-Fa-f]{6,8}$", "", (company.company_code or "")).upper()
+        short_prefix = _re.sub(r"[^A-Z0-9]", "", raw_co_prefix.split("-")[0].split("_")[0])[:4]
+        if len(short_prefix) < 2:
+            short_prefix = _re.sub(r"[^A-Z0-9]", "", (company.company_name or "TNT").upper())[:3] or "TNT"
+        short_admin_code = f"{short_prefix}_ADM"
+        short_admin_email = f"{short_prefix.lower()}@zynova.in"
+
         primary_admin = None
-        default_pwd = f"{company.company_code}@123"
+        default_pwd = short_admin_code
         # Company 88 / SaaS Segment Administrator
         if company.id == 88:
             saas_admin = db.query(_SE).filter_by(emp_code="ZMP18080088", is_deleted=False).first()
@@ -511,7 +519,7 @@ async def get_company_logins(
                     "id": chosen.id,
                     "emp_code": chosen.emp_code,
                     "full_name": chosen.full_name or f"{company.company_name} Admin",
-                    "email": chosen.email or f"admin@{company.company_code.lower()}.zynova.cloud",
+                    "email": chosen.email or short_admin_email,
                     "phone": chosen.phone or "—",
                     "designation": chosen.designation or "Tenant Master Administrator",
                     "role_name": "Tenant Master Administrator",
@@ -538,10 +546,17 @@ async def get_company_logins(
                 try:
                     from datetime import date
                     from app.core.security import SecurityManager
+                    cand_code = short_admin_code
+                    if db.query(_SE).filter_by(emp_code=cand_code).first():
+                        cand_code = f"{short_prefix}_ADM{company.id}"
+                    cand_email = short_admin_email
+                    if db.query(_SE).filter_by(email=cand_email).first():
+                        cand_email = f"{short_prefix.lower()}{company.id}@zynova.in"
+                    default_pwd = cand_code
                     new_ta = _SE(
-                        emp_code=f"{company.company_code}_ADMIN",
+                        emp_code=cand_code,
                         full_name=f"{company.company_name} Admin",
-                        email=f"admin@{company.company_code.lower()}.zynova.cloud",
+                        email=cand_email,
                         phone=company.phone or None,
                         designation="Tenant Master Administrator",
                         role_id=17,
@@ -567,18 +582,33 @@ async def get_company_logins(
                         "is_active": True,
                         "default_password": default_pwd
                     }
+                    users.insert(0, {
+                        "id": new_ta.id,
+                        "emp_code": new_ta.emp_code,
+                        "full_name": new_ta.full_name,
+                        "email": new_ta.email,
+                        "phone": new_ta.phone or "—",
+                        "designation": new_ta.designation,
+                        "role_name": "Tenant Master Administrator",
+                        "department_name": "General",
+                        "status": "active",
+                        "is_active": True,
+                        "is_primary": True,
+                        "last_login": "Never",
+                        "staff_type": "TENANT_ADMIN"
+                    })
                 except Exception:
                     primary_admin = {
                         "id": 0,
-                        "emp_code": f"{company.company_code}_ADMIN",
+                        "emp_code": short_admin_code,
                         "full_name": f"{company.company_name} Admin",
-                        "email": f"admin@{company.company_code.lower()}.zynova.cloud",
+                        "email": short_admin_email,
                         "phone": "—",
                         "designation": "Tenant Master Administrator",
                         "role_name": "Tenant Master Administrator",
                         "status": "active",
                         "is_active": True,
-                        "default_password": default_pwd
+                        "default_password": short_admin_code
                     }
 
         # Filter users list for tenant: Exclude cross-company mapped users if it's a SaaS client

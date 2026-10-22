@@ -968,6 +968,14 @@ async def get_staff_profile(
         client_obj = db.query(PlatformClient).filter_by(id=cid).first()
         if client_obj:
             client_code = client_obj.client_code
+            if cid > 1:
+                employee_data["is_saas_tenant"] = True
+                employee_data["company_segment"] = "SEGMENT_B_SAAS"
+                if (employee_data.get("tenant_id") or 1) <= 1:
+                    employee_data["tenant_id"] = cid
+                if not employee_data.get("base_company_name"):
+                    employee_data["base_company_name"] = client_obj.company_name
+                    employee_data["company_name"] = client_obj.company_name
         
         sub_ids = [s.id for s in db.query(PlatformSubscription).filter(
             PlatformSubscription.client_id == cid,

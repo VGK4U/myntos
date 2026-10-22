@@ -13,6 +13,7 @@ run_dunning(db, *, grace_days=10, dry_run=False)
 from __future__ import annotations
 
 import logging
+import re
 import secrets
 from datetime import date, timedelta
 from decimal import Decimal
@@ -325,7 +326,10 @@ def provision_tenant_admin(
     ).first()
 
     if existing_admin:
-        # Phase 3 Architectural Fix: Ensure existing admin has authoritative operational membership
+        # Phase 3 Architectural Fix: Ensure existing admin has authoritative tenant_id and operational membership
+        if existing_admin.tenant_id != client.id:
+            existing_admin.tenant_id = client.id
+        existing_admin.data_companies = [company.id]
         existing_mem = db.query(StaffCompanyMembership).filter_by(
             staff_id=existing_admin.id,
             company_id=company.id,
@@ -402,16 +406,20 @@ def provision_tenant_admin(
         db.add(role)
         db.flush()
 
-    # 4. Generate unique emp_code
-    base_code = f"ADM{client.id:04d}"
+    # 4. Generate short unique emp_code (e.g. LEO_ADM) & matching default password
+    raw_prefix = re.sub(r"-[0-9A-Fa-f]{6,8}$", "", (company.company_code or client.client_code or "")).upper()
+    short_prefix = re.sub(r"[^A-Z0-9]", "", raw_prefix.split("-")[0].split("_")[0])[:4]
+    if len(short_prefix) < 2:
+        short_prefix = re.sub(r"[^A-Z0-9]", "", (company.company_name or "TNT").upper())[:3] or "TNT"
+    base_code = f"{short_prefix}_ADM"
     emp_code = base_code
     clash_idx = 1
     while db.query(StaffEmployee).filter_by(emp_code=emp_code).first():
-        emp_code = f"{base_code}_{clash_idx}"
+        emp_code = f"{short_prefix}_ADM{clash_idx}"
         clash_idx += 1
 
-    # 5. Generate secure temporary password
-    temp_password = secrets.token_urlsafe(12)
+    # 5. Use concise emp_code as initial default password
+    temp_password = emp_code
     pwd_hash = SecurityManager.get_password_hash(temp_password)
 
     new_emp = StaffEmployee(

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import date
+import re
 
 from app.core.database import get_db
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
@@ -184,9 +185,10 @@ async def public_saas_signup(
         tenant_admin_role = db.query(StaffRole).filter(StaffRole.role_code == 'tenant_admin').first()
         role_id = tenant_admin_role.id if tenant_admin_role else 17
 
-        admin_emp_code = f"{company.company_code}_ADMIN"
+        short_prefix = re.sub(r"[^A-Z0-9]", "", (company.company_code or "TNT").upper().split("-")[0].split("_")[0])[:4] or "TNT"
+        admin_emp_code = f"{short_prefix}_ADM"
         if db.query(StaffEmployee).filter_by(emp_code=admin_emp_code).first():
-            admin_emp_code = f"{company.company_code}_ADM_{company.id}"
+            admin_emp_code = f"{short_prefix}_ADM{company.id}"
 
         raw_pwd = data.password if (data.password and len(data.password) >= 6) else admin_emp_code
         tenant_admin = StaffEmployee(

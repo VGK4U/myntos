@@ -1764,6 +1764,98 @@ function maskPhone(p) {
     return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
 }
 
+// ── Hoisted SaaS Tenant Mode Detection ──────────────────────────────────────
+let _uObj = {};
+let _initIsSaaS = false;
+try {
+  const _rawStaffUser = localStorage.getItem('staff_user');
+  if (_rawStaffUser) {
+    _uObj = JSON.parse(_rawStaffUser) || {};
+    const _rCode = (_uObj.role?.role_code || _uObj.role_code || '').toLowerCase();
+    const _sType = (_uObj.staff_type || '').toUpperCase();
+    const _tid = Number(_uObj.tenant_id || _uObj.client_id || 1);
+    const _bcid = Number(_uObj.base_company_id || 1);
+    if (
+      _tid > 1 ||
+      (_bcid > 1 && ![1, 2, 3, 4, 88].includes(_bcid)) ||
+      _uObj.is_saas_tenant === true ||
+      _uObj.company_segment === 'SEGMENT_B_SAAS' ||
+      _rCode.startsWith('tenant_') ||
+      _sType === 'TENANT_ADMIN' ||
+      _sType === 'SAAS_CLIENT' ||
+      _sType === 'SAAS_TENANT'
+    ) {
+      _initIsSaaS = true;
+      window._isSaasTenant = true;
+    }
+  }
+} catch(_) {}
+
+function isSaaSModeActive() {
+  return Boolean(
+    window._isSaasTenant ||
+    _initIsSaaS ||
+    (_uObj && (
+      _uObj.is_saas_tenant === true ||
+      _uObj.company_segment === 'SEGMENT_B_SAAS' ||
+      Number(_uObj.tenant_id || _uObj.client_id || 1) > 1 ||
+      (_uObj.base_company_id && ![1, 2, 3, 4, 88].includes(Number(_uObj.base_company_id)))
+    ))
+  );
+}
+
+function applySaaSTenantCleanUI() {
+  if (!isSaaSModeActive()) return;
+  document.title = 'Category-wise Leads — Workflow Master';
+  const hideParent = (id, sel) => {
+    const el = document.getElementById(id);
+    const p = el ? el.closest(sel) : null;
+    if (p) p.style.display = 'none';
+  };
+  // Filter panel: hide VGK / MNR / L1-L4 filters
+  ['filterAssoc', 'filterHandlerCode', 'filterFieldSupportCode', 'filterGuruName', 'filterZGuruName', 'filterCoreName'].forEach(id => {
+    const el = document.getElementById(id);
+    const fg = el ? el.closest('.fgroup') : null;
+    if (fg) {
+      fg.classList.remove('solar-only');
+      fg.style.display = 'none';
+    }
+  });
+  // Relabel Showroom filter -> Assigned Staff
+  const fsInput = document.getElementById('filterFieldStaffCode');
+  if (fsInput) {
+    fsInput.placeholder = 'e.g. MN50029';
+    const lbl = fsInput.closest('.fgroup')?.querySelector('label');
+    if (lbl) lbl.textContent = 'Assigned Staff (Emp Code)';
+  }
+  const tcInput = document.getElementById('filterTelecallerCode');
+  if (tcInput) tcInput.placeholder = 'e.g. MN50029';
+
+  // Edit modal: hide L1-L5 & Community Member grid
+  const l1Grid = document.getElementById('ef_src_search')?.closest('.form-grid');
+  if (l1Grid) l1Grid.style.display = 'none';
+
+  // Edit modal: relabel L6 Showroom -> Assigned Staff
+  const shwSearch = document.getElementById('ef_showroom_search');
+  if (shwSearch) {
+    shwSearch.placeholder = 'Search staff...';
+    const shwLbl = shwSearch.closest('.form-group')?.querySelector('label');
+    if (shwLbl) shwLbl.innerHTML = 'Assigned Staff <span class="text-muted" style="font-size:11px">(Staff)</span>';
+  }
+
+  // Edit modal: hide VGK Solar Brand incentive, CIBIL Advance, and MNR/VGK Association
+  hideParent('ef_solar_brand_id', '.form-grid');
+  hideParent('ef_existing_association', '.form-group');
+  const advWrap = document.getElementById('efCibilAdvStatusWrap');
+  if (advWrap) advWrap.style.display = 'none';
+
+  // Edit modal Add Deal form: hide MNR/VGK ID inputs
+  const dealSrc = document.getElementById('mnrDealSourceId');
+  if (dealSrc && dealSrc.parentElement && dealSrc.parentElement.parentElement) {
+    dealSrc.parentElement.parentElement.style.display = 'none';
+  }
+}
+
 // ── Config ──────────────────────────────────────────────────────────────────
 const API_CRM = '/api/v1/crm';
 const API_ETC = '/api/v1/etc';
@@ -1990,8 +2082,8 @@ function buildTabNav() {
     </button>`).join('');
 }
 
-function switchTab(key) {
-  if (activeTab === key) return;
+function switchTab(key, force = false) {
+  if (activeTab === key && !force) return;
   if (expandedRow) { expandedRow.remove(); expandedRow = null; }
   activeTab = key;
   currentPage = 1;
@@ -2011,6 +2103,7 @@ function switchTab(key) {
   const _fpgs=document.getElementById('filterPanelGs');if(_fpgs)_fpgs.style.display=isGS?'':'none';
   document.getElementById('statsRow').style.display=(isEtc||isGS)?'none':'flex';
   document.querySelectorAll('.solar-only').forEach(el=>el.style.display=isSolar?'':'none');
+  if (typeof applySaaSTenantCleanUI === 'function') applySaaSTenantCleanUI();
   document.getElementById('wonToggle').style.display=(isEtc||isGS)?'none':'inline-flex';
   const seb=document.getElementById('solarExportBtns');if(seb)seb.style.display=(isSolar&&!isGS)?'flex':'none';
   const psr=document.getElementById('pipelineStatsRow');if(psr)psr.style.display=isSolar?'flex':'none';
@@ -2028,7 +2121,7 @@ function switchTab(key) {
 
 // ── Table headers (with sort) ─────────────────────────────────────────────
   function buildTableHead() {
-  const _isSaaSMode = Boolean(window._isSaasTenant || _initIsSaaS || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
+  const _isSaaSMode = isSaaSModeActive();
   const thead = document.getElementById('tableHead');
   if (activeTab === 'ground-source') {
     thead.innerHTML = `<tr>
@@ -2127,16 +2220,16 @@ function switchTab(key) {
         <th>Comments</th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="${_isSaaSMode ? 'Assigned / Field Staff' : 'L6: Showroom / Field Staff'}">${_isSaaSMode ? 'Assigned Staff' : 'L6: Showroom'}<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
         <th title="L2: Senior Upliner">L2: Senior</th>
         <th title="L3: Extended Upliner">L3: Extended</th>
         <th title="L4: Core Upliner">L4: Core</th>
-        <th title="L5: Field Support">L5: Support</th>
+        <th title="L5: Field Support">L5: Support</th>` : ''}
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>` : ''}
+        <th>Tech Staff 2</th>
         <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
         <th>Bank IFSC</th>
         <th>Vendor</th>
@@ -2152,7 +2245,7 @@ function switchTab(key) {
         <th>Docs</th>
         <th title="Uploaded / Total Required">Doc Count</th>
         <th class="sortable" onclick="sortByCol('material_reach_date')">Material Dt<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>
+        ${!_isSaaSMode ? `<th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>` : ''}
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
@@ -2181,13 +2274,13 @@ function switchTab(key) {
         <th class="sortable" onclick="sortByCol('priority')">Priority<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="${_isSaaSMode ? 'Assigned / Field Staff' : 'L6: Showroom / Field Staff'}">${_isSaaSMode ? 'Assigned Staff' : 'L6: Showroom'}<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
-        <th title="L5: Field Support">L5: Support</th>
+        <th title="L5: Field Support">L5: Support</th>` : ''}
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>` : ''}
+        <th>Tech Staff 2</th>
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
@@ -2218,13 +2311,13 @@ function switchTab(key) {
         <th>B2B Stage</th>
         <th class="sortable" onclick="sortByCol('source')">Source<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('telecaller_id')">Support (Telecaller)<span class="sort-icon"></span></th>
-        <th class="sortable" onclick="sortByCol('field_staff_id')" title="L6: Showroom / Field Staff">L6: Showroom<span class="sort-icon"></span></th>
+        <th class="sortable" onclick="sortByCol('field_staff_id')" title="${_isSaaSMode ? 'Assigned / Field Staff' : 'L6: Showroom / Field Staff'}">${_isSaaSMode ? 'Assigned Staff' : 'L6: Showroom'}<span class="sort-icon"></span></th>
         ${!_isSaaSMode ? `
         <th class="sortable" onclick="sortByCol('source_ref_name')" title="L1: Ground Source">L1: Ground Source<span class="sort-icon"></span></th>
-        <th title="L5: Field Support">L5: Support</th>
+        <th title="L5: Field Support">L5: Support</th>` : ''}
         <th>Supp Staff</th>
         <th>Tech Staff 1</th>
-        <th>Tech Staff 2</th>` : ''}
+        <th>Tech Staff 2</th>
         <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
         <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
         <th title="Locked at completion — payout base" style="white-space:nowrap">Confirmed &#10003;</th>
@@ -2418,14 +2511,14 @@ async function loadData() {
 // ── Render CRM table ──────────────────────────────────────────────────────
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTableBody');
-  const _isSaaSMode = Boolean(window._isSaasTenant || _initIsSaaS || (typeof _uObj!=='undefined' && (_uObj.is_saas_tenant || _uObj.company_segment==='SEGMENT_B_SAAS')));
+  const _isSaaSMode = isSaaSModeActive();
   const isSolar = activeTab==='solar';
   const isB2B = activeTab==='ev-b2b';
-  const cols = _isRestrictedFreelancer
-    ? (isSolar ? 16 : isB2B ? 7 : 7)
+  const cols = document.querySelectorAll('#tableHead th').length || (_isRestrictedFreelancer
+    ? (isSolar ? 16 : 7)
     : _isSaaSMode
-    ? (isSolar ? 44 : isB2B ? 15 : 15)
-    : (isSolar ? 53 : isB2B ? 20 : 20);
+    ? (isSolar ? 46 : 18)
+    : (isSolar ? 53 : 20));
   if (!leads.length) {
     tbody.innerHTML = `<tr><td colspan="${cols}" class="no-data"><i class="fas fa-inbox"></i> No leads found</td></tr>`;
     document.getElementById('tableCountLabel').textContent = '0 leads';
@@ -2559,10 +2652,10 @@ function renderLeadsTable(leads) {
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="guru_id" data-type="handler_guru" data-val="${esc(l.guru_id||'')}" data-name="${esc(l.guru_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${handlerGuru}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="z_guru_id" data-type="handler_zguru" data-val="${esc(l.z_guru_id||'')}" data-name="${esc(l.z_guru_name||l.team_extended_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${handlerZGuru}</td>
         <td class="ic-handler" data-lid="${l.id}" data-field="team_core_partner_id" data-type="handler_core" data-val="${l.team_core_partner_id||''}" data-name="${esc(l.team_core_name||'')}" style="cursor:default" title="Auto-set from Ground Source upline">${handlerCore}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support_ref_id" data-type="handler_fs" data-val="${esc(_fsMId)}" data-name="${esc(_fsMName||'')}" data-valtype="${esc(_fsMType)}">${handlerFs}</td>
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_support_ref_id" data-type="handler_fs" data-val="${esc(_fsMId)}" data-name="${esc(_fsMName||'')}" data-valtype="${esc(_fsMType)}">${handlerFs}</td>` : ''}
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="support_staff_id" data-type="handler_support_staff" data-val="${l.support_staff_id||''}" data-name="${esc(l.support_staff_name||'')}">${handlerSupportStaff}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_staff1_id" data-type="handler_tech1" data-val="${l.technical_staff1_id||''}" data-name="${esc(l.technical_staff1_name||'')}">${handlerTech1}</td>
-        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}">${handlerTech}</td>` : ''}
+        <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}">${handlerTech}</td>
         <td class="ic" data-lid="${l.id}" data-field="pincode" data-type="text" data-val="${esc(l.pincode||'')}" style="font-size:10.5px">${l.pincode||'—'}</td>
         <td style="font-size:10.5px">${esc(l.ifsc_code||'—')}</td>
         <td class="ic" data-lid="${l.id}" data-field="vendor_id" data-type="vendor_select" data-val="${l.vendor_id||''}" style="cursor:pointer;min-width:90px">${l.partner_name?`<span style="font-size:10.5px;color:#1e3a5f;font-weight:600">${esc(l.partner_name)}</span>${l.vendor_code?`<br><span style="font-size:9px;color:#6b7280">${esc(l.vendor_code)}</span>`:''}` :'<span style="color:#9ca3af;font-size:9.5px;cursor:pointer">— Vendor</span>'}</td>
@@ -2578,7 +2671,7 @@ function renderLeadsTable(leads) {
         <td style="text-align:center">${docB}</td>
         <td style="text-align:center;font-size:11px;font-weight:700">${(()=>{const u=l.solar_docs_uploaded||0;const t=(typeof SDOC_TOTAL_REQUIRED!=='undefined'&&SDOC_TOTAL_REQUIRED)?SDOC_TOTAL_REQUIRED:27;const c=u>=t?'#16a34a':u>0?'#d97706':'#9ca3af';return `<span style="color:${c}" title="${u} uploaded of ${t} required">${u}/${t}</span>`;})()}</td>
         <td class="ic" data-lid="${l.id}" data-field="material_reach_date" data-type="date" data-val="${l.material_reach_date?l.material_reach_date.slice(0,10):''}" style="font-size:10.5px">${l.material_reach_date?fmtDateShort(l.material_reach_date):'—'}</td>
-        <td>${assocB}</td>
+        ${!_isSaaSMode ? `<td>${assocB}</td>` : ''}
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
@@ -2614,10 +2707,10 @@ function renderLeadsTable(leads) {
         <td>${handlerField}</td>
         ${!_isSaaSMode ? `
         <td>${handlerMnr}</td>
-        <td>${handlerFs}</td>
+        <td>${handlerFs}</td>` : ''}
         <td>${handlerSupportStaff}</td>
         <td>${handlerTech1}</td>
-        <td>${handlerTech}</td>` : ''}
+        <td>${handlerTech}</td>
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
@@ -2652,10 +2745,10 @@ function renderLeadsTable(leads) {
         <td>${handlerField}</td>
         ${!_isSaaSMode ? `
         <td>${handlerMnr}</td>
-        <td>${handlerFs}</td>
+        <td>${handlerFs}</td>` : ''}
         <td>${handlerSupportStaff}</td>
         <td>${handlerTech1}</td>
-        <td>${handlerTech}</td>` : ''}
+        <td>${handlerTech}</td>
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
@@ -2686,18 +2779,20 @@ function toggleExpand(leadId) {
     }
     const l = _leadsCache.find(x=>x.id==leadId);
     if (!l) return;
-    const cols = _isRestrictedFreelancer
+    const cols = document.querySelectorAll('#tableHead th').length || (_isRestrictedFreelancer
       ? (activeTab==='solar'?16:7)
-      : (activeTab==='solar'?37:17);
+      : (activeTab==='solar'?37:17));
     const dr = document.createElement('tr');
     dr.className='detail-row'; dr.dataset.parentId=leadId;
     dr.innerHTML=`<td colspan="${cols}">${buildDetailPanel(l)}</td>`;
     row.after(dr); expandedRow=dr;
     btn?.classList.add('open'); btn && (btn.innerHTML='<i class="fas fa-chevron-up"></i>');
-    // Async-load VGK support section after panel is in DOM
-    setTimeout(() => { try { loadVgkSupportForLead(leadId); } catch(e){ console.warn(e); } }, 50);
-    // DC_CIBIL_ADVANCE_001: Async-load CIBIL advance status for solar leads
-    setTimeout(() => { try { loadDetailAdvanceStatus(leadId); } catch(e){ console.warn(e); } }, 80);
+    if (!isSaaSModeActive()) {
+      // Async-load VGK support section after panel is in DOM
+      setTimeout(() => { try { loadVgkSupportForLead(leadId); } catch(e){ console.warn(e); } }, 50);
+      // DC_CIBIL_ADVANCE_001: Async-load CIBIL advance status for solar leads
+      setTimeout(() => { try { loadDetailAdvanceStatus(leadId); } catch(e){ console.warn(e); } }, 80);
+    }
   } catch (err) {
     console.error('toggleExpand error:', err);
   }
@@ -2767,10 +2862,11 @@ function buildDetailPanel(l) {
     <div class="detail-field"><div class="lbl">Source Details</div><div>${v(l.source_details)}</div></div>
     <div class="detail-field"><div class="lbl">Tags</div><div>${v(l.tags)}</div></div>
   </div>`;
+  const _isSaaSMode = isSaaSModeActive();
   html+=`<div class="detail-section" style="min-width:275px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
-      <h6 style="margin:0"><i class="fas fa-users"></i> Handlers <span style="font-size:8.5px;color:#0284c7;font-weight:700;background:#e0f2fe;padding:1px 5px;border-radius:3px;margin-left:4px">L1–L6</span></h6>
-      <button type="button" class="btn btn-sm" onclick="event.stopPropagation();openEditModal(${l.id})" style="font-size:9.5px;padding:1px 7px;border-radius:4px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:600;cursor:pointer"><i class="fas fa-pen"></i> Edit</button>
+      <h6 style="margin:0"><i class="fas fa-users"></i> ${_isSaaSMode ? 'Assigned Team' : 'Handlers <span style="font-size:8.5px;color:#0284c7;font-weight:700;background:#e0f2fe;padding:1px 5px;border-radius:3px;margin-left:4px">L1–L6</span>'}</h6>
+      <button type="button" class="btn btn-sm" onclick="event.stopPropagation();openEdit(${l.id})" style="font-size:9.5px;padding:1px 7px;border-radius:4px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-weight:600;cursor:pointer"><i class="fas fa-pen"></i> Edit</button>
     </div>`;
 
   const _renderConfirmBadge = (st, hasHandler) => {
@@ -2884,7 +2980,15 @@ function buildDetailPanel(l) {
   const _tech1Code = l.technical_staff1_id ? '#' + l.technical_staff1_id : '';
   const _tech2Code = l.technical_id ? '#' + l.technical_id : '';
 
-  html+=`
+  html+= _isSaaSMode ? `
+    ${_fmtStaffHandler('Assigned Staff', l.field_staff_name, l.field_staff_emp_code || (l.field_staff_id ? '#' + l.field_staff_id : ''), l.showroom_supported, null)}
+    ${_fmtStaffHandler('Support/Telecaller', l.telecaller_name, _teleCode, l.telecaller_supported, null)}
+    ${_fmtStaffHandler('Support Staff', l.support_staff_name, l.support_staff_id ? '#' + l.support_staff_id : '', null, null)}
+    ${_fmtStaffHandler('Technical Staff 1', l.technical_staff1_name, _tech1Code, null, null)}
+    ${_fmtStaffHandler('Technical Staff 2', l.technical_name, _tech2Code, l.technical_supported, null)}
+    ${_fmtStaffHandler('Primary Owner', l.primary_owner_name, l.primary_owner_employee_id, null, null)}
+    ${_fmtStaffHandler('Vendor', l.partner_name, l.vendor_code ? 'Code: ' + l.vendor_code : '', null, l.vendor_status ? `<span style="font-size:9px;background:#f3f4f6;padding:1px 4px;border-radius:3px">${esc(l.vendor_status)}</span>` : null)}
+  </div>` : `
     ${_fmtHandlerLevel('L1', 'Source', _l1Name, _l1Id, _l1Type, false, _l1Confirm, null)}
     ${_fmtHandlerLevel('L2', 'Senior', _l2Name, _l2Id, _l2Type, _l2Auto, _l2Confirm, null)}
     ${_fmtHandlerLevel('L3', 'Extended', _l3Name, _l3Id, _l3Type, _l3Auto, _l3Confirm, null)}
@@ -2929,10 +3033,10 @@ function buildDetailPanel(l) {
       <div class="detail-field"><div class="lbl">Subsidy</div><div>${subB}</div></div>
       <div class="detail-field"><div class="lbl">Material Reach</div><div>${v(l.material_reach_date?fmtDateShort(l.material_reach_date):null)}</div></div>
       <div class="detail-field"><div class="lbl">Installation</div><div>${v(l.installation_date?fmtDateShort(l.installation_date):null)}</div></div>
-      <div class="detail-field"><div class="lbl">Association</div><div>${assocB}</div></div>
+      ${!_isSaaSMode ? `<div class="detail-field"><div class="lbl">Association</div><div>${assocB}</div></div>` : ''}
       <div class="detail-field"><div class="lbl">CIBIL Score</div><div style="font-weight:700;color:${cibilScoreColor}">${l.cibil_score?l.cibil_score:'—'}</div></div>
       <div class="detail-field"><div class="lbl">CIBIL Status</div><div>${cibilBadge}</div></div>
-      <div class="detail-field" id="det-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>
+      ${!_isSaaSMode ? `<div class="detail-field" id="det-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>` : ''}
       ${l.documents_folder_link?`<div style="margin-top:7px"><a href="${esc(l.documents_folder_link)}" target="_blank" class="maps-btn" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-folder-open"></i> Open Docs</a></div>`:''}
     </div>
     <div class="detail-section"><h6 style="color:#2563eb"><i class="fas fa-shield-alt"></i> Insurance</h6>
@@ -3028,7 +3132,7 @@ function buildDetailPanel(l) {
         <div class="detail-field"><div class="lbl">Loan Bank</div><div style="font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.loan_bank||'')}">${v(l.loan_bank)}</div></div>
         <div class="detail-field"><div class="lbl">Bank Branch</div><div style="max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.bank_branch||'')}">${v(l.bank_branch)}</div></div>
         <div class="detail-field"><div class="lbl">CIBIL Status</div><div>${cibilText}</div></div>
-        <div class="detail-field" id="stage-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>
+        ${!_isSaaSMode ? `<div class="detail-field" id="stage-adv-${l.id}"><div class="lbl">CIBIL Advance</div><div style="color:#9ca3af;font-size:11px"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</div></div>` : ''}
       </div>
 
       <div class="stage-sub-card">
@@ -3052,11 +3156,13 @@ function buildDetailPanel(l) {
     </div>
   </div>`;
 
-  // VGK4U Support Confirmation — full-width section, async loaded
-  html+=`<div class="detail-section" style="grid-column:1/-1" id="vgk-supp-${l.id}">
-    <h6 style="color:#7c3aed"><i class="fas fa-shield-alt me-1"></i>VGK4U Support Confirmation <span style="font-size:9px;font-weight:400;opacity:.7">(L2 Senior / L3 Extended)</span></h6>
-    <div style="color:#9ca3af;font-size:11px;padding:4px 0"><i class="fas fa-spinner fa-spin me-1"></i>Loading VGK income entries…</div>
-  </div>`;
+  // VGK4U Support Confirmation — full-width section, async loaded (internal only)
+  if (!_isSaaSMode) {
+    html+=`<div class="detail-section" style="grid-column:1/-1" id="vgk-supp-${l.id}">
+      <h6 style="color:#7c3aed"><i class="fas fa-shield-alt me-1"></i>VGK4U Support Confirmation <span style="font-size:9px;font-weight:400;opacity:.7">(L2 Senior / L3 Extended)</span></h6>
+      <div style="color:#9ca3af;font-size:11px;padding:4px 0"><i class="fas fa-spinner fa-spin me-1"></i>Loading VGK income entries…</div>
+    </div>`;
+  }
 
   html+=`</div></div>`;
   return html;
@@ -3159,6 +3265,7 @@ async function triggerReleaseAdvance(leadId) {
 // DC-VGK-BRAND-INCENTIVE-001: Solar brand map + helpers
 let _solarBrandMap = {};
 (async function loadSolarBrands() {
+  if (isSaaSModeActive()) return;
   try {
     const r = await staffFetch('/api/v1/vgk/brands');
     const j = await r.json();
@@ -4150,7 +4257,7 @@ function openEdit(leadId){
   // DC-VGK-BRAND-INCENTIVE-001: pre-fill brand dropdown + info panel
   const _brandSel = document.getElementById('ef_solar_brand_id');
   if (_brandSel) { _brandSel.value = l.solar_brand_id != null ? String(l.solar_brand_id) : ''; onSolarBrandChange(_brandSel.value); }
-  if (l.category_id && l.associated_partner_id) {
+  if (!isSaaSModeActive() && l.category_id && l.associated_partner_id) {
     // Async load advance status for solar leads with a VGK partner
     loadCibilAdvanceStatus(l.id);
   }
@@ -4229,9 +4336,14 @@ function openEdit(leadId){
   if(_coreId || _coreName){efRenderSelected('core', _coreType, _coreId, _coreName);}
   else{document.getElementById('ef_core_selected').innerHTML='';}
   // DC-TEAM-ASSIGN-ALWAYS-001: Core visible whenever network source active — manual assign always possible
-  document.getElementById('ef_core_row').style.display=_netSrcActive?'block':'none';
+  document.getElementById('ef_core_row').style.display=(!isSaaSModeActive() && _netSrcActive)?'block':'none';
+  if (isSaaSModeActive()) {
+    document.getElementById('ef_guru_row').style.display='none';
+    document.getElementById('ef_z_guru_row').style.display='none';
+    applySaaSTenantCleanUI();
+  }
   // DC-TEAM-ASSIGN-ALWAYS-001: Trigger upline fetch if senior is not yet set
-  if(_netSrcActive && !_seniorId && !_seniorName){efFetchGuru(_mnrVgkSrcId,true);}
+  if(!isSaaSModeActive() && _netSrcActive && !_seniorId && !_seniorName){efFetchGuru(_mnrVgkSrcId,true);}
   sv('ef_fs_type',l.field_support_ref_type||'');sv('ef_fs_id',l.field_support_ref_id||l.adi_guru_id||'');sv('ef_fs_name',l.field_support_ref_name||l.adi_guru_name||'');
   sv('ef_fs_search','');efRenderSelected('fs',l.field_support_ref_type||'',l.field_support_ref_id||l.adi_guru_id||'',l.field_support_ref_name||l.adi_guru_name||'');
   const compSupp = l.company_supported !== false;
@@ -4867,7 +4979,7 @@ function efNetSearch(field){
     const q=(document.getElementById(searchId)?.value||'').trim();
     const resultsEl=document.getElementById(`ef_${field}_results`);
     if(q.length<2){resultsEl.style.display='none';return;}
-    efDoNetSearch(field,(field==='tech'||field==='tele')?'staff':'',q);
+    efDoNetSearch(field,(field==='tech'||field==='tele'||field==='tech1'||field==='support_staff'||(field==='showroom'&&isSaaSModeActive()))?'staff':'',q);
   },320);
 }
 async function efDoNetSearch(field,type,q){
@@ -5247,8 +5359,8 @@ function inlineHandlerEdit(td) {
   w.style.top  = Math.min(rect.bottom + 4, window.innerHeight - 220) + 'px';
   w.style.left = Math.min(rect.left, window.innerWidth - 310) + 'px';
 
-  const LABELS = {handler_staff:'Telecaller (Staff)',handler_showroom:'Showroom / Field Staff',handler_mnr:'Ground Source (MNR/Partner)',handler_fs:'Field Support',handler_support_staff:'Support Staff',handler_tech1:'Technical Staff 1',handler_tech:'Technical Staff 2',handler_guru:'Senior (MNR ID)',handler_zguru:'Extended (MNR ID)',handler_core:'Core (VGK Partner)'};
-  const searchType = (type === 'handler_staff' || type === 'handler_tech' || type === 'handler_support_staff' || type === 'handler_tech1') ? 'staff' : '';
+  const LABELS = {handler_staff:'Telecaller (Staff)',handler_showroom:isSaaSModeActive()?'Assigned Staff':'Showroom / Field Staff',handler_mnr:'Ground Source (MNR/Partner)',handler_fs:'Field Support',handler_support_staff:'Support Staff',handler_tech1:'Technical Staff 1',handler_tech:'Technical Staff 2',handler_guru:'Senior (MNR ID)',handler_zguru:'Extended (MNR ID)',handler_core:'Core (VGK Partner)'};
+  const searchType = (type === 'handler_staff' || type === 'handler_tech' || type === 'handler_support_staff' || type === 'handler_tech1' || (type === 'handler_showroom' && isSaaSModeActive())) ? 'staff' : '';
 
   let selId = curVal, selType = curVType, selName = curName;
   let _handlerSaved = false;
@@ -5990,25 +6102,13 @@ function showToast(msg,type='success'){const t=document.getElementById('toast');
 function refreshPage(){if(activeTab==='etc')loadEtcStudents(_etcPage);else loadData();loadTabCounts();}
 
 // ── Init ──────────────────────────────────────────────────────────────────
-let _initIsSaaS = false;
-try {
-  const _rawStaffUser = localStorage.getItem('staff_user');
-  if (_rawStaffUser) {
-    const _uObj = JSON.parse(_rawStaffUser);
-    const _rCode = (_uObj.role?.role_code || _uObj.role_code || '').toLowerCase();
-    const _sType = (_uObj.staff_type || '').toUpperCase();
-    if (_rCode.startsWith('tenant_') || _sType === 'TENANT_ADMIN' || _sType === 'SAAS_CLIENT' || _sType === 'SAAS_TENANT' || _uObj.company_segment === 'SEGMENT_B_SAAS') {
-      _initIsSaaS = true;
-    }
-  }
-} catch(_) {}
-
 if (!_initIsSaaS) {
   buildTabNav();
   buildTableHead();
   document.querySelectorAll('.solar-only').forEach(el=>el.style.display=''); // Solar is default tab
   (function(){const seb=document.getElementById('solarExportBtns');if(seb)seb.style.display='flex';})();
 } else {
+  applySaaSTenantCleanUI();
   // Pre-set SaaS banner and loading state
   const bannerH1 = document.querySelector('.page-banner h1');
   if (bannerH1) bannerH1.innerHTML = '<i class="fas fa-layer-group me-1"></i>Category-wise Leads';
@@ -6029,12 +6129,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       const _segData = await _segRes.json();
       const isSaaS = Boolean(_segData.is_saas_tenant || _initIsSaaS);
       if (isSaaS) {
+        _initIsSaaS = true;
+        window._isSaasTenant = true;
+        applySaaSTenantCleanUI();
         const bannerH1 = document.querySelector('.page-banner h1');
         if (bannerH1) bannerH1.innerHTML = '<i class="fas fa-layer-group me-1"></i>Category-wise Leads';
         const bannerP = document.querySelector('.page-banner p');
         if (bannerP) bannerP.textContent = 'Segment-wise operational pipelines and workflow management';
         const _segs = _segData.segments || [];
         if (_segs.length > 0) {
+          const _canonMap = {};
+          TABS.forEach(ct => { _canonMap[ct.key] = ct; });
           const _seenTabKeys = new Set();
           const _dedupTabs = [];
           _segs.forEach((s, idx) => {
@@ -6042,26 +6147,36 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (normKey === 'etc-training') normKey = 'etc';
             if (!normKey || _seenTabKeys.has(normKey)) return;
             _seenTabKeys.add(normKey);
+            const _canon = _canonMap[normKey];
+            const _cleanIcon = String(s.icon || (_canon && _canon.icon) || 'fa-folder').replace(/^fa[srb]?\s+/, '');
             const _clsIdx = _dedupTabs.length;
             _dedupTabs.push({
               key: normKey,
-              label: s.name,
-              icon: s.icon || 'fa-folder',
-              category: s.name,
-              cls: _clsIdx === 0 ? 't-solar' : (_clsIdx === 1 ? 't-ev-b2b' : (_clsIdx === 2 ? 't-ev-b2c' : 't-etc'))
+              label: s.name || (_canon && _canon.label) || normKey,
+              icon: _cleanIcon,
+              category: (_canon && _canon.category) || s.name,
+              cls: (_canon && _canon.cls) || (_clsIdx === 0 ? 't-solar' : (_clsIdx === 1 ? 't-ev-b2b' : (_clsIdx === 2 ? 't-ev-b2c' : 't-etc')))
             });
+          });
+          // Sort so Solar appears first in multi-tab bar and ETC appears last among standard tabs
+          _dedupTabs.sort((a, b) => {
+            if (a.key === 'solar') return -1;
+            if (b.key === 'solar') return 1;
+            if (a.key === 'etc') return 1;
+            if (b.key === 'etc') return -1;
+            return 0;
           });
           if (_dedupTabs.length > 0) {
             TABS = _dedupTabs;
             tabCounts = {};
             wonCounts = {};
             TABS.forEach(t => { tabCounts[t.key] = null; wonCounts[t.key] = null; });
-            activeTab = TABS[0].key;
+            const _prefTab = TABS.find(t => t.key === 'solar') || TABS.find(t => t.key !== 'etc') || TABS[0];
+            activeTab = _prefTab.key;
             buildTabNav();
             buildTableHead();
-            const t0 = TABS[0];
             const titleEl = document.getElementById('tableTitle');
-            if (titleEl && t0) titleEl.textContent = `${t0.label} Leads`;
+            if (titleEl && _prefTab) titleEl.textContent = `${_prefTab.label} Leads`;
           }
         } else {
           const tabNavEl = document.getElementById('tabNav');
@@ -6093,8 +6208,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const _rawInitTab = (_iUrlP.get('tab') || '').trim().toLowerCase().replace(/_/g, '-');
   const _initTab = (_rawInitTab === 'etc-training' && TABS.some(t => t.key === 'etc')) ? 'etc' : _rawInitTab;
   const _singleTabEntry = _initTab ? TABS.find(t => t.key === _initTab) : null;
-  if (_singleTabEntry) {
-    // Single-segment mode: hide tab bar, update banner to show only this segment
+  if (isSaaSModeActive()) {
+    // SaaS Tenant Architecture: ALWAYS show all tenant category tabs at the top (#tabNav visible)
+    const tabNavEl = document.getElementById('tabNav');
+    if (tabNavEl) tabNavEl.style.display = '';
+    const _targetKey = _singleTabEntry ? _singleTabEntry.key : activeTab;
+    switchTab(_targetKey, true);
+  } else if (_singleTabEntry) {
+    // Internal platform single-segment mode: hide tab bar, update banner to show only this segment
     document.getElementById('tabNav').style.display = 'none';
     const h1 = document.querySelector('.page-banner h1');
     if (h1) h1.innerHTML = `<i class="fas ${_singleTabEntry.icon} me-1"></i>${_singleTabEntry.label}`;
@@ -6102,18 +6223,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (sub) sub.textContent = _singleTabEntry.key === 'etc' ? 'Student Management' : _singleTabEntry.label + ' Leads';
     const vt = document.querySelector('.view-toggle');
     if (vt) vt.style.display = 'none';
-    // DC Protocol: capture pre-call state — switchTab early-returns when already active.
-    // Solar is the JS default (activeTab='solar'), so ?tab=solar hits this guard.
-    const _wasAlreadyActive = (activeTab === _singleTabEntry.key);
-    switchTab(_singleTabEntry.key);
-    if (_wasAlreadyActive) {
-      if (_singleTabEntry.key === 'etc') { loadEtcStudents(1); loadEtcStageStats(); }
-      else loadData();
-    }
+    switchTab(_singleTabEntry.key, true);
   } else {
-    if (activeTab === 'etc') { loadEtcStudents(1); loadEtcStageStats(); }
-    else if (activeTab === 'ground-source') { loadGroundSourceWeekly(); }
-    else loadData();
+    switchTab(activeTab, true);
   }
   setTimeout(loadTabCounts,2000);
 });

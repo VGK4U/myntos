@@ -292,7 +292,12 @@ def get_authorized_lead(
         # Operational Company Membership check
         if lead.company_id in ctx.accessible_company_ids:
             if for_mutation:
-                if ctx.has_capability("crm.leads.edit") or is_vgk_admin(current_user.staff_type) or (downline_ids and len(downline_ids) > 0):
+                _lead_status_low = (getattr(lead, "status", "") or "").lower()
+                _is_saas_won_workflow = bool(
+                    ctx.tenant_id and ctx.tenant_id > 1 and
+                    _lead_status_low in ("won", "won_plus", "closed_won", "order_placed", "dispatched", "delivered", "installed", "completed")
+                )
+                if ctx.has_capability("crm.leads.edit") or is_vgk_admin(current_user.staff_type) or (downline_ids and len(downline_ids) > 0) or _is_saas_won_workflow:
                     return lead
                 raise HTTPException(status_code=403, detail="Permission denied: You do not have permission to modify this lead")
             else:
@@ -7047,7 +7052,7 @@ def master_leads(
         emp_identifiers = [emp_code] if emp_code else []
         if str(current_employee.id) not in emp_identifiers:
             emp_identifiers.append(str(current_employee.id))
-        query = query.filter(or_(
+        _visibility_conds = [
             CRMLead.telecaller_id.in_(allowed_ids),
             CRMLead.field_staff_id.in_(allowed_ids),
             and_(
@@ -7057,7 +7062,14 @@ def master_leads(
             CRMLead.handler_id.in_(emp_identifiers),
             CRMLead.mnr_handler_id.in_(emp_identifiers),
             CRMLead.created_by_id.in_(emp_identifiers),
-        ))
+        ]
+        # DC Protocol (Oct 2026): In ZS Workflows (master-leads), SaaS tenant staff have full access
+        # to Won+ workflow leads belonging to their accessible tenant company.
+        if tenant_id is not None and tenant_id > 1:
+            _visibility_conds.append(
+                CRMLead.status.in_(['won', 'won_plus', 'closed_won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed'])
+            )
+        query = query.filter(or_(*_visibility_conds))
 
     # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
     if category or category_id is not None:
@@ -8393,7 +8405,7 @@ def lead_analytics(
     if not has_view_all:
         allowed_ids = [current_employee.id] + authorized_downline_ids
         emp_code = (current_employee.emp_code or '').strip()
-        base = base.filter(or_(
+        _an_vis_conds = [
             CRMLead.telecaller_id.in_(allowed_ids),
             CRMLead.field_staff_id.in_(allowed_ids),
             and_(
@@ -8402,7 +8414,12 @@ def lead_analytics(
             ),
             (CRMLead.handler_id == emp_code) if emp_code else False,
             (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
-        ))
+        ]
+        if tenant_id is not None and tenant_id > 1:
+            _an_vis_conds.append(
+                CRMLead.status.in_(['won', 'won_plus', 'closed_won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed'])
+            )
+        base = base.filter(or_(*_an_vis_conds))
 
     # DC Protocol (Apr 2026): Dual-match category filter — mirrors master-leads logic.
     if category:
@@ -19207,6 +19224,7 @@ async def network_search(
     """
     from app.models.staff_accounts import OfficialPartner, VendorMaster as _VM
     from app.models.staff import StaffEmployee as _SE
+    from app.models.staff_accounts import AssociatedCompany as Company
 
     type = search_type  # noqa: F841 — use local alias
     search_term = q.strip()
@@ -19214,8 +19232,22 @@ async def network_search(
     search_all = not type or type == 'all'
     per_type_limit = max(5, limit // 5) if search_all else limit
 
+    # SaaS Tenant Isolation: prevent internal VGK/MNR user lookup and scope staff/vendors/partners to tenant
+    _eff_tid = getattr(current_user, 'tenant_id', 1) or 1
+    _bcid = getattr(current_user, 'base_company_id', None)
+    _tenant_comp_ids = []
+    if _eff_tid <= 1 and _bcid and _bcid not in (1, 2, 3, 4, 88):
+        _comp_row = db.query(Company).filter(Company.id == _bcid).first()
+        if _comp_row and ((_comp_row.client_id and _comp_row.client_id > 1) or getattr(_comp_row, 'company_segment', None) == 'SEGMENT_B_SAAS'):
+            _eff_tid = _comp_row.client_id or _eff_tid
+    _is_saas_net = bool(_eff_tid > 1)
+    if _is_saas_net:
+        _tenant_comp_ids = [r[0] for r in db.query(Company.id).filter(Company.client_id == _eff_tid).all()]
+        if _bcid and _bcid not in _tenant_comp_ids:
+            _tenant_comp_ids.append(_bcid)
+
     try:
-        if search_all or type in ('mnr', 'vgk'):
+        if not _is_saas_net and (search_all or type in ('mnr', 'vgk')):
             users = db.query(User).filter(
                 User.activation_date.isnot(None),
                 or_(
@@ -19260,7 +19292,9 @@ async def network_search(
                     func.coalesce(func.lower(OfficialPartner.contact_person), '').contains(search_term.lower())
                 )
             )
-            if company_id:
+            if _is_saas_net:
+                partners_q = partners_q.filter(OfficialPartner.company_id.in_(_tenant_comp_ids or [-1]))
+            elif company_id:
                 partners_q = partners_q.filter(
                     or_(
                         OfficialPartner.company_id == company_id,
@@ -19346,14 +19380,17 @@ async def network_search(
                 })
 
         if search_all or type == 'vendor':
-            vendors = db.query(_VM).filter(
+            vendors_q = db.query(_VM).filter(
                 _VM.is_active == True,
                 or_(
                     func.lower(_VM.vendor_name).contains(search_term.lower()),
                     func.lower(_VM.vendor_code).contains(search_term.lower()),
                     _VM.phone.contains(search_term) if _VM.phone else False
                 )
-            ).order_by(_VM.vendor_name).limit(per_type_limit).all()
+            )
+            if _is_saas_net and hasattr(_VM, 'company_id'):
+                vendors_q = vendors_q.filter(_VM.company_id.in_(_tenant_comp_ids or [-1]))
+            vendors = vendors_q.order_by(_VM.vendor_name).limit(per_type_limit).all()
             for v in vendors:
                 results.append({
                     'id': str(v.id),
@@ -19365,14 +19402,22 @@ async def network_search(
                 })
 
         if search_all or type == 'staff':
-            staff_list = db.query(_SE).filter(
+            staff_q = db.query(_SE).filter(
                 _SE.status == 'active',
                 or_(
                     func.coalesce(func.lower(_SE.full_name), '').contains(search_term.lower()),
                     func.lower(_SE.emp_code).contains(search_term.lower()),
                     func.coalesce(_SE.phone, '').contains(search_term)
                 )
-            ).order_by(_SE.full_name).limit(per_type_limit).all()
+            )
+            if _is_saas_net:
+                staff_q = staff_q.filter(
+                    or_(
+                        _SE.tenant_id == _eff_tid,
+                        _SE.base_company_id.in_(_tenant_comp_ids or [-1])
+                    )
+                )
+            staff_list = staff_q.order_by(_SE.full_name).limit(per_type_limit).all()
             for s in staff_list:
                 results.append({
                     'id': str(s.id),

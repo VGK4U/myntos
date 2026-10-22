@@ -2077,14 +2077,39 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
         cid = int(existing[0])
         return {"ok": True, "client_id": cid, "status": "already-exists"}
 
-    # Unique Client Code
-    base_code = _slugify_code(payload.company_name)[:16]
-    code = f"{base_code}-{_secrets.token_hex(4).upper()}"
-    for _ in range(8):
-        clash = db.execute(text("SELECT 1 FROM platform_clients WHERE client_code=:c"),
-                           {"c": code}).first()
-        if not clash: break
-        code = f"{base_code}-{_secrets.token_hex(4).upper()}"
+    # Unique Short Client & Company Code (3-6 chars, no lengthy hex suffixes)
+    clean_name = _re.sub(r"[^A-Za-z0-9\s]", "", (payload.company_name or "").upper()).strip()
+    words = [w for w in clean_name.split() if w]
+    stop_words = {
+        "PVT", "LTD", "LIMITED", "PRIVATE", "LLP", "INC", "CORP", "CORPORATION",
+        "ENTERPRISES", "ENTERPRISE", "GROUP", "GROUPS", "SOLUTIONS", "SOLUTION",
+        "SERVICES", "SERVICE", "TECHNOLOGIES", "TECHNOLOGY", "TECH", "COMPANY", "CO", "INDIA", "IND"
+    }
+    core_words = [w for w in words if w not in stop_words] or words
+    if not core_words:
+        base_code = "TNT"
+    elif len(core_words) >= 3:
+        base_code = "".join(w[0] for w in core_words)[:4]
+    elif len(core_words) == 2:
+        base_code = (core_words[0][:2] + core_words[1][:2])[:4]
+    else:
+        w0 = core_words[0]
+        base_code = w0[:5] if (len(w0) == 5 and w0[-1].isdigit()) else w0[:4]
+
+    if len(base_code) < 3 and len(words) >= 2:
+        base_code = (words[0][:2] + "".join(w[0] for w in words[1:]))[:4]
+    if len(base_code) < 3:
+        base_code = (clean_name.replace(" ", "") + "TNT")[:3]
+
+    code = base_code
+    clash_idx = 1
+    while True:
+        clash_c = db.execute(text("SELECT 1 FROM platform_clients WHERE UPPER(client_code)=:c LIMIT 1"), {"c": code}).first()
+        clash_a = db.execute(text("SELECT 1 FROM associated_companies WHERE UPPER(company_code)=:c LIMIT 1"), {"c": code}).first()
+        if not clash_c and not clash_a:
+            break
+        code = f"{base_code[:4]}{clash_idx}"
+        clash_idx += 1
 
     # Create Client
     client = PlatformClient(
@@ -2122,7 +2147,7 @@ def tenant_signup(payload: TenantSignupIn, db: Session = Depends(get_db)):
     from app.models.staff_accounts import AssociatedCompany
     
     # Ensure company_code fits in String(20) and remains unique
-    safe_company_code = client.client_code
+    safe_company_code = client.client_code[:10]
     if len(safe_company_code) > 20:
         safe_company_code = safe_company_code[:11] + "-" + safe_company_code[-8:]
 

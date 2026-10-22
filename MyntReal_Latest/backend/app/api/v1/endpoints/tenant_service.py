@@ -75,7 +75,7 @@ def _ensure_tenant_categories(db: Session, company_id: int) -> List[SignupCatego
             new_cat = SignupCategory(
                 company_id=company_id,
                 name=cat_data['name'],
-                slug=f"{cat_data['slug']}-{company_id}",
+                slug=cat_data['slug'],
                 description=cat_data.get('description'),
                 icon=cat_data.get('icon'),
                 display_order=cat_data.get('display_order', idx),

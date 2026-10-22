@@ -214,6 +214,32 @@ export class StaffLeadsPage {
     this.container = container;
   }
 
+  private isSaasTenantUser(): boolean {
+    try {
+      const rawUser = localStorage.getItem('staff_user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser) || {};
+        const rCode = String(u.role?.role_code || u.role_code || '').toLowerCase();
+        const sType = String(u.staff_type || '').toUpperCase();
+        const tid = Number(u.tenant_id || u.client_id || 1);
+        const bcid = Number(u.base_company_id || 1);
+        if (
+          tid > 1 ||
+          (bcid > 1 && ![1, 2, 3, 4, 88].includes(bcid)) ||
+          u.is_saas_tenant === true ||
+          u.company_segment === 'SEGMENT_B_SAAS' ||
+          rCode.startsWith('tenant_') ||
+          sType === 'TENANT_ADMIN' ||
+          sType === 'SAAS_CLIENT' ||
+          sType === 'SAAS_TENANT'
+        ) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
   async init(params?: { leadId?: string; action?: string }): Promise<void> {
     await this.loadCompanies();
     this.render();
@@ -506,7 +532,7 @@ export class StaffLeadsPage {
               <input type="text" id="telecallerCodeFilter" class="form-input" value="${this.telecallerCode}" placeholder="Support (Emp Code)">
             </div>
             <div class="filter-group flex-grow">
-              <input type="text" id="fieldStaffCodeFilter" class="form-input" value="${this.fieldStaffCode}" placeholder="Showroom (Emp Code)">
+              <input type="text" id="fieldStaffCodeFilter" class="form-input" value="${this.fieldStaffCode}" placeholder="${this.isSaasTenantUser() ? 'Assigned Staff (Emp Code)' : 'Showroom (Emp Code)'}">
             </div>
           </div>
           <div class="filter-row">
@@ -1003,7 +1029,7 @@ export class StaffLeadsPage {
               </div>
             </div>
 
-            <div class="form-section" style="margin-bottom: 20px;">
+            <div class="form-section" style="margin-bottom: 20px; ${this.isSaasTenantUser() ? 'display:none;' : ''}">
               <div class="section-title" style="font-size: 12px; font-weight: 600; color: #8b5cf6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">Network Assignment (Optional)</div>
               <div class="form-group" style="margin-bottom: 12px; position: relative;">
                 <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">MNR/VGK Handler</label>
@@ -2229,7 +2255,7 @@ export class StaffLeadsPage {
         ` : ''}
         ${lead.field_staff_name ? `
           <div class="info-row">
-            <span class="info-label">Showroom</span>
+            <span class="info-label">${this.isSaasTenantUser() ? 'Assigned Staff' : 'Showroom'}</span>
             <span class="info-value">${lead.field_staff_name}</span>
           </div>
         ` : ''}
@@ -2473,8 +2499,10 @@ export class StaffLeadsPage {
       ` : ''}
     `;
 
-    // DC Protocol N001: lazy-load VGK banner (non-blocking, 200ms after render)
-    setTimeout(() => vgkBannerService.load(leadId, companyId, 'sl-mob-vgk-banner'), 200);
+    // DC Protocol N001: lazy-load VGK banner (non-blocking, 200ms after render, internal only)
+    if (!this.isSaasTenantUser()) {
+      setTimeout(() => vgkBannerService.load(leadId, companyId, 'sl-mob-vgk-banner'), 200);
+    }
 
     document.getElementById('editLeadBtn')?.addEventListener('click', () => this.showEditLeadModal(lead));
     document.getElementById('detailHistoryLeadBtn')?.addEventListener('click', () => {

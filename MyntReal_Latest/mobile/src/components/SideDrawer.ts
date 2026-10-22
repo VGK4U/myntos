@@ -792,10 +792,17 @@ export class SideDrawer {
     this.container.querySelectorAll('[data-route]').forEach(el => {
       el.addEventListener('click', () => {
         const rawRoute = (el as HTMLElement).dataset.route!;
-        const tab = (el as HTMLElement).dataset.tab;
+        let tab = (el as HTMLElement).dataset.tab;
         const rawLabel = (el.querySelector('.menu-label')?.textContent || '').trim();
         
         let targetRoute = ROUTE_PATH_MAP[rawRoute] || ROUTE_PATH_MAP[rawRoute.replace(/\/$/, '')];
+        if (!targetRoute) {
+          const dynLeadsMatch = rawRoute.match(/^\/staff\/([a-z0-9-]+)-leads$/i);
+          if (dynLeadsMatch && !['my', 'team', 'bank-wise', 'at-bank', 'import'].includes(dynLeadsMatch[1].toLowerCase())) {
+            targetRoute = 'category-leads-master';
+            if (!tab) tab = dynLeadsMatch[1].toLowerCase();
+          }
+        }
         if (!targetRoute && !rawRoute.startsWith('/')) {
           targetRoute = rawRoute;
         }
@@ -854,12 +861,23 @@ export class SideDrawer {
       "DIRECTOR", "SUPER_ADMIN", "ADMIN"
     ];
     
+    const isSaaSUser = Boolean(
+      roleCode === 'tenant_admin' ||
+      staffType === 'TENANT_ADMIN' ||
+      staffType === 'SAAS_CLIENT' ||
+      staffType === 'SAAS_TENANT' ||
+      user?.company_segment === 'SEGMENT_B_SAAS' ||
+      (user?.tenant_id && Number(user.tenant_id) > 1)
+    );
+
     if (
-      supremeVariants.includes(staffType) ||
-      ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
-      ['key_leadership', 'vgk4u', 'ea', 'vgk4u_supreme', 'executive_admin', 'manager', 'director', 'admin', 'super_admin'].includes(roleCode) ||
-      supremeVariants.includes(roleName) ||
-      Boolean(user.is_manager || user.is_admin || user.is_super_admin)
+      !isSaaSUser && (
+        supremeVariants.includes(staffType) ||
+        ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
+        ['key_leadership', 'vgk4u', 'ea', 'vgk4u_supreme', 'executive_admin', 'manager', 'director', 'admin', 'super_admin'].includes(roleCode) ||
+        supremeVariants.includes(roleName) ||
+        Boolean(user.is_manager || user.is_admin || user.is_super_admin)
+      )
     ) {
       this.isSupremeStaff = true;
       this.allowedPaths = '*';
@@ -1107,6 +1125,12 @@ export class SideDrawer {
         else if (cUpper.includes('INSURANCE') || cUpper.includes('ZYN_INSURANCE')) tab = 'insurance';
         else if (cUpper.includes('ETC_LEADS')) tab = 'etc';
         else if (cUpper.includes('MNR_LEADS')) tab = 'mnr';
+        else {
+          const dynMatch = route.match(/^\/staff\/([a-z0-9-]+)-leads$/i);
+          if (dynMatch && !['my', 'team', 'bank-wise', 'at-bank', 'import'].includes(dynMatch[1].toLowerCase())) {
+            tab = dynMatch[1].toLowerCase();
+          }
+        }
       }
 
       let iconHtml = '';

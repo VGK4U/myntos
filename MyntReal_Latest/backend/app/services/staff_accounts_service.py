@@ -389,6 +389,7 @@ class AssociatedCompanyService:
         # DC_SAAS_TENANT_ADMIN_001 (Sep 2026): Automatically provision a dedicated Tenant Master Admin
         # Every SaaS client / tenant MUST have its own independent admin account and NOT reuse MR10001
         try:
+            import re as _re
             from datetime import date
             from app.models.staff import StaffRole
             from app.core.security import SecurityManager
@@ -396,21 +397,31 @@ class AssociatedCompanyService:
             tenant_admin_role = db.query(StaffRole).filter(StaffRole.role_code == 'tenant_admin').first()
             role_id = tenant_admin_role.id if tenant_admin_role else 17
             
-            admin_emp_code = f"{company.company_code}_ADMIN"
+            raw_co_prefix = _re.sub(r"-[0-9A-Fa-f]{6,8}$", "", (company.company_code or "")).upper()
+            short_prefix = _re.sub(r"[^A-Z0-9]", "", raw_co_prefix.split("-")[0].split("_")[0])[:4]
+            if len(short_prefix) < 2:
+                short_prefix = _re.sub(r"[^A-Z0-9]", "", (company.company_name or "TNT").upper())[:3] or "TNT"
+
+            admin_emp_code = f"{short_prefix}_ADM"
             existing_admin = db.query(StaffEmployee).filter_by(emp_code=admin_emp_code).first()
             if existing_admin:
-                admin_emp_code = f"{company.company_code}_ADM_{company.id}"
+                admin_emp_code = f"{short_prefix}_ADM{company.id}"
             
+            admin_email = f"{short_prefix.lower()}@zynova.in"
+            if db.query(StaffEmployee).filter_by(email=admin_email).first():
+                admin_email = f"{short_prefix.lower()}{company.id}@zynova.in"
+
             default_pwd = admin_emp_code
             tenant_admin = StaffEmployee(
                 emp_code=admin_emp_code,
                 full_name=f"{company.company_name} Admin",
-                email=f"admin@{company.company_code.lower()}.zynova.cloud",
+                email=admin_email,
                 phone=getattr(data, 'phone', None) or None,
                 designation="Tenant Master Administrator",
                 role_id=role_id,
+                tenant_id=getattr(company, 'client_id', None) or 1,
                 base_company_id=company.id,
-                data_companies=[{"company_id": company.id}],
+                data_companies=[company.id],
                 staff_type="TENANT_ADMIN",
                 status="active",
                 date_of_joining=date.today(),
@@ -418,6 +429,17 @@ class AssociatedCompanyService:
                 created_by=employee.id
             )
             db.add(tenant_admin)
+            db.flush()
+            if getattr(company, 'client_id', None):
+                from app.models.staff import StaffCompanyMembership
+                db.add(StaffCompanyMembership(
+                    staff_id=tenant_admin.id,
+                    company_id=company.id,
+                    tenant_id=company.client_id,
+                    is_primary=True,
+                    is_active=True,
+                    role_id=role_id,
+                ))
             db.commit()
             logging.info(f"[DC_SAAS_PROVISION] Created Tenant Master Admin: {admin_emp_code} (ID={tenant_admin.id}) for {company.company_name}")
         except Exception as _ta_err:

@@ -110,36 +110,49 @@ async def get_categories(
     
     categories = query.order_by(SignupCategory.display_order, SignupCategory.name).all()
     
-    # DC Protocol (Sep 2026): Auto-provision isolated tenant categories if SaaS client company has 0 categories
-    if parsed_company_id is not None and len(categories) == 0:
-        company_exists = db.query(AssociatedCompany).filter(
-            AssociatedCompany.id == parsed_company_id,
-            AssociatedCompany.is_active == True
-        ).first()
-        if company_exists:
-            for cat_data in DEFAULT_SIGNUP_CATEGORIES:
+    # DC Protocol (Oct 2026): Ensure all standard DEFAULT_SIGNUP_CATEGORIES (including Solar)
+    # exist for this company alongside any custom/starter categories.
+    if parsed_company_id is not None:
+        all_company_cats = db.query(SignupCategory).filter(
+            SignupCategory.company_id == parsed_company_id
+        ).all()
+        existing_slugs = {(c.slug or '').strip().lower() for c in all_company_cats}
+        existing_names = {(c.name or '').strip().lower() for c in all_company_cats}
+        missing_defaults = [
+            cat_data for cat_data in DEFAULT_SIGNUP_CATEGORIES
+            if cat_data['slug'].lower() not in existing_slugs and cat_data['name'].lower() not in existing_names
+        ]
+        if missing_defaults:
+            company_exists = db.query(AssociatedCompany).filter(
+                AssociatedCompany.id == parsed_company_id,
+                AssociatedCompany.is_active == True
+            ).first()
+            if company_exists:
+                for cat_data in missing_defaults:
+                    try:
+                        new_cat = SignupCategory(
+                            company_id=parsed_company_id,
+                            name=cat_data['name'],
+                            slug=cat_data['slug'],
+                            description=cat_data.get('description', ''),
+                            icon=cat_data.get('icon', ''),
+                            display_order=cat_data.get('display_order', 0),
+                            is_active=True,
+                            requires_documents=False
+                        )
+                        db.add(new_cat)
+                    except Exception:
+                        pass
                 try:
-                    new_cat = SignupCategory(
-                        company_id=parsed_company_id,
-                        name=cat_data['name'],
-                        slug=cat_data['slug'],
-                        description=cat_data.get('description', ''),
-                        icon=cat_data.get('icon', ''),
-                        display_order=cat_data.get('display_order', 0),
-                        is_active=True,
-                        requires_documents=False
+                    db.commit()
+                    q_refresh = db.query(SignupCategory).filter(
+                        SignupCategory.company_id == parsed_company_id
                     )
-                    db.add(new_cat)
+                    if not include_inactive:
+                        q_refresh = q_refresh.filter(SignupCategory.is_active == True)
+                    categories = q_refresh.order_by(SignupCategory.display_order, SignupCategory.name).all()
                 except Exception:
-                    pass
-            try:
-                db.commit()
-                categories = db.query(SignupCategory).filter(
-                    SignupCategory.company_id == parsed_company_id,
-                    SignupCategory.is_active == True
-                ).order_by(SignupCategory.display_order, SignupCategory.name).all()
-            except Exception:
-                db.rollback()
+                    db.rollback()
 
     # If all companies requested, deduplicate by name to provide a clean list
     if is_all_companies:
