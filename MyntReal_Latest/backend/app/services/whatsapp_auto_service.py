@@ -913,7 +913,8 @@ def dispatch_scanned_lead_fallback(
     lead_id: Optional[int] = None,
     staff_id: Optional[int] = None,
     event_key: str = "lead_welcome",
-    reason: Optional[str] = None
+    reason: Optional[str] = None,
+    image_url: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     DC Anti-Ban Protocol Apr 2026:
@@ -992,6 +993,8 @@ def dispatch_scanned_lead_fallback(
                     "execution_id": exec_id,
                     "skip_backend_log": True
                 }
+                if image_url:
+                    bot_payload["imageUrl"] = image_url
                 resp = requests.post(bot_url, json=bot_payload, timeout=12)
                 if resp.status_code == 200:
                     raw = resp.json()
@@ -1030,7 +1033,8 @@ def dispatch_scanned_lead_fallback(
                 sent_by_name="System/Fallback",
                 sender_type="system",
                 job_id="lead_welcome_fallback",
-                execution_id=exec_id
+                execution_id=exec_id,
+                webhook_data=json.dumps({"media_url": image_url, "media_type": "image"}) if image_url else None
             )
             db.add(ml)
             if lead_id:

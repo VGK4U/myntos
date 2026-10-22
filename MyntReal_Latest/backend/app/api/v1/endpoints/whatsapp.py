@@ -825,6 +825,18 @@ def _process_meta_webhook_statuses_bg(statuses_list: list):
             if curr_prec > new_prec and curr_prec != 99:
                 continue
 
+            existing_media_url = None
+            try:
+                if ml.webhook_data:
+                    old_wbd = _json.loads(ml.webhook_data)
+                    if isinstance(old_wbd, dict):
+                        existing_media_url = old_wbd.get("media_url") or old_wbd.get("header_media_url")
+            except Exception:
+                pass
+
+            if existing_media_url and isinstance(su, dict):
+                su["media_url"] = existing_media_url
+
             ml.current_status     = mapped
             ml.status_source      = 'META_WEBHOOK'
             ml.last_status_update = get_indian_time()
@@ -858,9 +870,9 @@ def _process_meta_webhook_statuses_bg(statuses_list: list):
 
                 try:
                     is_critical = (
-                        ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome', 'manual_staff', 'manual', 'staff_reply')
+                        ml.message_type in ('whatsapp_otp', 'auto_vgk_member_created', 'lead_welcome', 'manual_staff', 'manual', 'staff_reply', 'general_broadcast')
                         or (ml.message_type and ml.message_type.startswith(('auto_', 'crm_lead_')))
-                        or str(err_code) in ('131047', '131026', '131051', '131052', '131053')
+                        or str(err_code) in ('131047', '131049', '131026', '131051', '131052', '131053')
                     )
                     if is_critical and ml.message_body and ml.mobile_number:
                         if getattr(ml, 'status_source', None) != 'FAILOVER_DISPATCHED':
@@ -870,7 +882,8 @@ def _process_meta_webhook_statuses_bg(statuses_list: list):
                                 phone=ml.mobile_number,
                                 message=ml.message_body,
                                 event_key=ml.message_type or "system_failover",
-                                reason=f"Meta async failure: {err_code or 'UNKNOWN'}"
+                                reason=f"Meta async failure: {err_code or 'UNKNOWN'}",
+                                image_url=existing_media_url
                             )
                             if fb_res.get("success"):
                                 ml.status_source = 'FAILOVER_DISPATCHED'
@@ -11275,10 +11288,43 @@ def _execute_general_broadcast_run(execution_id: str):
                                                 sender_type="staff",
                                                 job_id="general_broadcast_campaign",
                                                 execution_id=execution_id,
+                                                webhook_data=_json.dumps({"media_url": image_url, "media_type": "image"}) if image_url else None
                                             )
                                             db.add(ml)
                                             db.flush()
                                             ml_id_out = ml.id
+
+                                            if total_cnt <= 25 and wamid_out:
+                                                for _pw in range(4):
+                                                    time.sleep(1.2)
+                                                    try:
+                                                        db.expire_all()
+                                                        prow = db.execute(
+                                                            text("""
+                                                                SELECT current_status, status_source, error_code, error_message, failure_reason
+                                                                FROM public.message_log
+                                                                WHERE message_sid = :wamid
+                                                                ORDER BY id DESC LIMIT 1
+                                                            """),
+                                                            {"wamid": wamid_out},
+                                                        ).fetchone()
+                                                        if prow and prow[1] == "META_WEBHOOK":
+                                                            pst = str(prow[0] or "").lower()
+                                                            if pst in ("delivered", "read"):
+                                                                webhook_verified_delivered = True
+                                                                _sync_gbc_webhook_statuses(db, execution_id)
+                                                                break
+                                                            elif pst in ("failed", "undelivered"):
+                                                                delivered_ok = False
+                                                                c_code = str(prow[2] or "")
+                                                                if c_code == "131049":
+                                                                    err_out = "Meta Marketing Capped (#131049): Meta has temporarily capped marketing template delivery to this phone number to maintain ecosystem engagement. The template & flyer are valid, but WhatsApp blocks marketing frequency for this user today."
+                                                                else:
+                                                                    err_out = f"Meta #{c_code}: {prow[4] or prow[3] or 'Delivery failed'}"
+                                                                _sync_gbc_webhook_statuses(db, execution_id)
+                                                                break
+                                                    except Exception:
+                                                        db.rollback()
                                     else:
                                         err_obj = j_meta.get("error") if isinstance(j_meta.get("error"), dict) else {}
                                         err_out = f"Meta #{err_obj.get('code', r_meta.status_code)}: {err_obj.get('message', 'Template dispatch failed')}"
