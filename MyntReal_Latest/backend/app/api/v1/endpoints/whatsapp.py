@@ -10760,8 +10760,8 @@ def _execute_general_broadcast_run(execution_id: str):
 
                     interp_base = _interpolate_gbc_message(raw_message, rec_ctx)
                     clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
-                    if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1"):
-                        is_promo = any(k in t_slug for k in ("market", "promo", "campaign"))
+                    if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1") or any(k in f"{t_slug} {tpl_obj.slug or ''}".lower() for k in ("wishes", "marketing")):
+                        is_promo = any(k in f"{t_slug} {tpl_obj.slug or ''} {tpl_obj.name or ''}".lower() for k in ("market", "promo", "campaign"))
                         fallback_greet = "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *VGK4U & MyntReal Group*!"
                         open_greet_raw = greeting_text or fallback_greet
                         subj_raw = raw_subject_text or raw_message
@@ -11108,7 +11108,7 @@ def _execute_general_broadcast_run(execution_id: str):
                     if channel_mode in ("api_default", "api_first"):
                         try:
                             direct_res = {"success": False}
-                            if total_cnt <= 3 or not (tpl_obj and tpl_obj.is_meta_approved and tpl_obj.meta_template_name):
+                            if not (tpl_obj and tpl_obj.is_meta_approved and tpl_obj.meta_template_name):
                                 direct_res = _send_meta_direct_exact_gbc(
                                     db=db,
                                     phone_digits=phone_digits,
@@ -11132,8 +11132,8 @@ def _execute_general_broadcast_run(execution_id: str):
                                     interp_base = re.sub(r"^\s*Namaste\s+[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
                                     interp_base = re.sub(r"^\s*Warm greetings from[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
                                 clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
-                                if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1"):
-                                    is_promo = any(k in t_slug for k in ("market", "promo", "campaign"))
+                                if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1") or any(k in f"{t_slug} {tpl_obj.slug or ''}".lower() for k in ("wishes", "marketing")):
+                                    is_promo = any(k in f"{t_slug} {tpl_obj.slug or ''} {tpl_obj.name or ''}".lower() for k in ("market", "promo", "campaign"))
                                     fallback_greet = "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *VGK4U & MyntReal Group*!"
                                     open_greet_raw = greeting_text or fallback_greet
                                     subj_raw = raw_subject_text or raw_message
@@ -11239,7 +11239,7 @@ def _execute_general_broadcast_run(execution_id: str):
                                     })
 
                                 # Fast direct Meta Graph API template call using persistent keep-alive session
-                                if meta_post_url and meta_access_token and total_cnt > 3:
+                                if meta_post_url and meta_access_token:
                                     tpl_payload = {
                                         "messaging_product": "whatsapp",
                                         "to": phone_digits,

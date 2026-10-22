@@ -8524,7 +8524,10 @@ async function sendGbcTestOnSelectedNumber() {
   const imgUrl = (rawImgInput.startsWith('data:image/') && window._gbcFullUploadedImageData)
     ? window._gbcFullUploadedImageData
     : (rawImgInput || null);
-  const tplId = document.getElementById('gbcTemplateSelect')?.value || null;
+  const quickTplVal = document.getElementById('gbcComposerTemplateQuickSelect')?.value;
+  const tplId = (quickTplVal && quickTplVal !== 'custom')
+    ? quickTplVal
+    : (document.getElementById('gbcTemplateSelect')?.value || null);
   const channelMode = document.getElementById('gbcChannelMode')?.value || 'api_first';
   const scannedSpeed = document.getElementById('gbcScannedSpeed')?.value || 'safe';
   const title = (document.getElementById('gbcTitleInput')?.value || '').trim();
@@ -8629,7 +8632,10 @@ async function triggerGbcCampaign() {
   const imgUrl = (rawImgInput.startsWith('data:image/') && window._gbcFullUploadedImageData)
     ? window._gbcFullUploadedImageData
     : (rawImgInput || null);
-  const tplId = document.getElementById('gbcTemplateSelect')?.value || null;
+  const quickTplVal = document.getElementById('gbcComposerTemplateQuickSelect')?.value;
+  const tplId = (quickTplVal && quickTplVal !== 'custom')
+    ? quickTplVal
+    : (document.getElementById('gbcTemplateSelect')?.value || null);
   const channelMode = document.getElementById('gbcChannelMode')?.value || 'api_first';
   const scannedSpeed = document.getElementById('gbcScannedSpeed')?.value || 'safe';
   const title = (document.getElementById('gbcTitleInput')?.value || '').trim();
