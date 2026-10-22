@@ -14,13 +14,19 @@ class EVRacerGame {
     // Player EV Car State
     this.playerX = 0;       // -1.0 (Left edge) to +1.0 (Right edge)
     this.targetX = 0;
-    this.speed = 120;       // km/h
-    this.baseSpeed = 120;
-    this.maxSpeed = 220;
-    this.boostSpeed = 280;
-    this.brakeSpeed = 70;
+    this.speedMode = 'NORMAL';
+    this.modeBaseSpeed = 190;
+    this.modeMaxSpeed = 290;
+    this.modeBoostSpeed = 380;
+    this.baseSpeed = 190;
+    this.speed = 190;       // km/h
+    this.maxSpeed = 290;
+    this.boostSpeed = 380;
+    this.brakeSpeed = 75;
     this.isBoosting = false;
     this.isBraking = false;
+    this.levelUpBannerTimer = 0;
+    this.levelUpText = '';
 
     // Battery & Energy Mechanics
     this.battery = 100.0;   // 0.0 to 100.0%
@@ -140,18 +146,33 @@ class EVRacerGame {
   }
 
   setSpeedMode(mode) {
+    this.speedMode = mode;
     if (mode === 'SLOW') {
-      this.baseSpeed = 95;
-      this.maxSpeed = 170;
+      this.modeBaseSpeed = 140;
+      this.modeMaxSpeed = 220;
+      this.modeBoostSpeed = 300;
     } else if (mode === 'FAST') {
-      this.baseSpeed = 140;
-      this.maxSpeed = 240;
+      this.modeBaseSpeed = 260;
+      this.modeMaxSpeed = 380;
+      this.modeBoostSpeed = 460;
     } else if (mode === 'TURBO') {
-      this.baseSpeed = 165;
-      this.maxSpeed = 270;
+      this.modeBaseSpeed = 340;
+      this.modeMaxSpeed = 480;
+      this.modeBoostSpeed = 560;
     } else { // NORMAL
-      this.baseSpeed = 120;
-      this.maxSpeed = 220;
+      this.modeBaseSpeed = 190;
+      this.modeMaxSpeed = 290;
+      this.modeBoostSpeed = 380;
+    }
+    const currentLevel = (this.framework && this.framework.level) ? this.framework.level : 1;
+    const levelSpeedBonus = (currentLevel - 1) * 20;
+    this.baseSpeed = this.modeBaseSpeed + levelSpeedBonus;
+    this.maxSpeed = this.modeMaxSpeed + levelSpeedBonus;
+    this.boostSpeed = this.modeBoostSpeed + levelSpeedBonus;
+
+    // Immediately update current speed if running
+    if (this.isRunning && this.speed < this.baseSpeed) {
+      this.speed = this.baseSpeed;
     }
   }
 
@@ -185,8 +206,15 @@ class EVRacerGame {
 
     this.playerX = 0;
     this.targetX = 0;
+    const currentLevel = (this.framework && this.framework.level) ? this.framework.level : 1;
+    const levelSpeedBonus = (currentLevel - 1) * 20;
+    this.baseSpeed = (this.modeBaseSpeed || 190) + levelSpeedBonus;
+    this.maxSpeed = (this.modeMaxSpeed || 290) + levelSpeedBonus;
+    this.boostSpeed = (this.modeBoostSpeed || 380) + levelSpeedBonus;
     this.speed = this.baseSpeed;
     this.battery = 100.0;
+    this.levelUpBannerTimer = 0;
+    this.levelUpText = '';
     this.totalDistance = 0;
     this.batteryPacksCollected = 0;
     this.roadZ = 0;
@@ -265,39 +293,40 @@ class EVRacerGame {
   // ── PHYSICS & LOGIC UPDATE ──
   _update(dt) {
     // 1. Steering Physics
+    const steerRate = this.speed > 250 ? 2.8 : 2.3;
     if (this.keys.left) {
-      this.targetX = Math.max(-0.85, this.targetX - 2.2 * dt);
+      this.targetX = Math.max(-0.85, this.targetX - steerRate * dt);
     }
     if (this.keys.right) {
-      this.targetX = Math.min(0.85, this.targetX + 2.2 * dt);
+      this.targetX = Math.min(0.85, this.targetX + steerRate * dt);
     }
     // Smooth damp towards target
-    this.playerX += (this.targetX - this.playerX) * Math.min(1.0, 14 * dt);
+    this.playerX += (this.targetX - this.playerX) * Math.min(1.0, 15 * dt);
 
     // 2. Speed & Acceleration Mechanics
     if (this.keys.up && this.battery > 5) {
       // Turbo Boost
       this.isBoosting = true;
       this.isBraking = false;
-      this.speed = Math.min(this.boostSpeed, this.speed + 160 * dt);
-      this.battery = Math.max(0, this.battery - 2.4 * dt); // Consumes more energy
+      this.speed = Math.min(this.boostSpeed, this.speed + 280 * dt);
+      this.battery = Math.max(0, this.battery - 2.0 * dt); // Consumes energy
     } else if (this.keys.down) {
       // Regenerative Braking
       this.isBraking = true;
       this.isBoosting = false;
-      this.speed = Math.max(this.brakeSpeed, this.speed - 180 * dt);
-      this.battery = Math.min(this.batteryMax, this.battery + 0.45 * dt); // Regenerates power!
+      this.speed = Math.max(this.brakeSpeed, this.speed - 240 * dt);
+      this.battery = Math.min(this.batteryMax, this.battery + 0.65 * dt); // Regenerates power!
     } else {
       this.isBoosting = false;
       this.isBraking = false;
-      // Normal cruise deceleration / acceleration
+      // Normal cruise deceleration / acceleration towards baseSpeed
       if (this.speed < this.baseSpeed) {
-        this.speed = Math.min(this.baseSpeed, this.speed + 60 * dt);
+        this.speed = Math.min(this.baseSpeed, this.speed + 140 * dt);
       } else if (this.speed > this.baseSpeed) {
         this.speed = Math.max(this.baseSpeed, this.speed - 90 * dt);
       }
       // Normal cruise drain
-      this.battery = Math.max(0, this.battery - 0.7 * dt);
+      this.battery = Math.max(0, this.battery - 0.5 * dt);
     }
 
     // Battery Depletion Check
@@ -319,11 +348,39 @@ class EVRacerGame {
       this.framework.setDistanceTravelled(Math.round(this.totalDistance));
     }
 
-    // Level Scaling every 500m
-    const currentLevel = Math.floor(this.totalDistance / 500) + 1;
-    if (this.framework && this.framework.level !== currentLevel) {
-      this.framework.setLevel(currentLevel);
-      this.baseSpeed = Math.min(180, 120 + (currentLevel - 1) * 8);
+    // Level Scaling every 350m: dynamically accelerates speed as player advances levels!
+    const currentLevel = Math.floor(this.totalDistance / 350) + 1;
+    const prevLevel = (this.framework && this.framework.level) ? this.framework.level : 1;
+    if (currentLevel !== prevLevel) {
+      if (this.framework && typeof this.framework.setLevel === 'function') {
+        this.framework.setLevel(currentLevel);
+      }
+      const levelSpeedBonus = (currentLevel - 1) * 20; // +20 km/h per level!
+      this.baseSpeed = (this.modeBaseSpeed || 190) + levelSpeedBonus;
+      this.maxSpeed = (this.modeMaxSpeed || 290) + levelSpeedBonus;
+      this.boostSpeed = (this.modeBoostSpeed || 380) + levelSpeedBonus;
+
+      // Instantly surge speed into the new level
+      this.speed = Math.max(this.speed, this.baseSpeed);
+
+      // Trigger level-up banner, screen surge, and audio chime
+      this.levelUpBannerTimer = 2.4;
+      this.levelUpText = `⚡ LEVEL ${currentLevel} REACHED! SPEED +${levelSpeedBonus} KM/H`;
+      this.shakeDuration = 0.22;
+      this.shakeIntensity = 5;
+
+      for (let s = 0; s < 14; s++) {
+        this.speedLines.push({
+          x: (Math.random() - 0.5) * this.canvas.width * 1.2 + this.canvas.width / 2,
+          y: Math.random() * this.canvas.height * 0.7,
+          len: 55 + Math.random() * 85,
+          speed: 1200 + Math.random() * 800
+        });
+      }
+
+      if (window.gameAudio && typeof window.gameAudio.playScore === 'function') {
+        window.gameAudio.playScore();
+      }
     }
 
     // 4. Dynamic Road Curvature
@@ -394,13 +451,15 @@ class EVRacerGame {
     }
 
     // 7. Speed lines & FX
-    if (this.isBoosting) {
-      if (Math.random() < 0.7) {
+    const showSpeedLines = this.isBoosting || this.speed > 220;
+    if (showSpeedLines) {
+      const lineChance = this.isBoosting ? 0.8 : Math.min(0.7, (this.speed - 220) / 160);
+      if (Math.random() < lineChance) {
         this.speedLines.push({
           x: (Math.random() - 0.5) * this.canvas.width * 1.2 + this.canvas.width / 2,
           y: Math.random() * this.canvas.height * 0.7,
-          len: 40 + Math.random() * 70,
-          speed: 800 + Math.random() * 600
+          len: 45 + Math.random() * 85,
+          speed: 900 + Math.random() * 800
         });
       }
     }
@@ -420,9 +479,12 @@ class EVRacerGame {
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
-    // Screen Shake decay
+    // Screen Shake decay & Banner Timer
     if (this.shakeDuration > 0) {
       this.shakeDuration -= dt;
+    }
+    if (this.levelUpBannerTimer > 0) {
+      this.levelUpBannerTimer -= dt;
     }
   }
 
@@ -634,7 +696,7 @@ class EVRacerGame {
 
     // Moving Dashed Lane Dividers (3-Lane Road)
     const numDashes = 14;
-    const dashOffset = (this.roadZ % 60) / 60; // 0 to 1
+    const dashOffset = (this.roadZ % 45) / 45; // 0 to 1
 
     for (let i = 0; i < numDashes; i++) {
       const p1 = (i + dashOffset) / numDashes;
@@ -930,6 +992,30 @@ class EVRacerGame {
     this.ctx.fillStyle = '#cbd5e1';
     this.ctx.font = '600 10px "Plus Jakarta Sans", sans-serif';
     this.ctx.fillText(`📍 ${Math.round(this.totalDistance)}m | 🔋 ${this.batteryPacksCollected}`, w - 14, 54);
+
+    // ── LEVEL UP NOTIFICATION BANNER ──
+    if (this.levelUpBannerTimer > 0) {
+      this.ctx.save();
+      const alpha = Math.min(1.0, this.levelUpBannerTimer * 1.5);
+      this.ctx.globalAlpha = alpha;
+      this.ctx.fillStyle = 'rgba(16, 185, 129, 0.92)';
+      this.ctx.strokeStyle = '#34d399';
+      this.ctx.lineWidth = 1.5;
+      const bW = Math.min(320, w * 0.90);
+      const bH = 34;
+      const bX = (w - bW) / 2;
+      const bY = h * 0.40;
+      this.ctx.beginPath();
+      this.ctx.roundRect(bX, bY, bW, bH, 8);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = '900 12px "Plus Jakarta Sans", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(this.levelUpText || 'LEVEL UP! SPEED BOOSTED!', w / 2, bY + 21);
+      this.ctx.restore();
+    }
   }
 
   _drawIdle() {

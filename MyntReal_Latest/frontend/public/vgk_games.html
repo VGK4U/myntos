@@ -608,6 +608,38 @@
       </div>
     </div>
 
+    <!-- 1C. EV RACER SPEED SELECTOR -->
+    <div id="ev-racer-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(21, 18, 43, 0.95); border: 1px solid rgba(16, 185, 129, 0.45); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-success"></i> EV Supercar Cruise &amp; Acceleration:
+        </span>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.22); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.55); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-bolt me-1"></i> Turbo Boost (Up) &amp; Regen Braking (Down)
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap gap-2">
+          <div class="speed-picker-pill" id="pill-ev-slow" onclick="setEvRacerSpeed('SLOW')">
+            <i class="fa-solid fa-leaf text-info"></i> Slow (Eco 140 km/h)
+          </div>
+          <div class="speed-picker-pill active" id="pill-ev-normal" onclick="setEvRacerSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-success"></i> Normal (Cruise 190 km/h)
+          </div>
+          <div class="speed-picker-pill" id="pill-ev-fast" onclick="setEvRacerSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Sport 260 km/h)
+          </div>
+          <div class="speed-picker-pill" id="pill-ev-turbo" onclick="setEvRacerSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Hyper 340+ km/h)
+          </div>
+        </div>
+        <div class="small d-flex align-items-center gap-1" style="color: #cbd5e1; font-weight: 600;">
+          <i class="fa-solid fa-bolt-lightning text-success"></i>
+          <span>Use Down Arrow / Regen button to recharge battery on deceleration!</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 2. RUNNER CHARACTER SELECTOR -->
     <div id="runner-char-picker" class="card bg-dark border-secondary p-3 mb-4 d-none">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -893,9 +925,11 @@
       if (type === 'EV_RACER') document.getElementById('tab-ev-racer').classList.add('active');
 
       const speedPicker = document.getElementById('snake-speed-picker');
+      const evSpeedPicker = document.getElementById('ev-racer-speed-picker');
       const charPicker = document.getElementById('runner-char-picker');
       const previewPanel = document.getElementById('block-drop-preview-panel');
       if (speedPicker) speedPicker.classList.toggle('d-none', type !== 'SNAKE');
+      if (evSpeedPicker) evSpeedPicker.classList.toggle('d-none', type !== 'EV_RACER');
       if (charPicker) charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
       if (previewPanel) previewPanel.classList.toggle('d-none', type !== 'BLOCK_DROP');
 
@@ -938,8 +972,17 @@
       if (snakeEngine && typeof snakeEngine.setSpeedMode === 'function') {
         snakeEngine.setSpeedMode(mode);
       }
-      document.querySelectorAll('.speed-picker-pill').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#snake-speed-picker .speed-picker-pill').forEach(p => p.classList.remove('active'));
       const activePill = document.getElementById(`pill-speed-${mode.toLowerCase()}`);
+      if (activePill) activePill.classList.add('active');
+    }
+
+    function setEvRacerSpeed(mode) {
+      if (evRacerEngine && typeof evRacerEngine.setSpeedMode === 'function') {
+        evRacerEngine.setSpeedMode(mode);
+      }
+      document.querySelectorAll('#ev-racer-speed-picker .speed-picker-pill').forEach(p => p.classList.remove('active'));
+      const activePill = document.getElementById(`pill-ev-${mode.toLowerCase()}`);
       if (activePill) activePill.classList.add('active');
     }
 

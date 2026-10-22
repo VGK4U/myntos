@@ -369,7 +369,9 @@ class BouncingBallGame {
 
     // Check Level Complete (all bricks cleared)
     if (this.bricks.length === 0) {
-      this.framework.setLevel(this.framework.level + 1);
+      const nextLvl = (this.framework ? this.framework.level : 1) + 1;
+      this.framework.setLevel(nextLvl);
+      this.ballBaseSpeed += 0.35; // slightly faster ball each level!
       this.framework.addScore(1000);
       if (window.gameAudio) window.gameAudio.playPowerup();
       this._initLevel();

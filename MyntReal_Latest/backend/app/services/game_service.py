@@ -58,7 +58,7 @@ GAME_REWARD_RULES = {
     "EV_RACER": {
         "score_per_point": 1000,       # 1,000 score = 1 point
         "max_points_per_session": 50,  # Capped up to daily cap
-        "min_seconds_per_100m": 0.5,   # Anti-cheat: cannot drive faster than 0.5s per 100m
+        "min_seconds_per_100m": 0.38,  # Anti-cheat: cannot drive faster than 0.38s per 100m (~950 km/h)
     }
 }
 
@@ -226,7 +226,7 @@ def validate_anti_cheat_physics(
             return False
 
     elif game_type == "EV_RACER":
-        min_time = (distance_travelled / 100.0) * rules.get("min_seconds_per_100m", 0.5)
+        min_time = (distance_travelled / 100.0) * rules.get("min_seconds_per_100m", 0.38)
         if dur < min_time:
             logger.warning(f"[ANTI-CHEAT] EV Racer speed anomaly: {distance_travelled}m in {dur}s (min: {min_time}s)")
             return False

@@ -870,9 +870,42 @@
           </div>
         </div>
         <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
-          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders me-1" style="color: #d946ef;"></i>Slider:</span>
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders me-1" style="color: #d97706;"></i>Slider:</span>
           <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-bubble-speed" min="1" max="4" value="2" step="1" oninput="updateBubbleSpeedFromSlider(this.value)" style="accent-color: #d946ef;">
           <span class="badge bg-secondary font-monospace" id="label-bubble-speed">NORMAL</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2G. EV RACER SPEED SELECTOR (Visible when EV Racer selected) -->
+    <div id="ev-racer-speed-picker" class="card p-3 mb-4 d-none" style="background: rgba(16, 24, 38, 0.95); border: 1px solid rgba(16, 185, 129, 0.45); border-radius: 16px;">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="small fw-bold text-uppercase" style="color: #f8fafc; letter-spacing: 0.06em;">
+          <i class="fa-solid fa-gauge-high me-1 text-success"></i> EV Racer Cruise &amp; Acceleration Speed Bar:
+        </span>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.22); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.55); font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 9999px;">
+          <i class="fa-solid fa-bolt me-1"></i> Turbo Boost (Up) &amp; Regen Braking (Down)
+        </span>
+      </div>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="speed-picker-pill" id="pill-ev-racer-slow" onclick="setEvRacerSpeed('SLOW')">
+            <i class="fa-solid fa-leaf text-info"></i> Slow (Eco 140 km/h)
+          </div>
+          <div class="speed-picker-pill active" id="pill-ev-racer-normal" onclick="setEvRacerSpeed('NORMAL')">
+            <i class="fa-solid fa-bolt text-success"></i> Normal (Cruise 190 km/h)
+          </div>
+          <div class="speed-picker-pill" id="pill-ev-racer-fast" onclick="setEvRacerSpeed('FAST')">
+            <i class="fa-solid fa-gauge-high text-warning"></i> Fast (Sport 260 km/h)
+          </div>
+          <div class="speed-picker-pill" id="pill-ev-racer-turbo" onclick="setEvRacerSpeed('TURBO')">
+            <i class="fa-solid fa-fire-flame-curved text-danger"></i> Turbo (Hyper 340+ km/h)
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+          <span class="small text-muted fw-bold"><i class="fa-solid fa-sliders text-success me-1"></i>Slider:</span>
+          <input type="range" class="form-range flex-grow-1 custom-speed-slider" id="slider-ev-racer-speed" min="1" max="4" value="2" step="1" oninput="updateEvRacerSpeedFromSlider(this.value)" style="accent-color: #10b981;">
+          <span class="badge bg-secondary font-monospace" id="label-ev-racer-speed">NORMAL</span>
         </div>
       </div>
     </div>
@@ -1329,6 +1362,9 @@
 
       const savedBubbleSpeed = localStorage.getItem('myntreal_bubble_speed') || 'NORMAL';
       setBubbleSpeed(savedBubbleSpeed);
+
+      const savedEvRacerSpeed = localStorage.getItem('myntreal_ev_racer_speed') || 'NORMAL';
+      setEvRacerSpeed(savedEvRacerSpeed);
     }
 
     function checkAuthOrPromptResume() {
@@ -1516,6 +1552,7 @@
       const ballSpeed = document.getElementById('ball-speed-picker');
       const blockSpeed = document.getElementById('block-speed-picker');
       const bubbleSpeed = document.getElementById('bubble-speed-picker');
+      const evRacerSpeed = document.getElementById('ev-racer-speed-picker');
       const charPicker = document.getElementById('runner-char-picker');
       const sideHud = document.getElementById('block-drop-side-hud');
 
@@ -1525,6 +1562,7 @@
       if (ballSpeed) ballSpeed.classList.toggle('d-none', type !== 'BOUNCING_BALL');
       if (blockSpeed) blockSpeed.classList.toggle('d-none', type !== 'BLOCK_DROP');
       if (bubbleSpeed) bubbleSpeed.classList.toggle('d-none', type !== 'BUBBLE_BLASTER');
+      if (evRacerSpeed) evRacerSpeed.classList.toggle('d-none', type !== 'EV_RACER');
       if (charPicker) charPicker.classList.toggle('d-none', type !== 'ENDLESS_RUNNER');
       if (sideHud) sideHud.classList.toggle('d-none', type !== 'BLOCK_DROP');
 
@@ -1707,6 +1745,26 @@
     function updateBubbleSpeedFromSlider(val) {
       const mode = SPEED_INDEX_MAP[val] || 'NORMAL';
       setBubbleSpeed(mode);
+    }
+
+    function setEvRacerSpeed(mode) {
+      if (evRacerEngine && typeof evRacerEngine.setSpeedMode === 'function') {
+        evRacerEngine.setSpeedMode(mode);
+      }
+      localStorage.setItem('myntreal_ev_racer_speed', mode);
+      ['slow', 'normal', 'fast', 'turbo'].forEach(m => {
+        const p = document.getElementById(`pill-ev-racer-${m}`);
+        if (p) p.classList.toggle('active', m === mode.toLowerCase());
+      });
+      const slider = document.getElementById('slider-ev-racer-speed');
+      const label = document.getElementById('label-ev-racer-speed');
+      if (slider) slider.value = SPEED_MODE_MAP[mode] || 2;
+      if (label) label.textContent = mode;
+    }
+
+    function updateEvRacerSpeedFromSlider(val) {
+      const mode = SPEED_INDEX_MAP[parseInt(val, 10)] || 'NORMAL';
+      setEvRacerSpeed(mode);
     }
 
     function selectRunnerCharacter(charId) {

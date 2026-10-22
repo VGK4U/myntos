@@ -203,9 +203,12 @@ class EndlessRunnerGame {
   _update() {
     this.animFrame++;
 
-    // Accelerate runner speed gradually and gently based on speed mode
-    const maxSpd = this.maxSpeed || 5.0;
-    this.speed = Math.min(maxSpd, this.baseSpeed + (this.distance * 0.0005));
+    // Accelerate runner speed based on speed mode and level milestones
+    const lvl = Math.floor(this.distance / 250) + 1;
+    this.framework.setLevel(lvl);
+    const lvlSpeedBonus = (lvl - 1) * 0.35;
+    const maxSpd = (this.maxSpeed || 5.0) + lvlSpeedBonus;
+    this.speed = Math.min(maxSpd, this.baseSpeed + lvlSpeedBonus + (this.distance * 0.0003));
 
     // Update distance
     this.distance += Math.floor(this.speed * 0.22);
@@ -213,8 +216,6 @@ class EndlessRunnerGame {
     this.framework.addScore(1);
 
     // Milestones every 250m
-    const lvl = Math.floor(this.distance / 250) + 1;
-    this.framework.setLevel(lvl);
     if (this.distance > 0 && this.distance % 250 < 3) {
       this.framework.recordMilestone(this.distance);
     }
