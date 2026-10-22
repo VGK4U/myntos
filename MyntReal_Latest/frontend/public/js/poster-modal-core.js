@@ -749,12 +749,7 @@
         if (isDirAdv) return sum;
 
         const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
-        const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
-        const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
-        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
-          ? parseFloat(e.balance_gross)
-          : Math.max(0, gross - advAdj - lostDed);
-        return sum + balGross;
+        return sum + gross;
       }, 0);
       const overallVal = (allTimeSum > 0) ? allTimeSum : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0)));
       setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
@@ -819,12 +814,7 @@
         if (isDirAdv) return sum;
 
         const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
-        const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
-        const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
-        const balGross = (e.balance_gross !== undefined && e.balance_gross !== null)
-          ? parseFloat(e.balance_gross)
-          : Math.max(0, gross - advAdj - lostDed);
-        return sum + balGross;
+        return sum + gross;
       }, 0);
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
       const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);

@@ -17608,8 +17608,17 @@ else:
 _WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FRONTEND_PUBLIC_DIR = os.path.join(_WORKSPACE_ROOT, "frontend", "public")
 if os.path.isdir(FRONTEND_PUBLIC_DIR):
-    app.mount("/public", StaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
-    print(f"[DC-STATIC] ✅ Public assets mounted: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
+    class NoCacheStaticFiles(StaticFiles):
+        async def get_response(self, path: str, scope):
+            response = await super().get_response(path, scope)
+            if path.endswith((".js", ".css")):
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+            return response
+
+    app.mount("/public", NoCacheStaticFiles(directory=FRONTEND_PUBLIC_DIR, follow_symlink=True), name="public_frontend_assets")
+    print(f"[DC-STATIC] ✅ Public assets mounted with No-Cache headers: /public -> {FRONTEND_PUBLIC_DIR}", flush=True)
 
 # DC-STORAGE-FIX-001: Do NOT mount StaticFiles on /storage, because StaticFiles shadows the @app.api_route("/storage/{file_path:path}")
 # endpoint and returns 404 for any files stored in AWS S3 Object Storage.
