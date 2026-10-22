@@ -8967,10 +8967,12 @@ def vgk_top_partners_leaderboard_table(
         pass  # Include all members
     params: dict = {}
 
+    cl_date_join = ""
     if f_from and f_to:
         params["from_d"] = f_from.isoformat()
         params["to_d_end"] = f"{f_to.isoformat()}T23:59:59"
-        where_clauses.append("""(
+        params["to_d"] = f_to.isoformat()
+        cl_date_join = """ AND (
             (cl.created_at >= :from_d AND cl.created_at <= :to_d_end)
             OR (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
             OR EXISTS (
@@ -8980,6 +8982,9 @@ def vgk_top_partners_leaderboard_table(
                   AND tx.transaction_date >= CAST(:from_d AS date) 
                   AND tx.transaction_date <= CAST(:to_d_end AS date)
             )
+        )"""
+        where_clauses.append("""(
+            cl.id IS NOT NULL
             OR EXISTS (
                 SELECT 1 FROM crm_leads tcl2
                 JOIN official_partners sub2 ON sub2.id = tcl2.associated_partner_id
@@ -8995,6 +9000,13 @@ def vgk_top_partners_leaderboard_table(
                             AND tx2.transaction_date <= CAST(:to_d_end AS date)
                       )
                   )
+            )
+            OR EXISTS (
+                SELECT 1 FROM vgk_cash_income_entries cie2
+                WHERE cie2.partner_id = op.id
+                  AND cie2.status != 'CANCELLED'
+                  AND COALESCE(cie2.income_date, cie2.created_at::date) >= CAST(:from_d AS date)
+                  AND COALESCE(cie2.income_date, cie2.created_at::date) <= CAST(:to_d AS date)
             )
         )""")
         dvr_filter = """
@@ -9041,24 +9053,28 @@ def vgk_top_partners_leaderboard_table(
                COALESCE(op.member_status, 'ACTIVE') AS member_status,
                COALESCE(op.is_blocked, FALSE) AS is_blocked,
                COUNT(cl.id) AS total_leads,
-               COUNT(*) FILTER (WHERE (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL
+                                  AND (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
                                   AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
                                   AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')) AS submits_count,
-               COUNT(*) FILTER (WHERE (
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL AND (
                    cl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan')
                    OR cl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected')
                    OR cl.first_payment_received_date IS NOT NULL
                    OR EXISTS (SELECT 1 FROM crm_lead_audit_log al WHERE al.lead_id = cl.id AND al.new_value IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan'))
                )) AS with_bank_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.id IS NOT NULL
+                                                           AND (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
                                                            AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
                                                            AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')), 0) AS submits_val,
-               COUNT(*) FILTER (WHERE (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL
+                                  AND (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
                                   AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')) AS first_pmt_count,
-               COUNT(*) FILTER (WHERE cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed') AS completed_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed'), 0) AS completed_val,
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL AND (cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed')) AS completed_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.id IS NOT NULL AND (cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed')), 0) AS completed_val,
                COALESCE(SUM(
                    CASE 
+                       WHEN cl.id IS NULL THEN 0
                        WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id AND tx.validation_status IN ('validated', 'posted_to_ledger')) 
                             THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = cl.id AND tx.validation_status IN ('validated', 'posted_to_ledger'))
                        WHEN cl.deal_value_received > 0 THEN cl.deal_value_received
@@ -9066,10 +9082,10 @@ def vgk_top_partners_leaderboard_table(
                        ELSE 0
                    END
                ), 0) AS received_val,
-               COUNT(*) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')) AS won_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')), 0) AS won_val,
-               COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested')) AS lost_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested')), 0) AS lost_val,
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL AND (cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed'))) AS won_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.id IS NOT NULL AND (cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed'))), 0) AS won_val,
+               COUNT(*) FILTER (WHERE cl.id IS NOT NULL AND (cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested'))) AS lost_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.id IS NOT NULL AND (cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested'))), 0) AS lost_val,
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_leads,
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
                                                      AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR tcl.status IN ('submitted', 'application_submitted'))
@@ -9101,7 +9117,7 @@ def vgk_top_partners_leaderboard_table(
                    END
                ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_total_received_val
         FROM official_partners op
-        LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id
+        LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id{cl_date_join}
         {join_staff}
         WHERE {where_sql}
         GROUP BY op.id, op.partner_name, op.partner_code, op.is_active, op.member_status, op.is_blocked
