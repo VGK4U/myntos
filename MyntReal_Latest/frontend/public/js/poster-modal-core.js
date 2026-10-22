@@ -280,6 +280,7 @@
 
             <div style="width:100%;background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);border:1.5px solid #34d399;border-radius:14px;padding:8px 10px;text-align:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(4,120,87,0.45);box-sizing:border-box">
               <div style="font-size:21px;font-weight:950;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;max-width:100%;overflow:hidden"><span id="prevTodayLabelText">Today's Earning</span>: <span id="prevTotalToday" style="color:#fde047">₹0/-</span></div>
+              <div id="prevPeriodDateRange" style="font-size:11.5px;font-weight:900;color:#fef08a;margin-top:2px;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap;overflow:hidden"></div>
               <div id="prevAlreadyPaidText" style="font-size:12px;font-weight:800;color:#fde047;margin-top:3px;letter-spacing:0.3px;display:none"></div>
             </div>
 
@@ -318,7 +319,7 @@
 
               <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding-right:4px">
                 <div style="text-align:left">
-                  <div style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Today</div>
+                  <div id="prevSeniorTodayLabel" style="font-size:7.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px">Today</div>
                   <div id="prevSeniorToday" style="font-size:13px;font-weight:950;color:#ffffff">₹0/-</div>
                 </div>
                 <div style="text-align:center">
@@ -656,23 +657,20 @@
         }
       });
 
+      window._postTotalTodayUserEdited = false;
+      window._postCustomerUserEdited = false;
+
       const todayStr = new Date().toISOString().split('T')[0];
-      const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
-      const lastEarningDate = validDates.length > 0 ? validDates[validDates.length - 1] : todayStr;
+      const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => String(e.income_date).slice(0, 10)).sort();
+      const lastEarningDate = (validDates.includes(todayStr))
+        ? todayStr
+        : (validDates.length > 0 ? validDates[validDates.length - 1] : todayStr);
 
-      const mainDateFrom = (document.getElementById('iedDateFrom')?.value || document.getElementById('meDateFrom')?.value || document.getElementById('lvDateFrom')?.value || '').trim();
-      const mainDateTo   = (document.getElementById('iedDateTo')?.value || document.getElementById('meDateTo')?.value || document.getElementById('lvDateTo')?.value || '').trim();
-
-      let initFrom = mainDateFrom;
-      let initTo   = mainDateTo;
-
-      if (!initFrom && !initTo) {
+      let initFrom = todayStr;
+      let initTo   = todayStr;
+      if (!validDates.includes(todayStr) && validDates.length > 0) {
         initFrom = lastEarningDate;
         initTo   = lastEarningDate;
-      } else if (!initFrom) {
-        initFrom = initTo;
-      } else if (!initTo) {
-        initTo = initFrom;
       }
 
       const pDateFrom = document.getElementById('postPayoutDateFrom');
@@ -684,13 +682,15 @@
       const seniorEarning = m.senior_earning !== null && m.senior_earning !== undefined ? '₹' + _meFormatInr(m.senior_earning) + '/-' : '—';
 
       let customerName = '—', location = '—';
-      const targetEntries = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && (!initFrom || e.income_date >= initFrom) && (!initTo || e.income_date <= initTo));
+      const targetEntries = entries.filter(e => e.status !== 'CANCELLED' && (!initFrom || e.income_date >= initFrom) && (!initTo || e.income_date <= initTo));
       if (targetEntries.length) {
-        customerName = targetEntries[0].client_name || '—';
-        location = targetEntries[0].location || '—';
+        const l1Entry = targetEntries.find(e => e.level === 1 && (e.client_name || e.customer_name));
+        const chosen = l1Entry || targetEntries[0];
+        customerName = chosen.client_name || chosen.customer_name || '—';
+        location = chosen.location || chosen.city || '—';
       } else if (entries.length) {
-        customerName = entries[0].client_name || '—';
-        location = entries[0].location || '—';
+        customerName = entries[0].client_name || entries[0].customer_name || '—';
+        location = entries[0].location || entries[0].city || '—';
       }
 
       const installedStages = ['completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed'];
@@ -942,6 +942,7 @@
 
   function setPosterPresetPeriod(period) {
     window._postTotalTodayUserEdited = false;
+    window._postCustomerUserEdited = false;
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     let fromStr = todayStr;
@@ -963,7 +964,7 @@
       toStr = todayStr;
     } else if (period === 'all') {
       const entries = window._currentEntries || [];
-      const validDates = entries.filter(e => e.level === 1 && e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => e.income_date).sort();
+      const validDates = entries.filter(e => e.status !== 'CANCELLED' && e.income_date && e.income_date !== 'None').map(e => String(e.income_date).slice(0, 10)).sort();
       if (validDates.length > 0) {
         fromStr = validDates[0];
         toStr = validDates[validDates.length - 1];
@@ -1029,6 +1030,59 @@
       periodLabel = `Up to ${fmtDate(dateTo)}`;
     } else {
       periodLabel = 'All Time';
+    }
+
+    const prevPeriodDateRangeEl = document.getElementById('prevPeriodDateRange');
+    if (prevPeriodDateRangeEl) {
+      prevPeriodDateRangeEl.textContent = periodLabel;
+      prevPeriodDateRangeEl.style.display = periodLabel ? 'block' : 'none';
+    }
+
+    const prevSeniorTodayLabelEl = document.getElementById('prevSeniorTodayLabel');
+    if (prevSeniorTodayLabelEl) {
+      prevSeniorTodayLabelEl.textContent = isSingleDay ? (isToday ? 'Today' : 'Single Day') : 'This Period';
+    }
+
+    // Automatically update Customer Name & Location based on the selected date range if user hasn't typed custom customer
+    if (!window._postCustomerUserEdited) {
+      const matchingEntries = entries.filter(e => {
+        if (e.status === 'CANCELLED') return false;
+        const incD = (e.income_date && e.income_date !== 'None') ? String(e.income_date).slice(0, 10) : '';
+        const trigD = (e.trigger_date && e.trigger_date !== 'None') ? String(e.trigger_date).slice(0, 10) : '';
+        const createD = (e.created_at && e.created_at !== 'None') ? String(e.created_at).slice(0, 10) : '';
+        const pmtD = (e.payment_date && e.payment_date !== 'None') ? String(e.payment_date).slice(0, 10) : '';
+        if (dateFrom && dateTo) {
+          return (incD && incD >= dateFrom && incD <= dateTo) ||
+                 (trigD && trigD >= dateFrom && trigD <= dateTo) ||
+                 (createD && createD >= dateFrom && createD <= dateTo) ||
+                 (pmtD && pmtD >= dateFrom && pmtD <= dateTo);
+        } else if (dateFrom) {
+          return (incD >= dateFrom) || (trigD >= dateFrom) || (createD >= dateFrom) || (pmtD >= dateFrom);
+        } else if (dateTo) {
+          return (incD <= dateTo) || (trigD <= dateTo) || (createD <= dateTo) || (pmtD <= dateTo);
+        }
+        return true;
+      });
+
+      if (matchingEntries.length > 0) {
+        // Sort descending so the latest lead in the period is selected
+        matchingEntries.sort((a, b) => {
+          const dateA = a.income_date || a.trigger_date || a.payment_date || a.created_at || '';
+          const dateB = b.income_date || b.trigger_date || b.payment_date || b.created_at || '';
+          if (dateA !== dateB) return dateB.localeCompare(dateA);
+          return (b.id || 0) - (a.id || 0);
+        });
+        const l1 = matchingEntries.find(e => e.level === 1 && (e.client_name || e.customer_name));
+        const chosen = l1 || matchingEntries[0];
+        const postCustomerEl = document.getElementById('postCustomer');
+        const postLocationEl = document.getElementById('postLocation');
+        if (postCustomerEl && (chosen.client_name || chosen.customer_name)) {
+          postCustomerEl.value = chosen.client_name || chosen.customer_name;
+        }
+        if (postLocationEl && (chosen.location || chosen.city)) {
+          postLocationEl.value = chosen.location || chosen.city;
+        }
+      }
     }
 
     let stage1Amt = 0, stage2AdvAmt = 0;
@@ -1331,6 +1385,24 @@
       postTotalTodayInput._hasUserEditListener = true;
       postTotalTodayInput.addEventListener('input', () => {
         window._postTotalTodayUserEdited = true;
+        updatePoster();
+      });
+    }
+
+    const postCustomerInput = document.getElementById('postCustomer');
+    if (postCustomerInput && !postCustomerInput._hasUserEditListener) {
+      postCustomerInput._hasUserEditListener = true;
+      postCustomerInput.addEventListener('input', () => {
+        window._postCustomerUserEdited = true;
+        updatePoster();
+      });
+    }
+
+    const postLocationInput = document.getElementById('postLocation');
+    if (postLocationInput && !postLocationInput._hasUserEditListener) {
+      postLocationInput._hasUserEditListener = true;
+      postLocationInput.addEventListener('input', () => {
+        window._postLocationUserEdited = true;
         updatePoster();
       });
     }
