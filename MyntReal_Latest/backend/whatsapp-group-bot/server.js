@@ -153,29 +153,43 @@ async function processOutboundQueue() {
             let target = item.target_jid || item.phone;
             if (!target) continue;
             if (!target.includes('@')) {
-                if (item.target_type === 'group') {
-                    const cleanCode = cleanTargetCode(target);
+                const cleanCode = cleanTargetCode(target);
+                const isChannel = item.target_type === 'channel' || cleanCode.startsWith('0029') || String(target).includes('/channel/');
+                if (item.target_type === 'group' || isChannel) {
                     let resolvedGroupJid = jidCache[cleanCode] || null;
                     if (!resolvedGroupJid && sock && connectionStatus === 'connected') {
-                        try {
-                            const gInfo = await sock.groupGetInviteInfo(cleanCode);
-                            if (gInfo && gInfo.id) {
-                                resolvedGroupJid = gInfo.id.includes('@g.us') ? gInfo.id : `${gInfo.id}@g.us`;
-                                jidCache[cleanCode] = resolvedGroupJid;
-                            }
-                        } catch (e) {}
-                        if (!resolvedGroupJid) {
+                        if (isChannel) {
                             try {
-                                const participating = await sock.groupFetchAllParticipating();
-                                const matched = Object.values(participating).find(g =>
-                                    g.subject && g.subject.trim().toLowerCase() === String(target).trim().toLowerCase()
-                                ) || Object.values(participating).find(g =>
-                                    g.subject && g.subject.trim().toLowerCase().includes(String(target).trim().toLowerCase())
-                                );
-                                if (matched && matched.id) {
-                                    resolvedGroupJid = matched.id;
+                                const meta = await sock.newsletterMetadata('invite', cleanCode);
+                                if (meta && meta.id) {
+                                    resolvedGroupJid = meta.id.includes('@newsletter') ? meta.id : `${meta.id}@newsletter`;
+                                    jidCache[cleanCode] = resolvedGroupJid;
+                                    console.log(`[WA-BOT-QUEUE] Resolved channel JID: ${resolvedGroupJid} (${meta.name || 'Channel'})`);
+                                }
+                            } catch (nlErr) {
+                                console.warn(`[WA-BOT-QUEUE] Newsletter invite resolution note for ${cleanCode}:`, nlErr.message);
+                            }
+                        } else {
+                            try {
+                                const gInfo = await sock.groupGetInviteInfo(cleanCode);
+                                if (gInfo && gInfo.id) {
+                                    resolvedGroupJid = gInfo.id.includes('@g.us') ? gInfo.id : `${gInfo.id}@g.us`;
+                                    jidCache[cleanCode] = resolvedGroupJid;
                                 }
                             } catch (e) {}
+                            if (!resolvedGroupJid) {
+                                try {
+                                    const participating = await sock.groupFetchAllParticipating();
+                                    const matched = Object.values(participating).find(g =>
+                                        g.subject && g.subject.trim().toLowerCase() === String(target).trim().toLowerCase()
+                                    ) || Object.values(participating).find(g =>
+                                        g.subject && g.subject.trim().toLowerCase().includes(String(target).trim().toLowerCase())
+                                    );
+                                    if (matched && matched.id) {
+                                        resolvedGroupJid = matched.id;
+                                    }
+                                } catch (e) {}
+                            }
                         }
                     }
                     if (resolvedGroupJid) {
@@ -240,7 +254,8 @@ async function processOutboundQueue() {
                         }
                     );
                     if (!contentPayload) {
-                        throw new Error(`Media attachment could not be resolved for queued message: ${item.filename || extraOpts.filename || item.media_url}`);
+                        console.warn(`[WA-BOT] ⚠️ Media attachment could not be resolved for queued message (${item.filename || extraOpts.filename || item.media_url}). Falling back to text message delivery.`);
+                        contentPayload = { text: item.message || '' };
                     }
                 }
 

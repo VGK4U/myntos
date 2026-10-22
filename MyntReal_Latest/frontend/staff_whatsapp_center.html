@@ -1918,10 +1918,10 @@ We are delighted to share an important update tailored for our *{{segment}}* net
 
 <!-- ═══ GBC MODAL 2: INDIVIDUAL NUMBERS & MESSAGE DELIVERY DETAILS MODAL ════ -->
 <div class="modal-overlay" id="gbcRecipientsModal">
-  <div class="modal-box" style="max-width:1080px;width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;padding:0">
+  <div class="modal-box" style="max-width:1160px;width:96%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;padding:0">
     <div class="modal-head" style="background:#0f172a;color:#fff;padding:13px 18px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <h4 style="margin:0;font-size:14.5px;font-weight:800"><i class="fas fa-list-ol me-2 text-success"></i>Individual Numbers &amp; Message Delivery Details</h4>
+        <h4 style="margin:0;font-size:14.5px;font-weight:800"><i class="fas fa-list-ol me-2 text-success"></i>Recipient Delivery &amp; WhatsApp Group Status Details</h4>
         <div id="gbcRecipModalSubtitle" style="font-size:11px;color:#94a3b8;margin-top:2px"></div>
       </div>
       <button type="button" class="btn-custom" onclick="closeModal('gbcRecipientsModal')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">&times;</button>
@@ -1931,7 +1931,12 @@ We are delighted to share an important update tailored for our *{{segment}}* net
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0">
         <div id="gbcRecipModalStats" style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:700"></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="gbcRecipModalSearch" oninput="debounceLoadGbcTriggerRecipients()" placeholder="Search phone, name, WAMID..." style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;width:220px">
+          <input type="text" id="gbcRecipModalSearch" oninput="debounceLoadGbcTriggerRecipients()" placeholder="Search phone, name, WAMID..." style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;width:200px">
+          <select id="gbcRecipModalType" onchange="loadGbcTriggerRecipients()" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;background:#fff">
+            <option value="ALL">All Recipients &amp; Groups</option>
+            <option value="GROUPS">👥 Groups &amp; Channels Only</option>
+            <option value="INDIVIDUALS">👤 Individuals Only</option>
+          </select>
           <select id="gbcRecipModalStatus" onchange="loadGbcTriggerRecipients()" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;background:#fff">
             <option value="ALL">All Delivery Statuses</option>
             <option value="SENT">📤 Sent</option>
@@ -1946,25 +1951,66 @@ We are delighted to share an important update tailored for our *{{segment}}* net
         </div>
       </div>
 
-      <div style="overflow-x:auto;max-height:62vh">
+      <div style="overflow-x:auto;max-height:64vh">
         <table class="wa-table" style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;text-align:left;position:sticky;top:0;z-index:2">
               <th style="padding:9px 8px">#</th>
               <th style="padding:9px 8px">Recipient Name &amp; Code</th>
-              <th style="padding:9px 8px">Mobile Number</th>
-              <th style="padding:9px 8px">Category / Segment / Stage</th>
+              <th style="padding:9px 8px">Target / Mobile</th>
+              <th style="padding:9px 8px">Category / Segment</th>
               <th style="padding:9px 8px">Channel</th>
               <th style="padding:9px 8px">Delivery Status</th>
-              <th style="padding:9px 8px">Sent / Delivered / Read Time</th>
-              <th style="padding:9px 8px">Message Details / Error</th>
+              <th style="padding:9px 8px">Sent / Deliv / Read Time</th>
+              <th style="padding:9px 8px">Message Preview / Error</th>
+              <th style="padding:9px 8px;text-align:right">Action</th>
             </tr>
           </thead>
           <tbody id="gbcRecipModalTableBody">
-            <tr><td colspan="8" style="padding:24px;text-align:center;color:#64748b">Loading recipients...</td></tr>
+            <tr><td colspan="9" style="padding:24px;text-align:center;color:#64748b">Loading recipients...</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GBC MODAL 2B: FULL VIEW DETAIL FOR RECIPIENT / GROUP ═════════════════ -->
+<div class="modal-overlay" id="gbcRecipientDetailModal">
+  <div class="modal-box" style="max-width:700px;width:95%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;padding:0">
+    <div class="modal-head" style="background:#0f172a;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h4 id="gbcRecipDetailTitle" style="margin:0;font-size:14.5px;font-weight:800"><i class="fas fa-info-circle text-primary me-2"></i>Recipient Delivery Details</h4>
+        <div id="gbcRecipDetailSubtitle" style="font-size:11px;color:#94a3b8;margin-top:2px"></div>
+      </div>
+      <button type="button" class="btn-custom" onclick="closeModal('gbcRecipientDetailModal')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px;overflow-y:auto;flex:1">
+      <div id="gbcRecipDetailBadgeBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px"></div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+          <div><span style="color:#64748b">Target Name:</span> <strong id="gbcDetailTargetVal" style="color:#0f172a"></strong></div>
+          <div><span style="color:#64748b">Target Phone / ID:</span> <span id="gbcDetailPhoneVal" style="font-family:monospace;color:#059669;font-weight:700"></span></div>
+          <div><span style="color:#64748b">Category / Segment:</span> <span id="gbcDetailCategoryVal"></span></div>
+          <div><span style="color:#64748b">Status / Stage:</span> <span id="gbcDetailStatusVal"></span></div>
+          <div><span style="color:#64748b">Gateway / Provider:</span> <strong id="gbcDetailProviderVal"></strong></div>
+          <div><span style="color:#64748b">Message ID (WAMID):</span> <span id="gbcDetailWamidVal" style="font-family:monospace;font-size:11px;color:#475569"></span></div>
+          <div><span style="color:#64748b">Sent Time:</span> <span id="gbcDetailSentVal"></span></div>
+          <div><span style="color:#64748b">Delivered Time:</span> <span id="gbcDetailDelivVal"></span></div>
+          <div><span style="color:#64748b">Read Time:</span> <span id="gbcDetailReadVal"></span></div>
+          <div><span style="color:#64748b">Status Reason:</span> <span id="gbcDetailErrorVal" style="font-weight:600"></span></div>
+        </div>
+      </div>
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:800;color:#0f172a">Personalized Composed Message:</span>
+        <button type="button" class="btn-custom btn-outline-custom" onclick="copyTextFromElement('gbcDetailMsgBox')" style="padding:3px 9px;font-size:11px;font-weight:700;color:#1d4ed8">
+          <i class="fas fa-copy me-1"></i> Copy Message
+        </button>
+      </div>
+      <div id="gbcDetailMsgBox" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:#0f172a"></div>
+    </div>
+    <div class="modal-foot" style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:10px 16px;display:flex;justify-content:flex-end">
+      <button type="button" class="btn-custom btn-outline-custom" onclick="closeModal('gbcRecipientDetailModal')" style="padding:6px 14px;font-size:12px;font-weight:700">Close</button>
     </div>
   </div>
 </div>
@@ -9051,8 +9097,8 @@ async function loadGbcTriggersHistory(isSilent = false) {
             <button type="button" class="btn-custom btn-outline-custom" onclick="openGbcViewMessageModal(${idx})" style="padding:4px 9px;font-size:11px;font-weight:700;color:#065f46;border-color:#6ee7b7;background:#ecfdf5;margin-right:4px" title="View Broadcast Message, Signature & Creative">
               <i class="fas fa-eye"></i> View Message
             </button>
-            <button type="button" class="btn-custom" onclick="openGbcRecipientsModal('${escapeHtml(t.execution_id)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#0f172a;color:#fff;border:none;border-radius:6px" title="View Individual Numbers & Message Delivery Details">
-              <i class="fas fa-users"></i> Individual Numbers (${t.total || 0})
+            <button type="button" class="btn-custom" onclick="openGbcRecipientsModal('${escapeHtml(t.execution_id)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#0f172a;color:#fff;border:none;border-radius:6px" title="View Delivery Details for Individuals & WhatsApp Groups">
+              <i class="fas fa-users me-1"></i> Recipients &amp; Groups (${t.total || 0})
             </button>
           </td>
         </tr>
@@ -9178,10 +9224,31 @@ async function loadGbcTriggerRecipients(isSilent = false) {
   const status = document.getElementById('gbcRecipModalStatus')?.value || 'ALL';
 
   try {
+    const typeFilter = document.getElementById('gbcRecipModalType')?.value || 'ALL';
     const qs = new URLSearchParams({ search, status, limit: '1000' });
     const res = await apiFetch(`${API}/whatsapp/general-broadcast/triggers/${encodeURIComponent(gbcCurrentModalExecId)}/recipients?${qs.toString()}`);
     const ex = res.execution || {};
-    const list = res.recipients || [];
+    let list = res.recipients || [];
+
+    const isGroupFn = r => Boolean(
+      r.category_label?.includes('Group') ||
+      r.segment?.includes('Group') ||
+      r.category_label?.includes('Channel') ||
+      r.entity_type?.includes('group') ||
+      r.entity_type?.includes('channel') ||
+      r.recipient_type === 'group' ||
+      r.recipient_type === 'channel'
+    );
+
+    const grpTotal = list.filter(isGroupFn).length;
+    const indivTotal = list.length - grpTotal;
+
+    if (typeFilter === 'GROUPS') {
+      list = list.filter(isGroupFn);
+    } else if (typeFilter === 'INDIVIDUALS') {
+      list = list.filter(r => !isGroupFn(r));
+    }
+    window._gbcCurrentModalList = list;
 
     if (subEl) {
       subEl.textContent = `${ex.title || ''} • Triggered by ${ex.triggered_by || ''} on ${ex.timestamp || ''}`;
@@ -9189,6 +9256,8 @@ async function loadGbcTriggerRecipients(isSilent = false) {
     if (statsEl) {
       statsEl.innerHTML = `
         <span style="color:#0f172a">Total: ${ex.total || 0}</span>
+        <span style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:6px">👥 Groups: ${grpTotal}</span>
+        <span style="background:#f1f5f9;color:#334155;padding:2px 7px;border-radius:6px">👤 Individuals: ${indivTotal}</span>
         <span style="color:#2563eb">📤 Sent: ${ex.sent || 0}</span>
         <span style="color:#059669">✅ Delivered: ${ex.delivered || 0}</span>
         <span style="color:#7c3aed">👁️ Read: ${ex.read || 0}</span>
@@ -9197,23 +9266,34 @@ async function loadGbcTriggerRecipients(isSilent = false) {
     }
 
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="padding:24px;text-align:center;color:#64748b">No recipient records match the selected search/filter.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:#64748b">No recipient or group records match the selected search/filter.</td></tr>';
       return;
     }
 
     tbody.innerHTML = list.map((r, i) => {
+      const isGroup = isGroupFn(r);
+      const isChannel = r.recipient_type === 'channel' || r.entity_type === 'whatsapp_channel' || String(r.phone).startsWith('0029') || String(r.phone).includes('@newsletter');
+      const icon = isGroup
+        ? (isChannel ? '<i class="fas fa-bullhorn text-primary me-1"></i>' : '<i class="fas fa-users text-success me-1"></i>')
+        : '<i class="fas fa-user text-muted me-1"></i>';
+      const phoneDisplay = isGroup
+        ? `<span class="badge bg-light text-dark border"><i class="fab fa-whatsapp text-success me-1"></i>${escapeHtml(r.phone)}</span>`
+        : `<span style="font-weight:700;color:#059669;font-family:monospace">${escapeHtml(r.phone)}</span>`;
       const stColor = r.status === 'READ' ? '#7c3aed' : (r.status === 'DELIVERED' ? '#059669' : (r.status === 'SENT' ? '#2563eb' : (r.status === 'FAILED' ? '#dc2626' : '#d97706')));
-      const msgShort = (r.rendered_message || '').slice(0, 90) + ((r.rendered_message || '').length > 90 ? '...' : '');
+      const msgShort = (r.rendered_message || '').slice(0, 85) + ((r.rendered_message || '').length > 85 ? '...' : '');
+
       return `
-        <tr style="border-bottom:1px solid #f1f5f9">
+        <tr style="border-bottom:1px solid #f1f5f9; ${isGroup ? 'background:#f8fafc;' : ''}">
           <td style="padding:8px;color:#64748b">${i + 1}</td>
           <td style="padding:8px">
-            <div style="font-weight:700;color:#0f172a">${escapeHtml(r.name)}</div>
+            <div style="font-weight:700;color:#0f172a">${icon} ${escapeHtml(r.name)}</div>
             <div style="font-size:10.5px;color:#64748b;font-family:monospace">${escapeHtml(r.code)}</div>
           </td>
-          <td style="padding:8px;font-weight:700;color:#059669;font-family:monospace">${escapeHtml(r.phone)}</td>
+          <td style="padding:8px">${phoneDisplay}</td>
           <td style="padding:8px">
-            <div style="font-size:11px;font-weight:700;color:#334155">${escapeHtml(r.category_label)} • ${escapeHtml(r.segment)}</div>
+            <div style="font-size:11px;font-weight:700;color:#334155">
+              ${isGroup ? `<span class="badge" style="background:#e0e7ff;color:#3730a3">${isChannel ? '📢 Channel' : '👥 Group'}</span>` : `${escapeHtml(r.category_label)} • ${escapeHtml(r.segment)}`}
+            </div>
             <div style="font-size:10.5px;color:#64748b">${escapeHtml(r.status_label)} / ${escapeHtml(r.stage_label)}</div>
           </td>
           <td style="padding:8px;font-size:11px;font-weight:700">${escapeHtml(r.provider)}</td>
@@ -9225,13 +9305,85 @@ async function loadGbcTriggerRecipients(isSilent = false) {
             <div><strong>Deliv:</strong> ${escapeHtml(r.delivered_at)}</div>
             ${r.read_at && r.read_at !== '—' ? `<div style="color:#7c3aed"><strong>Read:</strong> ${escapeHtml(r.read_at)}</div>` : ''}
           </td>
-          <td style="padding:8px;max-width:260px">
+          <td style="padding:8px;max-width:240px">
             ${r.error_message ? `<div style="color:#dc2626;font-size:11px;font-weight:600;margin-bottom:3px"><i class="fas fa-exclamation-circle"></i> ${escapeHtml(r.error_message)}</div>` : ''}
-            <div style="font-size:11px;color:#475569;cursor:pointer" title="${escapeHtml(r.rendered_message)}" onclick="alert(this.title)">${escapeHtml(msgShort)}</div>
+            <div style="font-size:11px;color:#475569;cursor:pointer" title="${escapeHtml(r.rendered_message)}" onclick="openGbcRecipientDetail(${i})">${escapeHtml(msgShort)}</div>
+          </td>
+          <td style="padding:8px;text-align:right;white-space:nowrap">
+            <button type="button" class="btn-custom btn-outline-custom" onclick="openGbcRecipientDetail(${i})" style="padding:3px 8px;font-size:11px;font-weight:700;color:#0f172a;border-color:#cbd5e1;background:#fff" title="Open Full View Modal">
+              <i class="fas fa-eye text-primary me-1"></i> View Full
+            </button>
           </td>
         </tr>
       `;
     }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" style="padding:20px;color:#dc2626">Error loading recipient details: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function openGbcRecipientDetail(idx) {
+  const r = (window._gbcCurrentModalList || [])[idx];
+  if (!r) return;
+  const isGroup = Boolean(
+    r.category_label?.includes('Group') ||
+    r.segment?.includes('Group') ||
+    r.category_label?.includes('Channel') ||
+    r.entity_type?.includes('group') ||
+    r.entity_type?.includes('channel') ||
+    r.recipient_type === 'group' ||
+    r.recipient_type === 'channel'
+  );
+  const isChannel = r.recipient_type === 'channel' || r.entity_type === 'whatsapp_channel' || String(r.phone).startsWith('0029') || String(r.phone).includes('@newsletter');
+
+  const titleEl = document.getElementById('gbcRecipDetailTitle');
+  const subEl = document.getElementById('gbcRecipDetailSubtitle');
+  if (titleEl) {
+    titleEl.innerHTML = isGroup
+      ? (isChannel ? '<i class="fas fa-bullhorn text-primary me-2"></i>WhatsApp Channel Delivery Details' : '<i class="fas fa-users text-success me-2"></i>WhatsApp Group Delivery Details')
+      : '<i class="fas fa-user text-primary me-2"></i>Individual Delivery Details';
+  }
+  if (subEl) subEl.textContent = `${r.name || 'Recipient'} (${r.phone || 'Target'})`;
+
+  if (document.getElementById('gbcDetailTargetVal')) document.getElementById('gbcDetailTargetVal').textContent = r.name || '—';
+  if (document.getElementById('gbcDetailPhoneVal')) document.getElementById('gbcDetailPhoneVal').textContent = r.phone || '—';
+  if (document.getElementById('gbcDetailCategoryVal')) document.getElementById('gbcDetailCategoryVal').textContent = `${r.category_label || 'Recipient'} • ${r.segment || '—'}`;
+  if (document.getElementById('gbcDetailStatusVal')) document.getElementById('gbcDetailStatusVal').textContent = `${r.status_label || 'Active'} / ${r.stage_label || '—'}`;
+  if (document.getElementById('gbcDetailProviderVal')) document.getElementById('gbcDetailProviderVal').textContent = r.provider || '—';
+  if (document.getElementById('gbcDetailWamidVal')) document.getElementById('gbcDetailWamidVal').textContent = r.wamid || '—';
+  if (document.getElementById('gbcDetailSentVal')) document.getElementById('gbcDetailSentVal').textContent = r.sent_at || '—';
+  if (document.getElementById('gbcDetailDelivVal')) document.getElementById('gbcDetailDelivVal').textContent = r.delivered_at || '—';
+  if (document.getElementById('gbcDetailReadVal')) document.getElementById('gbcDetailReadVal').textContent = r.read_at || '—';
+
+  const errEl = document.getElementById('gbcDetailErrorVal');
+  if (errEl) {
+    if (r.error_message) {
+      errEl.textContent = r.error_message;
+      errEl.style.color = '#dc2626';
+    } else {
+      errEl.textContent = 'None (Delivered Successfully)';
+      errEl.style.color = '#059669';
+    }
+  }
+
+  const stColor = r.status === 'READ' ? '#7c3aed' : (r.status === 'DELIVERED' ? '#059669' : (r.status === 'SENT' ? '#2563eb' : (r.status === 'FAILED' ? '#dc2626' : '#d97706')));
+  const bBar = document.getElementById('gbcRecipDetailBadgeBar');
+  if (bBar) {
+    bBar.innerHTML = `
+      <span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}40;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800">
+        Status: ${escapeHtml(r.status || 'UNKNOWN')}
+      </span>
+      <span style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700">
+        Gateway: ${escapeHtml(r.provider || '—')}
+      </span>
+      ${isGroup ? `<span style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700">${isChannel ? '📢 WhatsApp Channel' : '👥 WhatsApp Group'}</span>` : ''}
+    `;
+  }
+
+  const msgBox = document.getElementById('gbcDetailMsgBox');
+  if (msgBox) msgBox.textContent = r.rendered_message || '(No message body)';
+  document.getElementById('gbcRecipientDetailModal')?.classList.add('open');
+}
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" style="padding:20px;color:#dc2626">Error loading recipient details: ${escapeHtml(err.message)}</td></tr>`;
   }

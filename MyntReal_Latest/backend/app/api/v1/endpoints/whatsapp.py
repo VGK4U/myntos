@@ -10389,6 +10389,54 @@ async def upload_whatsapp_broadcast_media(
     }
 
 
+def _ensure_media_url_for_remote_queue(image_url: Optional[str]) -> Optional[str]:
+    """
+    Ensures that an uploaded local media file (/static/images/uploads/...) is accessible to
+    remote Baileys WhatsApp bot instances (running on AWS ECS / Docker container) by uploading
+    to AWS S3 and returning a presigned URL, or falling back to a Base64 data URI.
+    """
+    if not image_url or not isinstance(image_url, str):
+        return None
+    image_url = image_url.strip()
+    if image_url.startswith("http://") or image_url.startswith("https://") or image_url.startswith("data:image/"):
+        return image_url
+
+    try:
+        from pathlib import Path
+        import base64
+        from app.services.s3_storage import S3StorageService
+        
+        project_root = Path(__file__).resolve().parents[5]
+        clean_rel = image_url.lstrip("/")
+        local_cand = project_root / "frontend" / clean_rel
+        if not local_cand.exists():
+            local_cand = project_root / clean_rel
+
+        if local_cand.exists() and local_cand.is_file():
+            file_bytes = local_cand.read_bytes()
+            try:
+                s3 = S3StorageService()
+                ext = local_cand.suffix.lower()
+                mime = "image/png" if ext == ".png" else "image/jpeg"
+                key = f"public/wa_broadcast/{local_cand.name}"
+                if s3.upload_file(key, file_bytes, mime):
+                    presigned = s3.generate_presigned_url(key, expiration=86400 * 7)
+                    if presigned:
+                        return presigned
+            except Exception as _s3_err:
+                logger.warning(f"[GBC] S3 sync for bot queue media failed: {_s3_err}")
+
+            if len(file_bytes) <= 4 * 1024 * 1024:
+                ext = local_cand.suffix.lower()
+                mime = "image/png" if ext == ".png" else "image/jpeg"
+                b64_str = base64.b64encode(file_bytes).decode("ascii")
+                return f"data:{mime};base64,{b64_str}"
+    except Exception as e:
+        logger.warning(f"[GBC] Failed to resolve media URL for bot queue: {e}")
+
+    return image_url
+
+
 def _resolve_meta_header_image_param(db: Session, image_url: Optional[str]) -> Optional[Dict[str, str]]:
     """
     Resolves a header image parameter for Meta Graph API template & direct messages.
@@ -11311,17 +11359,22 @@ def _execute_general_broadcast_run(execution_id: str):
                             clean_target = str(d.recipient_identifier or "")
                             if clean_target.startswith("GRP_NAME:"):
                                 clean_target = clean_target.replace("GRP_NAME:", "", 1)
-                            elif not clean_target.endswith("@g.us") and not clean_target.startswith("http") and clean_target.replace("-", "").isdigit():
+                            elif not clean_target.endswith("@g.us") and not clean_target.endswith("@newsletter") and not clean_target.startswith("http") and clean_target.replace("-", "").isdigit():
                                 clean_target = f"{clean_target}@g.us"
 
+                            is_chan = d.recipient_type == "channel" or clean_target.startswith("0029") or clean_target.endswith("@newsletter") or "channel" in str(d.recipient_name or "").lower()
+                            target_q_type = "channel" if is_chan else "group"
+
+                            queue_media = _ensure_media_url_for_remote_queue(image_url)
                             q_res = db.execute(text("""
                                 INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, job_id, execution_id, created_at)
-                                VALUES ('group', :t_jid, :msg, :media_url, 'pending', 'general_broadcast_campaign', :exec_id, NOW())
+                                VALUES (:target_type, :t_jid, :msg, :media_url, 'pending', 'general_broadcast_campaign', :exec_id, NOW())
                                 RETURNING id
                             """), {
+                                "target_type": target_q_type,
                                 "t_jid": clean_target,
                                 "msg": personalized_msg,
-                                "media_url": image_url,
+                                "media_url": queue_media,
                                 "exec_id": execution_id
                             })
                             db.commit()
@@ -11719,6 +11772,7 @@ def _execute_general_broadcast_run(execution_id: str):
                             try:
                                 clean_10 = phone_digits[-10:]
                                 t_jid = f"91{clean_10}@s.whatsapp.net"
+                                queue_media = _ensure_media_url_for_remote_queue(image_url)
                                 q_res = db.execute(text("""
                                     INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, job_id, execution_id, created_at)
                                     VALUES ('individual', :t_jid, :msg, :media_url, 'pending', 'general_broadcast_campaign', :exec_id, NOW())
@@ -11726,7 +11780,7 @@ def _execute_general_broadcast_run(execution_id: str):
                                 """), {
                                     "t_jid": t_jid,
                                     "msg": personalized_msg,
-                                    "media_url": image_url,
+                                    "media_url": queue_media,
                                     "exec_id": execution_id
                                 })
                                 db.commit()
@@ -12285,7 +12339,7 @@ def get_general_broadcast_trigger_recipients(
         # Determine effective delivery status
         if ml_st == "READ" or r[14] is not None:
             eff_status = "READ"
-        elif ml_st == "DELIVERED" or r[13] is not None or r[8] is not None or (prov in ("SCANNED_WA", "SCANNED_FALLBACK") and disp_st == "SENT"):
+        elif ml_st == "DELIVERED" or r[13] is not None or r[8] is not None or (prov in ("SCANNED_WA", "SCANNED_FALLBACK", "SCANNED_QUEUE") and disp_st == "SENT"):
             eff_status = "DELIVERED"
         elif disp_st == "FAILED" or ml_st in ("FAILED", "UNDELIVERED"):
             eff_status = "FAILED"
@@ -12304,7 +12358,7 @@ def get_general_broadcast_trigger_recipients(
                 continue
 
         sent_dt = r[7]
-        deliv_dt = r[13] or r[8] or (sent_dt if prov in ("SCANNED_WA", "SCANNED_FALLBACK") and disp_st == "SENT" else None)
+        deliv_dt = r[13] or r[8] or (sent_dt if prov in ("SCANNED_WA", "SCANNED_FALLBACK", "SCANNED_QUEUE") and disp_st == "SENT" else None)
         read_dt = r[14]
 
         items.append({
