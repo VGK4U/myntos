@@ -9911,6 +9911,9 @@ def _interpolate_gbc_message(template_text: str, rec: Dict[str, Any]) -> str:
         "{{status}}": r_status,
         "{{city}}": r_city,
         "{city}": r_city,
+        "{{discount_credits}}": str(rec.get("discount_credits") or "10,000"),
+        "{{referral_link}}": f"https://www.vgk4u.com/ref/{r_code}" if r_code else "https://www.vgk4u.com",
+        "{{phone}}": str(rec.get("phone") or ""),
         "{{company_name}}": "VGK4U & MyntReal",
     }
     for k, v in replacements.items():
@@ -10757,14 +10760,17 @@ def _execute_general_broadcast_run(execution_id: str):
 
                     interp_base = _interpolate_gbc_message(raw_message, rec_ctx)
                     clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
-                    if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1"):
-                        open_greet_raw = greeting_text or "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *Mynt & MyntReal Group*!"
+                    if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1"):
+                        is_promo = any(k in t_slug for k in ("market", "promo", "campaign"))
+                        fallback_greet = "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *VGK4U & MyntReal Group*!"
+                        open_greet_raw = greeting_text or fallback_greet
                         subj_raw = raw_subject_text or raw_message
                         if greeting_text and subj_raw.startswith(greeting_text):
                             subj_raw = subj_raw[len(greeting_text):].strip()
                         interp_greet = _interpolate_gbc_message(open_greet_raw, rec_ctx)
                         interp_subj = _interpolate_gbc_message(subj_raw, rec_ctx)
-                        interp_sig = _interpolate_gbc_message(signature_text or "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group", rec_ctx)
+                        default_sig = ("Warm Regards,\n*VGK4U & MyntReal Group*" if is_promo else "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group")
+                        interp_sig = _interpolate_gbc_message(signature_text or default_sig, rec_ctx)
 
                         g_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_greet) if ln.strip()]
                         g1 = re.sub(r"^🌟\s*", "", g_lines[0]).strip() if g_lines else f"Namaste *{rec_ctx['name']}* Ji 🌟,"
@@ -10773,13 +10779,14 @@ def _execute_general_broadcast_run(execution_id: str):
                         paras = [p.strip() for p in re.split(r"\n\s*\n|\r\n\s*\r\n", interp_subj) if p.strip()]
                         if len(paras) < 4:
                             paras = [p.strip() for p in re.split(r"[\r\n]+", interp_subj) if p.strip()]
+                        fallback_p = "⚡ Explore our flagship services at www.myntreal.com & www.vgk4u.com" if is_promo else "🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸"
                         while len(paras) < 4:
-                            paras.append("🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸")
+                            paras.append(fallback_p)
                         p1, p2, p3 = paras[0], paras[1], paras[2]
-                        p4 = re.sub(r"^🌸\s*|\s*🌸$", "", "  ".join(paras[3:]).strip()).strip() or "మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు!"
+                        p4 = re.sub(r"^🌸\s*|\s*🌸$", "", "  ".join(paras[3:]).strip()).strip() or fallback_p
 
                         s_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_sig) if ln.strip()]
-                        s1 = s_lines[0] if s_lines else "ఆత్మీయ శుభాకాంక్షలతో,"
+                        s1 = s_lines[0] if s_lines else ("Warm Regards," if is_promo else "ఆత్మీయ శుభాకాంక్షలతో,")
                         s2 = re.sub(r"\s*🙏$", "", "  ".join(s_lines[1:]).strip() if len(s_lines) > 1 else "MyntReal Group").strip() or "MyntReal Group"
 
                         b_vars = [
@@ -11125,14 +11132,17 @@ def _execute_general_broadcast_run(execution_id: str):
                                     interp_base = re.sub(r"^\s*Namaste\s+[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
                                     interp_base = re.sub(r"^\s*Warm greetings from[^\n]+\n+", "", interp_base, flags=re.IGNORECASE).strip()
                                 clean_sig = _sanitize_meta_param_text(signature_text or "Warm Regards, Mynt & MyntReal Team", 200)
-                                if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1"):
-                                    open_greet_raw = greeting_text or "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *Mynt & MyntReal Group*!"
+                                if t_slug in ("mynt_wishes_img_v1", "mynt_wishes_v1", "mynt_update_img_v1", "mnr_wishes_spaced_img_v1", "mnr_wishes_spaced_v1", "mynt_marketing_img_v1", "mnr_promotional_campaign_img_v1"):
+                                    is_promo = any(k in t_slug for k in ("market", "promo", "campaign"))
+                                    fallback_greet = "Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *VGK4U & MyntReal Group*!"
+                                    open_greet_raw = greeting_text or fallback_greet
                                     subj_raw = raw_subject_text or raw_message
                                     if greeting_text and subj_raw.startswith(greeting_text):
                                         subj_raw = subj_raw[len(greeting_text):].strip()
                                     interp_greet = _interpolate_gbc_message(open_greet_raw, rec_context)
                                     interp_subj = _interpolate_gbc_message(subj_raw, rec_context)
-                                    interp_sig = _interpolate_gbc_message(signature_text or "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group", rec_context)
+                                    default_sig = ("Warm Regards,\n*VGK4U & MyntReal Group*" if is_promo else "ఆత్మీయ శుభాకాంక్షలతో,\nMyntReal Group")
+                                    interp_sig = _interpolate_gbc_message(signature_text or default_sig, rec_context)
 
                                     g_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_greet) if ln.strip()]
                                     g1 = re.sub(r"^🌟\s*", "", g_lines[0]).strip() if g_lines else f"Namaste *{rec_context['name']}* Ji 🌟,"
@@ -11141,16 +11151,17 @@ def _execute_general_broadcast_run(execution_id: str):
                                     paras = [p.strip() for p in re.split(r"\n\s*\n|\r\n\s*\r\n", interp_subj) if p.strip()]
                                     if len(paras) < 4:
                                         paras = [p.strip() for p in re.split(r"[\r\n]+", interp_subj) if p.strip()]
+                                    fallback_p = "⚡ Explore our flagship services at www.myntreal.com & www.vgk4u.com" if is_promo else "🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸"
                                     while len(paras) < 4:
-                                        paras.append("🌸 మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు! 🌸")
+                                        paras.append(fallback_p)
                                     p1 = paras[0]
                                     p2 = paras[1]
                                     p3 = paras[2]
                                     p4 = "  ".join(paras[3:]).strip()
-                                    p4 = re.sub(r"^🌸\s*|\s*🌸$", "", p4).strip() or "మీకు మరియు మీ కుటుంబ సభ్యులకు శుభాకాంక్షలు!"
+                                    p4 = re.sub(r"^🌸\s*|\s*🌸$", "", p4).strip() or fallback_p
 
                                     s_lines = [ln.strip() for ln in re.split(r"[\r\n]+", interp_sig) if ln.strip()]
-                                    s1 = s_lines[0] if s_lines else "ఆత్మీయ శుభాకాంక్షలతో,"
+                                    s1 = s_lines[0] if s_lines else ("Warm Regards," if is_promo else "ఆత్మీయ శుభాకాంక్షలతో,")
                                     s2 = "  ".join(s_lines[1:]).strip() if len(s_lines) > 1 else "MyntReal Group"
                                     s2 = re.sub(r"\s*🙏$", "", s2).strip() or "MyntReal Group"
 

@@ -1415,6 +1415,9 @@
                 <h4 style="margin:0;font-size:14px;font-weight:800;color:#0f172a">Compose Broadcast Message, Signature &amp; CTA Options</h4>
               </div>
               <div style="display:flex;gap:6px;align-items:center">
+                <button type="button" class="btn-custom" onclick="loadGbcMarketingCampaignPreset()" style="padding:5px 11px;font-size:11.5px;font-weight:800;color:#1e40af;border:1px solid #93c5fd;background:#eff6ff;border-radius:7px;cursor:pointer">
+                  🎯 Load Marketing Campaign + Flyer
+                </button>
                 <button type="button" class="btn-custom" onclick="loadGbcDussehraWishesPreset()" style="padding:5px 11px;font-size:11.5px;font-weight:800;color:#9a3412;border:1px solid #fdba74;background:#fff7ed;border-radius:7px;cursor:pointer">
                   🌸 Load Telugu Dussehra Wishes + Flyer
                 </button>
@@ -1509,7 +1512,8 @@
               <!-- Greeting Preset Dropdown -->
               <div style="margin-bottom:8px">
                 <select id="gbcGreetingSelect" onchange="onGbcGreetingPresetChange()" style="width:100%;padding:7px 10px;border:1px solid #fcd34d;border-radius:7px;font-size:12px;font-weight:600;background:#fff">
-                  <option value="grp_default">🌟 Namaste *{{name}}* Ji 🌟, Warm greetings from *Mynt &amp; MyntReal Group*! (Default)</option>
+                  <option value="grp_default">🌟 Namaste *{{name}}* Ji 🌟, Warm greetings from *VGK4U &amp; MyntReal Group*! (Default)</option>
+                  <option value="grp_marketing">🚀 Namaste *{{name}}* Ji 🌟, Exclusive Promotional Announcement from *VGK4U &amp; MyntReal Group*!</option>
                   <option value="grp_telugu">🙏 నమస్కారం *{{name}}* గారు 🙏, *MyntReal Group* తరపున హృదయపూర్వక శుభాకాంక్షలు!</option>
                   <option value="grp_supreme">🙏 Namaste *{{name}}* Garu, Greetings from *Mynt Official Administration*!</option>
                   <option value="grp_segment">👋 Namaste *{{name}}* Ji 🙏, Important Update from *{{segment}}*:</option>
@@ -1526,6 +1530,8 @@
                     <button type="button" onclick="insertGbcGreetingVar('{{name}}')" style="background:#fff;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#78350f;cursor:pointer">{{name}}</button>
                     <button type="button" onclick="insertGbcGreetingVar('{{segment}}')" style="background:#fff;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#78350f;cursor:pointer">{{segment}}</button>
                     <button type="button" onclick="insertGbcGreetingVar('{{city}}')" style="background:#fff;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#78350f;cursor:pointer">{{city}}</button>
+                    <button type="button" onclick="insertGbcGreetingVar('{{code}}')" style="background:#fff;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#78350f;cursor:pointer">{{code}}</button>
+                    <button type="button" onclick="insertGbcGreetingVar('{{stage}}')" style="background:#fff;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#78350f;cursor:pointer">{{stage}}</button>
                   </div>
                 </div>
                 <textarea id="gbcGreetingText" rows="2" oninput="updateGbcLiveBubblePreview()" placeholder="Enter opening greeting (e.g. Namaste *{{name}}* Ji 🌟, Warm greetings from *Mynt & MyntReal Group*!)..." style="width:100%;padding:7px 10px;border:1px solid #fcd34d;border-radius:7px;font-size:12px;line-height:1.4;background:#fff">Namaste *{{name}}* Ji 🌟,
@@ -1555,6 +1561,8 @@ Warm greetings from *Mynt & MyntReal Group*!</textarea>
                 <button type="button" onclick="insertGbcVar('{{segment}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#0f172a;cursor:pointer">{{segment}}</button>
                 <button type="button" onclick="insertGbcVar('{{stage}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#0f172a;cursor:pointer">{{stage}}</button>
                 <button type="button" onclick="insertGbcVar('{{city}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#0f172a;cursor:pointer">{{city}}</button>
+                <button type="button" onclick="insertGbcVar('{{discount_credits}}')" style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#166534;cursor:pointer" title="Recipient Welcome/Discount Credits">{{discount_credits}}</button>
+                <button type="button" onclick="insertGbcVar('{{referral_link}}')" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#1e40af;cursor:pointer" title="Recipient Referral Link">{{referral_link}}</button>
               </div>
 
               <!-- Message Body Textarea -->
@@ -1616,9 +1624,17 @@ We are delighted to share an important update tailored for our *{{segment}}* net
 
               <!-- Per-Message Editable Signature Text -->
               <div>
-                <label style="font-size:10.5px;font-weight:700;color:#64748b;display:block;margin-bottom:3px">
-                  Customize Signature Text for This Message (Editable per broadcast):
-                </label>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:6px">
+                  <label style="font-size:10.5px;font-weight:700;color:#64748b;margin:0">
+                    Customize Signature Text for This Message (Editable per broadcast):
+                  </label>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    <span style="font-size:10px;font-weight:700;color:#64748b">Insert:</span>
+                    <button type="button" onclick="insertGbcSigVar('{{name}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#334155;cursor:pointer">{{name}}</button>
+                    <button type="button" onclick="insertGbcSigVar('{{segment}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#334155;cursor:pointer">{{segment}}</button>
+                    <button type="button" onclick="insertGbcSigVar('{{code}}')" style="background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;color:#334155;cursor:pointer">{{code}}</button>
+                  </div>
+                </div>
                 <textarea id="gbcSignatureText" rows="2" oninput="updateGbcLiveBubblePreview()" placeholder="Optional signature text appended at the bottom of this message..." style="width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;background:#fff"></textarea>
               </div>
             </div>
@@ -7175,7 +7191,9 @@ async function populateGbcTemplateDropdown() {
   }
 
   const prioritySlugs = [
+    'mynt_marketing_img_v1',
     'mynt_wishes_img_v1',
+    'mnr_promotional_campaign_img_v1',
     'mynt_update_img_v1',
     'mnr_wishes_spaced_img_v1',
     'mnr_wishes_spaced_v1',
@@ -7185,8 +7203,6 @@ async function populateGbcTemplateDropdown() {
     'mnr_wishes_template_v1',
     'mnr_custom_wishes_img_v1',
     'mnr_custom_wishes_v1',
-    'mnr_promotional_campaign_img_v1',
-    'mnr_promotional_campaign_v1',
     'vgk_general_broadcast_v1',
     'vgk_general_broadcast_img_v1'
   ];
@@ -7277,7 +7293,9 @@ function renderGbcApprovedTemplatesModalList() {
   const list = Array.isArray(window.allTemplatesCache) ? window.allTemplatesCache : [];
 
   const prioritySlugs = [
+    'mynt_marketing_img_v1',
     'mynt_wishes_img_v1',
+    'mnr_promotional_campaign_img_v1',
     'mynt_update_img_v1',
     'mnr_wishes_spaced_img_v1',
     'mnr_wishes_spaced_v1',
@@ -7288,9 +7306,7 @@ function renderGbcApprovedTemplatesModalList() {
     'mnr_custom_wishes_img_v1',
     'mnr_custom_wishes_v1',
     'vgk_general_broadcast_v1',
-    'vgk_general_broadcast_img_v1',
-    'mnr_promotional_campaign_v1',
-    'mnr_promotional_campaign_img_v1'
+    'vgk_general_broadcast_img_v1'
   ];
 
   const filtered = list.filter(t => {
@@ -7406,7 +7422,7 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
   const list = Array.isArray(window.allTemplatesCache) && window.allTemplatesCache.length
     ? window.allTemplatesCache
     : (Array.isArray(cachedTemplates) ? cachedTemplates : []);
-  const t = list.find(x => Number(x.id) === Number(tplId));
+  const t = list.find(x => String(x.id) === String(tplId) || x.slug === tplId || x.meta_template_name === tplId);
   if (!t) return;
 
   const sel = document.getElementById('gbcTemplateSelect');
@@ -7415,7 +7431,9 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
   if (quickSel) quickSel.value = String(t.id);
 
   const prioritySlugs = [
+    'mynt_marketing_img_v1',
     'mynt_wishes_img_v1',
+    'mnr_promotional_campaign_img_v1',
     'mynt_update_img_v1',
     'mnr_wishes_spaced_img_v1',
     'mnr_wishes_spaced_v1',
@@ -7426,11 +7444,10 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
     'mnr_custom_wishes_img_v1',
     'mnr_custom_wishes_v1',
     'vgk_general_broadcast_v1',
-    'vgk_general_broadcast_img_v1',
-    'mnr_promotional_campaign_v1',
-    'mnr_promotional_campaign_img_v1'
+    'vgk_general_broadcast_img_v1'
   ];
   const isEnvelope = prioritySlugs.includes(t.slug) || prioritySlugs.includes(t.meta_template_name);
+  const isMarketing = (t.slug || '').includes('marketing') || (t.name || '').toLowerCase().includes('marketing') || (t.slug || '').includes('promo');
 
   if (loadBodyIntoComposer && !isEnvelope && t.body_text) {
     // Convert positional {{1}} to {{name}} if needed for friendly editing
@@ -7441,7 +7458,7 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
 
   if ((t.header_type || '').toLowerCase() === 'image') {
     const imgIn = document.getElementById('gbcImageUrlInput');
-    const defaultImgUrl = t.header_media_url || '/static/images/dussehra_wishes_flyer.png';
+    const defaultImgUrl = t.header_media_url || (isMarketing ? '/static/images/solar_banner_creative.jpg' : '/static/images/dussehra_wishes_flyer.png');
     if (imgIn && !imgIn.value) {
       imgIn.value = defaultImgUrl;
       onGbcImageUrlChanged(defaultImgUrl);
@@ -7464,7 +7481,11 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
   }
   if (bodyPrev) {
     if (isEnvelope) {
-      bodyPrev.innerHTML = `<strong>✨ Wishes Template Structure (Opening + Subject/Wishes + Signature):</strong><br>• <code>{{1}} ({{opening_greeting}})</code> → <strong>👋 Opening Greeting &amp; Salutation Box below</strong> (Select preset or customize)<br>• <code>{{2}} ({{subject_message}})</code> → <strong>✍️ Subject / Custom Wishes Message Box below</strong><br>• <code>{{3}} ({{signature}})</code> → <strong>✒️ Message Signature Box below</strong>`;
+      if (isMarketing) {
+        bodyPrev.innerHTML = `<strong>🎯 Marketing Campaign Template Structure (Opening + Subject/Marketing + Signature):</strong><br>• <code>{{1}} ({{opening_greeting}})</code> → <strong>👋 Opening Greeting &amp; Salutation Box below</strong> (Select preset or customize)<br>• <code>{{2}} ({{subject_message}})</code> → <strong>🎯 Subject / Custom Marketing Message Box below</strong><br>• <code>{{3}} ({{signature}})</code> → <strong>✒️ Message Signature Box below</strong>`;
+      } else {
+        bodyPrev.innerHTML = `<strong>✨ Wishes Template Structure (Opening + Subject/Wishes + Signature):</strong><br>• <code>{{1}} ({{opening_greeting}})</code> → <strong>👋 Opening Greeting &amp; Salutation Box below</strong> (Select preset or customize)<br>• <code>{{2}} ({{subject_message}})</code> → <strong>✍️ Subject / Custom Wishes Message Box below</strong><br>• <code>{{3}} ({{signature}})</code> → <strong>✒️ Message Signature Box below</strong>`;
+      }
     } else {
       bodyPrev.textContent = `Template Structure: ${t.body_text || ''}`;
     }
@@ -7474,10 +7495,17 @@ function selectGbcApprovedTemplate(tplId, loadBodyIntoComposer = true) {
   }
   if (boxTitle && modeBadge) {
     if (isEnvelope) {
-      boxTitle.textContent = 'Subject / Custom Wishes Message Box — Enter {{2}} ({{subject_message}}) Wishes / Campaign Text Here:';
-      modeBadge.textContent = '✨ Wishes Template: Opening {{1}} + Subject {{2}} + Signature {{3}}';
-      modeBadge.style.background = '#dcfce7';
-      modeBadge.style.color = '#166534';
+      if (isMarketing) {
+        boxTitle.textContent = 'Subject / Custom Marketing Message Box — Enter {{2}} ({{subject_message}}) Marketing & Campaign Text Here:';
+        modeBadge.textContent = '🎯 Marketing Template: Opening {{1}} + Subject {{2}} + Signature {{3}}';
+        modeBadge.style.background = '#dbeafe';
+        modeBadge.style.color = '#1e40af';
+      } else {
+        boxTitle.textContent = 'Subject / Custom Wishes Message Box — Enter {{2}} ({{subject_message}}) Wishes / Campaign Text Here:';
+        modeBadge.textContent = '✨ Wishes Template: Opening {{1}} + Subject {{2}} + Signature {{3}}';
+        modeBadge.style.background = '#dcfce7';
+        modeBadge.style.color = '#166534';
+      }
     } else {
       boxTitle.textContent = 'Custom / Template Message Box (Edit or Customize Message Content Below)';
       modeBadge.textContent = '📋 Template Loaded (Editable)';
@@ -8052,6 +8080,18 @@ function insertGbcGreetingVar(token) {
   updateGbcLiveBubblePreview();
 }
 
+function insertGbcSigVar(token) {
+  const ta = document.getElementById('gbcSignatureText');
+  if (!ta) return;
+  const start = ta.selectionStart || 0;
+  const end = ta.selectionEnd || 0;
+  const v = ta.value;
+  ta.value = v.substring(0, start) + token + v.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + token.length;
+  updateGbcLiveBubblePreview();
+}
+
 function openGbcGreetingEditor(mode) {
   const sel = document.getElementById('gbcGreetingSelect');
   const ta = document.getElementById('gbcGreetingText');
@@ -8148,10 +8188,66 @@ function composeGbcPreviewString(sampleRec) {
   return full
     .replace(/\{\{name\}\}/g, sample.name || 'Valued Member')
     .replace(/\{\{code\}\}/g, sample.code || 'VGK001')
+    .replace(/\{\{partner_code\}\}/g, sample.code || 'VGK001')
     .replace(/\{\{segment\}\}/g, sample.segment || 'MyntReal')
     .replace(/\{\{stage\}\}/g, sample.stage_label || 'Active')
     .replace(/\{\{status\}\}/g, sample.status_label || 'Active')
-    .replace(/\{\{city\}\}/g, sample.city || 'Your City');
+    .replace(/\{\{city\}\}/g, sample.city || 'Your City')
+    .replace(/\{\{discount_credits\}\}/g, sample.discount_credits || '10,000')
+    .replace(/\{\{referral_link\}\}/g, `https://www.vgk4u.com/ref/${sample.code || 'VGK1024'}`)
+    .replace(/\{\{phone\}\}/g, sample.phone || '9876543210');
+}
+
+function loadGbcMarketingCampaignPreset() {
+  const titleEl = document.getElementById('gbcTitleInput');
+  if (titleEl) titleEl.value = '🌟 Marketing & Promotional Campaign (PM Surya Ghar Solar, EV & Real Estate)';
+
+  const greetChk = document.getElementById('gbcIncludeGreetingToggle');
+  if (greetChk) greetChk.checked = true;
+  const greetSel = document.getElementById('gbcGreetingSelect');
+  if (greetSel) greetSel.value = 'grp_marketing';
+  const greetTa = document.getElementById('gbcGreetingText');
+  if (greetTa) greetTa.value = `Namaste *{{name}}* Ji 🌟,\n\nWarm greetings from *VGK4U & MyntReal Group*!`;
+
+  const marketingCampaignBody = `🚀 *Exclusive Business & Growth Opportunities for our Valued {{segment}} Network!*
+
+☀️ *PM Surya Ghar Muft Bijli Yojana (Rooftop Solar):*
+Avail up to *₹78,000 Direct Central Government Subsidy* on 1kW - 3kW solar systems. Reduce your monthly power bills to ₹0 with 25-year panel warranty & fast subsidy release!
+
+⚡ *EV Dealership & Franchise Program:*
+Join Andhra Pradesh & Telangana's fastest-growing electric mobility franchise network with high referral commissions, zero upfront inventory risks & technician training.
+
+🏢 *High-Yield Real Estate Opportunities:*
+Exclusive pre-launch allocations in DTCP & RERA certified residential and commercial plots across prime development corridors.
+
+🎁 *Exclusive Partner Bonus:*
+Use your active member code *{{code}}* to unlock loyalty benefits and discount credits!
+
+📞 Reply *YES* or contact your dedicated coordinator today for zero-cost site survey & consultation.`;
+
+  const marketingSig = `ఆత్మీయ శుభాకాంక్షలతో,\n*టీమ్ విశ్వనాథ్ & MyntReal గ్రూప్*\nVGK4U & MyntReal Group\n🌐 www.vgk4u.com | www.myntreal.com`;
+
+  const msgEl = document.getElementById('gbcMessageInput');
+  if (msgEl) msgEl.value = marketingCampaignBody;
+
+  const sigEl = document.getElementById('gbcSignatureText');
+  if (sigEl) sigEl.value = marketingSig;
+
+  const imgIn = document.getElementById('gbcImageUrlInput');
+  const promoImgUrl = '/static/images/solar_banner_creative.jpg';
+  if (imgIn) {
+    imgIn.value = promoImgUrl;
+    onGbcImageUrlChanged(promoImgUrl);
+  }
+
+  const testNameEl = document.getElementById('gbcTestSendName') || document.getElementById('gbcTestSendNameInput');
+  if (testNameEl) testNameEl.value = 'Viswanath Garu';
+  const testPhoneEl = document.getElementById('gbcTestSendPhone') || document.getElementById('gbcTestSendPhoneInput');
+  if (testPhoneEl) testPhoneEl.value = '8875551666';
+
+  selectGbcApprovedTemplate('mynt_marketing_img_v1', false);
+  updateGbcLiveBubblePreview();
+  showToast('🎯 Marketing / Promotional Campaign loaded with creative flyer!', 'green');
 }
 
 function loadGbcDussehraWishesPreset() {
@@ -8197,7 +8293,7 @@ function loadGbcDussehraWishesPreset() {
     statusBox.innerHTML = `<div style="background:#dcfce7;border:1px solid #86efac;color:#166534;padding:6px 10px;border-radius:7px;font-weight:700"><i class="fas fa-check-circle me-1"></i>Delivered via META_WHATSAPP to <code>+918875551666</code> (WAMID: <code>wamid.HBgMOTE4ODc1NTUxNjY2FQIAERgSMTFGMDA3QTExNzI3NDEzMDZEAA==</code>)</div>`;
   }
 
-  selectGbcApprovedTemplate(2637, false);
+  selectGbcApprovedTemplate('mynt_wishes_img_v1', false);
   updateGbcLiveBubblePreview();
 }
 
