@@ -693,7 +693,7 @@
       const installedStages = ['completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed'];
       const installedSet = new Set();
       entries.forEach(e => {
-        if (e.status !== 'CANCELLED' && e.source_lead_id) {
+        if (e.level === 1 && e.status !== 'CANCELLED' && e.source_lead_id) {
           const stageStr = (e.stage_name || e.solar_pipeline_status || e.lead_status || e.stage || '').toString().toLowerCase();
           const hasInstDate = !!(e.installation_date && e.installation_date !== 'None' && e.installation_date !== 'null') ||
                               !!(e.installed_at && e.installed_at !== 'None' && e.installed_at !== 'null') ||
@@ -707,7 +707,10 @@
         }
       });
       let installedFiles = installedSet.size;
-      const filesDisplay = `${installedFiles}/${activeFiles || m.ground_leads_count || 3} FILES`;
+      if (installedFiles === 0 && d && d.summary && d.summary.installed_files !== undefined) {
+        installedFiles = d.summary.installed_files;
+      }
+      const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles || m.ground_leads_count || 1}` : `${activeFiles || m.ground_leads_count || 1}`) + ' FILES';
 
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
@@ -1270,12 +1273,19 @@
     const prevFilesEl = document.getElementById('prevFiles');
     const prevTeamBreakupFilesEl = document.getElementById('prevTeamBreakupFiles');
     if (prevFilesEl) {
-      const match = filesVal.match(/^(\d+)\s*\/\s*(\d+)\s*(.*)$/);
+      const match = filesVal.match(/^(\d+)\s*\/\s*(\d+)/);
       if (match) {
         prevFilesEl.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">${match[1]} INSTALLED</span>`;
         if (prevTeamBreakupFilesEl) prevTeamBreakupFilesEl.innerHTML = `<span style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">${match[2]} SUBMITTED</span>`;
       } else {
-        prevFilesEl.textContent = filesVal;
+        const singleMatch = filesVal.match(/^(\d+)/);
+        if (singleMatch) {
+          prevFilesEl.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f59e0b,#eab308);color:#0f172a;font-weight:950;font-size:9.5px;padding:2px 6px;border-radius:4px;line-height:1;white-space:nowrap">${singleMatch[1]} FILES</span>`;
+          if (prevTeamBreakupFilesEl) prevTeamBreakupFilesEl.innerHTML = `<span style="font-size:8px;font-weight:900;color:#93c5fd;letter-spacing:0.2px;line-height:1;white-space:nowrap">${singleMatch[1]} SUBMITTED</span>`;
+        } else {
+          prevFilesEl.textContent = filesVal;
+          if (prevTeamBreakupFilesEl) prevTeamBreakupFilesEl.innerHTML = '';
+        }
       }
     }
 
