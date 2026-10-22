@@ -5799,29 +5799,91 @@ def send_individual_whatsapp_api_first(
     now_utc = get_indian_time()
     effective_text = msg_text or "🎉 Congratulations from Team VGK4U!"
 
-    # ── STEP 1: Official Meta WhatsApp Cloud API (API Number) First for Text ──
+    # ── STEP 1: Official Meta WhatsApp Cloud API (API Number) First ──
     meta_res = {"success": False, "reason": "not_attempted"}
-    try:
-        meta_res = _send_meta(
-            phone=clean_10,
-            message=effective_text,
-            template=None,
-            db=db,
-            context=None,
-            is_internal_system=True,
-        )
-    except Exception as _meta_exc:
-        meta_res = {"success": False, "reason": str(_meta_exc), "error_code": "META_EXC"}
+    token, phone_id = _get_meta_creds(db)
+
+    if token and phone_id:
+        try:
+            # Case A: If an image attachment is provided -> send Image Message with Caption via Meta Cloud API
+            if image_url:
+                media_id = None
+                if ";base64," in image_url:
+                    import base64 as _b64
+                    import io as _io
+                    try:
+                        parts = image_url.split(";base64,")
+                        mime = parts[0].replace("data:", "").strip() or "image/png"
+                        img_bytes = _b64.b64decode(parts[1].replace("\s", ""))
+                        upload_url = f"https://graph.facebook.com/v21.0/{phone_id}/media"
+                        files = {"file": ("creative.png", _io.BytesIO(img_bytes), mime)}
+                        data = {"messaging_product": "whatsapp", "type": mime}
+                        up_resp = _req.post(upload_url, headers={"Authorization": f"Bearer {token}"}, data=data, files=files, timeout=15)
+                        if up_resp.status_code in (200, 201):
+                            media_id = up_resp.json().get("id")
+                        else:
+                            logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Meta media upload notice: {up_resp.status_code} {up_resp.text}")
+                    except Exception as _up_err:
+                        logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Media upload exception: {_up_err}")
+
+                meta_base = f"https://graph.facebook.com/v21.0/{phone_id}/messages"
+                headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+                img_payload = None
+                if media_id:
+                    img_payload = {
+                        "messaging_product": "whatsapp",
+                        "to": e164_phone,
+                        "type": "image",
+                        "image": {
+                            "id": media_id,
+                            "caption": effective_text
+                        }
+                    }
+                elif image_url.startswith("http://") or image_url.startswith("https://"):
+                    img_payload = {
+                        "messaging_product": "whatsapp",
+                        "to": e164_phone,
+                        "type": "image",
+                        "image": {
+                            "link": image_url,
+                            "caption": effective_text
+                        }
+                    }
+
+                if img_payload:
+                    resp = _req.post(meta_base, json=img_payload, headers=headers, timeout=15)
+                    data = resp.json()
+                    if resp.status_code in (200, 201) and data.get("messages"):
+                        wamid = data["messages"][0].get("id", "")
+                        meta_res = {"success": True, "wamid": wamid, "with_image": True}
+                    else:
+                        err_msg = data.get("error", {}).get("message", "Meta image send failed")
+                        meta_res = {"success": False, "reason": err_msg}
+
+            # Case B: If no image (or image send failed) -> send text via _send_meta
+            if not meta_res.get("success") and not image_url:
+                meta_res = _send_meta(
+                    phone=clean_10,
+                    message=effective_text,
+                    template=None,
+                    db=db,
+                    context=None,
+                    is_internal_system=True,
+                )
+        except Exception as _meta_exc:
+            meta_res = {"success": False, "reason": str(_meta_exc), "error_code": "META_EXC"}
 
     if meta_res.get("success") and meta_res.get("wamid"):
         wamid = meta_res["wamid"]
-        logger.info(f"[WA-INDIVIDUAL-API-FIRST] ✅ Delivered via Official Meta API to {clean_10} (wamid={wamid})")
+        has_img = meta_res.get("with_image", False)
+        logger.info(f"[WA-INDIVIDUAL-API-FIRST] ✅ Delivered via Official Meta API to {clean_10} (wamid={wamid}, image={has_img})")
         try:
             log_entry = MessageLog(
                 message_sid=wamid,
                 mobile_number=e164_phone[:20],
                 user_name=rec_name[:100],
-                message_type="individual_api_text",
+                message_type="individual_api_image" if has_img else "individual_api_text",
                 message_body=effective_text,
                 provider="META_WHATSAPP",
                 initial_status="API_ACCEPTED",
@@ -5848,14 +5910,16 @@ def send_individual_whatsapp_api_first(
             db.rollback()
             logger.warning(f"[WA-INDIVIDUAL-API-FIRST] Meta log notice: {_log_err}")
 
+        label = "Delivered via Official API (Image + Text) ✅" if has_img else "Delivered via Official API (Text) ✅"
         return {
             "success": True,
             "channel": "meta_api",
             "provider": "META_WHATSAPP",
-            "via": "Official API Number",
+            "via": "Official API Number (+91 85858 52738)",
             "wamid": wamid,
             "phone": clean_10,
-            "delivery_label": "Delivered via Official API (Text) ✅"
+            "has_image": has_img,
+            "delivery_label": label
         }
 
     # ── STEP 2: Automatic Fallback to Scanned WhatsApp (ONLY if API failed / not working) ──
