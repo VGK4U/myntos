@@ -36,8 +36,7 @@
       margin: 0;
       padding: 0;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      width: 100%;
     }
 
     /* Top Brand Bar */
@@ -120,11 +119,11 @@
 
     /* Main Container */
     .dashboard-container {
-      max-width: 1380px;
+      max-width: 1560px;
       width: 100%;
-      margin: 20px auto;
-      padding: 0 18px 40px;
-      flex: 1;
+      margin: 18px auto;
+      padding: 0 20px 48px;
+      box-sizing: border-box;
     }
 
     /* Member Overview Header Card */
@@ -345,13 +344,14 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
     .search-box {
       position: relative;
-      flex: 1;
+      flex: 1 1 280px;
       min-width: 240px;
-      max-width: 440px;
+      max-width: 460px;
     }
     .search-box i {
       position: absolute;
@@ -360,15 +360,18 @@
       transform: translateY(-50%);
       color: #94a3b8;
       font-size: 13px;
+      pointer-events: none;
     }
     .search-box input {
       width: 100%;
+      height: 38px;
       padding: 8px 12px 8px 34px;
       border: 1px solid var(--slate-300);
       border-radius: 8px;
       font-size: 13px;
       outline: none;
-      transition: border 0.15s ease;
+      transition: all 0.15s ease;
+      background: white;
     }
     .search-box input:focus {
       border-color: var(--primary);
@@ -378,20 +381,38 @@
     .toolbar-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
+      margin-left: auto;
     }
 
     .filter-select {
-      padding: 7px 10px;
+      height: 38px;
+      padding: 6px 10px;
       border: 1px solid var(--slate-300);
       border-radius: 8px;
-      font-size: 12.5px;
+      font-size: 12px;
       background: white;
       color: var(--slate-700);
       font-weight: 600;
       cursor: pointer;
       outline: none;
+      transition: border 0.15s ease;
+    }
+    .filter-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .count-badge-display {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--slate-600);
+      background: var(--slate-100);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--slate-200);
+      white-space: nowrap;
     }
 
     /* Tables */
@@ -401,27 +422,36 @@
       border-radius: 12px;
       overflow-x: auto;
       box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      -webkit-overflow-scrolling: touch;
+      position: relative;
     }
 
     .leads-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      font-size: 13px;
+      font-size: 12.5px;
+      min-width: 960px;
+    }
+    .leads-table.l5-table {
+      min-width: 1100px;
     }
 
     .leads-table th {
       background: #f8fafc;
-      padding: 12px 14px;
-      font-size: 11.5px;
+      padding: 11px 12px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--slate-600);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       border-bottom: 2px solid var(--slate-200);
       user-select: none;
       cursor: pointer;
       white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
     .leads-table th:hover {
       background: #f1f5f9;
@@ -429,14 +459,37 @@
     }
 
     .leads-table td {
-      padding: 12px 14px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--slate-100);
       vertical-align: middle;
     }
 
-    .leads-table tr:hover td {
+    .leads-table tbody tr {
+      transition: background-color 0.12s ease;
+    }
+    .leads-table tbody tr:hover td {
       background: #f8fafc;
     }
+
+    /* Column Sizing Helpers */
+    .th-id { width: 68px; text-align: center; }
+    .td-id { text-align: center; font-weight: 700; color: #64748b; white-space: nowrap; }
+    .th-customer { min-width: 170px; }
+    .td-customer { min-width: 170px; }
+    .th-support { min-width: 110px; }
+    .td-support { white-space: nowrap; }
+    .th-phone { min-width: 135px; }
+    .td-phone { white-space: nowrap; }
+    .th-status { min-width: 95px; text-align: center; }
+    .td-status { text-align: center; white-space: nowrap; }
+    .th-stage { min-width: 130px; }
+    .td-stage { white-space: nowrap; }
+    .th-docs { min-width: 125px; }
+    .td-docs { white-space: nowrap; }
+    .th-deal { min-width: 120px; }
+    .td-deal { white-space: nowrap; }
+    .th-date { min-width: 105px; }
+    .td-date { white-space: nowrap; color: #64748b; font-size: 11.5px; }
 
     .badge-status {
       padding: 3px 8px;
@@ -906,7 +959,7 @@
             </select>
           </div>
 
-          <div id="countBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
+          <div id="countBadge" class="count-badge-display">
             Showing 0 leads
           </div>
         </div>
@@ -917,15 +970,15 @@
         <table class="leads-table">
           <thead>
             <tr>
-              <th onclick="toggleSort('id')">ID <span id="sortIcon_id">↕</span></th>
-              <th onclick="toggleSort('name')">Customer Name & Location <span id="sortIcon_name">↕</span></th>
-              <th onclick="toggleSort('support')">Support (L5) <span id="sortIcon_support">↕</span></th>
-              <th onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
-              <th onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
-              <th onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
-              <th onclick="toggleSort('docs')">Documents <span id="sortIcon_docs">↕</span></th>
-              <th onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
-              <th onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
+              <th class="th-id" onclick="toggleSort('id')">ID <span id="sortIcon_id">↕</span></th>
+              <th class="th-customer" onclick="toggleSort('name')">Customer Name & Location <span id="sortIcon_name">↕</span></th>
+              <th class="th-support" onclick="toggleSort('support')">Support (L5) <span id="sortIcon_support">↕</span></th>
+              <th class="th-phone" onclick="toggleSort('phone')">Phone <span id="sortIcon_phone">↕</span></th>
+              <th class="th-status" onclick="toggleSort('status')">Status <span id="sortIcon_status">↕</span></th>
+              <th class="th-stage" onclick="toggleSort('stage')">Pipeline Stage <span id="sortIcon_stage">↕</span></th>
+              <th class="th-docs" onclick="toggleSort('docs')">Documents <span id="sortIcon_docs">↕</span></th>
+              <th class="th-deal" onclick="toggleSort('deal_value')">Deal Value <span id="sortIcon_deal_value">↕</span></th>
+              <th class="th-date" onclick="toggleSort('created_at')">Created Date <span id="sortIcon_created_at">↕</span></th>
             </tr>
           </thead>
           <tbody id="leadsTbody">
@@ -1022,7 +1075,7 @@
             </select>
           </div>
 
-          <div id="l5CountBadge" style="font-size:12.5px;font-weight:700;color:#64748b;margin-left:6px">
+          <div id="l5CountBadge" class="count-badge-display">
             Showing 0 L5 members
           </div>
         </div>
@@ -1030,7 +1083,7 @@
 
       <!-- L5 Executive Data Table -->
       <div class="table-container">
-        <table class="leads-table">
+        <table class="leads-table l5-table">
           <thead>
             <tr>
               <th onclick="toggleL5Sort('rank')" style="width:50px">#</th>
@@ -1831,40 +1884,40 @@
 
         return `
           <tr>
-            <td style="font-weight:700;color:#64748b;white-space:nowrap">#${esc(l.id)}</td>
-            <td style="min-width:150px">
-              <strong style="color:#0f172a;font-size:13.5px">${esc(rawLeadName)}</strong>
-              ${l.city ? `<div style="font-size:11.5px;color:#64748b"><i class="fas fa-map-marker-alt me-1"></i>${esc(l.city)}</div>` : ''}
+            <td class="td-id">#${esc(l.id)}</td>
+            <td class="td-customer">
+              <strong style="color:#0f172a;font-size:13px;display:block">${esc(rawLeadName)}</strong>
+              ${l.city ? `<div style="font-size:11px;color:#64748b;margin-top:2px"><i class="fas fa-map-marker-alt me-1 text-danger"></i>${esc(l.city)}</div>` : ''}
             </td>
-            <td style="white-space:nowrap">
+            <td class="td-support">
               ${suppBadge}
             </td>
-            <td style="white-space:nowrap">
-              <span class="phone-masked"><i class="fas fa-phone me-1" style="color:#94a3b8;font-size:11px"></i>${esc(phoneToDisplay)}</span>
+            <td class="td-phone">
+              <span class="phone-masked"><i class="fas fa-phone me-1" style="color:#94a3b8;font-size:10.5px"></i>${esc(phoneToDisplay)}</span>
             </td>
-            <td style="white-space:nowrap">
+            <td class="td-status">
               <span class="badge-status" style="background:${badgeBg};color:${badgeColor}">${esc(status)}</span>
             </td>
-            <td style="white-space:nowrap">
+            <td class="td-stage">
               <span class="badge-stage" style="background:${stageBg};color:${stageColor}">${esc(stageDisplay)}</span>
             </td>
-            <td style="white-space:nowrap">
-              <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+            <td class="td-docs">
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
                 <div>${docBadge}</div>
                 <div style="display:inline-flex;gap:4px;align-items:center">
-                  <button class="btn-doc-view" onclick="openLeadDocsModal(${l.id})" title="Manage / View Solar Documents (${docsCount})">
+                  <button type="button" class="btn-doc-view" onclick="openLeadDocsModal(${l.id})" title="Manage / View Solar Documents (${docsCount})">
                     <i class="fas fa-folder-open"></i> Docs
                   </button>
-                  <button class="btn-doc-share" id="slkBtn_${l.id}" onclick="shareLeadDocs(${l.id}, '${escLeadName}')" title="Generate 6-hour Share Link">
+                  <button type="button" class="btn-doc-share" id="slkBtn_${l.id}" onclick="shareLeadDocs(${l.id}, '${escLeadName}')" title="Generate 6-hour Share Link">
                     <i class="fas fa-share-alt"></i>
                   </button>
                 </div>
               </div>
             </td>
-            <td style="white-space:nowrap">
+            <td class="td-deal">
               ${valDisplay}
             </td>
-            <td style="color:#64748b;font-size:12px;white-space:nowrap">
+            <td class="td-date">
               ${createdDate}
             </td>
           </tr>

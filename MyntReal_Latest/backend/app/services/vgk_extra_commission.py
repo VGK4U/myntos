@@ -226,6 +226,7 @@ def apply_extra_commission_if_active(
 
                     _sp = db.begin_nested()
                     try:
+                        entry_no = _next_entry_number(db, company_id)
                         if trigger_event == 'first_payment':
                             _raw_dt = getattr(lead, 'first_payment_received_date', None) or getattr(lead, 'first_dvr_confirmed_at', None) or now_ist.date()
                         elif trigger_event == 'file_completed':
@@ -234,16 +235,19 @@ def apply_extra_commission_if_active(
                             _raw_dt = getattr(lead, 'submit_date', None) or now_ist.date()
                         _inc_date = (_raw_dt.date() if hasattr(_raw_dt, 'date') else _raw_dt) if _raw_dt else now_ist.date()
 
+                        skip_tds_flag = bool(getattr(_bz, 'waive_tds_and_admin', False))
+                        skip_rsn = '[Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]' if skip_tds_flag else None
+
                         vci_id = db.execute(text("""
                             INSERT INTO vgk_cash_income_entries
                               (company_id, entry_number, partner_id, source_lead_id,
                                kind, status, commission_amount, admin_charges,
-                               tds_amount, net_payout, level, notes, income_date,
-                               bonanza_id, created_at, updated_at)
+                               tds_amount, net_payout, level, skip_tds_admin, skip_reason,
+                               notes, income_date, bonanza_id, created_at, updated_at)
                             VALUES
                               (:co, :en, :pid, :lid,
                                'EXTRA_COMMISSION', 'PENDING',
-                               :ca, :ac, :ta, :np, :lv,
+                               :ca, :ac, :ta, :np, :lv, :skip_tds, :skip_rsn,
                                :notes, :inc_date, :bid, :now, :now)
                             RETURNING id
                         """), {
@@ -256,6 +260,8 @@ def apply_extra_commission_if_active(
                             'ta':       float(tds),
                             'np':       float(net),
                             'lv':       lv,
+                            'skip_tds': skip_tds_flag,
+                            'skip_rsn': skip_rsn,
                             'notes':    (
                                 f'Special Bonanza: {_bz.name}{waiver_note} | '
                                 f'Trigger: {trigger_event} | L{lv} Extra Commission'

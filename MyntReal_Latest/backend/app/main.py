@@ -17413,7 +17413,11 @@ async def serve_vgk_ground_source():
     _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     target_file = os.path.join(_workspace_root, "frontend", "vgk_ground_source.html")
     if os.path.exists(target_file):
-        return FileResponse(target_file, media_type="text/html")
+        return FileResponse(
+            target_file,
+            media_type="text/html",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+        )
     raise HTTPException(status_code=404, detail="Ground Source page not found")
 
 

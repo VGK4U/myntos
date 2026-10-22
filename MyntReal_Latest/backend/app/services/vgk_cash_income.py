@@ -1530,6 +1530,9 @@ def release_cash_income(
         payable = taxable_base
         tds     = Decimal('0.00')
         net     = taxable_base
+        entry.skip_tds_admin = True
+        if '[Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]' not in (entry.skip_reason or ''):
+            entry.skip_reason = ((entry.skip_reason or '') + ' | [Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]').strip(' |')
     else:
         admin   = (taxable_base * ADMIN_CHARGE_PCT / Decimal('100')).quantize(Decimal('0.01'))
         payable = max(Decimal('0'), taxable_base - admin)
@@ -3276,7 +3279,8 @@ def record_dvr_advance_as_income_row(
     from app.services.vgk_dhamaka_service import find_active_dhamaka_bonanza
     _lead_obj = db.execute(text("SELECT * FROM crm_leads WHERE id = :lid"), {'lid': _lead_id}).fetchone() if _lead_id else None
     _dh_bz = find_active_dhamaka_bonanza(db, _lead_obj) if _lead_obj else None
-    if _dh_bz and getattr(_dh_bz, 'waive_tds_and_admin', False):
+    dhamaka_waive = bool(_dh_bz and getattr(_dh_bz, 'waive_tds_and_admin', False))
+    if dhamaka_waive:
         admin_charges = Decimal('0.00')
         tds_amount    = Decimal('0.00')
         net_payout    = taxable_base
@@ -3308,6 +3312,8 @@ def record_dvr_advance_as_income_row(
         admin_charges           = admin_charges,
         tds_amount              = tds_amount,
         net_payout              = net_payout,
+        skip_tds_admin          = dhamaka_waive,
+        skip_reason             = '[Dhamaka Offer: 0% TDS & 0% Admin Borne by Company]' if dhamaka_waive else None,
         confirmed_by_id         = released_by_id,
         confirmed_at            = _get_ist(),
         income_date             = _get_ist().date(),
