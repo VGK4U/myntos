@@ -12029,7 +12029,7 @@ async function generateMemberPoster(partnerId) {
     if (installedFiles === 0 && typeof d !== 'undefined' && d && d.summary && d.summary.installed_files !== undefined) {
       installedFiles = d.summary.installed_files;
     }
-    const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
+    const filesDisplay = `${installedFiles}/${activeFiles || 4} FILES`;
     
     // Calculate true remaining potential pending on active in-flight leads (Expected Commission + Brand Allowance + Support - Already Paid)
     const memberRatePct = (m.commission_pct || (m.current_position === 'Regional Manager' ? 9.0 : (m.current_position === 'General Manager' ? 8.5 : (m.current_position === 'Manager' ? 7.5 : (m.current_position === 'Channel Partner' ? 5.0 : 5.0))))) / 100.0;
@@ -17424,7 +17424,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<script src="/public/js/poster-modal-core.js?v=20261022_1700_v2462"></script>
+<script src="/public/js/poster-modal-core.js?v=20261022_1710_v2463"></script>
 
 <!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
 <script>

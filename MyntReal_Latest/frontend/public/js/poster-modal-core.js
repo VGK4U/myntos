@@ -714,7 +714,7 @@
       if (installedFiles === 0 && summaryObj && summaryObj.installed_files !== undefined) {
         installedFiles = summaryObj.installed_files;
       }
-      const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles || m.ground_leads_count || 1}` : `${activeFiles || m.ground_leads_count || 1}`) + ' FILES';
+      const filesDisplay = `${installedFiles}/${activeFiles || m.ground_leads_count || 4} FILES`;
 
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
