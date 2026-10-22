@@ -2052,6 +2052,7 @@
     const dispatchTargets = [
       { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: isMemberBlocked ? 'Blocked Partner (Excluded)' : (mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone'), phone: mPhone, status: isMemberBlocked ? 'skipped' : (mPhone ? 'sending' : 'skipped'), msg: isMemberBlocked ? 'Suppressed (Blocked Partner)' : (mPhone ? 'Broadcasting...' : 'No Phone') },
       { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (isSeniorBlocked ? 'Blocked Senior (Excluded)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone')), phone: sPhone, status: isSeniorVisible ? (isSeniorBlocked ? 'skipped' : (sPhone ? 'sending' : 'skipped')) : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (isSeniorBlocked ? 'Suppressed (Blocked Senior)' : (sPhone ? 'Broadcasting...' : 'No Senior Phone')) },
+      { id: 'admin_copy', type: 'member', label: 'Admin Copy (+91 8875551666)', target: '+91 8875551666', phone: '8875551666', status: 'sending', msg: 'Broadcasting Admin Copy...' },
       { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
       { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
@@ -2171,6 +2172,23 @@
         }
       } else {
         updateDispatchStatus('senior', 'skipped', 'No Senior Phone');
+      }
+
+      // 3b. Mandatory Admin Copy (+91 8875551666) Direct Send (Official API First -> Scanned WA Fallback)
+      try {
+        const jsonAdmin = await sendIndividualWhatsAppApiFirst({
+          phone: '8875551666',
+          imageUrl: dataUrl,
+          message: shareText,
+          recipientName: 'Admin Copy (+91 8875551666)'
+        });
+        if (jsonAdmin && jsonAdmin.success) {
+          updateDispatchStatus('admin_copy', 'sent', jsonAdmin.delivery_label || (jsonAdmin.channel === 'meta_api' ? 'Delivered via Official API (Text) ✅' : 'Delivered via Scanned WA (API Fallback) ✅'));
+        } else {
+          updateDispatchStatus('admin_copy', 'error', (jsonAdmin && jsonAdmin.error) || 'Admin Copy Send Error');
+        }
+      } catch (adErr) {
+        updateDispatchStatus('admin_copy', 'error', 'WhatsApp Service Unreachable');
       }
 
       // 4. VGK4U Official Channel Send

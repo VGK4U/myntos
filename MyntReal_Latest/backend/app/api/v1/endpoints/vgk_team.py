@@ -557,6 +557,7 @@ def get_broadcast_audience(
                 WHERE op.category = 'VGK_TEAM'
                   AND COALESCE(op.is_blocked, FALSE) = FALSE
                   AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                  AND COALESCE(op.partner_type, '') != 'FREELANCER'
             """)).scalar() or 0
 
             active_bonanza_count = 0
@@ -579,6 +580,7 @@ def get_broadcast_audience(
                     WHERE op.category = 'VGK_TEAM'
                       AND COALESCE(op.is_blocked, FALSE) = FALSE
                       AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                      AND COALESCE(op.partner_type, '') != 'FREELANCER'
                       AND pmt.first_pmt_date IS NOT NULL
                       AND pmt.first_pmt_date >= :start_date
                       AND pmt.first_pmt_date <= :end_date
@@ -609,6 +611,7 @@ def get_broadcast_audience(
                 WHERE op.category = 'VGK_TEAM'
                   AND COALESCE(op.is_blocked, FALSE) = FALSE
                   AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                  AND COALESCE(op.partner_type, '') != 'FREELANCER'
                 GROUP BY op.id, op.partner_name, op.partner_code, op.phone, op.vgk4u_current_designation
                 HAVING COUNT(DISTINCT cl.id) >= 1
                 ORDER BY op.partner_name ASC
@@ -644,6 +647,7 @@ def get_broadcast_audience(
                 WHERE op.category = 'VGK_TEAM'
                   AND COALESCE(op.is_blocked, FALSE) = FALSE
                   AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                  AND COALESCE(op.partner_type, '') != 'FREELANCER'
                   AND pmt.first_pmt_date IS NOT NULL
                   AND pmt.first_pmt_date >= :start_date
                   AND pmt.first_pmt_date <= :end_date
@@ -680,6 +684,7 @@ def get_broadcast_audience(
                 WHERE op.category = 'VGK_TEAM'
                   AND COALESCE(op.is_blocked, FALSE) = FALSE
                   AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                  AND COALESCE(op.partner_type, '') != 'FREELANCER'
                 GROUP BY op.id, op.partner_name, op.partner_code, op.phone, op.vgk4u_current_designation
                 HAVING COUNT(DISTINCT cl.id) >= 1
                 ORDER BY op.partner_name ASC

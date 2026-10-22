@@ -9582,11 +9582,11 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
             assoc_types = ["vgk_members", "freelancers", "mnr_members", "staff", "tenants", "vendors", "wa_groups"]
 
         status_mode = str(filters.get("status_mode") or "active").strip().lower()  # 'active' | 'all'
-        freelancer_mode = str(filters.get("freelancer_mode") or "with_comm_only").strip().lower()
+        freelancer_mode = str(filters.get("freelancer_mode") or "exclude_all").strip().lower()
         # freelancer_mode options:
-        # - 'with_comm_only' (default: include freelancers with WITH_COMMUNICATION, exclude WITHOUT_COMMUNICATION)
+        # - 'exclude_all' (default: strictly exclude all freelancers from automated lists)
+        # - 'with_comm_only' (include freelancers with WITH_COMMUNICATION)
         # - 'include_all' (include both WITH_COMMUNICATION and WITHOUT_COMMUNICATION)
-        # - 'exclude_all' (exclude all freelancers)
         # - 'only_with_comm' (only freelancers with WITH_COMMUNICATION)
         # - 'only_without_comm' (only freelancers with WITHOUT_COMMUNICATION)
 
@@ -9663,6 +9663,7 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
                     FROM official_partners p
                     WHERE COALESCE(p.is_blocked, false) = false
                       AND UPPER(COALESCE(p.member_status, '')) != 'BLOCKED'
+                      AND COALESCE(p.partner_type, 'BOTH') != 'FREELANCER'
                       AND EXISTS (
                           SELECT 1 FROM crm_leads l
                           WHERE l.associated_partner_id = p.id
@@ -9700,6 +9701,7 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
                     FROM official_partners p
                     WHERE COALESCE(p.is_blocked, false) = false
                       AND UPPER(COALESCE(p.member_status, '')) != 'BLOCKED'
+                      AND COALESCE(p.partner_type, 'BOTH') != 'FREELANCER'
                       AND EXISTS (
                           SELECT 1 FROM crm_leads l
                           WHERE (l.associated_partner_id = p.id OR (l.source_ref_type = 'partner' AND l.source_ref_id::text = p.id::text))
@@ -10078,6 +10080,25 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
             r for r in recipients_list
             if r.get("phone") in sel_clean or r.get("clean_phone") in sel_clean
         ]
+
+    # [DC-MANDATORY-ADMIN-CC] Always mark a copy to +91 8875551666 for all broadcast campaigns
+    has_admin_copy = any(r.get("clean_phone") == "8875551666" for r in recipients_list)
+    if not has_admin_copy and len(recipients_list) > 0:
+        recipients_list.append({
+            "phone": "918875551666",
+            "display_phone": "+91 8875551666",
+            "clean_phone": "8875551666",
+            "name": "Admin Copy",
+            "code": "ADMIN-CC",
+            "category_label": "Admin Copy",
+            "segment": "Administration",
+            "status_label": "Active",
+            "stage_label": "Mandatory Copy",
+            "city": "",
+            "entity_type": "admin_copy",
+            "entity_id": None,
+        })
+        breakdown["Admin Copy"] = 1
 
     return {
         "total": len(recipients_list),
