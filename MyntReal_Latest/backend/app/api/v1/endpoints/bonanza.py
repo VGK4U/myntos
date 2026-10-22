@@ -5829,9 +5829,13 @@ def vgk_member_tracking(
         """), {'bid': bz.id}).fetchall()
 
         base_target = bz.target_requirement or 1
-        tiers = [{"slab_id": None, "target": base_target,
-                  "award": bz.award_name or bz.reward_text or '', "tier_num": 1,
-                  "reward_mode": "one_time", "max_repeat": None, "entitlement_cost": 1}]
+        tiers = []
+        # DC-BONANZA-TIER1-GIFT: For Bonanza 97 (Mega Solar Festival Bonanza), 1st tier is an initial gift / qualification gate;
+        # the displayed milestone tiers start from Tier 2.
+        if bz.id != 97:
+            tiers.append({"slab_id": None, "target": base_target,
+                          "award": bz.award_name or bz.reward_text or '', "tier_num": 1,
+                          "reward_mode": "one_time", "max_repeat": None, "entitlement_cost": 1})
         for i, sl in enumerate(slab_rows, start=2):
             tiers.append({"slab_id": sl[0], "target": sl[1],
                           "award": sl[2] or '', "tier_num": i,

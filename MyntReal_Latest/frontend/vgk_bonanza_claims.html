@@ -550,8 +550,9 @@ async function loadTracking() {
         if (!r.ok) throw new Error(d.detail || 'Failed');
         _trackLoaded = true;
         // DC-CLAIMS-HIDE-54: "Extra Field Allowance Rs. 3000/-" hidden on claims page only
+        // DC-BONANZA-TIER1-GIFT: Hide baseline Tier 1 for bonanza 97
         const filtered = Object.assign({}, d, {
-            rows: (d.rows || []).filter(row => row.bonanza_id !== 54)
+            rows: (d.rows || []).filter(row => row.bonanza_id !== 54 && !(row.bonanza_id === 97 && row.slab_id === null))
         });
         _trackApiData = filtered;
         renderTracking(filtered);

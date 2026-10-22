@@ -2731,7 +2731,7 @@ function mgmtRenderTracking(d) {
     const currStatusFilter = document.getElementById('mFilterCurrentStatus').value;
     const bonanzaId = document.getElementById('mFilterBonanza').value;
 
-    let rows = d.rows || [];
+    let rows = (d.rows || []).filter(row => !(row.bonanza_id === 97 && row.slab_id === null));
     if (currStatusFilter && !bonanzaId) {
         rows = rows.filter(row => getCampaignCurrentStatus(row) === currStatusFilter);
     }
@@ -3752,8 +3752,8 @@ function renderDynamicAchieversPoster(g, achieversList) {
         if (m.tiers) {
             Object.values(m.tiers).forEach((t, ti) => {
                 const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
-                // RULE 1: 1st tier (tierIdx === 0) is baseline qualification gate — DO NOT SHOW TIER 1!
-                if (tierIdx === 0) return;
+                // RULE 1: Do not show baseline qualification gate / campaign title
+                if (t.award_name === 'Solar Festival Milestones' || (t.tier_label && t.tier_label.includes('Solar Festival Milestones'))) return;
 
                 if (t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid') {
                     // RULE 2: Always show gift name, NEVER generic "Tier 1" / "Tier 2"!
