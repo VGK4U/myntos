@@ -9552,6 +9552,84 @@ def _resolve_general_broadcast_recipients(db: Session, filters: Dict[str, Any]) 
             except Exception as e:
                 logger.warning(f"[GBC] VGK members query error: {e}")
 
+        # 1a. Members with at least 1 file (across all time in crm_leads)
+        if "members_with_files" in assoc_types:
+            try:
+                sql_mwf = """
+                    SELECT DISTINCT p.id, p.partner_code, p.partner_name, COALESCE(p.whatsapp_number, p.phone) AS ph,
+                           p.city, p.is_active, COALESCE(p.member_status, 'INACTIVE') AS m_status,
+                           COALESCE(p.partner_type, 'BOTH') AS p_type
+                    FROM official_partners p
+                    WHERE COALESCE(p.is_blocked, false) = false
+                      AND UPPER(COALESCE(p.member_status, '')) != 'BLOCKED'
+                      AND EXISTS (
+                          SELECT 1 FROM crm_leads l
+                          WHERE l.associated_partner_id = p.id
+                             OR (l.source_ref_type = 'partner' AND l.source_ref_id::text = p.id::text)
+                      )
+                """
+                if status_mode == "active":
+                    sql_mwf += " AND p.is_active = true"
+                rows_mwf = db.execute(text(sql_mwf)).fetchall()
+                for r in rows_mwf:
+                    st_lbl = "Active" if r[5] else "Inactive"
+                    cat_lbl = "VGK Member (≥1 File)" if r[7] != "FREELANCER" else "Freelancer (≥1 File)"
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Partner With Files",
+                        code=r[1] or f"VGK-{r[0]}",
+                        category_label=cat_lbl,
+                        segment="VGK4U (≥1 File)",
+                        status_label=st_lbl,
+                        stage_label="Has Files",
+                        city=r[4] or "",
+                        entity_type="vgk_member_with_files",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] Members with files query error: {e}")
+
+        # 1b. Members with at least 1 file in active bonanza period
+        if "members_with_active_bonanza_files" in assoc_types:
+            try:
+                sql_mab = """
+                    SELECT DISTINCT p.id, p.partner_code, p.partner_name, COALESCE(p.whatsapp_number, p.phone) AS ph,
+                           p.city, p.is_active, COALESCE(p.member_status, 'INACTIVE') AS m_status,
+                           COALESCE(p.partner_type, 'BOTH') AS p_type
+                    FROM official_partners p
+                    WHERE COALESCE(p.is_blocked, false) = false
+                      AND UPPER(COALESCE(p.member_status, '')) != 'BLOCKED'
+                      AND EXISTS (
+                          SELECT 1 FROM crm_leads l
+                          WHERE (l.associated_partner_id = p.id OR (l.source_ref_type = 'partner' AND l.source_ref_id::text = p.id::text))
+                            AND l.created_at >= (
+                                SELECT COALESCE(MIN(start_date), '2026-09-01')
+                                FROM bonanza
+                                WHERE status = 'Approved' AND (end_date >= NOW() OR start_date >= '2026-09-01')
+                            )
+                      )
+                """
+                if status_mode == "active":
+                    sql_mab += " AND p.is_active = true"
+                rows_mab = db.execute(text(sql_mab)).fetchall()
+                for r in rows_mab:
+                    st_lbl = "Active" if r[5] else "Inactive"
+                    cat_lbl = "VGK Member (Bonanza File)" if r[7] != "FREELANCER" else "Freelancer (Bonanza File)"
+                    _add_recipient(
+                        phone_raw=r[3],
+                        name=r[2] or "Partner With Bonanza File",
+                        code=r[1] or f"VGK-{r[0]}",
+                        category_label=cat_lbl,
+                        segment="VGK4U (Active Bonanza)",
+                        status_label=st_lbl,
+                        stage_label="Bonanza File",
+                        city=r[4] or "",
+                        entity_type="vgk_member_bonanza",
+                        entity_id=r[0],
+                    )
+            except Exception as e:
+                logger.warning(f"[GBC] Members with active bonanza files query error: {e}")
+
         # 2. Freelancers (official_partners where partner_type='FREELANCER' + staff_employees where staff_type='FREELANCER')
         if "freelancers" in assoc_types and freelancer_mode != "exclude_all":
             try:
@@ -11494,6 +11572,52 @@ def _execute_general_broadcast_run(execution_id: str):
                                 err_out = f"{err_out} | Scanned WA: {sc_err}" if err_out else sc_err
                         except Exception as se:
                             err_out = f"{err_out} | Scanned WA unreachable: {str(se)}" if err_out else f"Scanned WA unreachable: {str(se)}"
+
+                        # Automatic fallback to PostgreSQL whatsapp_bot_queue if direct port 5002 HTTP was offline
+                        if not delivered_ok and channel_mode in ("scanned_safe", "api_first"):
+                            try:
+                                clean_10 = phone_digits[-10:]
+                                t_jid = f"91{clean_10}@s.whatsapp.net"
+                                q_res = db.execute(text("""
+                                    INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, job_id, execution_id, created_at)
+                                    VALUES ('individual', :t_jid, :msg, :media_url, 'pending', 'general_broadcast_campaign', :exec_id, NOW())
+                                    RETURNING id
+                                """), {
+                                    "t_jid": t_jid,
+                                    "msg": personalized_msg,
+                                    "media_url": image_url,
+                                    "exec_id": execution_id
+                                })
+                                db.commit()
+                                q_row = q_res.fetchone()
+                                if q_row and q_row[0]:
+                                    delivered_ok = True
+                                    used_provider = "SCANNED_QUEUE"
+                                    wamid_out = f"wamid.scanned_q.{q_row[0]}"
+                                    err_out = None
+                                    ml = MessageLog(
+                                        message_sid=wamid_out,
+                                        message_type="general_broadcast",
+                                        mobile_number=phone_digits,
+                                        to_number=phone_digits,
+                                        user_name=(d.recipient_name or phone_digits)[:100],
+                                        message_body=personalized_msg,
+                                        provider="SCANNED_QUEUE",
+                                        initial_status="queued",
+                                        current_status="sent",
+                                        sent_at=now_ist,
+                                        sent_by_staff_id=trig_staff_id,
+                                        sent_by_name=trig_by_name,
+                                        sender_type="staff",
+                                        job_id="general_broadcast_campaign",
+                                        execution_id=execution_id,
+                                        webhook_data=_json.dumps({"media_url": image_url, "media_type": "image"}) if image_url else None
+                                    )
+                                    db.add(ml)
+                                    db.flush()
+                                    ml_id_out = ml.id
+                            except Exception as _qe:
+                                logger.warning(f"[GBC] Queue fallback note: {_qe}")
 
                 # Update Dispatch & Execution counters
                 idx += 1

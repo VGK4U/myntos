@@ -1271,6 +1271,12 @@
                   <label style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #cbd5e1;padding:5px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer">
                     <input type="checkbox" class="gbc-assoc-chk" value="vendors" onchange="onGbcAssocTypeChange(this)"> 🏭 Vendors
                   </label>
+                  <label style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;border:1px solid #f59e0b;padding:5px 10px;border-radius:7px;font-size:11.5px;font-weight:700;color:#92400e;cursor:pointer" title="Filter VGK Members &amp; Freelancers who have submitted at least 1 file">
+                    <input type="checkbox" class="gbc-assoc-chk" value="members_with_files" id="gbcAssocWithFiles" onchange="onGbcAssocTypeChange(this)"> 📁 Select members with at least 1 file
+                  </label>
+                  <label style="display:inline-flex;align-items:center;gap:5px;background:#fdf2f8;border:1px solid #ec4899;padding:5px 10px;border-radius:7px;font-size:11.5px;font-weight:700;color:#9d174d;cursor:pointer" title="Filter VGK Members &amp; Freelancers who have submitted at least 1 file in the active bonanza period">
+                    <input type="checkbox" class="gbc-assoc-chk" value="members_with_active_bonanza_files" id="gbcAssocActiveBonanzaFiles" onchange="onGbcAssocTypeChange(this)"> 🏆 Select members with at least 1 file in active bonanza
+                  </label>
                   <label style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #86efac;padding:5px 10px;border-radius:7px;font-size:11.5px;font-weight:700;color:#166534;cursor:pointer" id="gbcGroupPillLabel">
                     <input type="checkbox" class="gbc-assoc-chk" value="wa_groups" id="gbcAssocWaGroups" onchange="onGbcAssocTypeChange(this)"> 👥 WhatsApp Groups (7)
                   </label>
@@ -1762,20 +1768,30 @@ We are delighted to share an important update tailored for our *{{segment}}* net
                     <option value="">-- Select from Filtered Audience or Enter Number Below --</option>
                   </select>
                 </div>
-                <div style="display:flex;gap:6px;align-items:center">
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
                   <input type="text" id="gbcTestSendName" oninput="updateGbcLiveBubblePreview()" placeholder="Test Name (e.g. Viswanath Garu)" value="Viswanath Garu" style="width:38%;padding:6px 8px;border:1px solid #6ee7b7;border-radius:6px;font-size:11.5px;background:#fff">
                   <input type="text" id="gbcTestSendPhone" placeholder="Mobile Number (e.g. 9876543210)" value="8875551666" style="flex:1;padding:6px 8px;border:1px solid #6ee7b7;border-radius:6px;font-size:11.5px;font-weight:700;background:#fff">
-                  <button type="button" id="btnGbcTestSend" onclick="sendGbcTestOnSelectedNumber()" class="btn-custom" style="background:#0f172a;color:#fff;padding:6px 12px;font-size:11.5px;font-weight:800;border:none;border-radius:6px;white-space:nowrap;cursor:pointer">
-                    <i class="fas fa-flask me-1"></i> Test Send
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                  <button type="button" id="btnGbcTestSendScanned" onclick="sendGbcTestOnSelectedNumber('scanned_safe')" class="btn-custom" style="background:#059669;color:#fff;padding:8px 8px;font-size:11.5px;font-weight:800;border:none;border-radius:6px;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(5,150,105,0.25)" title="Test via Scanned WhatsApp Web: Preserves 100% spacing, bullets, and flyer image">
+                    <i class="fas fa-qrcode me-1"></i> 📱 Test with Scanned WA
+                  </button>
+                  <button type="button" id="btnGbcTestSendMeta" onclick="sendGbcTestOnSelectedNumber('api_default')" class="btn-custom" style="background:#1e40af;color:#fff;padding:8px 8px;font-size:11.5px;font-weight:800;border:none;border-radius:6px;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(30,64,175,0.25)" title="Test via Meta Cloud API: Uses Meta Approved Template">
+                    <i class="fas fa-building-shield me-1"></i> 🏢 Test with Meta API
                   </button>
                 </div>
                 <div id="gbcTestSendStatusBox" style="display:none;margin-top:6px;padding:6px 8px;border-radius:6px;font-size:11px;font-weight:600"></div>
               </div>
 
-              <!-- Launch Campaign Button -->
-              <button type="button" id="btnTriggerGbcCampaign" onclick="triggerGbcCampaign()" class="btn-custom btn-green" style="width:100%;padding:12px 16px;font-size:14px;font-weight:800;border-radius:10px;justify-content:center;box-shadow:0 4px 14px rgba(5,150,105,0.3)">
-                <i class="fas fa-paper-plane me-2"></i> Trigger Broadcast Campaign Now
-              </button>
+              <!-- Launch Campaign Buttons (Scanned vs Official Meta API) -->
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button type="button" id="btnTriggerGbcScanned" onclick="triggerGbcCampaignWithMode('scanned_safe')" class="btn-custom" style="width:100%;padding:12px 14px;font-size:13.5px;font-weight:800;border-radius:10px;justify-content:center;background:#059669;color:#fff;border:none;box-shadow:0 4px 14px rgba(5,150,105,0.3);cursor:pointer">
+                  <i class="fas fa-qrcode me-2"></i> 📱 Trigger with Scanned WhatsApp (Full Formatting, Line Spacing &amp; Flyer)
+                </button>
+                <button type="button" id="btnTriggerGbcMeta" onclick="triggerGbcCampaignWithMode('api_default')" class="btn-custom" style="width:100%;padding:11px 14px;font-size:13px;font-weight:800;border-radius:10px;justify-content:center;background:#1e40af;color:#fff;border:none;box-shadow:0 4px 14px rgba(30,64,175,0.25);cursor:pointer">
+                  <i class="fas fa-building-shield me-2"></i> 🏢 Trigger with Official Meta API (Meta Template Wrapper)
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -8503,11 +8519,13 @@ function onGbcTestRecipientSelectChange() {
   }
 }
 
-async function sendGbcTestOnSelectedNumber() {
+async function sendGbcTestOnSelectedNumber(overrideMode = null) {
   const phRaw = (document.getElementById('gbcTestSendPhone')?.value || '').trim();
   const nmRaw = (document.getElementById('gbcTestSendName')?.value || '').trim() || 'Test Recipient';
   const statusBox = document.getElementById('gbcTestSendStatusBox');
-  const btn = document.getElementById('btnGbcTestSend');
+  const btnScanned = document.getElementById('btnGbcTestSendScanned');
+  const btnMeta = document.getElementById('btnGbcTestSendMeta');
+  const btnOld = document.getElementById('btnGbcTestSend');
 
   const digits = phRaw.replace(/\D/g, '');
   if (digits.length < 10) {
@@ -8528,7 +8546,7 @@ async function sendGbcTestOnSelectedNumber() {
   const tplId = (quickTplVal && quickTplVal !== 'custom')
     ? quickTplVal
     : (document.getElementById('gbcTemplateSelect')?.value || null);
-  const channelMode = document.getElementById('gbcChannelMode')?.value || 'api_first';
+  const channelMode = overrideMode || document.getElementById('gbcChannelMode')?.value || 'api_first';
   const scannedSpeed = document.getElementById('gbcScannedSpeed')?.value || 'safe';
   const title = (document.getElementById('gbcTitleInput')?.value || '').trim();
 
@@ -8540,16 +8558,22 @@ async function sendGbcTestOnSelectedNumber() {
   const sel = document.getElementById('gbcTestRecipientSelect');
   const opt = sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex] : null;
 
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+  const targetBtn = channelMode === 'scanned_safe' ? btnScanned : (channelMode === 'api_default' ? btnMeta : (btnOld || btnScanned));
+  if (targetBtn) {
+    targetBtn.disabled = true;
+    targetBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
   }
+  if (btnScanned && btnScanned !== targetBtn) btnScanned.disabled = true;
+  if (btnMeta && btnMeta !== targetBtn) btnMeta.disabled = true;
+  if (btnOld && btnOld !== targetBtn) btnOld.disabled = true;
+
   if (statusBox) {
     statusBox.style.display = 'block';
     statusBox.style.background = '#eff6ff';
     statusBox.style.color = '#1e40af';
     statusBox.style.border = '1px solid #93c5fd';
-    statusBox.innerHTML = `<i class="fas fa-circle-notch fa-spin me-1"></i> Dispatching Test Message to <strong>${escapeHtml(nmRaw)} (${escapeHtml(phRaw)})</strong>...`;
+    const modeBadge = channelMode === 'scanned_safe' ? '📱 Scanned WhatsApp' : '🏢 Official Meta API';
+    statusBox.innerHTML = `<i class="fas fa-circle-notch fa-spin me-1"></i> Dispatching Test Message via <strong>${modeBadge}</strong> to <strong>${escapeHtml(nmRaw)} (${escapeHtml(phRaw)})</strong>...`;
   }
 
   try {
@@ -8605,15 +8629,29 @@ async function sendGbcTestOnSelectedNumber() {
       statusBox.innerHTML = `<i class="fas fa-times-circle me-1"></i> Error: ${escapeHtml(err.message)}`;
     }
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-flask me-1"></i> Test Send';
+    if (btnScanned) {
+      btnScanned.disabled = false;
+      btnScanned.innerHTML = '<i class="fas fa-qrcode me-1"></i> 📱 Test with Scanned WA';
+    }
+    if (btnMeta) {
+      btnMeta.disabled = false;
+      btnMeta.innerHTML = '<i class="fas fa-building-shield me-1"></i> 🏢 Test with Meta API';
+    }
+    if (btnOld) {
+      btnOld.disabled = false;
+      btnOld.innerHTML = '<i class="fas fa-flask me-1"></i> Test Send';
     }
   }
 }
 
 // ── TRIGGER CAMPAIGN & LIVE PROGRESS BAR WITH COUNTS ─────────────────────────
-async function triggerGbcCampaign() {
+function triggerGbcCampaignWithMode(mode) {
+  const sel = document.getElementById('gbcChannelMode');
+  if (sel) sel.value = mode;
+  triggerGbcCampaign(mode);
+}
+
+async function triggerGbcCampaign(overrideMode = null) {
   const activeRecipients = gbcPreviewRecipientsList.filter(r => !gbcExcludedPhones.has(r.phone));
   const includeGroups = Boolean(document.getElementById('gbcIncludeGroups')?.checked);
   const totalTargets = activeRecipients.length + (includeGroups ? 7 : 0);
@@ -8636,7 +8674,7 @@ async function triggerGbcCampaign() {
   const tplId = (quickTplVal && quickTplVal !== 'custom')
     ? quickTplVal
     : (document.getElementById('gbcTemplateSelect')?.value || null);
-  const channelMode = document.getElementById('gbcChannelMode')?.value || 'api_first';
+  const channelMode = overrideMode || document.getElementById('gbcChannelMode')?.value || 'api_first';
   const scannedSpeed = document.getElementById('gbcScannedSpeed')?.value || 'safe';
   const title = (document.getElementById('gbcTitleInput')?.value || '').trim();
 
@@ -8645,14 +8683,26 @@ async function triggerGbcCampaign() {
     return;
   }
 
-  if (!confirm(`🚀 Ready to trigger this General Broadcast to ${totalTargets} recipient(s) via ${channelMode.toUpperCase()}?`)) {
+  const modeBadge = channelMode === 'scanned_safe' ? '📱 Scanned WhatsApp (Full Formatting, Line Spacing & Flyer)' : '🏢 Official Meta Cloud API';
+  if (!confirm(`🚀 Ready to trigger this General Broadcast to ${totalTargets} recipient(s) via ${modeBadge}?`)) {
     return;
   }
 
-  const btn = document.getElementById('btnTriggerGbcCampaign');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Queuing &amp; Starting Broadcast...';
+  const btnScanned = document.getElementById('btnTriggerGbcScanned');
+  const btnMeta = document.getElementById('btnTriggerGbcMeta');
+  const btnOld = document.getElementById('btnTriggerGbcCampaign');
+
+  if (btnScanned) {
+    btnScanned.disabled = true;
+    btnScanned.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Queuing &amp; Starting...';
+  }
+  if (btnMeta) {
+    btnMeta.disabled = true;
+    btnMeta.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Queuing &amp; Starting...';
+  }
+  if (btnOld) {
+    btnOld.disabled = true;
+    btnOld.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Queuing &amp; Starting...';
   }
 
   try {
@@ -8691,9 +8741,17 @@ async function triggerGbcCampaign() {
   } catch (err) {
     showToast(`Broadcast trigger error: ${err.message}`, 'red');
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Trigger Broadcast Campaign Now';
+    if (btnScanned) {
+      btnScanned.disabled = false;
+      btnScanned.innerHTML = '<i class="fas fa-qrcode me-2"></i> 📱 Trigger with Scanned WhatsApp (Full Formatting, Line Spacing &amp; Flyer)';
+    }
+    if (btnMeta) {
+      btnMeta.disabled = false;
+      btnMeta.innerHTML = '<i class="fas fa-building-shield me-2"></i> 🏢 Trigger with Official Meta API (Meta Template Wrapper)';
+    }
+    if (btnOld) {
+      btnOld.disabled = false;
+      btnOld.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Trigger Broadcast Campaign Now';
     }
   }
 }
