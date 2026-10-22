@@ -9378,6 +9378,32 @@ def vgk_top_partners_leaderboard_table(
         "rank_5": sum(1 for p in partners if p.get("rank_num") == 5),
     }
 
+    totals_summary = {
+        "overall_payout": sum(p.get("overall_payout", 0.0) for p in partners),
+        "team_income": total_team_income,
+        "current_month_earning": sum(p.get("current_month_earning", 0.0) for p in partners),
+        "eligible_files_installed": sum(p.get("eligible_files_installed", 0) for p in partners),
+        "eligible_files_total": sum(p.get("eligible_files_total", 0) for p in partners),
+        "total_leads": sum(p.get("total_leads", 0) for p in partners),
+        "submits_count": sum(p.get("submits_count", 0) for p in partners),
+        "with_bank_count": sum(p.get("with_bank_count", 0) for p in partners),
+        "submits_val": sum(p.get("submits_val", 0.0) for p in partners),
+        "first_pmt_count": sum(p.get("first_pmt_count", 0) for p in partners),
+        "completed_count": sum(p.get("completed_count", 0) for p in partners),
+        "received_val": sum(p.get("received_val", 0.0) for p in partners),
+        "processed_count": sum(p.get("processed_count", 0) for p in partners),
+        "team_added": total_team_members,
+        "team_leads": total_team_files,
+        "team_submits_count": team_submits_count,
+        "team_with_bank_count": sum(p.get("team_with_bank_count", 0) for p in partners),
+        "team_submits_val": team_submits_val,
+        "team_first_pmt_count": team_first_pmt_count,
+        "team_completed_count": team_completed_count,
+        "team_total_received_val": team_total_received_val,
+        "team_processed_count": sum(p.get("team_processed_count", 0) for p in partners),
+        "avg_win_rate": round(sum(p.get("win_rate", 0.0) for p in partners) / len(partners), 1) if partners else 0.0
+    }
+
     total_count = len(partners)
     start_idx = (page - 1) * limit
     end_idx = start_idx + limit
@@ -9396,6 +9422,7 @@ def vgk_top_partners_leaderboard_table(
             "total_pages": (total_count + limit - 1) // limit if limit > 0 else 1,
             "team_summary": team_summary,
             "rank_summary": rank_summary,
+            "totals_summary": totals_summary,
             "partners": paginated_partners
         }
     }
