@@ -734,11 +734,20 @@
         prevCelebrationTitleEl.textContent = `🎉 👑 CONGRATULATIONS 👑 🎉`;
       }
 
-      // Overall Earning: Total cumulative earnings irrespective of level (Net Gross - Canonical Option 1)
+      // Overall Earning: Total cumulative earnings irrespective of level (Incomes total only - excludes direct cash advances)
       const allTimeSum = entries.reduce((sum, e) => {
         if (e.status === 'CANCELLED') return sum;
         if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
         if (e.id && String(e.id).startsWith('VSCA-')) return sum;
+        const _k = String(e.kind || '').toUpperCase();
+        const isDirAdv = (
+          e.display_kind === 'Direct Advance' ||
+          e.kind === 'DIRECT_ADVANCE' ||
+          (!e.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(_k)) ||
+          e.level === 0
+        );
+        if (isDirAdv) return sum;
+
         const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
         const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
         const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
@@ -779,7 +788,14 @@
           const key = `${lid}_${lvl}`;
           const val = se.potential_overall_earning || se.commission_amount || 0;
           if (!srUniquePot[key] || val > srUniquePot[key]) srUniquePot[key] = val;
-          if (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE') {
+          const _sk = String(se.kind || '').toUpperCase();
+          const sIsDirAdv = (
+            se.display_kind === 'Direct Advance' ||
+            se.kind === 'DIRECT_ADVANCE' ||
+            (!se.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(_sk)) ||
+            se.level === 0
+          );
+          if (!sIsDirAdv && (se.kind === 'ADVANCE' || se.kind === 'DVR_ADVANCE')) {
             const sGross = parseFloat(se.commission_amount || 0);
             const sAdv = parseFloat(se.advance_adjusted_amount || 0);
             const sLost = parseFloat(se.lost_lead_deduction || 0);
@@ -788,11 +804,20 @@
           }
         }
       });
-      // Overall Earning: Total cumulative earnings across all valid commission entries (Net Gross)
+      // Senior Overall Earning: Total cumulative earnings across all valid commission entries (Incomes total only - excludes direct cash advances)
       const srAllTimeSum = srEntries.reduce((sum, e) => {
         if (e.status === 'CANCELLED') return sum;
         if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
         if (e.id && String(e.id).startsWith('VSCA-')) return sum;
+        const _k = String(e.kind || '').toUpperCase();
+        const isDirAdv = (
+          e.display_kind === 'Direct Advance' ||
+          e.kind === 'DIRECT_ADVANCE' ||
+          (!e.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(_k)) ||
+          e.level === 0
+        );
+        if (isDirAdv) return sum;
+
         const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
         const advAdj = parseFloat(e.advance_adjusted_amount || 0) || 0;
         const lostDed = parseFloat(e.lost_lead_deduction || 0) || 0;
@@ -1045,6 +1070,14 @@
           : Math.max(0, grossAmt - advAdj - lostDed);
         const k = (e.kind || '').toUpperCase();
         const typeStr = (e.income_type || '').toLowerCase();
+
+        const isDirAdv = (
+          e.display_kind === 'Direct Advance' ||
+          e.kind === 'DIRECT_ADVANCE' ||
+          (!e.source_lead_id && ['ADVANCE', 'STAGE1_ADVANCE', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'].includes(k)) ||
+          e.level === 0
+        );
+        if (isDirAdv) return;
 
         if (k === 'ADVANCE' || typeStr.includes('stage 1 adv')) {
           stage1Amt += balGross;
