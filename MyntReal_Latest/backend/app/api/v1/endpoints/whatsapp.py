@@ -11239,15 +11239,16 @@ def _execute_general_broadcast_run(execution_id: str):
                     used_provider = "DRY_RUN_SIMULATED"
                     wamid_out = f"wamid.dryrun.{uuid.uuid4().hex[:14]}"
 
-                # ── GROUP DISPATCH (Always Scanned WA) ────────────────────────────
+                # ── GROUP DISPATCH (Always Scanned WA / Queue) ────────────────────
                 elif d.recipient_type in ("group", "channel"):
                     used_provider = "SCANNED_WA"
                     try:
                         grp_payload = {"message": personalized_msg, "imageUrl": image_url}
-                        if str(d.recipient_identifier).startswith("GRP_NAME:"):
-                            grp_payload["groupName"] = str(d.recipient_identifier).replace("GRP_NAME:", "", 1)
+                        target_ident = str(d.recipient_identifier or "")
+                        if target_ident.startswith("GRP_NAME:"):
+                            grp_payload["groupName"] = target_ident.replace("GRP_NAME:", "", 1)
                         else:
-                            grp_payload["inviteCode"] = str(d.recipient_identifier)
+                            grp_payload["inviteCode"] = target_ident
                         r_grp = http_session.post("http://127.0.0.1:5002/api/send-group-message", json=grp_payload, timeout=25)
                         j_grp = r_grp.json() if r_grp.content else {}
                         if r_grp.status_code == 200 and j_grp.get("success"):
@@ -11257,6 +11258,35 @@ def _execute_general_broadcast_run(execution_id: str):
                             err_out = j_grp.get("error") or f"Group bot HTTP {r_grp.status_code}"
                     except Exception as ge:
                         err_out = f"Group bot unreachable: {str(ge)}"
+
+                    # Automatic fallback to PostgreSQL whatsapp_bot_queue for Groups if direct HTTP gateway is offline/remote
+                    if not delivered_ok:
+                        try:
+                            clean_target = str(d.recipient_identifier or "")
+                            if clean_target.startswith("GRP_NAME:"):
+                                clean_target = clean_target.replace("GRP_NAME:", "", 1)
+                            elif not clean_target.endswith("@g.us") and not clean_target.startswith("http") and clean_target.replace("-", "").isdigit():
+                                clean_target = f"{clean_target}@g.us"
+
+                            q_res = db.execute(text("""
+                                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, job_id, execution_id, created_at)
+                                VALUES ('group', :t_jid, :msg, :media_url, 'pending', 'general_broadcast_campaign', :exec_id, NOW())
+                                RETURNING id
+                            """), {
+                                "t_jid": clean_target,
+                                "msg": personalized_msg,
+                                "media_url": image_url,
+                                "exec_id": execution_id
+                            })
+                            db.commit()
+                            q_row = q_res.fetchone()
+                            if q_row and q_row[0]:
+                                delivered_ok = True
+                                used_provider = "SCANNED_QUEUE"
+                                wamid_out = f"wamid.scanned_grp_q.{q_row[0]}"
+                                err_out = None
+                        except Exception as _gqe:
+                            logger.warning(f"[GBC] Group queue fallback error: {_gqe}")
 
                 # ── INDIVIDUAL DISPATCH ───────────────────────────────────────────
                 else:
@@ -11581,8 +11611,8 @@ def _execute_general_broadcast_run(execution_id: str):
                                 pass
                             err_out = str(me)
 
-                    # 2. Scanned WhatsApp Path (when channel_mode == 'scanned_safe' OR when 'api_first' falls back and Scanned bot is online)
-                    if not delivered_ok and (channel_mode == "scanned_safe" or (channel_mode == "api_first" and scanned_bot_online)):
+                    # 2. Scanned WhatsApp Path (Guaranteed Automatic Failover: when channel_mode == 'scanned_safe' OR whenever Meta API failed due to day limit / Error 131049, window expiry, or template rejection!)
+                    if not delivered_ok:
                         try:
                             if idx > 0 and total_cnt > 1:
                                 if scanned_speed == "fast":
@@ -11625,6 +11655,7 @@ def _execute_general_broadcast_run(execution_id: str):
                                         sender_type="staff",
                                         job_id="general_broadcast_campaign",
                                         execution_id=execution_id,
+                                        webhook_data=_json.dumps({"media_url": image_url, "media_type": "image"}) if image_url else None
                                     )
                                     db.add(ml)
                                     db.flush()
@@ -11638,7 +11669,7 @@ def _execute_general_broadcast_run(execution_id: str):
                             err_out = f"{err_out} | Scanned WA unreachable: {str(se)}" if err_out else f"Scanned WA unreachable: {str(se)}"
 
                         # Automatic fallback to PostgreSQL whatsapp_bot_queue if direct port 5002 HTTP was offline
-                        if not delivered_ok and channel_mode in ("scanned_safe", "api_first"):
+                        if not delivered_ok:
                             try:
                                 clean_10 = phone_digits[-10:]
                                 t_jid = f"91{clean_10}@s.whatsapp.net"
