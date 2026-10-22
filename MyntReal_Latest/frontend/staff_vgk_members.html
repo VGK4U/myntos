@@ -12026,7 +12026,7 @@ async function generateMemberPoster(partnerId) {
       }
     });
     let installedFiles = installedSet.size;
-    if (installedFiles === 0 && d && d.summary && d.summary.installed_files !== undefined) {
+    if (installedFiles === 0 && typeof d !== 'undefined' && d && d.summary && d.summary.installed_files !== undefined) {
       installedFiles = d.summary.installed_files;
     }
     const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles}` : `${activeFiles}`) + ' FILES';
@@ -12122,7 +12122,7 @@ async function generateMemberPoster(partnerId) {
       const gross = parseFloat(e.commission_amount || e.amount || 0) || 0;
       return sum + gross;
     }, 0);
-    const overallVal = (allTimeSum > 0) ? allTimeSum : ((d && d.summary && d.summary.gross_earned !== undefined) ? d.summary.gross_earned : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0))));
+    const overallVal = (allTimeSum > 0) ? allTimeSum : ((typeof d !== 'undefined' && d && d.summary && d.summary.gross_earned !== undefined) ? d.summary.gross_earned : ((m.all_time_gross_earned !== undefined && m.all_time_gross_earned !== null) ? m.all_time_gross_earned : ((m.gross_earned !== undefined && m.gross_earned !== null) ? m.gross_earned : (m.received || 0))));
     setVal('postHighlight', '₹' + _meFormatInr(overallVal) + '/-');
     setVal('postFiles', filesDisplay);
     setVal('postOverall', (m.total_team_size || 0) + ' MEMBERS');
@@ -17424,7 +17424,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<script src="/public/js/poster-modal-core.js?v=20261022_1525_v2461"></script>
+<script src="/public/js/poster-modal-core.js?v=20261022_1700_v2462"></script>
 
 <!-- DC Protocol: 3-Hour Time-Bound Shared Ledger Link Modal -->
 <script>

@@ -573,6 +573,7 @@
 
       const targetPid = m.id || partnerId;
       let entries = (entriesOutcome && entriesOutcome.success && entriesOutcome.data) ? entriesOutcome.data : null;
+      let entriesSummary = (entriesOutcome && entriesOutcome.summary) ? entriesOutcome.summary : null;
       const needEntriesFetch = !entries;
       const needSeniorFetch = Boolean(m.parent_partner_id && (!seniorOutcome || String(m.parent_partner_id) !== String(knownParentPid)));
 
@@ -587,11 +588,13 @@
         ]);
         if (reqSeq !== window._posterGenReqSeq) return;
         entries = (lateEntriesD && lateEntriesD.success && lateEntriesD.data) ? lateEntriesD.data : [];
+        if (lateEntriesD && lateEntriesD.summary) entriesSummary = lateEntriesD.summary;
         window._seniorEntries = (lateSeniorD && lateSeniorD.success && lateSeniorD.data) ? lateSeniorD.data : [];
       } else {
         window._seniorEntries = (seniorOutcome && seniorOutcome.success && seniorOutcome.data) ? seniorOutcome.data : [];
       }
       window._currentEntries = entries;
+      window._currentEntriesSummary = entriesSummary;
 
       const uniqueL1Leads = new Set();
       entries.forEach(e => {
@@ -707,8 +710,9 @@
         }
       });
       let installedFiles = installedSet.size;
-      if (installedFiles === 0 && d && d.summary && d.summary.installed_files !== undefined) {
-        installedFiles = d.summary.installed_files;
+      const summaryObj = (typeof entriesSummary !== 'undefined' && entriesSummary) ? entriesSummary : (window._currentEntriesSummary || null);
+      if (installedFiles === 0 && summaryObj && summaryObj.installed_files !== undefined) {
+        installedFiles = summaryObj.installed_files;
       }
       const filesDisplay = (installedFiles > 0 ? `${installedFiles}/${activeFiles || m.ground_leads_count || 1}` : `${activeFiles || m.ground_leads_count || 1}`) + ' FILES';
 
