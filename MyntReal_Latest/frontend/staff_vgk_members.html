@@ -13198,15 +13198,15 @@ function showLiveDispatchStatusModal(targets, partnerName) {
       return `
         <div id="dispRow_${t.id}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f9fafb;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
-            <div style="flex-shrink:0">${icon}</div>
+            <div class="disp-icon-col" style="flex-shrink:0">${icon}</div>
             <div style="min-width:0">
               <div style="font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.label}</div>
               <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.target}</div>
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0;margin-left:12px">
-            <span style="font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:12px;letter-spacing:0.3px;${badgeStyle}">${badgeText}</span>
-            <div style="font-size:10px;color:#9ca3af;margin-top:2px">${t.msg || ''}</div>
+            <span class="disp-badge-col" style="font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:12px;letter-spacing:0.3px;${badgeStyle}">${badgeText}</span>
+            <div class="disp-msg-col" style="font-size:10px;color:#9ca3af;margin-top:2px">${t.msg || ''}</div>
           </div>
         </div>
       `;
@@ -13253,10 +13253,46 @@ window.updateDispatchStatus = function(id, status, msg) {
     t.status = status;
     t.msg = msg || '';
   }
-  const modal = document.getElementById('liveDispatchModal');
-  if (modal && window._dispatchTargets) {
-    const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevSubtitle')?.textContent || '').trim();
-    showLiveDispatchStatusModal(window._dispatchTargets, partnerName);
+  const row = document.getElementById('dispRow_' + id);
+  if (row) {
+    let badgeStyle = 'background:#f3f4f6;color:#6b7280';
+    let badgeText = 'PENDING';
+    let icon = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+
+    if (status === 'sent') {
+      badgeStyle = 'background:#d1fae5;color:#065f46';
+      badgeText = 'SENT ✅';
+      icon = '<i class="fas fa-check-circle text-success" style="font-size:16px"></i>';
+    } else if (status === 'error') {
+      badgeStyle = 'background:#fee2e2;color:#991b1b';
+      badgeText = 'FAILED ❌';
+      icon = '<i class="fas fa-times-circle text-danger" style="font-size:16px"></i>';
+    } else if (status === 'skipped') {
+      badgeStyle = 'background:#f3f4f6;color:#9ca3af';
+      badgeText = 'SKIPPED';
+      icon = '<i class="fas fa-minus-circle text-muted" style="font-size:16px"></i>';
+    } else if (status === 'sending') {
+      badgeStyle = 'background:#e0e7ff;color:#3730a3';
+      badgeText = 'SENDING...';
+    }
+
+    const iconDiv = row.querySelector('.disp-icon-col');
+    if (iconDiv) iconDiv.innerHTML = icon;
+
+    const badgeSpan = row.querySelector('.disp-badge-col');
+    if (badgeSpan) {
+      badgeSpan.textContent = badgeText;
+      badgeSpan.style.cssText = `font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:12px;letter-spacing:0.3px;${badgeStyle}`;
+    }
+
+    const msgDiv = row.querySelector('.disp-msg-col');
+    if (msgDiv) msgDiv.textContent = msg || '';
+  } else {
+    const modal = document.getElementById('liveDispatchModal');
+    if (modal && window._dispatchTargets) {
+      const partnerName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevSubtitle')?.textContent || '').trim();
+      showLiveDispatchStatusModal(window._dispatchTargets, partnerName);
+    }
   }
 };
 
@@ -13883,6 +13919,8 @@ window.postPosterAnnouncement = openPostToPortalModal;
 // ── GENERAL BROADCAST MESSAGE MODAL CONTROLLER ──
 // ═══════════════════════════════════════════════════════════════════
 window._genMsgSelectedMembers = [];
+window._genMsgAudienceMembers = null;
+window._genMsgAudienceCounts = null;
 window._genMsgUploadedImage = null; // { dataUrl, blob, name }
 let _genMsgSearchTimer = null;
 
@@ -13892,15 +13930,198 @@ function openGeneralMessageModal() {
   modal.style.display = 'flex';
 
   if (!window._genMsgSelectedMembers) window._genMsgSelectedMembers = [];
+
+  // Reset audience checkboxes on open
+  const chkFiles = document.getElementById('genMsgFilterAtLeastOneFile');
+  const chkBonanza = document.getElementById('genMsgFilterActiveBonanza');
+  if (chkFiles) chkFiles.checked = false;
+  if (chkBonanza) chkBonanza.checked = false;
+  window._genMsgAudienceMembers = null;
+
+  const input = document.getElementById('genMsgMemberSearch');
+  if (input) {
+    input.disabled = false;
+    input.placeholder = 'Search partner name, code, phone…';
+  }
+
   renderGenMsgSelectedMembers();
   updateGenMsgCharCount();
+  loadGenMsgAudienceCounts();
 
   setTimeout(() => {
-    const input = document.getElementById('genMsgMemberSearch');
     if (input) input.focus();
   }, 100);
 }
 window.openGeneralMessageModal = openGeneralMessageModal;
+
+async function loadGenMsgAudienceCounts() {
+  try {
+    const badgeFiles = document.getElementById('genMsgBadgeAtLeastOneFile');
+    const badgeBonanza = document.getElementById('genMsgBadgeActiveBonanza');
+    if (badgeFiles) badgeFiles.textContent = '...';
+    if (badgeBonanza) badgeBonanza.textContent = '...';
+
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof API !== 'undefined') ? API : '/api/v1');
+    const res = await staffFetch(`${apiBase}/vgk/members/broadcast-audience?filter_type=counts`);
+    const data = await res.json();
+    if (data && data.success && data.counts) {
+      window._genMsgAudienceCounts = data.counts;
+      if (badgeFiles) badgeFiles.textContent = `${data.counts.has_files || 0} members`;
+      if (badgeBonanza) {
+        badgeBonanza.textContent = `${data.counts.active_bonanza || 0} members`;
+        if (data.counts.active_bonanza_name) {
+          badgeBonanza.title = `Active Bonanza: ${data.counts.active_bonanza_name}`;
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('Error loading audience counts:', e);
+  }
+}
+window.loadGenMsgAudienceCounts = loadGenMsgAudienceCounts;
+
+async function onGenMsgAudienceCheckboxChange() {
+  const chkFiles = document.getElementById('genMsgFilterAtLeastOneFile')?.checked;
+  const chkBonanza = document.getElementById('genMsgFilterActiveBonanza')?.checked;
+  const searchInput = document.getElementById('genMsgMemberSearch');
+  const searchDropdown = document.getElementById('genMsgMemberDropdown');
+  const container = document.getElementById('genMsgSelectedMembersList');
+  const badge = document.getElementById('genMsgCountBadge');
+
+  if (searchDropdown) searchDropdown.style.display = 'none';
+
+  // If NEITHER checkbox is checked: return to manual mode
+  if (!chkFiles && !chkBonanza) {
+    window._genMsgAudienceMembers = null;
+    if (searchInput) {
+      searchInput.disabled = false;
+      searchInput.placeholder = 'Search partner name, code, phone…';
+    }
+    renderGenMsgSelectedMembers();
+    return;
+  }
+
+  // Audience checkbox IS checked:
+  if (searchInput) {
+    searchInput.disabled = true;
+    searchInput.placeholder = 'Audience filter active (manual search disabled)';
+  }
+
+  let filterType = 'both';
+  let filterTitle = 'Members with ≥1 file or active bonanza';
+  if (chkFiles && !chkBonanza) {
+    filterType = 'has_files';
+    filterTitle = 'Members with at least 1 file';
+  } else if (!chkFiles && chkBonanza) {
+    filterType = 'active_bonanza';
+    filterTitle = 'Members with at least 1 file in active bonanza';
+  }
+
+  if (badge) {
+    badge.textContent = 'Loading...';
+    badge.style.background = '#fef3c7';
+    badge.style.color = '#92400e';
+  }
+
+  if (container) {
+    container.innerHTML = `
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px;text-align:center;font-size:12px;color:#166534">
+        <i class="fas fa-spinner fa-spin me-2"></i>Loading audience list (${filterTitle})...
+      </div>
+    `;
+  }
+
+  try {
+    const apiBase = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof API !== 'undefined') ? API : '/api/v1');
+    const res = await staffFetch(`${apiBase}/vgk/members/broadcast-audience?filter_type=${filterType}`);
+    const data = await res.json();
+    if (!data || !data.success) {
+      throw new Error(data?.error || 'Failed to fetch audience');
+    }
+
+    const members = data.members || [];
+    window._genMsgAudienceMembers = members;
+
+    if (badge) {
+      badge.textContent = `${members.length} Members Targeted`;
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#166534';
+    }
+
+    renderGenMsgAudienceMembers(filterTitle, data.bonanza_name);
+  } catch(err) {
+    console.error('Error fetching audience members:', err);
+    if (container) {
+      container.innerHTML = `
+        <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px;font-size:11.5px;color:#dc2626">
+          <i class="fas fa-exclamation-triangle me-1"></i> Failed to load audience: ${esc(err.message)}
+        </div>
+      `;
+    }
+  }
+}
+window.onGenMsgAudienceCheckboxChange = onGenMsgAudienceCheckboxChange;
+
+function renderGenMsgAudienceMembers(filterTitle, bonanzaName) {
+  const container = document.getElementById('genMsgSelectedMembersList');
+  const members = window._genMsgAudienceMembers || [];
+  if (!container) return;
+
+  if (!members.length) {
+    container.innerHTML = `
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:10px;font-size:11.5px;color:#92400e;text-align:center">
+        No active members found matching: <strong>${esc(filterTitle)}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  const bonanzaSubtitle = bonanzaName ? `<div style="font-size:10px;color:#047857;margin-top:2px"><i class="fas fa-award me-1"></i>${esc(bonanzaName)}</div>` : '';
+
+  const memberRows = members.map((m, idx) => {
+    const cleanPhone = (m.phone || '').replace(/\D/g, '');
+    const phoneDisplay = cleanPhone ? `+91 ${cleanPhone.slice(-10)}` : 'No phone';
+    const detailBadge = (m.bonanza_files_count > 0)
+      ? `<span style="font-size:9.5px;padding:1px 5px;border-radius:6px;background:#fef3c7;color:#92400e;font-weight:700">${m.bonanza_files_count} bonanza file${m.bonanza_files_count > 1 ? 's' : ''}</span>`
+      : `<span style="font-size:9.5px;padding:1px 5px;border-radius:6px;background:#e0f2fe;color:#0369a1;font-weight:700">${m.files_count || 1} file${(m.files_count || 1) > 1 ? 's' : ''}</span>`;
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;font-size:11px">
+        <div style="min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <strong style="color:#0284c7">${esc(m.partner_code || '')}</strong>
+          <span style="font-weight:600;color:#1e293b;margin-left:4px">${esc(m.partner_name || '')}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${detailBadge}
+          <span style="font-size:10px;color:#64748b;font-family:monospace">${phoneDisplay}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:10px;box-sizing:border-box">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-size:11.5px;font-weight:800;color:#166534">
+            <i class="fas fa-check-circle me-1"></i>${esc(filterTitle)}
+          </div>
+          ${bonanzaSubtitle}
+        </div>
+        <span style="font-size:10px;font-weight:800;background:#bbf7d0;color:#14532d;padding:2px 7px;border-radius:10px;flex-shrink:0">
+          ${members.length} Members
+        </span>
+      </div>
+      <p style="font-size:10.5px;color:#15803d;margin:0 0 8px 0;line-height:1.3">
+        When broadcasting, individual WhatsApp messages will be delivered to all <strong>${members.length}</strong> members.
+      </p>
+      <div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:2px">
+        ${memberRows}
+      </div>
+    </div>
+  `;
+}
+window.renderGenMsgAudienceMembers = renderGenMsgAudienceMembers;
 
 function closeGeneralMessageModal() {
   const modal = document.getElementById('generalMessageModal');
@@ -14299,7 +14520,13 @@ async function shareGenMsgDefaultChannel() {
   const text = (document.getElementById('genMsgText')?.value || '').trim();
   const imgData = window._genMsgUploadedImage?.dataUrl || null;
   const imgBlob = window._genMsgUploadedImage?.blob || null;
-  const members = window._genMsgSelectedMembers || [];
+
+  const chkFiles = document.getElementById('genMsgFilterAtLeastOneFile')?.checked;
+  const chkBonanza = document.getElementById('genMsgFilterActiveBonanza')?.checked;
+  const isAudienceActive = Boolean(chkFiles || chkBonanza);
+  const audienceMembers = isAudienceActive ? (window._genMsgAudienceMembers || []) : [];
+  const manualMembers = window._genMsgSelectedMembers || [];
+  const effectiveMembers = isAudienceActive ? audienceMembers : manualMembers;
 
   if (!text && !imgData) {
     window._isGenMsgSharingInProgress = false;
@@ -14310,15 +14537,15 @@ async function shareGenMsgDefaultChannel() {
   // Construct target list for dispatch modal
   const dispatchTargets = [];
 
-  // Selected Members (1 to 5)
-  if (members.length > 0) {
-    members.forEach((m, idx) => {
+  // Recipient Members (Audience segment or 1 to 5 selected)
+  if (effectiveMembers.length > 0) {
+    effectiveMembers.forEach((m, idx) => {
       const cleanPhone = (m.phone || '').replace(/\D/g, '');
       const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
       dispatchTargets.push({
-        id: 'gen_member_' + (m.id || idx),
+        id: 'gen_member_' + (m.id || m.partner_code || idx),
         type: 'member',
-        label: `Member: ${m.partner_name || m.name || 'Partner'}`,
+        label: `Member: ${m.partner_name || m.name || 'Partner'} (${m.partner_code || ''})`,
         target: isBlocked ? 'Blocked Partner (Excluded)' : (cleanPhone ? `+91 ${cleanPhone.slice(-10)}` : 'No Phone'),
         phone: cleanPhone,
         status: isBlocked ? 'skipped' : (cleanPhone ? 'sending' : 'skipped'),
@@ -14398,8 +14625,8 @@ async function shareGenMsgDefaultChannel() {
     updateStatus('portal_shoutout', 'error', pErr.message || 'Portal Submit Error');
   }
 
-  // 2. Selected Members Direct Dispatch (Individual -> Always Official API Number First for Text; Fallback to Scanned ONLY if API fails)
-  for (const m of members) {
+  // 2. Selected/Audience Members Direct Dispatch (Individual -> Always Official API Number First for Text; Fallback to Scanned ONLY if API fails)
+  for (const m of effectiveMembers) {
     const tId = 'gen_member_' + (m.id || m.partner_code);
     const cleanPhone = (m.phone || '').replace(/\D/g, '');
     const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
@@ -15890,7 +16117,7 @@ function _renderCommDetailTable(partnerId) {
       <!-- Left Pane: Controls -->
       <div style="width:390px;background:#f9fafb;border-right:1px solid #e5e7eb;padding:20px;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
         
-        <!-- SECTION 1: TARGET MEMBERS (UP TO 5) -->
+        <!-- SECTION 1: TARGET MEMBERS (UP TO 5 OR BULK AUDIENCE) -->
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <h5 style="font-size:12px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;margin:0">
@@ -15898,7 +16125,26 @@ function _renderCommDetailTable(partnerId) {
             </h5>
             <span id="genMsgCountBadge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#e0f2fe;color:#0369a1">0 / 5 Selected</span>
           </div>
-          <p style="font-size:11px;color:#64748b;margin:0 0 8px 0;line-height:1.35">
+
+          <!-- Audience Filter Checkboxes -->
+          <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;flex-direction:column;gap:7px">
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;margin:0;user-select:none">
+              <div style="display:flex;align-items:center;gap:7px">
+                <input type="checkbox" id="genMsgFilterAtLeastOneFile" onchange="onGenMsgAudienceCheckboxChange()" style="cursor:pointer;accent-color:#0284c7;width:15px;height:15px;margin:0">
+                <span style="font-size:11.5px;font-weight:700;color:#0f172a">Select members with at least 1 file</span>
+              </div>
+              <span id="genMsgBadgeAtLeastOneFile" style="font-size:10px;background:#e0f2fe;color:#0369a1;font-weight:700;padding:2px 6px;border-radius:6px;white-space:nowrap">...</span>
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;margin:0;user-select:none">
+              <div style="display:flex;align-items:center;gap:7px">
+                <input type="checkbox" id="genMsgFilterActiveBonanza" onchange="onGenMsgAudienceCheckboxChange()" style="cursor:pointer;accent-color:#0284c7;width:15px;height:15px;margin:0">
+                <span style="font-size:11.5px;font-weight:700;color:#0f172a">Select members with at least 1 file in active bonanza</span>
+              </div>
+              <span id="genMsgBadgeActiveBonanza" style="font-size:10px;background:#fef3c7;color:#92400e;font-weight:700;padding:2px 6px;border-radius:6px;white-space:nowrap">...</span>
+            </label>
+          </div>
+
+          <p id="genMsgSearchHelpText" style="font-size:11px;color:#64748b;margin:0 0 8px 0;line-height:1.35">
             Type name, partner code, or mobile number to search and select up to 5 recipient members.
           </p>
           

@@ -517,6 +517,205 @@ def search_vgk_members(
     }
 
 
+@router.get("/members/broadcast-audience")
+def get_broadcast_audience(
+    filter_type: str = Query("counts", description="counts | has_files | active_bonanza | both"),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns audience counts or member lists for General Broadcast targeting:
+    - has_files: VGK members with at least 1 file
+    - active_bonanza: VGK members with at least 1 file in the currently active bonanza
+    - both: Union of members matching either filter
+    - counts: Summary counts of both segments
+    """
+    try:
+        # Fetch currently active VGK bonanza
+        bonanza_row = db.execute(text("""
+            SELECT id, name, start_date, (end_date + (COALESCE(grace_days, 0) || ' days')::interval) AS end_with_grace
+            FROM bonanza
+            WHERE (portal = 'VGK' OR portal ILIKE '%VGK%')
+              AND status IN ('Approved', 'Running')
+              AND start_date <= NOW()
+              AND (end_date + (COALESCE(grace_days, 0) || ' days')::interval) >= NOW()
+            ORDER BY id DESC
+            LIMIT 1
+        """)).fetchone()
+
+        bonanza_name = bonanza_row.name if bonanza_row else None
+        bonanza_id = bonanza_row.id if bonanza_row else None
+
+        if filter_type == "counts":
+            has_files_count = db.execute(text("""
+                SELECT COUNT(DISTINCT op.id)
+                FROM official_partners op
+                JOIN crm_leads cl ON (
+                    cl.associated_partner_id = op.id
+                    OR cl.source_ref_id = op.partner_code
+                    OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                )
+                WHERE op.category = 'VGK_TEAM'
+                  AND COALESCE(op.is_blocked, FALSE) = FALSE
+                  AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+            """)).scalar() or 0
+
+            active_bonanza_count = 0
+            if bonanza_row:
+                active_bonanza_count = db.execute(text("""
+                    SELECT COUNT(DISTINCT op.id)
+                    FROM official_partners op
+                    JOIN crm_leads cl ON (
+                        cl.associated_partner_id = op.id
+                        OR cl.source_ref_id = op.partner_code
+                        OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                    )
+                    CROSS JOIN LATERAL (
+                        SELECT COALESCE(
+                            cl.first_payment_received_date,
+                            (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                            (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                        ) AS first_pmt_date
+                    ) pmt
+                    WHERE op.category = 'VGK_TEAM'
+                      AND COALESCE(op.is_blocked, FALSE) = FALSE
+                      AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                      AND pmt.first_pmt_date IS NOT NULL
+                      AND pmt.first_pmt_date >= :start_date
+                      AND pmt.first_pmt_date <= :end_date
+                """), {'start_date': bonanza_row.start_date.date(), 'end_date': bonanza_row.end_with_grace.date()}).scalar() or 0
+
+            return {
+                "success": True,
+                "counts": {
+                    "has_files": has_files_count,
+                    "active_bonanza": active_bonanza_count,
+                    "active_bonanza_name": bonanza_name,
+                    "active_bonanza_id": bonanza_id
+                }
+            }
+
+        if filter_type == "has_files":
+            query = text("""
+                SELECT op.id, op.partner_name, op.partner_code, op.phone,
+                       COALESCE(op.vgk4u_current_designation, 'Channel Partner') as designation,
+                       COUNT(DISTINCT cl.id) as files_count,
+                       0 as bonanza_files_count
+                FROM official_partners op
+                JOIN crm_leads cl ON (
+                    cl.associated_partner_id = op.id
+                    OR cl.source_ref_id = op.partner_code
+                    OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                )
+                WHERE op.category = 'VGK_TEAM'
+                  AND COALESCE(op.is_blocked, FALSE) = FALSE
+                  AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                GROUP BY op.id, op.partner_name, op.partner_code, op.phone, op.vgk4u_current_designation
+                HAVING COUNT(DISTINCT cl.id) >= 1
+                ORDER BY op.partner_name ASC
+            """)
+            rows = db.execute(query).fetchall()
+        elif filter_type == "active_bonanza":
+            if not bonanza_row:
+                return {
+                    "success": True,
+                    "filter_type": filter_type,
+                    "count": 0,
+                    "bonanza_name": None,
+                    "members": []
+                }
+            query = text("""
+                SELECT op.id, op.partner_name, op.partner_code, op.phone,
+                       COALESCE(op.vgk4u_current_designation, 'Channel Partner') as designation,
+                       0 as files_count,
+                       COUNT(DISTINCT cl.id) as bonanza_files_count
+                FROM official_partners op
+                JOIN crm_leads cl ON (
+                    cl.associated_partner_id = op.id
+                    OR cl.source_ref_id = op.partner_code
+                    OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                )
+                CROSS JOIN LATERAL (
+                    SELECT COALESCE(
+                        cl.first_payment_received_date,
+                        (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                        (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                    ) AS first_pmt_date
+                ) pmt
+                WHERE op.category = 'VGK_TEAM'
+                  AND COALESCE(op.is_blocked, FALSE) = FALSE
+                  AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                  AND pmt.first_pmt_date IS NOT NULL
+                  AND pmt.first_pmt_date >= :start_date
+                  AND pmt.first_pmt_date <= :end_date
+                GROUP BY op.id, op.partner_name, op.partner_code, op.phone, op.vgk4u_current_designation
+                HAVING COUNT(DISTINCT cl.id) >= 1
+                ORDER BY op.partner_name ASC
+            """)
+            rows = db.execute(query, {'start_date': bonanza_row.start_date.date(), 'end_date': bonanza_row.end_with_grace.date()}).fetchall()
+        elif filter_type == "both":
+            query = text("""
+                SELECT op.id, op.partner_name, op.partner_code, op.phone,
+                       COALESCE(op.vgk4u_current_designation, 'Channel Partner') as designation,
+                       COUNT(DISTINCT cl.id) as files_count,
+                       COUNT(DISTINCT CASE 
+                           WHEN pmt.first_pmt_date IS NOT NULL 
+                            AND :start_date IS NOT NULL 
+                            AND pmt.first_pmt_date >= :start_date 
+                            AND pmt.first_pmt_date <= :end_date 
+                           THEN cl.id ELSE NULL 
+                       END) as bonanza_files_count
+                FROM official_partners op
+                JOIN crm_leads cl ON (
+                    cl.associated_partner_id = op.id
+                    OR cl.source_ref_id = op.partner_code
+                    OR cl.source_ref_id = CAST(op.id AS VARCHAR)
+                )
+                LEFT JOIN LATERAL (
+                    SELECT COALESCE(
+                        cl.first_payment_received_date,
+                        (SELECT MIN(created_at)::date FROM crm_lead_transactions WHERE lead_id = cl.id),
+                        (SELECT MIN(income_date) FROM income_entries WHERE lead_id = cl.id)
+                    ) AS first_pmt_date
+                ) pmt ON TRUE
+                WHERE op.category = 'VGK_TEAM'
+                  AND COALESCE(op.is_blocked, FALSE) = FALSE
+                  AND COALESCE(op.member_status, 'ACTIVE') != 'BLOCKED'
+                GROUP BY op.id, op.partner_name, op.partner_code, op.phone, op.vgk4u_current_designation
+                HAVING COUNT(DISTINCT cl.id) >= 1
+                ORDER BY op.partner_name ASC
+            """)
+            start_d = bonanza_row.start_date.date() if bonanza_row else None
+            end_d = bonanza_row.end_with_grace.date() if bonanza_row else None
+            rows = db.execute(query, {'start_date': start_d, 'end_date': end_d}).fetchall()
+        else:
+            return {"success": False, "error": f"Unknown filter_type: {filter_type}"}
+
+        members = []
+        for r in rows:
+            members.append({
+                "id": r.id,
+                "partner_name": r.partner_name,
+                "partner_code": r.partner_code,
+                "phone": r.phone,
+                "designation": r.designation,
+                "files_count": getattr(r, 'files_count', 0),
+                "bonanza_files_count": getattr(r, 'bonanza_files_count', 0),
+                "is_blocked": False
+            })
+
+        return {
+            "success": True,
+            "filter_type": filter_type,
+            "count": len(members),
+            "bonanza_name": bonanza_name,
+            "bonanza_id": bonanza_id,
+            "members": members
+        }
+    except Exception as e:
+        logger.exception("Error getting broadcast audience")
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/members")
 def list_vgk_members(
     is_active: Optional[bool] = Query(None),
