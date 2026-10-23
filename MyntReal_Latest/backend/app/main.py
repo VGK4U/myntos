@@ -6106,7 +6106,7 @@ def _startup_worker():
         from app.models.staff import StaffMenuMaster as _SMM
         _VGK_TEAM_MENUS = [
             {"menu_code": "VGK_COUPONS", "menu_name": "VGK Coupons", "menu_category": "vgk_team", "menu_icon": "fas fa-ticket-alt", "route_path": "/staff/vgk/coupons/available", "display_order": 703},
-            {"menu_code": "VGK_BONANZA_MANAGEMENT", "menu_name": "Bonanza Campaigns", "menu_category": "vgk_team", "menu_icon": "fas fa-trophy", "route_path": "/staff/vgk/bonanza-management", "display_order": 704},
+            {"menu_code": "VGK_BONANZA_MANAGEMENT", "menu_name": "Awards and Bonanza", "menu_category": "vgk_team", "menu_icon": "fas fa-award", "route_path": "/staff/vgk/bonanza-management", "display_order": 704},
             {"menu_code": "VGK_BONANZA_CLAIMS", "menu_name": "Bonanza Claims", "menu_category": "vgk_team", "menu_icon": "fas fa-clipboard-check", "route_path": "/staff/vgk/bonanza-claims", "display_order": 705},
             {"menu_code": "VGK_MY_REGISTRATIONS", "menu_name": "My VGK Registrations", "menu_category": "vgk_team", "menu_icon": "fas fa-user-check", "route_path": "/staff/vgk/my-registrations", "display_order": 706},
         ]

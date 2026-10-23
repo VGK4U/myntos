@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VGK Bonanza Management — Staff</title>
+<title>Awards and Bonanza — VGK For You</title>
   <link rel="icon" type="image/png" sizes="64x64" href="/public/zynova-z-icon.png?v=zclean2">
   <link rel="shortcut icon" type="image/x-icon" href="/public/zynova-z-favicon.ico?v=zclean2">
   <link rel="apple-touch-icon" href="/public/apple-touch-icon.png?v=zclean2">
@@ -105,6 +105,185 @@ tbody tr { background: #ffffff !important; }
 <nav id="staffSidebar"></nav>
 <div id="headerContainer" style="position:sticky;top:0;z-index:1000;margin-left:260px;"><header class="top-header"></header></div>
 <main class="main-content" id="main-content">
+
+    <!-- Top-Level Tab Navigation: Awards & Bonanza -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+        <div>
+            <h1 style="font-size: 22px; font-weight: 800; color: #1e1b4b; margin: 0; display: flex; align-items: center; gap: 9px;">
+                <i class="fas fa-award text-warning"></i> Awards and Bonanza
+            </h1>
+            <p style="color: #64748b; font-size: 12.5px; margin: 2px 0 0 0;">
+                MintOS VGK For You — Lifetime Awards & Special Bonanza Campaigns
+            </p>
+        </div>
+        <div class="mgmt-tabs" style="margin-bottom: 0;">
+            <button class="mgmt-tab active" id="mainTabBtnAwards" onclick="switchMainTab('awards')">
+                <i class="fas fa-medal me-2"></i>Awards
+            </button>
+            <button class="mgmt-tab" id="mainTabBtnBonanza" onclick="switchMainTab('bonanza')">
+                <i class="fas fa-gift me-2"></i>Bonanza Rewards
+            </button>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- ── TAB 1: LIFETIME AWARDS ───────────────────────────────────────── -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="mainTabAwardsContent">
+        <!-- Awards Hero Banner -->
+        <div class="page-banner" style="background: linear-gradient(135deg, #1e1b4b 0%, #31104b 50%, #4c1d95 100%); border: 1px solid rgba(245, 158, 11, 0.4); padding: 20px 24px; position: relative; overflow: hidden; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); margin-bottom: 20px;">
+            <div style="position: absolute; top: -50px; right: -30px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%); pointer-events: none;"></div>
+            <div style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                        <span style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-weight: 800; padding: 3px 9px; border-radius: 6px; font-size: 10.5px; letter-spacing: 0.7px; text-transform: uppercase;">
+                            <i class="fas fa-crown me-1"></i> LIFETIME GIFT LADDER
+                        </span>
+                        <span style="color: #fbbf24; font-size: 12px; font-weight: 600;"><i class="fas fa-check-double me-1"></i> Verified Solar Production Model</span>
+                    </div>
+                    <h2 style="font-size: 21px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+                        VGK For You Lifetime Awards
+                    </h2>
+                    <p style="color: #cbd5e1; font-size: 12.5px; margin: 0 0 10px 0; max-width: 820px;">
+                        Qualification is based purely on verified completed solar customer files. <strong>1 File</strong> counted on validated 1st payment. <strong>3 Files = 1 Active Member</strong>. Insurance requires 1 file with 100% full deal payment.
+                    </p>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; padding: 4px 10px; font-size: 11px; color: #fde68a;">
+                        <i class="fas fa-info-circle text-warning"></i>
+                        <span>Notice: Financial share allocations & 4th-level upline shares are pending executive approval. Progression is shown as verified operational active-member counts.</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-sm btn-outline-light" onclick="loadAwardsOverview()" style="font-weight: 600; border-radius: 8px; padding: 6px 12px;">
+                        <i class="fas fa-sync me-1"></i> Refresh Data
+                    </button>
+                    <button class="btn btn-sm btn-warning text-dark" onclick="switchAwardsSubtab('team_achievements')" style="font-weight: 700; border-radius: 8px; padding: 6px 14px; box-shadow: 0 2px 8px rgba(245,158,11,0.35);">
+                        <i class="fas fa-users-cog me-1"></i> Team Achievements
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Awards KPI Row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;" id="awardsKpiRow">
+            <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+                <div class="stat-val" id="kpiCumActive" style="color: #7c3aed;">—</div>
+                <div class="stat-label">Cumulative Active Members</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Lifetime Qualifying (≥3 Files)</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #059669;">
+                <div class="stat-val" id="kpiFreshActive" style="color: #059669;">—</div>
+                <div class="stat-label">Fresh Active Members</div>
+                <div style="font-size: 11px; color: #059669; font-weight: 600; margin-top: 2px;" id="kpiFreshPeriodBadge">Current Month</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #2563eb;">
+                <div class="stat-val" id="kpiInsurance" style="color: #2563eb;">—</div>
+                <div class="stat-label">Insurance Qualified</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">₹10 Lakh Cover (1 Full Paid File)</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #d97706;">
+                <div class="stat-val" id="kpiPendingThreshold" style="color: #d97706;">—</div>
+                <div class="stat-label">Threshold Pending</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">1–2 Files Completed</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #4f46e5;">
+                <div class="stat-val" id="kpiTotalFiles" style="color: #4f46e5;">—</div>
+                <div class="stat-label">Total Files Validated</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Validated 1st Payment</div>
+            </div>
+        </div>
+
+        <!-- Awards Subtab Navigation -->
+        <div class="mgmt-tabs" style="margin-bottom: 16px;">
+            <button class="mgmt-tab active" id="awardsSubtabBtnLadder" onclick="switchAwardsSubtab('ladder')">
+                <i class="fas fa-trophy me-2"></i>Lifetime Gift Ladder
+            </button>
+            <button class="mgmt-tab" id="awardsSubtabBtnTeam" onclick="switchAwardsSubtab('team_achievements')">
+                <i class="fas fa-users-cog me-2"></i>Team Achievements & Validation
+            </button>
+        </div>
+
+        <!-- ── SUBTAB A: Lifetime Gift Ladder ────────────────────────────── -->
+        <div id="awardsViewLadder">
+            <div id="giftLadderGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div style="text-align: center; padding: 40px; color: #9ca3af; grid-column: 1 / -1;">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Loading Lifetime Gift Ladder…
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUBTAB B: Team Achievements & Validation ─────────────────── -->
+        <div id="awardsViewTeam" style="display: none;">
+            <!-- Filters -->
+            <div class="filter-bar">
+                <div style="flex: 1; min-width: 180px;">
+                    <label>Partner Search</label>
+                    <input class="form-control" id="awardsFilterSearch" placeholder="Name or code…" onkeyup="if(event.key==='Enter')loadAwardsOverview()">
+                </div>
+                <div>
+                    <label>Active Status</label>
+                    <select class="form-select" id="awardsFilterStatus" onchange="loadAwardsOverview()">
+                        <option value="all">All Members</option>
+                        <option value="active">🏆 Active Only (≥3 Files)</option>
+                        <option value="pending">⏳ Pending (1–2 Files)</option>
+                        <option value="inactive">0 Files Done</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Validation Issues</label>
+                    <select class="form-select" id="awardsFilterProblem" onchange="loadAwardsOverview()">
+                        <option value="all">All Issues</option>
+                        <option value="has_problems">⚠️ Has Problems</option>
+                        <option value="clean">✓ Clean / Verified</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Payment Validation</label>
+                    <select class="form-select" id="awardsFilterPayment" onchange="loadAwardsOverview()">
+                        <option value="all">All Payments</option>
+                        <option value="first_paid">1st Payment Validated</option>
+                        <option value="fully_paid">100% Fully Paid (Insurance)</option>
+                        <option value="unpaid">Unpaid / Missing</option>
+                    </select>
+                </div>
+                <button class="btn-filter apply" onclick="loadAwardsOverview()"><i class="fas fa-search me-1"></i>Apply</button>
+                <button class="btn-filter reset" onclick="clearAwardsFilters()">Reset</button>
+            </div>
+
+            <!-- Team Achievements Table Card -->
+            <div class="table-card">
+                <div class="table-card-header">
+                    <h3><i class="fas fa-users me-2" style="color: #7c3aed;"></i>Team Active-Member Validation</h3>
+                    <div style="font-size: 12px; color: #6b7280;">
+                        <span id="awardsMemberCountBadge" class="badge bg-light text-dark border">0 Members</span>
+                    </div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="table" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Partner</th>
+                                <th>Upline Sponsor</th>
+                                <th style="text-align: center;">Validated Files</th>
+                                <th style="text-align: center;">Active Threshold</th>
+                                <th style="text-align: center;">Insurance (₹10L)</th>
+                                <th>Validation Status</th>
+                                <th style="text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="awardsTeamTableBody">
+                            <tr><td colspan="7" style="text-align: center; padding: 32px; color: #9ca3af;"><i class="fas fa-spinner fa-spin me-2"></i>Loading team achievements…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div><!-- /mainTabAwardsContent -->
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- ── TAB 2: BONANZA REWARDS (Existing Campaigns & Tracking) ───────── -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="mainTabBonanzaContent" style="display: none;">
+
     <!-- Achievers Poster Hero Banner Header -->
     <div class="page-banner" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #3b0764 100%); border: 1px solid rgba(245, 158, 11, 0.35); padding: 22px 26px; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25); border-radius: 14px;">
         <!-- Background Ambient Glow -->
@@ -301,6 +480,7 @@ tbody tr { background: #ffffff !important; }
         </div>
 
     </div><!-- /mgmtTabTracking -->
+    </div><!-- /mainTabBonanzaContent -->
 </div>
 
 <!-- Create / Edit Modal -->
@@ -923,6 +1103,108 @@ tbody tr { background: #ffffff !important; }
         </div>
     </div>
 </div>
+
+<!-- Active Member Validation Details Modal (View Action) -->
+<div class="modal-overlay" id="activeMemberValidationModal">
+    <div class="modal-box" style="width: 860px; max-width: 96vw; max-height: 94vh;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b, #31104b); color: white; border-top-left-radius: 14px; border-top-right-radius: 14px; padding: 16px 20px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #fbbf24; color: #000; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
+                        MEMBER VALIDATION AUDIT
+                    </span>
+                    <h4 id="valModalPartnerTitle" style="color: white; font-size: 16px; margin: 0; font-weight: 700;">Partner Name</h4>
+                </div>
+                <div id="valModalPartnerSubtitle" style="color: #cbd5e1; font-size: 11.5px; margin-top: 3px;">Partner Code: —</div>
+            </div>
+            <button onclick="closeMemberValidationModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:white;opacity:0.8">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <!-- Status Pill Banners -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;" id="valModalBadgesRow">
+                <div id="valModalActiveBadge" style="padding: 10px 14px; border-radius: 10px; background: #f3f4f6; border: 1px solid #e5e7eb;">
+                    <!-- Active Status -->
+                </div>
+                <div id="valModalInsuranceBadge" style="padding: 10px 14px; border-radius: 10px; background: #f3f4f6; border: 1px solid #e5e7eb;">
+                    <!-- Insurance Status -->
+                </div>
+            </div>
+
+            <!-- Upline Attribution Path (4 Tiers) -->
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;">
+                <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-sitemap" style="color: #7c3aed;"></i> Upline Attribution Hierarchy Path
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;" id="valModalUplineRow">
+                    <!-- Upline cards -->
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #9ca3af; font-style: italic;">
+                    * Notice: Attribution shares are pending corporate policy decision. No commission or reserve amounts are deducted in this view.
+                </div>
+            </div>
+
+            <!-- Counted Solar Files Table -->
+            <div style="margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase;">
+                        <i class="fas fa-file-invoice" style="color: #059669;"></i> Counted Solar Customer Files (<span id="valModalFilesCount">0</span>)
+                    </div>
+                    <div style="font-size: 11px; color: #059669; font-weight: 600;">
+                        1 File recognized on validated 1st payment
+                    </div>
+                </div>
+                <div style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <table class="table table-sm" style="margin-bottom: 0; font-size: 12px;">
+                        <thead style="background: #f9fafb;">
+                            <tr>
+                                <th>File ID</th>
+                                <th>Customer Name</th>
+                                <th style="text-align: right;">Deal Value</th>
+                                <th style="text-align: right;">Payment Recd</th>
+                                <th style="text-align: center;">1st Payment</th>
+                                <th style="text-align: center;">Full Payment</th>
+                                <th>Pipeline Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="valModalFilesTableBody">
+                            <!-- Files rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Specific Validation Problems / Outstanding Diagnostics -->
+            <div style="margin-bottom: 18px;">
+                <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">
+                    <i class="fas fa-exclamation-triangle" style="color: #d97706;"></i> Outstanding Validation Diagnostics
+                </div>
+                <div id="valModalProblemsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Problems list -->
+                </div>
+            </div>
+
+            <!-- Placement Reassignment Audit History -->
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px;">
+                <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fas fa-history" style="color: #2563eb;"></i> Placement Change Audit History</span>
+                    <span style="font-size: 10.5px; color: #059669; text-transform: none; font-weight: 600;">Immutable File Tallies</span>
+                </div>
+                <div id="valModalPlacementContainer">
+                    <!-- Placement changes -->
+                </div>
+            </div>
+
+            <!-- Privacy & RBAC Guard Notice -->
+            <div style="margin-top: 14px; text-align: center; font-size: 10.5px; color: #9ca3af;">
+                <i class="fas fa-lock me-1"></i> Role-Based Access Control: Bank account credentials, PAN/KYC cards, and personal financial accounts are protected and restricted from this view.
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e5e7eb;">
+            <button class="btn btn-secondary btn-sm" onclick="closeMemberValidationModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/staff_sidebar.js"></script>
@@ -2592,7 +2874,409 @@ async function loadEcCategories() {
     } catch (_) {}
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// [DC-VGK-AWARDS-BONANZA-001] Awards & Bonanza Tab Switching & Rendering
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _currentMainTab = 'awards';
+let _currentAwardsSubtab = 'ladder';
+let _awardsLoaded = false;
+let _awardsData = null;
+
+function switchMainTab(tab) {
+    _currentMainTab = tab;
+    const isAwards = (tab === 'awards');
+    document.getElementById('mainTabAwardsContent').style.display = isAwards ? '' : 'none';
+    document.getElementById('mainTabBonanzaContent').style.display = isAwards ? 'none' : '';
+    document.getElementById('mainTabBtnAwards').classList.toggle('active', isAwards);
+    document.getElementById('mainTabBtnBonanza').classList.toggle('active', !isAwards);
+    if (isAwards && !_awardsLoaded) {
+        loadAwardsOverview();
+    }
+}
+
+function switchAwardsSubtab(subtab) {
+    _currentAwardsSubtab = subtab;
+    const isLadder = (subtab === 'ladder');
+    document.getElementById('awardsViewLadder').style.display = isLadder ? '' : 'none';
+    document.getElementById('awardsViewTeam').style.display = isLadder ? 'none' : '';
+    document.getElementById('awardsSubtabBtnLadder').classList.toggle('active', isLadder);
+    document.getElementById('awardsSubtabBtnTeam').classList.toggle('active', !isLadder);
+}
+
+function clearAwardsFilters() {
+    if (document.getElementById('awardsFilterSearch')) document.getElementById('awardsFilterSearch').value = '';
+    if (document.getElementById('awardsFilterStatus')) document.getElementById('awardsFilterStatus').value = 'all';
+    if (document.getElementById('awardsFilterProblem')) document.getElementById('awardsFilterProblem').value = 'all';
+    if (document.getElementById('awardsFilterPayment')) document.getElementById('awardsFilterPayment').value = 'all';
+    loadAwardsOverview();
+}
+
+async function loadAwardsOverview() {
+    const search = document.getElementById('awardsFilterSearch') ? document.getElementById('awardsFilterSearch').value.trim() : '';
+    const status = document.getElementById('awardsFilterStatus') ? document.getElementById('awardsFilterStatus').value : 'all';
+    const problem = document.getElementById('awardsFilterProblem') ? document.getElementById('awardsFilterProblem').value : 'all';
+    const payment = document.getElementById('awardsFilterPayment') ? document.getElementById('awardsFilterPayment').value : 'all';
+
+    let url = '/api/v1/vgk/awards/overview?';
+    const params = [];
+    if (search) params.push('search=' + encodeURIComponent(search));
+    if (status && status !== 'all') params.push('status_filter=' + encodeURIComponent(status));
+    if (problem && problem !== 'all') params.push('problem_filter=' + encodeURIComponent(problem));
+    if (payment && payment !== 'all') params.push('payment_filter=' + encodeURIComponent(payment));
+    url += params.join('&');
+
+    try {
+        const resp = await staffFetch(url);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || data.error || 'Failed to load awards');
+        _awardsData = data;
+        _awardsLoaded = true;
+        renderAwardsKPIs(data.kpis, data.reporting_period);
+        renderGiftLadder(data.gift_ladder);
+        renderTeamAchievements(data.members);
+    } catch (err) {
+        console.error('Failed to load awards overview:', err);
+    }
+}
+
+function renderAwardsKPIs(kpis, period) {
+    if (!kpis) return;
+    if (document.getElementById('kpiCumActive')) document.getElementById('kpiCumActive').textContent = kpis.cumulative_active_members || 0;
+    if (document.getElementById('kpiFreshActive')) document.getElementById('kpiFreshActive').textContent = kpis.fresh_active_members || 0;
+    if (document.getElementById('kpiFreshPeriodBadge')) document.getElementById('kpiFreshPeriodBadge').textContent = 'Current Month: ' + (period || 'Oct 2026');
+    if (document.getElementById('kpiInsurance')) document.getElementById('kpiInsurance').textContent = kpis.insurance_qualified_members || 0;
+    if (document.getElementById('kpiPendingThreshold')) document.getElementById('kpiPendingThreshold').textContent = kpis.pending_threshold_members || 0;
+    if (document.getElementById('kpiTotalFiles')) document.getElementById('kpiTotalFiles').textContent = kpis.total_eligible_files || 0;
+}
+
+function renderGiftLadder(ladder) {
+    const grid = document.getElementById('giftLadderGrid');
+    if (!grid) return;
+    if (!ladder || !ladder.length) {
+        grid.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;grid-column:1/-1">No gift ladder tiers available.</div>';
+        return;
+    }
+
+    const icons = {
+        1: { icon: 'fas fa-shield-alt', color: '#2563eb' },
+        2: { icon: 'fas fa-swimming-pool', color: '#06b6d4' },
+        3: { icon: 'fas fa-mountain', color: '#059669' },
+        4: { icon: 'fas fa-motorcycle', color: '#d97706' },
+        5: { icon: 'fas fa-coins', color: '#eab308' },
+        6: { icon: 'fas fa-home', color: '#7c3aed' },
+        7: { icon: 'fas fa-car-side', color: '#dc2626' },
+        8: { icon: 'fas fa-hotel', color: '#4f46e5' },
+        9: { icon: 'fas fa-crown', color: '#d97706' }
+    };
+
+    grid.innerHTML = ladder.map(t => {
+        const ic = icons[t.tier_number] || { icon: 'fas fa-award', color: '#7c3aed' };
+        const isAchieved = t.status === 'achieved';
+        const isInProgress = t.status === 'in_progress';
+        
+        const badgeHtml = isAchieved 
+            ? '<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:4px 8px;"><i class="fas fa-check-circle me-1"></i>Achieved</span>'
+            : (isInProgress
+                ? `<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:11px;padding:4px 8px;"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>`
+                : `<span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:11px;padding:4px 8px;"><i class="fas fa-lock me-1"></i>Locked</span>`);
+
+        const gapText = isAchieved
+            ? '<span style="color:#059669;font-weight:700;"><i class="fas fa-check me-1"></i>Milestone Met!</span>'
+            : `<span style="color:#d97706;font-weight:600;"><i class="fas fa-arrow-up me-1"></i>${t.gap} ${t.target_metric === 'files' ? 'file' : 'active member'}${t.gap === 1 ? '' : 's'} to qualify</span>`;
+
+        return `
+            <div class="stat-card" style="border: 1.5px solid ${isAchieved ? '#10b981' : (isInProgress ? '#c4b5fd' : '#e5e7eb')}; border-radius: 12px; padding: 18px; position: relative; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: ${ic.color}15; display: flex; align-items: center; justify-content: center; color: ${ic.color}; font-size: 20px;">
+                            <i class="${ic.icon}"></i>
+                        </div>
+                        <div>
+                            <span style="font-size: 10.5px; font-weight: 800; color: #6b7280; text-transform: uppercase;">Tier ${t.tier_number}</span>
+                            <h4 style="font-size: 15px; font-weight: 800; color: #111827; margin: 0;">${t.reward_name}</h4>
+                        </div>
+                    </div>
+                    ${badgeHtml}
+                </div>
+
+                <p style="font-size: 12px; color: #4b5563; margin-bottom: 10px; min-height: 32px;">${t.reward_description}</p>
+
+                <div style="background: #f9fafb; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11.5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: #6b7280; font-weight: 600;">Rule:</span>
+                        <span style="color: #111827; font-weight: 700;">${t.qualification_rule}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #6b7280; font-weight: 600;">Indicative Cost:</span>
+                        <span style="color: #4b5563; font-weight: 700;">${t.cost_display} <span style="font-size: 10px; color: #9ca3af; font-weight: normal;">(${t.cost_type})</span></span>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;">
+                        <span style="font-weight: 700; color: #111827;">Progress: ${t.current_count} / ${t.target_count} ${t.target_metric === 'files' ? 'Files' : 'Active Members'}</span>
+                        <span style="font-weight: 800; color: ${isAchieved ? '#059669' : '#7c3aed'};">${t.progress_pct}%</span>
+                    </div>
+                    <div style="height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden;">
+                        <div style="height: 100%; width: ${t.progress_pct}%; background: ${isAchieved ? '#10b981' : 'linear-gradient(90deg, #7c3aed, #a855f7)'}; border-radius: 999px;"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                    ${gapText}
+                    <button class="btn btn-sm btn-link" style="font-size: 11px; padding: 0; text-decoration: none; color: #7c3aed; font-weight: 700;" onclick="switchAwardsSubtab('team_achievements')">
+                        View Team &rarr;
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderTeamAchievements(members) {
+    const tbody = document.getElementById('awardsTeamTableBody');
+    const badge = document.getElementById('awardsMemberCountBadge');
+    if (!tbody) return;
+
+    if (!members || !members.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 32px; color: #9ca3af;">No matching members found in your authorized team scope.</td></tr>';
+        if (badge) badge.textContent = '0 Members';
+        return;
+    }
+
+    if (badge) badge.textContent = members.length + ' Members';
+
+    tbody.innerHTML = members.map(m => {
+        const activeBadge = m.is_active
+            ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:4px 8px;"><i class="fas fa-check-circle me-1"></i>Active (${m.eligible_files_count}/3)</span>`
+            : `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;padding:4px 8px;"><i class="fas fa-clock me-1"></i>Pending (${m.eligible_files_count}/3)</span>`;
+
+        const insuranceBadge = m.insurance_eligible
+            ? `<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:11px;padding:4px 8px;"><i class="fas fa-shield-alt me-1"></i>Qualified</span>`
+            : `<span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:11px;padding:4px 8px;">Pending Full Pay</span>`;
+
+        let problemBadge = '<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:3px 7px;"><i class="fas fa-check me-1"></i>Clean</span>';
+        if (m.validation_problems && m.validation_problems.length > 0) {
+            const prob = m.validation_problems[0];
+            const probCount = m.validation_problems.length;
+            problemBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:11px;padding:3px 7px;" title="${prob.reason}"><i class="fas fa-exclamation-triangle me-1"></i>${prob.problem_type} ${probCount > 1 ? `(+${probCount - 1})` : ''}</span>`;
+        }
+
+        const sponsorName = m.upline_path && m.upline_path.sponsor ? m.upline_path.sponsor.partner_name : '—';
+        const sponsorCode = m.upline_path && m.upline_path.sponsor ? m.upline_path.sponsor.partner_code : '';
+
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight: 700; color: #111827;">${m.partner_name}</div>
+                    <div style="font-size: 11px; color: #6b7280;"><code>${m.partner_code}</code> • Reg: ${m.created_at || '—'}</div>
+                </td>
+                <td>
+                    <div style="font-size: 12px; color: #374151;">${sponsorName}</div>
+                    <div style="font-size: 10.5px; color: #9ca3af;">${sponsorCode}</div>
+                </td>
+                <td style="text-align: center;">
+                    <span style="font-weight: 800; font-size: 13px; color: #111827;">${m.eligible_files_count}</span>
+                    <span style="font-size: 11px; color: #6b7280;"> files</span>
+                </td>
+                <td style="text-align: center;">${activeBadge}</td>
+                <td style="text-align: center;">${insuranceBadge}</td>
+                <td>${problemBadge}</td>
+                <td style="text-align: center;">
+                    <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 10px; font-size: 11.5px;" onclick="openMemberValidationModal(${m.partner_id})">
+                        <i class="fas fa-search-plus me-1"></i>View
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openMemberValidationModal(partnerId) {
+    if (!_awardsData || !_awardsData.members) return;
+    const m = _awardsData.members.find(x => x.partner_id === partnerId);
+    if (!m) {
+        alert('Member details not found');
+        return;
+    }
+
+    document.getElementById('valModalPartnerTitle').textContent = m.partner_name;
+    document.getElementById('valModalPartnerSubtitle').textContent = `Partner Code: ${m.partner_code} • Registered: ${m.created_at || '—'} • Category: ${m.category}`;
+
+    // Badges Row
+    const activeEl = document.getElementById('valModalActiveBadge');
+    if (m.is_active) {
+        activeEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-check-circle" style="color:#059669;font-size:22px;"></i>
+                <div>
+                    <div style="font-size:12px;font-weight:800;color:#065f46;">3-File Active Threshold Achieved</div>
+                    <div style="font-size:11px;color:#047857;">${m.eligible_files_count} Validated Files • Achieved: ${m.active_achieved_date || 'Verified'}</div>
+                </div>
+            </div>
+        `;
+    } else {
+        const rem = 3 - m.eligible_files_count;
+        activeEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-clock" style="color:#d97706;font-size:22px;"></i>
+                <div>
+                    <div style="font-size:12px;font-weight:800;color:#92400e;">Active Threshold Pending (${m.eligible_files_count}/3 Files)</div>
+                    <div style="font-size:11px;color:#b45309;">Needs ${rem} more validated file${rem === 1 ? '' : 's'} to activate</div>
+                </div>
+            </div>
+        `;
+    }
+
+    const insEl = document.getElementById('valModalInsuranceBadge');
+    if (m.insurance_eligible) {
+        insEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-shield-alt" style="color:#2563eb;font-size:22px;"></i>
+                <div>
+                    <div style="font-size:12px;font-weight:800;color:#1e40af;">Insurance Qualified: ₹10 Lakh Cover</div>
+                    <div style="font-size:11px;color:#1d4ed8;">100% full deal payment collected on File #${m.insurance_lead_id || 'Verified'}</div>
+                </div>
+            </div>
+        `;
+    } else {
+        insEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-shield-alt" style="color:#9ca3af;font-size:22px;"></i>
+                <div>
+                    <div style="font-size:12px;font-weight:800;color:#374151;">Insurance Eligibility Pending</div>
+                    <div style="font-size:11px;color:#6b7280;">Requires 1 file with 100% full deal payment collected</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Upline Path (4 tiers)
+    const uplineRow = document.getElementById('valModalUplineRow');
+    const u = m.upline_path || {};
+    uplineRow.innerHTML = `
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+            <div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;">1. Sponsor / Direct</div>
+            <div style="font-weight:700;color:#111827;font-size:12px;">${(u.sponsor && u.sponsor.partner_name) || 'Direct Company'}</div>
+            <div style="font-size:10px;color:#9ca3af;">${(u.sponsor && u.sponsor.partner_code) || ''}</div>
+        </div>
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+            <div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;">2. Senior Partner</div>
+            <div style="font-weight:700;color:#111827;font-size:12px;">${(u.senior && u.senior.partner_name) || '—'}</div>
+            <div style="font-size:10px;color:#9ca3af;">${(u.senior && u.senior.partner_code) || ''}</div>
+        </div>
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+            <div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;">3. Extended Team</div>
+            <div style="font-weight:700;color:#111827;font-size:12px;">${(u.extended && u.extended.partner_name) || '—'}</div>
+            <div style="font-size:10px;color:#9ca3af;">${(u.extended && u.extended.partner_code) || ''}</div>
+        </div>
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+            <div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;">4. Core Team</div>
+            <div style="font-weight:700;color:#111827;font-size:12px;">${(u.core && u.core.partner_name) || '—'}</div>
+            <div style="font-size:10px;color:#9ca3af;">${(u.core && u.core.partner_code) || ''}</div>
+        </div>
+    `;
+
+    // Counted Files Table
+    const filesCountEl = document.getElementById('valModalFilesCount');
+    const filesTbody = document.getElementById('valModalFilesTableBody');
+    const files = m.counted_files || [];
+    filesCountEl.textContent = files.length;
+
+    if (!files.length) {
+        filesTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#9ca3af;">No validated solar files on record for this member.</td></tr>';
+    } else {
+        filesTbody.innerHTML = files.map(f => {
+            const firstBadge = f.first_payment_validated
+                ? `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:10px;">✓ Paid (${f.first_payment_date || 'Done'})</span>`
+                : '<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;">Pending</span>';
+
+            const fullBadge = f.fully_paid
+                ? '<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">✓ 100% Full</span>'
+                : `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;">Bal: ₹${(f.deal_value_balance||0).toLocaleString()}</span>`;
+
+            return `
+                <tr>
+                    <td><strong>#${f.lead_id}</strong></td>
+                    <td>${f.customer_name}</td>
+                    <td style="text-align:right;">₹${(f.deal_value_total||0).toLocaleString()}</td>
+                    <td style="text-align:right;color:#059669;font-weight:700;">₹${(f.deal_value_received||0).toLocaleString()}</td>
+                    <td style="text-align:center;">${firstBadge}</td>
+                    <td style="text-align:center;">${fullBadge}</td>
+                    <td><span class="badge bg-light text-dark border">${f.pipeline_status}</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Diagnostics / Validation Problems
+    const probContainer = document.getElementById('valModalProblemsContainer');
+    const probs = m.validation_problems || [];
+    if (!probs.length) {
+        probContainer.innerHTML = '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;color:#065f46;font-size:12px;"><i class="fas fa-check-circle me-1"></i>All records verified clean. Zero outstanding validation issues.</div>';
+    } else {
+        probContainer.innerHTML = probs.map(p => {
+            let bg = '#fffbeb';
+            let border = '#fcd34d';
+            let text = '#92400e';
+            let icon = 'fas fa-exclamation-triangle';
+            if (p.severity === 'danger' || p.problem_type === 'LEAD_CANCELLED') {
+                bg = '#fef2f2'; border = '#fca5a5'; text = '#991b1b'; icon = 'fas fa-times-circle';
+            } else if (p.severity === 'info' || p.problem_type === 'ACTIVE_THRESHOLD_PENDING') {
+                bg = '#eff6ff'; border = '#bfdbfe'; text = '#1e40af'; icon = 'fas fa-info-circle';
+            }
+            return `
+                <div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px;font-size:11.5px;color:${text};display:flex;align-items:flex-start;gap:8px;">
+                    <i class="${icon}" style="margin-top:2px;"></i>
+                    <div style="flex:1;">
+                        <strong>[${p.problem_type}]</strong> ${p.reason}
+                        ${p.date ? `<div style="font-size:10px;opacity:0.8;margin-top:2px;">Recorded Date: ${p.date}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Placement Reassignment History
+    const placeContainer = document.getElementById('valModalPlacementContainer');
+    const hist = m.placement_history || [];
+    if (!hist.length) {
+        placeContainer.innerHTML = '<div style="font-size:11.5px;color:#9ca3af;font-style:italic;">No sponsor or upline placement changes on record. Member remains under original sponsor.</div>';
+    } else {
+        placeContainer.innerHTML = `
+            <table class="table table-sm" style="font-size:11.5px;margin-bottom:0;">
+                <thead>
+                    <tr><th>Date</th><th>Old Upline</th><th>New Upline</th><th>Reason</th></tr>
+                </thead>
+                <tbody>
+                    ${hist.map(h => `
+                        <tr>
+                            <td>${h.date || '—'}</td>
+                            <td>${h.old_upline_name} (${h.old_upline_code})</td>
+                            <td><strong>${h.new_upline_name} (${h.new_upline_code})</strong></td>
+                            <td>${h.reason}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    document.getElementById('activeMemberValidationModal').classList.add('open');
+}
+
+function closeMemberValidationModal() {
+    const modal = document.getElementById('activeMemberValidationModal');
+    if (modal) modal.classList.remove('open');
+}
+
 async function init() {
+    // [DC-VGK-AWARDS-BONANZA-001] Load Lifetime Awards overview
+    loadAwardsOverview();
+
     // Fire loadBonanzas immediately so campaign table renders without delay
     const mainLoad = loadBonanzas();
     // Fire metadata dropdown loads concurrently

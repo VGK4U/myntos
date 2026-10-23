@@ -36,7 +36,7 @@ RUN cd frontend && npm install --omit=dev --no-audit --no-fund --no-package-lock
 RUN cd backend/whatsapp-group-bot && NODE_OPTIONS="--max-old-space-size=512" npm install --omit=dev --no-audit --no-fund
 
 # Cache buster ensures AWS Docker daemon always copies fresh application code without busting dependency cache
-ARG BUILD_ID=v2.4.73-fix-dvr-advance-display-and-option-b-settlement
+ARG BUILD_ID=v2.4.74-awards-and-bonanza-lifetime-ladder-and-member-validation
 
 # Copy application source code
 COPY . .

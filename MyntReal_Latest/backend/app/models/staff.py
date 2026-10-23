@@ -2860,7 +2860,7 @@ DEFAULT_STAFF_MENUS = [
     {"menu_code": "VGK_COMMISSION_CONFIG", "menu_name": "Commission Config", "menu_category": "vgk_team", "menu_icon": "fas fa-sliders-h", "route_path": "/staff/vgk/config", "display_order": 701},
     {"menu_code": "VGK_INCOME_MANAGEMENT", "menu_name": "Income Management", "menu_category": "vgk_team", "menu_icon": "fas fa-hand-holding-usd", "route_path": "/staff/vgk/income-unified", "display_order": 702},
     {"menu_code": "VGK_COUPONS", "menu_name": "VGK Coupons", "menu_category": "vgk_team", "menu_icon": "fas fa-ticket-alt", "route_path": "/staff/vgk/coupons/available", "display_order": 703},
-    {"menu_code": "VGK_BONANZA_MANAGEMENT", "menu_name": "Bonanza Campaigns", "menu_category": "vgk_team", "menu_icon": "fas fa-trophy", "route_path": "/staff/vgk/bonanza-management", "display_order": 704},
+    {"menu_code": "VGK_BONANZA_MANAGEMENT", "menu_name": "Awards and Bonanza", "menu_category": "vgk_team", "menu_icon": "fas fa-award", "route_path": "/staff/vgk/bonanza-management", "display_order": 704},
     {"menu_code": "VGK_BONANZA_CLAIMS", "menu_name": "Bonanza Claims", "menu_category": "vgk_team", "menu_icon": "fas fa-clipboard-check", "route_path": "/staff/vgk/bonanza-claims", "display_order": 705},
     {"menu_code": "VGK_PROMO_CODES", "menu_name": "VGK Promo Codes", "menu_category": "vgk_team", "menu_icon": "fas fa-tags", "route_path": "/staff/vgk/promo-codes", "display_order": 706},
     # DC-VGK-PARTNER-SYNC-001: VGK Admin sub-section for partner KYC review

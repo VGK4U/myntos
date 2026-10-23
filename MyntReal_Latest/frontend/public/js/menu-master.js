@@ -476,7 +476,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
         sub_section_code: "VGK_BONANZA",
         sub_section_label: "VGK Bonanza",
         items: [
-          { menu_code: "VGK_BONANZA_MANAGEMENT", label: "Bonanza Campaigns", route: "/staff/vgk/bonanza-management", audience: ["STAFF"] },
+          { menu_code: "VGK_BONANZA_MANAGEMENT", label: "Awards and Bonanza", route: "/staff/vgk/bonanza-management", audience: ["STAFF"] },
           { menu_code: "VGK_BONANZA_CLAIMS", label: "Bonanza Claims", route: "/staff/vgk/bonanza-claims", audience: ["STAFF"] }
         ]
       },

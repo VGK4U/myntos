@@ -10645,3 +10645,335 @@ def get_public_ledger_data(token: Optional[str] = Query(None), code: Optional[st
 
 
 
+
+
+# ===========================================================================
+# [DC-VGK-AWARDS-BONANZA-001] VGK Awards & Bonanza: Lifetime Awards & Member Validation
+# ===========================================================================
+
+@router.get("/awards/overview")
+def get_vgk_awards_overview(
+    search: Optional[str] = Query(None, description="Partner code or name search"),
+    status_filter: Optional[str] = Query("all", description="all | active | pending | inactive"),
+    problem_filter: Optional[str] = Query("all", description="all | has_problems | clean"),
+    payment_filter: Optional[str] = Query("all", description="all | first_paid | fully_paid | unpaid"),
+    upline_id: Optional[int] = Query(None, description="Filter by upline sponsor partner ID"),
+    current_user = Depends(get_current_user_hybrid_with_partner),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns verified lifetime awards progress and active-member validation data.
+    - Qualification basis: Eligible files count (1 file on validated 1st payment; 3 files = Active Member).
+    - Insurance Gift: Requires 1 fully paid file (deal_value_received >= deal_value_total).
+    - Strict RBAC: VGK members see only authorized downline; staff see authorized scope.
+    - Zero exposure of PAN/KYC, bank details, or commissions.
+    - Financial allocations and payouts remain unassigned and pending approval.
+    """
+    try:
+        now = get_indian_time()
+        current_period_label = now.strftime("%B %Y")
+        is_member = isinstance(current_user, OfficialPartner)
+        
+        if is_member:
+            scoped_partners = _collect_tree_partners(current_user, db, depth=10)
+        else:
+            scoped_q = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+            if upline_id:
+                scoped_q = scoped_q.filter(OfficialPartner.parent_partner_id == upline_id)
+            scoped_partners = scoped_q.all()
+
+        scoped_ids = [p.id for p in scoped_partners]
+        if not scoped_ids:
+            return {
+                "success": True,
+                "reporting_period": current_period_label,
+                "kpis": {
+                    "cumulative_active_members": 0,
+                    "fresh_active_members": 0,
+                    "insurance_qualified_members": 0,
+                    "pending_threshold_members": 0,
+                    "total_eligible_files": 0,
+                    "total_members_in_scope": 0
+                },
+                "gift_ladder": [],
+                "members": []
+            }
+
+        all_vgk = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM').all()
+        partner_map = {p.id: p for p in all_vgk}
+
+        change_logs_raw = db.query(VGKUplineChangeLog).filter(VGKUplineChangeLog.member_id.in_(scoped_ids)).all()
+        change_logs_by_member = {}
+        for cl in change_logs_raw:
+            old_p = partner_map.get(cl.old_upline_id)
+            new_p = partner_map.get(cl.new_upline_id)
+            change_logs_by_member.setdefault(cl.member_id, []).append({
+                "id": cl.id,
+                "old_upline_id": cl.old_upline_id,
+                "old_upline_name": old_p.partner_name if old_p else f"Partner #{cl.old_upline_id}",
+                "old_upline_code": old_p.partner_code if old_p else "",
+                "new_upline_id": cl.new_upline_id,
+                "new_upline_name": new_p.partner_name if new_p else f"Partner #{cl.new_upline_id}",
+                "new_upline_code": new_p.partner_code if new_p else "",
+                "reason": cl.reason or "Upline placement reassignment",
+                "date": cl.created_at.strftime("%Y-%m-%d %H:%M") if cl.created_at else None,
+                "entries_reassigned": bool(cl.entries_reassigned)
+            })
+
+        leads_raw = db.execute(text("""
+            SELECT 
+                cl.id, cl.associated_partner_id, cl.name, cl.deal_value_total, cl.deal_value_received, cl.deal_value_balance,
+                cl.first_payment_received_date, cl.submit_date, cl.status, cl.solar_pipeline_status, cl.created_at,
+                cl.team_senior_partner_id, cl.team_extended_partner_id, cl.team_core_partner_id
+            FROM crm_leads cl
+            WHERE cl.associated_partner_id = ANY(:pids)
+            ORDER BY cl.id DESC;
+        """), {"pids": scoped_ids}).fetchall()
+
+        leads_by_partner = {}
+        for l in leads_raw:
+            leads_by_partner.setdefault(l.associated_partner_id, []).append(l)
+
+        member_records = []
+        cumulative_active_count = 0
+        fresh_active_count = 0
+        insurance_qualified_count = 0
+        total_eligible_files = 0
+        pending_active_count = 0
+
+        for p in scoped_partners:
+            p_leads = leads_by_partner.get(p.id, [])
+            eligible_files = []
+            counted_files_details = []
+            validation_problems = []
+            has_full_paid = False
+            full_paid_lead_id = None
+
+            for l in p_leads:
+                is_canc = (l.status in ('cancelled', 'lost', 'rejected')) or (l.solar_pipeline_status in ('cancelled', 'not_interested', 'bank_not_interested'))
+                has_first_pay = (l.first_payment_received_date is not None) or ((l.deal_value_received or 0) > 0)
+                is_full = ((l.deal_value_received or 0) >= (l.deal_value_total or 1)) and ((l.deal_value_total or 0) > 0)
+
+                cust_name = l.name or f"Customer #{l.id}"
+                if is_member and cust_name and len(cust_name) > 2:
+                    parts = cust_name.split()
+                    cust_name = " ".join([part[0] + "***" for part in parts if part])
+
+                f_info = {
+                    "lead_id": l.id,
+                    "customer_name": cust_name,
+                    "deal_value_total": float(l.deal_value_total or 0),
+                    "deal_value_received": float(l.deal_value_received or 0),
+                    "deal_value_balance": float(l.deal_value_balance or 0),
+                    "first_payment_date": l.first_payment_received_date.strftime("%Y-%m-%d") if l.first_payment_received_date else (l.created_at.strftime("%Y-%m-%d") if l.created_at and has_first_pay else None),
+                    "first_payment_validated": bool(has_first_pay),
+                    "fully_paid": bool(is_full),
+                    "pipeline_status": l.solar_pipeline_status or l.status or "Submitted",
+                    "is_cancelled": bool(is_canc)
+                }
+
+                if is_canc:
+                    validation_problems.append({
+                        "problem_type": "LEAD_CANCELLED",
+                        "severity": "danger",
+                        "reason": f"Lead #{l.id} marked as {l.solar_pipeline_status or l.status}. File excluded from active tally.",
+                        "lead_id": l.id,
+                        "date": l.created_at.strftime("%Y-%m-%d") if l.created_at else None
+                    })
+                elif has_first_pay:
+                    eligible_files.append(f_info)
+                    counted_files_details.append(f_info)
+                    if is_full:
+                        has_full_paid = True
+                        full_paid_lead_id = l.id
+                else:
+                    validation_problems.append({
+                        "problem_type": "PAYMENT_MISSING",
+                        "severity": "warning",
+                        "reason": f"Lead #{l.id} has no validated first payment. First payment required to count.",
+                        "lead_id": l.id,
+                        "date": l.submit_date.strftime("%Y-%m-%d") if l.submit_date else (l.created_at.strftime("%Y-%m-%d") if l.created_at else None)
+                    })
+
+            elig_cnt = len(eligible_files)
+            total_eligible_files += elig_cnt
+            is_act = (elig_cnt >= 3)
+            act_date = None
+            is_fresh = False
+
+            if is_act:
+                cumulative_active_count += 1
+                sorted_f = sorted(eligible_files, key=lambda x: x["first_payment_date"] or "")
+                act_date = sorted_f[2]["first_payment_date"]
+                if act_date:
+                    try:
+                        f_d = datetime.strptime(act_date, "%Y-%m-%d")
+                        if f_d.year == now.year and f_d.month == now.month:
+                            is_fresh = True
+                            fresh_active_count += 1
+                    except Exception:
+                        pass
+            elif 0 < elig_cnt < 3:
+                pending_active_count += 1
+                validation_problems.append({
+                    "problem_type": "ACTIVE_THRESHOLD_PENDING",
+                    "severity": "info",
+                    "reason": f"Completed {elig_cnt}/3 files. Needs {3 - elig_cnt} more validated file(s) to reach Active Member status.",
+                    "lead_id": None,
+                    "date": None
+                })
+            elif elig_cnt == 0 and len(p_leads) == 0:
+                validation_problems.append({
+                    "problem_type": "NO_LEADS_SUBMITTED",
+                    "severity": "secondary",
+                    "reason": "Registered member has no submitted solar leads.",
+                    "lead_id": None,
+                    "date": None
+                })
+
+            if has_full_paid:
+                insurance_qualified_count += 1
+            elif elig_cnt > 0:
+                validation_problems.append({
+                    "problem_type": "INSURANCE_PAYMENT_PENDING",
+                    "severity": "warning",
+                    "reason": "1 file with 100% full deal payment collected required for ₹10 Lakh insurance cover.",
+                    "lead_id": None,
+                    "date": None
+                })
+
+            parent_p = partner_map.get(p.parent_partner_id)
+            first_lead = p_leads[0] if p_leads else None
+            senior_p = partner_map.get(getattr(first_lead, "team_senior_partner_id", None)) if first_lead else None
+            extended_p = partner_map.get(getattr(first_lead, "team_extended_partner_id", None)) if first_lead else None
+            core_p = partner_map.get(getattr(first_lead, "team_core_partner_id", None)) if first_lead else None
+
+            upline_path = {
+                "sponsor": {"partner_id": parent_p.id if parent_p else None, "partner_name": parent_p.partner_name if parent_p else "Direct Company", "partner_code": parent_p.partner_code if parent_p else "COMPANY"},
+                "senior": {"partner_id": senior_p.id if senior_p else None, "partner_name": senior_p.partner_name if senior_p else "—", "partner_code": senior_p.partner_code if senior_p else ""},
+                "extended": {"partner_id": extended_p.id if extended_p else None, "partner_name": extended_p.partner_name if extended_p else "—", "partner_code": extended_p.partner_code if extended_p else ""},
+                "core": {"partner_id": core_p.id if core_p else None, "partner_name": core_p.partner_name if core_p else "—", "partner_code": core_p.partner_code if core_p else ""}
+            }
+
+            rec = {
+                "partner_id": p.id,
+                "partner_name": p.partner_name or f"Partner #{p.id}",
+                "partner_code": p.partner_code or f"VGK{p.id}",
+                "category": p.category or "VGK_TEAM",
+                "is_paid_activation": bool(p.is_paid_activation),
+                "created_at": p.created_at.strftime("%Y-%m-%d") if p.created_at else None,
+                "eligible_files_count": elig_cnt,
+                "is_active": is_act,
+                "active_achieved_date": act_date,
+                "is_fresh_active": is_fresh,
+                "insurance_eligible": bool(has_full_paid),
+                "insurance_lead_id": full_paid_lead_id,
+                "insurance_cover_display": "₹10 Lakh Cover",
+                "validation_problems": validation_problems,
+                "has_validation_problems": len(validation_problems) > 0,
+                "counted_files": counted_files_details,
+                "upline_path": upline_path,
+                "placement_history": change_logs_by_member.get(p.id, [])
+            }
+            member_records.append(rec)
+
+        filtered_members = member_records
+        if search:
+            s = search.strip().lower()
+            filtered_members = [m for m in filtered_members if s in m["partner_name"].lower() or s in m["partner_code"].lower()]
+        if status_filter == "active":
+            filtered_members = [m for m in filtered_members if m["is_active"]]
+        elif status_filter == "pending":
+            filtered_members = [m for m in filtered_members if 0 < m["eligible_files_count"] < 3]
+        elif status_filter == "inactive":
+            filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
+
+        if problem_filter == "has_problems":
+            filtered_members = [m for m in filtered_members if m["has_validation_problems"]]
+        elif problem_filter == "clean":
+            filtered_members = [m for m in filtered_members if not m["has_validation_problems"]]
+
+        if payment_filter == "first_paid":
+            filtered_members = [m for m in filtered_members if m["eligible_files_count"] > 0]
+        elif payment_filter == "fully_paid":
+            filtered_members = [m for m in filtered_members if m["insurance_eligible"]]
+        elif payment_filter == "unpaid":
+            filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
+
+        tiers_def = [
+            {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Eligible file with 100% full deal payment collected", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
+            {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
+            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "3 Cumulative Active Members (9 completed solar files)", "target_metric": "active_members", "target_count": 3, "cost_display": "₹10,000", "cost_type": "User Indicated"},
+            {"tier_number": 4, "reward_name": "EV Bike", "reward_description": "Brand new electric two-wheeler scooter / motorcycle", "qualification_rule": "25 Cumulative Active Members (75 completed solar files)", "target_metric": "active_members", "target_count": 25, "cost_display": "₹80,000", "cost_type": "User Indicated"},
+            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher", "qualification_rule": "75 Cumulative Active Members (225 completed solar files)", "target_metric": "active_members", "target_count": 75, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
+            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,000 Cumulative Active Members (3,000 completed solar files)", "target_metric": "active_members", "target_count": 1000, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
+            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "2,500 Cumulative Active Members (7,500 completed solar files)", "target_metric": "active_members", "target_count": 2500, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
+            {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided"},
+            {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
+        ]
+
+        ladder = []
+        for t in tiers_def:
+            if t.get("is_insurance"):
+                curr = 1 if insurance_qualified_count > 0 else 0
+                gap = 0 if insurance_qualified_count > 0 else 1
+                pct = 100.0 if insurance_qualified_count > 0 else 0.0
+                stat = "achieved" if insurance_qualified_count > 0 else "in_progress"
+            else:
+                curr = cumulative_active_count
+                tgt = t["target_count"]
+                gap = max(0, tgt - curr)
+                pct = min(100.0, round((curr / tgt) * 100, 1)) if tgt > 0 else 0.0
+                stat = "achieved" if curr >= tgt else ("in_progress" if curr > 0 else "locked")
+            ladder.append({**t, "current_count": curr, "gap": gap, "progress_pct": pct, "status": stat})
+
+        return {
+            "success": True,
+            "reporting_period": current_period_label,
+            "kpis": {
+                "cumulative_active_members": cumulative_active_count,
+                "fresh_active_members": fresh_active_count,
+                "insurance_qualified_members": insurance_qualified_count,
+                "pending_threshold_members": pending_active_count,
+                "total_eligible_files": total_eligible_files,
+                "total_members_in_scope": len(scoped_partners)
+            },
+            "gift_ladder": ladder,
+            "members": filtered_members
+        }
+    except Exception as e:
+        logger.error(f"[DC-AWARDS-OVERVIEW-ERR] Error: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e), "kpis": {}, "gift_ladder": [], "members": []}
+
+
+@router.get("/awards/member-validation/{partner_id}")
+def get_vgk_member_awards_validation(
+    partner_id: int,
+    current_user = Depends(get_current_user_hybrid_with_partner),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns specific active-member validation details for a single VGK partner.
+    Strictly checked against authorized downline if called by a VGK member.
+    """
+    is_member = isinstance(current_user, OfficialPartner)
+    if is_member:
+        allowed_ids = [p.id for p in _collect_tree_partners(current_user, db, depth=10)]
+        if partner_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Access denied: Partner is not in your authorized downline.")
+
+    overview = get_vgk_awards_overview(
+        search=None,
+        status_filter="all",
+        problem_filter="all",
+        payment_filter="all",
+        upline_id=None,
+        current_user=current_user,
+        db=db
+    )
+    members = overview.get("members", [])
+    matching = [m for m in members if m["partner_id"] == partner_id]
+    if not matching:
+        raise HTTPException(status_code=404, detail="Partner not found in authorized scope.")
+    return {"success": True, "data": matching[0]}
+
