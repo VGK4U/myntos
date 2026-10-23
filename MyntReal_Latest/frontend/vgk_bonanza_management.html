@@ -3137,24 +3137,29 @@ function renderGiftLadder(ladder) {
 }
 
 function openTierAchieversModal(tierNumber) {
-    if (!_awardsData || !_awardsData.members) return;
-    const { achievers, inProgress, targetCount, targetMetric, tier } = getTierAchievers(tierNumber);
+    if (!_awardsData || !_awardsData.gift_ladder) return;
+    const tier = _awardsData.gift_ladder.find(t => t.tier_number === tierNumber);
     if (!tier) return;
 
     document.getElementById('tierAchieversTierTag').textContent = `TIER ${tier.tier_number} ACHIEVERS`;
     document.getElementById('tierAchieversTitle').textContent = tier.reward_name;
     document.getElementById('tierAchieversSubtitle').textContent = `Rule: ${tier.qualification_rule} • Cost: ${tier.cost_display} (${tier.cost_type})`;
 
+    const achievers = tier.achievers || [];
+    const leadingContenders = tier.leading_contenders || [];
+    const targetCount = tier.target_count;
+    const targetMetric = tier.target_metric;
+
     // KPI row in modal
     const kpiRow = document.getElementById('tierAchieversKpiRow');
     kpiRow.innerHTML = `
         <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px;">
             <div style="font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase;">Target Requirement</div>
-            <div style="font-size: 15px; font-weight: 800; color: #111827;">${targetCount} ${targetMetric === 'files' ? 'Files' : 'Active Members'}</div>
+            <div style="font-size: 15px; font-weight: 800; color: #111827;">${targetCount} ${targetMetric === 'files' ? 'Full Paid File' : 'Active Member'}${targetCount === 1 ? '' : 's'} in Downline</div>
         </div>
         <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px;">
-            <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;">Qualified Achievers</div>
-            <div style="font-size: 15px; font-weight: 800; color: #065f46;">${achievers.length} Members</div>
+            <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;">Leaders Who Met Tier</div>
+            <div style="font-size: 15px; font-weight: 800; color: #065f46;">${achievers.length} ${tier.is_insurance ? 'Members' : 'Leaders'}</div>
         </div>
         <div style="background: ${tier.status === 'achieved' ? '#d1fae5' : '#eff6ff'}; border: 1px solid ${tier.status === 'achieved' ? '#6ee7b7' : '#bfdbfe'}; border-radius: 8px; padding: 10px 14px;">
             <div style="font-size: 10px; font-weight: 800; color: ${tier.status === 'achieved' ? '#047857' : '#1e40af'}; text-transform: uppercase;">Milestone Status</div>
@@ -3163,46 +3168,99 @@ function openTierAchieversModal(tierNumber) {
     `;
 
     const tableWrap = document.getElementById('tierAchieversTableWrap');
+    const thead = tableWrap.querySelector('thead tr');
     const tbody = document.getElementById('tierAchieversTableBody');
     const emptyBox = document.getElementById('tierAchieversEmptyContainer');
+
+    if (tier.is_insurance) {
+        thead.innerHTML = `
+            <th>Member / Partner</th>
+            <th>Upline Sponsor</th>
+            <th style="text-align: center;">Validated Files</th>
+            <th>Qualification Detail</th>
+            <th style="text-align: center;">Action</th>
+        `;
+    } else {
+        thead.innerHTML = `
+            <th>Leader (Who Met Tier)</th>
+            <th>Upline Sponsor</th>
+            <th style="text-align: center;">Active In Downline</th>
+            <th>Because Of Whom (Qualifying Downline Members)</th>
+            <th style="text-align: center;">Action</th>
+        `;
+    }
 
     if (achievers.length > 0) {
         tableWrap.style.display = '';
         emptyBox.style.display = 'none';
 
-        tbody.innerHTML = achievers.map(m => {
-            const sponsorName = m.upline_path && m.upline_path.sponsor ? m.upline_path.sponsor.partner_name : '—';
-            const sponsorCode = m.upline_path && m.upline_path.sponsor ? m.upline_path.sponsor.partner_code : '';
+        tbody.innerHTML = achievers.map(a => {
+            const qms = a.qualifying_active_members || [];
 
-            let detailHtml = '';
             if (tier.is_insurance) {
-                detailHtml = `<span style="color:#059669;font-weight:700;"><i class="fas fa-check-circle me-1"></i>100% Fully Paid on Lead #${m.insurance_lead_id || 'Verified'}</span>`;
-            } else {
-                detailHtml = `<span style="color:#059669;font-weight:700;"><i class="fas fa-check-circle me-1"></i>Active Threshold Met (${m.eligible_files_count} Validated Files)</span>${m.active_achieved_date ? `<div style="font-size:10.5px;color:#6b7280;">Achieved on: ${m.active_achieved_date}</div>` : ''}`;
+                const detail = (qms[0] && qms[0].detail) || '100% full deal payment collected';
+                return `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
+                            <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
+                        </td>
+                        <td>
+                            <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
+                            <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            <span style="font-weight: 800; font-size: 13px; color: #111827;">${(qms[0] && qms[0].files_count) || 1}</span>
+                        </td>
+                        <td>
+                            <span style="color: #059669; font-weight: 700;"><i class="fas fa-check-circle me-1"></i>${detail}</span>
+                        </td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 9px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
+                                <i class="fas fa-search-plus me-1"></i>Audit
+                            </button>
+                        </td>
+                    </tr>
+                `;
             }
+
+            const qmsHtml = qms.map(qm => `
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; font-size: 11px; margin-bottom: 3px;">
+                    <div>
+                        <strong style="color: #065f46;"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
+                        <code>${qm.partner_code}</code>
+                        <span class="badge" style="background: #dbeafe; color: #1e40af; margin-left: 4px;">${qm.generation}</span>
+                        <span style="color: #047857; font-weight: 600; margin-left: 4px;">• ${qm.files_count} Validated Files</span>
+                    </div>
+                    <button class="btn btn-xs btn-link p-0 text-success fw-bold" style="font-size: 10.5px; text-decoration: none;" onclick="closeTierAchieversModal(); openMemberValidationModal(${qm.partner_id});">
+                        Audit &rarr;
+                    </button>
+                </div>
+            `).join('');
 
             return `
                 <tr>
                     <td>
-                        <div style="font-weight:700;color:#111827;">${m.partner_name}</div>
-                        <div style="font-size:11px;color:#6b7280;"><code>${m.partner_code}</code> • Reg: ${m.created_at || '—'}</div>
+                        <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
+                        <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
                     </td>
                     <td>
-                        <div style="font-size:11.5px;color:#374151;">${sponsorName}</div>
-                        <div style="font-size:10px;color:#9ca3af;">${sponsorCode}</div>
+                        <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
+                        <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                     </td>
-                    <td style="text-align:center;">
-                        <span style="font-weight:800;font-size:13px;color:#111827;">${m.eligible_files_count}</span>
-                    </td>
-                    <td style="text-align:center;">
-                        <span class="badge" style="background:#d1fae5;color:#065f46;font-size:10.5px;padding:3px 7px;">
-                            ${m.is_active ? `Active (${m.eligible_files_count}/3)` : `${m.eligible_files_count}/3 Files`}
+                    <td style="text-align: center;">
+                        <span class="badge" style="background: #d1fae5; color: #065f46; font-size: 11.5px; padding: 4px 8px; font-weight: 800;">
+                            ${a.downline_active_count} Active
                         </span>
                     </td>
-                    <td>${detailHtml}</td>
-                    <td style="text-align:center;">
-                        <button class="btn btn-sm btn-outline-primary" style="font-weight:700;border-radius:6px;padding:3px 9px;font-size:11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${m.partner_id})">
-                            <i class="fas fa-search-plus me-1"></i>Audit
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            ${qmsHtml}
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 4px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
+                            <i class="fas fa-user-check me-1"></i>Audit Leader
                         </button>
                     </td>
                 </tr>
@@ -3212,29 +3270,34 @@ function openTierAchieversModal(tierNumber) {
         tableWrap.style.display = 'none';
         emptyBox.style.display = '';
 
-        const activeContributors = inProgress.filter(m => m.is_active);
-        const nearActive = inProgress.filter(m => !m.is_active && m.eligible_files_count > 0);
-
         emptyBox.innerHTML = `
-            <div style="text-align:center;margin-bottom:14px;">
-                <div style="width:48px;height:48px;border-radius:50%;background:#fef3c7;color:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:8px;">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px;">
                     <i class="fas fa-hourglass-half"></i>
                 </div>
-                <h5 style="font-weight:800;color:#111827;margin-bottom:4px;">No Members Have Unlocked Tier ${tier.tier_number} Yet</h5>
-                <p style="font-size:12px;color:#6b7280;margin:0 auto;max-width:540px;">
-                    Requires <strong>${targetCount} ${targetMetric === 'files' ? 'Files' : 'Active Members'}</strong>. Current organization total is <strong>${tier.current_count} Active Members</strong> (Deficit: <strong>${tier.gap} more</strong> to reach this milestone).
+                <h5 style="font-weight: 800; color: #111827; margin-bottom: 4px;">No Leaders Have Met Tier ${tier.tier_number} (${tier.reward_name}) Yet</h5>
+                <p style="font-size: 12px; color: #6b7280; margin: 0 auto; max-width: 580px;">
+                    Requires <strong>${targetCount} Active Members in downline</strong>. Current organization highest is <strong>${tier.current_count} Active Members</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
                 </p>
             </div>
-            ${activeContributors.length > 0 ? `
-                <div style="text-align:left;background:white;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;">
-                    <div style="font-size:11px;font-weight:800;color:#374151;text-transform:uppercase;margin-bottom:8px;">
-                        <i class="fas fa-star text-warning me-1"></i> Leading Active Contributors To This Goal (${activeContributors.length})
+            ${leadingContenders.length > 0 ? `
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
+                    <div style="font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; margin-bottom: 10px;">
+                        <i class="fas fa-chart-line text-primary me-1"></i> Leaders Closest To Unlocking This Milestone (${leadingContenders.length})
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                        ${activeContributors.map(c => `
-                            <span class="badge" style="background:#f3f4f6;color:#111827;border:1px solid #d1d5db;font-size:11px;padding:5px 9px;cursor:pointer;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.partner_id})">
-                                <strong>${c.partner_name}</strong> (${c.partner_code}) • ${c.eligible_files_count} Files &rarr;
-                            </span>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        ${leadingContenders.map(c => `
+                            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <strong style="color: #111827;">${c.leader_name}</strong> <code>${c.leader_code}</code>
+                                    <span class="badge" style="background: #dbeafe; color: #1e40af; margin-left: 6px;">${c.downline_active_count} Active in Downline</span>
+                                    <span style="color: #d97706; font-size: 11px; margin-left: 6px; font-weight: 600;">(Needs ${c.gap} more)</span>
+                                </div>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    <span style="font-size: 11px; color: #6b7280;">Because of: ${(c.qualifying_active_members||[]).map(q => q.partner_name).join(', ')}</span>
+                                    <button class="btn btn-xs btn-outline-primary" style="font-size: 10.5px; padding: 2px 7px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id});">Audit</button>
+                                </div>
+                            </div>
                         `).join('')}
                     </div>
                 </div>
@@ -3244,6 +3307,7 @@ function openTierAchieversModal(tierNumber) {
 
     document.getElementById('tierAchieversModal').classList.add('open');
 }
+
 
 function closeTierAchieversModal() {
     const modal = document.getElementById('tierAchieversModal');

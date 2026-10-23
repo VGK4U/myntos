@@ -10883,6 +10883,53 @@ def get_vgk_awards_overview(
             }
             member_records.append(rec)
 
+        # Build active members index across all evaluated members
+        active_members_dict = {}
+        for rec in member_records:
+            if rec["is_active"]:
+                active_members_dict[rec["partner_id"]] = {
+                    "partner_id": rec["partner_id"],
+                    "partner_name": rec["partner_name"],
+                    "partner_code": rec["partner_code"],
+                    "files_count": rec["eligible_files_count"],
+                    "achieved_date": rec["active_achieved_date"] or "Verified"
+                }
+
+        # Build children map for generation tree traversal
+        children_map = {}
+        for p in all_vgk:
+            children_map.setdefault(p.parent_partner_id, []).append(p.id)
+
+        def get_downline_with_depth(pid, current_depth=1, max_depth=10):
+            result = []
+            if current_depth > max_depth:
+                return result
+            for cid in children_map.get(pid, []):
+                result.append((cid, current_depth))
+                result.extend(get_downline_with_depth(cid, current_depth + 1, max_depth))
+            return result
+
+        # Compute for each member: downline active members count & exact list of qualifying downline members
+        for rec in member_records:
+            pid = rec["partner_id"]
+            dl_with_depth = get_downline_with_depth(pid)
+            dl_actives = []
+            for cid, depth in dl_with_depth:
+                if cid in active_members_dict:
+                    am = active_members_dict[cid]
+                    gen_label = "Direct Downline (L1)" if depth == 1 else f"Generation L{depth}"
+                    dl_actives.append({
+                        "partner_id": cid,
+                        "partner_name": am["partner_name"],
+                        "partner_code": am["partner_code"],
+                        "files_count": am["files_count"],
+                        "generation": gen_label,
+                        "depth": depth,
+                        "achieved_date": am["achieved_date"]
+                    })
+            rec["downline_active_count"] = len(dl_actives)
+            rec["downline_active_members"] = dl_actives
+
         filtered_members = member_records
         if search and isinstance(search, str):
             s = search.strip().lower()
@@ -10911,14 +10958,14 @@ def get_vgk_awards_overview(
 
         tiers_def = [
             {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Eligible file with 100% full deal payment collected", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
-            {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
-            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "3 Cumulative Active Members (9 completed solar files)", "target_metric": "active_members", "target_count": 3, "cost_display": "₹10,000", "cost_type": "User Indicated"},
-            {"tier_number": 4, "reward_name": "EV Bike", "reward_description": "Brand new electric two-wheeler scooter / motorcycle", "qualification_rule": "25 Cumulative Active Members (75 completed solar files)", "target_metric": "active_members", "target_count": 25, "cost_display": "₹80,000", "cost_type": "User Indicated"},
-            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher", "qualification_rule": "75 Cumulative Active Members (225 completed solar files)", "target_metric": "active_members", "target_count": 75, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
-            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,000 Cumulative Active Members (3,000 completed solar files)", "target_metric": "active_members", "target_count": 1000, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
-            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "2,500 Cumulative Active Members (7,500 completed solar files)", "target_metric": "active_members", "target_count": 2500, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
-            {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided"},
-            {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
+            {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member in downline (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
+            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "3 Cumulative Active Members in downline (9 completed solar files)", "target_metric": "active_members", "target_count": 3, "cost_display": "₹10,000", "cost_type": "User Indicated"},
+            {"tier_number": 4, "reward_name": "EV Bike", "reward_description": "Brand new electric two-wheeler scooter / motorcycle", "qualification_rule": "25 Cumulative Active Members in downline (75 completed solar files)", "target_metric": "active_members", "target_count": 25, "cost_display": "₹80,000", "cost_type": "User Indicated"},
+            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher", "qualification_rule": "75 Cumulative Active Members in downline (225 completed solar files)", "target_metric": "active_members", "target_count": 75, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
+            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,000 Cumulative Active Members in downline (3,000 completed solar files)", "target_metric": "active_members", "target_count": 1000, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
+            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "2,500 Cumulative Active Members in downline (7,500 completed solar files)", "target_metric": "active_members", "target_count": 2500, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
+            {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members in downline (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided"},
+            {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members in downline (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
         ]
 
         ladder = []
@@ -10928,13 +10975,78 @@ def get_vgk_awards_overview(
                 gap = 0 if insurance_qualified_count > 0 else 1
                 pct = 100.0 if insurance_qualified_count > 0 else 0.0
                 stat = "achieved" if insurance_qualified_count > 0 else "in_progress"
+                
+                # Achievers: Members who personally qualified for insurance (1 fully paid file)
+                achievers = [
+                    {
+                        "leader_id": m["partner_id"],
+                        "leader_name": m["partner_name"],
+                        "leader_code": m["partner_code"],
+                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                        "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
+                        "qualification_type": "Personal Deal Qualification",
+                        "downline_active_count": 0,
+                        "qualifying_active_members": [
+                            {
+                                "partner_id": m["partner_id"],
+                                "partner_name": m["partner_name"],
+                                "partner_code": m["partner_code"],
+                                "files_count": m["eligible_files_count"],
+                                "generation": "Self (Direct Producer)",
+                                "detail": f"100% full deal payment collected on Lead #{m.get('insurance_lead_id') or 'Verified'}"
+                            }
+                        ]
+                    }
+                    for m in member_records if m["insurance_eligible"]
+                ]
+                leading_contenders = []
             else:
                 curr = cumulative_active_count
                 tgt = t["target_count"]
                 gap = max(0, tgt - curr)
                 pct = min(100.0, round((curr / tgt) * 100, 1)) if tgt > 0 else 0.0
                 stat = "achieved" if curr >= tgt else ("in_progress" if curr > 0 else "locked")
-            ladder.append({**t, "current_count": curr, "gap": gap, "progress_pct": pct, "status": stat})
+
+                # Achievers: Leaders who met this tier because they have >= tgt Active Members in their downline
+                achievers = [
+                    {
+                        "leader_id": m["partner_id"],
+                        "leader_name": m["partner_name"],
+                        "leader_code": m["partner_code"],
+                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                        "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
+                        "downline_active_count": m["downline_active_count"],
+                        "qualification_type": f"Team Leadership ({m['downline_active_count']} Active Downline Members)",
+                        "qualifying_active_members": m["downline_active_members"]
+                    }
+                    for m in member_records if m["downline_active_count"] >= tgt
+                ]
+
+                # Leaders closest to this tier (leading contenders)
+                leading_contenders = [
+                    {
+                        "leader_id": m["partner_id"],
+                        "leader_name": m["partner_name"],
+                        "leader_code": m["partner_code"],
+                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                        "downline_active_count": m["downline_active_count"],
+                        "gap": max(0, tgt - m["downline_active_count"]),
+                        "qualifying_active_members": m["downline_active_members"]
+                    }
+                    for m in sorted(member_records, key=lambda x: x["downline_active_count"], reverse=True)
+                    if 0 < m["downline_active_count"] < tgt
+                ][:6]
+
+            ladder.append({
+                **t,
+                "current_count": curr,
+                "gap": gap,
+                "progress_pct": pct,
+                "status": stat,
+                "achievers": achievers,
+                "achievers_count": len(achievers),
+                "leading_contenders": leading_contenders
+            })
 
         return {
             "success": True,
