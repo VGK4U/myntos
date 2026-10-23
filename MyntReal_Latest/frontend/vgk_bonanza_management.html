@@ -4067,6 +4067,8 @@ function renderDynamicAchieversPoster(g, achieversList) {
     // Helper: compute qualified tier gifts
     const getQualifiedTiers = (m) => {
         const qualifiedTiers = [];
+        const isEc = g && (g.tiers?.[0]?.reward_type === 'extra_commission' || g.tiers?.[0]?.reward_type === 'brand_wise_commission');
+        if (isEc) return qualifiedTiers; // Extra commission campaigns use commercial breakdown cards, not gift pill tags
         if (m.tiers) {
             Object.values(m.tiers).forEach((t, ti) => {
                 const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
@@ -4083,6 +4085,10 @@ function renderDynamicAchieversPoster(g, achieversList) {
                         }
                     }
                     if (/^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) giftTitle = '';
+                    // Exclude long policy descriptions, terms, and dhamaka commission text
+                    if (giftTitle.length > 40 || giftTitle.toLowerCase().includes('commission') || giftTitle.toLowerCase().includes('dussehra dhamaka') || giftTitle.toLowerCase().includes('100% source')) {
+                        giftTitle = '';
+                    }
                     if (giftTitle) qualifiedTiers.push(giftTitle);
                 }
             });
