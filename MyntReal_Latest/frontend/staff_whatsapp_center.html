@@ -9384,10 +9384,6 @@ function openGbcRecipientDetail(idx) {
   if (msgBox) msgBox.textContent = r.rendered_message || '(No message body)';
   document.getElementById('gbcRecipientDetailModal')?.classList.add('open');
 }
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" style="padding:20px;color:#dc2626">Error loading recipient details: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
 
 // Page Initialization with Immediate Workspace Visibility & DOM ready state safeguard
 async function initWhatsAppCenter() {
