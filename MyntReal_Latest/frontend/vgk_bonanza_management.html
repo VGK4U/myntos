@@ -4162,15 +4162,14 @@ function renderDynamicAchieversPoster(g, achieversList) {
                     ${tierGiftsHtml}
                 </div>
 
-                <!-- 4. TOTAL BONANZA ACHIEVEMENT METRICS (Total Files, Total 1st Pmt Benefit, Total Business Value) -->
+                <!-- 4. TOTAL BONANZA ACHIEVEMENT METRICS (Only shown if member achieved more than 1 file) -->
+                ${isMultiFile ? `
                 <div style="width:100%; margin-bottom:14px; position:relative;">
-                    ${isMultiFile ? `
                     <div style="text-align:center; margin-bottom:8px;">
                         <span style="background:linear-gradient(90deg, #ea580c, #dc2626); color:#fff; font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:4px 20px; border-radius:14px; border:1px solid #fca5a5; box-shadow:0 3px 10px rgba(220,38,38,0.5);">
                             🔥 MULTI-FILE BONANZA ACHIEVER · ${filesCountNum} FILES DELIVERED 🔥
                         </span>
                     </div>
-                    ` : ''}
 
                     <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95)); border:2px solid #f59e0b; border-radius:12px; padding:12px 14px; box-shadow:0 4px 16px rgba(0,0,0,0.5); display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; text-align:center; position:relative; overflow:hidden;">
                         <!-- Col 1: Total Bonanza Files -->
@@ -4207,6 +4206,7 @@ function renderDynamicAchieversPoster(g, achieversList) {
                         </div>
                     </div>
                 </div>
+                ` : ''}
 
                 <!-- 5. Commercial Revenue & Benefit Breakdown Grid (4 Pillars) -->
                 <div style="width:100%; margin:4px 0 14px 0; position:relative;">
@@ -4279,7 +4279,7 @@ function renderDynamicAchieversPoster(g, achieversList) {
                 <div style="width:100%; background:linear-gradient(90deg, rgba(245,158,11,0.18), rgba(16,185,129,0.18)); border:1.5px solid #f59e0b; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:10px;">
                     <div style="text-align:center;">
                         <div style="font-size:9.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
-                            <i class="fas fa-check-circle text-warning me-1"></i> FIRST PAYMENT RELEASED (PER FILE)
+                            <i class="fas fa-check-circle text-warning me-1"></i> ${isMultiFile ? 'FIRST PAYMENT RELEASED (PER FILE)' : 'FIRST PAYMENT RELEASED BENEFIT'}
                         </div>
                         <div style="font-size:20px; font-weight:900; color:#fef08a; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
                             ${escBonanzaH(firstTotalVal)}
@@ -4289,22 +4289,13 @@ function renderDynamicAchieversPoster(g, achieversList) {
                     <div style="width:1px; height:36px; background:rgba(245,158,11,0.3);"></div>
                     <div style="text-align:center;">
                         <div style="font-size:9.5px; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.8px;">
-                            <i class="fas fa-trophy text-success me-1"></i> TOTAL DEAL BENEFIT (PER FILE)
+                            <i class="fas fa-trophy text-success me-1"></i> ${isMultiFile ? 'TOTAL DEAL BENEFIT (PER FILE)' : 'TOTAL DEAL BENEFIT'}
                         </div>
                         <div style="font-size:20px; font-weight:900; color:#6ee7b7; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
                             ${escBonanzaH(totalVal)}
                         </div>
                         <div style="font-size:8.5px; color:#cbd5e1;">(1st Released + Brand & Support)</div>
                     </div>
-                </div>
-
-                <!-- 7. Business Sectors 5 Pillars -->
-                <div style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">☀️ SOLAR ROOFTOP</span>
-                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">⚡ EV MOBILITY</span>
-                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🎓 SKILL TRAINING</span>
-                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🛡️ INSURANCE CARE</span>
-                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🏢 REAL ESTATE</span>
                 </div>
             </div>
         `;
