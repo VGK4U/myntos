@@ -3634,19 +3634,17 @@ function renderHarGharPreview(){
   lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
   lines.push(`1. No. of Leads At Bank - *${m.leads_at_bank ?? 0}*`);
   lines.push(`2. New VGK Members (Current Month) - *${m.new_vgk_members_current_month ?? 0}*`);
-  const revLabel = m.month_label ? ` (${m.month_label})` : '';
-  lines.push(`3. Revenue${revLabel} - *${m.revenue_current_month_formatted || '₹0'}*`);
-  lines.push(`4. Files From VGK members - *${m.files_from_vgk ?? 0}*`);
-  lines.push(`5. Files from the Company - *${m.files_from_company ?? 0}*`);
-  lines.push(`6. Files from Staff - *${m.files_from_staff ?? 0}*`);
-  lines.push(`7. Overall Completed Installations - *${m.overall_completed_installations ?? 0}*`);
-  lines.push(`8. This Month Installations - *${m.this_month_installations ?? 0}*`);
-  lines.push(`9. Pending for Installations - *${m.pending_for_installations ?? 0}*`);
-  lines.push(`10. 2nd payment pending - *${m.second_payment_pending ?? 0}*`);
-  lines.push(`11. Discom Pending - *${m.discom_pending ?? 0}*`);
-  lines.push(`12. DCR Pending - *${m.dcr_pending ?? 0}*`);
-  lines.push(`13. EB Cust. - *${m.eb_cust ?? 0}*`);
-  lines.push(`14. EB Staff - *${m.eb_staff ?? 0}*`);
+  lines.push(`3. Files From VGK members - *${m.files_from_vgk ?? 0}*`);
+  lines.push(`4. Files from the Company - *${m.files_from_company ?? 0}*`);
+  lines.push(`5. Files from Staff - *${m.files_from_staff ?? 0}*`);
+  lines.push(`6. Overall Completed Installations - *${m.overall_completed_installations ?? 0}*`);
+  lines.push(`7. This Month Installations - *${m.this_month_installations ?? 0}*`);
+  lines.push(`8. Pending for Installations - *${m.pending_for_installations ?? 0}*`);
+  lines.push(`9. 2nd payment pending - *${m.second_payment_pending ?? 0}*`);
+  lines.push(`10. Discom Pending - *${m.discom_pending ?? 0}*`);
+  lines.push(`11. DCR Pending - *${m.dcr_pending ?? 0}*`);
+  lines.push(`12. EB Cust. - *${m.eb_cust ?? 0}*`);
+  lines.push(`13. EB Staff - *${m.eb_staff ?? 0}*`);
 
   if(includeManual || _hgsSelectedPeople.length > 0 || _hgsSelectedCustomers.length > 0){
     lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -3912,17 +3910,17 @@ function renderHarGharAllParamsGrid(){
   const paramsConfig = [
     { key: 'leads_at_bank', label: '1. Leads At Bank', val: m.leads_at_bank ?? 0, color: '#0284c7' },
     { key: 'new_vgk_members', label: '2. New VGK Members', val: m.new_vgk_members_current_month ?? 0, color: '#16a34a' },
-    { key: 'files_from_vgk', label: '4. Files From VGK', val: m.files_from_vgk ?? 0, color: '#7c3aed' },
-    { key: 'files_from_company', label: '5. Files Company', val: m.files_from_company ?? 0, color: '#059669' },
-    { key: 'files_from_staff', label: '6. Files Staff', val: m.files_from_staff ?? 0, color: '#2563eb' },
-    { key: 'overall_completed_installations', label: '7. Installations Overall', val: m.overall_completed_installations ?? 0, color: '#0d9488' },
-    { key: 'this_month_installations', label: '8. Installations Month', val: m.this_month_installations ?? 0, color: '#10b981' },
-    { key: 'pending_for_installations', label: '9. Pending Installation', val: m.pending_for_installations ?? 0, color: '#f59e0b' },
-    { key: 'second_payment_pending', label: '10. 2nd Pmt Pending', val: m.second_payment_pending ?? 0, color: '#d97706' },
-    { key: 'discom_pending', label: '11. Discom Pending', val: m.discom_pending ?? 0, color: '#6366f1' },
-    { key: 'dcr_pending', label: '12. DCR Pending', val: m.dcr_pending ?? 0, color: '#8b5cf6' },
-    { key: 'eb_cust', label: '13. EB Cust.', val: m.eb_cust ?? 0, color: '#0284c7' },
-    { key: 'eb_staff', label: '14. EB Staff', val: m.eb_staff ?? 0, color: '#475569' },
+    { key: 'files_from_vgk', label: '3. Files From VGK', val: m.files_from_vgk ?? 0, color: '#7c3aed' },
+    { key: 'files_from_company', label: '4. Files Company', val: m.files_from_company ?? 0, color: '#059669' },
+    { key: 'files_from_staff', label: '5. Files Staff', val: m.files_from_staff ?? 0, color: '#2563eb' },
+    { key: 'overall_completed_installations', label: '6. Installations Overall', val: m.overall_completed_installations ?? 0, color: '#0d9488' },
+    { key: 'this_month_installations', label: '7. Installations Month', val: m.this_month_installations ?? 0, color: '#10b981' },
+    { key: 'pending_for_installations', label: '8. Pending Installation', val: m.pending_for_installations ?? 0, color: '#f59e0b' },
+    { key: 'second_payment_pending', label: '9. 2nd Pmt Pending', val: m.second_payment_pending ?? 0, color: '#d97706' },
+    { key: 'discom_pending', label: '10. Discom Pending', val: m.discom_pending ?? 0, color: '#6366f1' },
+    { key: 'dcr_pending', label: '11. DCR Pending', val: m.dcr_pending ?? 0, color: '#8b5cf6' },
+    { key: 'eb_cust', label: '12. EB Cust.', val: m.eb_cust ?? 0, color: '#0284c7' },
+    { key: 'eb_staff', label: '13. EB Staff', val: m.eb_staff ?? 0, color: '#475569' },
     { key: 'no_interaction_3d', label: '📞 0 Calls (3 Days)', val: m.members_no_interaction_3d_count ?? 0, color: '#dc2626' },
     { key: 'low_talktime_24h', label: '📞 <5m Talk (24h)', val: m.members_low_talktime_24h_count ?? 0, color: '#ea580c' },
   ];

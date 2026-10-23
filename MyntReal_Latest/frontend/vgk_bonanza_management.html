@@ -3512,6 +3512,55 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                         <i class="fas fa-camera text-warning me-1"></i> Click the camera icon on any achiever's photo in the live preview to upload or replace custom photo.
                     </div>
 
+                    <!-- Commercial & Revenue Breakdown (Customizable for Poster) -->
+                    <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:10px; padding-top:12px;">
+                        <label style="font-size:11px; font-weight:800; color:#fbbf24; text-transform:uppercase; display:block; margin-bottom:8px;">
+                            <i class="fas fa-coins me-1"></i> REVENUE & BENEFIT BREAKDOWN
+                        </label>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">ACHIEVER RANK TAG</label>
+                                    <input type="text" id="posterControlRank" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fbbf24; font-weight:700;" value="2nd ACHIEVER">
+                                </div>
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">CAREER DESIGNATION</label>
+                                    <input type="text" id="posterControlDesignation" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff;" value="SENIOR">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">L1 SOURCE (SAME DAY)</label>
+                                    <input type="text" id="posterControlL1" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff; font-weight:700;" value="₹9,000/-">
+                                </div>
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">EXTRA COMMISSION</label>
+                                    <input type="text" id="posterControlExtra" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff; font-weight:700;" value="₹4,500/-">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">TDS & ADMIN RETURN</label>
+                                    <input type="text" id="posterControlTds" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff; font-weight:700;" value="₹1,500/-">
+                                </div>
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">SUPPORT + BRAND (NETMETER)</label>
+                                    <input type="text" id="posterControlSupport" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff; font-weight:700;" value="₹5,000/-">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">TOTAL 1ST PMT BENEFIT</label>
+                                    <input type="text" id="posterControlFirstTotal" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1.5px solid #fbbf24; border-radius:5px; background:#1e293b; color:#fef08a; font-weight:800;" value="₹15,000/-">
+                                </div>
+                                <div>
+                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">TOTAL DEAL / FILE BENEFIT</label>
+                                    <input type="text" id="posterControlTotal" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1.5px solid #10b981; border-radius:5px; background:#1e293b; color:#34d399; font-weight:800;" value="₹20,000/-">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -3893,7 +3942,223 @@ function renderDynamicAchieversPoster(g, achieversList) {
         return;
     }
 
-    achieversGrid.innerHTML = list.map((m, idx) => {
+    // Controls values from Left Pane
+    const rankVal       = (document.getElementById('posterControlRank')?.value || '2nd ACHIEVER').trim();
+    const desigVal      = (document.getElementById('posterControlDesignation')?.value || 'SENIOR').trim();
+    const l1Val         = (document.getElementById('posterControlL1')?.value || '₹9,000/-').trim();
+    const extraVal      = (document.getElementById('posterControlExtra')?.value || '₹4,500/-').trim();
+    const tdsVal        = (document.getElementById('posterControlTds')?.value || '₹1,500/-').trim();
+    const supportVal    = (document.getElementById('posterControlSupport')?.value || '₹5,000/-').trim();
+    const firstTotalVal = (document.getElementById('posterControlFirstTotal')?.value || '₹15,000/-').trim();
+    const totalVal      = (document.getElementById('posterControlTotal')?.value || '₹20,000/-').trim();
+
+    // Helper: compute qualified tier gifts
+    const getQualifiedTiers = (m) => {
+        const qualifiedTiers = [];
+        if (m.tiers) {
+            Object.values(m.tiers).forEach((t, ti) => {
+                const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
+                if (t.award_name === 'Solar Festival Milestones' || (t.tier_label && t.tier_label.includes('Solar Festival Milestones'))) return;
+                if (t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid') {
+                    let giftTitle = t.award_name || t.tier_label || '';
+                    if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                    if (!giftTitle && t.reward_amount) giftTitle = `₹${Number(t.reward_amount).toLocaleString('en-IN')}`;
+                    if (!giftTitle || /^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) {
+                        const targetTierObj = (g.tiers && g.tiers[tierIdx]) ? g.tiers[tierIdx] : null;
+                        if (targetTierObj) {
+                            giftTitle = targetTierObj.award_name || targetTierObj.tier_label || '';
+                            if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
+                        }
+                    }
+                    if (/^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) giftTitle = '';
+                    if (giftTitle) qualifiedTiers.push(giftTitle);
+                }
+            });
+        }
+        return qualifiedTiers;
+    };
+
+    // CELEBRATION SINGLE-ACHIEVER FULL POSTER HERO MODE
+    if (list.length === 1) {
+        const m = list[0];
+        const imgId = `posterImg_${m.partner_id}_0`;
+        const initials = getCleanMemberInitials(m.partner_name);
+        const hasPhoto = m.photo_url && m.photo_url.trim() !== '' && m.photo_url !== 'null';
+
+        const photoContentHtml = hasPhoto
+            ? `<img id="${imgId}" src="${m.photo_url}" crossorigin="anonymous" alt="${escBonanzaH(m.partner_name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 100%; height: 100%; object-fit: cover;">
+               <div style="display:none; width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:32px; font-weight:900; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`
+            : `<div id="${imgId}_avatar" style="width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:32px; font-weight:900; display:flex; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`;
+
+        const qTiers = getQualifiedTiers(m);
+        const tierGiftsHtml = qTiers.length > 0
+            ? `<div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 4px;">
+                ${qTiers.map(gift => `
+                    <span style="background: rgba(245,158,11,0.25); border: 1px solid #f59e0b; color: #fef08a; font-size: 10px; font-weight: 800; padding: 2px 10px; border-radius: 6px;" title="${escBonanzaH(gift)}">
+                        <i class="fas fa-gift text-warning me-1"></i>${escBonanzaH(gift)}
+                    </span>
+                `).join('')}
+               </div>`
+            : '';
+
+        achieversGrid.innerHTML = `
+            <div style="width:100%; max-width:760px; margin:0 auto; display:flex; flex-direction:column; align-items:center; position:relative; z-index:2; box-sizing:border-box;">
+                
+                <!-- Celebratory Ribbon -->
+                <div style="margin-bottom:14px; text-align:center;">
+                    <div style="display:inline-block; background:linear-gradient(135deg, #991b1b, #dc2626, #b91c1c); color:#ffffff; font-weight:800; font-size:12px; padding:5px 24px; border-radius:16px; border:1px solid #fca5a5; text-transform:uppercase; letter-spacing:1px; box-shadow:0 3px 10px rgba(220,38,38,0.5);">
+                        🎉 FOR ACHIEVING THE ${escBonanzaH(titleVal.toUpperCase())} 🎉
+                    </div>
+                </div>
+
+                <!-- 1. Achiever Medallion with Golden Wreath & Dynamic Rank Shield -->
+                <div style="position:relative; margin-bottom:14px;">
+                    <!-- Floating Dynamic Rank Shield (Top) -->
+                    <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); z-index:5; background:linear-gradient(135deg, #b45309, #f59e0b, #fef08a, #d97706); color:#000; font-size:12px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:4px 20px; border-radius:18px; border:2px solid #ffffff; box-shadow:0 4px 15px rgba(0,0,0,0.7); white-space:nowrap;">
+                        ★ ${escBonanzaH(rankVal)} ★
+                    </div>
+                    
+                    <!-- Golden Medallion Ring -->
+                    <div style="width:136px; height:136px; border-radius:50%; padding:6px; background:linear-gradient(135deg, #f59e0b, #fef08a, #b45309, #d97706); box-shadow:0 0 28px rgba(245,158,11,0.65), inset 0 0 10px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; position:relative;">
+                        <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; border:3px solid #1e1b4b; background:#0f172a; position:relative;">
+                            ${photoContentHtml}
+                        </div>
+                        <!-- Upload Camera Button -->
+                        <button onclick="triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position:absolute; bottom:2px; right:2px; background:#f59e0b; border:2px solid #000; color:#000; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.6);">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Golden Plaque Name Banner & Career Designation -->
+                <div style="text-align:center; margin-bottom:14px; width:100%;">
+                    <div style="display:inline-block; background:linear-gradient(90deg, rgba(245,158,11,0), rgba(245,158,11,0.25) 20%, rgba(245,158,11,0.45) 50%, rgba(245,158,11,0.25) 80%, rgba(245,158,11,0)); border-top:1.5px solid #f59e0b; border-bottom:1.5px solid #f59e0b; padding:6px 36px; margin-bottom:6px;">
+                        <div style="font-size:22px; font-weight:900; color:#ffffff; letter-spacing:1.5px; text-transform:uppercase; text-shadow:0 2px 10px rgba(0,0,0,0.9);">
+                            ${escBonanzaH(m.partner_name)}
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:2px;">
+                        <span style="background:linear-gradient(90deg, #1e3a8a, #2563eb); border:1px solid #60a5fa; color:#dbeafe; font-size:10.5px; font-weight:800; padding:4px 14px; border-radius:12px; letter-spacing:0.8px; text-transform:uppercase;">
+                            <i class="fas fa-id-badge me-1"></i> CAREER DESIGNATION : <strong style="color:#ffffff;">${escBonanzaH(desigVal)}</strong>
+                        </span>
+                        <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fef08a; font-size:10.5px; font-weight:800; padding:4px 14px; border-radius:12px;">
+                            <i class="fas fa-hashtag me-1"></i> ${escBonanzaH(m.partner_code)}
+                        </span>
+                    </div>
+                    ${tierGiftsHtml}
+                </div>
+
+                <!-- 3. Commercial Revenue & Benefit Breakdown Grid (4 Pillars) -->
+                <div style="width:100%; margin:4px 0 16px 0; position:relative;">
+                    <div style="font-size:11px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <i class="fas fa-coins text-warning"></i> COMMERCIAL BENEFIT BREAKDOWN PER DEAL
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; position:relative;">
+                        
+                        <!-- Card 1: L1 Source Commission -->
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(16,185,129,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:8px; font-weight:800; background:#065f46; color:#a7f3d0; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                                DIRECT (SAME DAY)
+                            </div>
+                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                                L1 SOURCE COMMISSION
+                            </div>
+                            <div style="font-size:17px; font-weight:900; color:#34d399; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                                ${escBonanzaH(l1Val)}
+                            </div>
+                            <div style="font-size:8.5px; color:#6ee7b7; font-weight:600;">Before TDS & Admin</div>
+                        </div>
+
+                        <!-- Card 2: Extra Commission -->
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(245,158,11,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:8px; font-weight:800; background:#92400e; color:#fde68a; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                                + EXTRA COMMISSION
+                            </div>
+                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                                EXTRA INCOME
+                            </div>
+                            <div style="font-size:17px; font-weight:900; color:#fbbf24; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                                ${escBonanzaH(extraVal)}
+                            </div>
+                            <div style="font-size:8.5px; color:#fde68a; font-weight:600;">Offer Multiplier Reward</div>
+                        </div>
+
+                        <!-- Card 3: TDS & Admin Return -->
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(56,189,248,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:8px; font-weight:800; background:#075985; color:#bae6fd; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                                + 10% FEE WAIVER
+                            </div>
+                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                                TDS & ADMIN RETURN
+                            </div>
+                            <div style="font-size:17px; font-weight:900; color:#38bdf8; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                                ${escBonanzaH(tdsVal)}
+                            </div>
+                            <div style="font-size:8.5px; color:#bae6fd; font-weight:600;">100% Reimbursed to You</div>
+                        </div>
+
+                        <!-- Card 4: Support + Brand Pending -->
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(192,132,252,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:8px; font-weight:800; background:#6b21a8; color:#f3e8ff; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                                + POST-NETMETER
+                            </div>
+                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                                BRAND & SUPPORT
+                            </div>
+                            <div style="font-size:17px; font-weight:900; color:#c084fc; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                                ${escBonanzaH(supportVal)}
+                            </div>
+                            <div style="font-size:8.5px; color:#e9d5ff; font-weight:600;">Released After Netmeter</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 4. Golden Dual Highlight Release Bar -->
+                <div style="width:100%; background:linear-gradient(90deg, rgba(245,158,11,0.18), rgba(16,185,129,0.18)); border:1.5px solid #f59e0b; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:10px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:9.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
+                            <i class="fas fa-check-circle text-warning me-1"></i> FIRST PAYMENT RELEASED BENEFIT
+                        </div>
+                        <div style="font-size:20px; font-weight:900; color:#fef08a; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
+                            ${escBonanzaH(firstTotalVal)}
+                        </div>
+                        <div style="font-size:8.5px; color:#cbd5e1;">(L1 ₹9K + Extra ₹4.5K + TDS/Admin ₹1.5K)</div>
+                    </div>
+                    <div style="width:1px; height:36px; background:rgba(245,158,11,0.3);"></div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9.5px; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.8px;">
+                            <i class="fas fa-trophy text-success me-1"></i> TOTAL DEAL BENEFIT (PER FILE)
+                        </div>
+                        <div style="font-size:20px; font-weight:900; color:#6ee7b7; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
+                            ${escBonanzaH(totalVal)}
+                        </div>
+                        <div style="font-size:8.5px; color:#cbd5e1;">(1st Released + Brand & Support)</div>
+                    </div>
+                </div>
+
+                <!-- 5. Business Sectors 5 Pillars -->
+                <div style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">☀️ SOLAR ROOFTOP</span>
+                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">⚡ EV MOBILITY</span>
+                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🎓 SKILL TRAINING</span>
+                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🛡️ INSURANCE CARE</span>
+                    <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:14px; padding:3px 10px; font-size:9px; font-weight:700; color:#e2e8f0;">🏢 REAL ESTATE</span>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // MULTI-ACHIEVER GRID MODE
+    achieversGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; width: 100%; text-align: center; margin-bottom: 10px; font-size: 11.5px; color: #cbd5e1;">
+            Showing <strong style="color:#fbbf24;">${list.length}</strong> Achievers. 
+            <span style="color:#38bdf8; font-size:11px;">Tip: Click any achiever card to open their personalized celebration flyer with commercial revenue breakdown!</span>
+        </div>
+    ` + list.map((m, idx) => {
         const imgId = `posterImg_${m.partner_id}_${idx}`;
         const initials = getCleanMemberInitials(m.partner_name);
         const hasPhoto = m.photo_url && m.photo_url.trim() !== '' && m.photo_url !== 'null';
@@ -3903,37 +4168,7 @@ function renderDynamicAchieversPoster(g, achieversList) {
                <div style="display:none; width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:24px; font-weight:900; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`
             : `<div id="${imgId}_avatar" style="width:100%; height:100%; background:linear-gradient(135deg, #1e3a8a, #0f172a); color:#fbbf24; font-size:24px; font-weight:900; display:flex; align-items:center; justify-content:center; letter-spacing:1px;">${initials}</div>`;
 
-        // Compute eligible tier gifts/awards for this member
-        const qualifiedTiers = [];
-        if (m.tiers) {
-            Object.values(m.tiers).forEach((t, ti) => {
-                const tierIdx = t.tier_index !== undefined ? t.tier_index : ti;
-                // RULE 1: Do not show baseline qualification gate / campaign title
-                if (t.award_name === 'Solar Festival Milestones' || (t.tier_label && t.tier_label.includes('Solar Festival Milestones'))) return;
-
-                if (t.is_eligible === true || (t.gap !== undefined && t.gap <= 0) || t.claim_status === 'Paid') {
-                    // RULE 2: Always show gift name, NEVER generic "Tier 1" / "Tier 2"!
-                    let giftTitle = t.award_name || t.tier_label || '';
-                    if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
-                    if (!giftTitle && t.reward_amount) giftTitle = `₹${Number(t.reward_amount).toLocaleString('en-IN')}`;
-                    
-                    // Fallback to g.tiers[tierIdx] if still generic or empty
-                    if (!giftTitle || /^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) {
-                        const targetTierObj = (g.tiers && g.tiers[tierIdx]) ? g.tiers[tierIdx] : null;
-                        if (targetTierObj) {
-                            giftTitle = targetTierObj.award_name || targetTierObj.tier_label || '';
-                            if (giftTitle.includes('—')) giftTitle = giftTitle.split('—')[1].trim();
-                        }
-                    }
-
-                    // Remove any remaining generic 'Tier N' or 'Milestone N' text
-                    if (/^tier\s*\d+$/i.test(giftTitle) || /^milestone\s*\d+$/i.test(giftTitle)) giftTitle = '';
-
-                    if (giftTitle) qualifiedTiers.push(giftTitle);
-                }
-            });
-        }
-
+        const qualifiedTiers = getQualifiedTiers(m);
         const tierGiftsHtml = qualifiedTiers.length > 0
             ? `<div style="display: flex; flex-direction: column; gap: 3px; align-items: center; margin-top: 5px;">
                 ${qualifiedTiers.map(gift => `
@@ -3945,21 +4180,32 @@ function renderDynamicAchieversPoster(g, achieversList) {
             : '';
 
         return `
-            <div style="flex: 0 0 190px; width: 190px; max-width: 200px; margin: 0 auto; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 10px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box;">
+            <div onclick="focusSinglePosterAchiever('${m.partner_id}')" style="cursor: pointer; flex: 0 0 190px; width: 190px; max-width: 200px; margin: 0 auto; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 10px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#fbbf24';" onmouseout="this.style.transform='none'; this.style.borderColor='#f59e0b';">
                 <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 8px auto;">
                     <div style="width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fbbf24; overflow: hidden; box-shadow: 0 4px 10px rgba(245,158,11,0.5); background: #334155;">
                         ${photoContentHtml}
                     </div>
-                    <button onclick="triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
+                    <button onclick="event.stopPropagation(); triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position: absolute; bottom: -2px; right: -2px; background: #f59e0b; border: 2px solid #000; color: #000; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-camera"></i>
                     </button>
                 </div>
                 <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 2px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escBonanzaH(m.partner_name)}">${escBonanzaH(m.partner_name)}</div>
                 <div style="font-size: 10.5px; font-weight: 700; color: #f59e0b;">${escBonanzaH(m.partner_code)}</div>
                 ${tierGiftsHtml}
+                <div style="margin-top:6px; font-size:9.5px; color:#38bdf8; font-weight:700;">
+                    <i class="fas fa-eye me-1"></i> View Flyer
+                </div>
             </div>
         `;
     }).join('');
+}
+
+function focusSinglePosterAchiever(partnerId) {
+    const chkEls = document.querySelectorAll('.poster-member-chk');
+    chkEls.forEach(chk => {
+        chk.checked = (String(chk.getAttribute('data-partner-id')) === String(partnerId));
+    });
+    updatePosterFromControls();
 }
 
 async function capturePosterCanvasDataUrl() {
