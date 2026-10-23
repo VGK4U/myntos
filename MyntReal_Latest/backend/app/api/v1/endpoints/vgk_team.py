@@ -10678,7 +10678,7 @@ def get_vgk_awards_overview(
             scoped_partners = _collect_tree_partners(current_user, db, depth=10)
         else:
             scoped_q = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-            if upline_id:
+            if upline_id and isinstance(upline_id, int):
                 scoped_q = scoped_q.filter(OfficialPartner.parent_partner_id == upline_id)
             scoped_partners = scoped_q.all()
 
@@ -10878,27 +10878,30 @@ def get_vgk_awards_overview(
             member_records.append(rec)
 
         filtered_members = member_records
-        if search:
+        if search and isinstance(search, str):
             s = search.strip().lower()
             filtered_members = [m for m in filtered_members if s in m["partner_name"].lower() or s in m["partner_code"].lower()]
-        if status_filter == "active":
-            filtered_members = [m for m in filtered_members if m["is_active"]]
-        elif status_filter == "pending":
-            filtered_members = [m for m in filtered_members if 0 < m["eligible_files_count"] < 3]
-        elif status_filter == "inactive":
-            filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
+        if status_filter and isinstance(status_filter, str):
+            if status_filter == "active":
+                filtered_members = [m for m in filtered_members if m["is_active"]]
+            elif status_filter == "pending":
+                filtered_members = [m for m in filtered_members if 0 < m["eligible_files_count"] < 3]
+            elif status_filter == "inactive":
+                filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
 
-        if problem_filter == "has_problems":
-            filtered_members = [m for m in filtered_members if m["has_validation_problems"]]
-        elif problem_filter == "clean":
-            filtered_members = [m for m in filtered_members if not m["has_validation_problems"]]
+        if problem_filter and isinstance(problem_filter, str):
+            if problem_filter == "has_problems":
+                filtered_members = [m for m in filtered_members if m["has_validation_problems"]]
+            elif problem_filter == "clean":
+                filtered_members = [m for m in filtered_members if not m["has_validation_problems"]]
 
-        if payment_filter == "first_paid":
-            filtered_members = [m for m in filtered_members if m["eligible_files_count"] > 0]
-        elif payment_filter == "fully_paid":
-            filtered_members = [m for m in filtered_members if m["insurance_eligible"]]
-        elif payment_filter == "unpaid":
-            filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
+        if payment_filter and isinstance(payment_filter, str):
+            if payment_filter == "first_paid":
+                filtered_members = [m for m in filtered_members if m["eligible_files_count"] > 0]
+            elif payment_filter == "fully_paid":
+                filtered_members = [m for m in filtered_members if m["insurance_eligible"]]
+            elif payment_filter == "unpaid":
+                filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
 
         tiers_def = [
             {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Eligible file with 100% full deal payment collected", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
