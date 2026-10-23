@@ -10846,13 +10846,13 @@ def get_vgk_awards_overview(
                     "date": None
                 })
 
-            if has_full_paid:
+            if elig_cnt > 0:
                 insurance_qualified_count += 1
-            elif elig_cnt > 0:
+            else:
                 validation_problems.append({
-                    "problem_type": "INSURANCE_PAYMENT_PENDING",
-                    "severity": "warning",
-                    "reason": "1 file with 100% full deal payment collected required for ₹10 Lakh insurance cover.",
+                    "problem_type": "INSURANCE_FILE_PENDING",
+                    "severity": "info",
+                    "reason": "1 personal file with validated first payment required for ₹10 Lakh insurance cover.",
                     "lead_id": None,
                     "date": None
                 })
@@ -10881,8 +10881,8 @@ def get_vgk_awards_overview(
                 "is_active": is_act,
                 "active_achieved_date": act_date,
                 "is_fresh_active": is_fresh,
-                "insurance_eligible": bool(has_full_paid),
-                "insurance_lead_id": full_paid_lead_id,
+                "insurance_eligible": bool(elig_cnt > 0),
+                "insurance_lead_id": eligible_files[0]["lead_id"] if eligible_files else None,
                 "insurance_cover_display": "₹10 Lakh Cover",
                 "validation_problems": validation_problems,
                 "has_validation_problems": len(validation_problems) > 0,
@@ -10966,10 +10966,10 @@ def get_vgk_awards_overview(
                 filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
 
         tiers_def = [
-            {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Eligible file with 100% full deal payment collected", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
+            {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Personal eligible file with validated first payment", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
             {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member in downline (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
             {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "5 Cumulative Active Members in downline (15 completed solar files)", "target_metric": "active_members", "target_count": 5, "cost_display": "₹10,000", "cost_type": "User Indicated"},
-            {"tier_number": 4, "reward_name": "Araku / Resort Party", "reward_description": "Grand Celebration & Resort Party at Araku for Team / Family", "qualification_rule": "30 Cumulative Active Members in downline (90 completed solar files)", "target_metric": "active_members", "target_count": 30, "cost_display": "₹50,000", "cost_type": "User Indicated"},
+            {"tier_number": 4, "reward_name": "Gold Worth ₹2 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher worth ₹2,00,000", "qualification_rule": "30 Cumulative Active Members in downline (90 completed solar files)", "target_metric": "active_members", "target_count": 30, "cost_display": "₹2,00,000", "cost_type": "User Provided"},
             {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh / EV Bike", "reward_description": "Pure gold sovereign / jewellery voucher or EV Bike milestone", "qualification_rule": "100 Cumulative Active Members in downline (300 completed solar files)", "target_metric": "active_members", "target_count": 100, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
             {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,500 Cumulative Active Members in downline (4,500 completed solar files)", "target_metric": "active_members", "target_count": 1500, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
             {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "3,000 Cumulative Active Members in downline (9,000 completed solar files)", "target_metric": "active_members", "target_count": 3000, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
@@ -11014,7 +11014,7 @@ def get_vgk_awards_overview(
                                 "partner_code": m["partner_code"],
                                 "files_count": m["eligible_files_count"],
                                 "generation": "Self (Direct Producer)",
-                                "detail": f"100% full deal payment collected on Lead #{m.get('insurance_lead_id') or 'Verified'}"
+                                "detail": f"First payment validated on Lead #{m.get('insurance_lead_id') or 'Verified'}"
                             }
                         ]
                     }
