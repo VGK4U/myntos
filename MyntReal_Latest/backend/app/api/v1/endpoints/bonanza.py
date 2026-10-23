@@ -5584,7 +5584,8 @@ def vgk_member_tracking(
 
         if bz.reward_type in ('extra_commission', 'brand_wise_commission'):
             stats_rows = db.execute(text("""
-                SELECT ecl.partner_id, ecl.level, COUNT(ecl.id) as count, COALESCE(SUM(ie.commission_amount), 0) as earnings
+                SELECT ecl.partner_id, ecl.level, COUNT(ecl.id) as count, COALESCE(SUM(ie.commission_amount), 0) as earnings,
+                       MIN(ecl.created_at) as first_date
                 FROM bonanza_extra_commission_log ecl
                 LEFT JOIN vgk_cash_income_entries ie ON ie.id = ecl.vci_entry_id
                 WHERE ecl.bonanza_id = :bid AND ecl.partner_id = ANY(:pids)
@@ -5596,13 +5597,18 @@ def vgk_member_tracking(
                 lv = sr.level
                 cnt = int(sr.count)
                 earn = float(sr.earnings)
+                fdate = sr[4].strftime("%Y-%m-%d") if sr[4] else None
                 if pid not in ec_stats_map:
-                    ec_stats_map[pid] = {"levels": {}, "total_earnings": 0.0}
+                    ec_stats_map[pid] = {"levels": {}, "total_earnings": 0.0, "first_date": fdate}
+                else:
+                    if fdate and (not ec_stats_map[pid].get("first_date") or fdate < ec_stats_map[pid]["first_date"]):
+                        ec_stats_map[pid]["first_date"] = fdate
                 ec_stats_map[pid]["levels"][str(lv)] = {"count": cnt, "earnings": earn}
                 ec_stats_map[pid]["total_earnings"] += earn
 
         eligible_map = {}
         achieved_map = {}
+        first_date_map = {}
 
         # Get brand filters for this bonanza
         bf_rows = db.execute(text("""
@@ -5616,7 +5622,8 @@ def vgk_member_tracking(
             # DC-BONANZA-FIRST-DVR-002: count CONFIRMED income_entries by income_date
             # (lead owner = associated_partner_id).
             count_rows = db.execute(text("""
-                SELECT cl.associated_partner_id, COUNT(DISTINCT ie.lead_id)
+                SELECT cl.associated_partner_id, COUNT(DISTINCT ie.lead_id),
+                       MIN(ie.income_date) AS first_date
                 FROM income_entries ie
                 JOIN crm_leads cl ON cl.id = ie.lead_id
                 WHERE cl.associated_partner_id = ANY(:pids)
@@ -5631,6 +5638,9 @@ def vgk_member_tracking(
             """), {'pids': partner_ids, 'start': bz.start_date,
                    'end': bz.end_date, 'grace': grace}).fetchall()
             achieved_map = {r[0]: int(r[1]) for r in count_rows}
+            for r in count_rows:
+                if r[2]:
+                    first_date_map[r[0]] = r[2].strftime("%Y-%m-%d") if hasattr(r[2], 'strftime') else str(r[2])[:10]
 
             # Eligible for FIRST_DVR: submitted in range matching segment
             seg = bz.segment_id
@@ -5698,7 +5708,11 @@ def vgk_member_tracking(
                                COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
                                                     AND pmt.first_pmt_date >= CAST(:start AS DATE) 
                                                     AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
-                                               THEN cl.id END) AS done_count
+                                               THEN cl.id END) AS done_count,
+                               MIN(CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                         AND pmt.first_pmt_date >= CAST(:start AS DATE) 
+                                         AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                                    THEN pmt.first_pmt_date END) AS first_date
                         FROM crm_leads cl
                         JOIN official_partners op ON op.id = ANY(:pids)
                           AND (
@@ -5732,6 +5746,8 @@ def vgk_member_tracking(
                     for r in count_rows:
                         eligible_map[r[0]] = int(r[1])
                         achieved_map[r[0]] = int(r[2])
+                        if r[3]:
+                            first_date_map[r[0]] = r[3].strftime("%Y-%m-%d") if hasattr(r[3], 'strftime') else str(r[3])[:10]
                 else:
                     # Standard Solar: Eligible = first payment received in campaign range.
                     # Done = first payment received in campaign range + grace days.
@@ -5742,7 +5758,11 @@ def vgk_member_tracking(
                                                     AND pmt.first_pmt_date <= CAST(:end AS DATE) THEN cl.id END) AS eligible_count,
                                COUNT(DISTINCT CASE WHEN pmt.first_pmt_date IS NOT NULL 
                                                     AND pmt.first_pmt_date >= CAST(:start AS DATE)
-                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count
+                                                    AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL) THEN cl.id END) AS done_count,
+                               MIN(CASE WHEN pmt.first_pmt_date IS NOT NULL 
+                                         AND pmt.first_pmt_date >= CAST(:start AS DATE) 
+                                         AND pmt.first_pmt_date <= CAST(:end AS DATE) + CAST(:grace || ' days' AS INTERVAL)
+                                    THEN pmt.first_pmt_date END) AS first_date
                         FROM crm_leads cl
                         JOIN official_partners op ON op.id = ANY(:pids)
                           AND (
@@ -5775,6 +5795,8 @@ def vgk_member_tracking(
                     for r in count_rows:
                         eligible_map[r[0]] = int(r[1])
                         achieved_map[r[0]] = int(r[2])
+                        if r[3]:
+                            first_date_map[r[0]] = r[3].strftime("%Y-%m-%d") if hasattr(r[3], 'strftime') else str(r[3])[:10]
 
 
             else:
@@ -5794,7 +5816,11 @@ def vgk_member_tracking(
                            COUNT(DISTINCT CASE WHEN cld.deal_value_balance = 0
                                                 AND cld.status = 'completed'
                                                 AND cld.close_date IS NOT NULL
-                                                AND cld.close_date <= :end + INTERVAL '1 day' * :grace THEN cld.id END) AS done_count
+                                                AND cld.close_date <= :end + INTERVAL '1 day' * :grace THEN cld.id END) AS done_count,
+                           MIN(CASE WHEN cld.deal_value_balance = 0
+                                     AND cld.status = 'completed'
+                                     AND cld.close_date IS NOT NULL
+                                     AND cld.close_date <= :end + INTERVAL '1 day' * :grace THEN cld.close_date END) AS first_date
                     FROM crm_lead_deals cld
                     WHERE cld.deal_source_id IN (
                         SELECT partner_code FROM official_partners WHERE id = ANY(:pids)
@@ -5812,6 +5838,8 @@ def vgk_member_tracking(
                     if pid:
                         eligible_map[pid] = int(r[1])
                         achieved_map[pid] = int(r[2])
+                        if r[3]:
+                            first_date_map[pid] = r[3].strftime("%Y-%m-%d") if hasattr(r[3], 'strftime') else str(r[3])[:10]
 
         # Claim statuses (bonanza level + slab-level claim tracking via claim_level)
         claim_rows = db.execute(text("""
@@ -5884,6 +5912,12 @@ def vgk_member_tracking(
                 claim_status = claim_info[0]
                 completed_date = claim_info[1].strftime("%Y-%m-%d") if claim_info[1] else None
 
+                earliest_date = completed_date or (
+                    ec_stats_map.get(pid, {}).get("first_date")
+                    if bz.reward_type in ('extra_commission', 'brand_wise_commission')
+                    else first_date_map.get(pid)
+                )
+
                 member_payload = {
                     "partner_id":   pid,
                     "partner_name": partner_map[pid]["name"],
@@ -5895,13 +5929,19 @@ def vgk_member_tracking(
                     "gap":          gap,
                     "is_eligible":  is_elig,
                     "claim_status": claim_status,
-                    "completed_date": completed_date,
+                    "completed_date": completed_date or (earliest_date if is_elig else None),
+                    "achieved_date": earliest_date,
                 }
                 if bz.reward_type in ('extra_commission', 'brand_wise_commission'):
                     member_payload["ec_stats"] = ec_stats_map.get(pid, {"levels": {}, "total_earnings": 0.0})
                 members_list.append(member_payload)
 
-            members_list.sort(key=lambda m: (-int(m["is_eligible"]), -m["achieved"]))
+            members_list.sort(key=lambda m: (
+                -int(m["is_eligible"]),
+                -float(m["achieved"]),
+                m["achieved_date"] or "9999-99-99",
+                m["partner_name"] or ""
+            ))
 
             row_key = f"bz_{bz.id}" + (f"_slab_{t['slab_id']}" if t["slab_id"] else "_base")
             track_rows.append({

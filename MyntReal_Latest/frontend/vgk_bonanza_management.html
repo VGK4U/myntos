@@ -276,6 +276,15 @@ tbody tr { background: #ffffff !important; }
                 <label>Partner Search</label>
                 <input class="form-control" id="mFilterPartner" placeholder="Name or code…" style="min-width:160px">
             </div>
+            <div>
+                <label><i class="fas fa-sort-amount-down me-1" style="color:#6366f1"></i>Sort By</label>
+                <select class="form-select" id="mSortTrackBy" onchange="mgmtChangeSort(this.value)" style="min-width:215px;font-weight:600">
+                    <option value="highest_first" selected>🏆 Highest Numbers (Achievers First)</option>
+                    <option value="first_achiever">⏱️ First Achiever (Earliest Date)</option>
+                    <option value="name_asc">🔤 Member Name (A–Z)</option>
+                    <option value="code_asc">🔢 Partner Code</option>
+                </select>
+            </div>
             <button class="btn-filter apply" onclick="mgmtLoadTracking()"><i class="fas fa-search me-1"></i>Apply</button>
             <button class="btn-filter reset" onclick="mgmtClearTrackFilters()">Reset</button>
             <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
@@ -2600,10 +2609,22 @@ function mgmtSwitchTab(tab) {
     if (tab === 'tracking' && !_mgmtTrackLoaded) mgmtLoadTracking();
 }
 
+let _mgmtSortBy = 'highest_first';
+
+function mgmtChangeSort(val) {
+    _mgmtSortBy = val || 'highest_first';
+    if (_mgmtTrackApiData) {
+        mgmtRenderTracking(_mgmtTrackApiData);
+    }
+}
+
 function mgmtClearTrackFilters() {
     document.getElementById('mFilterBonanza').value = '';
     document.getElementById('mFilterPartner').value = '';
     document.getElementById('mFilterCurrentStatus').value = 'Running';
+    const sortEl = document.getElementById('mSortTrackBy');
+    if (sortEl) sortEl.value = 'highest_first';
+    _mgmtSortBy = 'highest_first';
     mgmtSetTrackView('all');
     _mgmtTrackLoaded = false;
     mgmtLoadTracking();
@@ -2778,7 +2799,6 @@ function mgmtRenderTracking(d) {
 
         // ── Tier-column layout: members = rows, tiers = column groups ────
         const memberMap = {};
-        const baseOrder = [];
         const isEc = g.tiers[0].reward_type === 'extra_commission' || g.tiers[0].reward_type === 'brand_wise_commission';
         const ecLevels = g.tiers[0].ec_levels || [];
 
@@ -2786,35 +2806,128 @@ function mgmtRenderTracking(d) {
             (tier.members || []).forEach(m => {
                 if (!memberMap[m.partner_id]) {
                     memberMap[m.partner_id] = {
-                        partner_id: m.partner_id, partner_name: m.partner_name,
-                        partner_code: m.partner_code, photo_url: m.photo_url || '', claim_status: m.claim_status,
-                        tiers: {}, any_eligible: false,
+                        partner_id: m.partner_id,
+                        partner_name: m.partner_name,
+                        partner_code: m.partner_code,
+                        photo_url: m.photo_url || '',
+                        claim_status: m.claim_status,
+                        completed_date: m.completed_date || null,
+                        achieved_date: m.achieved_date || m.completed_date || null,
+                        tiers: {},
+                        any_eligible: false,
                         ec_stats: m.ec_stats || {levels: {}, total_earnings: 0.0}
                     };
-                    if (ti === 0) baseOrder.push(m.partner_id);
+                } else {
+                    if (m.completed_date && !memberMap[m.partner_id].completed_date) {
+                        memberMap[m.partner_id].completed_date = m.completed_date;
+                    }
+                    if (m.achieved_date && !memberMap[m.partner_id].achieved_date) {
+                        memberMap[m.partner_id].achieved_date = m.achieved_date;
+                    }
                 }
                 memberMap[m.partner_id].tiers[tier.row_key] = {
                     eligible: m.eligible ?? 0,
-                    achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible,
+                    achieved: m.achieved,
+                    gap: m.gap,
+                    is_eligible: m.is_eligible,
                     award_name: tier.award_name,
                     tier_label: tier.tier_label,
                     reward_amount: tier.reward_amount,
-                    tier_index: ti
+                    tier_index: ti,
+                    completed_date: m.completed_date || null,
+                    achieved_date: m.achieved_date || m.completed_date || null
                 };
                 if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
             });
         });
         g.memberMap = memberMap;
 
-        let displayOrder = baseOrder;
+        // Distinct partner IDs in this campaign
+        let candidatePartnerIds = Object.keys(memberMap).map(Number);
+
+        let filteredIds = candidatePartnerIds;
         if (_mgmtTrackView === 'achieved') {
-            displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
+            filteredIds = candidatePartnerIds.filter(pid => memberMap[pid].any_eligible);
         } else if (_mgmtTrackView === 'progress') {
-            displayOrder = baseOrder.filter(pid =>
+            filteredIds = candidatePartnerIds.filter(pid =>
                 isEc ? (memberMap[pid].ec_stats.total_earnings > 0) :
                 Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0 || (t.eligible || 0) > 0)
             );
         }
+
+        // Helper to extract sort metadata for each partner
+        function getMemberSortMeta(pid) {
+            const m = memberMap[pid];
+            if (!m) return { isAchiever: 0, highestTier: -1, score: 0, dateStr: '9999-99-99', name: '', code: '' };
+            const isAchiever = isEc ? ((m.ec_stats?.total_earnings || 0) > 0 ? 1 : 0) : (m.any_eligible ? 1 : 0);
+            
+            let score = 0;
+            let highestTierAchieved = -1;
+            let earliestDate = m.achieved_date || m.completed_date || null;
+
+            if (isEc) {
+                score = m.ec_stats?.total_earnings || 0;
+                earliestDate = m.ec_stats?.first_date || earliestDate;
+            } else {
+                Object.values(m.tiers).forEach(t => {
+                    if ((t.achieved || 0) > score) score = t.achieved;
+                    if (t.is_eligible && (t.tier_index ?? 0) > highestTierAchieved) {
+                        highestTierAchieved = t.tier_index ?? 0;
+                    }
+                    const d = t.achieved_date || t.completed_date;
+                    if (d && (!earliestDate || d < earliestDate)) {
+                        earliestDate = d;
+                    }
+                });
+            }
+
+            return {
+                isAchiever,
+                highestTier: highestTierAchieved,
+                score,
+                dateStr: earliestDate || '9999-99-99',
+                name: (m.partner_name || '').toLowerCase(),
+                code: (m.partner_code || '').toLowerCase()
+            };
+        }
+
+        // Deterministic sort based on selected sort option
+        filteredIds.sort((a, b) => {
+            const ma = getMemberSortMeta(a);
+            const mb = getMemberSortMeta(b);
+
+            if (_mgmtSortBy === 'first_achiever') {
+                // First Achiever option:
+                // 1. Achievers on top
+                // 2. Earliest date on top
+                // 3. Highest tier / highest score
+                // 4. Partner name (A-Z)
+                if (mb.isAchiever !== ma.isAchiever) return mb.isAchiever - ma.isAchiever;
+                if (ma.dateStr !== mb.dateStr) return ma.dateStr.localeCompare(mb.dateStr);
+                if (mb.highestTier !== ma.highestTier) return mb.highestTier - ma.highestTier;
+                if (mb.score !== ma.score) return mb.score - ma.score;
+                return ma.name.localeCompare(mb.name);
+            } else if (_mgmtSortBy === 'name_asc') {
+                return ma.name.localeCompare(mb.name);
+            } else if (_mgmtSortBy === 'code_asc') {
+                return ma.code.localeCompare(mb.code);
+            } else {
+                // Default 'highest_first':
+                // "First Achiever should be shown on top in each first with highest numbers, and the next sorting option is First Achiever"
+                // 1. Achievers on top
+                // 2. Highest tier reached
+                // 3. Highest numbers (deals achieved / earnings)
+                // 4. First Achiever tie-breaker (earliest date)
+                // 5. Partner name (A-Z)
+                if (mb.isAchiever !== ma.isAchiever) return mb.isAchiever - ma.isAchiever;
+                if (mb.highestTier !== ma.highestTier) return mb.highestTier - ma.highestTier;
+                if (mb.score !== ma.score) return mb.score - ma.score;
+                if (ma.dateStr !== mb.dateStr) return ma.dateStr.localeCompare(mb.dateStr);
+                return ma.name.localeCompare(mb.name);
+            }
+        });
+
+        const displayOrder = filteredIds;
 
         const TIER_BG_PALETTE = [
             { headBg: 'linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%)', headText: '#5b21b6', cellBg: 'rgba(237,233,254,0.25)', borderLeft: '2px solid #a78bfa' },
@@ -2913,8 +3026,10 @@ function mgmtRenderTracking(d) {
                     } else if (t.gap > 0) {
                         needCell = `<span style="color:#dc2626;font-weight:700;font-size:11px" title="${t.gap} deal(s) needed to reach milestone target of ${tier.target}">${t.gap} req</span>`;
                     } else {
+                        const dateBadge = t.achieved_date ? `<div style="font-size:9px;color:#059669;font-weight:600">${fmtDate(t.achieved_date)}</div>` : '';
                         needCell = `<div style="text-align:center">
                             <span style="background-color:#dcfce7;color:#15803d;padding:1px 5px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block">Met</span>
+                            ${dateBadge}
                         </div>`;
                     }
                     return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.cellBg};padding:3px 2px">${eligCell}</td>
