@@ -8109,7 +8109,7 @@ def fetch_member_income_entries_data(
         elif _pct > 0:
             commission_base = round(float(r.commission_amount) / _pct * 100, 2)
             _rcv_val = commission_base
-        elif _kind in ('ADVANCE', 'STAGE1_ADVANCE', 'EXTRA_COMMISSION', 'BONANZA_BONUS', 'DIRECT_ADVANCE'):
+        elif _kind in ('ADVANCE', 'STAGE1_ADVANCE', 'DVR_ADVANCE', 'STAGE2_ADVANCE', 'EXTRA_COMMISSION', 'BONANZA_BONUS', 'DIRECT_ADVANCE', 'PARTNER_ADVANCE'):
             commission_base = float(r.commission_amount)
             _rcv_val = 0.0
         else:
