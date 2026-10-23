@@ -18464,6 +18464,9 @@ async def serve_storage_file(request: Request, file_path: str):
     if file_data is None:
         if "wa_media" in file_path.lower():
             if content_type.startswith("image/"):
+                placeholder_path = Path(__file__).parent.parent / "storage" / "wa_media_placeholder.png"
+                if placeholder_path.exists():
+                    return Response(content=placeholder_path.read_bytes(), media_type="image/png", status_code=200, headers={"Cache-Control": "public, max-age=3600"})
                 svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
                   <rect width="300" height="200" fill="#1e293b" rx="12"/>
                   <text x="150" y="90" font-size="32" text-anchor="middle" fill="#94a3b8">📎</text>

@@ -4732,36 +4732,68 @@ function resolveMediaUrl(url) {
 }
 
 function renderWhatsAppMediaAttachment(m) {
-  const rawUrl = m.media_url || m.url || '';
+  let rawUrl = m.media_url || m.url || '';
+  if (!rawUrl && m.body && m.body.includes('[Media: ')) {
+    const match = m.body.match(/\[Media:\s*([^\]]+)\]/i);
+    if (match && match[1]) rawUrl = match[1].trim();
+  }
   if (!rawUrl) return '';
   const finalUrl = resolveMediaUrl(rawUrl);
   const dlUrl = finalUrl.includes('?') ? `${finalUrl}&download=1` : `${finalUrl}?download=1`;
   const mime = (m.media_mime_type || '').toLowerCase();
   const type = (m.media_type || '').toLowerCase();
   const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(finalUrl);
-  const isImage = (type === 'image') || mime.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(finalUrl);
+  const isVideo = (type === 'video') || mime.startsWith('video/') || /\.(mp4|webm|mov|m4v|mkv)(\?.*)?$/i.test(finalUrl);
+  const isAudio = (type === 'audio') || mime.startsWith('audio/') || /\.(mp3|ogg|wav|m4a|aac)(\?.*)?$/i.test(finalUrl);
+  const isImage = !isPdf && !isVideo && !isAudio && ((type === 'image') || mime.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(finalUrl) || true);
   let fileName = m.media_name || m.filename || finalUrl.split('/').pop().split('?')[0] || '';
   if (!fileName || /^\d+$/.test(fileName)) {
-    fileName = isImage ? 'Photo Attachment' : (isPdf ? 'Document Attachment' : 'Media Attachment');
+    fileName = isImage ? 'Photo Attachment' : (isVideo ? 'Video Attachment' : (isPdf ? 'Document Attachment' : 'Media Attachment'));
   }
 
-  if (isImage) {
+  if (isVideo) {
     return `
-      <div style="margin-top:6px;margin-bottom:4px;border-radius:8px;overflow:hidden;max-width:280px;background:#f8fafc;border:1px solid #e2e8f0;position:relative;">
-        <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;">
-          <img src="${finalUrl}" alt="Media Attachment" style="width:100%;max-height:220px;object-fit:cover;display:block;" onerror="this.parentElement.parentElement.style.display='none';this.parentElement.parentElement.nextElementSibling.style.display='block';" />
-        </a>
-        <div style="padding:4px 8px;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f1f5f9;">
-          <span style="font-size:10.5px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escapeHtml(fileName)}</span>
-          <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#059669;font-weight:700;text-decoration:none;" title="Download Image">
+      <div class="wa-media-preview-card" style="margin-top:6px;margin-bottom:6px;border-radius:10px;overflow:hidden;max-width:300px;background:#0f172a;border:1px solid #334155;box-shadow:0 3px 10px rgba(0,0,0,0.15);">
+        <div style="background:#000;position:relative;">
+          <video src="${finalUrl}" controls preload="metadata" style="width:100%;max-height:220px;display:block;"></video>
+        </div>
+        <div style="padding:6px 10px;background:#1e293b;border-top:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span style="font-size:11px;color:#cbd5e1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</span>
+          <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#34d399;font-weight:700;text-decoration:none;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);padding:3px 9px;border-radius:5px;" title="Download Video">
             <i class="fas fa-download"></i> Download
           </a>
         </div>
       </div>
-      <div class="wa-fallback-attach-btn" style="display:none;margin-top:4px;">
-        <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:6px;color:#059669;font-weight:700;font-size:12px;text-decoration:none;background:#ecfdf5;padding:6px 10px;border-radius:6px;border:1px solid #a7f3d0;">
-          <i class="fas fa-download"></i> Download Media Attachment
+    `;
+  }
+
+  if (isAudio) {
+    return `
+      <div style="margin-top:6px;margin-bottom:4px;padding:8px 10px;border-radius:8px;background:#f8fafc;border:1px solid #cbd5e1;max-width:280px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:10.5px;color:#64748b;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escapeHtml(fileName)}</span>
+          <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="font-size:11px;color:#059669;font-weight:700;text-decoration:none;" title="Download Audio"><i class="fas fa-download"></i> Download</a>
+        </div>
+        <audio src="${finalUrl}" controls style="width:100%;height:32px;"></audio>
+      </div>
+    `;
+  }
+
+  if (isImage) {
+    return `
+      <div class="wa-media-preview-card" style="margin-top:6px;margin-bottom:6px;border-radius:10px;overflow:hidden;max-width:300px;background:#0f172a;border:1px solid #334155;position:relative;box-shadow:0 3px 10px rgba(0,0,0,0.15);">
+        <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;position:relative;background:#1e293b;min-height:160px;" title="Click to view full image">
+          <img src="${finalUrl}" alt="Photo Preview" loading="lazy" style="width:100%;max-height:240px;object-fit:cover;display:block;" onerror="this.onerror=null;this.src='/storage/wa_media_placeholder.png';" />
+          <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;">
+            <i class="fas fa-image"></i> Photo
+          </div>
         </a>
+        <div style="padding:6px 10px;background:#1e293b;border-top:1px solid #334155;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span style="font-size:11px;color:#cbd5e1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</span>
+          <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#34d399;font-weight:700;text-decoration:none;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);padding:3px 9px;border-radius:5px;transition:all .15s;" onmouseover="this.style.background='rgba(52,211,153,0.25)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'" title="Download Image">
+            <i class="fas fa-download"></i> Download
+          </a>
+        </div>
       </div>
     `;
   }
@@ -4832,7 +4864,10 @@ function renderChatMessages(msgs) {
   msgs.forEach((m, idx) => {
     const isOut = m.message_type === 'outbound' || m.sender === 'bot' || m.sender_type === 'bot' || m.message_type === 'manual_staff' || m.is_from_me;
     const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
-    const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
+    let msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
+    if (msgText) {
+      msgText = msgText.replace(/\[Media:\s*[^\]]+\]/gi, '').trim();
+    }
     const timeStr = m.sent_at || m.received_at_ist || m.time_str || m.received_at || '';
     const ticks = m.status_ticks || (isOut ? (m.status === 'delivered' ? '✓✓' : (m.status === 'read' ? '✓✓' : '✓')) : '');
     const tickColor = m.status_color || (m.status === 'read' ? '#3b82f6' : '#6b7280');

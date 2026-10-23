@@ -4721,9 +4721,13 @@ def get_whatsapp_chat_history(
                 if m_match:
                     media_url = m_match.group(1).strip()
                     media_name = media_url.split("/")[-1].split("?")[0]
+                    body_content = re.sub(r'\[Media:\s*[^\]]+\]', '', body_content).strip()
 
             m_is_pdf = (media_name and media_name.lower().endswith('.pdf')) or (media_mime and 'pdf' in media_mime.lower())
-            m_is_img = (media_url and any(media_url.lower().endswith(e) or f"{e}?" in media_url.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+            m_is_video = (media_url and any(media_url.lower().endswith(e) or f"{e}?" in media_url.lower() for e in ('.mp4', '.webm', '.mov', '.m4v'))) or (media_mime and 'video' in media_mime.lower())
+            m_is_audio = (media_url and any(media_url.lower().endswith(e) or f"{e}?" in media_url.lower() for e in ('.mp3', '.ogg', '.wav', '.m4a'))) or (media_mime and 'audio' in media_mime.lower())
+            m_is_img = (media_url and any(media_url.lower().endswith(e) or f"{e}?" in media_url.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif'))) or (media_mime and 'image' in media_mime.lower())
+            m_type_resolved = "document" if m_is_pdf else ("video" if m_is_video else ("audio" if m_is_audio else ("image" if m_is_img else None)))
 
             log_messages.append({
                 "id": f"ml_{l.id}",
@@ -4732,7 +4736,7 @@ def get_whatsapp_chat_history(
                 "sender_name": sender_label,
                 "body": body_content,
                 "media_url": media_url,
-                "media_type": "document" if m_is_pdf else ("image" if m_is_img else None),
+                "media_type": m_type_resolved,
                 "media_mime_type": media_mime,
                 "media_name": media_name,
                 "reply_to": reply_to,
@@ -4833,7 +4837,10 @@ def get_whatsapp_chat_history(
                 media_name = norm_media.split("/")[-1].split("?")[0]
 
             inb_is_pdf = (m.message_type == 'document') or (media_name and media_name.lower().endswith('.pdf')) or (media_mime and 'pdf' in str(media_mime).lower())
-            inb_is_img = (m.message_type == 'image') or (norm_media and any(norm_media.lower().endswith(e) or f"{e}?" in norm_media.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+            inb_is_video = (m.message_type == 'video') or (norm_media and any(norm_media.lower().endswith(e) or f"{e}?" in norm_media.lower() for e in ('.mp4', '.webm', '.mov', '.m4v'))) or (media_mime and 'video' in str(media_mime).lower())
+            inb_is_audio = (m.message_type == 'audio') or (norm_media and any(norm_media.lower().endswith(e) or f"{e}?" in norm_media.lower() for e in ('.mp3', '.ogg', '.wav', '.m4a'))) or (media_mime and 'audio' in str(media_mime).lower())
+            inb_is_img = (m.message_type == 'image') or (norm_media and any(norm_media.lower().endswith(e) or f"{e}?" in norm_media.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif'))) or (media_mime and 'image' in str(media_mime).lower())
+            inb_type_resolved = "document" if inb_is_pdf else ("video" if inb_is_video else ("audio" if inb_is_audio else ("image" if inb_is_img else (m.message_type if m.message_type not in ('text', None) else None))))
 
             inbox_messages.append({
                 "id": f"wa_{m.id}",
@@ -4842,7 +4849,7 @@ def get_whatsapp_chat_history(
                 "sender_name": "Mynt Bot" if is_outbound else (m.from_name or ("WhatsApp Group" if is_grp else "Customer")),
                 "body": m.body_text or "—",
                 "media_url": norm_media,
-                "media_type": "document" if inb_is_pdf else ("image" if inb_is_img else (m.message_type if m.message_type not in ('text', None) else None)),
+                "media_type": inb_type_resolved,
                 "media_mime_type": media_mime,
                 "media_name": media_name,
                 "reply_to": reply_to,
