@@ -1615,6 +1615,33 @@ tbody tr { background: #ffffff !important; }
                 </div>
             </div>
 
+            <!-- Filter & Sort Control Bar for Tier Modal -->
+            <div id="tierAchieversControlBar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+                <!-- Filter Pills -->
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;" id="tierModalFilterPills">
+                    <!-- Dynamic filter pills: All, Eligible, Issued, Pending, Ineligible -->
+                </div>
+                <!-- Sort & Search Controls -->
+                <div style="display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap;">
+                    <div style="position: relative;">
+                        <input type="text" id="tierModalSearchInput" placeholder="Search member, code, reason..." oninput="onTierModalSearchChange()" style="font-size: 11.5px; padding: 5px 10px 5px 28px; border-radius: 7px; border: 1.5px solid #cbd5e1; width: 190px; outline: none; background: #ffffff;">
+                        <i class="fas fa-search" style="position: absolute; left: 9px; top: 9px; font-size: 11px; color: #94a3b8;"></i>
+                    </div>
+                    <select id="tierModalSortSelect" onchange="onTierModalSortChange()" style="font-size: 11.5px; padding: 5px 10px; border-radius: 7px; border: 1.5px solid #cbd5e1; background: #ffffff; font-weight: 700; color: #334155; cursor: pointer; outline: none;">
+                        <option value="default">Sort: Default Order</option>
+                        <option value="eligible_first">Sort: Eligible First (Active Top)</option>
+                        <option value="ineligible_first">Sort: Ineligible First (Grey Top)</option>
+                        <option value="issued_first">Sort: Claim Status (Issued &rarr; Pending)</option>
+                        <option value="pending_first">Sort: Claim Status (Pending &rarr; Issued)</option>
+                        <option value="name_asc">Sort: Member Name (A &rarr; Z)</option>
+                        <option value="name_desc">Sort: Member Name (Z &rarr; A)</option>
+                        <option value="code_asc">Sort: Partner Code (Asc)</option>
+                        <option value="files_desc">Sort: Validated Files / Actives (High &rarr; Low)</option>
+                        <option value="files_asc">Sort: Validated Files / Actives (Low &rarr; High)</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Achievers Table Wrap -->
             <div id="tierAchieversTableWrap" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: auto; flex: 1; min-height: 240px; background: #ffffff;">
                 <table class="table table-hover table-sm" style="margin-bottom: 0; font-size: 12px; width: 100%; position: relative; border-collapse: separate; border-spacing: 0;">
@@ -3790,36 +3817,217 @@ function renderGiftLadder(ladder) {
     }).join('');
 }
 
+let _currentModalTier = null;
+let _currentModalFilter = 'all';
+let _currentModalSort = 'default';
+let _currentModalSearch = '';
+
 function openTierAchieversModal(tierNumber) {
     if (!_awardsData || !_awardsData.gift_ladder) return;
     const tier = _awardsData.gift_ladder.find(t => t.tier_number === tierNumber);
     if (!tier) return;
 
+    _currentModalTier = tier;
+    _currentModalFilter = 'all';
+    _currentModalSort = 'default';
+    _currentModalSearch = '';
+
     document.getElementById('tierAchieversTierTag').textContent = `TIER ${tier.tier_number} ACHIEVERS`;
     document.getElementById('tierAchieversTitle').textContent = tier.reward_name;
     document.getElementById('tierAchieversSubtitle').textContent = `Rule: ${tier.qualification_rule} • Cost: ${tier.cost_display} (${tier.cost_type})`;
 
+    const searchInput = document.getElementById('tierModalSearchInput');
+    if (searchInput) searchInput.value = '';
+    const sortSelect = document.getElementById('tierModalSortSelect');
+    if (sortSelect) sortSelect.value = 'default';
+
+    renderTierAchieversModalContent();
+
+    const modal = document.getElementById('tierAchieversModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function setTierModalFilter(filterId) {
+    _currentModalFilter = filterId;
+    renderTierAchieversModalContent();
+}
+
+function onTierModalSearchChange() {
+    const input = document.getElementById('tierModalSearchInput');
+    _currentModalSearch = input ? (input.value || '').trim().toLowerCase() : '';
+    renderTierAchieversModalContent();
+}
+
+function onTierModalSortChange() {
+    const select = document.getElementById('tierModalSortSelect');
+    _currentModalSort = select ? select.value : 'default';
+    renderTierAchieversModalContent();
+}
+
+function renderTierAchieversModalContent() {
+    if (!_currentModalTier) return;
+    const tier = _currentModalTier;
     const achievers = tier.achievers || [];
     const leadingContenders = tier.leading_contenders || [];
+    const isContenderMode = (achievers.length === 0 && leadingContenders.length > 0);
+    const sourceList = isContenderMode ? leadingContenders : achievers;
+
     const targetCount = tier.target_count;
     const targetMetric = tier.target_metric;
 
-    // KPI row in modal
+    // Build normalized items with eligibility and claim properties
+    const normalizedList = sourceList.map(a => {
+        const cInfo = a.claim_info || {};
+        const cStatus = (a.claim_status || cInfo.claim_status || 'pending').toLowerCase();
+        const isIssued = (cStatus === 'issued');
+        const isPending = !isIssued;
+
+        // Ineligible check: Deactivated or Freelancer
+        const isDeact = (a.is_deactivated !== undefined)
+            ? Boolean(a.is_deactivated)
+            : (a.is_account_active === false || a.is_blocked === true || (a.member_status && a.member_status !== 'ACTIVE'));
+        const isFree = (a.is_freelancer !== undefined)
+            ? Boolean(a.is_freelancer)
+            : (a.partner_type === 'FREELANCER' || Boolean(a.freelancer_classification));
+        const isInelig = (a.is_ineligible !== undefined) ? Boolean(a.is_ineligible) : (isDeact || isFree);
+
+        let reason = a.ineligible_reason || '';
+        if (!reason) {
+            if (isDeact && isFree) reason = 'Deactivated & Freelancer';
+            else if (isDeact) reason = 'Deactivated Account';
+            else if (isFree) reason = 'Freelancer';
+        }
+
+        const filesCount = tier.is_insurance 
+            ? ((a.qualifying_active_members && a.qualifying_active_members[0] && a.qualifying_active_members[0].files_count) || 1)
+            : (a.downline_active_count || 0);
+
+        return {
+            ...a,
+            _cInfo: cInfo,
+            _cStatus: cStatus,
+            _isIssued: isIssued,
+            _isPending: isPending,
+            _isDeactivated: isDeact,
+            _isFreelancer: isFree,
+            _isIneligible: isInelig,
+            _isEligible: !isInelig,
+            _ineligibleReason: reason,
+            _filesCount: filesCount
+        };
+    });
+
+    // Data Labels summary metrics
+    const totalCount = normalizedList.length;
+    const eligibleCount = normalizedList.filter(x => x._isEligible).length;
+    const issuedCount = normalizedList.filter(x => x._isIssued).length;
+    const pendingCount = normalizedList.filter(x => x._isPending).length;
+    const ineligibleCount = normalizedList.filter(x => x._isIneligible).length;
+
+    // Render 5 Data Labels KPI Cards in open mode
     const kpiRow = document.getElementById('tierAchieversKpiRow');
-    kpiRow.innerHTML = `
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px;">
-            <div style="font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase;">Target Requirement</div>
-            <div style="font-size: 14.5px; font-weight: 800; color: #111827;">${targetCount} ${targetMetric === 'files' ? 'Personal File (1st Payment Validated)' : 'Active Member' + (targetCount === 1 ? '' : 's') + ' in Downline'}</div>
-        </div>
-        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px;">
-            <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;">Leaders Who Met Tier</div>
-            <div style="font-size: 15px; font-weight: 800; color: #065f46;">${achievers.length} ${tier.is_insurance ? 'Members' : 'Leaders'}</div>
-        </div>
-        <div style="background: ${tier.status === 'achieved' ? '#d1fae5' : '#eff6ff'}; border: 1px solid ${tier.status === 'achieved' ? '#6ee7b7' : '#bfdbfe'}; border-radius: 8px; padding: 10px 14px;">
-            <div style="font-size: 10px; font-weight: 800; color: ${tier.status === 'achieved' ? '#047857' : '#1e40af'}; text-transform: uppercase;">Milestone Status</div>
-            <div style="font-size: 15px; font-weight: 800; color: ${tier.status === 'achieved' ? '#065f46' : '#1e40af'}; text-transform: capitalize;">${tier.status.replace('_', ' ')} (${tier.progress_pct}%)</div>
-        </div>
-    `;
+    if (kpiRow) {
+        kpiRow.innerHTML = `
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+                <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Target Requirement</div>
+                <div style="font-size: 14.5px; font-weight: 800; color: #0f172a; margin-top: 1px;">${targetCount} ${targetMetric === 'files' ? 'Personal File (1st Payment Validated)' : 'Active Members in Downline'}</div>
+                <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">${tier.reward_name}</div>
+            </div>
+            <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 10px 14px;">
+                <div style="font-size: 10px; font-weight: 800; color: #7c3aed; text-transform: uppercase;">Total In Tier</div>
+                <div style="font-size: 20px; font-weight: 900; color: #6d28d9; margin-top: 1px;">${totalCount} <span style="font-size: 12px; font-weight: 700; color: #8b5cf6;">${isContenderMode ? 'Contenders' : 'Members'}</span></div>
+                <div style="font-size: 10.5px; color: #7c3aed; margin-top: 2px;">All qualified records</div>
+            </div>
+            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 14px;">
+                <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;"><i class="fas fa-check-circle me-1"></i>Eligible (Active)</div>
+                <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 1px;">${eligibleCount} <span style="font-size: 12px; font-weight: 700; color: #10b981;">Members</span></div>
+                <div style="font-size: 10.5px; color: #047857; margin-top: 2px;">Active Verified Leaders</div>
+            </div>
+            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;">
+                <div style="font-size: 10px; font-weight: 800; color: #1e40af; text-transform: uppercase;"><i class="fas fa-gift me-1"></i>Claims Status</div>
+                <div style="font-size: 15px; font-weight: 900; color: #1d4ed8; margin-top: 2px;">
+                    <span style="color:#059669;">${issuedCount} Issued</span> <span style="color:#94a3b8;font-size:12px;font-weight:400;">&bull;</span> <span style="color:#d97706;">${pendingCount} Pending</span>
+                </div>
+                <div style="font-size: 10.5px; color: #1e40af; margin-top: 2px;">Auditor Handover Status</div>
+            </div>
+            <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible (Ignored)</div>
+                <div style="font-size: 20px; font-weight: 900; color: #475569; margin-top: 1px;">${ineligibleCount} <span style="font-size: 12px; font-weight: 700; color: #64748b;">Members</span></div>
+                <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Deactivated &amp; Freelancers</div>
+            </div>
+        `;
+    }
+
+    // Render Filter Pills in Control Bar
+    const pillsWrap = document.getElementById('tierModalFilterPills');
+    if (pillsWrap) {
+        const pillsDef = [
+            { id: 'all', label: 'All', count: totalCount, icon: 'fas fa-list', bg: '#4f46e5', text: '#ffffff' },
+            { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
+            { id: 'issued', label: 'Issued', count: issuedCount, icon: 'fas fa-check-double', bg: '#0284c7', text: '#ffffff' },
+            { id: 'pending', label: 'Pending', count: pendingCount, icon: 'fas fa-clock', bg: '#d97706', text: '#ffffff' },
+            { id: 'ineligible', label: 'Ineligible (Deactivated & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
+        ];
+
+        pillsWrap.innerHTML = pillsDef.map(p => {
+            const isActive = (_currentModalFilter === p.id);
+            const style = isActive
+                ? `background: ${p.bg}; color: ${p.text}; border: 1.5px solid ${p.bg}; box-shadow: 0 2px 6px rgba(0,0,0,0.15);`
+                : `background: #ffffff; color: #475569; border: 1.5px solid #e2e8f0;`;
+            return `
+                <button type="button" onclick="setTierModalFilter('${p.id}')" style="padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; ${style}">
+                    <i class="${p.icon}"></i> ${p.label} <span style="background: ${isActive ? 'rgba(255,255,255,0.25)' : '#f1f5f9'}; color: ${isActive ? '#fff' : '#334155'}; font-size: 10.5px; padding: 1px 6px; border-radius: 10px;">${p.count}</span>
+                </button>
+            `;
+        }).join('');
+    }
+
+    // Filter items
+    let filtered = normalizedList.filter(item => {
+        if (_currentModalFilter === 'eligible' && !item._isEligible) return false;
+        if (_currentModalFilter === 'issued' && !item._isIssued) return false;
+        if (_currentModalFilter === 'pending' && !item._isPending) return false;
+        if (_currentModalFilter === 'ineligible' && !item._isIneligible) return false;
+
+        if (_currentModalSearch) {
+            const s = _currentModalSearch;
+            const hay = [
+                item.leader_name || '',
+                item.leader_code || '',
+                item.upline_sponsor || '',
+                item.upline_sponsor_code || '',
+                item._ineligibleReason || ''
+            ].join(' ').toLowerCase();
+            if (!hay.includes(s)) return false;
+        }
+        return true;
+    });
+
+    // Sort items
+    filtered.sort((a, b) => {
+        switch (_currentModalSort) {
+            case 'eligible_first':
+                return (a._isIneligible ? 1 : 0) - (b._isIneligible ? 1 : 0);
+            case 'ineligible_first':
+                return (b._isIneligible ? 1 : 0) - (a._isIneligible ? 1 : 0);
+            case 'issued_first':
+                return (b._isIssued ? 1 : 0) - (a._isIssued ? 1 : 0);
+            case 'pending_first':
+                return (b._isPending ? 1 : 0) - (a._isPending ? 1 : 0);
+            case 'name_asc':
+                return (a.leader_name || '').localeCompare(b.leader_name || '');
+            case 'name_desc':
+                return (b.leader_name || '').localeCompare(a.leader_name || '');
+            case 'code_asc':
+                return (a.leader_code || '').localeCompare(b.leader_code || '');
+            case 'files_desc':
+                return (b._filesCount || 0) - (a._filesCount || 0);
+            case 'files_asc':
+                return (a._filesCount || 0) - (b._filesCount || 0);
+            default:
+                return 0;
+        }
+    });
 
     const tableWrap = document.getElementById('tierAchieversTableWrap');
     const thead = tableWrap.querySelector('thead tr');
@@ -3831,21 +4039,29 @@ function openTierAchieversModal(tierNumber) {
         <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
         <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Validated Files' : 'Active In Downline'}</th>
         <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Qualification Detail' : 'Because Of Whom (Qualifying Downline Members)'}</th>
-        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 140px;">Claim & Issuance</th>
+        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 140px;">Claim &amp; Issuance</th>
         <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 170px;">Auditor Action</th>
     `;
 
-    if (achievers.length > 0) {
+    if (filtered.length > 0) {
         tableWrap.style.display = '';
         emptyBox.style.display = 'none';
 
-        tbody.innerHTML = achievers.map(a => {
+        tbody.innerHTML = filtered.map(a => {
             const qms = a.qualifying_active_members || [];
-            const cInfo = a.claim_info || {};
-            const cStatus = (a.claim_status || cInfo.claim_status || 'pending').toLowerCase();
+            const cInfo = a._cInfo || {};
+            const cStatus = a._cStatus;
+            const isInelig = a._isIneligible;
 
             let cBadge = '';
-            if (cStatus === 'issued') {
+            if (isInelig) {
+                cBadge = `
+                    <span class="badge" style="background:#e2e8f0;color:#64748b;font-size:11px;padding:4px 8px;font-weight:700;border:1px solid #cbd5e1;">
+                        <i class="fas fa-ban me-1 text-secondary"></i>Ineligible / Ignored
+                    </span>
+                    <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${escH(a._ineligibleReason)}</div>
+                `;
+            } else if (cStatus === 'issued') {
                 cBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:4px 8px;font-weight:700;"><i class="fas fa-check-double me-1"></i>Issued</span>`;
                 if (cInfo.issued_date) {
                     cBadge += `<div style="font-size:10.5px;color:#047857;margin-top:2px;font-weight:600;">${escH(cInfo.issued_date)}</div>`;
@@ -3866,29 +4082,37 @@ function openTierAchieversModal(tierNumber) {
                     <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 8px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
                         <i class="fas fa-search-plus me-1"></i>Audit
                     </button>
-                    <button class="btn btn-sm text-white" style="font-weight: 700; border-radius: 6px; padding: 3px 8px; font-size: 11px; background: #059669; border-color: #059669;" onclick='openClaimUpdateModal(${JSON.stringify(a.leader_id)}, ${JSON.stringify(a.leader_name)}, ${JSON.stringify(a.leader_code)}, ${tier.tier_number}, ${JSON.stringify(tier.reward_name)}, ${JSON.stringify(cInfo)})'>
+                    <button class="btn btn-sm text-white" style="font-weight: 700; border-radius: 6px; padding: 3px 8px; font-size: 11px; background: ${isInelig ? '#64748b' : '#059669'}; border-color: ${isInelig ? '#64748b' : '#059669'};" onclick='openClaimUpdateModal(${JSON.stringify(a.leader_id)}, ${JSON.stringify(a.leader_name)}, ${JSON.stringify(a.leader_code)}, ${tier.tier_number}, ${JSON.stringify(tier.reward_name)}, ${JSON.stringify(cInfo)})'>
                         <i class="fas fa-edit me-1"></i>Claim
                     </button>
                 </div>
             `;
 
+            // Distinct light grey background for Ineligible members so they can be easily identified and ignored
+            const rowBgStyle = isInelig 
+                ? 'background: #f1f5f9 !important; border-left: 4px solid #94a3b8; color: #475569;' 
+                : 'background: #ffffff;';
+
             if (tier.is_insurance) {
                 const detail = (qms[0] && qms[0].detail) || 'First payment validated on customer lead';
                 return `
-                    <tr>
+                    <tr style="${rowBgStyle}">
                         <td style="padding: 10px 12px; vertical-align: middle;">
-                            <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
-                            <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
+                            <div style="font-weight: 700; color: ${isInelig ? '#475569' : '#111827'}; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                ${a.leader_name}
+                                ${isInelig ? `<span class="badge" style="background:#e2e8f0;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:10px;padding:2px 7px;border-radius:4px;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible: ${escH(a._ineligibleReason)}</span>` : ''}
+                            </div>
+                            <div style="font-size: 11px; color: ${isInelig ? '#94a3b8' : '#6b7280'};"><code>${a.leader_code}</code></div>
                         </td>
                         <td style="padding: 10px 12px; vertical-align: middle;">
-                            <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
+                            <div style="font-size: 12px; color: ${isInelig ? '#64748b' : '#374151'};">${a.upline_sponsor}</div>
                             <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                         </td>
                         <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
-                            <span style="font-weight: 800; font-size: 13px; color: #111827;">${(qms[0] && qms[0].files_count) || 1}</span>
+                            <span style="font-weight: 800; font-size: 13px; color: ${isInelig ? '#64748b' : '#111827'};">${a._filesCount}</span>
                         </td>
                         <td style="padding: 10px 12px; vertical-align: middle;">
-                            <span style="color: #059669; font-weight: 700;"><i class="fas fa-check-circle me-1"></i>${detail}</span>
+                            <span style="color: ${isInelig ? '#64748b' : '#059669'}; font-weight: 700;"><i class="${isInelig ? 'fas fa-info-circle text-secondary' : 'fas fa-check-circle'} me-1"></i>${detail}</span>
                         </td>
                         <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
                             ${cBadge}
@@ -3901,12 +4125,12 @@ function openTierAchieversModal(tierNumber) {
             }
 
             const qmsHtml = qms.map(qm => `
-                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
+                <div style="background: ${isInelig ? '#e2e8f0' : '#f0fdf4'}; border: 1px solid ${isInelig ? '#cbd5e1' : '#86efac'}; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
                     <div>
-                        <strong style="color: #065f46;"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
+                        <strong style="color: ${isInelig ? '#475569' : '#065f46'};"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
                         <code>${qm.partner_code}</code>
-                        <span class="badge" style="background: #dbeafe; color: #1e40af; margin-left: 4px;">${qm.generation}</span>
-                        <span style="color: #047857; font-weight: 600; margin-left: 4px;">• ${qm.files_count} Validated Files</span>
+                        <span class="badge" style="background: ${isInelig ? '#cbd5e1' : '#dbeafe'}; color: ${isInelig ? '#334155' : '#1e40af'}; margin-left: 4px;">${qm.generation}</span>
+                        <span style="color: ${isInelig ? '#475569' : '#047857'}; font-weight: 600; margin-left: 4px;">• ${qm.files_count} Validated Files</span>
                     </div>
                     <button class="btn btn-xs btn-link p-0 text-success fw-bold" style="font-size: 10.5px; text-decoration: none;" onclick="closeTierAchieversModal(); openMemberValidationModal(${qm.partner_id});">
                         Audit &rarr;
@@ -3915,18 +4139,21 @@ function openTierAchieversModal(tierNumber) {
             `).join('');
 
             return `
-                <tr>
+                <tr style="${rowBgStyle}">
                     <td style="padding: 10px 12px; vertical-align: middle;">
-                        <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
-                        <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
+                        <div style="font-weight: 700; color: ${isInelig ? '#475569' : '#111827'}; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                            ${a.leader_name}
+                            ${isInelig ? `<span class="badge" style="background:#e2e8f0;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:10px;padding:2px 7px;border-radius:4px;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible: ${escH(a._ineligibleReason)}</span>` : ''}
+                        </div>
+                        <div style="font-size: 11px; color: ${isInelig ? '#94a3b8' : '#6b7280'};"><code>${a.leader_code}</code></div>
                     </td>
                     <td style="padding: 10px 12px; vertical-align: middle;">
-                        <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
+                        <div style="font-size: 12px; color: ${isInelig ? '#64748b' : '#374151'};">${a.upline_sponsor}</div>
                         <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                     </td>
                     <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
-                        <span class="badge" style="background: #d1fae5; color: #065f46; font-size: 11.5px; padding: 4px 8px; font-weight: 800;">
-                            ${a.downline_active_count} Active
+                        <span class="badge" style="background: ${isInelig ? '#e2e8f0' : '#d1fae5'}; color: ${isInelig ? '#475569' : '#065f46'}; font-size: 11.5px; padding: 4px 8px; font-weight: 800;">
+                            ${a._filesCount} Active
                         </span>
                     </td>
                     <td style="padding: 10px 12px; vertical-align: middle;">
@@ -3947,44 +4174,54 @@ function openTierAchieversModal(tierNumber) {
         tableWrap.style.display = 'none';
         emptyBox.style.display = '';
 
-        emptyBox.innerHTML = `
-            <div style="text-align: center; margin-bottom: 16px;">
-                <div style="width: 48px; height: 48px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px;">
-                    <i class="fas fa-hourglass-half"></i>
-                </div>
-                <h5 style="font-weight: 800; color: #111827; margin-bottom: 4px;">No Leaders Have Met Tier ${tier.tier_number} (${tier.reward_name}) Yet</h5>
-                <p style="font-size: 12px; color: #6b7280; margin: 0 auto; max-width: 580px;">
-                    Requires <strong>${targetCount} Active Members in downline</strong>. Current highest available is <strong>${tier.current_count} Active Member(s)</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
-                </p>
-            </div>
-            ${leadingContenders.length > 0 ? `
-                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
-                    <div style="font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; margin-bottom: 10px;">
-                        <i class="fas fa-chart-line text-primary me-1"></i> Leaders Closest To Unlocking This Milestone (${leadingContenders.length})
+        if (sourceList.length > 0 && filtered.length === 0) {
+            emptyBox.innerHTML = `
+                <div style="text-align: center; padding: 32px 16px;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; color: #64748b; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px;">
+                        <i class="fas fa-filter"></i>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        ${leadingContenders.map(c => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px;">
-                                <div>
-                                    <strong style="color: #111827; font-size: 12.5px;">${c.leader_name}</strong>
-                                    <code>${c.leader_code}</code>
-                                    <span style="font-size: 11px; color: #6b7280; margin-left: 8px;">Sponsor: ${c.upline_sponsor}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span class="badge bg-primary" style="font-size: 11px; padding: 4px 8px;">${c.downline_active_count} / ${targetCount} Active Members</span>
-                                    <span style="font-size: 11px; color: #d97706; font-weight: 700;">Needs ${c.gap} more</span>
-                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 11px; font-weight: 600; padding: 2px 8px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id})">Audit</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <h5 style="font-weight: 800; color: #1e293b; margin-bottom: 4px;">No Members Match Selected Filter</h5>
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Active filter: <strong>${_currentModalFilter}</strong> ${_currentModalSearch ? `(Search: "${escH(_currentModalSearch)}")` : ''}</p>
+                    <button class="btn btn-sm btn-outline-primary" style="font-weight:700;border-radius:6px;" onclick="setTierModalFilter('all'); document.getElementById('tierModalSearchInput').value=''; onTierModalSearchChange();">Reset Filters</button>
                 </div>
-            ` : ''}
-        `;
+            `;
+        } else {
+            emptyBox.innerHTML = `
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px;">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <h5 style="font-weight: 800; color: #111827; margin-bottom: 4px;">No Leaders Have Met Tier ${tier.tier_number} (${tier.reward_name}) Yet</h5>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0 auto; max-width: 580px;">
+                        Requires <strong>${targetCount} Active Members in downline</strong>. Current highest available is <strong>${tier.current_count} Active Member(s)</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
+                    </p>
+                </div>
+                ${leadingContenders.length > 0 ? `
+                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; margin-bottom: 10px;">
+                            <i class="fas fa-chart-line text-primary me-1"></i> Leaders Closest To Unlocking This Milestone (${leadingContenders.length})
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${leadingContenders.map(c => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px;">
+                                    <div>
+                                        <strong style="color: #111827; font-size: 12.5px;">${c.leader_name}</strong>
+                                        <code>${c.leader_code}</code>
+                                        <span style="font-size: 11px; color: #6b7280; margin-left: 8px;">Sponsor: ${c.upline_sponsor}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span class="badge bg-primary" style="font-size: 11px; padding: 4px 8px;">${c.downline_active_count} / ${targetCount} Active Members</span>
+                                        <span style="font-size: 11px; color: #d97706; font-weight: 700;">Needs ${c.gap} more</span>
+                                        <button class="btn btn-xs btn-outline-secondary" style="font-size: 11px; font-weight: 600; padding: 2px 8px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id})">Audit</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
     }
-
-    const modal = document.getElementById('tierAchieversModal');
-    if (modal) modal.style.display = 'flex';
 }
 
 function openClaimUpdateModal(partnerId, partnerName, partnerCode, tierNumber, rewardName, claimInfo) {

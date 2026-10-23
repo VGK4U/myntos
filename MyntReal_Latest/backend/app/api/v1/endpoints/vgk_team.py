@@ -10870,6 +10870,19 @@ def get_vgk_awards_overview(
                 "core": {"partner_id": core_p.id if core_p else None, "partner_name": core_p.partner_name if core_p else "—", "partner_code": core_p.partner_code if core_p else ""}
             }
 
+            # DC Protocol: Ineligible classification (Deactivated & Freelancers)
+            is_deactivated = (not p.is_active) or bool(p.is_blocked) or (p.member_status in ('INACTIVE', 'BLOCKED', 'DEACTIVATED'))
+            is_freelancer = (getattr(p, 'partner_type', '') == 'FREELANCER') or bool(getattr(p, 'freelancer_classification', None))
+            is_ineligible = is_deactivated or is_freelancer
+
+            ineligible_reason = ""
+            if is_deactivated and is_freelancer:
+                ineligible_reason = "Deactivated & Freelancer"
+            elif is_deactivated:
+                ineligible_reason = "Deactivated Account"
+            elif is_freelancer:
+                ineligible_reason = "Freelancer"
+
             rec = {
                 "partner_id": p.id,
                 "partner_name": p.partner_name or f"Partner #{p.id}",
@@ -10888,7 +10901,16 @@ def get_vgk_awards_overview(
                 "has_validation_problems": len(validation_problems) > 0,
                 "counted_files": counted_files_details,
                 "upline_path": upline_path,
-                "placement_history": change_logs_by_member.get(p.id, [])
+                "placement_history": change_logs_by_member.get(p.id, []),
+                "is_account_active": bool(p.is_active),
+                "is_blocked": bool(p.is_blocked),
+                "member_status": p.member_status or "ACTIVE",
+                "partner_type": p.partner_type or "PARTNER",
+                "freelancer_classification": p.freelancer_classification,
+                "is_freelancer": is_freelancer,
+                "is_deactivated": is_deactivated,
+                "is_ineligible": is_ineligible,
+                "ineligible_reason": ineligible_reason
             }
             member_records.append(rec)
 
@@ -11062,6 +11084,14 @@ def get_vgk_awards_overview(
                             "downline_active_count": 0,
                             "claim_status": c_info.get("claim_status", "pending"),
                             "claim_info": c_info,
+                            "is_account_active": m.get("is_account_active", True),
+                            "is_blocked": m.get("is_blocked", False),
+                            "member_status": m.get("member_status", "ACTIVE"),
+                            "partner_type": m.get("partner_type", "PARTNER"),
+                            "is_freelancer": m.get("is_freelancer", False),
+                            "is_deactivated": m.get("is_deactivated", False),
+                            "is_ineligible": m.get("is_ineligible", False),
+                            "ineligible_reason": m.get("ineligible_reason", ""),
                             "qualifying_active_members": [
                                 {
                                     "partner_id": m["partner_id"],
@@ -11111,7 +11141,15 @@ def get_vgk_awards_overview(
                             "qualification_type": f"Team Leadership ({len(assigned)} Fresh Active Downline Member{'s' if len(assigned) > 1 else ''})",
                             "qualifying_active_members": assigned,
                             "claim_status": c_info.get("claim_status", "pending"),
-                            "claim_info": c_info
+                            "claim_info": c_info,
+                            "is_account_active": m.get("is_account_active", True),
+                            "is_blocked": m.get("is_blocked", False),
+                            "member_status": m.get("member_status", "ACTIVE"),
+                            "partner_type": m.get("partner_type", "PARTNER"),
+                            "is_freelancer": m.get("is_freelancer", False),
+                            "is_deactivated": m.get("is_deactivated", False),
+                            "is_ineligible": m.get("is_ineligible", False),
+                            "ineligible_reason": m.get("ineligible_reason", "")
                         })
                     elif len(available_actives) > 0:
                         # Leader has progress toward this tier with unconsumed active members
@@ -11122,7 +11160,15 @@ def get_vgk_awards_overview(
                             "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
                             "downline_active_count": len(available_actives),
                             "gap": tgt - len(available_actives),
-                            "qualifying_active_members": available_actives
+                            "qualifying_active_members": available_actives,
+                            "is_account_active": m.get("is_account_active", True),
+                            "is_blocked": m.get("is_blocked", False),
+                            "member_status": m.get("member_status", "ACTIVE"),
+                            "partner_type": m.get("partner_type", "PARTNER"),
+                            "is_freelancer": m.get("is_freelancer", False),
+                            "is_deactivated": m.get("is_deactivated", False),
+                            "is_ineligible": m.get("is_ineligible", False),
+                            "ineligible_reason": m.get("ineligible_reason", "")
                         })
 
                 # Sort achievers: Leaders with direct (L1) contributors first, then by name
