@@ -3518,15 +3518,9 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                             <i class="fas fa-coins me-1"></i> REVENUE & BENEFIT BREAKDOWN
                         </label>
                         <div style="display:flex; flex-direction:column; gap:8px;">
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                                <div>
-                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">ACHIEVER RANK TAG</label>
-                                    <input type="text" id="posterControlRank" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fbbf24; font-weight:700;" value="2nd ACHIEVER">
-                                </div>
-                                <div>
-                                    <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">CAREER DESIGNATION</label>
-                                    <input type="text" id="posterControlDesignation" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff;" value="SENIOR">
-                                </div>
+                            <div>
+                                <label style="font-size:9.5px; color:#94a3b8; display:block; font-weight:700;">CAREER DESIGNATION</label>
+                                <input type="text" id="posterControlDesignation" oninput="updatePosterFromControls()" style="width:100%; padding:6px 8px; font-size:11.5px; border:1px solid rgba(245,158,11,0.4); border-radius:5px; background:#1e293b; color:#fff;" value="SENIOR">
                             </div>
 
                             <!-- Cumulative Bonanza Metrics -->
@@ -3606,100 +3600,100 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                 <input type="file" id="customCreativeInput" accept="image/*" style="display: none;" onchange="handleCustomCreativeUpload(event)">
 
                 <!-- Tab Content 1: Auto-Generated Poster Preview -->
-                <div id="posterTabContentAuto" style="flex:1; overflow-y:auto; text-align:center; padding-right:6px;">
+                <div id="posterTabContentAuto" style="flex:1; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; padding:6px; box-sizing:border-box;">
                     
                     <!-- DYNAMIC POSTER CANVAS CONTENT -->
-                    <div id="dynamicPosterContent" style="width: 100%; max-width: 820px; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); color: white; padding: 26px 22px; border-radius: 16px; border: 3px solid #f59e0b; position: relative; font-family: 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; overflow: hidden; margin: 0 auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7);">
+                    <div id="dynamicPosterContent" style="width: 100%; max-width: 780px; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); color: white; padding: 14px 18px; border-radius: 14px; border: 2.5px solid #f59e0b; position: relative; font-family: 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; overflow: hidden; margin: 0 auto; box-shadow: 0 12px 30px rgba(0,0,0,0.7); transform-origin: top center;">
 
                         <!-- Ambient Glow -->
                         <div style="position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 500px; height: 500px; background: radial-gradient(circle, rgba(245,158,11,0.2) 0%, transparent 70%); pointer-events: none;"></div>
 
                         <!-- 1. Header Logos Row -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: relative; z-index: 2; padding: 0 8px;">
-                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
-                                <img src="/public/vgk4u-logo-200.png" alt="VGK4U Logo" style="height: 38px; object-fit: contain;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; position: relative; z-index: 2; padding: 0 4px;">
+                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 4px 12px; border-radius: 6px;">
+                                <img src="/public/vgk4u-logo-200.png" alt="VGK4U Logo" style="height: 32px; object-fit: contain;">
                             </div>
-                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 6px 14px; border-radius: 8px;">
-                                <img src="/public/myntreal-logo-trans.png" alt="MYNTREAL Logo" style="height: 34px; object-fit: contain;">
+                            <div style="display: flex; align-items: center; background: rgba(255,255,255,0.95); padding: 4px 12px; border-radius: 6px;">
+                                <img src="/public/myntreal-logo-trans.png" alt="MYNTREAL Logo" style="height: 28px; object-fit: contain;">
                             </div>
                         </div>
 
                         <!-- 2. Campaign Header Badge -->
-                        <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
-                            <div id="posterHeaderBadge" style="display: inline-block; background: linear-gradient(135deg, #b45309, #d97706, #f59e0b); color: #ffffff; font-weight: 800; font-size: 13px; padding: 6px 24px; border-radius: 20px; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.2px; box-shadow: 0 4px 15px rgba(245,158,11,0.4);">
+                        <div style="text-align: center; margin-bottom: 8px; position: relative; z-index: 2;">
+                            <div id="posterHeaderBadge" style="display: inline-block; background: linear-gradient(135deg, #b45309, #d97706, #f59e0b); color: #ffffff; font-weight: 800; font-size: 11.5px; padding: 4px 20px; border-radius: 16px; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 3px 10px rgba(245,158,11,0.4);">
                                 VGK BONANZA ACHIEVERS POSTER
                             </div>
                         </div>
 
                         <!-- 3. Title & Subtitle -->
-                        <div style="text-align: center; margin-bottom: 18px; position: relative; z-index: 2;">
-                            <h1 style="font-size: 30px; font-weight: 900; background: linear-gradient(90deg, #fff, #fef08a, #f59e0b, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="text-align: center; margin-bottom: 8px; position: relative; z-index: 2;">
+                            <h1 style="font-size: 24px; font-weight: 900; background: linear-gradient(90deg, #fff, #fef08a, #f59e0b, #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: 0.8px;">
                                 CONGRATULATIONS!
                             </h1>
-                            <div style="font-size: 16px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <i class="fas fa-star" style="font-size: 12px;"></i>
+                            <div style="font-size: 13.5px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <i class="fas fa-star" style="font-size: 10px;"></i>
                                 <span id="posterSubHeaderTitle">to Our Bonanza Achievers</span>
-                                <i class="fas fa-star" style="font-size: 12px;"></i>
+                                <i class="fas fa-star" style="font-size: 10px;"></i>
                             </div>
-                            <div id="posterSubHeaderSlogan" style="font-size: 13px; color: #e2e8f0; margin-top: 4px; font-weight: 600;">
+                            <div id="posterSubHeaderSlogan" style="font-size: 11px; color: #e2e8f0; margin-top: 2px; font-weight: 600;">
                                 You've Qualified for the Bonanza Reward!
                             </div>
                         </div>
 
                         <!-- 4. Campaign Period & Qualification Pill -->
-                        <div style="display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 10px 16px; margin: 0 auto 18px auto; max-width: 640px; position: relative; z-index: 2;">
-                            <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
-                                <div style="background: rgba(245,158,11,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 15px;">
+                        <div style="display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 6px 14px; margin: 0 auto 8px auto; max-width: 600px; position: relative; z-index: 2;">
+                            <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+                                <div style="background: rgba(245,158,11,0.2); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 13px;">
                                     <i class="far fa-calendar-alt"></i>
                                 </div>
                                 <div>
-                                    <div style="font-size: 9.5px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">CAMPAIGN PERIOD</div>
-                                    <div id="posterPeriodText" style="font-size: 12.5px; font-weight: 700; color: #ffffff;">01 SEPT 2026 → 31 OCT 2026</div>
+                                    <div style="font-size: 8.5px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">CAMPAIGN PERIOD</div>
+                                    <div id="posterPeriodText" style="font-size: 11.5px; font-weight: 700; color: #ffffff;">01 SEPT 2026 → 31 OCT 2026</div>
                                 </div>
                             </div>
-                            <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.2);"></div>
-                            <div style="display: flex; align-items: center; gap: 10px; text-align: left;">
-                                <div style="background: rgba(16,185,129,0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 15px;">
+                            <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.2);"></div>
+                            <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+                                <div style="background: rgba(16,185,129,0.2); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 13px;">
                                     <i class="fas fa-check-circle"></i>
                                 </div>
                                 <div>
-                                    <div style="font-size: 9.5px; font-weight: 800; color: #34d399; text-transform: uppercase;">QUALIFICATION</div>
-                                    <div id="posterQualText" style="font-size: 12.5px; font-weight: 700; color: #ffffff;">DVR with Eligible 1st Payment Received</div>
+                                    <div style="font-size: 8.5px; font-weight: 800; color: #34d399; text-transform: uppercase;">QUALIFICATION</div>
+                                    <div id="posterQualText" style="font-size: 11.5px; font-weight: 700; color: #ffffff;">DVR with Eligible 1st Payment Received</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 5. Achievers Section Header -->
-                        <div style="text-align: center; margin-bottom: 14px; position: relative; z-index: 2;">
-                            <span style="background: linear-gradient(90deg, #1e3a8a, #3b82f6); border: 1px solid #60a5fa; color: #ffffff; font-weight: 800; font-size: 12px; padding: 4px 18px; border-radius: 20px; letter-spacing: 1px;">
+                        <div style="text-align: center; margin-bottom: 8px; position: relative; z-index: 2;">
+                            <span style="background: linear-gradient(90deg, #1e3a8a, #3b82f6); border: 1px solid #60a5fa; color: #ffffff; font-weight: 800; font-size: 11px; padding: 3px 16px; border-radius: 16px; letter-spacing: 0.8px;">
                                 ⭐ OUR BONANZA ACHIEVERS ⭐
                             </span>
                         </div>
 
                         <!-- 6. Achiever Cards Grid (Dynamic Center Alignment) -->
-                        <div id="posterAchieversGrid" style="width: 100%; display: flex; flex-wrap: wrap; justify-content: center !important; align-items: center !important; gap: 18px; margin: 0 auto 20px auto; box-sizing: border-box; position: relative; z-index: 2; text-align: center;">
+                        <div id="posterAchieversGrid" style="width: 100%; display: flex; flex-wrap: wrap; justify-content: center !important; align-items: center !important; gap: 12px; margin: 0 auto 6px auto; box-sizing: border-box; position: relative; z-index: 2; text-align: center;">
                             <!-- Dynamically generated achiever cards -->
                         </div>
 
                         <!-- 7. Footer Slogans -->
-                        <div style="text-align: center; margin-top: 10px; position: relative; z-index: 2;">
-                            <div style="font-size: 13px; font-weight: 700; color: #cbd5e1; margin-bottom: 2px;">
+                        <div style="text-align: center; margin-top: 6px; position: relative; z-index: 2;">
+                            <div style="font-size: 11.5px; font-weight: 700; color: #cbd5e1; margin-bottom: 2px;">
                                 Your Hard Work, Dedication & Commitment are the Real Inspiration!
                             </div>
-                            <div style="font-size: 14px; font-weight: 800; color: #fef08a; font-style: italic;">
+                            <div style="font-size: 12px; font-weight: 800; color: #fef08a; font-style: italic;">
                                 Keep Growing... Keep Winning... Many More Bonanzas Await You!
                             </div>
                         </div>
 
                         <!-- 8. Bottom Bar Slogans -->
-                        <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: space-around; font-size: 10px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">
+                        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: space-around; font-size: 9px; font-weight: 800; color: #fbbf24; text-transform: uppercase;">
                             <div><i class="fas fa-trophy me-1"></i> MORE EFFORTS MORE REWARDS</div>
                             <div><i class="fas fa-users me-1"></i> TOGETHER WE GROW</div>
                             <div><i class="fas fa-bullseye me-1"></i> TOGETHER WE ACHIEVE</div>
                             <div><i class="fas fa-chart-line me-1"></i> TOGETHER WE CELEBRATE</div>
                         </div>
                         
-                        <div style="text-align: center; margin-top: 6px; font-size: 12px; font-weight: 800; color: #34d399; letter-spacing: 0.8px;">
+                        <div style="text-align: center; margin-top: 4px; font-size: 10.5px; font-weight: 800; color: #34d399; letter-spacing: 0.6px;">
                             🌿 Go Solar. Give Back. Grow Together. 🌿
                         </div>
                     </div>
@@ -3775,6 +3769,7 @@ function openPosterModal(bonanzaId, partnerId) {
     } else if (_currentActiveBonanza) {
         switchPosterCampaign(_currentActiveBonanza.bonanza_id, partnerId);
     }
+    requestAnimationFrame(() => fitPosterToScreen());
 }
 
 function populatePosterCampaignDropdown() {
@@ -3943,8 +3938,9 @@ function switchPosterTab(tab) {
     if (tab === 'auto') {
         if (btnAuto) { btnAuto.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)'; btnAuto.style.color = '#000'; }
         if (btnCustom) { btnCustom.style.background = 'rgba(255,255,255,0.08)'; btnCustom.style.color = '#cbd5e1'; }
-        if (contentAuto) contentAuto.style.display = 'block';
+        if (contentAuto) contentAuto.style.display = 'flex';
         if (contentCustom) contentCustom.style.display = 'none';
+        requestAnimationFrame(() => fitPosterToScreen());
     } else {
         if (btnCustom) { btnCustom.style.background = 'linear-gradient(90deg, #10b981, #059669)'; btnCustom.style.color = '#fff'; }
         if (btnAuto) { btnAuto.style.background = 'rgba(255,255,255,0.08)'; btnAuto.style.color = '#cbd5e1'; }
@@ -4123,45 +4119,38 @@ function renderDynamicAchieversPoster(g, achieversList) {
             <div style="width:100%; max-width:760px; margin:0 auto; display:flex; flex-direction:column; align-items:center; position:relative; z-index:2; box-sizing:border-box;">
                 
                 <!-- Celebratory Ribbon -->
-                <div style="margin-bottom:12px; text-align:center;">
-                    <div style="display:inline-block; background:linear-gradient(135deg, #991b1b, #dc2626, #b91c1c); color:#ffffff; font-weight:800; font-size:12px; padding:5px 24px; border-radius:16px; border:1px solid #fca5a5; text-transform:uppercase; letter-spacing:1px; box-shadow:0 3px 10px rgba(220,38,38,0.5);">
+                <div style="margin-bottom:8px; text-align:center;">
+                    <div style="display:inline-block; background:linear-gradient(135deg, #991b1b, #dc2626, #b91c1c); color:#ffffff; font-weight:800; font-size:11px; padding:4px 22px; border-radius:14px; border:1px solid #fca5a5; text-transform:uppercase; letter-spacing:0.8px; box-shadow:0 2px 8px rgba(220,38,38,0.5);">
                         🎉 FOR ACHIEVING THE ${escBonanzaH(titleVal.toUpperCase())} 🎉
                     </div>
                 </div>
 
-                <!-- 1. Achiever Rank Shield - Cleanly Placed Above Photo Medallion (Never Overlaps Head/Cap) -->
-                <div style="margin-bottom:10px; text-align:center;">
-                    <div style="display:inline-block; background:linear-gradient(135deg, #b45309, #f59e0b, #fef08a, #d97706); color:#000; font-size:12.5px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; padding:5px 24px; border-radius:20px; border:2px solid #ffffff; box-shadow:0 4px 18px rgba(245,158,11,0.5), 0 2px 6px rgba(0,0,0,0.8); white-space:nowrap;">
-                        ★ ${escBonanzaH(rankVal)} ★
-                    </div>
-                </div>
-
-                <!-- 2. Golden Medallion Ring for Achiever Photo (Enlarged to 172px for clear visibility) -->
-                <div style="position:relative; margin-bottom:14px;">
-                    <div style="width:172px; height:172px; border-radius:50%; padding:6px; background:linear-gradient(135deg, #f59e0b, #fef08a, #b45309, #d97706); box-shadow:0 0 35px rgba(245,158,11,0.7), inset 0 0 12px rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; position:relative;">
-                        <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; border:3.5px solid #1e1b4b; background:#0f172a; position:relative; box-shadow:inset 0 0 10px rgba(0,0,0,0.8);">
+                <!-- Achiever Photo Medallion -->
+                <div style="position:relative; margin-bottom:8px;">
+                    <div style="width:148px; height:148px; border-radius:50%; padding:5px; background:linear-gradient(135deg, #f59e0b, #fef08a, #b45309, #d97706); box-shadow:0 0 28px rgba(245,158,11,0.65), inset 0 0 10px rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; position:relative;">
+                        <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; border:3px solid #1e1b4b; background:#0f172a; position:relative; box-shadow:inset 0 0 8px rgba(0,0,0,0.8);">
                             ${photoContentHtml}
                         </div>
                         <!-- Upload Camera Button (Auto-hidden during canvas download/share) -->
-                        <button class="poster-camera-btn" onclick="triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position:absolute; bottom:4px; right:4px; background:#f59e0b; border:2px solid #000; color:#000; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 10px rgba(0,0,0,0.8); transition:transform 0.15s ease;">
+                        <button class="poster-camera-btn" onclick="triggerAchieverPhotoUpload('${imgId}')" title="Click to upload custom photo" style="position:absolute; bottom:3px; right:3px; background:#f59e0b; border:2px solid #000; color:#000; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.8); transition:transform 0.15s ease;">
                             <i class="fas fa-camera"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- 3. Golden Plaque Name Banner & Career Designation -->
-                <div style="text-align:center; margin-bottom:12px; width:100%;">
-                    <div style="display:inline-block; background:linear-gradient(90deg, rgba(245,158,11,0), rgba(245,158,11,0.25) 20%, rgba(245,158,11,0.45) 50%, rgba(245,158,11,0.25) 80%, rgba(245,158,11,0)); border-top:1.5px solid #f59e0b; border-bottom:1.5px solid #f59e0b; padding:6px 36px; margin-bottom:6px;">
-                        <div style="font-size:22px; font-weight:900; color:#ffffff; letter-spacing:1.5px; text-transform:uppercase; text-shadow:0 2px 10px rgba(0,0,0,0.9);">
+                <!-- Golden Plaque Name Banner & Career Designation -->
+                <div style="text-align:center; margin-bottom:8px; width:100%;">
+                    <div style="display:inline-block; background:linear-gradient(90deg, rgba(245,158,11,0), rgba(245,158,11,0.25) 20%, rgba(245,158,11,0.45) 50%, rgba(245,158,11,0.25) 80%, rgba(245,158,11,0)); border-top:1.5px solid #f59e0b; border-bottom:1.5px solid #f59e0b; padding:4px 32px; margin-bottom:4px;">
+                        <div style="font-size:20px; font-weight:900; color:#ffffff; letter-spacing:1.2px; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,0.9);">
                             ${escBonanzaH(m.partner_name)}
                         </div>
                     </div>
 
                     <div style="display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:2px;">
-                        <span style="background:linear-gradient(90deg, #1e3a8a, #2563eb); border:1px solid #60a5fa; color:#dbeafe; font-size:10.5px; font-weight:800; padding:4px 14px; border-radius:12px; letter-spacing:0.8px; text-transform:uppercase;">
+                        <span style="background:linear-gradient(90deg, #1e3a8a, #2563eb); border:1px solid #60a5fa; color:#dbeafe; font-size:10px; font-weight:800; padding:3px 12px; border-radius:12px; letter-spacing:0.8px; text-transform:uppercase;">
                             <i class="fas fa-id-badge me-1"></i> CAREER DESIGNATION : <strong style="color:#ffffff;">${escBonanzaH(desigVal)}</strong>
                         </span>
-                        <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fef08a; font-size:10.5px; font-weight:800; padding:4px 14px; border-radius:12px;">
+                        <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fef08a; font-size:10px; font-weight:800; padding:3px 12px; border-radius:12px;">
                             <i class="fas fa-hashtag me-1"></i> ${escBonanzaH(m.partner_code)}
                         </span>
                     </div>
@@ -4170,141 +4159,142 @@ function renderDynamicAchieversPoster(g, achieversList) {
 
                 <!-- 4. TOTAL BONANZA ACHIEVEMENT METRICS (Only shown if member achieved more than 1 file) -->
                 ${isMultiFile ? `
-                <div style="width:100%; margin-bottom:14px; position:relative;">
-                    <div style="text-align:center; margin-bottom:8px;">
-                        <span style="background:linear-gradient(90deg, #ea580c, #dc2626); color:#fff; font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:4px 20px; border-radius:14px; border:1px solid #fca5a5; box-shadow:0 3px 10px rgba(220,38,38,0.5);">
+                <div style="width:100%; margin-bottom:10px; position:relative;">
+                    <div style="text-align:center; margin-bottom:6px;">
+                        <span style="background:linear-gradient(90deg, #ea580c, #dc2626); color:#fff; font-size:10.5px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:3px 18px; border-radius:12px; border:1px solid #fca5a5; box-shadow:0 2px 8px rgba(220,38,38,0.5);">
                             🔥 MULTI-FILE BONANZA ACHIEVER · ${filesCountNum} FILES DELIVERED 🔥
                         </span>
                     </div>
 
-                    <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95)); border:2px solid #f59e0b; border-radius:12px; padding:12px 14px; box-shadow:0 4px 16px rgba(0,0,0,0.5); display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; text-align:center; position:relative; overflow:hidden;">
+                    <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95)); border:2px solid #f59e0b; border-radius:10px; padding:10px 12px; box-shadow:0 4px 14px rgba(0,0,0,0.5); display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; text-align:center; position:relative; overflow:hidden;">
                         <!-- Col 1: Total Bonanza Files -->
-                        <div style="border-right:1px solid rgba(245,158,11,0.3); padding-right:8px;">
-                            <div style="font-size:9.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
+                        <div style="border-right:1px solid rgba(245,158,11,0.3); padding-right:6px;">
+                            <div style="font-size:9px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
                                 <i class="fas fa-file-invoice text-warning me-1"></i> TOTAL BONANZA FILES
                             </div>
-                            <div style="font-size:22px; font-weight:900; color:#ffffff; margin:3px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
+                            <div style="font-size:20px; font-weight:900; color:#ffffff; margin:2px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(filesCountVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#cbd5e1; font-weight:600;">Bonanza Qualified Deals</div>
+                            <div style="font-size:8px; color:#cbd5e1; font-weight:600;">Bonanza Qualified Deals</div>
                         </div>
 
                         <!-- Col 2: Total 1st Payment Benefit -->
-                        <div style="border-right:1px solid rgba(245,158,11,0.3); padding-right:8px;">
-                            <div style="font-size:9.5px; font-weight:800; color:#fef08a; text-transform:uppercase; letter-spacing:0.8px;">
+                        <div style="border-right:1px solid rgba(245,158,11,0.3); padding-right:6px;">
+                            <div style="font-size:9px; font-weight:800; color:#fef08a; text-transform:uppercase; letter-spacing:0.8px;">
                                 <i class="fas fa-hand-holding-usd text-warning me-1"></i> TOTAL 1ST PMT BENEFIT
                             </div>
-                            <div style="font-size:22px; font-weight:900; color:#fde047; margin:3px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
+                            <div style="font-size:20px; font-weight:900; color:#fde047; margin:2px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(totalFirstBenefitVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#fef08a; font-weight:600;">Instant Released Earnings</div>
+                            <div style="font-size:8px; color:#fef08a; font-weight:600;">Instant Released Earnings</div>
                         </div>
 
                         <!-- Col 3: Total Business Value -->
                         <div>
-                            <div style="font-size:9.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px;">
+                            <div style="font-size:9px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px;">
                                 <i class="fas fa-chart-line text-info me-1"></i> TOTAL BUSINESS VALUE
                             </div>
-                            <div style="font-size:22px; font-weight:900; color:#67e8f9; margin:3px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
+                            <div style="font-size:20px; font-weight:900; color:#67e8f9; margin:2px 0; text-shadow:0 1px 6px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(totalBizVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#bae6fd; font-weight:600;">Project Commercial Volume</div>
+                            <div style="font-size:8px; color:#bae6fd; font-weight:600;">Project Commercial Volume</div>
                         </div>
                     </div>
                 </div>
                 ` : ''}
 
                 <!-- 5. Commercial Revenue & Benefit Breakdown Grid (4 Pillars) -->
-                <div style="width:100%; margin:4px 0 14px 0; position:relative;">
-                    <div style="font-size:11px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <div style="width:100%; margin:2px 0 8px 0; position:relative;">
+                    <div style="font-size:10.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:6px;">
                         <i class="fas fa-coins text-warning"></i> COMMERCIAL BENEFIT BREAKDOWN ${isMultiFile ? '(PER FILE DEAL)' : 'PER DEAL'}
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; position:relative;">
+                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; position:relative;">
                         
                         <!-- Card 1: L1 Source Commission -->
-                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(16,185,129,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
-                            <div style="font-size:8px; font-weight:800; background:#065f46; color:#a7f3d0; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(16,185,129,0.5); border-radius:8px; padding:7px 5px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:7.5px; font-weight:800; background:#065f46; color:#a7f3d0; padding:2px 5px; border-radius:3px; display:inline-block; margin-bottom:3px; text-transform:uppercase;">
                                 DIRECT (SAME DAY)
                             </div>
-                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                            <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:22px; display:flex; align-items:center; justify-content:center;">
                                 L1 SOURCE COMMISSION
                             </div>
-                            <div style="font-size:17px; font-weight:900; color:#34d399; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                            <div style="font-size:15px; font-weight:900; color:#34d399; margin:2px 0 1px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(l1Val)}
                             </div>
-                            <div style="font-size:8.5px; color:#6ee7b7; font-weight:600;">Before TDS & Admin</div>
+                            <div style="font-size:8px; color:#6ee7b7; font-weight:600;">Before TDS & Admin</div>
                         </div>
 
                         <!-- Card 2: Extra Commission -->
-                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(245,158,11,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
-                            <div style="font-size:8px; font-weight:800; background:#92400e; color:#fde68a; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(245,158,11,0.5); border-radius:8px; padding:7px 5px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:7.5px; font-weight:800; background:#92400e; color:#fde68a; padding:2px 5px; border-radius:3px; display:inline-block; margin-bottom:3px; text-transform:uppercase;">
                                 + EXTRA COMMISSION
                             </div>
-                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                            <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:22px; display:flex; align-items:center; justify-content:center;">
                                 EXTRA INCOME
                             </div>
-                            <div style="font-size:17px; font-weight:900; color:#fbbf24; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                            <div style="font-size:15px; font-weight:900; color:#fbbf24; margin:2px 0 1px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(extraVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#fde68a; font-weight:600;">Offer Multiplier Reward</div>
+                            <div style="font-size:8px; color:#fde68a; font-weight:600;">Offer Multiplier Reward</div>
                         </div>
 
                         <!-- Card 3: TDS & Admin Return -->
-                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(56,189,248,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
-                            <div style="font-size:8px; font-weight:800; background:#075985; color:#bae6fd; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(56,189,248,0.5); border-radius:8px; padding:7px 5px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:7.5px; font-weight:800; background:#075985; color:#bae6fd; padding:2px 5px; border-radius:3px; display:inline-block; margin-bottom:3px; text-transform:uppercase;">
                                 + 10% FEE WAIVER
                             </div>
-                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                            <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:22px; display:flex; align-items:center; justify-content:center;">
                                 TDS & ADMIN RETURN
                             </div>
-                            <div style="font-size:17px; font-weight:900; color:#38bdf8; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                            <div style="font-size:15px; font-weight:900; color:#38bdf8; margin:2px 0 1px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(tdsVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#bae6fd; font-weight:600;">100% Reimbursed to You</div>
+                            <div style="font-size:8px; color:#bae6fd; font-weight:600;">100% Reimbursed to You</div>
                         </div>
 
                         <!-- Card 4: Support + Brand Pending -->
-                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(192,132,252,0.5); border-radius:10px; padding:10px 8px; text-align:center; box-shadow:0 4px 14px rgba(0,0,0,0.4); position:relative;">
-                            <div style="font-size:8px; font-weight:800; background:#6b21a8; color:#f3e8ff; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:4px; text-transform:uppercase;">
+                        <div style="background:linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border:1.5px solid rgba(192,132,252,0.5); border-radius:8px; padding:7px 5px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.4); position:relative;">
+                            <div style="font-size:7.5px; font-weight:800; background:#6b21a8; color:#f3e8ff; padding:2px 5px; border-radius:3px; display:inline-block; margin-bottom:3px; text-transform:uppercase;">
                                 + POST-NETMETER
                             </div>
-                            <div style="font-size:9.5px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:24px; display:flex; align-items:center; justify-content:center;">
+                            <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; line-height:1.2; height:22px; display:flex; align-items:center; justify-content:center;">
                                 BRAND & SUPPORT
                             </div>
-                            <div style="font-size:17px; font-weight:900; color:#c084fc; margin:4px 0 2px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
+                            <div style="font-size:15px; font-weight:900; color:#c084fc; margin:2px 0 1px 0; text-shadow:0 1px 4px rgba(0,0,0,0.8);">
                                 ${escBonanzaH(supportVal)}
                             </div>
-                            <div style="font-size:8.5px; color:#e9d5ff; font-weight:600;">Released After Netmeter</div>
+                            <div style="font-size:8px; color:#e9d5ff; font-weight:600;">Released After Netmeter</div>
                         </div>
 
                     </div>
                 </div>
 
                 <!-- 6. Golden Dual Highlight Release Bar -->
-                <div style="width:100%; background:linear-gradient(90deg, rgba(245,158,11,0.18), rgba(16,185,129,0.18)); border:1.5px solid #f59e0b; border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:10px;">
+                <div style="width:100%; background:linear-gradient(90deg, rgba(245,158,11,0.18), rgba(16,185,129,0.18)); border:1.5px solid #f59e0b; border-radius:8px; padding:8px 12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:8px;">
                     <div style="text-align:center;">
-                        <div style="font-size:9.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
+                        <div style="font-size:9px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.8px;">
                             <i class="fas fa-check-circle text-warning me-1"></i> ${isMultiFile ? 'FIRST PAYMENT RELEASED (PER FILE)' : 'FIRST PAYMENT RELEASED BENEFIT'}
                         </div>
-                        <div style="font-size:20px; font-weight:900; color:#fef08a; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
+                        <div style="font-size:18px; font-weight:900; color:#fef08a; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
                             ${escBonanzaH(firstTotalVal)}
                         </div>
-                        <div style="font-size:8.5px; color:#cbd5e1;">(L1 ₹9K + Extra ₹4.5K + TDS/Admin ₹1.5K)</div>
+                        <div style="font-size:8px; color:#cbd5e1;">(L1 ₹9K + Extra ₹4.5K + TDS/Admin ₹1.5K)</div>
                     </div>
-                    <div style="width:1px; height:36px; background:rgba(245,158,11,0.3);"></div>
+                    <div style="width:1px; height:30px; background:rgba(245,158,11,0.3);"></div>
                     <div style="text-align:center;">
-                        <div style="font-size:9.5px; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.8px;">
+                        <div style="font-size:9px; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.8px;">
                             <i class="fas fa-trophy text-success me-1"></i> ${isMultiFile ? 'TOTAL DEAL BENEFIT (PER FILE)' : 'TOTAL DEAL BENEFIT'}
                         </div>
-                        <div style="font-size:20px; font-weight:900; color:#6ee7b7; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
+                        <div style="font-size:18px; font-weight:900; color:#6ee7b7; text-shadow:0 1px 6px rgba(0,0,0,0.6);">
                             ${escBonanzaH(totalVal)}
                         </div>
-                        <div style="font-size:8.5px; color:#cbd5e1;">(1st Released + Brand & Support)</div>
+                        <div style="font-size:8px; color:#cbd5e1;">(1st Released + Brand & Support)</div>
                     </div>
                 </div>
             </div>
         `;
+        requestAnimationFrame(() => fitPosterToScreen());
         return;
     }
 
@@ -4368,6 +4358,38 @@ function renderDynamicAchieversPoster(g, achieversList) {
             </div>
         `;
     }).join('');
+    requestAnimationFrame(() => fitPosterToScreen());
+}
+
+function fitPosterToScreen() {
+    const container = document.getElementById('posterTabContentAuto');
+    const poster = document.getElementById('dynamicPosterContent');
+    if (!container || !poster || _posterActiveTab !== 'auto') return;
+
+    // Reset transform to measure actual unscaled dimensions
+    poster.style.transform = 'none';
+    poster.style.marginBottom = '0px';
+
+    const availHeight = container.clientHeight - 12;
+    const availWidth = container.clientWidth - 12;
+    const posterHeight = poster.offsetHeight;
+    const posterWidth = poster.offsetWidth;
+
+    if (posterHeight > 0 && availHeight > 0 && posterWidth > 0 && availWidth > 0) {
+        const scaleY = availHeight / posterHeight;
+        const scaleX = availWidth / posterWidth;
+        const scale = Math.min(1, scaleY, scaleX);
+
+        if (scale < 0.999) {
+            poster.style.transformOrigin = 'top center';
+            poster.style.transform = `scale(${scale.toFixed(4)})`;
+            const scaledHeight = posterHeight * scale;
+            poster.style.marginBottom = `-${(posterHeight - scaledHeight).toFixed(0)}px`;
+        } else {
+            poster.style.transform = 'none';
+            poster.style.marginBottom = '0px';
+        }
+    }
 }
 
 function focusSinglePosterAchiever(partnerId) {
@@ -4387,6 +4409,11 @@ async function capturePosterCanvasDataUrl() {
     if (!target) return null;
     const cameraBtns = target.querySelectorAll('.poster-camera-btn');
     cameraBtns.forEach(btn => btn.style.display = 'none');
+    const prevTransform = target.style.transform;
+    const prevMarginBottom = target.style.marginBottom;
+    target.style.transform = 'none';
+    target.style.marginBottom = '0px';
+
     try {
         const canvas = await html2canvas(target, {
             scale: 2.5,
@@ -4399,7 +4426,10 @@ async function capturePosterCanvasDataUrl() {
         console.warn('Canvas capture failed:', e);
         return null;
     } finally {
+        target.style.transform = prevTransform;
+        target.style.marginBottom = prevMarginBottom;
         cameraBtns.forEach(btn => btn.style.display = 'flex');
+        fitPosterToScreen();
     }
 }
 
@@ -4564,6 +4594,11 @@ async function downloadDynamicPoster() {
 
     const cameraBtns = target.querySelectorAll('.poster-camera-btn');
     cameraBtns.forEach(btn => btn.style.display = 'none');
+    const prevTransform = target.style.transform;
+    const prevMarginBottom = target.style.marginBottom;
+    target.style.transform = 'none';
+    target.style.marginBottom = '0px';
+
     try {
         const canvas = await html2canvas(target, {
             scale: 3,
@@ -4579,7 +4614,10 @@ async function downloadDynamicPoster() {
     } catch (err) {
         alert('Could not generate poster: ' + err.message);
     } finally {
+        target.style.transform = prevTransform;
+        target.style.marginBottom = prevMarginBottom;
         cameraBtns.forEach(btn => btn.style.display = 'flex');
+        fitPosterToScreen();
     }
 }
 
@@ -4591,6 +4629,12 @@ document.addEventListener('DOMContentLoaded', function() {
         StaffHeader.inject('VGK Bonanza Management', 'fas fa-trophy');
         StaffHeader.init();
     }
+    window.addEventListener('resize', () => {
+        const modal = document.getElementById('posterModalOverlay');
+        if (modal && (modal.classList.contains('open') || modal.style.display === 'flex')) {
+            fitPosterToScreen();
+        }
+    });
     init().catch(e => console.error('[Init] error:', e));
 });
 </script>
