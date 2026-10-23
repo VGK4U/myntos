@@ -461,7 +461,7 @@
         let allIncomes = [];
         let filteredIncomes = [];
         let currentTab = 'transactions';
-        let currentSort = { field: 'income_date', order: 'desc' };
+        let currentSort = { field: 'created_at', order: 'desc' };
         let searchTimer = null;
         let destSearchTimer = null;
         let currentUserData = null;
@@ -486,34 +486,52 @@
         let estSummary = null;
         let bankAccountsCache = {};
 
+        function _getStaffUser() {
+            if (currentUserData && (currentUserData.emp_code || currentUserData.employee_code || currentUserData.id)) {
+                return currentUserData;
+            }
+            try {
+                const stored = JSON.parse(localStorage.getItem('staff_user') || 'null');
+                if (stored && (stored.emp_code || stored.employee_code || stored.id)) return stored;
+            } catch(e) {}
+            return currentUserData || {};
+        }
+
+        function _getUserRole(u) {
+            if (!u) return '';
+            if (typeof u.role === 'string') return u.role.toLowerCase().trim();
+            if (u.role && typeof u.role === 'object' && u.role.role_code) return String(u.role.role_code).toLowerCase().trim();
+            return (u.emp_role_code || u.role_code || '').toLowerCase().trim();
+        }
+
         function canRejectEntries() {
-            if (!currentUserData) return false;
-            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
-            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
-            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
-            const designation = (currentUserData.designation || '').toUpperCase();
+            const u = _getStaffUser();
+            const empCode = (u.emp_code || u.employee_code || '').toUpperCase().trim();
+            const empName = (u.full_name || u.name || '').toUpperCase().trim();
+            const role = _getUserRole(u);
+            const designation = (u.designation || '').toUpperCase().trim();
             const allowedRoles = new Set(['vgk4u', 'ea', 'accounts', 'executive_assistant', 'executive assistant', 'key_leadership', 'admin']);
-            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowedRoles.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowedRoles.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP') || designation.includes('ADMIN');
         }
 
         function canDeleteEntries() {
-            if (!currentUserData) return false;
-            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
-            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
-            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
-            const designation = (currentUserData.designation || '').toUpperCase().trim();
+            const u = _getStaffUser();
+            const empCode = (u.emp_code || u.employee_code || '').toUpperCase().trim();
+            const empName = (u.full_name || u.name || '').toUpperCase().trim();
+            const role = _getUserRole(u);
+            const designation = (u.designation || '').toUpperCase().trim();
             const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin']);
-            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP') || designation.includes('ADMIN');
         }
 
         function canEditEntries() {
-            if (!currentUserData) return false;
-            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
-            const empName = (currentUserData.full_name || currentUserData.name || '').toUpperCase().trim();
-            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
-            const designation = (currentUserData.designation || '').toUpperCase().trim();
+            const u = _getStaffUser();
+            const empCode = (u.emp_code || u.employee_code || '').toUpperCase().trim();
+            const empName = (u.full_name || u.name || '').toUpperCase().trim();
+            const role = _getUserRole(u);
+            const designation = (u.designation || '').toUpperCase().trim();
             const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'executive assistant', 'accounts', 'accounts_staff', 'accounts_manager', 'key_leadership', 'admin']);
-            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP');
+            return empCode === 'MR10001' || empCode === 'MR10025' || empName.includes('SUBHASH') || allowed.has(role) || designation.includes('MENTOR') || designation.includes('LEADERSHIP') || designation.includes('ADMIN');
         }
 
         function esc(s) {
@@ -562,11 +580,25 @@
             if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
             if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Income Entries', 'fas fa-file-invoice-dollar'); StaffHeader.init(); }
             if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
-            document.getElementById('formDate').valueAsDate = new Date();
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const formDateEl = document.getElementById('formDate');
+            if (formDateEl) {
+                formDateEl.valueAsDate = new Date();
+                formDateEl.max = todayStr;
+            }
             try {
                 const meR = await staffFetch('/api/v1/staff/auth/me');
-                if (meR.ok) { const _meRes = await meR.json(); currentUserData = _meRes.data || _meRes; }
+                if (meR.ok) { 
+                    const _meRes = await meR.json(); 
+                    currentUserData = _meRes.employee || _meRes.data || _meRes;
+                    if (currentUserData) {
+                        try { localStorage.setItem('staff_user', JSON.stringify(currentUserData)); } catch(e) {}
+                    }
+                }
             } catch(e) {}
+            if (!currentUserData) {
+                try { currentUserData = JSON.parse(localStorage.getItem('staff_user') || 'null'); } catch(e) {}
+            }
             await Promise.all([loadCompanies(), loadSourceTypes(), loadFilterCategories('')]);
             await loadIncomes();
             updateDeletedBadgeCount();
@@ -732,9 +764,27 @@
                 let va = a[f], vb = b[f];
                 if (va == null) va = '';
                 if (vb == null) vb = '';
-                if (typeof va === 'number' && typeof vb === 'number') return rev ? vb - va : va - vb;
-                va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
-                return rev ? vb.localeCompare(va) : va.localeCompare(vb);
+                
+                let cmp = 0;
+                if (f === 'created_at' || f === 'income_date' || f === 'payment_date') {
+                    const ta = va ? new Date(va).getTime() : 0;
+                    const tb = vb ? new Date(vb).getTime() : 0;
+                    if (ta !== tb) cmp = rev ? tb - ta : ta - tb;
+                } else if (typeof va === 'number' && typeof vb === 'number') {
+                    if (va !== vb) cmp = rev ? vb - va : va - vb;
+                } else {
+                    const sa = String(va).toLowerCase();
+                    const sb = String(vb).toLowerCase();
+                    const scmp = sa.localeCompare(sb);
+                    if (scmp !== 0) cmp = rev ? -scmp : scmp;
+                }
+                if (cmp !== 0) return cmp;
+                
+                // Secondary tiebreaker: always most recent entry first (created_at DESC, id DESC)
+                const ca_time = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const cb_time = b.created_at ? new Date(b.created_at).getTime() : 0;
+                if (ca_time !== cb_time) return cb_time - ca_time;
+                return (b.id || 0) - (a.id || 0);
             });
         }
 
@@ -1079,17 +1129,22 @@
                 if (canEditEntries() || canDeleteEntries()) {
                     quickActions = '<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle;">';
                     if (canEditEntries()) {
-                        quickActions += '<button type="button" class="btn-action-icon" onclick="openEditModal('+inc.id+')" title="Edit Entry #'+safeEntryCode+'" style="border:none;background:#eff6ff;color:#2563eb;padding:2px 5px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-pencil-alt"></i></button>';
+                        quickActions += '<button type="button" class="btn-action-icon" onclick="openEditModal('+inc.id+')" title="Edit Entry #'+safeEntryCode+'" style="border:none;background:#eff6ff;color:#2563eb;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-pencil-alt"></i></button>';
                     }
                     if (canDeleteEntries()) {
-                        quickActions += '<button type="button" class="btn-action-icon" onclick="deleteIncome('+inc.id+',\''+safeEntryEsc+'\')" title="Delete Entry #'+safeEntryCode+'" style="border:none;background:#fef2f2;color:#dc2626;padding:2px 5px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-trash-alt"></i></button>';
+                        quickActions += '<button type="button" class="btn-action-icon" onclick="deleteIncome('+inc.id+',\''+safeEntryEsc+'\')" title="Delete Entry #'+safeEntryCode+'" style="border:none;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:11px;"><i class="fas fa-trash-alt"></i></button>';
                     }
                     quickActions += '</span>';
                 }
 
+                const todayIso = new Date().toISOString().slice(0, 10);
+                const isFutureDate = Boolean(inc.income_date && String(inc.income_date).slice(0, 10) > todayIso);
+                const futureBadge = isFutureDate ? '<div style="margin-top:2px;"><span class="badge bg-warning text-dark" style="font-size:9.5px;padding:2px 5px;font-weight:700;" title="Nominal transaction date is in the future"><i class="fas fa-exclamation-triangle me-1"></i>Future</span></div>' : '';
+                const entryTimeHtml = inc.created_at ? '<div style="font-size:10px;color:#6b7280;margin-top:2px;white-space:nowrap;" title="Recorded in system on ' + esc(fmtDateTime(inc.created_at)) + '"><i class="far fa-clock me-1" style="color:#9ca3af;"></i>' + esc(fmtDateTime(inc.created_at)) + '</div>' : '';
+
                 rows += '<tr class="'+(isRejected ? 'row-rejected' : isEstimated ? 'row-estimated' : '')+'">' +
                     '<td style="white-space:nowrap;"><code style="font-size:11px;font-weight:600;">'+safeEntryCode+'</code>'+quickActions+'</td>' +
-                    '<td style="white-space:nowrap;">'+fmtD(inc.income_date)+'</td>' +
+                    '<td style="white-space:nowrap;"><div><strong>'+fmtD(inc.income_date)+'</strong></div>'+futureBadge+entryTimeHtml+'</td>' +
                     '<td><small>'+(inc.company_name || '-')+'</small></td>' +
                     '<td>'+catBadge+'</td>' +
                     '<td>'+dealBadge+'</td>' +
@@ -1112,7 +1167,7 @@
 
             el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-list me-2"></i>All Transactions</span><span style="color:#6b7280; font-size:13px;">'+viewable.length+' records'+(estimatedCount > 0 ? ' <span style="font-size:11px;color:#b45309;"><i class="fas fa-calculator me-1"></i>'+estimatedCount+' estimated (also in Estimations tab)</span>' : '')+'</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
                 thSort('entry_number','Entry #') +
-                thSort('income_date','Date') +
+                thSort('created_at','Date & Entry Time') +
                 thSort('company_name','Company') +
                 thSort('revenue_category_name','Category') +
                 thSort('deal_code','Deal #') +
@@ -2798,6 +2853,12 @@
             const editNarr = document.getElementById('editNarration')?.value.trim() || null;
 
             if (!editDt) { alert('Income date is required'); return; }
+            const todayIsoEdit = new Date().toISOString().slice(0, 10);
+            if (editDt > todayIsoEdit) {
+                if (!confirm('Warning: The selected Income Date (' + editDt + ') is in the future.\n\nAre you sure you want to record this future date?')) {
+                    return;
+                }
+            }
             if (isNaN(editAmt) || editAmt <= 0) { alert('Please enter a valid amount greater than 0'); return; }
             if (!editComp) { alert('Please select an associated company'); return; }
 
@@ -2859,6 +2920,12 @@
                 show_in_ledger: document.getElementById('formShowInLedger').checked,
             };
             if (!data.company_id || !data.amount || !data.income_date || !data.income_source_id) { alert('Please fill all required fields'); return; }
+            const todayIsoCreate = new Date().toISOString().slice(0, 10);
+            if (data.income_date > todayIsoCreate) {
+                if (!confirm('Warning: The selected Income Date (' + data.income_date + ') is in the future.\n\nAre you sure you want to record this future date?')) {
+                    return;
+                }
+            }
             try {
                 const r = await staffFetch(API_BASE + '/income-entries', {
                     method: 'POST',

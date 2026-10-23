@@ -3444,11 +3444,19 @@ class IncomeEntryService:
         
         order_col = getattr(IncomeEntry, sort_by, None) if sort_by else None
         if order_col is not None:
-            entries = query.order_by(desc(order_col) if sort_order == 'desc' else asc(order_col), desc(IncomeEntry.id)).offset(
+            if sort_by == 'income_date':
+                order_clause = [desc(IncomeEntry.income_date) if sort_order == 'desc' else asc(IncomeEntry.income_date), desc(IncomeEntry.created_at), desc(IncomeEntry.id)]
+            elif sort_by == 'created_at':
+                order_clause = [desc(IncomeEntry.created_at) if sort_order == 'desc' else asc(IncomeEntry.created_at), desc(IncomeEntry.id)]
+            else:
+                order_clause = [desc(order_col) if sort_order == 'desc' else asc(order_col), desc(IncomeEntry.created_at), desc(IncomeEntry.id)]
+            entries = query.order_by(*order_clause).offset(
                 (page - 1) * page_size
             ).limit(page_size).all()
         else:
-            entries = query.order_by(desc(IncomeEntry.income_date), desc(IncomeEntry.id)).offset(
+            # DC Protocol (Oct 2026): Default sorting by entry creation timestamp (created_at DESC, id DESC)
+            # so the most recently recorded entries appear on top
+            entries = query.order_by(desc(IncomeEntry.created_at), desc(IncomeEntry.id)).offset(
                 (page - 1) * page_size
             ).limit(page_size).all()
         
