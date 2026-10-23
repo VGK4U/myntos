@@ -11382,6 +11382,7 @@ def get_vgk_award_claim(
 
 
 @router.get("/awards/my-summary")
+@router.get("/team/awards/my-summary")
 def get_my_vgk_awards_summary(
     current_user = Depends(get_current_user_hybrid_with_partner),
     db: Session = Depends(get_db)
@@ -11437,20 +11438,29 @@ def get_my_vgk_awards_summary(
         overview_data = get_vgk_awards_overview(current_user=current_user, db=db)
     except Exception as e:
         logger.error(f"[VGK-MY-AWARDS] overview computation failed: {e}")
-        overview_data = {"ladder": []}
+        overview_data = {"gift_ladder": []}
 
     ladder_list = []
     achieved_awards = []
 
-    for tier in overview_data.get("ladder", []):
+    raw_ladder = overview_data.get("gift_ladder") or overview_data.get("ladder") or []
+
+    for tier in raw_ladder:
         t_num = tier.get("tier_number")
         t_name = tier.get("reward_name")
-        target = tier.get("target_active_members", 0)
-        is_insurance = tier.get("is_insurance", False)
+        target = tier.get("target_count") or tier.get("target_active_members") or 0
+        is_insurance = bool(tier.get("is_insurance", False))
 
         achievers = tier.get("achievers", [])
         my_achiever = next((a for a in achievers if a.get("leader_id") == partner_id), None)
         is_achieved = (my_achiever is not None)
+
+        contenders = tier.get("leading_contenders", [])
+        my_contender = next((c for c in contenders if c.get("leader_id") == partner_id), None)
+
+        my_current_count = my_achiever.get("downline_active_count", 0) if my_achiever else (my_contender.get("downline_active_count", 0) if my_contender else 0)
+        my_gap = 0 if is_achieved else (my_contender.get("gap", target) if my_contender else target)
+        my_contributors = my_achiever.get("qualifying_active_members", []) if my_achiever else (my_contender.get("qualifying_active_members", []) if my_contender else [])
 
         claim_data = claims_by_tier.get(t_num, {})
         if is_achieved and not claim_data:
@@ -11466,20 +11476,24 @@ def get_my_vgk_awards_summary(
                 "notes": "Verified by Lifetime Rewards Engine. Awaiting auditor issuance."
             }
 
-        tier_status = "achieved" if is_achieved else "in_progress"
+        tier_status = "achieved" if is_achieved else ("in_progress" if my_current_count > 0 else "locked")
         ladder_item = {
             "tier_number": t_num,
             "reward_name": t_name,
             "target_active_members": target,
+            "target_count": target,
             "icon": tier.get("icon"),
             "category": tier.get("category"),
             "is_insurance": is_insurance,
             "hide_value": tier.get("hide_value", False),
-            "cost_per_recipient": tier.get("cost_per_recipient") if not tier.get("hide_value") else 0,
+            "cost_per_recipient": tier.get("internal_cost") or tier.get("cost_per_recipient") if not tier.get("hide_value") else 0,
+            "cost_display": tier.get("cost_display", ""),
             "status": tier_status,
             "is_achieved": is_achieved,
-            "my_contributors_count": my_achiever.get("active_contributors_count", 0) if my_achiever else 0,
-            "contributors": my_achiever.get("contributors", []) if my_achiever else [],
+            "current_progress": my_current_count,
+            "gap": my_gap,
+            "my_contributors_count": my_current_count,
+            "contributors": my_contributors,
             "claim": claim_data
         }
         ladder_list.append(ladder_item)
@@ -11491,7 +11505,7 @@ def get_my_vgk_awards_summary(
                 "icon": tier.get("icon"),
                 "is_insurance": is_insurance,
                 "hide_value": tier.get("hide_value", False),
-                "contributors_count": my_achiever.get("active_contributors_count", 0) if my_achiever else 0,
+                "contributors_count": my_current_count,
                 "claim_status": claim_data.get("claim_status", "pending"),
                 "achievement_date": claim_data.get("achievement_date", ""),
                 "issued_date": claim_data.get("issued_date", ""),
@@ -11502,8 +11516,8 @@ def get_my_vgk_awards_summary(
                 "updated_by": claim_data.get("updated_by", "")
             })
 
-    partner_name = getattr(current_user, "name", None) or getattr(current_user, "partner_name", None) or "Partner"
-    partner_code = getattr(current_user, "code", None) or getattr(current_user, "partner_code", None) or ""
+    partner_name = getattr(current_user, "partner_name", None) or getattr(current_user, "contact_person", None) or getattr(current_user, "name", None) or "VGK Partner"
+    partner_code = getattr(current_user, "partner_code", None) or getattr(current_user, "code", None) or ""
 
     return {
         "success": True,
