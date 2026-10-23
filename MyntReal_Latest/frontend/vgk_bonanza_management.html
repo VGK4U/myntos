@@ -1647,6 +1647,89 @@ tbody tr { background: #ffffff !important; }
     </div>
 </div>
 
+<!-- Award Claim & Issuance Management Modal -->
+<div class="modal-overlay" id="awardClaimModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10050; align-items:center; justify-content:center;">
+    <div class="modal-box" style="width: 680px; max-width: 95vw; max-height: 92vh; background: #ffffff; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="background: #38bdf8; color: #0f172a; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
+                    AUDITOR DESK
+                </span>
+                <h4 style="color: white; font-size: 16px; margin: 0; font-weight: 700;">Update Award Claim & Issuance</h4>
+            </div>
+            <button onclick="closeClaimUpdateModal()" style="background:none;border:none;font-size:22px;color:white;cursor:pointer;opacity:0.8;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 18px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; flex: 1;">
+            <!-- Achiever Banner -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div id="claimModalMemberName" style="font-size: 14.5px; font-weight: 800; color: #0f172a;">—</div>
+                    <div id="claimModalMemberCode" style="font-size: 11.5px; color: #64748b;">—</div>
+                </div>
+                <div style="text-align: right;">
+                    <div id="claimModalTierTag" style="font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase;">Tier —</div>
+                    <div id="claimModalRewardName" style="font-size: 13.5px; font-weight: 700; color: #1e293b;">—</div>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form id="claimUpdateForm" onsubmit="event.preventDefault(); saveAwardClaim();">
+                <input type="hidden" id="claimPartnerId">
+                <input type="hidden" id="claimTierNumber">
+                <input type="hidden" id="claimRewardName">
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Claim Status <span class="text-danger">*</span></label>
+                        <select id="claimStatusSelect" class="form-select form-select-sm" style="font-weight: 600;" required>
+                            <option value="pending">Pending Verification / Sourcing</option>
+                            <option value="approved">Approved (Ready for Handover)</option>
+                            <option value="issued">Issued & Completed</option>
+                            <option value="rejected">Rejected / Disqualified</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Achievement Date</label>
+                        <input type="date" id="claimAchieveDate" class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Issuance / Handover Date</label>
+                        <input type="date" id="claimIssueDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Provider / Agency / Jeweller / Dealer</label>
+                        <input type="text" id="claimProviderName" class="form-control form-control-sm" placeholder="e.g. HDFC Life / Tanishq / Wonderla">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Reference # (Policy # / Voucher Code / Bill # / UTR)</label>
+                        <input type="text" id="claimRefNumber" class="form-control form-control-sm" placeholder="e.g. POL-VGK-2026-0042 / TAN-GLD-8821">
+                    </div>
+
+                    <!-- Dynamic Gift Fields Container -->
+                    <div class="col-12" id="claimDynamicFieldsWrap" style="background: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #cbd5e1;">
+                        <!-- Injected based on Tier -->
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #334155;">Auditor Handover Notes & Remarks</label>
+                        <textarea id="claimNotes" class="form-control form-control-sm" rows="2" placeholder="Record policy certificate handover, courier AWB, or physical event delivery notes..."></textarea>
+                    </div>
+                </div>
+
+                <div id="claimSaveMsg" style="margin-top: 10px; display: none;"></div>
+            </form>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc; display: flex; justify-content: space-between;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeClaimUpdateModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="claimSaveBtn" style="font-weight: 700; padding: 6px 18px; background: #2563eb;" onclick="saveAwardClaim()">
+                <i class="fas fa-save me-1"></i>Save & Sync Claim
+            </button>
+        </div>
+    </div>
+</div>
+
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/staff_sidebar.js"></script>
@@ -3442,9 +3525,9 @@ function renderCostingAnalysis() {
     if (sbody) {
         const scenarios = [
             { tier: 2, name: 'Family Water-Park Outing', low: '₹5,000', base: '₹6,000', high: '₹7,500', members: 1, confirmed: '₹4,000', buffer: '+₹800 (1x Surplus with 20% bonus)', buffClass: 'text-success' },
-            { tier: 3, name: 'Araku Trip for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 5, confirmed: '₹20,000', buffer: '+₹24,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 4, name: 'Gold Worth ₹2 Lakh', low: '₹1,90,000', base: '₹2,00,000', high: '₹2,15,000', members: 30, confirmed: '₹1,36,000', buffer: '+₹4,000 (Surplus on Gross)', buffClass: 'text-success' },
-            { tier: 5, name: 'Gold Worth ₹2.5 Lakh / EV Bike', low: '₹2,40,000', base: '₹2,50,000', high: '₹2,65,000', members: 100, confirmed: '₹4,00,000', buffer: '+₹4,30,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 3, name: 'Araku Trip / Resort Party for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 5, confirmed: '₹20,000', buffer: '+₹24,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 4, name: 'EV Bike', low: '₹72,000', base: '₹80,000', high: '₹95,000', members: 30, confirmed: '₹1,20,000', buffer: '+₹1,24,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 5, name: 'Gold Worth ₹2 Lakh', low: '₹1,90,000', base: '₹2,00,000', high: '₹2,15,000', members: 100, confirmed: '₹4,00,000', buffer: '+₹4,80,000 (Surplus)', buffClass: 'text-success' },
             { tier: 6, name: 'House Fund ₹30 Lakh', low: '₹30,00,000', base: '₹30,00,000', high: '₹32,00,000', members: 1500, confirmed: '₹60,00,000', buffer: '+₹72,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 7, name: 'Jaguar Fund ₹50 Lakh', low: '₹45,00,000', base: '₹50,00,000', high: '₹55,00,000', members: 3000, confirmed: '₹1,20,00,000', buffer: '+₹1,54,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', low: '₹1,35,00,000', base: '₹1,50,00,000', high: '₹1,65,00,000', members: 10000, confirmed: '₹4,00,00,000', buffer: '+₹5,30,00,000 (Surplus)', buffClass: 'text-success' },
@@ -3468,9 +3551,9 @@ function renderCostingAnalysis() {
     if (cbody) {
         const chainData = [
             { tier: 2, name: 'Family Water-Park Outing', target: 1, cost1x: 6000, cost3x: 18000, funds: 6800, bal1x: '+₹800 (Surplus)', bal3x: '-₹11,200', riskTag: '<span class="badge bg-danger">Intro Deficit (-165%)</span>' },
-            { tier: 3, name: 'Araku Trip for Two', target: 5, cost1x: 10000, cost3x: 30000, funds: 34000, bal1x: '+₹24,000 (Surplus)', bal3x: '+₹4,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
-            { tier: 4, name: 'Gold Worth ₹2 Lakh', target: 30, cost1x: 200000, cost3x: 600000, funds: 204000, bal1x: '+₹4,000 (Surplus)', bal3x: '-₹3,96,000', riskTag: '<span class="badge bg-warning text-dark">Single Solvent / 3x Deficit</span>' },
-            { tier: 5, name: 'Gold Worth ₹2.5 Lakh / EV Bike', target: 100, cost1x: 250000, cost3x: 750000, funds: 680000, bal1x: '+₹4,30,000 (Surplus)', bal3x: '-₹70,000', riskTag: '<span class="badge bg-warning text-dark">Deficit (-9%)</span>' },
+            { tier: 3, name: 'Araku Trip / Resort Party for Two', target: 5, cost1x: 10000, cost3x: 30000, funds: 34000, bal1x: '+₹24,000 (Surplus)', bal3x: '+₹4,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
+            { tier: 4, name: 'EV Bike', target: 30, cost1x: 80000, cost3x: 240000, funds: 204000, bal1x: '+₹1,24,000 (Surplus)', bal3x: '-₹36,000', riskTag: '<span class="badge bg-warning text-dark">Near Break-Even (-15%)</span>' },
+            { tier: 5, name: 'Gold Worth ₹2 Lakh', target: 100, cost1x: 200000, cost3x: 600000, funds: 680000, bal1x: '+₹4,80,000 (Surplus)', bal3x: '+₹80,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
             { tier: 6, name: 'House Fund ₹30 Lakh', target: 1500, cost1x: 3000000, cost3x: 9000000, funds: 10200000, bal1x: '+₹72,00,000 (Surplus)', bal3x: '+₹12,00,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
             { tier: 7, name: 'Jaguar Fund ₹50 Lakh', target: 3000, cost1x: 5000000, cost3x: 15000000, funds: 20400000, bal1x: '+₹1,54,00,000 (Surplus)', bal3x: '+₹54,00,000', riskTag: '<span class="badge bg-success">Solvent (+36%)</span>' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', target: 10000, cost1x: 15000000, cost3x: 45000000, funds: 68000000, bal1x: '+₹5,30,00,000 (Surplus)', bal3x: '+₹2,30,00,000', riskTag: '<span class="badge bg-success">Solvent (+51%)</span>' },
@@ -3624,7 +3707,7 @@ function renderGiftLadder(ladder) {
         1: { icon: 'fas fa-shield-alt', color: '#2563eb', bg: '#eff6ff' },
         2: { icon: 'fas fa-swimming-pool', color: '#06b6d4', bg: '#ecfeff' },
         3: { icon: 'fas fa-mountain', color: '#059669', bg: '#ecfdf5' },
-        4: { icon: 'fas fa-coins', color: '#d97706', bg: '#fffbeb' },
+        4: { icon: 'fas fa-motorcycle', color: '#d97706', bg: '#fffbeb' },
         5: { icon: 'fas fa-coins', color: '#eab308', bg: '#fefce8' },
         6: { icon: 'fas fa-home', color: '#7c3aed', bg: '#f5f3ff' },
         7: { icon: 'fas fa-car-side', color: '#dc2626', bg: '#fef2f2' },
@@ -3681,7 +3764,7 @@ function renderGiftLadder(ladder) {
                     </div>
                     <div>
                         <span style="color: #6b7280; font-weight: 600;">Indicative Cost:</span>
-                        <span style="color: #4b5563; font-weight: 700; margin-left: 4px;">${t.cost_display} <span style="font-size: 10px; color: #9ca3af; font-weight: normal;">(${t.cost_type})</span></span>
+                        <span style="color: #4b5563; font-weight: 700; margin-left: 4px;">${t.hide_value ? '<span style="color:#059669;"><i class="fas fa-gift me-1"></i>' + t.cost_display + '</span>' : t.cost_display} <span style="font-size: 10px; color: #9ca3af; font-weight: normal;">(${t.cost_type})</span></span>
                     </div>
                 </div>
 
@@ -3726,7 +3809,7 @@ function openTierAchieversModal(tierNumber) {
     kpiRow.innerHTML = `
         <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px;">
             <div style="font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase;">Target Requirement</div>
-            <div style="font-size: 15px; font-weight: 800; color: #111827;">${targetCount} ${targetMetric === 'files' ? 'Full Paid File' : 'Active Member'}${targetCount === 1 ? '' : 's'} in Downline</div>
+            <div style="font-size: 14.5px; font-weight: 800; color: #111827;">${targetCount} ${targetMetric === 'files' ? 'Personal File (1st Payment Validated)' : 'Active Member' + (targetCount === 1 ? '' : 's') + ' in Downline'}</div>
         </div>
         <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px;">
             <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;">Leaders Who Met Tier</div>
@@ -3743,23 +3826,14 @@ function openTierAchieversModal(tierNumber) {
     const tbody = document.getElementById('tierAchieversTableBody');
     const emptyBox = document.getElementById('tierAchieversEmptyContainer');
 
-    if (tier.is_insurance) {
-        thead.innerHTML = `
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Member / Partner</th>
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
-            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Validated Files</th>
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Qualification Detail</th>
-            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Action</th>
-        `;
-    } else {
-        thead.innerHTML = `
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Leader (Who Met Tier)</th>
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
-            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Active In Downline</th>
-            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Because Of Whom (Qualifying Downline Members)</th>
-            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Action</th>
-        `;
-    }
+    thead.innerHTML = `
+        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Member / Partner' : 'Leader (Who Met Tier)'}</th>
+        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Validated Files' : 'Active In Downline'}</th>
+        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Qualification Detail' : 'Because Of Whom (Qualifying Downline Members)'}</th>
+        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 140px;">Claim & Issuance</th>
+        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 170px;">Auditor Action</th>
+    `;
 
     if (achievers.length > 0) {
         tableWrap.style.display = '';
@@ -3767,36 +3841,67 @@ function openTierAchieversModal(tierNumber) {
 
         tbody.innerHTML = achievers.map(a => {
             const qms = a.qualifying_active_members || [];
+            const cInfo = a.claim_info || {};
+            const cStatus = (a.claim_status || cInfo.claim_status || 'pending').toLowerCase();
+
+            let cBadge = '';
+            if (cStatus === 'issued') {
+                cBadge = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px;padding:4px 8px;font-weight:700;"><i class="fas fa-check-double me-1"></i>Issued</span>`;
+                if (cInfo.issued_date) {
+                    cBadge += `<div style="font-size:10.5px;color:#047857;margin-top:2px;font-weight:600;">${escH(cInfo.issued_date)}</div>`;
+                }
+                if (cInfo.reference_number) {
+                    cBadge += `<div style="font-size:10px;color:#475569;"><code>${escH(cInfo.reference_number)}</code></div>`;
+                }
+            } else if (cStatus === 'approved') {
+                cBadge = `<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:11px;padding:4px 8px;font-weight:700;"><i class="fas fa-thumbs-up me-1"></i>Approved</span>`;
+            } else if (cStatus === 'rejected') {
+                cBadge = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:11px;padding:4px 8px;font-weight:700;"><i class="fas fa-times-circle me-1"></i>Rejected</span>`;
+            } else {
+                cBadge = `<span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;padding:4px 8px;font-weight:700;"><i class="fas fa-clock me-1"></i>Pending</span>`;
+            }
+
+            const actionButtons = `
+                <div style="display: flex; gap: 6px; justify-content: center;">
+                    <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 8px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
+                        <i class="fas fa-search-plus me-1"></i>Audit
+                    </button>
+                    <button class="btn btn-sm text-white" style="font-weight: 700; border-radius: 6px; padding: 3px 8px; font-size: 11px; background: #059669; border-color: #059669;" onclick='openClaimUpdateModal(${JSON.stringify(a.leader_id)}, ${JSON.stringify(a.leader_name)}, ${JSON.stringify(a.leader_code)}, ${tier.tier_number}, ${JSON.stringify(tier.reward_name)}, ${JSON.stringify(cInfo)})'>
+                        <i class="fas fa-edit me-1"></i>Claim
+                    </button>
+                </div>
+            `;
 
             if (tier.is_insurance) {
-                const detail = (qms[0] && qms[0].detail) || '100% full deal payment collected';
+                const detail = (qms[0] && qms[0].detail) || 'First payment validated on customer lead';
                 return `
                     <tr>
-                        <td style="padding: 10px 12px;">
+                        <td style="padding: 10px 12px; vertical-align: middle;">
                             <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
                             <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
                         </td>
-                        <td style="padding: 10px 12px;">
+                        <td style="padding: 10px 12px; vertical-align: middle;">
                             <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
                             <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                         </td>
-                        <td style="text-align: center; padding: 10px 12px;">
+                        <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
                             <span style="font-weight: 800; font-size: 13px; color: #111827;">${(qms[0] && qms[0].files_count) || 1}</span>
                         </td>
-                        <td style="padding: 10px 12px;">
+                        <td style="padding: 10px 12px; vertical-align: middle;">
                             <span style="color: #059669; font-weight: 700;"><i class="fas fa-check-circle me-1"></i>${detail}</span>
                         </td>
-                        <td style="text-align: center; padding: 10px 12px;">
-                            <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
-                                <i class="fas fa-search-plus me-1"></i>Audit
-                            </button>
+                        <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
+                            ${cBadge}
+                        </td>
+                        <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
+                            ${actionButtons}
                         </td>
                     </tr>
                 `;
             }
 
             const qmsHtml = qms.map(qm => `
-                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
+                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
                     <div>
                         <strong style="color: #065f46;"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
                         <code>${qm.partner_code}</code>
@@ -3830,9 +3935,10 @@ function openTierAchieversModal(tierNumber) {
                         </div>
                     </td>
                     <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
-                        <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 4px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
-                            <i class="fas fa-user-check me-1"></i>Audit Leader
-                        </button>
+                        ${cBadge}
+                    </td>
+                    <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
+                        ${actionButtons}
                     </td>
                 </tr>
             `;
@@ -3858,15 +3964,16 @@ function openTierAchieversModal(tierNumber) {
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         ${leadingContenders.map(c => `
-                            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px;">
                                 <div>
-                                    <strong style="color: #111827;">${c.leader_name}</strong> <code>${c.leader_code}</code>
-                                    <span class="badge" style="background: #dbeafe; color: #1e40af; margin-left: 6px;">${c.downline_active_count} Active in Downline</span>
-                                    <span style="color: #d97706; font-size: 11px; margin-left: 6px; font-weight: 600;">(Needs ${c.gap} more)</span>
+                                    <strong style="color: #111827; font-size: 12.5px;">${c.leader_name}</strong>
+                                    <code>${c.leader_code}</code>
+                                    <span style="font-size: 11px; color: #6b7280; margin-left: 8px;">Sponsor: ${c.upline_sponsor}</span>
                                 </div>
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <span style="font-size: 11px; color: #6b7280;">Available: ${(c.qualifying_active_members||[]).map(q => q.partner_name).join(', ')}</span>
-                                    <button class="btn btn-xs btn-outline-primary" style="font-size: 10.5px; padding: 2px 7px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id});">Audit</button>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="badge bg-primary" style="font-size: 11px; padding: 4px 8px;">${c.downline_active_count} / ${targetCount} Active Members</span>
+                                    <span style="font-size: 11px; color: #d97706; font-weight: 700;">Needs ${c.gap} more</span>
+                                    <button class="btn btn-xs btn-outline-secondary" style="font-size: 11px; font-weight: 600; padding: 2px 8px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id})">Audit</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -3876,15 +3983,231 @@ function openTierAchieversModal(tierNumber) {
         `;
     }
 
-    document.getElementById('tierAchieversModal').classList.add('open');
+    const modal = document.getElementById('tierAchieversModal');
+    if (modal) modal.style.display = 'flex';
 }
 
-function closeTierAchieversModal() {
-    const modal = document.getElementById('tierAchieversModal');
-    if (modal) modal.classList.remove('open');
-    const box = document.getElementById('tierAchieversModalBox');
-    if (box && box.classList.contains('modal-fullscreen')) {
-        toggleTierAchieversFullscreen();
+function openClaimUpdateModal(partnerId, partnerName, partnerCode, tierNumber, rewardName, claimInfo) {
+    claimInfo = claimInfo || {};
+    document.getElementById('claimPartnerId').value = partnerId;
+    document.getElementById('claimTierNumber').value = tierNumber;
+    document.getElementById('claimRewardName').value = rewardName;
+
+    document.getElementById('claimModalMemberName').textContent = partnerName;
+    document.getElementById('claimModalMemberCode').textContent = partnerCode + ' (ID: ' + partnerId + ')';
+    document.getElementById('claimModalTierTag').textContent = 'Tier ' + tierNumber;
+    document.getElementById('claimModalRewardName').textContent = rewardName;
+
+    document.getElementById('claimStatusSelect').value = claimInfo.claim_status || 'pending';
+    document.getElementById('claimAchieveDate').value = claimInfo.achievement_date || '';
+    document.getElementById('claimIssueDate').value = claimInfo.issued_date || '';
+    document.getElementById('claimProviderName').value = claimInfo.provider_name || '';
+    document.getElementById('claimRefNumber').value = claimInfo.reference_number || '';
+    document.getElementById('claimNotes').value = claimInfo.notes || '';
+
+    // Render dynamic fields based on tier
+    renderDynamicClaimFields(tierNumber, claimInfo.issue_details || {});
+
+    const msg = document.getElementById('claimSaveMsg');
+    if (msg) msg.style.display = 'none';
+
+    const modal = document.getElementById('awardClaimModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeClaimUpdateModal() {
+    const modal = document.getElementById('awardClaimModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderDynamicClaimFields(tierNumber, details) {
+    details = details || {};
+    const wrap = document.getElementById('claimDynamicFieldsWrap');
+    if (!wrap) return;
+
+    if (tierNumber === 1) {
+        wrap.innerHTML = `
+            <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-shield-alt me-1"></i>Insurance Policy Details (₹10 Lakh Cover)
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Sum Insured</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="sum_insured" value="${escH(details.sum_insured || '₹10,00,000')}" readonly style="background:#e2e8f0;font-weight:700;">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Policy Period / Expiry</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="valid_until" value="${escH(details.valid_until || '1 Year Renewal')}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Nominee Name</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="nominee" value="${escH(details.nominee || '')}" placeholder="Nominee on record">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Certificate Doc Link / Drive URL</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="doc_url" value="${escH(details.doc_url || '')}" placeholder="https://...">
+                </div>
+            </div>
+        `;
+    } else if (tierNumber === 2 || tierNumber === 3) {
+        wrap.innerHTML = `
+            <div style="font-size: 11.5px; font-weight: 800; color: #047857; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-plane-departure me-1"></i>Travel & Booking Voucher Details
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Resort / Park Name</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="resort_name" value="${escH(details.resort_name || (tierNumber === 2 ? 'Wonderla / Water Kingdom' : 'Araku Hill Resort'))}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Travel / Booking Date</label>
+                    <input type="date" class="form-control form-control-sm dynamic-claim-field" data-key="booking_date" value="${escH(details.booking_date || '')}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">PNR / Voucher Code</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="voucher_code" value="${escH(details.voucher_code || '')}" placeholder="e.g. VOU-ARK-2026-99">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Pass / Ticket Count</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="pass_count" value="${escH(details.pass_count || (tierNumber === 2 ? '4 Family Members' : '2 Persons'))}">
+                </div>
+            </div>
+        `;
+    } else if (tierNumber === 4) {
+        wrap.innerHTML = `
+            <div style="font-size: 11.5px; font-weight: 800; color: #b45309; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-motorcycle me-1"></i>EV Two-Wheeler Vehicle Handover Details
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Vehicle Make & Model</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="vehicle_model" value="${escH(details.vehicle_model || '')}" placeholder="e.g. Ola S1 / Ather 450X / Hero Electric">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Chassis / Frame Number</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="chassis_no" value="${escH(details.chassis_no || '')}" placeholder="ME4...">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Showroom / Dealership</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="dealer" value="${escH(details.dealer || '')}" placeholder="Dealer branch">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Delivery Challan #</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="delivery_challan" value="${escH(details.delivery_challan || '')}">
+                </div>
+            </div>
+        `;
+    } else if (tierNumber === 5) {
+        wrap.innerHTML = `
+            <div style="font-size: 11.5px; font-weight: 800; color: #d97706; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-coins me-1"></i>Gold Milestone Details (₹2 Lakh Value)
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Weight / Carat</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="gold_weight" value="${escH(details.gold_weight || '24K Hallmark Bullion (~26.5g)')}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Jeweller / Merchant</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="jeweller_name" value="${escH(details.jeweller_name || 'Tanishq / Joyalukkas / Malabar')}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Invoice / Certificate #</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="gold_cert_no" value="${escH(details.gold_cert_no || '')}">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Voucher Validity</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="voucher_expiry" value="${escH(details.voucher_expiry || '6 Months from issue')}">
+                </div>
+            </div>
+        `;
+    } else {
+        wrap.innerHTML = `
+            <div style="font-size: 11.5px; font-weight: 800; color: #4f46e5; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-award me-1"></i>Fund Grant & Asset Disbursement Details
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Sanction / Approval Ref</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="sanction_ref" value="${escH(details.sanction_ref || '')}" placeholder="BOD-APP-...">
+                </div>
+                <div class="col-md-6">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Bank Account / UTR #</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="disbursement_utr" value="${escH(details.disbursement_utr || '')}" placeholder="UTR Ref / Account">
+                </div>
+                <div class="col-12">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Milestone Asset Agreement Reference</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="agreement_ref" value="${escH(details.agreement_ref || '')}" placeholder="Legal Agreement Deed / Registry Reference">
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function saveAwardClaim() {
+    const pid = parseInt(document.getElementById('claimPartnerId').value, 10);
+    const tier = parseInt(document.getElementById('claimTierNumber').value, 10);
+    const rewardName = document.getElementById('claimRewardName').value;
+    const status = document.getElementById('claimStatusSelect').value;
+    const achDate = document.getElementById('claimAchieveDate').value;
+    const issDate = document.getElementById('claimIssueDate').value;
+    const provider = document.getElementById('claimProviderName').value;
+    const refNo = document.getElementById('claimRefNumber').value;
+    const notes = document.getElementById('claimNotes').value;
+
+    const dynamicFields = {};
+    document.querySelectorAll('.dynamic-claim-field').forEach(input => {
+        const k = input.getAttribute('data-key');
+        if (k) dynamicFields[k] = input.value;
+    });
+
+    const btn = document.getElementById('claimSaveBtn');
+    const msg = document.getElementById('claimSaveMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+
+    try {
+        const res = await staffFetch('/api/v1/vgk-team/awards/claim/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                partner_id: pid,
+                tier_number: tier,
+                reward_name: rewardName,
+                claim_status: status,
+                achievement_date: achDate,
+                issued_date: issDate,
+                provider_name: provider,
+                reference_number: refNo,
+                issue_details: dynamicFields,
+                notes: notes
+            })
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+            msg.className = 'alert alert-success py-2 px-3';
+            msg.style.display = 'block';
+            msg.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + d.message;
+
+            if (typeof loadAwardsOverview === 'function') {
+                await loadAwardsOverview();
+            }
+            setTimeout(() => {
+                closeClaimUpdateModal();
+                openTierAchieversModal(tier);
+            }, 800);
+        } else {
+            msg.className = 'alert alert-danger py-2 px-3';
+            msg.style.display = 'block';
+            msg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>' + (d.detail || 'Failed to update claim.');
+        }
+    } catch (e) {
+        msg.className = 'alert alert-danger py-2 px-3';
+        msg.style.display = 'block';
+        msg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Network error: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>Save & Sync Claim';
     }
 }
 

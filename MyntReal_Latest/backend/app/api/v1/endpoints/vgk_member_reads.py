@@ -165,10 +165,47 @@ def get_my_awards(
                 logger.warning(f"[MNR-AWARDS] query failed: {e}")
 
     if aud in ("vgk4u", "both"):
-        # No dedicated vgk_award table yet — surface the activation bonus
-        # (level=0) and any milestone bonus rows from vgk_team_income_entries
-        # as "awards" so the page shows real data when it exists.
         partner_id = _resolve_partner_id(current_user, db)
+
+        # 1. Surface Lifetime Bonanza awards from vgk_award_claims
+        lifetime_claims = []
+        if partner_id:
+            try:
+                c_rows = db.execute(sa_text("""
+                    SELECT id, partner_id, tier_number, reward_name, claim_status,
+                           achievement_date, issued_date, provider_name, reference_number,
+                           issue_details, notes, updated_at
+                    FROM vgk_award_claims
+                    WHERE partner_id = :pid
+                    ORDER BY tier_number ASC
+                """), {"pid": int(partner_id)}).fetchall()
+                for c in c_rows:
+                    dt_won = c[5].isoformat() if hasattr(c[5], "isoformat") else (str(c[5]) if c[5] else None)
+                    dt_iss = c[6].isoformat() if hasattr(c[6], "isoformat") else (str(c[6]) if c[6] else None)
+                    details = c[9] if isinstance(c[9], dict) else {}
+                    claim_obj = {
+                        "id": f"lifetime_claim_{c[0]}",
+                        "tier_number": c[2],
+                        "title": c[3] or f"Tier {c[2]} Milestone Award",
+                        "award_name": c[3] or f"Tier {c[2]} Milestone Award",
+                        "won_at": dt_won,
+                        "issued_at": dt_iss,
+                        "created_at": dt_won,
+                        "status": c[4] or "pending",
+                        "provider_name": c[7] or "",
+                        "reference_number": c[8] or "",
+                        "issue_details": details,
+                        "notes": c[10] or "",
+                        "amount": 0,
+                        "audience": "vgk4u",
+                        "category": "lifetime_award"
+                    }
+                    items.append(claim_obj)
+                    lifetime_claims.append(claim_obj)
+            except Exception as e:
+                logger.warning(f"[VGK-MEMBER-AWARDS] claims query failed: {e}")
+
+        # 2. Surface activation bonus (level=0) and milestone bonus rows from vgk_team_income_entries
         q = db.query(VGKTeamIncomeEntry).filter(
             VGKTeamIncomeEntry.status == "CONFIRMED",
             VGKTeamIncomeEntry.bonus_amount > 0,
@@ -191,9 +228,10 @@ def get_my_awards(
                 "status": r.status,
                 "amount": float(r.bonus_amount or 0),
                 "audience": "vgk4u",
+                "category": "income_bonus"
             })
 
-    return _envelope(items, aud, awards=items)
+    return _envelope(items, aud, awards=items, lifetime_claims=lifetime_claims if aud in ("vgk4u", "both") else [])
 
 
 # ─────────────────────────────────────────────────────────────────────

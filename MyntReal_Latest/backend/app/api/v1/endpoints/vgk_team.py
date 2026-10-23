@@ -10966,16 +10966,58 @@ def get_vgk_awards_overview(
                 filtered_members = [m for m in filtered_members if m["eligible_files_count"] == 0]
 
         tiers_def = [
-            {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Personal eligible file with validated first payment", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
-            {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member in downline (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
-            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "5 Cumulative Active Members in downline (15 completed solar files)", "target_metric": "active_members", "target_count": 5, "cost_display": "₹10,000", "cost_type": "User Indicated"},
-            {"tier_number": 4, "reward_name": "Gold Worth ₹2 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher worth ₹2,00,000", "qualification_rule": "30 Cumulative Active Members in downline (90 completed solar files)", "target_metric": "active_members", "target_count": 30, "cost_display": "₹2,00,000", "cost_type": "User Provided"},
-            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh / EV Bike", "reward_description": "Pure gold sovereign / jewellery voucher or EV Bike milestone", "qualification_rule": "100 Cumulative Active Members in downline (300 completed solar files)", "target_metric": "active_members", "target_count": 100, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
-            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,500 Cumulative Active Members in downline (4,500 completed solar files)", "target_metric": "active_members", "target_count": 1500, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
-            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "3,000 Cumulative Active Members in downline (9,000 completed solar files)", "target_metric": "active_members", "target_count": 3000, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
-            {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members in downline (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided"},
-            {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members in downline (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
+            {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Personal eligible file with validated first payment", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True, "hide_value": False, "internal_cost": 2500},
+            {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member in downline (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated", "hide_value": False, "internal_cost": 6000},
+            {"tier_number": 3, "reward_name": "Araku Trip / Resort Party for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip / resort celebration for 2", "qualification_rule": "5 Cumulative Active Members in downline (15 completed solar files)", "target_metric": "active_members", "target_count": 5, "cost_display": "Complimentary Tour", "cost_type": "Tour Package (All-Inclusive)", "hide_value": True, "internal_cost": 10000},
+            {"tier_number": 4, "reward_name": "EV Bike", "reward_description": "Brand new electric two-wheeler scooter / motorcycle", "qualification_rule": "30 Cumulative Active Members in downline (90 completed solar files)", "target_metric": "active_members", "target_count": 30, "cost_display": "Electric Two-Wheeler", "cost_type": "Vehicle Milestone (Full Ownership)", "hide_value": True, "internal_cost": 80000},
+            {"tier_number": 5, "reward_name": "Gold Worth ₹2 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher worth ₹2,00,000", "qualification_rule": "100 Cumulative Active Members in downline (300 completed solar files)", "target_metric": "active_members", "target_count": 100, "cost_display": "₹2,00,000", "cost_type": "User Provided", "hide_value": False, "internal_cost": 200000},
+            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,500 Cumulative Active Members in downline (4,500 completed solar files)", "target_metric": "active_members", "target_count": 1500, "cost_display": "₹30,00,000", "cost_type": "User Provided", "hide_value": False, "internal_cost": 3000000},
+            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "3,000 Cumulative Active Members in downline (9,000 completed solar files)", "target_metric": "active_members", "target_count": 3000, "cost_display": "₹50,00,000", "cost_type": "User Provided", "hide_value": False, "internal_cost": 5000000},
+            {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members in downline (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided", "hide_value": False, "internal_cost": 15000000},
+            {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members in downline (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)", "hide_value": False, "internal_cost": 50000000}
         ]
+
+        # Load persisted claim & issuance records from DB
+        claims_map = {}
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS vgk_award_claims (
+                    id SERIAL PRIMARY KEY,
+                    partner_id INTEGER NOT NULL,
+                    tier_number INTEGER NOT NULL,
+                    reward_name VARCHAR(255),
+                    claim_status VARCHAR(50) DEFAULT 'pending',
+                    achievement_date VARCHAR(50),
+                    issued_date VARCHAR(50),
+                    provider_name VARCHAR(255),
+                    reference_number VARCHAR(255),
+                    issue_details JSONB,
+                    notes TEXT,
+                    updated_by VARCHAR(255),
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    CONSTRAINT uq_vgk_award_partner_tier UNIQUE (partner_id, tier_number)
+                );
+                CREATE INDEX IF NOT EXISTS idx_vgk_award_claims_partner ON vgk_award_claims (partner_id);
+            """))
+            db.commit()
+
+            c_rows = db.execute(text("SELECT partner_id, tier_number, claim_status, achievement_date, issued_date, provider_name, reference_number, issue_details, notes FROM vgk_award_claims")).fetchall()
+            for cr in c_rows:
+                claims_map[(cr[0], cr[1])] = {
+                    "claim_status": cr[2] or "pending",
+                    "achievement_date": cr[3] or "",
+                    "issued_date": cr[4] or "",
+                    "provider_name": cr[5] or "",
+                    "reference_number": cr[6] or "",
+                    "issue_details": cr[7] or {},
+                    "notes": cr[8] or ""
+                }
+        except Exception as e:
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         # Candidates for leadership awards: Exclude corporate/system accounts (VGK Support, ID 31, company roots)
         # Leadership awards are for real team partners/leaders
@@ -10997,29 +11039,40 @@ def get_vgk_awards_overview(
                 pct = 100.0 if insurance_qualified_count > 0 else 0.0
                 stat = "achieved" if insurance_qualified_count > 0 else "in_progress"
                 
-                # Achievers: Members who personally qualified for insurance (1 fully paid file)
-                achievers = [
-                    {
-                        "leader_id": m["partner_id"],
-                        "leader_name": m["partner_name"],
-                        "leader_code": m["partner_code"],
-                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
-                        "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
-                        "qualification_type": "Personal Deal Qualification",
-                        "downline_active_count": 0,
-                        "qualifying_active_members": [
-                            {
-                                "partner_id": m["partner_id"],
-                                "partner_name": m["partner_name"],
-                                "partner_code": m["partner_code"],
-                                "files_count": m["eligible_files_count"],
-                                "generation": "Self (Direct Producer)",
-                                "detail": f"First payment validated on Lead #{m.get('insurance_lead_id') or 'Verified'}"
-                            }
-                        ]
-                    }
-                    for m in member_records if m["insurance_eligible"]
-                ]
+                # Achievers: Members who personally qualified for insurance (1 validated first payment file)
+                achievers = []
+                for m in member_records:
+                    if m["insurance_eligible"]:
+                        c_info = claims_map.get((m["partner_id"], 1), {
+                            "claim_status": "pending",
+                            "achievement_date": m.get("created_at") or "",
+                            "issued_date": "",
+                            "provider_name": "HDFC Life / Star Health (Group Policy)",
+                            "reference_number": "",
+                            "issue_details": {"sum_insured": "₹10,00,000"},
+                            "notes": ""
+                        })
+                        achievers.append({
+                            "leader_id": m["partner_id"],
+                            "leader_name": m["partner_name"],
+                            "leader_code": m["partner_code"],
+                            "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                            "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
+                            "qualification_type": "Personal Deal Qualification",
+                            "downline_active_count": 0,
+                            "claim_status": c_info.get("claim_status", "pending"),
+                            "claim_info": c_info,
+                            "qualifying_active_members": [
+                                {
+                                    "partner_id": m["partner_id"],
+                                    "partner_name": m["partner_name"],
+                                    "partner_code": m["partner_code"],
+                                    "files_count": m["eligible_files_count"],
+                                    "generation": "Self (Direct Producer)",
+                                    "detail": f"First payment validated on Lead #{m.get('insurance_lead_id') or 'Verified'}"
+                                }
+                            ]
+                        })
                 leading_contenders = []
             else:
                 tgt = t["target_count"]
@@ -11039,6 +11092,15 @@ def get_vgk_awards_overview(
                         # Leader achieved this tier! Allocate the required active members and lock them
                         assigned = available_actives[:tgt]
                         leader_consumed_contributors[pid].update(c["partner_id"] for c in assigned)
+                        c_info = claims_map.get((pid, t["tier_number"]), {
+                            "claim_status": "pending",
+                            "achievement_date": m.get("active_achieved_date") or "",
+                            "issued_date": "",
+                            "provider_name": "",
+                            "reference_number": "",
+                            "issue_details": {},
+                            "notes": ""
+                        })
                         achievers.append({
                             "leader_id": pid,
                             "leader_name": m["partner_name"],
@@ -11047,7 +11109,9 @@ def get_vgk_awards_overview(
                             "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
                             "downline_active_count": len(assigned),
                             "qualification_type": f"Team Leadership ({len(assigned)} Fresh Active Downline Member{'s' if len(assigned) > 1 else ''})",
-                            "qualifying_active_members": assigned
+                            "qualifying_active_members": assigned,
+                            "claim_status": c_info.get("claim_status", "pending"),
+                            "claim_info": c_info
                         })
                     elif len(available_actives) > 0:
                         # Leader has progress toward this tier with unconsumed active members
@@ -11148,4 +11212,308 @@ def get_vgk_member_awards_validation(
     if not matching:
         raise HTTPException(status_code=404, detail="Partner not found in authorized scope.")
     return {"success": True, "data": matching[0]}
+
+
+class AwardClaimUpdatePayload(BaseModel):
+    partner_id: int
+    tier_number: int
+    reward_name: Optional[str] = None
+    claim_status: str = "pending"  # pending | approved | issued | rejected
+    achievement_date: Optional[str] = None
+    issued_date: Optional[str] = None
+    provider_name: Optional[str] = None
+    reference_number: Optional[str] = None
+    issue_details: Optional[dict] = None
+    notes: Optional[str] = None
+
+
+@router.post("/awards/claim/update")
+def update_vgk_award_claim(
+    payload: AwardClaimUpdatePayload,
+    current_user = Depends(get_current_user_hybrid_with_partner),
+    db: Session = Depends(get_db)
+):
+    """
+    Auditor & Staff endpoint: Updates claim status, achievement date, issuance date,
+    and gift-specific fulfillment details (Policy #, Travel Voucher, Bullion Cert, etc.)
+    """
+    is_member = isinstance(current_user, OfficialPartner)
+    if is_member:
+        raise HTTPException(status_code=403, detail="Access denied: Only staff and auditors can update award claims.")
+
+    user_name = getattr(current_user, "username", None) or getattr(current_user, "name", None) or "Staff Auditor"
+    import json
+    details_json = json.dumps(payload.issue_details or {})
+
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS vgk_award_claims (
+            id SERIAL PRIMARY KEY,
+            partner_id INTEGER NOT NULL,
+            tier_number INTEGER NOT NULL,
+            reward_name VARCHAR(255),
+            claim_status VARCHAR(50) DEFAULT 'pending',
+            achievement_date VARCHAR(50),
+            issued_date VARCHAR(50),
+            provider_name VARCHAR(255),
+            reference_number VARCHAR(255),
+            issue_details JSONB,
+            notes TEXT,
+            updated_by VARCHAR(255),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            CONSTRAINT uq_vgk_award_partner_tier UNIQUE (partner_id, tier_number)
+        );
+        CREATE INDEX IF NOT EXISTS idx_vgk_award_claims_partner ON vgk_award_claims (partner_id);
+    """))
+
+    db.execute(text("""
+        INSERT INTO vgk_award_claims (
+            partner_id, tier_number, reward_name, claim_status, achievement_date,
+            issued_date, provider_name, reference_number, issue_details, notes, updated_by, updated_at
+        ) VALUES (
+            :pid, :tier, :reward, :status, :ach_date,
+            :iss_date, :provider, :ref_no, :details::jsonb, :notes, :by, NOW()
+        )
+        ON CONFLICT (partner_id, tier_number) DO UPDATE SET
+            reward_name = EXCLUDED.reward_name,
+            claim_status = EXCLUDED.claim_status,
+            achievement_date = EXCLUDED.achievement_date,
+            issued_date = EXCLUDED.issued_date,
+            provider_name = EXCLUDED.provider_name,
+            reference_number = EXCLUDED.reference_number,
+            issue_details = EXCLUDED.issue_details,
+            notes = EXCLUDED.notes,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = NOW()
+    """), {
+        "pid": payload.partner_id,
+        "tier": payload.tier_number,
+        "reward": payload.reward_name or f"Tier {payload.tier_number}",
+        "status": payload.claim_status,
+        "ach_date": payload.achievement_date or "",
+        "iss_date": payload.issued_date or "",
+        "provider": payload.provider_name or "",
+        "ref_no": payload.reference_number or "",
+        "details": details_json,
+        "notes": payload.notes or "",
+        "by": user_name
+    })
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Claim status updated to '{payload.claim_status}' for Partner #{payload.partner_id} (Tier {payload.tier_number}).",
+        "data": {
+            "partner_id": payload.partner_id,
+            "tier_number": payload.tier_number,
+            "claim_status": payload.claim_status,
+            "achievement_date": payload.achievement_date,
+            "issued_date": payload.issued_date,
+            "provider_name": payload.provider_name,
+            "reference_number": payload.reference_number,
+            "issue_details": payload.issue_details,
+            "updated_by": user_name
+        }
+    }
+
+
+@router.get("/awards/claim/{partner_id}/{tier_number}")
+def get_vgk_award_claim(
+    partner_id: int,
+    tier_number: int,
+    current_user = Depends(get_current_user_hybrid_with_partner),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the specific claim record for a partner & tier.
+    Authorized for both staff and the member themselves.
+    """
+    is_member = isinstance(current_user, OfficialPartner)
+    if is_member and current_user.id != partner_id:
+        allowed_ids = [p.id for p in _collect_tree_partners(current_user, db, depth=10)]
+        if partner_id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Access denied: Cannot view claim of outside partner.")
+
+    try:
+        row = db.execute(text("""
+            SELECT partner_id, tier_number, reward_name, claim_status, achievement_date,
+                   issued_date, provider_name, reference_number, issue_details, notes, updated_by, updated_at
+            FROM vgk_award_claims
+            WHERE partner_id = :pid AND tier_number = :tier
+        """), {"pid": partner_id, "tier": tier_number}).fetchone()
+    except Exception:
+        row = None
+
+    if not row:
+        return {
+            "success": True,
+            "data": {
+                "partner_id": partner_id,
+                "tier_number": tier_number,
+                "claim_status": "pending",
+                "achievement_date": "",
+                "issued_date": "",
+                "provider_name": "",
+                "reference_number": "",
+                "issue_details": {},
+                "notes": "",
+                "is_created": False
+            }
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "partner_id": row[0],
+            "tier_number": row[1],
+            "reward_name": row[2],
+            "claim_status": row[3] or "pending",
+            "achievement_date": row[4] or "",
+            "issued_date": row[5] or "",
+            "provider_name": row[6] or "",
+            "reference_number": row[7] or "",
+            "issue_details": row[8] or {},
+            "notes": row[9] or "",
+            "updated_by": row[10] or "",
+            "updated_at": row[11].strftime("%Y-%m-%d %H:%M:%S") if row[11] else None,
+            "is_created": True
+        }
+    }
+
+
+@router.get("/awards/my-summary")
+def get_my_vgk_awards_summary(
+    current_user = Depends(get_current_user_hybrid_with_partner),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the lifetime awards, ladder progress, and claim status for the logged-in partner.
+    Synchronized in real-time with auditor updates in vgk_award_claims.
+    """
+    is_partner = isinstance(current_user, OfficialPartner)
+    partner_id = current_user.id if is_partner else getattr(current_user, "partner_id", None)
+    if not partner_id:
+        return {
+            "success": True,
+            "is_partner": False,
+            "partner_id": None,
+            "message": "Not a partner account or not logged in as partner.",
+            "achieved_count": 0,
+            "achieved_awards": [],
+            "ladder": []
+        }
+
+    # 1. Fetch claims from vgk_award_claims
+    try:
+        claims_rows = db.execute(text("""
+            SELECT tier_number, reward_name, claim_status, achievement_date,
+                   issued_date, provider_name, reference_number, issue_details,
+                   notes, updated_by, updated_at
+            FROM vgk_award_claims
+            WHERE partner_id = :pid
+            ORDER BY tier_number ASC
+        """), {"pid": partner_id}).fetchall()
+    except Exception:
+        claims_rows = []
+
+    claims_by_tier = {}
+    for r in claims_rows:
+        claims_by_tier[r[0]] = {
+            "tier_number": r[0],
+            "reward_name": r[1],
+            "claim_status": r[2] or "pending",
+            "achievement_date": r[3] or "",
+            "issued_date": r[4] or "",
+            "provider_name": r[5] or "",
+            "reference_number": r[6] or "",
+            "issue_details": r[7] if isinstance(r[7], dict) else {},
+            "notes": r[8] or "",
+            "updated_by": r[9] or "",
+            "updated_at": r[10].strftime("%Y-%m-%d %H:%M:%S") if r[10] else None
+        }
+
+    # 2. Compute live overview to get exact tier qualification and contributor count for this partner
+    try:
+        overview_data = get_vgk_awards_overview(current_user=current_user, db=db)
+    except Exception as e:
+        logger.error(f"[VGK-MY-AWARDS] overview computation failed: {e}")
+        overview_data = {"ladder": []}
+
+    ladder_list = []
+    achieved_awards = []
+
+    for tier in overview_data.get("ladder", []):
+        t_num = tier.get("tier_number")
+        t_name = tier.get("reward_name")
+        target = tier.get("target_active_members", 0)
+        is_insurance = tier.get("is_insurance", False)
+
+        achievers = tier.get("achievers", [])
+        my_achiever = next((a for a in achievers if a.get("leader_id") == partner_id), None)
+        is_achieved = (my_achiever is not None)
+
+        claim_data = claims_by_tier.get(t_num, {})
+        if is_achieved and not claim_data:
+            claim_data = {
+                "tier_number": t_num,
+                "reward_name": t_name,
+                "claim_status": "pending",
+                "achievement_date": "Achieved",
+                "issued_date": "",
+                "provider_name": "Official VGK Program",
+                "reference_number": "",
+                "issue_details": {},
+                "notes": "Verified by Lifetime Rewards Engine. Awaiting auditor issuance."
+            }
+
+        tier_status = "achieved" if is_achieved else "in_progress"
+        ladder_item = {
+            "tier_number": t_num,
+            "reward_name": t_name,
+            "target_active_members": target,
+            "icon": tier.get("icon"),
+            "category": tier.get("category"),
+            "is_insurance": is_insurance,
+            "hide_value": tier.get("hide_value", False),
+            "cost_per_recipient": tier.get("cost_per_recipient") if not tier.get("hide_value") else 0,
+            "status": tier_status,
+            "is_achieved": is_achieved,
+            "my_contributors_count": my_achiever.get("active_contributors_count", 0) if my_achiever else 0,
+            "contributors": my_achiever.get("contributors", []) if my_achiever else [],
+            "claim": claim_data
+        }
+        ladder_list.append(ladder_item)
+
+        if is_achieved:
+            achieved_awards.append({
+                "tier_number": t_num,
+                "reward_name": t_name,
+                "icon": tier.get("icon"),
+                "is_insurance": is_insurance,
+                "hide_value": tier.get("hide_value", False),
+                "contributors_count": my_achiever.get("active_contributors_count", 0) if my_achiever else 0,
+                "claim_status": claim_data.get("claim_status", "pending"),
+                "achievement_date": claim_data.get("achievement_date", ""),
+                "issued_date": claim_data.get("issued_date", ""),
+                "provider_name": claim_data.get("provider_name", ""),
+                "reference_number": claim_data.get("reference_number", ""),
+                "issue_details": claim_data.get("issue_details", {}),
+                "notes": claim_data.get("notes", ""),
+                "updated_by": claim_data.get("updated_by", "")
+            })
+
+    partner_name = getattr(current_user, "name", None) or getattr(current_user, "partner_name", None) or "Partner"
+    partner_code = getattr(current_user, "code", None) or getattr(current_user, "partner_code", None) or ""
+
+    return {
+        "success": True,
+        "is_partner": True,
+        "partner_id": partner_id,
+        "partner_name": partner_name,
+        "partner_code": partner_code,
+        "achieved_count": len(achieved_awards),
+        "achieved_awards": achieved_awards,
+        "ladder": ladder_list
+    }
+
 
