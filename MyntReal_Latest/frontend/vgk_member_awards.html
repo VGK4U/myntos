@@ -523,6 +523,11 @@ function renderClaimDetailsHtml(rewardName, details, provider, refNo) {
       if (details.nominee_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Nominee</div><div class="detail-item-val">${escapeHtml(details.nominee_name)} (${escapeHtml(details.nominee_relation || 'Nominee')})</div></div>`);
       if (details.policy_type) items.push(`<div class="detail-item"><div class="detail-item-lbl">Policy Plan</div><div class="detail-item-val">${escapeHtml(details.policy_type)}</div></div>`);
       if (details.validity_period) items.push(`<div class="detail-item"><div class="detail-item-lbl">Coverage Period</div><div class="detail-item-val">${escapeHtml(details.validity_period)}</div></div>`);
+    } else if (rName.includes('ev car') || rName.includes('car fund')) {
+      if (details.ev_car_model) items.push(`<div class="detail-item"><div class="detail-item-lbl">Vehicle Model</div><div class="detail-item-val text-info">${escapeHtml(details.ev_car_model)}</div></div>`);
+      if (details.dealer_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Showroom</div><div class="detail-item-val">${escapeHtml(details.dealer_name)}</div></div>`);
+      if (details.down_payment_ref) items.push(`<div class="detail-item"><div class="detail-item-lbl">Down Payment Grant (₹1.5L)</div><div class="detail-item-val text-success font-monospace">${escapeHtml(details.down_payment_ref)}</div></div>`);
+      if (details.cash_incentive_ref) items.push(`<div class="detail-item"><div class="detail-item-lbl">Direct Cash Incentive (₹50K)</div><div class="detail-item-val text-warning font-monospace">${escapeHtml(details.cash_incentive_ref)}</div></div>`);
     } else if (rName.includes('gold')) {
       if (details.gold_grams) items.push(`<div class="detail-item"><div class="detail-item-lbl">Gold Weight</div><div class="detail-item-val text-warning font-monospace">${escapeHtml(details.gold_grams)} Grams</div></div>`);
       if (details.purity) items.push(`<div class="detail-item"><div class="detail-item-lbl">Purity</div><div class="detail-item-val">${escapeHtml(details.purity)}</div></div>`);

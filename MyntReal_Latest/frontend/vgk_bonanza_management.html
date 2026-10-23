@@ -170,8 +170,8 @@ tbody tr { background: #ffffff !important; }
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;" id="awardsKpiRow">
             <div class="stat-card" style="border-left: 4px solid #7c3aed;">
                 <div class="stat-val" id="kpiCumActive" style="color: #7c3aed;">—</div>
-                <div class="stat-label">Cumulative Active Members</div>
-                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Lifetime Qualifying (≥3 Files)</div>
+                <div class="stat-label">Total Active Members</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Lifetime Distinct Producers (≥3 Files)</div>
             </div>
             <div class="stat-card" style="border-left: 4px solid #059669;">
                 <div class="stat-val" id="kpiFreshActive" style="color: #059669;">—</div>
@@ -181,7 +181,7 @@ tbody tr { background: #ffffff !important; }
             <div class="stat-card" style="border-left: 4px solid #2563eb;">
                 <div class="stat-val" id="kpiInsurance" style="color: #2563eb;">—</div>
                 <div class="stat-label">Insurance Qualified</div>
-                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">₹10 Lakh Cover (1 Full Paid File)</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">₹10 Lakh Cover (1st Payment Validated)</div>
             </div>
             <div class="stat-card" style="border-left: 4px solid #d97706;">
                 <div class="stat-val" id="kpiPendingThreshold" style="color: #d97706;">—</div>
@@ -3527,7 +3527,7 @@ function renderCostingAnalysis() {
             { tier: 2, name: 'Family Water-Park Outing', low: '₹5,000', base: '₹6,000', high: '₹7,500', members: 1, confirmed: '₹4,000', buffer: '+₹800 (1x Surplus with 20% bonus)', buffClass: 'text-success' },
             { tier: 3, name: 'Araku Trip / Resort Party for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 5, confirmed: '₹20,000', buffer: '+₹24,000 (Surplus)', buffClass: 'text-success' },
             { tier: 4, name: 'EV Bike', low: '₹72,000', base: '₹80,000', high: '₹95,000', members: 30, confirmed: '₹1,20,000', buffer: '+₹1,24,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 5, name: 'Gold Worth ₹2 Lakh', low: '₹1,90,000', base: '₹2,00,000', high: '₹2,15,000', members: 100, confirmed: '₹4,00,000', buffer: '+₹4,80,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 5, name: 'EV Car Fund (₹1.5L DP + ₹50K Cash)', low: '₹1,90,000', base: '₹2,00,000', high: '₹2,10,000', members: 100, confirmed: '₹4,00,000', buffer: '+₹4,80,000 (Surplus)', buffClass: 'text-success' },
             { tier: 6, name: 'House Fund ₹30 Lakh', low: '₹30,00,000', base: '₹30,00,000', high: '₹32,00,000', members: 1500, confirmed: '₹60,00,000', buffer: '+₹72,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 7, name: 'Jaguar Fund ₹50 Lakh', low: '₹45,00,000', base: '₹50,00,000', high: '₹55,00,000', members: 3000, confirmed: '₹1,20,00,000', buffer: '+₹1,54,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', low: '₹1,35,00,000', base: '₹1,50,00,000', high: '₹1,65,00,000', members: 10000, confirmed: '₹4,00,00,000', buffer: '+₹5,30,00,000 (Surplus)', buffClass: 'text-success' },
@@ -3553,7 +3553,7 @@ function renderCostingAnalysis() {
             { tier: 2, name: 'Family Water-Park Outing', target: 1, cost1x: 6000, cost3x: 18000, funds: 6800, bal1x: '+₹800 (Surplus)', bal3x: '-₹11,200', riskTag: '<span class="badge bg-danger">Intro Deficit (-165%)</span>' },
             { tier: 3, name: 'Araku Trip / Resort Party for Two', target: 5, cost1x: 10000, cost3x: 30000, funds: 34000, bal1x: '+₹24,000 (Surplus)', bal3x: '+₹4,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
             { tier: 4, name: 'EV Bike', target: 30, cost1x: 80000, cost3x: 240000, funds: 204000, bal1x: '+₹1,24,000 (Surplus)', bal3x: '-₹36,000', riskTag: '<span class="badge bg-warning text-dark">Near Break-Even (-15%)</span>' },
-            { tier: 5, name: 'Gold Worth ₹2 Lakh', target: 100, cost1x: 200000, cost3x: 600000, funds: 680000, bal1x: '+₹4,80,000 (Surplus)', bal3x: '+₹80,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
+            { tier: 5, name: 'EV Car Fund (₹1.5L DP + ₹50K Cash)', target: 100, cost1x: 200000, cost3x: 600000, funds: 680000, bal1x: '+₹4,80,000 (Surplus)', bal3x: '+₹80,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
             { tier: 6, name: 'House Fund ₹30 Lakh', target: 1500, cost1x: 3000000, cost3x: 9000000, funds: 10200000, bal1x: '+₹72,00,000 (Surplus)', bal3x: '+₹12,00,000', riskTag: '<span class="badge bg-success">Solvent (+13%)</span>' },
             { tier: 7, name: 'Jaguar Fund ₹50 Lakh', target: 3000, cost1x: 5000000, cost3x: 15000000, funds: 20400000, bal1x: '+₹1,54,00,000 (Surplus)', bal3x: '+₹54,00,000', riskTag: '<span class="badge bg-success">Solvent (+36%)</span>' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', target: 10000, cost1x: 15000000, cost3x: 45000000, funds: 68000000, bal1x: '+₹5,30,00,000 (Surplus)', bal3x: '+₹2,30,00,000', riskTag: '<span class="badge bg-success">Solvent (+51%)</span>' },
@@ -3708,7 +3708,7 @@ function renderGiftLadder(ladder) {
         2: { icon: 'fas fa-swimming-pool', color: '#06b6d4', bg: '#ecfeff' },
         3: { icon: 'fas fa-mountain', color: '#059669', bg: '#ecfdf5' },
         4: { icon: 'fas fa-motorcycle', color: '#d97706', bg: '#fffbeb' },
-        5: { icon: 'fas fa-coins', color: '#eab308', bg: '#fefce8' },
+        5: { icon: 'fas fa-car-side', color: '#0284c7', bg: '#f0f9ff' },
         6: { icon: 'fas fa-home', color: '#7c3aed', bg: '#f5f3ff' },
         7: { icon: 'fas fa-car-side', color: '#dc2626', bg: '#fef2f2' },
         8: { icon: 'fas fa-hotel', color: '#4f46e5', bg: '#eef2ff' },
@@ -4099,25 +4099,25 @@ function renderDynamicClaimFields(tierNumber, details) {
         `;
     } else if (tierNumber === 5) {
         wrap.innerHTML = `
-            <div style="font-size: 11.5px; font-weight: 800; color: #d97706; text-transform: uppercase; margin-bottom: 8px;">
-                <i class="fas fa-coins me-1"></i>Gold Milestone Details (₹2 Lakh Value)
+            <div style="font-size: 11.5px; font-weight: 800; color: #0284c7; text-transform: uppercase; margin-bottom: 8px;">
+                <i class="fas fa-car-side me-1"></i>EV Car Fund Details (₹1.5 Lakh DP + ₹50,000 Cash)
             </div>
             <div class="row g-2">
                 <div class="col-md-6">
-                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Weight / Carat</label>
-                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="gold_weight" value="${escH(details.gold_weight || '24K Hallmark Bullion (~26.5g)')}">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Vehicle / EV Car Model</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="ev_car_model" value="${escH(details.ev_car_model || 'Tata Tiago EV / MG Comet / EV Selection')}" placeholder="EV Car Model">
                 </div>
                 <div class="col-md-6">
-                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Jeweller / Merchant</label>
-                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="jeweller_name" value="${escH(details.jeweller_name || 'Tanishq / Joyalukkas / Malabar')}">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Showroom / Dealership</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="dealer_name" value="${escH(details.dealer_name || 'Authorized EV Showroom')}">
                 </div>
                 <div class="col-md-6">
-                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Invoice / Certificate #</label>
-                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="gold_cert_no" value="${escH(details.gold_cert_no || '')}">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Down Payment UTR / Cheque (₹1,50,000)</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="down_payment_ref" value="${escH(details.down_payment_ref || '')}" placeholder="DP Cheque / UTR #">
                 </div>
                 <div class="col-md-6">
-                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Voucher Validity</label>
-                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="voucher_expiry" value="${escH(details.voucher_expiry || '6 Months from issue')}">
+                    <label style="font-size: 11px; font-weight: 600; color: #475569;">Direct Cash Incentive UTR (₹50,000)</label>
+                    <input type="text" class="form-control form-control-sm dynamic-claim-field" data-key="cash_incentive_ref" value="${escH(details.cash_incentive_ref || '')}" placeholder="Cash Payout UTR #">
                 </div>
             </div>
         `;
