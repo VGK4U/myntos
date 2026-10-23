@@ -3442,11 +3442,11 @@ function renderCostingAnalysis() {
     if (sbody) {
         const scenarios = [
             { tier: 2, name: 'Family Water-Park Outing', low: '₹5,000', base: '₹6,000', high: '₹7,500', members: 1, confirmed: '₹4,000', buffer: '-₹2,000 (Initial Deficit)', buffClass: 'text-danger' },
-            { tier: 3, name: 'Araku Trip for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 3, confirmed: '₹12,000', buffer: '+₹2,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 4, name: 'EV Bike', low: '₹72,000', base: '₹80,000', high: '₹95,000', members: 25, confirmed: '₹1,00,000', buffer: '+₹20,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 5, name: 'Gold Worth ₹2.5 Lakh', low: '₹2,40,000', base: '₹2,50,000', high: '₹2,65,000', members: 75, confirmed: '₹3,00,000', buffer: '+₹50,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 6, name: 'House Fund ₹30 Lakh', low: '₹30,00,000', base: '₹30,00,000', high: '₹32,00,000', members: 1000, confirmed: '₹40,00,000', buffer: '+₹10,00,000 (Surplus)', buffClass: 'text-success' },
-            { tier: 7, name: 'Jaguar Fund ₹50 Lakh', low: '₹45,00,000', base: '₹50,00,000', high: '₹55,00,000', members: 2500, confirmed: '₹1,00,00,000', buffer: '+₹50,00,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 3, name: 'Araku Trip for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 5, confirmed: '₹20,000', buffer: '+₹10,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 4, name: 'Araku / Resort Party', low: '₹40,000', base: '₹50,000', high: '₹65,000', members: 30, confirmed: '₹1,20,000', buffer: '+₹70,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 5, name: 'Gold Worth ₹2.5 Lakh / EV Bike', low: '₹2,40,000', base: '₹2,50,000', high: '₹2,65,000', members: 100, confirmed: '₹4,00,00,000', buffer: '+₹1,50,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 6, name: 'House Fund ₹30 Lakh', low: '₹30,00,000', base: '₹30,00,000', high: '₹32,00,000', members: 1500, confirmed: '₹60,00,000', buffer: '+₹30,00,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 7, name: 'Jaguar Fund ₹50 Lakh', low: '₹45,00,000', base: '₹50,00,000', high: '₹55,00,000', members: 3000, confirmed: '₹1,20,00,000', buffer: '+₹70,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', low: '₹1,35,00,000', base: '₹1,50,00,000', high: '₹1,65,00,000', members: 10000, confirmed: '₹4,00,00,000', buffer: '+₹2,50,00,000 (Surplus)', buffClass: 'text-success' },
             { tier: 9, name: 'Grand Package ₹5.0 Crore', low: '₹4,50,00,000', base: '₹5,00,00,000', high: '₹5,50,00,000', members: 35000, confirmed: '₹14,00,00,000', buffer: '+₹9,00,00,000 (Surplus)', buffClass: 'text-success' }
         ];
@@ -3468,11 +3468,11 @@ function renderCostingAnalysis() {
     if (cbody) {
         const chainData = [
             { tier: 2, name: 'Family Water-Park Outing', target: 1, cost1x: 6000, cost3x: 18000, funds: 6000, bal1x: '₹0 (Break-Even)', bal3x: '-₹12,000', riskTag: '<span class="badge bg-danger">Critical Deficit (-200%)</span>' },
-            { tier: 3, name: 'Araku Trip for Two', target: 3, cost1x: 10000, cost3x: 30000, funds: 18000, bal1x: '+₹8,000 (Surplus)', bal3x: '-₹12,000', riskTag: '<span class="badge bg-danger">Deficit (-40%)</span>' },
-            { tier: 4, name: 'EV Bike', target: 25, cost1x: 80000, cost3x: 240000, funds: 150000, bal1x: '+₹70,000 (Surplus)', bal3x: '-₹90,000', riskTag: '<span class="badge bg-danger">Deficit (-37.5%)</span>' },
-            { tier: 5, name: 'Gold Worth ₹2.5 Lakh', target: 75, cost1x: 250000, cost3x: 750000, funds: 450000, bal1x: '+₹2,00,000 (Surplus)', bal3x: '-₹3,00,000', riskTag: '<span class="badge bg-danger">Deficit (-40%)</span>' },
-            { tier: 6, name: 'House Fund ₹30 Lakh', target: 1000, cost1x: 3000000, cost3x: 9000000, funds: 6000000, bal1x: '+₹30,00,000 (Surplus)', bal3x: '-₹30,00,000', riskTag: '<span class="badge bg-danger">Deficit (-33.3%)</span>' },
-            { tier: 7, name: 'Jaguar Fund ₹50 Lakh', target: 2500, cost1x: 5000000, cost3x: 15000000, funds: 15000000, bal1x: '+₹1,00,00,000 (Surplus)', bal3x: '₹0 (Break-Even)', riskTag: '<span class="badge bg-warning text-dark">Break-Even (0%)</span>' },
+            { tier: 3, name: 'Araku Trip for Two', target: 5, cost1x: 10000, cost3x: 30000, funds: 30000, bal1x: '+₹20,000 (Surplus)', bal3x: '₹0 (Break-Even)', riskTag: '<span class="badge bg-warning text-dark">Break-Even (0%)</span>' },
+            { tier: 4, name: 'Araku / Resort Party', target: 30, cost1x: 50000, cost3x: 150000, funds: 180000, bal1x: '+₹1,30,000 (Surplus)', bal3x: '+₹30,000', riskTag: '<span class="badge bg-success">Solvent (+20%)</span>' },
+            { tier: 5, name: 'Gold Worth ₹2.5 Lakh / EV Bike', target: 100, cost1x: 250000, cost3x: 750000, funds: 600000, bal1x: '+₹3,50,000 (Surplus)', bal3x: '-₹1,50,000', riskTag: '<span class="badge bg-danger">Deficit (-20%)</span>' },
+            { tier: 6, name: 'House Fund ₹30 Lakh', target: 1500, cost1x: 3000000, cost3x: 9000000, funds: 9000000, bal1x: '+₹60,00,000 (Surplus)', bal3x: '₹0 (Break-Even)', riskTag: '<span class="badge bg-warning text-dark">Break-Even (0%)</span>' },
+            { tier: 7, name: 'Jaguar Fund ₹50 Lakh', target: 3000, cost1x: 5000000, cost3x: 15000000, funds: 18000000, bal1x: '+₹1,30,00,000 (Surplus)', bal3x: '+₹30,00,000', riskTag: '<span class="badge bg-success">Solvent (+20%)</span>' },
             { tier: 8, name: 'Villa Fund ₹1.5 Crore', target: 10000, cost1x: 15000000, cost3x: 45000000, funds: 60000000, bal1x: '+₹4,50,00,000 (Surplus)', bal3x: '+₹1,50,00,000', riskTag: '<span class="badge bg-success">Solvent (+33%)</span>' },
             { tier: 9, name: 'Grand Package ₹5.0 Crore', target: 35000, cost1x: 50000000, cost3x: 150000000, funds: 210000000, bal1x: '+₹16,00,00,000 (Surplus)', bal3x: '+₹6,00,00,000', riskTag: '<span class="badge bg-success">Solvent (+40%)</span>' }
         ];
@@ -3624,7 +3624,7 @@ function renderGiftLadder(ladder) {
         1: { icon: 'fas fa-shield-alt', color: '#2563eb', bg: '#eff6ff' },
         2: { icon: 'fas fa-swimming-pool', color: '#06b6d4', bg: '#ecfeff' },
         3: { icon: 'fas fa-mountain', color: '#059669', bg: '#ecfdf5' },
-        4: { icon: 'fas fa-motorcycle', color: '#d97706', bg: '#fffbeb' },
+        4: { icon: 'fas fa-glass-cheers', color: '#d97706', bg: '#fffbeb' },
         5: { icon: 'fas fa-coins', color: '#eab308', bg: '#fefce8' },
         6: { icon: 'fas fa-home', color: '#7c3aed', bg: '#f5f3ff' },
         7: { icon: 'fas fa-car-side', color: '#dc2626', bg: '#fef2f2' },
