@@ -331,6 +331,31 @@
         .badge-approved { background: #ede9fe; color: #4c1d95; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
         .badge-delivered { background: #ede9fe; color: #4c1d95; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
 
+        /* ── Operations Center Segmented Pill Filter ── */
+        .req-pill-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all .15s ease;
+        }
+        .req-pill-btn:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+        .req-pill-btn.active {
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
         /* ── Network / Upline ── */
         .upline-chain { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .upline-item { background: #ede9fe; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
@@ -803,7 +828,7 @@
             <button class="snav-item" id="snav-points" onclick="showTab('points'); closeSidebar()"><i class="fas fa-coins"></i>Points Balance</button>
             <button class="snav-item" id="snav-ledger" onclick="showTab('ledger'); closeSidebar()"><i class="fas fa-rupee-sign"></i>My Earnings</button>
             <button class="snav-item" id="snav-leads" onclick="showTab('leads'); closeSidebar()"><i class="fas fa-user-tag"></i>My Leads</button>
-            <button class="snav-item" id="snav-tickets" onclick="showTab('tickets'); closeSidebar()"><i class="fas fa-tools"></i>Service Tickets</button>
+            <button class="snav-item" id="snav-tickets" onclick="showTab('tickets'); closeSidebar()"><i class="fas fa-headset"></i>Applications &amp; Support</button>
             <button class="snav-item" id="snav-bonanza" onclick="showTab('bonanza'); closeSidebar()"><i class="fas fa-trophy"></i>Bonanza Rewards</button>
             <button class="snav-item" id="snav-vendors" onclick="showTab('vendors'); closeSidebar()"><i class="fas fa-store"></i>Vendor Shops</button>
             <button class="snav-item" id="snav-media" onclick="showTab('media'); closeSidebar()"><i class="fas fa-photo-video"></i>Media Hub</button>
@@ -846,7 +871,7 @@
             <li class="nav-item"><a class="nav-link" href="#" id="dashTab-mycard" onclick="return showTab('mycard', this)"><i class="fas fa-id-card me-1"></i>My Card &amp; Progress</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('leads', this)"><i class="fas fa-user-tag me-1"></i>My Leads</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('orders', this)"><i class="fas fa-box me-1"></i>Orders</a></li>
-            <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('tickets', this)"><i class="fas fa-tools me-1"></i>Service Tickets</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('tickets', this)"><i class="fas fa-headset me-1"></i>Applications &amp; Support</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('network', this)"><i class="fas fa-sitemap me-1"></i>Team</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('addmember', this)"><i class="fas fa-user-plus me-1"></i>Add Channel Partner</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('points', this)"><i class="fas fa-coins me-1"></i>Credits</a></li>
@@ -1408,9 +1433,9 @@
             </div>
         </div>
 
-        <!-- SERVICE TICKETS TAB -->
+        <!-- EXECUTIVE APPLICATIONS & SUPPORT CENTER TAB -->
         <div id="tab-tickets" style="display:none">
-            <!-- Full service-request form embedded as iframe (VGK header+sidebar remain) -->
+            <!-- Hidden Iframe wrapper maintained for backward compatibility -->
             <div id="svcReqFrameWrap" style="display:none;margin-bottom:14px">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                     <span style="font-size:13px;font-weight:700;color:#4c1d95"><i class="fas fa-tools me-1"></i>Raise a Service Request</span>
@@ -1418,16 +1443,126 @@
                 </div>
                 <iframe id="svcReqFrame" src="" style="width:100%;height:82vh;border:1.5px solid #e5e7eb;border-radius:14px;background:#fff;" scrolling="yes" allow="clipboard-write"></iframe>
             </div>
+            <span id="ticketsTotalBadge" style="display:none">0</span>
 
-            <!-- Ticket History -->
-            <div class="section-card">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-                    <div class="section-title" style="margin-bottom:0"><i class="fas fa-tools" style="color:#e11d48"></i>My Tickets <span id="ticketsTotalBadge" style="background:#ffe4e6;color:#e11d48;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px">0</span></div>
-                    <button onclick="showRaiseTicketIframe()" id="btnNewTicket" style="background:linear-gradient(135deg,#7c3aed,#4c1d95);border:none;color:#fff;font-weight:700;font-size:13px;padding:9px 18px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:7px">
-                        <i class="fas fa-plus"></i>Raise Ticket
-                    </button>
+            <!-- 1. Executive Top Header with Actions -->
+            <div class="card-custom" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0;display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-headset" style="color:#4f46e5;"></i>
+                            Applications &amp; Support Center
+                            <span id="reqTotalHeaderBadge" style="background:#e0e7ff;color:#4338ca;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:800;">0</span>
+                        </h2>
+                        <div style="font-size:12.5px;color:#64748b;margin-top:4px;">
+                            Track business applications, sales team dispatches, technical service tickets, and turnaround times (TAT).
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <button type="button" onclick="openQuickAlertModal('APPLICATION')"
+                            style="background:linear-gradient(135deg,#059669,#047857);color:#ffffff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(5,150,105,0.25);">
+                            <i class="fas fa-bolt text-warning"></i> + I Have an Application
+                        </button>
+                        <button type="button" onclick="openQuickAlertModal('SUPPORT')"
+                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#ffffff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(220,38,38,0.25);">
+                            <i class="fas fa-headset"></i> + Raise Support Ticket
+                        </button>
+                    </div>
                 </div>
-                <div id="ticketsContent"><div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x"></i></div></div>
+            </div>
+
+            <!-- 2. Executive KPI Cards Row -->
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #4f46e5;cursor:pointer;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);" onclick="switchReqTypePill('ALL')">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-layer-group me-1" style="color:#4f46e5;"></i>Total Requests</div>
+                        <div class="kpi-value" id="kpiReqTotal" style="font-size:22px;font-weight:800;color:#4f46e5;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" style="font-size:11px;color:#94a3b8;">All-time raised</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #059669;cursor:pointer;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);" onclick="switchReqTypePill('APPLICATION')">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-bolt text-success me-1"></i>Applications</div>
+                        <div class="kpi-value" id="kpiReqApps" style="font-size:22px;font-weight:800;color:#059669;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" style="font-size:11px;color:#94a3b8;">Business leads</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #dc2626;cursor:pointer;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);" onclick="switchReqTypePill('SUPPORT')">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-headset text-danger me-1"></i>Support</div>
+                        <div class="kpi-value" id="kpiReqSupport" style="font-size:22px;font-weight:800;color:#dc2626;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" style="font-size:11px;color:#94a3b8;">Service &amp; helpdesk</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #d97706;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-clock text-warning me-1"></i>Pickup Pending</div>
+                        <div class="kpi-value" id="kpiReqPending" style="font-size:22px;font-weight:800;color:#d97706;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" style="font-size:11px;color:#94a3b8;">Awaiting staff</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #2563eb;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-spinner text-primary me-1"></i>In Progress</div>
+                        <div class="kpi-value" id="kpiReqInProgress" style="font-size:22px;font-weight:800;color:#2563eb;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" style="font-size:11px;color:#94a3b8;">Claimed &amp; working</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="kpi-card" style="border-left:4px solid #047857;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.04);">
+                        <div class="kpi-label" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;"><i class="fas fa-check-circle text-success me-1"></i>Completed</div>
+                        <div class="kpi-value" id="kpiReqCompleted" style="font-size:22px;font-weight:800;color:#047857;margin:4px 0 2px;">0</div>
+                        <div class="kpi-sub" id="kpiReqAvgTat" style="font-size:11px;color:#059669;font-weight:700;">Avg TAT: —</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Sticky Segmented Type Filter Pill Bar & Search Controls -->
+            <div class="card-custom" style="padding:14px 18px;margin-bottom:16px;background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <!-- Segmented Type Pills -->
+                    <div style="display:inline-flex;background:#f1f5f9;padding:4px;border-radius:10px;gap:4px;">
+                        <button type="button" class="req-pill-btn active" id="reqPillAll" onclick="switchReqTypePill('ALL')">
+                            <i class="fas fa-list"></i> All Requests <span id="pillCountAll" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;">0</span>
+                        </button>
+                        <button type="button" class="req-pill-btn" id="reqPillApp" onclick="switchReqTypePill('APPLICATION')">
+                            <i class="fas fa-bolt text-warning"></i> ⚡ Applications <span id="pillCountApp" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;">0</span>
+                        </button>
+                        <button type="button" class="req-pill-btn" id="reqPillSupport" onclick="switchReqTypePill('SUPPORT')">
+                            <i class="fas fa-headset text-danger"></i> 🆘 Support Tickets <span id="pillCountSupport" style="background:#e2e8f0;padding:1px 6px;border-radius:10px;font-size:11px;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Secondary Search & Filters Toolbar -->
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <div style="position:relative;">
+                            <input type="text" id="reqFilterSearch" placeholder="Search code, customer, phone, notes…"
+                                oninput="debounceReqSearch()"
+                                style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 12px 6px 30px;font-size:12px;min-width:220px;outline:none;">
+                            <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:11px;"></i>
+                        </div>
+                        <select id="reqFilterStatus" onchange="applyReqFilters()"
+                            style="border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:12px;outline:none;background:#fff;font-weight:600;">
+                            <option value="ALL">All Status</option>
+                            <option value="PENDING">Pending Pickup</option>
+                            <option value="IN_PROGRESS">Claimed / In Progress</option>
+                            <option value="WAITING_FOR_DETAILS">Waiting for Details</option>
+                            <option value="PROCESSED">Completed / Won</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                        <button type="button" onclick="resetReqFilters()" title="Reset Filters"
+                            style="border:1.5px solid #cbd5e1;background:#fff;color:#475569;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-weight:600;">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Table Container -->
+            <div class="section-card" style="padding:0;overflow:hidden;border-radius:14px;">
+                <div id="ticketsContent">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x" style="color:#4f46e5;"></i></div>
+                </div>
             </div>
         </div>
 
@@ -4714,8 +4849,8 @@
         function closeRaiseTicketIframe() {
             document.getElementById('svcReqFrameWrap').style.display = 'none';
             document.getElementById('svcReqFrame').src = '';
-            document.getElementById('btnNewTicket').style.display = '';
-            loadTickets(1);
+            const b = document.getElementById('btnNewTicket'); if (b) b.style.display = '';
+            loadRequestsAndTickets(1);
         }
         // Listen for success/close messages posted by the embedded service-request iframe
         window.addEventListener('message', function(evt) {
@@ -4728,42 +4863,440 @@
             }
         });
 
-        let ticketsPage = 1;
-        async function loadTickets(page) {
-            ticketsPage = page;
-            document.getElementById('ticketsContent').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+        // ── Executive Applications & Support Center ────────────────────────
+        let _reqTypeFilter = 'ALL';
+        let _reqStatusFilter = 'ALL';
+        let _reqSearchQuery = '';
+        let _reqPage = 1;
+        const _reqPageSize = 20;
+        let _reqSearchTimer = null;
+        let _cachedReqMap = {};
+
+        function formatTatDuration(seconds) {
+            if (!seconds || seconds <= 0) return '—';
+            if (seconds < 60) return seconds + 's';
+            const mins = Math.floor(seconds / 60);
+            if (mins < 60) return mins + 'm';
+            const hours = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            if (hours < 24) return remMins > 0 ? (hours + 'h ' + remMins + 'm') : (hours + 'h');
+            const days = Math.floor(hours / 24);
+            const remHours = hours % 24;
+            return remHours > 0 ? (days + 'd ' + remHours + 'h') : (days + 'd');
+        }
+
+        function switchReqTypePill(type) {
+            _reqTypeFilter = type || 'ALL';
+            ['reqPillAll', 'reqPillApp', 'reqPillSupport'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            if (_reqTypeFilter === 'APPLICATION') {
+                const el = document.getElementById('reqPillApp'); if (el) el.classList.add('active');
+            } else if (_reqTypeFilter === 'SUPPORT') {
+                const el = document.getElementById('reqPillSupport'); if (el) el.classList.add('active');
+            } else {
+                const el = document.getElementById('reqPillAll'); if (el) el.classList.add('active');
+            }
+            _reqPage = 1;
+            loadRequestsAndTickets(1);
+        }
+
+        function debounceReqSearch() {
+            clearTimeout(_reqSearchTimer);
+            _reqSearchTimer = setTimeout(() => {
+                _reqSearchQuery = (document.getElementById('reqFilterSearch')?.value || '').trim();
+                _reqPage = 1;
+                loadRequestsAndTickets(1);
+            }, 300);
+        }
+
+        function applyReqFilters() {
+            _reqStatusFilter = document.getElementById('reqFilterStatus')?.value || 'ALL';
+            _reqPage = 1;
+            loadRequestsAndTickets(1);
+        }
+
+        function resetReqFilters() {
+            _reqTypeFilter = 'ALL';
+            _reqStatusFilter = 'ALL';
+            _reqSearchQuery = '';
+            const searchInput = document.getElementById('reqFilterSearch');
+            if (searchInput) searchInput.value = '';
+            const statusSelect = document.getElementById('reqFilterStatus');
+            if (statusSelect) statusSelect.value = 'ALL';
+            ['reqPillAll', 'reqPillApp', 'reqPillSupport'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            const pillAll = document.getElementById('reqPillAll');
+            if (pillAll) pillAll.classList.add('active');
+            _reqPage = 1;
+            loadRequestsAndTickets(1);
+        }
+
+        async function loadRequestsAndTickets(page = 1) {
+            _reqPage = page;
+            const content = document.getElementById('ticketsContent');
+            if (!content) return;
+            content.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x" style="color:#4f46e5;"></i></div>';
+
             try {
-                const resp = await fetch(BASE + '/dashboard/tickets?page=' + page, { headers: authHeaders() });
+                const params = new URLSearchParams({
+                    page: page,
+                    page_size: _reqPageSize,
+                    type: _reqTypeFilter,
+                    status: _reqStatusFilter,
+                    search: _reqSearchQuery
+                });
+
+                const resp = await fetch(BASE + '/quick-alerts/my-history?' + params.toString(), {
+                    headers: authHeaders()
+                });
                 if (resp.status === 401) { logout(); return; }
                 const data = await resp.json();
-                if (!data.success) throw new Error();
-                document.getElementById('ticketsTotalBadge').textContent = data.total;
-                const openCount = (data.data || []).filter(t => t.status === 'Open' || t.status === 'In Progress').length;
-                // [DC-FIX] null-guard: sumTickets element may not exist
-                const _sumT = document.getElementById('sumTickets'); if (_sumT) _sumT.textContent = openCount;
-                if (!data.data.length) {
-                    document.getElementById('ticketsContent').innerHTML = `<div class="empty-state"><i class="fas fa-tools"></i><p>No service tickets yet.</p></div>`;
+                if (!data.success) throw new Error(data.message || 'Failed to load requests');
+
+                // Update KPIs
+                const kpis = data.kpis || {};
+                const elTotal = document.getElementById('kpiReqTotal'); if (elTotal) elTotal.textContent = kpis.total_all || 0;
+                const elApps = document.getElementById('kpiReqApps'); if (elApps) elApps.textContent = kpis.total_app || 0;
+                const elSupp = document.getElementById('kpiReqSupport'); if (elSupp) elSupp.textContent = kpis.total_support || 0;
+                const elPend = document.getElementById('kpiReqPending'); if (elPend) elPend.textContent = kpis.total_pending || 0;
+                const elProg = document.getElementById('kpiReqInProgress'); if (elProg) elProg.textContent = kpis.total_in_progress || 0;
+                const elComp = document.getElementById('kpiReqCompleted'); if (elComp) elComp.textContent = kpis.total_processed || 0;
+                const elTat = document.getElementById('kpiReqAvgTat');
+                if (elTat) {
+                    elTat.textContent = kpis.avg_tat_minutes ? ('Avg TAT: ' + formatTatDuration(kpis.avg_tat_minutes * 60)) : 'Avg TAT: —';
+                }
+
+                // Update Badges & Counts
+                const bTotal = document.getElementById('reqTotalHeaderBadge'); if (bTotal) bTotal.textContent = data.total || 0;
+                const pAll = document.getElementById('pillCountAll'); if (pAll) pAll.textContent = kpis.total_all || 0;
+                const pApp = document.getElementById('pillCountApp'); if (pApp) pApp.textContent = kpis.total_app || 0;
+                const pSupp = document.getElementById('pillCountSupport'); if (pSupp) pSupp.textContent = kpis.total_support || 0;
+
+                // Backward-compatibility guards
+                const legacyBadge = document.getElementById('ticketsTotalBadge'); if (legacyBadge) legacyBadge.textContent = data.total;
+                const _sumT = document.getElementById('sumTickets'); if (_sumT) _sumT.textContent = kpis.total_in_progress || 0;
+
+                // Cache items in map for modal lookup
+                _cachedReqMap = {};
+                (data.data || []).forEach(it => {
+                    _cachedReqMap[String(it.id)] = it;
+                });
+
+                if (!data.data || !data.data.length) {
+                    content.innerHTML = `
+                        <div class="empty-state" style="padding:48px 20px;text-align:center;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#f1f5f9;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                                <i class="fas fa-inbox" style="font-size:26px;color:#94a3b8;"></i>
+                            </div>
+                            <div style="font-size:16px;font-weight:700;color:#334155;">No requests found</div>
+                            <div style="font-size:13px;color:#64748b;margin-top:4px;max-width:400px;margin-left:auto;margin-right:auto;">
+                                ${_reqSearchQuery ? 'No results matched your search keyword or filters.' : 'You have not submitted any applications or support tickets yet.'}
+                            </div>
+                        </div>`;
                     return;
                 }
-                const rows = data.data.map(t => `<tr>
-                    <td><strong style="color:#e11d48;font-size:12px">${escHtml(t.ticket_id)}</strong></td>
-                    <td>${escHtml(t.customer_name)}</td>
-                    <td style="font-size:12px">${escHtml(t.customer_phone)}</td>
-                    <td style="font-size:12px">${escHtml(t.issue_category)}</td>
-                    <td>${ticketStatusBadge(t.status)}</td>
-                    <td><span style="font-size:11px;color:${t.sla_status==='Breached'?'#dc2626':'#7c3aed'}">${escHtml(t.sla_status||'—')}</span></td>
-                    <td style="font-size:11px;color:#9ca3af">${fmtDate(t.created_date)}</td>
-                </tr>`).join('');
-                const pagination = buildPagination(data.total, page, 20, 'loadTickets');
-                document.getElementById('ticketsContent').innerHTML = `
+
+                const rows = data.data.map(item => {
+                    const isApp = (item.alert_type === 'APPLICATION');
+                    const typeBadge = isApp
+                        ? '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-bolt text-warning"></i> Application</span>'
+                        : '<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-headset text-danger"></i> Support</span>';
+
+                    let statusBadge = '';
+                    if (item.status === 'PROCESSED') {
+                        statusBadge = '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-check-circle"></i> Completed</span>';
+                    } else if (item.status === 'CANCELLED') {
+                        statusBadge = '<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-times-circle"></i> Cancelled</span>';
+                    } else if (item.status === 'WAITING_FOR_DETAILS') {
+                        statusBadge = '<span style="background:#fff7ed;color:#c2410c;border:1px solid #ffedd5;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-pause-circle"></i> Waiting Info</span>';
+                    } else if (item.status === 'CLAIMED' || item.status === 'IN_PROGRESS') {
+                        statusBadge = '<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-spinner fa-spin"></i> In Progress</span>';
+                    } else {
+                        statusBadge = '<span style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-clock"></i> Awaiting Pickup</span>';
+                    }
+
+                    // Handling staff
+                    let staffHtml = '';
+                    if (item.claimed_by_staff_name) {
+                        staffHtml = `
+                            <div style="font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">
+                                <i class="fas fa-user-check text-success me-1"></i>${escHtml(item.claimed_by_staff_name)}
+                            </div>
+                            ${item.claimed_by_emp_code ? `<span style="font-size:10px;color:#64748b;background:#f1f5f9;padding:1px 5px;border-radius:4px;display:inline-block;margin-top:2px;">${escHtml(item.claimed_by_emp_code)}</span>` : ''}
+                            ${item.claim_wait_seconds > 0 ? `<div style="font-size:10.5px;color:#475569;margin-top:2px;"><i class="fas fa-bolt text-warning me-1"></i>Pickup in ${formatTatDuration(item.claim_wait_seconds)}</div>` : ''}
+                        `;
+                    } else {
+                        staffHtml = '<span style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;"><i class="fas fa-user-clock me-1"></i>Unassigned</span>';
+                    }
+
+                    // TAT & Completion
+                    let tatHtml = '';
+                    if (item.status === 'PROCESSED') {
+                        tatHtml = `
+                            <div style="font-size:12px;font-weight:800;color:#059669;display:flex;align-items:center;gap:4px;">
+                                <i class="fas fa-stopwatch"></i>${formatTatDuration(item.total_turnaround_seconds)}
+                            </div>
+                            <div style="font-size:10.5px;color:#64748b;margin-top:2px;">${escHtml(item.processed_at_ist || fmtDate(item.processed_at))}</div>
+                        `;
+                    } else if (item.status === 'CANCELLED') {
+                        tatHtml = '<span style="color:#94a3b8;font-size:11px;">Closed</span>';
+                    } else {
+                        tatHtml = '<span style="color:#2563eb;font-size:11px;font-weight:700;"><i class="fas fa-hourglass-half me-1"></i>Working...</span>';
+                    }
+
+                    // Notes / Details snippet
+                    const notesText = item.notes || item.processing_notes || '—';
+                    const attCount = (item.attachments || []).length;
+
+                    return `
+                        <tr>
+                            <td style="padding:10px 14px;">
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                    <strong style="color:#0f172a;font-family:monospace;font-size:12.5px;">${escHtml(item.alert_code)}</strong>
+                                    ${item.priority && item.priority !== 'Normal' ? `<span style="background:#fff1f2;color:#e11d48;font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px;">${escHtml(item.priority)}</span>` : ''}
+                                </div>
+                                <div style="margin-top:4px;">${typeBadge}</div>
+                                ${item.service_ticket_code ? `<div style="font-size:10.5px;color:#2563eb;margin-top:3px;"><i class="fas fa-ticket-alt me-1"></i>Ticket: ${escHtml(item.service_ticket_code)}</div>` : ''}
+                            </td>
+                            <td style="padding:10px 14px;">
+                                <div style="font-size:12px;color:#1e293b;font-weight:600;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(notesText)}">
+                                    ${escHtml(notesText)}
+                                </div>
+                                ${item.customer_name ? `<div style="font-size:11px;color:#64748b;margin-top:2px;"><i class="fas fa-user me-1"></i>${escHtml(item.customer_name)} ${item.customer_phone ? '(' + escHtml(item.customer_phone) + ')' : ''}</div>` : ''}
+                                ${attCount > 0 ? `<div style="margin-top:3px;"><span style="font-size:10.5px;color:#0284c7;background:#e0f2fe;padding:1px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-paperclip"></i> ${attCount} photo(s)</span></div>` : ''}
+                            </td>
+                            <td style="padding:10px 14px;">
+                                <div style="font-size:12px;font-weight:600;color:#334155;">${escHtml(item.created_at_ist || fmtDate(item.created_at))}</div>
+                                <div style="font-size:10.5px;color:#64748b;margin-top:2px;"><i class="fas fa-globe text-primary me-1"></i>Web / WhatsApp</div>
+                            </td>
+                            <td style="padding:10px 14px;">${staffHtml}</td>
+                            <td style="padding:10px 14px;">${statusBadge}</td>
+                            <td style="padding:10px 14px;">${tatHtml}</td>
+                            <td style="padding:10px 14px;text-align:right;">
+                                <button type="button" class="btn btn-sm" onclick="openReqDetailModal('${item.id}')"
+                                    style="background:#f8fafc;border:1.5px solid #cbd5e1;color:#1e293b;font-weight:700;font-size:11.5px;border-radius:8px;padding:4px 10px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+                                    <i class="fas fa-eye text-primary"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const pagination = buildPagination(data.total, page, _reqPageSize, 'loadRequestsAndTickets');
+                content.innerHTML = `
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead><tr><th>Ticket ID</th><th>Customer</th><th>Phone</th><th>Category</th><th>Status</th><th>SLA</th><th>Date</th></tr></thead>
+                        <table class="table table-sm table-hover mb-0" style="vertical-align:middle;">
+                            <thead>
+                                <tr style="background:#f8fafc;border-bottom:1.5px solid #e2e8f0;">
+                                    <th style="padding:10px 14px;">Request ID &amp; Type</th>
+                                    <th style="padding:10px 14px;">Details &amp; Customer</th>
+                                    <th style="padding:10px 14px;">Raised On</th>
+                                    <th style="padding:10px 14px;">Handling Executive</th>
+                                    <th style="padding:10px 14px;">Status</th>
+                                    <th style="padding:10px 14px;">Resolution / TAT</th>
+                                    <th style="padding:10px 14px;text-align:right;">Action</th>
+                                </tr>
+                            </thead>
                             <tbody>${rows}</tbody>
                         </table>
                     </div>${pagination}`;
             } catch(e) {
-                document.getElementById('ticketsContent').innerHTML = `<div class="alert alert-danger">Failed to load tickets.</div>`;
+                content.innerHTML = `<div class="alert alert-danger" style="margin:16px;">Failed to load requests: ${escHtml(e.message || 'Unknown error')}</div>`;
+            }
+        }
+
+        // Backward compatibility alias
+        const loadTickets = loadRequestsAndTickets;
+        window.loadTickets = loadTickets;
+
+        function openReqDetailModal(itemId) {
+            const item = _cachedReqMap[String(itemId)];
+            if (!item) return;
+
+            const isApp = (item.alert_type === 'APPLICATION');
+            const typeBadgeEl = document.getElementById('reqModalTypeBadge');
+            if (typeBadgeEl) {
+                typeBadgeEl.innerHTML = isApp
+                    ? '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:800;"><i class="fas fa-bolt text-warning me-1"></i>APPLICATION</span>'
+                    : '<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:800;"><i class="fas fa-headset text-danger me-1"></i>SUPPORT TICKET</span>';
+            }
+
+            const codeEl = document.getElementById('reqModalCode');
+            if (codeEl) codeEl.textContent = item.alert_code || '—';
+
+            const statusBadgeEl = document.getElementById('reqModalStatusBadge');
+            if (statusBadgeEl) {
+                if (item.status === 'PROCESSED') {
+                    statusBadgeEl.innerHTML = '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:800;"><i class="fas fa-check-circle me-1"></i>Completed / Won</span>';
+                } else if (item.status === 'CANCELLED') {
+                    statusBadgeEl.innerHTML = '<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:800;"><i class="fas fa-times-circle me-1"></i>Cancelled</span>';
+                } else if (item.status === 'WAITING_FOR_DETAILS') {
+                    statusBadgeEl.innerHTML = '<span style="background:#fff7ed;color:#c2410c;border:1px solid #ffedd5;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:800;"><i class="fas fa-pause-circle me-1"></i>Waiting for Info</span>';
+                } else if (item.status === 'CLAIMED' || item.status === 'IN_PROGRESS') {
+                    statusBadgeEl.innerHTML = '<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:800;"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>';
+                } else {
+                    statusBadgeEl.innerHTML = '<span style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:800;"><i class="fas fa-clock me-1"></i>Awaiting Pickup</span>';
+                }
+            }
+
+            // Key metrics strip
+            const crEl = document.getElementById('reqModalCreated');
+            if (crEl) crEl.textContent = item.created_at_ist || fmtDate(item.created_at) || '—';
+
+            const stEl = document.getElementById('reqModalStaff');
+            if (stEl) {
+                if (item.claimed_by_staff_name) {
+                    stEl.textContent = item.claimed_by_staff_name + (item.claimed_by_emp_code ? ` (${item.claimed_by_emp_code})` : '');
+                } else {
+                    stEl.textContent = 'Unassigned';
+                }
+            }
+
+            const cmEl = document.getElementById('reqModalCompleted');
+            if (cmEl) cmEl.textContent = item.processed_at_ist || (item.status === 'PROCESSED' ? fmtDate(item.processed_at) : 'In Progress');
+
+            const tatEl = document.getElementById('reqModalTat');
+            if (tatEl) {
+                if (item.status === 'PROCESSED' && item.total_turnaround_seconds > 0) {
+                    tatEl.textContent = formatTatDuration(item.total_turnaround_seconds);
+                    tatEl.style.color = '#059669';
+                } else if (item.claim_wait_seconds > 0) {
+                    tatEl.textContent = 'Pickup: ' + formatTatDuration(item.claim_wait_seconds);
+                    tatEl.style.color = '#2563eb';
+                } else {
+                    tatEl.textContent = 'Ongoing';
+                    tatEl.style.color = '#d97706';
+                }
+            }
+
+            // Notes / details
+            const notesEl = document.getElementById('reqModalNotes');
+            if (notesEl) {
+                let noteText = item.notes || 'No description provided.';
+                if (item.customer_name || item.customer_phone) {
+                    noteText += `\n\nCustomer Contact: ${item.customer_name || '—'} (${item.customer_phone || '—'})`;
+                }
+                notesEl.textContent = noteText;
+            }
+
+            // Staff resolution remarks
+            const staffSec = document.getElementById('reqModalStaffSection');
+            const resEl = document.getElementById('reqModalResolution');
+            if (staffSec && resEl) {
+                if (item.processing_notes) {
+                    staffSec.style.display = 'block';
+                    resEl.textContent = item.processing_notes;
+                } else {
+                    staffSec.style.display = 'none';
+                }
+            }
+
+            // Attachments
+            const attWrap = document.getElementById('reqModalAttachmentsWrap');
+            const attList = document.getElementById('reqModalAttachmentsList');
+            const attCountEl = document.getElementById('reqModalAttCount');
+            if (attWrap && attList) {
+                const atts = item.attachments || [];
+                if (atts.length > 0) {
+                    attWrap.style.display = 'block';
+                    if (attCountEl) attCountEl.textContent = atts.length;
+                    attList.innerHTML = atts.map((att, i) => `
+                        <a href="${att.file_url}" target="_blank" rel="noopener"
+                            style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #cbd5e1;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;color:#2563eb;text-decoration:none;">
+                            <i class="fas fa-image"></i> Photo ${i+1} <i class="fas fa-external-link-alt" style="font-size:10px;"></i>
+                        </a>
+                    `).join('');
+                } else {
+                    attWrap.style.display = 'none';
+                }
+            }
+
+            // Chronological timeline
+            const tlEl = document.getElementById('reqModalTimeline');
+            if (tlEl) {
+                const isClaimed = !!item.claimed_by_staff_name;
+                const isProcessed = (item.status === 'PROCESSED');
+                const isCancelled = (item.status === 'CANCELLED');
+
+                let tlHtml = `
+                    <!-- Step 1: Raised -->
+                    <div style="position:relative;margin-bottom:18px;">
+                        <div style="position:absolute;left:-31px;top:0;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid #fff;box-shadow:0 0 0 2px #10b981;"></div>
+                        <div style="font-size:12.5px;font-weight:700;color:#0f172a;">Request Raised &amp; Broadcasted</div>
+                        <div style="font-size:11px;color:#64748b;">${item.created_at_ist || fmtDate(item.created_at)} · Channel: Web / WhatsApp Broadcast</div>
+                    </div>
+
+                    <!-- Step 2: Claimed -->
+                    <div style="position:relative;margin-bottom:18px;">
+                        <div style="position:absolute;left:-31px;top:0;width:14px;height:14px;border-radius:50%;background:${isClaimed ? '#3b82f6' : '#cbd5e1'};border:2px solid #fff;box-shadow:0 0 0 2px ${isClaimed ? '#3b82f6' : '#cbd5e1'};"></div>
+                        <div style="font-size:12.5px;font-weight:700;color:${isClaimed ? '#0f172a' : '#94a3b8'};">
+                            ${isClaimed ? `Claimed by ${escHtml(item.claimed_by_staff_name)}` : 'Awaiting Staff Claim / Pickup'}
+                        </div>
+                        <div style="font-size:11px;color:#64748b;">
+                            ${isClaimed ? (item.claimed_at_ist || 'Claimed') + (item.claim_wait_seconds > 0 ? ` (Response TAT: ${formatTatDuration(item.claim_wait_seconds)})` : '') : 'Queued in executive dispatch poller'}
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Action & Processing -->
+                    <div style="position:relative;margin-bottom:18px;">
+                        <div style="position:absolute;left:-31px;top:0;width:14px;height:14px;border-radius:50%;background:${(isClaimed || isProcessed) ? '#8b5cf6' : '#cbd5e1'};border:2px solid #fff;box-shadow:0 0 0 2px ${(isClaimed || isProcessed) ? '#8b5cf6' : '#cbd5e1'};"></div>
+                        <div style="font-size:12.5px;font-weight:700;color:${(isClaimed || isProcessed) ? '#0f172a' : '#94a3b8'};">
+                            Work In Progress
+                        </div>
+                        <div style="font-size:11px;color:#64748b;">
+                            ${item.processing_notes ? escHtml(item.processing_notes) : (isProcessed ? 'Processing successfully fulfilled.' : 'Assigned team is reviewing details and contacting parties.')}
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Final Outcome -->
+                    <div style="position:relative;">
+                        <div style="position:absolute;left:-31px;top:0;width:14px;height:14px;border-radius:50%;background:${isProcessed ? '#10b981' : (isCancelled ? '#ef4444' : '#cbd5e1')};border:2px solid #fff;box-shadow:0 0 0 2px ${isProcessed ? '#10b981' : (isCancelled ? '#ef4444' : '#cbd5e1')};"></div>
+                        <div style="font-size:12.5px;font-weight:700;color:${(isProcessed || isCancelled) ? '#0f172a' : '#94a3b8'};">
+                            ${isProcessed ? 'Completed / Closed' : (isCancelled ? 'Cancelled' : 'Pending Completion')}
+                        </div>
+                        <div style="font-size:11px;color:#64748b;">
+                            ${isProcessed ? (item.processed_at_ist || 'Completed') + (item.total_turnaround_seconds > 0 ? ` (Total TAT: ${formatTatDuration(item.total_turnaround_seconds)})` : '') : (isCancelled ? 'Request was cancelled.' : 'Final resolution pending')}
+                        </div>
+                    </div>
+                `;
+                tlEl.innerHTML = tlHtml;
+            }
+
+            // Footer Cancel button if eligible
+            const cancelWrap = document.getElementById('reqModalFooterCancelWrap');
+            if (cancelWrap) {
+                const canCancel = (item.status !== 'PROCESSED' && item.status !== 'CANCELLED' && String(item.id).indexOf('st_') !== 0);
+                if (canCancel) {
+                    cancelWrap.innerHTML = `
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelReqFromModal('${item.id}', '${item.alert_code}')" style="border-radius:8px;font-weight:700;">
+                            <i class="fas fa-times-circle me-1"></i> Cancel Request
+                        </button>
+                    `;
+                } else {
+                    cancelWrap.innerHTML = '';
+                }
+            }
+
+            const modalEl = document.getElementById('reqDetailModal');
+            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                m.show();
+            }
+        }
+
+        async function cancelReqFromModal(alertId, alertCode) {
+            const modalEl = document.getElementById('reqDetailModal');
+            if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const m = bootstrap.Modal.getInstance(modalEl);
+                if (m) m.hide();
+            }
+            if (typeof cancelMyQuickAlert === 'function') {
+                await cancelMyQuickAlert(alertId, alertCode);
+                loadRequestsAndTickets(_reqPage);
             }
         }
 
@@ -13903,6 +14436,84 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 </div>
 
+<!-- ── REQUEST & TICKET DETAILS / TIMELINE MODAL ── -->
+<div class="modal fade" id="reqDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:18px;overflow:hidden;border:none;box-shadow:0 20px 45px rgba(0,0,0,0.25);">
+            <!-- Modal Header -->
+            <div id="reqModalHeader" style="padding:18px 24px;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div id="reqModalTypeBadge"></div>
+                    <span id="reqModalCode" style="font-family:monospace;font-size:15px;font-weight:800;letter-spacing:0.5px;color:#f8fafc;"></span>
+                    <span id="reqModalStatusBadge"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding:22px 24px;background:#f8fafc;max-height:80vh;overflow-y:auto;">
+                <!-- 1. Key Metrics Strip -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+                        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Raised On</div>
+                        <div id="reqModalCreated" style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">—</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+                        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Handled By</div>
+                        <div id="reqModalStaff" style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">—</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+                        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Completed On</div>
+                        <div id="reqModalCompleted" style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">—</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+                        <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;">Turnaround (TAT)</div>
+                        <div id="reqModalTat" style="font-size:13px;font-weight:800;color:#059669;margin-top:2px;">—</div>
+                    </div>
+                </div>
+
+                <!-- 2. Request Details / Notes Card -->
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+                    <div style="font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-file-alt text-primary"></i> Request Details &amp; Notes
+                    </div>
+                    <div id="reqModalNotes" style="font-size:13.5px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">—</div>
+                </div>
+
+                <!-- 3. Staff Resolution / Processing Notes Card -->
+                <div id="reqModalStaffSection" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:none;">
+                    <div style="font-size:12px;font-weight:800;color:#1e40af;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-user-shield text-primary"></i> Staff Update &amp; Resolution Remarks
+                    </div>
+                    <div id="reqModalResolution" style="font-size:13px;color:#1e3a8a;line-height:1.5;white-space:pre-wrap;">—</div>
+                </div>
+
+                <!-- 4. Attachments Section (if any) -->
+                <div id="reqModalAttachmentsWrap" style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:none;">
+                    <div style="font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-paperclip text-info"></i> Attachments (<span id="reqModalAttCount">0</span>)
+                    </div>
+                    <div id="reqModalAttachmentsList" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+                </div>
+
+                <!-- 5. Step-by-Step Chronological Timeline -->
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;">
+                    <div style="font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+                        <i class="fas fa-history" style="color:#4f46e5;"></i> End-to-End Processing Timeline
+                    </div>
+                    <div id="reqModalTimeline" style="position:relative;padding-left:24px;border-left:2px solid #e2e8f0;margin-left:8px;"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding:14px 24px;background:#ffffff;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <div id="reqModalFooterCancelWrap"></div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="border-radius:8px;font-weight:700;padding:6px 16px;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
     let currentQuickAlertType = 'APPLICATION';
@@ -14077,6 +14688,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const tktMsg = json.service_ticket_code ? `\nService Ticket ID: ${json.service_ticket_code}` : '';
                 alert(`✅ ${json.message || 'Request broadcasted successfully!'}${tktMsg}`);
                 loadQuickAlertsStatus();
+                if (typeof loadRequestsAndTickets === 'function') {
+                    loadRequestsAndTickets(1);
+                }
             } else {
                 alert(json.detail || json.message || 'Failed to submit request. Please try again.');
                 btn.disabled = false;
@@ -14115,6 +14729,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const json = await res.json();
             if (res.ok && json.success) {
                 loadQuickAlertsStatus();
+                if (typeof loadRequestsAndTickets === 'function') {
+                    loadRequestsAndTickets(_reqPage || 1);
+                }
             } else {
                 alert(json.detail || json.message || 'Could not cancel request.');
             }
@@ -14197,6 +14814,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <button onclick="loadQuickAlertsStatus()" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size: 12px;">
                             <i class="fas fa-sync-alt me-1"></i> Refresh
+                        </button>
+                        <button onclick="showTab('tickets'); switchReqTypePill('${alert.alert_type === 'APPLICATION' ? 'APPLICATION' : 'SUPPORT'}');" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size: 12px; color: #4f46e5; font-weight: 700;">
+                            <i class="fas fa-external-link-alt me-1"></i> View in Center
                         </button>
                         ${canCancel ? `
                             <button onclick="cancelMyQuickAlert(${alert.id}, '${alert.alert_code}')" class="btn btn-sm"

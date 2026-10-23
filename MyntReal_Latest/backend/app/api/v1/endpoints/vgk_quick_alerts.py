@@ -740,6 +740,145 @@ def get_member_quick_alerts_status(
     }
 
 
+@router.get("/my-history")
+def get_member_quick_alerts_history(
+    type: Optional[str] = Query(None, description="APPLICATION or SUPPORT or ALL"),
+    status: Optional[str] = Query(None, description="Filter by status: PENDING, CLAIMED, IN_PROGRESS, WAITING_FOR_DETAILS, PROCESSED, CANCELLED"),
+    search: Optional[str] = Query(None, description="Search keyword"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """
+    DC Protocol (Oct 2026): Executive History for Member Requests & Support Center.
+    Returns paginated items with full executive KPIs, turnaround time (TAT), handling staff, and audit remarks.
+    """
+    from app.models.ticket import ServiceTicket
+
+    # 1. Base query for alerts
+    base_alerts_q = db.query(VGKMemberQuickAlert).options(
+        joinedload(VGKMemberQuickAlert.claimed_by_staff),
+        joinedload(VGKMemberQuickAlert.processed_by_staff)
+    ).filter(VGKMemberQuickAlert.partner_id == current_member.id)
+    
+    all_alerts = base_alerts_q.order_by(desc(VGKMemberQuickAlert.id)).all()
+    enriched_alerts = enrich_alerts_with_service_tickets(db, [a.to_dict() for a in all_alerts])
+    
+    # 2. Check legacy ServiceTickets for this partner not already linked to an alert
+    linked_st_codes = set()
+    for ea in enriched_alerts:
+        if ea.get("service_ticket_code"):
+            linked_st_codes.add(ea["service_ticket_code"])
+        if ea.get("linked_ticket_id"):
+            linked_st_codes.add(str(ea["linked_ticket_id"]))
+
+    legacy_tickets = db.query(ServiceTicket).filter(ServiceTicket.partner_id == current_member.id).all()
+    legacy_items = []
+    for lt in legacy_tickets:
+        if lt.ticket_id in linked_st_codes:
+            continue
+        lt_status = 'PROCESSED' if (lt.status or '').lower() in ('resolved', 'closed', 'completed') else (
+            'IN_PROGRESS' if (lt.status or '').lower() in ('in progress', 'assigned', 'working') else 'PENDING'
+        )
+        c_dt = lt.created_date.isoformat() if lt.created_date else None
+        legacy_items.append({
+            "id": f"st_{lt.id}",
+            "alert_code": lt.ticket_id,
+            "alert_type": "SUPPORT",
+            "display_type": "SUPPORT",
+            "partner_id": current_member.id,
+            "partner_code": current_member.partner_code,
+            "partner_name": current_member.name,
+            "partner_phone": current_member.mobile_number or '',
+            "notes": f"{lt.issue_category or 'Service Ticket'} — {getattr(lt, 'issue_description', '') or ''}".strip(),
+            "priority": lt.priority or "Normal",
+            "status": lt_status,
+            "claimed_by_staff_name": getattr(lt, 'technician_name', None) or "Service Support Desk",
+            "claimed_by_emp_code": None,
+            "claimed_at": c_dt,
+            "claimed_at_ist": lt.created_date.strftime("%d %b %Y, %I:%M %p IST") if lt.created_date else None,
+            "processed_by_staff_name": getattr(lt, 'technician_name', None) or "Service Support Desk",
+            "processed_at": lt.resolved_date.isoformat() if getattr(lt, 'resolved_date', None) else None,
+            "processed_at_ist": lt.resolved_date.strftime("%d %b %Y, %I:%M %p IST") if getattr(lt, 'resolved_date', None) else None,
+            "processing_notes": getattr(lt, 'resolution_notes', None) or f"Customer: {lt.customer_name or '—'} ({lt.customer_phone or '—'})",
+            "created_at": c_dt,
+            "created_at_ist": lt.created_date.strftime("%d %b %Y, %I:%M %p IST") if lt.created_date else None,
+            "service_ticket_code": lt.ticket_id,
+            "customer_name": getattr(lt, 'customer_name', None),
+            "customer_phone": getattr(lt, 'customer_phone', None),
+            "claim_wait_seconds": 0,
+            "handling_seconds": 0,
+            "total_turnaround_seconds": 0
+        })
+
+    unified_stream = enriched_alerts + legacy_items
+
+    # Compute Executive KPIs across all records
+    total_all = len(unified_stream)
+    total_app = sum(1 for x in unified_stream if x.get("alert_type") == 'APPLICATION')
+    total_support = sum(1 for x in unified_stream if x.get("alert_type") in ('SUPPORT', 'IMMEDIATE_SUPPORT'))
+    total_pending = sum(1 for x in unified_stream if x.get("status") == 'PENDING')
+    total_in_progress = sum(1 for x in unified_stream if x.get("status") in ('CLAIMED', 'IN_PROGRESS', 'WAITING_FOR_DETAILS'))
+    total_processed = sum(1 for x in unified_stream if x.get("status") == 'PROCESSED')
+    total_cancelled = sum(1 for x in unified_stream if x.get("status") == 'CANCELLED')
+
+    tat_seconds_list = [x.get("total_turnaround_seconds") for x in unified_stream if x.get("status") == 'PROCESSED' and (x.get("total_turnaround_seconds") or 0) > 0]
+    avg_tat_minutes = int(sum(tat_seconds_list) / len(tat_seconds_list) / 60) if tat_seconds_list else 0
+
+    filtered = unified_stream
+    if type and type.upper() != 'ALL':
+        u_type = type.upper().strip()
+        if u_type == 'APPLICATION':
+            filtered = [x for x in filtered if x.get("alert_type") == 'APPLICATION']
+        elif u_type in ('SUPPORT', 'IMMEDIATE_SUPPORT'):
+            filtered = [x for x in filtered if x.get("alert_type") in ('SUPPORT', 'IMMEDIATE_SUPPORT')]
+
+    if status and status.upper() != 'ALL':
+        u_st = status.upper().strip()
+        filtered = [x for x in filtered if x.get("status") == u_st]
+
+    if search:
+        s_lower = search.strip().lower()
+        filtered = [
+            x for x in filtered
+            if s_lower in (x.get("alert_code") or '').lower()
+            or s_lower in (x.get("notes") or '').lower()
+            or s_lower in (x.get("processing_notes") or '').lower()
+            or s_lower in (x.get("claimed_by_staff_name") or '').lower()
+            or s_lower in (x.get("customer_name") or '').lower()
+            or s_lower in (x.get("customer_phone") or '').lower()
+        ]
+
+    def get_sort_key(item):
+        ca = item.get("created_at") or ''
+        return str(ca)
+
+    filtered.sort(key=get_sort_key, reverse=True)
+
+    total_filtered = len(filtered)
+    start_idx = (page - 1) * page_size
+    paged_data = filtered[start_idx : start_idx + page_size]
+
+    return {
+        "success": True,
+        "total": total_filtered,
+        "page": page,
+        "page_size": page_size,
+        "kpis": {
+            "total_all": total_all,
+            "total_app": total_app,
+            "total_support": total_support,
+            "total_pending": total_pending,
+            "total_in_progress": total_in_progress,
+            "total_processed": total_processed,
+            "total_cancelled": total_cancelled,
+            "avg_tat_minutes": avg_tat_minutes
+        },
+        "data": paged_data
+    }
+
+
 @router.post("/member-cancel")
 def cancel_member_quick_alert(
     payload: QuickAlertMemberCancelRequest,
