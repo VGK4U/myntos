@@ -2726,19 +2726,38 @@
 
         <!-- ── BONANZA TAB ─────────────────────────────────────────── -->
         <div id="tab-bonanza" style="display:none">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
                 <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
                     <i class="fas fa-trophy" style="color:#fff;font-size:18px"></i>
                 </div>
                 <div>
-                    <div style="font-size:17px;font-weight:800;color:#111">Bonanza Rewards</div>
-                    <div style="font-size:12px;color:#6b7280">Source deals, hit targets, earn rewards</div>
+                    <div style="font-size:17px;font-weight:800;color:#111">Bonanza &amp; Lifetime Awards</div>
+                    <div style="font-size:12px;color:#6b7280">Lifetime milestone ladder &amp; promotional deal campaigns</div>
                 </div>
                 <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                    <a href="/vgk/awards" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(245,158,11,.3)"><i class="fas fa-crown"></i> Lifetime Awards &amp; Claims</a>
-                    <button onclick="loadBonanza(true)" style="background:none;border:1.5px solid #7c3aed;color:#7c3aed;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-sync me-1"></i>Refresh</button>
+                    <button onclick="refreshCurrentBonanzaView()" style="background:none;border:1.5px solid #7c3aed;color:#7c3aed;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-sync me-1" id="bonanzaSyncIcon"></i>Refresh</button>
                 </div>
             </div>
+
+            <!-- Subview Switcher: Lifetime Awards vs Promotional Campaigns -->
+            <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:2px solid #ede9fe;padding-bottom:10px;overflow-x:auto">
+                <button id="bzSubTab-lifetime" onclick="switchBonanzaView('lifetime')" style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#7c3aed;color:#fff;display:inline-flex;align-items:center;gap:7px;box-shadow:0 2px 8px rgba(124,58,237,.35);white-space:nowrap">
+                    <i class="fas fa-crown text-warning"></i> Lifetime Awards &amp; Claims (9 Tiers)
+                </button>
+                <button id="bzSubTab-campaigns" onclick="switchBonanzaView('campaigns')" style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;display:inline-flex;align-items:center;gap:7px;box-shadow:none;white-space:nowrap">
+                    <i class="fas fa-gift text-purple"></i> Promotional Deal Bonanzas
+                </button>
+            </div>
+
+            <!-- SUBVIEW 1: Lifetime Awards & Claims (Embedded in Dashboard) -->
+            <div id="bonanza-subview-lifetime">
+                <div id="lifetimeAwardsContent">
+                    <div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x" style="color:#7c3aed"></i></div>
+                </div>
+            </div>
+
+            <!-- SUBVIEW 2: Promotional Campaigns & Deals -->
+            <div id="bonanza-subview-campaigns" style="display:none">
             <!-- Filter bar — scrollable chip row -->
             <div class="bz-filter-bar" id="bonanzaFilters" style="margin-bottom:16px">
                 <button class="bz-filter-btn active" onclick="filterBonanza('all',this)"><i class="fas fa-th-large me-1"></i>All</button>
@@ -2789,6 +2808,7 @@
             </div>
 
             <div id="bonanzaList"><div class="loading-spinner"><i class="fas fa-spinner fa-spin fa-2x"></i></div></div>
+            </div> <!-- End bonanza-subview-campaigns -->
         </div>
 
         <!-- ── Vendor Shops Tab ── -->
@@ -3416,7 +3436,7 @@
                     const defaultSub = isComm ? 'community' : 'cash-income';
                     switchLedgerTab((isComm ? (_lt === 'community') : LEDGER_PANES.includes(_lt)) ? _lt : defaultSub);
                 }
-                else if (name === 'bonanza') loadBonanza();
+                else if (name === 'bonanza') { switchBonanzaView(_bonanzaActiveSubView || 'lifetime'); }
                 else if (name === 'coupons') loadCouponBalance();
                 else if (name === 'vendors') loadVendorDirectory();
                 else if (name === 'media') loadMediaSection();
@@ -7434,6 +7454,271 @@
                     out.innerHTML = '';
                 }
             }, 500);
+        }
+
+        // ── Bonanza & Lifetime Awards ───────────────────────────────────────
+        let _bonanzaActiveSubView = 'lifetime';
+        let _lifetimeAwardsData = null;
+
+        function switchBonanzaView(mode) {
+            _bonanzaActiveSubView = mode;
+            const btnLife = document.getElementById('bzSubTab-lifetime');
+            const btnCamp = document.getElementById('bzSubTab-campaigns');
+            const viewLife = document.getElementById('bonanza-subview-lifetime');
+            const viewCamp = document.getElementById('bonanza-subview-campaigns');
+
+            if (mode === 'lifetime') {
+                if (btnLife) {
+                    btnLife.style.background = '#7c3aed';
+                    btnLife.style.color = '#fff';
+                    btnLife.style.boxShadow = '0 2px 8px rgba(124,58,237,.35)';
+                }
+                if (btnCamp) {
+                    btnCamp.style.background = '#f3f4f6';
+                    btnCamp.style.color = '#4b5563';
+                    btnCamp.style.boxShadow = 'none';
+                }
+                if (viewLife) viewLife.style.display = 'block';
+                if (viewCamp) viewCamp.style.display = 'none';
+                loadLifetimeAwardsDashboard();
+            } else {
+                if (btnLife) {
+                    btnLife.style.background = '#f3f4f6';
+                    btnLife.style.color = '#4b5563';
+                    btnLife.style.boxShadow = 'none';
+                }
+                if (btnCamp) {
+                    btnCamp.style.background = '#7c3aed';
+                    btnCamp.style.color = '#fff';
+                    btnCamp.style.boxShadow = '0 2px 8px rgba(124,58,237,.35)';
+                }
+                if (viewLife) viewLife.style.display = 'none';
+                if (viewCamp) viewCamp.style.display = 'block';
+                loadBonanza();
+            }
+        }
+
+        function refreshCurrentBonanzaView() {
+            const icon = document.getElementById('bonanzaSyncIcon');
+            if (icon) icon.classList.add('fa-spin');
+            if (_bonanzaActiveSubView === 'lifetime') {
+                loadLifetimeAwardsDashboard(true).finally(() => {
+                    if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 600);
+                });
+            } else {
+                loadBonanza(true).finally(() => {
+                    if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 600);
+                });
+            }
+        }
+
+        async function loadLifetimeAwardsDashboard(force) {
+            if (!force && _lifetimeAwardsData) { renderLifetimeAwardsDashboard(); return; }
+            const container = document.getElementById('lifetimeAwardsContent');
+            if (!container) return;
+            container.innerHTML = '<div style="text-align:center;padding:48px"><i class="fas fa-spinner fa-spin fa-2x" style="color:#7c3aed"></i><div style="margin-top:10px;font-size:13px;color:#6b7280;font-weight:600">Loading your lifetime awards & eligibility...</div></div>';
+            try {
+                const r = await fetch('/api/v1/vgk/team/awards/my-summary', { headers: authHeaders() });
+                const d = await r.json();
+                if (!r.ok || !d.success) throw new Error(d.detail || d.message || 'Failed to load awards');
+                _lifetimeAwardsData = d;
+                renderLifetimeAwardsDashboard();
+            } catch(e) {
+                container.innerHTML = `<div style="text-align:center;padding:32px;color:#dc2626;background:#fef2f2;border-radius:12px;border:1px solid #fecaca"><i class="fas fa-exclamation-triangle me-2"></i>${e.message}</div>`;
+            }
+        }
+
+        function renderLifetimeAwardsDashboard() {
+            const container = document.getElementById('lifetimeAwardsContent');
+            if (!container || !_lifetimeAwardsData) return;
+            const data = _lifetimeAwardsData;
+            const achieved = data.achieved_awards || [];
+            const ladder = data.ladder || [];
+
+            let issuedCount = 0;
+            let pendingCount = 0;
+            let totalContributors = 0;
+
+            achieved.forEach(a => {
+                const s = (a.claim_status || 'pending').toLowerCase();
+                if (s === 'issued') issuedCount++;
+                else pendingCount++;
+                if (a.contributors_count) totalContributors += a.contributors_count;
+            });
+
+            const nextTier = ladder.find(t => !t.is_achieved);
+
+            let html = `
+                <!-- Recognition Hero Banner -->
+                <div style="background:linear-gradient(135deg,#312e81 0%,#1e1b4b 60%,#0f172a 100%);border-radius:16px;padding:22px 24px;color:#fff;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.15)">
+                    <div>
+                        <span style="background:#f59e0b;color:#111;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em">
+                            <i class="fas fa-crown me-1"></i> Lifetime Recognition Ladder
+                        </span>
+                        <h3 style="font-size:18px;font-weight:800;color:#fff;margin:6px 0 2px 0">${escHtml(data.partner_name || 'VGK Partner')} · Milestone Progress</h3>
+                        <div style="font-size:12.5px;color:#cbd5e1">ID: <strong>${escHtml(data.partner_code || '—')}</strong> &bull; Status: <strong style="color:#34d399">Active Verified Partner</strong></div>
+                    </div>
+                    <div style="background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 18px;text-align:left;min-width:200px">
+                        <div style="font-size:11px;text-transform:uppercase;color:#cbd5e1;font-weight:700">Tiers Won</div>
+                        <div style="font-size:26px;font-weight:900;color:#38bdf8">${achieved.length} <span style="font-size:13px;font-weight:600;color:#94a3b8">/ 9 Tiers</span></div>
+                        <div style="font-size:11.5px;color:#cbd5e1">${nextTier ? 'Next: Tier ' + nextTier.tier_number + ' (' + escHtml(nextTier.reward_name) + ')' : '🎉 All Milestones Met!'}</div>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Metrics -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#b45309"><i class="fas fa-award me-1"></i> Total Won</div>
+                        <div style="font-size:24px;font-weight:900;color:#d97706;margin-top:2px">${achieved.length}</div>
+                        <div style="font-size:11px;color:#6b7280">Out of 9 Lifetime Tiers</div>
+                    </div>
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #d1fae5;border-left:4px solid #10b981;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#047857"><i class="fas fa-gift me-1"></i> Issued / Handed Over</div>
+                        <div style="font-size:24px;font-weight:900;color:#059669;margin-top:2px">${issuedCount}</div>
+                        <div style="font-size:11px;color:#6b7280">Auditor Verified &amp; Dispatched</div>
+                    </div>
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #e0f2fe;border-left:4px solid #0ea5e9;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#0369a1"><i class="fas fa-clock me-1"></i> Under Verification</div>
+                        <div style="font-size:24px;font-weight:900;color:#0284c7;margin-top:2px">${pendingCount}</div>
+                        <div style="font-size:11px;color:#6b7280">Processing with Vendor / Agency</div>
+                    </div>
+                    <div style="background:#fff;border-radius:12px;border:1.5px solid #ede9fe;border-left:4px solid #7c3aed;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6d28d9"><i class="fas fa-users me-1"></i> Active Contributors</div>
+                        <div style="font-size:24px;font-weight:900;color:#7c3aed;margin-top:2px">${totalContributors}</div>
+                        <div style="font-size:11px;color:#6b7280">Active 3-file downlines credited</div>
+                    </div>
+                </div>
+            `;
+
+            // Achieved Awards Section
+            if (achieved.length > 0) {
+                html += `<div style="margin-bottom:22px"><div style="font-size:15px;font-weight:800;color:#111;margin-bottom:10px"><i class="fas fa-medal text-warning me-1"></i> My Achieved Awards &amp; Auditor Issuance Status</div>`;
+                achieved.forEach(a => {
+                    const isIssued = (a.claim_status || '').toLowerCase() === 'issued';
+                    const badge = isIssued
+                        ? `<span style="background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800"><i class="fas fa-check-circle me-1"></i>Issued &amp; Handed Over</span>`
+                        : `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800"><i class="fas fa-clock me-1"></i>Under Verification</span>`;
+
+                    html += `
+                        <div style="background:#fff;border:1.5px solid ${isIssued ? '#10b981' : '#f59e0b'};border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:16px">
+                                        <i class="${a.icon || 'fas fa-gift'}"></i>
+                                    </div>
+                                    <div>
+                                        <span style="background:#ede9fe;color:#7c3aed;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px">TIER ${a.tier_number}</span>
+                                        <h5 style="font-size:15px;font-weight:800;color:#111;margin:2px 0 0 0">${escHtml(a.reward_name)}</h5>
+                                    </div>
+                                </div>
+                                <div>${badge}</div>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#4b5563;border-top:1px solid #f3f4f6;padding-top:8px;margin-top:6px">
+                                <div><span style="color:#9ca3af">Won Date:</span> <strong>${escHtml(a.achievement_date || 'Achieved')}</strong></div>
+                                <div><span style="color:#9ca3af">Handover Date:</span> <strong>${escHtml(a.issued_date || 'In Process')}</strong></div>
+                                ${a.provider_name ? `<div><span style="color:#9ca3af">Provider:</span> <strong>${escHtml(a.provider_name)}</strong></div>` : ''}
+                                ${a.reference_number ? `<div><span style="color:#9ca3af">Ref #:</span> <strong style="color:#d97706;font-family:monospace">${escHtml(a.reference_number)}</strong></div>` : ''}
+                                ${a.updated_by ? `<div><span style="color:#9ca3af">Audited by:</span> <strong>${escHtml(a.updated_by)}</strong></div>` : ''}
+                            </div>
+                            ${a.notes ? `<div style="font-size:11.5px;color:#6b7280;margin-top:6px;background:#f9fafb;padding:6px 10px;border-radius:6px"><em>Auditor Remarks:</em> "${escHtml(a.notes)}"</div>` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // Table Format Ladder (Similar to Staff System)
+            html += `
+                <div style="margin-top:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+                        <div>
+                            <div style="font-size:15px;font-weight:800;color:#111"><i class="fas fa-layer-group text-primary me-1"></i> Lifetime Rewards &amp; Eligibility Table (9 Tiers)</div>
+                            <div style="font-size:12px;color:#6b7280">Pure Active Member Attribution (3 Files Recognized per Member, Excluding Earlier Tiers)</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border:1.5px solid #ede9fe;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)">
+                        <div class="table-responsive">
+                            <table style="width:100%;border-collapse:collapse;margin:0">
+                                <thead>
+                                    <tr style="background:#f8fafc;border-bottom:1.5px solid #e2e8f0">
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Tier</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Milestone Award</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Qualification Criteria</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Indicative Value</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;min-width:180px">My Progress &amp; Eligibility</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Status</th>
+                                        <th style="padding:12px 14px;font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b">Issuance Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+
+            ladder.forEach(t => {
+                const isAch = t.is_achieved;
+                const tgtVal = t.target_active_members;
+                const curVal = isAch ? (t.is_insurance ? 1 : tgtVal) : t.my_contributors_count;
+                const pct = isAch ? 100 : Math.min(100, Math.round((curVal / (tgtVal || 1)) * 100));
+                const targetMetricLabel = t.is_insurance ? 'File' : 'Active Members';
+
+                const statusBadge = isAch 
+                    ? `<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:12px;font-size:10.5px;font-weight:800"><i class="fas fa-check-circle me-1"></i>Achieved</span>`
+                    : `<span style="background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:12px;font-size:10.5px;font-weight:800"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>`;
+
+                const gapText = isAch 
+                    ? `<span style="color:#059669;font-weight:700;font-size:11px"><i class="fas fa-check me-1"></i>Milestone Met!</span>`
+                    : `<span style="color:#d97706;font-size:11px;font-weight:600"><i class="fas fa-arrow-up me-1"></i>${Math.max(0, tgtVal - curVal)} more to qualify</span>`;
+
+                const claimInline = isAch
+                    ? `<span style="color:#059669;font-weight:700;font-size:11.5px"><i class="fas fa-gift me-1"></i>${(t.claim && t.claim.claim_status === 'issued') ? 'Issued' : 'Claim Processing'}</span>`
+                    : `<span style="color:#9ca3af;font-size:11px">&mdash;</span>`;
+
+                html += `
+                    <tr style="border-bottom:1px solid #f1f5f9;background:${isAch ? 'rgba(16,185,129,.03)' : '#fff'}">
+                        <td style="padding:12px 14px;white-space:nowrap">
+                            <span style="background:${isAch ? '#d1fae5' : '#ede9fe'};color:${isAch ? '#065f46' : '#7c3aed'};font-weight:800;font-size:10.5px;padding:3px 8px;border-radius:5px;display:inline-flex;align-items:center;gap:4px">
+                                <i class="${t.icon || 'fas fa-gift'}"></i> Tier ${t.tier_number}
+                            </span>
+                        </td>
+                        <td style="padding:12px 14px">
+                            <strong style="color:#111827;font-size:13.5px">${escHtml(t.reward_name)}</strong>
+                        </td>
+                        <td style="padding:12px 14px">
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:11.5px;color:#334155;max-width:280px">
+                                <strong>Rule:</strong> ${escHtml(t.qualification_rule || (t.is_insurance ? '1 Personal validated file' : tgtVal + ' fresh active members in downline'))}
+                            </div>
+                        </td>
+                        <td style="padding:12px 14px;white-space:nowrap;font-weight:700;font-size:12.5px;color:#7c3aed">
+                            ${t.hide_value ? '<span style="color:#059669;"><i class="fas fa-gift me-1"></i>' + (t.reward_name.includes('Araku') ? 'Complimentary Tour' : 'Electric Milestone') + '</span>' : (t.cost_display || ('₹' + Number(t.cost_per_recipient || 0).toLocaleString('en-IN')))}
+                        </td>
+                        <td style="padding:12px 14px">
+                            <div style="display:flex;justify-content:space-between;font-weight:700;font-size:11.5px;color:#111827;margin-bottom:3px">
+                                <span>${curVal} / ${tgtVal} ${targetMetricLabel}</span>
+                                <span style="color:${isAch ? '#059669' : '#7c3aed'}">${pct}%</span>
+                            </div>
+                            <div style="height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-bottom:3px">
+                                <div style="height:100%;width:${pct}%;background:${isAch ? '#10b981' : 'linear-gradient(90deg,#7c3aed,#a855f7)'};border-radius:999px"></div>
+                            </div>
+                            <div>${gapText}</div>
+                        </td>
+                        <td style="padding:12px 14px;white-space:nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td style="padding:12px 14px;white-space:nowrap">
+                            ${claimInline}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
         }
 
         // ── Bonanza Tab ──────────────────────────────────────────────────────

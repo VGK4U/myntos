@@ -12,29 +12,32 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <style>
 :root {
-  --primary: #4f46e5;
-  --primary-dark: #3730a3;
+  --primary: #6366f1;
+  --primary-dark: #4338ca;
   --secondary: #0ea5e9;
-  --bg: #0f172a;
-  --card-bg: #1e293b;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --text-main: #f8fafc;
+  --bg: #090e1a;
+  --card-bg: #141e33;
+  --card-border: rgba(255, 255, 255, 0.12);
+  --text-main: #ffffff;
+  --text-sub: #e2e8f0;
   --text-muted: #94a3b8;
   --gold: #f59e0b;
   --emerald: #10b981;
 }
 
+* { box-sizing: border-box; }
+
 body {
-  background: #0b1120;
+  background: #090e1a;
   color: var(--text-main);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
-  padding-bottom: 50px;
+  padding-bottom: 60px;
 }
 
 .topbar {
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
   padding: 14px 24px;
   display: flex;
@@ -43,13 +46,12 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
 .brand {
   font-weight: 800;
   font-size: 19px;
-  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -59,11 +61,11 @@ body {
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  padding: 6px 14px;
+  padding: 7px 15px;
   border-radius: 8px;
   text-decoration: none;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   transition: all 0.2s;
   display: inline-flex;
   align-items: center;
@@ -71,30 +73,30 @@ body {
 }
 
 .btn-nav:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
 }
 
 .hero-banner {
-  background: linear-gradient(135deg, #4338ca 0%, #1e1b4b 60%, #0f172a 100%);
+  background: linear-gradient(135deg, #3730a3 0%, #1e1b4b 55%, #0f172a 100%);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1.5px solid rgba(99, 102, 241, 0.35);
   padding: 28px 32px;
-  margin: 24px auto;
-  max-width: 1300px;
+  margin: 22px auto;
+  max-width: 1380px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
 
 .hero-banner::after {
   content: '';
   position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+  top: -60px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.25) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -102,13 +104,13 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  max-width: 1300px;
+  max-width: 1380px;
   margin: 0 auto 24px auto;
 }
 
 .kpi-card {
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #131c31;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 18px 20px;
   position: relative;
@@ -117,31 +119,37 @@ body {
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.5);
 }
 
 .kpi-label {
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: #cbd5e1;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .kpi-val {
-  font-size: 26px;
-  font-weight: 800;
-  color: #fff;
+  font-size: 30px;
+  font-weight: 900;
   line-height: 1.2;
 }
 
+.kpi-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
 .section-container {
-  max-width: 1300px;
-  margin: 0 auto 32px auto;
+  max-width: 1380px;
+  margin: 0 auto 30px auto;
 }
 
 .section-head {
@@ -149,206 +157,182 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  padding: 0 4px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
+  font-size: 19px;
+  font-weight: 800;
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.achieved-card {
-  background: linear-gradient(145deg, #1e293b 0%, #151f30 100%);
-  border: 1.5px solid #10b981;
-  border-radius: 16px;
-  padding: 22px;
-  margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
-  transition: all 0.25s;
+/* Table Style similar to Staff Bonanza System */
+.awards-table-card {
+  background: #111a2e;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.3);
 }
 
-.achieved-card.pending {
-  border-color: #f59e0b;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.12);
+.awards-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
 }
 
-.badge-claim {
+.awards-table thead th {
+  background: #0b1324;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 14px 16px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.awards-table tbody td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  vertical-align: middle;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.awards-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.awards-table tbody tr.row-achieved td {
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.tier-badge-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.tier-badge-cell.achieved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.rule-box {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  max-width: 320px;
+}
+
+.rule-box strong {
+  color: #ffffff;
+}
+
+.prog-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 6px 0 4px 0;
+  min-width: 140px;
+}
+
+.prog-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+  transition: width 0.4s ease;
+}
+
+.prog-fill.achieved {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.status-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.badge-issued {
+.chip-achieved {
   background: rgba(16, 185, 129, 0.18);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
-.badge-approved {
+.chip-progress {
   background: rgba(59, 130, 246, 0.18);
   color: #60a5fa;
   border: 1px solid rgba(59, 130, 246, 0.4);
 }
 
-.badge-pending {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+.chip-locked {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
-.badge-rejected {
-  background: rgba(239, 68, 68, 0.18);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-.ladder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
-}
-
-.ladder-card {
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.achieved-award-card {
+  background: linear-gradient(145deg, #17243c 0%, #10192b 100%);
+  border: 1.5px solid #10b981;
   border-radius: 14px;
-  padding: 20px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.12);
+}
+
+.achieved-award-card.pending {
+  border-color: #f59e0b;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.12);
+}
+
+.claim-detail-pill {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.view-mode-btn {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.ladder-card.achieved {
-  background: linear-gradient(160deg, #1e293b 0%, #172554 100%);
-  border: 1.5px solid #60a5fa;
-  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.15);
-}
-
-.ladder-tier-num {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #94a3b8;
-}
-
-.ladder-card.achieved .ladder-tier-num {
-  color: #60a5fa;
-}
-
-.ladder-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-bottom: 12px;
-  color: #c7d2fe;
-}
-
-.ladder-card.achieved .ladder-icon {
-  background: rgba(96, 165, 250, 0.2);
-  color: #60a5fa;
-}
-
-.ladder-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 6px;
-  line-height: 1.3;
-}
-
-.ladder-target {
-  font-size: 12.5px;
-  color: #94a3b8;
-  margin-bottom: 14px;
-}
-
-.ladder-progress {
-  height: 7px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.ladder-progress-bar {
-  height: 100%;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #4f46e5, #06b6d4);
-  transition: width 0.4s ease;
-}
-
-.ladder-card.achieved .ladder-progress-bar {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.table-custom {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table-custom th {
-  background: #0f172a;
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.table-custom td {
-  padding: 12px 14px;
-  font-size: 13px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
-}
-
-.table-custom tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.detail-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 14px;
-  border-radius: 10px;
-  margin-top: 14px;
-}
-
-.detail-item-lbl {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #94a3b8;
-  margin-bottom: 2px;
-}
-
-.detail-item-val {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #f1f5f9;
-  word-break: break-word;
+.view-mode-btn.active {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
 }
 </style>
 </head>
@@ -364,119 +348,112 @@ body {
     <button onclick="loadMemberAwards(true)" class="btn-nav">
       <i class="fas fa-sync-alt" id="syncIcon"></i> Refresh
     </button>
-    <a href="/vgk/dashboard" class="btn-nav">
+    <a href="/vgk/dashboard?tab=bonanza" class="btn-nav">
       <i class="bi bi-arrow-left"></i> Dashboard
     </a>
   </div>
 </div>
 
 <div class="container-fluid px-3 px-md-4">
-  <!-- Hero Banner -->
+  <!-- Hero Recognition Banner -->
   <div class="hero-banner">
     <div class="row align-items-center">
       <div class="col-lg-8">
-        <span class="badge bg-warning text-dark px-3 py-1 mb-2 font-monospace fw-bold">
+        <span class="badge bg-warning text-dark px-3 py-1 mb-2 font-monospace fw-bold" style="font-size:11px">
           <i class="fas fa-crown me-1"></i> OFFICIAL MEMBER RECOGNITION
         </span>
         <h2 class="fw-bold mb-2 text-white" id="memberNameHeader">VGK Partner Lifetime Rewards</h2>
-        <p class="text-light opacity-75 mb-3" style="font-size:14px; max-width:650px">
-          Track your milestone awards, downline active contributions, and auditor-verified gift issuances in real-time. All rewards are backed by verified client files.
+        <p class="mb-3 text-light" style="font-size:14px; color:#cbd5e1; max-width:680px">
+          Track your milestone awards, downline active contributions, and auditor-verified gift issuances in real-time. All rewards are backed by verified solar customer files.
         </p>
-        <div class="d-flex flex-wrap gap-2 text-muted" style="font-size:12.5px" id="memberMeta">
+        <div class="d-flex flex-wrap gap-2" style="font-size:13px" id="memberMeta">
           <span><i class="fas fa-id-badge text-info me-1"></i> ID: <strong class="text-white" id="partnerIdText">—</strong></span>
-          <span class="mx-2">•</span>
+          <span class="mx-2 text-muted">•</span>
           <span><i class="fas fa-check-circle text-success me-1"></i> Status: <strong class="text-white">Active Verified Partner</strong></span>
         </div>
       </div>
       <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-        <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:inline-block; text-align:left; min-width:220px">
-          <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:700">Lifetime Tiers Won</div>
-          <div style="font-size:32px; font-weight:900; color:#38bdf8" id="heroAchievedCount">0</div>
-          <div style="font-size:11.5px; color:#cbd5e1" id="heroNextTarget">Next: Tier 1 Insurance</div>
+        <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.18); display:inline-block; text-align:left; min-width:240px">
+          <div style="font-size:11px; text-transform:uppercase; color:#cbd5e1; font-weight:800">Lifetime Tiers Won</div>
+          <div style="font-size:34px; font-weight:900; color:#38bdf8" id="heroAchievedCount">0</div>
+          <div style="font-size:12px; color:#f1f5f9; font-weight:600" id="heroNextTarget">Next Target: Tier 1 Insurance</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- KPI Grid -->
+  <!-- KPI Metric Row -->
   <div class="kpi-grid">
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
       <div class="kpi-label"><i class="fas fa-award text-warning"></i> Total Awards Won</div>
       <div class="kpi-val text-warning" id="kpiTotalWon">0</div>
-      <div class="text-muted mt-1" style="font-size:11.5px">Out of 9 Lifetime Tiers</div>
+      <div class="kpi-sub">Out of 9 Lifetime Tiers</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-left: 4px solid #10b981;">
       <div class="kpi-label"><i class="fas fa-gift text-success"></i> Issued & Handed Over</div>
       <div class="kpi-val text-success" id="kpiIssued">0</div>
-      <div class="text-muted mt-1" style="font-size:11.5px">Auditor Verified & Dispatched</div>
+      <div class="kpi-sub">Auditor Verified & Dispatched</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-left: 4px solid #0ea5e9;">
       <div class="kpi-label"><i class="fas fa-clock text-info"></i> Claims In Verification</div>
       <div class="kpi-val text-info" id="kpiPending">0</div>
-      <div class="text-muted mt-1" style="font-size:11.5px">Processing with Vendor/Agency</div>
+      <div class="kpi-sub">Processing with Vendor / Agency</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-left: 4px solid #6366f1;">
       <div class="kpi-label"><i class="fas fa-users text-primary"></i> Downline Contributors</div>
-      <div class="kpi-val text-primary" id="kpiContributors">0</div>
-      <div class="text-muted mt-1" style="font-size:11.5px">Active 3-file members credited</div>
+      <div class="kpi-val" style="color:#a5b4fc" id="kpiContributors">0</div>
+      <div class="kpi-sub">Active 3-file members credited</div>
     </div>
   </div>
 
-  <!-- Section 1: Achieved Awards & Issuance Details -->
+  <!-- Section 1: My Achieved Awards & Issuance Details -->
   <div class="section-container">
     <div class="section-head">
       <div class="section-title">
         <i class="fas fa-medal text-warning"></i> My Achieved Awards & Issuance Status
       </div>
-      <span class="badge bg-dark border border-secondary text-light px-2 py-1" style="font-size:11.5px" id="achievedCountBadge">0 Achieved</span>
+      <span class="badge bg-dark border border-secondary text-light px-3 py-1" style="font-size:12px" id="achievedCountBadge">0 Achieved</span>
     </div>
 
     <div id="achievedAwardsContainer">
-      <div class="text-center py-5 rounded-3" style="background:#1e293b; border:1px dashed rgba(255,255,255,0.15)">
+      <div class="text-center py-4 rounded-3" style="background:#131c31; border:1px dashed rgba(255,255,255,0.18)">
         <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
-        <div class="text-light fw-bold">Loading your lifetime rewards...</div>
+        <div class="text-light fw-bold" style="font-size:14px">Loading your lifetime rewards...</div>
       </div>
     </div>
   </div>
 
-  <!-- Section 2: Full 9-Tier Lifetime Bonanza Ladder -->
+  <!-- Section 2: Awards & Eligibility Table (Staff System Format) -->
   <div class="section-container">
     <div class="section-head">
-      <div class="section-title">
-        <i class="fas fa-layer-group text-info"></i> VGK Lifetime Rewards Ladder (9 Tiers)
+      <div>
+        <div class="section-title">
+          <i class="fas fa-layer-group text-info"></i> Lifetime Rewards & Eligibility Table (9 Tiers)
+        </div>
+        <div style="font-size:12.5px; color:#cbd5e1; margin-top:2px">
+          Pure Active Member Attribution (3 Files Recognized per Member, Excluding Earlier Tiers)
+        </div>
       </div>
-      <div class="text-muted" style="font-size:12px">Pure Active Member Attribution (3 Files Recognized per Member)</div>
     </div>
 
-    <div class="ladder-grid" id="ladderGrid">
-      <!-- Dynamic 9 tiers -->
-    </div>
-  </div>
-
-  <!-- Section 3: Activation & Team Milestone Income Bonuses -->
-  <div class="section-container">
-    <div class="section-head">
-      <div class="section-title">
-        <i class="fas fa-coins text-success"></i> Cash Bonuses & Team Milestones
-      </div>
-      <div class="text-muted" style="font-size:12px">Directly credited to VGK Wallet</div>
-    </div>
-
-    <div class="card bg-dark border border-secondary rounded-3 overflow-hidden">
+    <div class="awards-table-card">
       <div class="table-responsive">
-        <table class="table-custom">
+        <table class="awards-table">
           <thead>
             <tr>
-              <th>Bonus / Award Title</th>
-              <th>Achievement Date</th>
+              <th>Tier</th>
+              <th>Milestone Award</th>
+              <th>Qualification Criteria</th>
+              <th>Indicative Value</th>
+              <th style="min-width:180px">My Progress & Eligibility</th>
               <th>Status</th>
-              <th class="text-end">Bonus Amount</th>
+              <th>Issuance Details</th>
             </tr>
           </thead>
-          <tbody id="incomeBonusRows">
+          <tbody id="ladderTableBody">
             <tr>
-              <td colspan="4" class="text-center py-4 text-muted">
-                <i class="fas fa-spinner fa-spin me-2"></i> Loading bonus history...
+              <td colspan="7" class="text-center py-4 text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i> Loading ladder data...
               </td>
             </tr>
           </tbody>
@@ -487,70 +464,16 @@ body {
 </div>
 
 <script>
-const TOKEN = localStorage.getItem('vgkAuthToken') || localStorage.getItem('authToken') || '';
+// Comprehensive token resolver covering all VGK partner token storage keys
+const TOKEN = localStorage.getItem('vgk_token') || 
+              sessionStorage.getItem('vgk_token') || 
+              localStorage.getItem('vgkAuthToken') || 
+              localStorage.getItem('authToken') || '';
+
 const AUD = () => (window.AudienceTabs && window.AudienceTabs.current()) || 'vgk4u';
 
 function fmt(n) {
   return '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function getBadgeHtml(status) {
-  const s = (status || 'pending').toLowerCase();
-  if (s === 'issued') {
-    return `<span class="badge-claim badge-issued"><i class="fas fa-check-circle"></i> Issued & Handed Over</span>`;
-  } else if (s === 'approved') {
-    return `<span class="badge-claim badge-approved"><i class="fas fa-check-double"></i> Approved & In Dispatch</span>`;
-  } else if (s === 'rejected') {
-    return `<span class="badge-claim badge-rejected"><i class="fas fa-times-circle"></i> Rejected / Clawback</span>`;
-  }
-  return `<span class="badge-claim badge-pending"><i class="fas fa-clock"></i> Pending Verification</span>`;
-}
-
-function renderClaimDetailsHtml(rewardName, details, provider, refNo) {
-  const rName = (rewardName || '').toLowerCase();
-  let items = [];
-
-  if (provider) {
-    items.push(`<div class="detail-item"><div class="detail-item-lbl">Provider / Partner</div><div class="detail-item-val">${escapeHtml(provider)}</div></div>`);
-  }
-  if (refNo) {
-    items.push(`<div class="detail-item"><div class="detail-item-lbl">Reference / Policy / Voucher #</div><div class="detail-item-val text-warning font-monospace">${escapeHtml(refNo)}</div></div>`);
-  }
-
-  if (details && typeof details === 'object') {
-    if (rName.includes('insurance')) {
-      if (details.sum_insured) items.push(`<div class="detail-item"><div class="detail-item-lbl">Sum Insured</div><div class="detail-item-val text-success font-monospace">${escapeHtml(details.sum_insured)}</div></div>`);
-      if (details.nominee_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Nominee</div><div class="detail-item-val">${escapeHtml(details.nominee_name)} (${escapeHtml(details.nominee_relation || 'Nominee')})</div></div>`);
-      if (details.policy_type) items.push(`<div class="detail-item"><div class="detail-item-lbl">Policy Plan</div><div class="detail-item-val">${escapeHtml(details.policy_type)}</div></div>`);
-      if (details.validity_period) items.push(`<div class="detail-item"><div class="detail-item-lbl">Coverage Period</div><div class="detail-item-val">${escapeHtml(details.validity_period)}</div></div>`);
-    } else if (rName.includes('ev car') || rName.includes('car fund')) {
-      if (details.ev_car_model) items.push(`<div class="detail-item"><div class="detail-item-lbl">Vehicle Model</div><div class="detail-item-val text-info">${escapeHtml(details.ev_car_model)}</div></div>`);
-      if (details.dealer_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Showroom</div><div class="detail-item-val">${escapeHtml(details.dealer_name)}</div></div>`);
-      if (details.down_payment_ref) items.push(`<div class="detail-item"><div class="detail-item-lbl">Down Payment Grant (₹1.5L)</div><div class="detail-item-val text-success font-monospace">${escapeHtml(details.down_payment_ref)}</div></div>`);
-      if (details.cash_incentive_ref) items.push(`<div class="detail-item"><div class="detail-item-lbl">Direct Cash Incentive (₹50K)</div><div class="detail-item-val text-warning font-monospace">${escapeHtml(details.cash_incentive_ref)}</div></div>`);
-    } else if (rName.includes('gold')) {
-      if (details.gold_grams) items.push(`<div class="detail-item"><div class="detail-item-lbl">Gold Weight</div><div class="detail-item-val text-warning font-monospace">${escapeHtml(details.gold_grams)} Grams</div></div>`);
-      if (details.purity) items.push(`<div class="detail-item"><div class="detail-item-lbl">Purity</div><div class="detail-item-val">${escapeHtml(details.purity)}</div></div>`);
-      if (details.hallmark_cert) items.push(`<div class="detail-item"><div class="detail-item-lbl">Hallmark Cert #</div><div class="detail-item-val font-monospace">${escapeHtml(details.hallmark_cert)}</div></div>`);
-    } else if (rName.includes('ev') || rName.includes('bike') || rName.includes('car')) {
-      if (details.vehicle_model) items.push(`<div class="detail-item"><div class="detail-item-lbl">Model</div><div class="detail-item-val">${escapeHtml(details.vehicle_model)}</div></div>`);
-      if (details.color) items.push(`<div class="detail-item"><div class="detail-item-lbl">Color</div><div class="detail-item-val">${escapeHtml(details.color)}</div></div>`);
-      if (details.chassis_number) items.push(`<div class="detail-item"><div class="detail-item-lbl">Chassis #</div><div class="detail-item-val font-monospace">${escapeHtml(details.chassis_number)}</div></div>`);
-    } else if (rName.includes('araku') || rName.includes('park') || rName.includes('trip') || rName.includes('tour')) {
-      if (details.resort_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Destination / Resort</div><div class="detail-item-val">${escapeHtml(details.resort_name)}</div></div>`);
-      if (details.persons_count) items.push(`<div class="detail-item"><div class="detail-item-lbl">Guests Covered</div><div class="detail-item-val">${escapeHtml(details.persons_count)} Persons</div></div>`);
-      if (details.voucher_validity) items.push(`<div class="detail-item"><div class="detail-item-lbl">Voucher Valid Till</div><div class="detail-item-val">${escapeHtml(details.voucher_validity)}</div></div>`);
-    } else if (rName.includes('fund') || rName.includes('villa') || rName.includes('house')) {
-      if (details.bank_name) items.push(`<div class="detail-item"><div class="detail-item-lbl">Bank / Escrow</div><div class="detail-item-val">${escapeHtml(details.bank_name)}</div></div>`);
-      if (details.utr_number) items.push(`<div class="detail-item"><div class="detail-item-lbl">UTR / Payment Ref</div><div class="detail-item-val font-monospace">${escapeHtml(details.utr_number)}</div></div>`);
-    }
-  }
-
-  if (!items.length) {
-    return `<div class="detail-row"><div class="text-muted" style="font-size:12px"><i class="fas fa-info-circle me-1"></i> Claim records verified by compliance. Official documents will be dispatched by auditor team.</div></div>`;
-  }
-
-  return `<div class="detail-row">${items.join('')}</div>`;
 }
 
 function escapeHtml(str) {
@@ -563,12 +486,43 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function getBadgeHtml(status) {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'issued') {
+    return `<span class="status-chip chip-achieved"><i class="fas fa-check-circle"></i> Issued & Handed Over</span>`;
+  } else if (s === 'approved') {
+    return `<span class="status-chip chip-progress"><i class="fas fa-check-double"></i> Approved - In Dispatch</span>`;
+  } else if (s === 'rejected') {
+    return `<span class="status-chip" style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.4)"><i class="fas fa-times-circle"></i> Rejected / Clawback</span>`;
+  }
+  return `<span class="status-chip" style="background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.4)"><i class="fas fa-clock"></i> Verification Underway</span>`;
+}
+
+function renderClaimDetailsInline(award) {
+  const s = (award.claim_status || 'pending').toLowerCase();
+  const d = award.issue_details || {};
+  let out = [];
+
+  if (s === 'issued') {
+    out.push(`<div class="text-success fw-bold" style="font-size:11.5px"><i class="fas fa-check-circle me-1"></i> Issued: ${award.issued_date || 'Handed Over'}</div>`);
+    if (award.reference_number) out.push(`<div class="text-warning font-monospace" style="font-size:11px">Ref: ${escapeHtml(award.reference_number)}</div>`);
+    if (d.sum_insured) out.push(`<div class="text-light" style="font-size:11px">Cover: ${escapeHtml(d.sum_insured)} (${escapeHtml(d.nominee_name || 'Nominee')})</div>`);
+    if (d.down_payment_ref) out.push(`<div class="text-light" style="font-size:11px">DP Ref: ${escapeHtml(d.down_payment_ref)}</div>`);
+  } else if (s === 'approved') {
+    out.push(`<div class="text-info fw-bold" style="font-size:11.5px"><i class="fas fa-truck me-1"></i> In Dispatch</div>`);
+    if (award.provider_name) out.push(`<div class="text-light" style="font-size:11px">${escapeHtml(award.provider_name)}</div>`);
+  } else {
+    out.push(`<div class="text-muted" style="font-size:11.5px"><i class="fas fa-hourglass-half me-1"></i> Awaiting auditor dispatch</div>`);
+  }
+
+  return out.join('');
+}
+
 async function loadMemberAwards(force) {
   const syncIcon = document.getElementById('syncIcon');
   if (syncIcon) syncIcon.classList.add('fa-spin');
 
   try {
-    // 1. Fetch real-time member awards summary from dedicated endpoint
     const res = await fetch('/api/v1/vgk/team/awards/my-summary', {
       headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
     });
@@ -577,12 +531,9 @@ async function loadMemberAwards(force) {
     if (data.success && data.is_partner) {
       renderMemberPortal(data);
     } else {
-      // Fallback to /api/v1/awards/my-awards
+      // Fallback
       loadFallbackAwards();
     }
-
-    // 2. Fetch income bonus entries
-    loadIncomeBonuses();
   } catch (err) {
     console.error('Awards summary fetch error:', err);
     loadFallbackAwards();
@@ -627,38 +578,33 @@ function renderMemberPortal(data) {
     document.getElementById('heroNextTarget').textContent = `🎉 All Lifetime Milestones Achieved!`;
   }
 
-  // Render Achieved Cards
+  // 1. Render Achieved Section
   const achContainer = document.getElementById('achievedAwardsContainer');
   if (!achievedAwards.length) {
     achContainer.innerHTML = `
-      <div class="text-center py-5 rounded-3" style="background:#1e293b; border:1px dashed rgba(255,255,255,0.15)">
-        <i class="fas fa-trophy fa-3x text-warning mb-3 opacity-50"></i>
-        <h5 class="text-light fw-bold">Your Lifetime Rewards Journey Has Begun!</h5>
-        <p class="text-muted mb-3" style="font-size:13.5px; max-width:550px; margin:0 auto">
-          Qualify for your <strong>₹10 Lakh Personal Accident & Medical Insurance</strong> with just 1 validated first-payment file, or unlock the <strong>Family Water-Park Outing</strong> with 1 active member!
+      <div class="text-center py-4 rounded-3" style="background:#131c31; border:1px dashed rgba(255,255,255,0.18)">
+        <i class="fas fa-trophy fa-3x text-warning mb-2 opacity-50"></i>
+        <h5 class="text-white fw-bold mb-1">Your Lifetime Rewards Journey Has Begun!</h5>
+        <p style="color:#cbd5e1; font-size:13px; max-width:580px; margin:0 auto">
+          Unlock your <strong>₹10 Lakh Personal Accident & Medical Insurance</strong> with just 1 validated first-payment file, or qualify for the <strong>Family Water-Park Outing</strong> with 1 fresh active downline member!
         </p>
-        <a href="/vgk/dashboard" class="btn btn-outline-info btn-sm">
-          <i class="fas fa-bullhorn me-1"></i> Submit Active Files
-        </a>
       </div>
     `;
   } else {
     achContainer.innerHTML = achievedAwards.map(a => {
       const isIssued = (a.claim_status || '').toLowerCase() === 'issued';
-      const cardClass = isIssued ? 'achieved-card' : 'achieved-card pending';
+      const cardClass = isIssued ? 'achieved-award-card' : 'achieved-award-card pending';
       const icon = a.icon || 'fas fa-gift';
 
       return `
         <div class="${cardClass}">
-          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
             <div class="d-flex align-items-center gap-3">
-              <div class="ladder-icon m-0" style="background:rgba(245,158,11,0.15); color:#f59e0b">
+              <div style="width:42px;height:42px;border-radius:10px;background:rgba(245,158,11,0.15);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:18px">
                 <i class="${icon}"></i>
               </div>
               <div>
-                <div class="text-warning fw-bold text-uppercase" style="font-size:11px; letter-spacing:0.06em">
-                  Tier ${a.tier_number} Achieved Award
-                </div>
+                <span class="badge bg-warning text-dark px-2 py-0 font-monospace fw-bold" style="font-size:10px">TIER ${a.tier_number}</span>
                 <h5 class="text-white fw-bold mb-0">${escapeHtml(a.reward_name)}</h5>
               </div>
             </div>
@@ -667,29 +613,30 @@ function renderMemberPortal(data) {
             </div>
           </div>
 
-          <div class="row g-2 mt-2 pt-2 border-top border-secondary text-muted" style="font-size:12.5px">
+          <div class="row g-2 mt-2 pt-2 border-top border-secondary" style="font-size:12.5px; color:#cbd5e1">
             <div class="col-sm-6 col-md-3">
-              <i class="fas fa-calendar-check text-info me-1"></i> Won Date: 
-              <strong class="text-light">${a.achievement_date || 'Achieved'}</strong>
+              <span class="text-muted">Won Date:</span> <strong class="text-light">${a.achievement_date || 'Achieved'}</strong>
             </div>
             <div class="col-sm-6 col-md-3">
-              <i class="fas fa-truck-loading text-success me-1"></i> Handover Date: 
-              <strong class="text-light">${a.issued_date || 'In Process'}</strong>
+              <span class="text-muted">Handover Date:</span> <strong class="text-light">${a.issued_date || 'In Process'}</strong>
             </div>
             <div class="col-sm-6 col-md-3">
-              <i class="fas fa-user-friends text-primary me-1"></i> Qualifying Downlines: 
-              <strong class="text-light">${a.contributors_count || (a.is_insurance ? '1 Personal File' : '1')}</strong>
+              <span class="text-muted">Downline Contributor:</span> <strong class="text-light">${a.contributors_count || (a.is_insurance ? '1 Personal File' : '1')}</strong>
             </div>
             <div class="col-sm-6 col-md-3">
-              <i class="fas fa-shield-alt text-warning me-1"></i> Verification: 
-              <strong class="text-light">${a.updated_by ? `Audited by ${escapeHtml(a.updated_by)}` : 'System Verified'}</strong>
+              <span class="text-muted">Audited by:</span> <strong class="text-light">${a.updated_by || 'Verified'}</strong>
             </div>
           </div>
 
-          ${renderClaimDetailsHtml(a.reward_name, a.issue_details, a.provider_name, a.reference_number)}
+          ${a.reference_number || a.provider_name ? `
+            <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top border-secondary">
+              ${a.provider_name ? `<div class="claim-detail-pill"><span class="text-muted" style="font-size:10.5px">PROVIDER</span><div class="text-light fw-bold" style="font-size:12px">${escapeHtml(a.provider_name)}</div></div>` : ''}
+              ${a.reference_number ? `<div class="claim-detail-pill"><span class="text-muted" style="font-size:10.5px">REFERENCE / POLICY #</span><div class="text-warning font-monospace fw-bold" style="font-size:12px">${escapeHtml(a.reference_number)}</div></div>` : ''}
+            </div>
+          ` : ''}
 
           ${a.notes ? `
-            <div class="mt-2 pt-2" style="font-size:12px; color:#cbd5e1; border-top:1px dashed rgba(255,255,255,0.08)">
+            <div class="mt-2 pt-1 text-light" style="font-size:12px; opacity:0.9">
               <i class="fas fa-comment-alt text-info me-1"></i> <em>Auditor Remarks:</em> "${escapeHtml(a.notes)}"
             </div>
           ` : ''}
@@ -698,125 +645,79 @@ function renderMemberPortal(data) {
     }).join('');
   }
 
-  // Render Full 9-Tier Ladder
-  const ladderGrid = document.getElementById('ladderGrid');
-  ladderGrid.innerHTML = ladder.map(t => {
+  // 2. Render Full Awards & Eligibility Table (Staff System Format)
+  const tbody = document.getElementById('ladderTableBody');
+  tbody.innerHTML = ladder.map(t => {
     const isAch = t.is_achieved;
-    const cardClass = isAch ? 'ladder-card achieved' : 'ladder-card';
-    const targetText = t.is_insurance ? '1 Personal Validated File' : `${t.target_active_members.toLocaleString('en-IN')} Active Members`;
-    const curVal = isAch ? (t.is_insurance ? 1 : t.target_active_members) : t.my_contributors_count;
-    const pct = isAch ? 100 : Math.min(100, Math.round((curVal / (t.target_active_members || 1)) * 100));
+    const rowClass = isAch ? 'row-achieved' : '';
+    const badgeClass = isAch ? 'tier-badge-cell achieved' : 'tier-badge-cell';
+    const fillClass = isAch ? 'prog-fill achieved' : 'prog-fill';
 
-    let statusPill = `<span class="badge bg-secondary text-light px-2 py-1" style="font-size:11px"><i class="fas fa-lock me-1"></i> In Progress</span>`;
-    if (isAch) {
-      const claimStatus = (t.claim && t.claim.claim_status || 'pending').toLowerCase();
-      if (claimStatus === 'issued') {
-        statusPill = `<span class="badge bg-success text-white px-2 py-1" style="font-size:11px"><i class="fas fa-check-circle me-1"></i> Issued</span>`;
-      } else {
-        statusPill = `<span class="badge bg-warning text-dark px-2 py-1" style="font-size:11px"><i class="fas fa-clock me-1"></i> Claim In Process</span>`;
-      }
-    }
+    const targetMetricLabel = t.is_insurance ? 'File' : 'Active Members';
+    const curVal = isAch ? (t.is_insurance ? 1 : t.target_active_members) : t.my_contributors_count;
+    const tgtVal = t.target_active_members;
+    const pct = isAch ? 100 : Math.min(100, Math.round((curVal / (tgtVal || 1)) * 100));
+
+    const statusBadge = isAch 
+      ? `<span class="status-chip chip-achieved"><i class="fas fa-check-circle"></i> Achieved</span>`
+      : `<span class="status-chip chip-progress"><i class="fas fa-spinner fa-spin"></i> In Progress</span>`;
+
+    const gapText = isAch 
+      ? `<span class="text-success fw-bold" style="font-size:11px"><i class="fas fa-check me-1"></i> Milestone Met!</span>`
+      : `<span class="text-warning" style="font-size:11px"><i class="fas fa-arrow-up me-1"></i> ${Math.max(0, tgtVal - curVal)} more to qualify</span>`;
 
     return `
-      <div class="${cardClass}">
-        <div>
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="ladder-tier-num">Tier ${t.tier_number}</span>
-            ${statusPill}
+      <tr class="${rowClass}">
+        <td>
+          <span class="${badgeClass}">
+            <i class="${t.icon || 'fas fa-gift'}"></i> Tier ${t.tier_number}
+          </span>
+        </td>
+        <td>
+          <strong class="text-white" style="font-size:14px">${escapeHtml(t.reward_name)}</strong>
+        </td>
+        <td>
+          <div class="rule-box">
+            <strong>Rule:</strong> ${escapeHtml(t.qualification_rule || (t.is_insurance ? '1 Personal validated file' : `${tgtVal} fresh active members in downline`))}
           </div>
-          <div class="ladder-icon">
-            <i class="${t.icon || 'fas fa-gift'}"></i>
+        </td>
+        <td>
+          <div style="font-weight:700; color:#38bdf8; font-size:13px">
+            ${t.hide_value ? '<span class="text-success"><i class="fas fa-gift me-1"></i>' + (t.reward_name.includes('Araku') ? 'Complimentary Tour' : 'Electric Milestone') + '</span>' : (t.cost_display || fmt(t.cost_per_recipient))}
           </div>
-          <div class="ladder-name">${escapeHtml(t.reward_name)}</div>
-          <div class="ladder-target">
-            <i class="fas fa-bullseye text-warning me-1"></i> Target: <strong>${targetText}</strong>
+        </td>
+        <td>
+          <div class="d-flex justify-content-between fw-bold" style="font-size:12px; color:#ffffff">
+            <span>${curVal} / ${tgtVal} ${targetMetricLabel}</span>
+            <span class="${isAch ? 'text-success' : 'text-info'}">${pct}%</span>
           </div>
-        </div>
-
-        <div>
-          <div class="d-flex justify-content-between text-muted mb-1" style="font-size:11px">
-            <span>Progress</span>
-            <span class="text-light fw-bold">${pct}%</span>
+          <div class="prog-track">
+            <div class="${fillClass}" style="width: ${pct}%"></div>
           </div>
-          <div class="ladder-progress">
-            <div class="ladder-progress-bar" style="width: ${pct}%"></div>
-          </div>
-          <div class="text-end text-muted" style="font-size:10.5px">
-            ${isAch ? '<span class="text-success fw-bold"><i class="fas fa-check me-1"></i> Milestone Met</span>' : `Needed: ${Math.max(0, t.target_active_members - curVal)} more`}
-          </div>
-        </div>
-      </div>
+          <div>${gapText}</div>
+        </td>
+        <td>
+          ${statusBadge}
+        </td>
+        <td>
+          ${isAch ? renderClaimDetailsInline(t.claim || {}) : '<span class="text-muted" style="font-size:11.5px">—</span>'}
+        </td>
+      </tr>
     `;
   }).join('');
 }
 
 async function loadFallbackAwards() {
-  try {
-    const res = await fetch(`/api/v1/awards/my-awards?audience=${AUD()}`, {
-      headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
-    });
-    const d = await res.json();
-    const claims = d.lifetime_claims || [];
-    const container = document.getElementById('achievedAwardsContainer');
-
-    if (!claims.length) {
-      container.innerHTML = `
-        <div class="text-center py-5 rounded-3" style="background:#1e293b; border:1px dashed rgba(255,255,255,0.15)">
-          <i class="fas fa-trophy fa-3x text-warning mb-3 opacity-50"></i>
-          <h5 class="text-light fw-bold">Your Lifetime Rewards Journey Has Begun!</h5>
-          <p class="text-muted mb-3" style="font-size:13.5px; max-width:550px; margin:0 auto">
-            Qualify for your <strong>₹10 Lakh Personal Accident & Medical Insurance</strong> with just 1 validated first-payment file!
-          </p>
-        </div>
-      `;
-    } else {
-      container.innerHTML = claims.map(c => `
-        <div class="achieved-card ${c.status === 'issued' ? '' : 'pending'}">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="text-white fw-bold mb-0">${escapeHtml(c.award_name)}</h5>
-            ${getBadgeHtml(c.status)}
-          </div>
-          <div class="text-muted" style="font-size:12.5px">
-            Won: ${c.won_at || 'Achieved'} • Provider: ${escapeHtml(c.provider_name || 'VGK Program')}
-          </div>
-          ${renderClaimDetailsHtml(c.award_name, c.issue_details, c.provider_name, c.reference_number)}
-        </div>
-      `).join('');
-    }
-  } catch (e) {
-    document.getElementById('achievedAwardsContainer').innerHTML = `
-      <div class="alert alert-danger mb-0">${e.message}</div>
-    `;
-  }
-}
-
-async function loadIncomeBonuses() {
-  const tbody = document.getElementById('incomeBonusRows');
-  try {
-    const res = await fetch(`/api/v1/awards/my-awards?audience=${AUD()}`, {
-      headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
-    });
-    const d = await res.json();
-    const rows = (d.items || d.awards || []).filter(r => r.category !== 'lifetime_award');
-
-    if (!rows.length) {
-      tbody.innerHTML = `
-        <tr><td colspan="4" class="text-center py-4 text-muted">No cash bonuses credited yet.</td></tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td class="fw-bold text-light">${escapeHtml(r.title || r.award_name || 'Bonus')}</td>
-        <td class="text-muted">${(r.won_at || r.created_at || '—').slice(0, 19).replace('T', ' ')}</td>
-        <td><span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-1">${r.status || 'CONFIRMED'}</span></td>
-        <td class="text-end fw-bold text-warning font-monospace">${fmt(r.amount)}</td>
-      </tr>
-    `).join('');
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4" class="text-danger py-3 text-center">Failed to load bonus history: ${e.message}</td></tr>`;
-  }
+  const container = document.getElementById('achievedAwardsContainer');
+  container.innerHTML = `
+    <div class="text-center py-4 rounded-3" style="background:#131c31; border:1px dashed rgba(255,255,255,0.18)">
+      <i class="fas fa-trophy fa-3x text-warning mb-2 opacity-50"></i>
+      <h5 class="text-white fw-bold mb-1">Your Lifetime Rewards Journey Has Begun!</h5>
+      <p style="color:#cbd5e1; font-size:13px; max-width:580px; margin:0 auto">
+        Unlock your <strong>₹10 Lakh Personal Accident & Medical Insurance</strong> with just 1 validated first-payment file!
+      </p>
+    </div>
+  `;
 }
 
 document.addEventListener('audience:changed', () => loadMemberAwards(true));

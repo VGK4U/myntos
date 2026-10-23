@@ -20199,11 +20199,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(data);
     });
     return;
-  } else if (url === '/vgk_member_awards.html' || url.startsWith('/vgk_member_awards.html?') || url === '/vgk_member_awards' || url.startsWith('/vgk_member_awards?')) {
-    res.writeHead(302, { 'Location': '/vgk/awards' });
+  } else if (url === '/vgk_member_awards.html' || url.startsWith('/vgk_member_awards.html?') || url === '/vgk_member_awards' || url.startsWith('/vgk_member_awards?') || url === '/vgk/awards' || url.startsWith('/vgk/awards?')) {
+    res.writeHead(302, { 'Location': '/vgk/dashboard?tab=bonanza' });
     res.end();
     return;
-  } else if (url.match(/^\/vgk\/(birthdays|top-earners|awards|daywise-income|income-types|direct-summary|matching-summary|guru-summary|ved-summary|ev-benefits|ev-discount|franchise-earnings|insurance|training|coupon-benefits|my-submissions|feedback|announcements|my-announcements|kyc|bank-details|profile-edit|settings|coupon-activate|coupon-progress|coupon-transfer)(\?|$)/)) {
+  } else if (url.match(/^\/vgk\/(birthdays|top-earners|daywise-income|income-types|direct-summary|matching-summary|guru-summary|ved-summary|ev-benefits|ev-discount|franchise-earnings|insurance|training|coupon-benefits|my-submissions|feedback|announcements|my-announcements|kyc|bank-details|profile-edit|settings|coupon-activate|coupon-progress|coupon-transfer)(\?|$)/)) {
     // Task #33 — VGK4U Member Parity Phase 1: serve member-side read-only pages
     // [DC_VGK_AUTH_GATE_001] Reuse the VGK login gate already used elsewhere.
     if (!isLoggedIn) {
