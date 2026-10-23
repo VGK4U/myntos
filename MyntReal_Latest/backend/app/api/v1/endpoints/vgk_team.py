@@ -7675,6 +7675,7 @@ def fetch_member_income_entries_data(
             "  COALESCE(e.tds_amount, 0)::float            AS tds_amount, "
             "  COALESCE(e.net_payout, 0)::float            AS net_payout, "
             "  e.source_lead_id, "
+            "  e.source_transaction_id, "
             "  e.category_id, "
             "  COALESCE(e.solar_value, 0)::float           AS solar_value_entry, "
             "  COALESCE(e.confirmed_final_value, 0)::float AS cfv_raw, "
@@ -8208,10 +8209,15 @@ def fetch_member_income_entries_data(
         stage2_adv = 0.0
         adv_paid   = 0.0
         if _resolved_kind == 'COMMISSION' and r.source_lead_id is not None and _lvl_int is not None:
-            adv_info = adv_map.get((int(r.source_lead_id), int(_lvl_int)), {})
-            stage1_adv = float(adv_info.get("stage1", 0.0))
-            stage2_adv = float(adv_info.get("stage2", 0.0))
-            adv_paid   = float(adv_info.get("total", 0.0))
+            if getattr(r, 'source_transaction_id', None) is not None and adv_adjusted > 0:
+                stage1_adv = adv_adjusted
+                stage2_adv = 0.0
+                adv_paid   = adv_adjusted
+            else:
+                adv_info = adv_map.get((int(r.source_lead_id), int(_lvl_int)), {})
+                stage1_adv = float(adv_info.get("stage1", 0.0))
+                stage2_adv = float(adv_info.get("stage2", 0.0))
+                adv_paid   = float(adv_info.get("total", 0.0))
         elif _resolved_kind == 'DVR_ADVANCE':
             # For Stage 2 DVR_ADVANCE entries, advance_adjusted_amount is the Stage 1 recovery deduction for this receipt
             stage1_adv = adv_adjusted
@@ -8221,7 +8227,7 @@ def fetch_member_income_entries_data(
         gross_amt = float(r.commission_amount)
         
         lost_lead_deduction = lost_ded_map.get(int(r.id), 0.0)
-        tot_adv_deducted = (adv_paid if _resolved_kind == 'COMMISSION' else adv_adjusted) + lost_lead_deduction
+        tot_adv_deducted = (adv_paid if (_resolved_kind == 'COMMISSION' and getattr(r, 'source_transaction_id', None) is None) else adv_adjusted) + lost_lead_deduction
         bal_gross = max(0.0, round(gross_amt - tot_adv_deducted, 2))
 
         # Authoritative backend values: use stored financial values from database if present
