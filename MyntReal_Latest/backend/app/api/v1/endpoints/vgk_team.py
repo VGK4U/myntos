@@ -6881,6 +6881,10 @@ def member_earnings_dashboard(
 
     _special_keys = {'BALANCE_RECEIVED_PLUS', 'INSTALLED', 'WON', 'SUBMITTED'}
     _standard_st = [s for s in status_list if s not in _special_keys]
+    # DC-PENDING-FAMILY-001: Expand PENDING to include all pending-disbursement lifecycle statuses
+    # (PENDING, STAGE1_APPROVED, DRAFT) to align with KPI pending definitions and include Stage 1 advances.
+    if 'PENDING' in _standard_st:
+        _standard_st = list(set(_standard_st) | {'PENDING', 'STAGE1_APPROVED', 'DRAFT'})
 
     cond_parts = []
     if IS_BRP:
@@ -7640,6 +7644,9 @@ def fetch_member_income_entries_data(
 
     _special_keys = {'BALANCE_RECEIVED_PLUS', 'INSTALLED', 'WON', 'SUBMITTED'}
     _standard_st = [s for s in _st_list if s not in _special_keys]
+    # DC-PENDING-FAMILY-001: Expand PENDING to include all pending-disbursement lifecycle statuses
+    if 'PENDING' in _standard_st:
+        _standard_st = list(set(_standard_st) | {'PENDING', 'STAGE1_APPROVED', 'DRAFT'})
 
     _cond_parts = []
     if _is_brp:
@@ -8505,6 +8512,8 @@ def lead_earnings_dashboard(
 
     raw_status = income_status if (income_status and isinstance(income_status, str)) else None
     status_list = [s.strip().upper() for s in raw_status.split(',') if s.strip()] if raw_status else []
+    if 'PENDING' in status_list:
+        status_list = list(set(status_list) | {'PENDING', 'STAGE1_APPROVED', 'DRAFT'})
     IS_BRP = 'BALANCE_RECEIVED_PLUS' in status_list
     _other_st = [s for s in status_list if s != 'BALANCE_RECEIVED_PLUS']
 
@@ -10959,11 +10968,11 @@ def get_vgk_awards_overview(
         tiers_def = [
             {"tier_number": 1, "reward_name": "Member Insurance", "reward_description": "₹10 Lakh Personal Accident & Medical Insurance Cover", "qualification_rule": "1 Eligible file with 100% full deal payment collected", "target_metric": "files", "target_count": 1, "cost_display": "₹10 Lakh Cover", "cost_type": "Sum Insured (Cover amount; premium covered by company)", "is_insurance": True},
             {"tier_number": 2, "reward_name": "Family Water-Park Outing", "reward_description": "Day outing with lunch buffet for 4 family members", "qualification_rule": "1 Active Member in downline (3 completed eligible solar files)", "target_metric": "active_members", "target_count": 1, "cost_display": "₹6,000", "cost_type": "Estimated"},
-            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "3 Cumulative Active Members in downline (9 completed solar files)", "target_metric": "active_members", "target_count": 3, "cost_display": "₹10,000", "cost_type": "User Indicated"},
-            {"tier_number": 4, "reward_name": "EV Bike", "reward_description": "Brand new electric two-wheeler scooter / motorcycle", "qualification_rule": "25 Cumulative Active Members in downline (75 completed solar files)", "target_metric": "active_members", "target_count": 25, "cost_display": "₹80,000", "cost_type": "User Indicated"},
-            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh", "reward_description": "Pure gold sovereign / jewellery voucher", "qualification_rule": "75 Cumulative Active Members in downline (225 completed solar files)", "target_metric": "active_members", "target_count": 75, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
-            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,000 Cumulative Active Members in downline (3,000 completed solar files)", "target_metric": "active_members", "target_count": 1000, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
-            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "2,500 Cumulative Active Members in downline (7,500 completed solar files)", "target_metric": "active_members", "target_count": 2500, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
+            {"tier_number": 3, "reward_name": "Araku Trip for Two", "reward_description": "2 Days / 1 Night all-inclusive hill-station trip for 2", "qualification_rule": "5 Cumulative Active Members in downline (15 completed solar files)", "target_metric": "active_members", "target_count": 5, "cost_display": "₹10,000", "cost_type": "User Indicated"},
+            {"tier_number": 4, "reward_name": "Araku / Resort Party", "reward_description": "Grand Celebration & Resort Party at Araku for Team / Family", "qualification_rule": "30 Cumulative Active Members in downline (90 completed solar files)", "target_metric": "active_members", "target_count": 30, "cost_display": "₹50,000", "cost_type": "User Indicated"},
+            {"tier_number": 5, "reward_name": "Gold Worth ₹2.5 Lakh / EV Bike", "reward_description": "Pure gold sovereign / jewellery voucher or EV Bike milestone", "qualification_rule": "100 Cumulative Active Members in downline (300 completed solar files)", "target_metric": "active_members", "target_count": 100, "cost_display": "₹2,50,000", "cost_type": "User Provided"},
+            {"tier_number": 6, "reward_name": "House Fund ₹30 Lakh", "reward_description": "Residential home / plot construction milestone fund", "qualification_rule": "1,500 Cumulative Active Members in downline (4,500 completed solar files)", "target_metric": "active_members", "target_count": 1500, "cost_display": "₹30,00,000", "cost_type": "User Provided"},
+            {"tier_number": 7, "reward_name": "Jaguar / Luxury-Car Fund ₹50 Lakh", "reward_description": "Premium luxury vehicle acquisition fund", "qualification_rule": "3,000 Cumulative Active Members in downline (9,000 completed solar files)", "target_metric": "active_members", "target_count": 3000, "cost_display": "₹50,00,000", "cost_type": "User Provided"},
             {"tier_number": 8, "reward_name": "Villa Fund ₹1.5 Crore", "reward_description": "Gated-community luxury villa milestone fund", "qualification_rule": "10,000 Cumulative Active Members in downline (30,000 completed solar files)", "target_metric": "active_members", "target_count": 10000, "cost_display": "₹1,50,00,000", "cost_type": "User Provided"},
             {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members in downline (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
         ]

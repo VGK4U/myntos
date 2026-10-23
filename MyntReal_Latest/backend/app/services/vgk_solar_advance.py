@@ -78,14 +78,14 @@ def _next_advance_number(db: Session) -> str:
 
 def get_partner_solar_advance_eligibility(db: Session, partner_id: int, lead_id: Optional[int] = None) -> dict:
     """
-    DC-ADV-POLICY-202610:
+    DC-ADV-POLICY-202610 (Option 1):
     Calculates partner advance eligibility per strict business rules:
       1. Maximum 2 advances per Ground Source member in total (Option A).
       2. Advance #1: eligible on member's 1st qualified file.
       3. File #2: skipped (no advance).
       4. Advance #2: eligible on member's 3rd qualified file.
       5. File #4+: capped at 2 advances.
-      6. Requires customer 1st payment received (deal_value_received > 0 or first_payment_received_date) (Option B).
+      6. Triggers upon reaching bank submission stage with CIBIL >= 700 (Option 1: does not block on customer 1st payment).
     """
     try:
         from app.models.crm import CRMLead
@@ -134,7 +134,7 @@ def get_partner_solar_advance_eligibility(db: Session, partner_id: int, lead_id:
                 'reason': 'File #2 skipped per advance policy (2nd advance eligible on File #3)'
             }
 
-        # 3. Check customer 1st payment (Option B)
+        # 3. Customer 1st payment status (Option 1: recorded informatively; does not block Stage 1 advance eligibility)
         has_first_pmt = False
         if lead:
             has_first_pmt = (float(getattr(lead, 'deal_value_received', 0) or 0) > 0) or bool(getattr(lead, 'first_payment_received_date', None))
@@ -142,17 +142,6 @@ def get_partner_solar_advance_eligibility(db: Session, partner_id: int, lead_id:
                 _txn = db.execute(text("SELECT id FROM crm_lead_transactions WHERE lead_id = :lid AND amount > 0 LIMIT 1"), {'lid': lead.id}).fetchone()
                 if _txn:
                     has_first_pmt = True
-
-        if lead and not has_first_pmt:
-            return {
-                'eligible': False,
-                'is_cap_reached': False,
-                'is_file_2_skipped': False,
-                'has_first_payment': False,
-                'past_advances_count': past_adv_count,
-                'file_seq': file_seq,
-                'reason': 'Customer 1st payment pending (Advance requires 1st payment received)'
-            }
 
         return {
             'eligible': True,
