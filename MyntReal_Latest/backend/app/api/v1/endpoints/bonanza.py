@@ -12,6 +12,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from app.models.bonanza import Bonanza, DynamicBonanzaHistory, BonanzaSlab  # DC Protocol: BonanzaProgress deprecated
+from app.models.base import get_indian_time
 from app.models.crm import CRMLeadDeal
 from app.models.user import User
 from app.models.awards import UserAwardProgress, UserMatchingAwardProgress
