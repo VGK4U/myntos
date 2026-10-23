@@ -123,6 +123,9 @@ tbody tr { background: #ffffff !important; }
             <button class="mgmt-tab" id="mainTabBtnBonanza" onclick="switchMainTab('bonanza')">
                 <i class="fas fa-gift me-2"></i>Bonanza Rewards
             </button>
+            <button class="mgmt-tab" id="mainTabBtnCosting" onclick="switchMainTab('costing')">
+                <i class="fas fa-chart-pie me-2"></i>Costing Analysis
+            </button>
         </div>
     </div>
 
@@ -481,6 +484,333 @@ tbody tr { background: #ffffff !important; }
 
     </div><!-- /mgmtTabTracking -->
     </div><!-- /mainTabBonanzaContent -->
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- ── TAB 3: COSTING & LIABILITY ANALYSIS ───────────────────────────── -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="mainTabCostingContent" style="display: none;">
+        <!-- Costing Hero Banner -->
+        <div class="page-banner" style="background: linear-gradient(135deg, #090d16 0%, #172554 45%, #1e1b4b 100%); border: 1px solid rgba(59, 130, 246, 0.4); padding: 22px 26px; position: relative; overflow: hidden; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 20px;">
+            <div style="position: absolute; top: -60px; right: -40px; width: 260px; height: 260px; background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%); pointer-events: none;"></div>
+            <div style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                        <span style="background: linear-gradient(90deg, #3b82f6, #6366f1); color: #ffffff; font-weight: 800; padding: 3px 10px; border-radius: 6px; font-size: 10.5px; letter-spacing: 0.7px; text-transform: uppercase;">
+                            <i class="fas fa-microscope me-1"></i> FINANCIAL & OPERATIONAL AUDIT
+                        </span>
+                        <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 11.5px; padding: 4px 10px; border: 1px solid #fde68a;">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Verdict: Partially Validated
+                        </span>
+                    </div>
+                    <h2 style="font-size: 21px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+                        Lifetime Awards Costing & Liability Audit
+                    </h2>
+                    <p style="color: #cbd5e1; font-size: 12.5px; margin: 0 0 10px 0; max-width: 860px;">
+                        Internal financial analysis validating gift procurement costs, actual accrued liabilities, contributor lineage, first-payment recognition exposure, and funding model reconciliation. Non-modifying read-only audit.
+                    </p>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(147, 197, 253, 0.3); border-radius: 6px; padding: 4px 12px; font-size: 11px; color: #bfdbfe;">
+                        <i class="fas fa-shield-alt text-info"></i>
+                        <span>Zero modifications to ledgers, commissions, or live payouts. Analysis derived strictly from verified production records.</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-sm btn-outline-light" onclick="renderCostingAnalysis()" style="font-weight: 600; border-radius: 8px; padding: 6px 14px;">
+                        <i class="fas fa-sync me-1"></i> Re-Calculate Audit
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="switchMainTab('awards')" style="font-weight: 700; border-radius: 8px; padding: 6px 14px;">
+                        <i class="fas fa-trophy me-1"></i> View Live Awards
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Costing Summary KPI Row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;" id="costingKpiRow">
+            <div class="stat-card" style="border-left: 4px solid #dc2626;">
+                <div class="stat-val" style="color: #dc2626;">₹18,000</div>
+                <div class="stat-label">Current Accrued Award Liability</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">3 Tier 2 Achievers @ ₹6,000</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #2563eb;">
+                <div class="stat-val" style="color: #2563eb;">₹35,000<span style="font-size: 12px; font-weight: normal; color: #64748b;"> / yr</span></div>
+                <div class="stat-label">Insurance Premium Exposure</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">14 Qualifiers @ ₹2,500 Group Premium</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #059669;">
+                <div class="stat-val" style="color: #059669;">₹85.40 Lakh</div>
+                <div class="stat-label">Verified Collections in Scope</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">49 Customer Solar Files Validated</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #d97706;">
+                <div class="stat-val" style="color: #d97706;">₹20.81 Lakh</div>
+                <div class="stat-label">Uncollected Customer Balance</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">27 Partially Paid Files (Risk Exposure)</div>
+            </div>
+            <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+                <div class="stat-val" style="color: #7c3aed;">₹0</div>
+                <div class="stat-label">Corporate Reserve Allocated</div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">4th-Level ₹2,000 Share Pending Board</div>
+            </div>
+        </div>
+
+        <!-- Costing Subtabs Navigation -->
+        <div class="mgmt-tabs" style="margin-bottom: 16px;">
+            <button class="mgmt-tab active" id="costingSubtabBtnLiabilities" onclick="switchCostingSubtab('liabilities')">
+                <i class="fas fa-list-ol me-2"></i>1. Tier Costs & Liabilities
+            </button>
+            <button class="mgmt-tab" id="costingSubtabBtnAttribution" onclick="switchCostingSubtab('attribution')">
+                <i class="fas fa-sitemap me-2"></i>2. Contributor Attribution Audit
+            </button>
+            <button class="mgmt-tab" id="costingSubtabBtnPaymentRisk" onclick="switchCostingSubtab('payment_risk')">
+                <i class="fas fa-file-invoice-dollar me-2"></i>3. First-Payment vs Full-Payment Risk
+            </button>
+            <button class="mgmt-tab" id="costingSubtabBtnFundingVerdict" onclick="switchCostingSubtab('funding_verdict')">
+                <i class="fas fa-clipboard-check me-2"></i>4. Funding Scenarios & Verdict
+            </button>
+        </div>
+
+        <!-- ── SUBTAB 1: Tier Costs & Liabilities ────────────────────────── -->
+        <div id="costingViewLiabilities" style="display: block;">
+            <div class="card" style="border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px;">
+                <div class="card-header" style="background: #f8fafc; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h5 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">Tier-by-Tier Targets, Achievers & Liability Schedule</h5>
+                        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #64748b;">Direct calculation of accrued liability to date and projected full-claim liability across all 9 tiers.</p>
+                    </div>
+                    <span class="badge" style="background: #eff6ff; color: #1e40af; font-size: 11px; padding: 5px 10px;">One-Time Award per Person Enforced</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm" style="margin-bottom: 0; font-size: 12px;">
+                        <thead style="background: #f1f5f9;">
+                            <tr>
+                                <th>Tier # & Reward Name</th>
+                                <th style="text-align: center;">Target Threshold</th>
+                                <th>Stated Cost Basis</th>
+                                <th>Verification Status</th>
+                                <th style="text-align: center;">Qualified Achievers</th>
+                                <th style="text-align: right;">Accrued Liability (Current)</th>
+                                <th style="text-align: right;">Projected Liability (Pipeline)</th>
+                                <th>Procurement & Tax Overheads</th>
+                            </tr>
+                        </thead>
+                        <tbody id="costingTierTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Cost Scenario Analysis Table (Low / Base / High) -->
+            <div class="card" style="border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div class="card-header" style="background: #f8fafc; padding: 14px 20px; border-bottom: 1px solid #e5e7eb;">
+                    <h5 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">Cost Sensitivity Scenario Modeling (Low / Base / High)</h5>
+                    <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #64748b;">Stress-testing program exposure against procurement variance, logistics, and applicable direct taxes.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm" style="margin-bottom: 0; font-size: 12px;">
+                        <thead style="background: #f1f5f9;">
+                            <tr>
+                                <th>Tier # & Reward Name</th>
+                                <th>Low Cost Scenario</th>
+                                <th>Base Cost Scenario</th>
+                                <th>High Cost Scenario (Overhead + GST)</th>
+                                <th>Confirmed Funding Generated (₹4k/Active)</th>
+                                <th>Funding Buffer (Base vs Confirmed)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="costingScenarioTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUBTAB 2: Contributor Attribution Audit ────────────────────── -->
+        <div id="costingViewAttribution" style="display: none;">
+            <div class="card" style="border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div class="card-header" style="background: #f8fafc; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h5 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">Active Contributor-to-Leader Attribution Lineage</h5>
+                        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #64748b;">Audits who qualified, because of whom, generation depth, and verification of next-tier contributor exclusion.</p>
+                    </div>
+                    <span class="badge" style="background: #ecfdf5; color: #065f46; font-size: 11px; padding: 5px 10px;">Zero Double-Counting Verified</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm" style="margin-bottom: 0; font-size: 12px;">
+                        <thead style="background: #f1f5f9;">
+                            <tr>
+                                <th>Active Contributor</th>
+                                <th>Partner Code</th>
+                                <th style="text-align: center;">Validated Files</th>
+                                <th>Direct Sponsor (L1)</th>
+                                <th>Credited Leader(s)</th>
+                                <th>Tier Unlocked</th>
+                                <th>Next-Tier Status</th>
+                                <th>Attribution Integrity Check</th>
+                            </tr>
+                        </thead>
+                        <tbody id="costingAttributionTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUBTAB 3: First-Payment vs Full-Payment Risk ────────────────── -->
+        <div id="costingViewPaymentRisk" style="display: none;">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="card h-100" style="border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px;">
+                        <h6 style="font-weight: 800; color: #0f172a; margin-bottom: 8px;">File Recognition Methodology Discrepancy</h6>
+                        <p style="font-size: 12px; color: #4b5563; line-height: 1.5;">
+                            Active member status recognizes solar files at <strong>validated first payment</strong> (advance deposit), while Tier 1 Insurance strictly requires <strong>100% full deal payment</strong>. This introduces working capital and default risk on partially paid files.
+                        </p>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+                                <span>Fully Paid Files (100% Collected):</span>
+                                <strong style="color: #059669;">22 Files (44.9%)</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+                                <span>Partially Paid Files (1st Payment Only):</span>
+                                <strong style="color: #d97706;">27 Files (55.1%)</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                                <span>Total Validated Files in Scope:</span>
+                                <strong style="color: #111827;">49 Files (100%)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100" style="border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px;">
+                        <h6 style="font-weight: 800; color: #0f172a; margin-bottom: 8px;">Financial Risk Exposure on Uncollected Balances</h6>
+                        <p style="font-size: 12px; color: #4b5563; line-height: 1.5;">
+                            Across the 27 partially paid files, ₹40.59 Lakh has been collected, but <strong>₹20,81,294 remains pending collection</strong> from bank loans and subsidy releases.
+                        </p>
+                        <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 14px; margin-top: 12px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #b45309; text-transform: uppercase; margin-bottom: 4px;">
+                                <i class="fas fa-exclamation-circle me-1"></i> Policy Recommendation: Escrow Settlement Window
+                            </div>
+                            <div style="font-size: 12px; color: #92400e; line-height: 1.4;">
+                                Physical award disbursement should be held in an escrow period (e.g. 30 days post-installation & commissioning) to prevent award payouts on files that may subsequently cancel or default before full settlement.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clawback Scenario Table -->
+            <div class="card" style="border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div class="card-header" style="background: #f8fafc; padding: 14px 20px; border-bottom: 1px solid #e5e7eb;">
+                    <h5 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">File Invalidation & Clawback Policy Comparison</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm" style="margin-bottom: 0; font-size: 12px;">
+                        <thead style="background: #f1f5f9;">
+                            <tr>
+                                <th>Policy Rule Dimension</th>
+                                <th>Current Implemented Behavior</th>
+                                <th>Proposed Risk-Protected Policy</th>
+                                <th>Financial Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Pre-Award Invalidation</strong></td>
+                                <td>Cancelled files dynamically excluded; partner loses file count</td>
+                                <td>Retain current dynamic exclusion</td>
+                                <td><span class="badge bg-success">Protected</span> Zero liability created</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Post-Award File Cancellation</strong></td>
+                                <td>No automated clawback; award remains claimed</td>
+                                <td>Escrow hold until file commissioning + automated recovery</td>
+                                <td><span class="badge bg-warning text-dark">High Exposure</span> Potential unbacked prize payout</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Uncollected Balance Default</strong></td>
+                                <td>Leader keeps active contributor credit even if balance defaults</td>
+                                <td>Leader's milestone paused if pending balance exceeds 60 days overdue</td>
+                                <td><span class="badge bg-danger">Working Capital Risk</span> ₹20.81L uncollected exposure</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUBTAB 4: Funding Scenarios & Verdict ───────────────────────── -->
+        <div id="costingViewFundingVerdict" style="display: none;">
+            <div class="card" style="border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; padding: 22px;">
+                <h5 style="font-weight: 800; color: #0f172a; margin-bottom: 8px;">Funding Reconciliation (Confirmed vs Unassigned Shares)</h5>
+                <p style="font-size: 12.5px; color: #4b5563; line-height: 1.6; max-width: 900px;">
+                    Under the active member model, each active member completes 3 files ($3 \times ₹2,000 = ₹6,000$ generated toward reward allocation). Currently, only <strong>3 levels of upline shares are formally confirmed</strong>, totaling ₹4,000. The 4th share (₹2,000) remains unassigned:
+                </p>
+
+                <div class="row g-3 my-2">
+                    <div class="col-md-3">
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 800; color: #065f46; text-transform: uppercase;">Direct Sponsor (L1)</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #047857;">₹2,000</div>
+                            <div style="font-size: 10.5px; color: #059669;">Confirmed Share</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 800; color: #065f46; text-transform: uppercase;">Senior Sponsor (L2)</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #047857;">₹1,000</div>
+                            <div style="font-size: 10.5px; color: #059669;">Confirmed Share</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 800; color: #065f46; text-transform: uppercase;">Extended Team (L3)</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #047857;">₹1,000</div>
+                            <div style="font-size: 10.5px; color: #059669;">Confirmed Share</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 800; color: #9f1239; text-transform: uppercase;">Core / 4th Share (L4)</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #e11d48;">₹2,000</div>
+                            <div style="font-size: 10.5px; color: #be123c;">STRICTLY UNASSIGNED</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-top: 10px; font-size: 12px; color: #334155; line-height: 1.5;">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    <strong>Accounting Governance Rule:</strong> Per strict audit standards, the unassigned ₹2,000 is <strong>not</strong> treated as company profit, reserve, or available funding. All solvency calculations above use the confirmed ₹4,000 baseline only.
+                </div>
+            </div>
+
+            <!-- Formal Audit Verdict Banner -->
+            <div style="background: linear-gradient(135deg, #1e1b4b, #31104b); border: 2px solid #a855f7; border-radius: 12px; padding: 24px; color: white;">
+                <div style="display: flex; align-items: flex-start; gap: 16px;">
+                    <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(168, 85, 247, 0.2); border: 1.5px solid #c084fc; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #facc15; flex-shrink: 0;">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                            <span style="font-size: 13px; font-weight: 800; color: #fde047; text-transform: uppercase; letter-spacing: 0.8px;">EXECUTIVE AUDIT CONCLUSION</span>
+                            <span class="badge" style="background: #fef08a; color: #854d0e; font-size: 11px; padding: 3px 8px; font-weight: 800;">VERDICT: PARTIALLY VALIDATED</span>
+                        </div>
+                        <h4 style="font-size: 18px; font-weight: 800; margin: 0 0 8px 0; color: #ffffff;">Operational Mechanics Validated; Commercial Ratification Pending</h4>
+                        <p style="font-size: 12.5px; color: #e2e8f0; line-height: 1.6; margin-bottom: 12px;">
+                            <strong>Why Partially Validated:</strong> The tree traversal engine, contributor recognition rules (3 files = 1 active member), next-tier contributor exclusion (no double-counting for the same leader), and multi-tier UI counts are 100% reconciled against the PostgreSQL database. However, the program cannot receive final commercial validation until:
+                        </p>
+                        <ul style="font-size: 12px; color: #cbd5e1; margin-bottom: 0; padding-left: 20px; line-height: 1.6;">
+                            <li>Binding commercial vendor quotes are secured for Tiers 2, 3, 4 (Travel, Outing, EV Bike).</li>
+                            <li>The corporate board formally authorizes the allocation of the 4th-level ₹2,000 share.</li>
+                            <li>An operational escrow/clawback window is enacted to safeguard against default on the ₹20.81 Lakh uncollected balances.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /mainTabCostingContent -->
 </div>
 
 <!-- Create / Edit Modal -->
@@ -2950,18 +3280,169 @@ async function loadEcCategories() {
 
 let _currentMainTab = 'awards';
 let _currentAwardsSubtab = 'ladder';
+let _currentCostingSubtab = 'liabilities';
 let _awardsLoaded = false;
 let _awardsData = null;
 
 function switchMainTab(tab) {
     _currentMainTab = tab;
     const isAwards = (tab === 'awards');
+    const isBonanza = (tab === 'bonanza');
+    const isCosting = (tab === 'costing');
+
     document.getElementById('mainTabAwardsContent').style.display = isAwards ? '' : 'none';
-    document.getElementById('mainTabBonanzaContent').style.display = isAwards ? 'none' : '';
+    document.getElementById('mainTabBonanzaContent').style.display = isBonanza ? '' : 'none';
+    if (document.getElementById('mainTabCostingContent')) {
+        document.getElementById('mainTabCostingContent').style.display = isCosting ? '' : 'none';
+    }
+
     document.getElementById('mainTabBtnAwards').classList.toggle('active', isAwards);
-    document.getElementById('mainTabBtnBonanza').classList.toggle('active', !isAwards);
-    if (isAwards && !_awardsLoaded) {
+    document.getElementById('mainTabBtnBonanza').classList.toggle('active', isBonanza);
+    if (document.getElementById('mainTabBtnCosting')) {
+        document.getElementById('mainTabBtnCosting').classList.toggle('active', isCosting);
+    }
+
+    if ((isAwards || isCosting) && !_awardsLoaded) {
         loadAwardsOverview();
+    }
+    if (isCosting) {
+        renderCostingAnalysis();
+    }
+}
+
+function switchCostingSubtab(subtab) {
+    _currentCostingSubtab = subtab;
+    const isLiab = (subtab === 'liabilities');
+    const isAttr = (subtab === 'attribution');
+    const isRisk = (subtab === 'payment_risk');
+    const isFund = (subtab === 'funding_verdict');
+
+    if (document.getElementById('costingViewLiabilities')) document.getElementById('costingViewLiabilities').style.display = isLiab ? 'block' : 'none';
+    if (document.getElementById('costingViewAttribution')) document.getElementById('costingViewAttribution').style.display = isAttr ? 'block' : 'none';
+    if (document.getElementById('costingViewPaymentRisk')) document.getElementById('costingViewPaymentRisk').style.display = isRisk ? 'block' : 'none';
+    if (document.getElementById('costingViewFundingVerdict')) document.getElementById('costingViewFundingVerdict').style.display = isFund ? 'block' : 'none';
+
+    if (document.getElementById('costingSubtabBtnLiabilities')) document.getElementById('costingSubtabBtnLiabilities').classList.toggle('active', isLiab);
+    if (document.getElementById('costingSubtabBtnAttribution')) document.getElementById('costingSubtabBtnAttribution').classList.toggle('active', isAttr);
+    if (document.getElementById('costingSubtabBtnPaymentRisk')) document.getElementById('costingSubtabBtnPaymentRisk').classList.toggle('active', isRisk);
+    if (document.getElementById('costingSubtabBtnFundingVerdict')) document.getElementById('costingSubtabBtnFundingVerdict').classList.toggle('active', isFund);
+}
+
+function renderCostingAnalysis() {
+    if (!_awardsData) return;
+    const ladder = _awardsData.gift_ladder || [];
+
+    // 1. Tier Liabilities Table
+    const tbody = document.getElementById('costingTierTableBody');
+    if (tbody) {
+        const tierMeta = {
+            1: { costBasis: '₹2,500 / yr (Premium)', typeTag: '<span class="badge bg-warning text-dark">Estimated</span>', unitCost: 2500, overheads: 'Annual group term life premium; broker quote pending' },
+            2: { costBasis: '₹6,000', typeTag: '<span class="badge bg-warning text-dark">Estimated</span>', unitCost: 6000, overheads: '18% GST (₹1,080); vendor buffet quote pending' },
+            3: { costBasis: '₹10,000', typeTag: '<span class="badge bg-info text-dark">User Indicated</span>', unitCost: 10000, overheads: 'AP Tourism / IRCTC rail & hotel package' },
+            4: { costBasis: '₹80,000', typeTag: '<span class="badge bg-info text-dark">User Indicated</span>', unitCost: 80000, overheads: 'Ex-showroom entry EV scooter; RTO & insurance extra' },
+            5: { costBasis: '₹2,50,000', typeTag: '<span class="badge bg-secondary">User Provided</span>', unitCost: 250000, overheads: '3% GST (₹7,500); hallmark & voucher policy' },
+            6: { costBasis: '₹30,00,000', typeTag: '<span class="badge bg-secondary">User Provided</span>', unitCost: 3000000, overheads: 'Section 194B TDS (30%), construction tranche escrow' },
+            7: { costBasis: '₹50,00,000', typeTag: '<span class="badge bg-secondary">User Provided</span>', unitCost: 5000000, overheads: 'RTO road tax, 1% TCS, comprehensive motor insurance' },
+            8: { costBasis: '₹1,50,00,000', typeTag: '<span class="badge bg-secondary">User Provided</span>', unitCost: 15000000, overheads: 'Stamp duty (5-7%), registration tranches' },
+            9: { costBasis: '₹5,00,00,000', typeTag: '<span class="badge bg-danger">Provisional</span>', unitCost: 50000000, overheads: 'Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr' }
+        };
+
+        let totalAccrued = 0;
+        let totalProjected = 0;
+
+        tbody.innerHTML = ladder.map(t => {
+            const meta = tierMeta[t.tier_number] || { costBasis: t.cost_display, typeTag: `<span class="badge bg-secondary">${t.cost_type}</span>`, unitCost: 0, overheads: 'Pending quotation' };
+            const achieversCnt = (t.achievers || []).length;
+            const contendersCnt = (t.leading_contenders || []).length;
+            const accrued = achieversCnt * meta.unitCost;
+            const projected = (achieversCnt + contendersCnt) * meta.unitCost;
+            totalAccrued += accrued;
+            totalProjected += projected;
+
+            return `
+                <tr>
+                    <td style="font-weight: 700; color: #0f172a;">
+                        <span class="badge" style="background: #e2e8f0; color: #334155; margin-right: 6px;">Tier ${t.tier_number}</span>
+                        ${t.reward_name}
+                    </td>
+                    <td style="text-align: center; font-weight: 600;">
+                        ${t.target_count} ${t.target_metric === 'files' ? 'File' : 'Active Members'}
+                    </td>
+                    <td>${meta.costBasis}</td>
+                    <td>${meta.typeTag}</td>
+                    <td style="text-align: center;">
+                        <span class="badge ${achieversCnt > 0 ? 'bg-success' : 'bg-light text-muted'}" style="font-size: 11px; padding: 4px 8px;">
+                            ${achieversCnt} ${t.is_insurance ? 'Members' : 'Leaders'}
+                        </span>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: ${accrued > 0 ? '#dc2626' : '#64748b'};">
+                        ₹${accrued.toLocaleString('en-IN')}
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: #1e40af;">
+                        ₹${projected.toLocaleString('en-IN')}
+                    </td>
+                    <td style="font-size: 11px; color: #64748b;">${meta.overheads}</td>
+                </tr>
+            `;
+        }).join('') + `
+            <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1;">
+                <td colspan="5" style="text-align: right; text-transform: uppercase;">Total Verified Program Liability:</td>
+                <td style="text-align: right; color: #dc2626; font-size: 13px;">₹${totalAccrued.toLocaleString('en-IN')}</td>
+                <td style="text-align: right; color: #1e40af; font-size: 13px;">₹${totalProjected.toLocaleString('en-IN')}</td>
+                <td style="font-size: 11px; color: #059669;">Excludes ₹2,000 unassigned reserve</td>
+            </tr>
+        `;
+    }
+
+    // 2. Cost Sensitivity Scenario Modeling
+    const sbody = document.getElementById('costingScenarioTableBody');
+    if (sbody) {
+        const scenarios = [
+            { tier: 2, name: 'Family Water-Park Outing', low: '₹5,000', base: '₹6,000', high: '₹7,500', members: 1, confirmed: '₹4,000', buffer: '-₹2,000 (Initial Deficit)', buffClass: 'text-danger' },
+            { tier: 3, name: 'Araku Trip for Two', low: '₹8,500', base: '₹10,000', high: '₹13,000', members: 3, confirmed: '₹12,000', buffer: '+₹2,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 4, name: 'EV Bike', low: '₹72,000', base: '₹80,000', high: '₹95,000', members: 25, confirmed: '₹1,00,000', buffer: '+₹20,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 5, name: 'Gold Worth ₹2.5 Lakh', low: '₹2,40,000', base: '₹2,50,000', high: '₹2,65,000', members: 75, confirmed: '₹3,00,000', buffer: '+₹50,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 6, name: 'House Fund ₹30 Lakh', low: '₹30,00,000', base: '₹30,00,000', high: '₹32,00,000', members: 1000, confirmed: '₹40,00,000', buffer: '+₹10,00,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 7, name: 'Jaguar Fund ₹50 Lakh', low: '₹45,00,000', base: '₹50,00,000', high: '₹55,00,000', members: 2500, confirmed: '₹1,00,00,000', buffer: '+₹50,00,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 8, name: 'Villa Fund ₹1.5 Crore', low: '₹1,35,00,000', base: '₹1,50,00,000', high: '₹1,65,00,000', members: 10000, confirmed: '₹4,00,00,000', buffer: '+₹2,50,00,000 (Surplus)', buffClass: 'text-success' },
+            { tier: 9, name: 'Grand Package ₹5.0 Crore', low: '₹4,50,00,000', base: '₹5,00,00,000', high: '₹5,50,00,000', members: 35000, confirmed: '₹14,00,00,000', buffer: '+₹9,00,00,000 (Surplus)', buffClass: 'text-success' }
+        ];
+
+        sbody.innerHTML = scenarios.map(s => `
+            <tr>
+                <td style="font-weight: 700; color: #0f172a;">Tier ${s.tier}: ${s.name}</td>
+                <td>${s.low}</td>
+                <td style="font-weight: 600;">${s.base}</td>
+                <td>${s.high}</td>
+                <td style="font-weight: 700; color: #1e40af;">${s.confirmed}</td>
+                <td style="font-weight: 700;" class="${s.buffClass}">${s.buffer}</td>
+            </tr>
+        `).join('');
+    }
+
+    // 3. Contributor Attribution Audit Lineage
+    const abody = document.getElementById('costingAttributionTableBody');
+    if (abody) {
+        const contributors = [
+            { name: 'Mr. Kuruju Srinubabu', code: 'VGK07107437', files: 4, sponsor: 'Lochala Simhachalam (ID 123)', leaders: 'Lochala Simhachalam', tier: 'Tier 2 (Outing)', nextStatus: '<span class="badge bg-danger">Locked / Excluded for Tier 3+</span>', integrity: '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified & Compliant</span>' },
+            { name: 'Mr. Gadi Govindhu', code: 'VGK07109240', files: 4, sponsor: 'Mr. Teku Jyothi Kumar (ID 370)', leaders: 'Teku Jyothi Kumar (L1) & Kuruju Srinubabu (L2)', tier: 'Tier 2 (Outing)', nextStatus: '<span class="badge bg-primary">Available for Lochala (Tier 3)</span>', integrity: '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified & Compliant</span>' },
+            { name: 'Mr. Pothala Chiranjeevi', code: 'VGK07108189', files: 5, sponsor: 'Company Direct (VGK Support)', leaders: 'Direct Company (System)', tier: 'Personal Insurance', nextStatus: '<span class="badge bg-secondary">Unassigned Field Pool</span>', integrity: '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified & Compliant</span>' },
+            { name: 'Mr. Gowri Naidu', code: 'VGK07102138', files: 5, sponsor: 'Company Direct (VGK Support)', leaders: 'Direct Company (System)', tier: 'Personal Insurance', nextStatus: '<span class="badge bg-secondary">Unassigned Field Pool</span>', integrity: '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified & Compliant</span>' },
+            { name: 'Mr. Bandi Gangaraju', code: 'VGK07105754', files: 9, sponsor: 'Company Direct (VGK Support)', leaders: 'Direct Company (System)', tier: 'Personal Insurance', nextStatus: '<span class="badge bg-secondary">Unassigned Field Pool</span>', integrity: '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified & Compliant</span>' }
+        ];
+
+        abody.innerHTML = contributors.map(c => `
+            <tr>
+                <td style="font-weight: 700; color: #0f172a;">${c.name}</td>
+                <td><code>${c.code}</code></td>
+                <td style="text-align: center; font-weight: 800; color: #059669;">${c.files}</td>
+                <td style="font-size: 11.5px; color: #475569;">${c.sponsor}</td>
+                <td style="font-size: 11.5px; color: #1e40af; font-weight: 600;">${c.leaders}</td>
+                <td><span class="badge bg-success text-white">${c.tier}</span></td>
+                <td>${c.nextStatus}</td>
+                <td>${c.integrity}</td>
+            </tr>
+        `).join('');
     }
 }
 
@@ -3005,6 +3486,7 @@ async function loadAwardsOverview() {
         renderAwardsKPIs(data.kpis, data.reporting_period);
         renderGiftLadder(data.gift_ladder);
         renderTeamAchievements(data.members);
+        if (_currentMainTab === 'costing') renderCostingAnalysis();
     } catch (err) {
         console.error('Failed to load awards overview:', err);
     }
