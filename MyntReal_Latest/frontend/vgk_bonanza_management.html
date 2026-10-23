@@ -858,10 +858,14 @@ tbody tr { background: #ffffff !important; }
             <button onclick="document.getElementById('mtrackDetailsModal').classList.remove('open')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#fff">&times;</button>
         </div>
         <div class="modal-body" style="padding:20px; overflow-y:auto; max-height:calc(100vh - 200px)">
-            <div id="mtrackDetailsInfo" style="display:flex; justify-content:space-between; margin-bottom:15px; background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; color:#334155">
+            <div id="mtrackDetailsInfo" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; color:#334155">
                 <div><strong>Campaign:</strong> <span id="mtrackDetailsCampaign">—</span></div>
                 <div><strong>Partner:</strong> <span id="mtrackDetailsPartner">—</span></div>
                 <div><strong>Basis:</strong> <span id="mtrackDetailsBasis">—</span></div>
+                <div id="mtrackDetailsScopeToggle" style="display:flex; gap:6px;">
+                    <button id="mtrackBtnTriggered" class="btn-filter apply" style="padding:4px 10px; font-size:11px; font-weight:700; background:#059669; color:#fff" onclick="switchTrackDetailsScope(true)"><i class="fas fa-trophy me-1"></i>Qualifying Track</button>
+                    <button id="mtrackBtnAll" class="btn-filter apply" style="padding:4px 10px; font-size:11px; font-weight:700; background:#6b7280; color:#fff; opacity:0.6" onclick="switchTrackDetailsScope(false)"><i class="fas fa-list me-1"></i>All Submissions</button>
+                </div>
             </div>
             
             <div style="overflow-x:auto">
@@ -3017,19 +3021,17 @@ function mgmtRenderTracking(d) {
                     }
                     const isCompleted = t.claim_status === 'Paid' || t.claim_status === 'Delivered';
                     let needCell = '';
+                    const escapedCampaignName = escH(tier.name).replace(/'/g, "\\'");
+                    const escapedPartnerName = escH(md.partner_name).replace(/'/g, "\\'");
                     if (isCompleted) {
-                        const formattedDate = t.completed_date ? fmtDate(t.completed_date) : '';
                         needCell = `<div style="text-align:center">
-                            <span style="background-color:#dcfce7;color:#15803d;padding:1px 5px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block">Done</span>
-                            <div style="font-size:9px;color:#6b7280">${formattedDate}</div>
+                            <span onclick="openTrackDetails(${tier.bonanza_id}, ${md.partner_id}, '${escapedCampaignName}', '${escapedPartnerName}', true)" style="background-color:#dcfce7;color:#15803d;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block;cursor:pointer" title="Click to view achievement track">Done</span>
                         </div>`;
                     } else if (t.gap > 0) {
                         needCell = `<span style="color:#dc2626;font-weight:700;font-size:11px" title="${t.gap} deal(s) needed to reach milestone target of ${tier.target}">${t.gap} req</span>`;
                     } else {
-                        const dateBadge = t.achieved_date ? `<div style="font-size:9px;color:#059669;font-weight:600">${fmtDate(t.achieved_date)}</div>` : '';
                         needCell = `<div style="text-align:center">
-                            <span style="background-color:#dcfce7;color:#15803d;padding:1px 5px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block">Met</span>
-                            ${dateBadge}
+                            <span onclick="openTrackDetails(${tier.bonanza_id}, ${md.partner_id}, '${escapedCampaignName}', '${escapedPartnerName}', true)" style="background-color:#dcfce7;color:#15803d;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;display:inline-block;cursor:pointer" title="Click to view achievement track">Met</span>
                         </div>`;
                     }
                     return `<td style="text-align:center;border-left:${theme.borderLeft};background-color:${theme.cellBg};padding:3px 2px">${eligCell}</td>
@@ -3041,16 +3043,23 @@ function mgmtRenderTracking(d) {
             const claimBadge = md.claim_status
                 ? `<span style="display:inline-block;padding:1px 6px;border-radius:12px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
                 : `<span style="color:#9ca3af;font-size:10px">—</span>`;
+            const escapedGroupCampaign = escH(g.name).replace(/'/g, "\\'");
+            const escapedRowPartner = escH(md.partner_name).replace(/'/g, "\\'");
             const shareBtn = md.any_eligible
                 ? `<button onclick="openPosterModal(${g.bonanza_id}, ${md.partner_id})" class="btn-share-row" style="background: linear-gradient(90deg, #f59e0b, #d97706); color: #000; font-size: 10px; font-weight: 800; border: none; padding: 2px 7px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; margin-left: 5px;" title="Share Achievement Poster"><i class="fas fa-share-alt"></i> Share</button>`
+                : '';
+            const hasActivity = md.any_eligible || (isEc ? (md.ec_stats?.total_earnings > 0) : Object.values(md.tiers || {}).some(t => (t.achieved || 0) > 0 || (t.eligible || 0) > 0));
+            const viewBtn = hasActivity
+                ? `<button onclick="openTrackDetails(${g.bonanza_id}, ${md.partner_id}, '${escapedGroupCampaign}', '${escapedRowPartner}', true)" class="btn-view-row" style="background:#e0e7ff; color:#3730a3; font-size:10px; font-weight:700; border:1px solid #c7d2fe; padding:2px 7px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:3px; margin-left:4px;" title="View Achievement History & Track"><i class="fas fa-eye"></i> View</button>`
                 : '';
             const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
             return `<tr class="${rowCls}">
                 <td style="width:22px;color:#9ca3af;font-size:11px;text-align:center;padding:4px 2px">${idx+1}</td>
-                <td style="white-space:nowrap;padding:4px 6px;max-width:170px;overflow:hidden;text-overflow:ellipsis" title="${escH(md.partner_name)} (${escH(md.partner_code)})">
+                <td style="white-space:nowrap;padding:4px 6px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${escH(md.partner_name)} (${escH(md.partner_code)})">
                     <span style="font-weight:700;font-size:12px;color:#111827">${escBonanzaH(md.partner_name)}</span>
                     <span style="font-size:10px;color:#6b7280;margin-left:3px">(${escBonanzaH(md.partner_code)})</span>
                     ${shareBtn}
+                    ${viewBtn}
                 </td>
                 ${tierCells}
                 ${isEc ? '' : `<td style="text-align:center;padding:4px 2px">${claimBadge}</td>`}
@@ -3260,6 +3269,20 @@ async function saveCompleteTier() {
     }
 }
 
+let _currentTrackModalParams = null;
+
+function switchTrackDetailsScope(onlyTriggered) {
+    if (!_currentTrackModalParams) return;
+    openTrackDetails(
+        _currentTrackModalParams.bonanzaId,
+        _currentTrackModalParams.partnerId,
+        _currentTrackModalParams.campaignName,
+        _currentTrackModalParams.partnerName,
+        onlyTriggered,
+        _currentTrackModalParams.level
+    );
+}
+
 function openTrackDetailsFromLink(el) {
     const bid = el.getAttribute('data-bonanza-id');
     const pid = el.getAttribute('data-partner-id');
@@ -3270,14 +3293,29 @@ function openTrackDetailsFromLink(el) {
     openTrackDetails(bid, pid, campaignName, partnerName, onlyTriggered, level);
 }
 
-async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName, onlyTriggered = false, level = null) {
+async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName, onlyTriggered = true, level = null) {
+    _currentTrackModalParams = { bonanzaId, partnerId, campaignName, partnerName, onlyTriggered, level };
     const modal = document.getElementById('mtrackDetailsModal');
     const tbody = document.getElementById('mtrackDetailsTbody');
     
+    // Update scope toggle buttons if present
+    const btnTrig = document.getElementById('mtrackBtnTriggered');
+    const btnAll = document.getElementById('mtrackBtnAll');
+    if (btnTrig && btnAll) {
+        btnTrig.style.opacity = onlyTriggered ? '1' : '0.6';
+        btnTrig.style.background = onlyTriggered ? '#059669' : '#6b7280';
+        btnAll.style.opacity = !onlyTriggered ? '1' : '0.6';
+        btnAll.style.background = !onlyTriggered ? '#2563eb' : '#6b7280';
+    }
+
     // Set headers
-    document.getElementById('mtrackDetailsCampaign').textContent = campaignName;
-    document.getElementById('mtrackDetailsPartner').textContent = partnerName;
+    document.getElementById('mtrackDetailsCampaign').textContent = campaignName || '—';
+    document.getElementById('mtrackDetailsPartner').textContent = partnerName || '—';
     document.getElementById('mtrackDetailsBasis').textContent = "Loading...";
+    const titleEl = document.getElementById('mtrackDetailsModalTitle');
+    if (titleEl) {
+        titleEl.textContent = onlyTriggered ? "Achievement History & Qualifying Track" : "All Member Submissions & Track";
+    }
     
     // Clear old rows
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:32px; color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>';
@@ -3309,7 +3347,7 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                     <th style="padding:10px">Lead Name</th>
                     <th style="padding:10px">Phone / Mobile</th>
                     <th style="padding:10px">Submit Date</th>
-                    <th style="padding:10px">Payment Date</th>
+                    <th style="padding:10px">${onlyTriggered ? 'Milestone Date' : 'Payment Date'}</th>
                     <th style="padding:10px">Status</th>
                     <th style="padding:10px">Solar Stage</th>
                     <th style="padding:10px">Brand</th>
@@ -3325,7 +3363,7 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                     <th style="padding:10px">Lead Name</th>
                     <th style="padding:10px">Phone / Mobile</th>
                     <th style="padding:10px">Submit Date</th>
-                    <th style="padding:10px">Payment Date</th>
+                    <th style="padding:10px">${onlyTriggered ? 'Milestone / Qualifying Date' : 'Payment Date'}</th>
                     <th style="padding:10px">Status</th>
                     <th style="padding:10px">Solar Stage</th>
                     <th style="padding:10px">Brand</th>
@@ -3343,6 +3381,9 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
         tbody.innerHTML = leads.map((l, i) => {
             const submitDate = l.submit_date ? fmtDate(l.submit_date) : '—';
             const paymentDate = l.payment_date ? fmtDate(l.payment_date) : '—';
+            const dateCell = (l.payment_date && onlyTriggered)
+                ? `<span style="font-weight:700; color:#059669"><i class="fas fa-check-circle me-1" style="font-size:10px"></i>${paymentDate}</span>`
+                : paymentDate;
             
             const partnerCell = isOverall
                 ? `<td style="padding:10px"><div style="font-weight:700;font-size:12px;color:#1e3a8a">${escH(l.partner_name || '—')}</div>
@@ -3357,7 +3398,7 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                     <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
                     <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
                     <td style="padding:10px">${submitDate}</td>
-                    <td style="padding:10px">${paymentDate}</td>
+                    <td style="padding:10px">${dateCell}</td>
                     <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
                     <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
                     <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
@@ -3372,7 +3413,7 @@ async function openTrackDetails(bonanzaId, partnerId, campaignName, partnerName,
                     <td style="padding:10px; font-weight:600; color:#1e293b">${escH(l.customer_name)}</td>
                     <td style="padding:10px; white-space:nowrap"><a href="tel:${escH(l.mobile)}" style="color:#2563eb; text-decoration:none; font-weight:600">${escH(l.mobile)}</a></td>
                     <td style="padding:10px">${submitDate}</td>
-                    <td style="padding:10px">${paymentDate}</td>
+                    <td style="padding:10px">${dateCell}</td>
                     <td style="padding:10px"><span class="badge" style="background:#f1f5f9; color:#475569">${escH(l.status)}</span></td>
                     <td style="padding:10px"><span style="color:#0891b2">${escH(l.solar_pipeline_status || '—')}</span></td>
                     <td style="padding:10px; color:#475569">${escH(l.brand_name || '—')}</td>
