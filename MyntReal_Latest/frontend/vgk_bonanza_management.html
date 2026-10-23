@@ -1208,8 +1208,8 @@ tbody tr { background: #ffffff !important; }
 
 <!-- Tier Achievers Modal (Show members who achieved the tier) -->
 <div class="modal-overlay" id="tierAchieversModal">
-    <div class="modal-box" style="width: 880px; max-width: 96vw; max-height: 94vh;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b, #31104b); color: white; border-top-left-radius: 14px; border-top-right-radius: 14px; padding: 16px 20px;">
+    <div class="modal-box" id="tierAchieversModalBox" style="width: 1100px; max-width: 96vw; height: 90vh; max-height: 90vh; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+        <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b, #31104b); color: white; padding: 14px 20px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span id="tierAchieversTierTag" style="background: #fbbf24; color: #000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
@@ -1221,25 +1221,37 @@ tbody tr { background: #ffffff !important; }
                     Rule: 1 Eligible file with 100% full deal payment collected
                 </div>
             </div>
-            <button onclick="closeTierAchieversModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:white;opacity:0.8">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" id="tierAchieversFullscreenBtn" onclick="toggleTierAchieversFullscreen()" title="Toggle Fullscreen" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 6px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button onclick="closeTierAchieversModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:white;opacity:0.8;line-height:1;">&times;</button>
+            </div>
         </div>
-        <div class="modal-body" style="padding: 20px;">
+        <div class="modal-body" style="padding: 18px 22px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
             <!-- Summary stats row in modal -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;" id="tierAchieversKpiRow">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;" id="tierAchieversKpiRow">
                 <!-- KPI cards -->
             </div>
 
+            <!-- Policy Guard Notice Banner -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 14px; font-size: 11.5px; color: #475569; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-shield-alt text-primary" style="font-size: 15px;"></i>
+                <div>
+                    <strong>Attribution Integrity Rule:</strong> Active members (3+ completed solar files) who qualify an upline leader for a milestone are locked as contributors for that tier and strictly excluded from double-counting in subsequent tiers.
+                </div>
+            </div>
+
             <!-- Achievers Table Wrap -->
-            <div id="tierAchieversTableWrap" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; margin-bottom: 16px;">
-                <table class="table table-hover table-sm" style="margin-bottom: 0; font-size: 12px;">
-                    <thead style="background: #f9fafb;">
+            <div id="tierAchieversTableWrap" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: auto; flex: 1; min-height: 240px; background: #ffffff;">
+                <table class="table table-hover table-sm" style="margin-bottom: 0; font-size: 12px; width: 100%; position: relative; border-collapse: separate; border-spacing: 0;">
+                    <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
                         <tr>
-                            <th>Member / Partner</th>
-                            <th>Upline Sponsor</th>
-                            <th style="text-align: center;">Validated Files</th>
-                            <th style="text-align: center;">Active Status</th>
-                            <th>Qualification Detail</th>
-                            <th style="text-align: center;">Action</th>
+                            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Leader / Member</th>
+                            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+                            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Active In Downline</th>
+                            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Because Of Whom (Qualifying Downline Members)</th>
+                            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="tierAchieversTableBody">
@@ -1249,12 +1261,15 @@ tbody tr { background: #ffffff !important; }
             </div>
 
             <!-- Empty / In-progress Notice -->
-            <div id="tierAchieversEmptyContainer" style="display: none; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db; margin-bottom: 16px;">
+            <div id="tierAchieversEmptyContainer" style="display: none; padding: 22px; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db;">
                 <!-- Explanatory message -->
             </div>
         </div>
-        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e5e7eb;">
-            <button class="btn btn-secondary btn-sm" onclick="closeTierAchieversModal()">Close</button>
+        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #f9fafb; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 11px; color: #6b7280;">
+                <i class="fas fa-lock me-1"></i> Data validated via verified 1st customer payments. Zero duplicate allocations.
+            </div>
+            <button class="btn btn-secondary btn-sm" style="font-weight: 600; padding: 5px 16px;" onclick="closeTierAchieversModal()">Close</button>
         </div>
     </div>
 </div>
@@ -3079,8 +3094,13 @@ function renderGiftLadder(ladder) {
             ? '<span style="color:#059669;font-weight:700;"><i class="fas fa-check-circle me-1"></i>Milestone Met!</span>'
             : `<span style="color:#d97706;font-weight:600;"><i class="fas fa-arrow-up me-1"></i>${t.gap} ${t.target_metric === 'files' ? 'file' : 'active member'}${t.gap === 1 ? '' : 's'} to qualify</span>`;
 
-        const { achievers } = getTierAchievers(t.tier_number);
-        const achieverCount = achievers.length;
+        const achieverCount = t.achievers_count !== undefined ? t.achievers_count : (t.achievers ? t.achievers.length : 0);
+        const contenderCount = t.leading_contenders ? t.leading_contenders.length : 0;
+        const btnHtml = isAchieved
+            ? `<button class="btn btn-sm btn-success text-white" style="font-weight: 700; border-radius: 7px; padding: 5px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px;" onclick="openTierAchieversModal(${t.tier_number})"><i class="fas fa-award"></i> View Achievers (${achieverCount})</button>`
+            : (contenderCount > 0
+                ? `<button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 7px; padding: 5px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px;" onclick="openTierAchieversModal(${t.tier_number})"><i class="fas fa-chart-line"></i> View Contenders (${contenderCount})</button>`
+                : `<button class="btn btn-sm btn-outline-secondary" style="font-weight: 700; border-radius: 7px; padding: 5px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px;" onclick="openTierAchieversModal(${t.tier_number})"><i class="fas fa-users"></i> View Achievers (0)</button>`);
 
         return `
             <div class="stat-card" style="border: 1.5px solid ${isAchieved ? '#10b981' : (isInProgress ? '#c4b5fd' : '#e5e7eb')}; border-radius: 12px; padding: 16px 20px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
@@ -3125,11 +3145,9 @@ function renderGiftLadder(ladder) {
                 </div>
 
                 <!-- Right: Status Badge & View Achievers Button -->
-                <div style="min-width: 160px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                <div style="min-width: 170px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
                     ${badgeHtml}
-                    <button class="btn btn-sm ${isAchieved ? 'btn-success text-white' : 'btn-outline-primary'}" style="font-weight: 700; border-radius: 7px; padding: 5px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 6px;" onclick="openTierAchieversModal(${t.tier_number})">
-                        <i class="fas fa-users"></i> View Achievers (${achieverCount})
-                    </button>
+                    ${btnHtml}
                 </div>
             </div>
         `;
@@ -3174,19 +3192,19 @@ function openTierAchieversModal(tierNumber) {
 
     if (tier.is_insurance) {
         thead.innerHTML = `
-            <th>Member / Partner</th>
-            <th>Upline Sponsor</th>
-            <th style="text-align: center;">Validated Files</th>
-            <th>Qualification Detail</th>
-            <th style="text-align: center;">Action</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Member / Partner</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Validated Files</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Qualification Detail</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Action</th>
         `;
     } else {
         thead.innerHTML = `
-            <th>Leader (Who Met Tier)</th>
-            <th>Upline Sponsor</th>
-            <th style="text-align: center;">Active In Downline</th>
-            <th>Because Of Whom (Qualifying Downline Members)</th>
-            <th style="text-align: center;">Action</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Leader (Who Met Tier)</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Active In Downline</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Because Of Whom (Qualifying Downline Members)</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Action</th>
         `;
     }
 
@@ -3201,22 +3219,22 @@ function openTierAchieversModal(tierNumber) {
                 const detail = (qms[0] && qms[0].detail) || '100% full deal payment collected';
                 return `
                     <tr>
-                        <td>
+                        <td style="padding: 10px 12px;">
                             <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
                             <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
                         </td>
-                        <td>
+                        <td style="padding: 10px 12px;">
                             <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
                             <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                         </td>
-                        <td style="text-align: center;">
+                        <td style="text-align: center; padding: 10px 12px;">
                             <span style="font-weight: 800; font-size: 13px; color: #111827;">${(qms[0] && qms[0].files_count) || 1}</span>
                         </td>
-                        <td>
+                        <td style="padding: 10px 12px;">
                             <span style="color: #059669; font-weight: 700;"><i class="fas fa-check-circle me-1"></i>${detail}</span>
                         </td>
-                        <td style="text-align: center;">
-                            <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 9px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
+                        <td style="text-align: center; padding: 10px 12px;">
+                            <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
                                 <i class="fas fa-search-plus me-1"></i>Audit
                             </button>
                         </td>
@@ -3225,7 +3243,7 @@ function openTierAchieversModal(tierNumber) {
             }
 
             const qmsHtml = qms.map(qm => `
-                <div style="display: flex; align-items: center; justify-content: space-between; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; font-size: 11px; margin-bottom: 3px;">
+                <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
                     <div>
                         <strong style="color: #065f46;"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
                         <code>${qm.partner_code}</code>
@@ -3240,25 +3258,25 @@ function openTierAchieversModal(tierNumber) {
 
             return `
                 <tr>
-                    <td>
+                    <td style="padding: 10px 12px; vertical-align: middle;">
                         <div style="font-weight: 700; color: #111827;">${a.leader_name}</div>
                         <div style="font-size: 11px; color: #6b7280;"><code>${a.leader_code}</code></div>
                     </td>
-                    <td>
+                    <td style="padding: 10px 12px; vertical-align: middle;">
                         <div style="font-size: 12px; color: #374151;">${a.upline_sponsor}</div>
                         <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
                     </td>
-                    <td style="text-align: center;">
+                    <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
                         <span class="badge" style="background: #d1fae5; color: #065f46; font-size: 11.5px; padding: 4px 8px; font-weight: 800;">
                             ${a.downline_active_count} Active
                         </span>
                     </td>
-                    <td>
-                        <div style="display: flex; flex-direction: column;">
+                    <td style="padding: 10px 12px; vertical-align: middle;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                             ${qmsHtml}
                         </div>
                     </td>
-                    <td style="text-align: center;">
+                    <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
                         <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 4px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
                             <i class="fas fa-user-check me-1"></i>Audit Leader
                         </button>
@@ -3277,7 +3295,7 @@ function openTierAchieversModal(tierNumber) {
                 </div>
                 <h5 style="font-weight: 800; color: #111827; margin-bottom: 4px;">No Leaders Have Met Tier ${tier.tier_number} (${tier.reward_name}) Yet</h5>
                 <p style="font-size: 12px; color: #6b7280; margin: 0 auto; max-width: 580px;">
-                    Requires <strong>${targetCount} Active Members in downline</strong>. Current organization highest is <strong>${tier.current_count} Active Members</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
+                    Requires <strong>${targetCount} Active Members in downline</strong>. Current highest available is <strong>${tier.current_count} Active Member(s)</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
                 </p>
             </div>
             ${leadingContenders.length > 0 ? `
@@ -3293,8 +3311,8 @@ function openTierAchieversModal(tierNumber) {
                                     <span class="badge" style="background: #dbeafe; color: #1e40af; margin-left: 6px;">${c.downline_active_count} Active in Downline</span>
                                     <span style="color: #d97706; font-size: 11px; margin-left: 6px; font-weight: 600;">(Needs ${c.gap} more)</span>
                                 </div>
-                                <div style="display: flex; gap: 6px; align-items: center;">
-                                    <span style="font-size: 11px; color: #6b7280;">Because of: ${(c.qualifying_active_members||[]).map(q => q.partner_name).join(', ')}</span>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <span style="font-size: 11px; color: #6b7280;">Available: ${(c.qualifying_active_members||[]).map(q => q.partner_name).join(', ')}</span>
                                     <button class="btn btn-xs btn-outline-primary" style="font-size: 10.5px; padding: 2px 7px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id});">Audit</button>
                                 </div>
                             </div>
@@ -3308,10 +3326,36 @@ function openTierAchieversModal(tierNumber) {
     document.getElementById('tierAchieversModal').classList.add('open');
 }
 
-
 function closeTierAchieversModal() {
     const modal = document.getElementById('tierAchieversModal');
     if (modal) modal.classList.remove('open');
+    const box = document.getElementById('tierAchieversModalBox');
+    if (box && box.classList.contains('modal-fullscreen')) {
+        toggleTierAchieversFullscreen();
+    }
+}
+
+function toggleTierAchieversFullscreen() {
+    const box = document.getElementById('tierAchieversModalBox');
+    const btn = document.getElementById('tierAchieversFullscreenBtn');
+    if (!box) return;
+    if (box.classList.contains('modal-fullscreen')) {
+        box.classList.remove('modal-fullscreen');
+        box.style.width = '1100px';
+        box.style.height = '90vh';
+        box.style.maxWidth = '96vw';
+        box.style.maxHeight = '90vh';
+        box.style.borderRadius = '14px';
+        if (btn) btn.innerHTML = '<i class="fas fa-expand"></i>';
+    } else {
+        box.classList.add('modal-fullscreen');
+        box.style.width = '100vw';
+        box.style.height = '100vh';
+        box.style.maxWidth = '100vw';
+        box.style.maxHeight = '100vh';
+        box.style.borderRadius = '0';
+        if (btn) btn.innerHTML = '<i class="fas fa-compress"></i>';
+    }
 }
 
 

@@ -10968,6 +10968,18 @@ def get_vgk_awards_overview(
             {"tier_number": 9, "reward_name": "Grand Package (Villa + Car + Cash)", "reward_description": "Crown achievement: Luxury Villa + Luxury Car + Cash Reserve", "qualification_rule": "35,000 Cumulative Active Members in downline (105,000 completed solar files)", "target_metric": "active_members", "target_count": 35000, "cost_display": "₹5.00 Crore (Provisional)", "cost_type": "Provisional Package (Villa ₹1.5 Cr + Car ₹1.0 Cr + Cash ₹2.5 Cr - Pending Final Confirmation)"}
         ]
 
+        # Candidates for leadership awards: Exclude corporate/system accounts (VGK Support, ID 31, company roots)
+        # Leadership awards are for real team partners/leaders
+        field_candidate_records = [
+            m for m in member_records
+            if m["partner_id"] != 31 and m.get("partner_code") != "VGK07102207" and "support" not in (m.get("partner_name") or "").lower()
+        ]
+
+        # Persistent contributor allocation tracker across tiers:
+        # Once an active member downline contributes to unlock a tier for a leader, that contributor
+        # is permanently consumed and EXCLUDED from all subsequent tier levels for that leader!
+        leader_consumed_contributors = {m["partner_id"]: set() for m in field_candidate_records}
+
         ladder = []
         for t in tiers_def:
             if t.get("is_insurance"):
@@ -11001,41 +11013,71 @@ def get_vgk_awards_overview(
                 ]
                 leading_contenders = []
             else:
-                curr = cumulative_active_count
                 tgt = t["target_count"]
-                gap = max(0, tgt - curr)
-                pct = min(100.0, round((curr / tgt) * 100, 1)) if tgt > 0 else 0.0
-                stat = "achieved" if curr >= tgt else ("in_progress" if curr > 0 else "locked")
+                achievers = []
+                leading_contenders = []
 
-                # Achievers: Leaders who met this tier because they have >= tgt Active Members in their downline
-                achievers = [
-                    {
-                        "leader_id": m["partner_id"],
-                        "leader_name": m["partner_name"],
-                        "leader_code": m["partner_code"],
-                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
-                        "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
-                        "downline_active_count": m["downline_active_count"],
-                        "qualification_type": f"Team Leadership ({m['downline_active_count']} Active Downline Members)",
-                        "qualifying_active_members": m["downline_active_members"]
-                    }
-                    for m in member_records if m["downline_active_count"] >= tgt
-                ]
+                for m in field_candidate_records:
+                    pid = m["partner_id"]
+                    consumed = leader_consumed_contributors[pid]
+                    # Filter downline actives: EXCLUDE any active member who already contributed to an earlier tier
+                    available_actives = [
+                        c for c in m.get("downline_active_members", [])
+                        if c["partner_id"] not in consumed
+                    ]
 
-                # Leaders closest to this tier (leading contenders)
-                leading_contenders = [
-                    {
-                        "leader_id": m["partner_id"],
-                        "leader_name": m["partner_name"],
-                        "leader_code": m["partner_code"],
-                        "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
-                        "downline_active_count": m["downline_active_count"],
-                        "gap": max(0, tgt - m["downline_active_count"]),
-                        "qualifying_active_members": m["downline_active_members"]
-                    }
-                    for m in sorted(member_records, key=lambda x: x["downline_active_count"], reverse=True)
-                    if 0 < m["downline_active_count"] < tgt
-                ][:6]
+                    if len(available_actives) >= tgt:
+                        # Leader achieved this tier! Allocate the required active members and lock them
+                        assigned = available_actives[:tgt]
+                        leader_consumed_contributors[pid].update(c["partner_id"] for c in assigned)
+                        achievers.append({
+                            "leader_id": pid,
+                            "leader_name": m["partner_name"],
+                            "leader_code": m["partner_code"],
+                            "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                            "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
+                            "downline_active_count": len(assigned),
+                            "qualification_type": f"Team Leadership ({len(assigned)} Fresh Active Downline Member{'s' if len(assigned) > 1 else ''})",
+                            "qualifying_active_members": assigned
+                        })
+                    elif len(available_actives) > 0:
+                        # Leader has progress toward this tier with unconsumed active members
+                        leading_contenders.append({
+                            "leader_id": pid,
+                            "leader_name": m["partner_name"],
+                            "leader_code": m["partner_code"],
+                            "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                            "downline_active_count": len(available_actives),
+                            "gap": tgt - len(available_actives),
+                            "qualifying_active_members": available_actives
+                        })
+
+                # Sort achievers: Leaders with direct (L1) contributors first, then by name
+                achievers.sort(key=lambda x: (
+                    0 if any(q.get("depth") == 1 for q in x.get("qualifying_active_members", [])) else 1,
+                    x["leader_name"]
+                ))
+
+                leading_contenders.sort(key=lambda x: x["downline_active_count"], reverse=True)
+
+                achievers_count = len(achievers)
+                if achievers_count > 0:
+                    stat = "achieved"
+                    curr = tgt
+                    gap = 0
+                    pct = 100.0
+                else:
+                    max_avail = max([c["downline_active_count"] for c in leading_contenders], default=0)
+                    if max_avail > 0:
+                        stat = "in_progress"
+                        curr = max_avail
+                        gap = max(0, tgt - curr)
+                        pct = min(99.0, round((curr / tgt) * 100, 1)) if tgt > 0 else 0.0
+                    else:
+                        stat = "locked"
+                        curr = 0
+                        gap = tgt
+                        pct = 0.0
 
             ladder.append({
                 **t,
