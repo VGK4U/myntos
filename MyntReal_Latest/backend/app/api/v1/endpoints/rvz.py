@@ -4656,7 +4656,7 @@ async def list_all_tc_versions(
         total_users = db.query(User).count()
         active_users = db.query(User).filter(User.account_status == 'active').count()
         
-        # Get all acceptance records
+        # Get all acceptance records from UserCouponAcceptance (MNR)
         all_acceptances = db.query(
             UserCouponAcceptance.accepted_terms_version,
             func.count(func.distinct(UserCouponAcceptance.user_id)).label('accepted_count')
@@ -4664,6 +4664,27 @@ async def list_all_tc_versions(
         
         # Create acceptance map
         acceptance_map = {acc.accepted_terms_version: acc.accepted_count for acc in all_acceptances}
+
+        # DC Protocol: Also merge real database acceptances from vgk_terms_acceptance_log (VGK4U)
+        from sqlalchemy import text as sa_text
+        try:
+            vgk_acc_rows = db.execute(sa_text("""
+                SELECT version, COUNT(DISTINCT partner_id) as accepted_count
+                FROM vgk_terms_acceptance_log
+                GROUP BY version
+            """)).fetchall()
+            for row in vgk_acc_rows:
+                ver = row[0]
+                cnt = int(row[1])
+                acceptance_map[ver] = acceptance_map.get(ver, 0) + cnt
+        except Exception as _vgk_cnt_err:
+            logger.warning(f"[RVZ-TERMS] Failed to query vgk_terms_acceptance_log: {_vgk_cnt_err}")
+
+        # Total official partners for VGK platform context
+        try:
+            total_partners = db.execute(sa_text("SELECT COUNT(*) FROM official_partners WHERE is_active = true")).scalar() or 0
+        except Exception:
+            total_partners = 0
         
         # Calculate overall stats
         total_acceptances = sum(acceptance_map.values())
@@ -4674,8 +4695,9 @@ async def list_all_tc_versions(
         
         for v in versions:
             accepted_count = acceptance_map.get(v.version, 0)
-            not_accepted = total_users - accepted_count
-            acceptance_rate = (accepted_count / total_users * 100) if total_users > 0 else 0
+            user_base = total_partners if getattr(v, 'platform_type', 'MNR') == 'VGK' and total_partners > 0 else total_users
+            not_accepted = max(0, user_base - accepted_count)
+            acceptance_rate = (accepted_count / user_base * 100) if user_base > 0 else 0
             
             version_data = {
                 "id": v.id,
@@ -4691,10 +4713,11 @@ async def list_all_tc_versions(
                 "source_version": v.source_version,
                 "max_displays": v.max_displays,
                 "platform_type": getattr(v, 'platform_type', 'MNR'),
-                # Statistics
-                "total_users": total_users,
+                # Statistics (both keys supported for UI compatibility)
+                "total_users": user_base,
                 "active_users": active_users,
                 "accepted_count": accepted_count,
+                "acceptance_count": accepted_count,
                 "not_accepted": not_accepted,
                 "acceptance_rate": round(acceptance_rate, 2)
             }
@@ -5086,8 +5109,50 @@ async def get_detailed_acceptance_records(
                 "user_agent": acceptance.user_agent or "N/A"
             })
         
+        # DC Protocol: Also fetch official VGK channel partner acceptances from vgk_terms_acceptance_log
+        from sqlalchemy import text as sa_text
+        try:
+            vgk_q = """
+                SELECT l.id, p.partner_code, p.partner_name, p.email, p.phone,
+                       l.version, l.accepted_at, l.ip_address, l.user_agent
+                FROM vgk_terms_acceptance_log l
+                JOIN official_partners p ON l.partner_id = p.id
+                WHERE 1=1
+            """
+            vgk_params = {}
+            if version:
+                vgk_q += " AND l.version = :version"
+                vgk_params["version"] = version
+            if user_id:
+                vgk_q += " AND (p.partner_code ILIKE :uid OR p.partner_name ILIKE :uid)"
+                vgk_params["uid"] = f"%{user_id}%"
+            if date_from:
+                vgk_q += " AND l.accepted_at >= :date_from"
+                vgk_params["date_from"] = date_from
+            if date_to:
+                vgk_q += " AND l.accepted_at < :date_to"
+                vgk_params["date_to"] = date_to + " 23:59:59"
+            vgk_q += " ORDER BY l.accepted_at DESC"
+            vgk_rows = db.execute(sa_text(vgk_q), vgk_params).fetchall()
+            for r in vgk_rows:
+                records.append({
+                    "id": f"vgk_{r[0]}",
+                    "user_id": r[1],
+                    "user_name": r[2],
+                    "user_email": r[3] or "N/A",
+                    "user_contact": r[4] or "N/A",
+                    "acceptance_number": 1,
+                    "accepted_version": r[5],
+                    "acceptance_timestamp": r[6].isoformat() if r[6] else "",
+                    "login_attempt": 1,
+                    "ip_address": r[7] or "N/A",
+                    "user_agent": r[8] or "N/A"
+                })
+        except Exception as _vgk_audit_err:
+            logger.warning(f"[RVZ-TERMS] Failed to fetch vgk audit records: {_vgk_audit_err}")
+
         # Sort by most recent first for display
-        records.reverse()
+        records.sort(key=lambda x: x.get("acceptance_timestamp") or "", reverse=True)
         
         return {
             "success": True,
