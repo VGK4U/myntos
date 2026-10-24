@@ -539,6 +539,16 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
           { menu_code: "VGK_REAL_DREAMS", label: "VGK Real Dreams (ZR)", route: "/staff/vgk4u/real-estate", audience: ["STAFF"] },
           { menu_code: "VGK_CARE", label: "VGK Care (ZC)", route: "/staff/vgk4u/insurance", audience: ["STAFF"] }
         ]
+      },
+      {
+        sub_section_code: "VGK_LEGAL_COMPLIANCE",
+        sub_section_label: "Legal, Terms & Compliance",
+        items: [
+          { menu_code: "VGK_TERMS_EDITOR", label: "T&C Content Editor", route: "/staff/mnr/terms-editor", icon: "fas fa-edit", audience: ["STAFF"] },
+          { menu_code: "VGK_TERMS_VERSIONS", label: "T&C Versions", route: "/staff/mnr/terms-versions", icon: "fas fa-file-contract", audience: ["STAFF"] },
+          { menu_code: "VGK_TERMS_AUDIT", label: "T&C Acceptance Audit", route: "/staff/mnr/terms-audit", icon: "fas fa-history", audience: ["STAFF"] },
+          { menu_code: "VGK_COMPLIANCE_DASHBOARD", label: "Compliance Dashboard", route: "/staff/mnr/compliance", icon: "fas fa-shield-alt", audience: ["STAFF"] }
+        ]
       }
     ]
   },

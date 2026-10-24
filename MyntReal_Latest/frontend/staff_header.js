@@ -1165,33 +1165,73 @@ window.StaffHeader = window.StaffHeader || {
         
         const collectMenuItems = () => {
             menuItems = [];
-            if (typeof StaffSidebar !== 'undefined' && StaffSidebar.menuConfig) {
-                const sections = StaffSidebar.menuConfig.sections || [];
-                sections.forEach(section => {
-                    const sectionTitle = section.title || section.id || 'Other';
-                    (section.items || []).forEach(item => {
-                        if (item.href && item.label) {
+            const seen = new Set();
+            // 1. Authoritative MENU_MASTER
+            const mm = window.MENU_MASTER || (typeof MENU_MASTER !== 'undefined' ? MENU_MASTER : null) || window.MENU_MASTER_DATA;
+            if (Array.isArray(mm) && mm.length > 0) {
+                mm.forEach(sec => {
+                    const secTitle = sec.section_label || sec.section_code || 'Section';
+                    (sec.items || []).forEach(it => {
+                        const href = it.route || it.href;
+                        if (href && it.label && !seen.has(href)) {
+                            seen.add(href);
                             menuItems.push({
-                                label: item.label,
-                                href: item.href,
-                                icon: item.icon || 'fas fa-file',
-                                section: sectionTitle
+                                label: it.label,
+                                href: href,
+                                icon: it.icon || 'fas fa-file',
+                                section: secTitle
                             });
                         }
                     });
-                    (section.subSections || []).forEach(sub => {
-                        (sub.items || []).forEach(item => {
-                            if (item.href && item.label) {
+                    (sec.subSections || []).forEach(sub => {
+                        const subTitle = sub.sub_section_label || sub.sub_section_code || secTitle;
+                        (sub.items || []).forEach(it => {
+                            const href = it.route || it.href;
+                            if (href && it.label && !seen.has(href)) {
+                                seen.add(href);
                                 menuItems.push({
-                                    label: item.label,
-                                    href: item.href,
-                                    icon: item.icon || 'fas fa-file',
-                                    section: sub.title || sectionTitle
+                                    label: it.label,
+                                    href: href,
+                                    icon: it.icon || 'fas fa-file',
+                                    section: subTitle
                                 });
                             }
                         });
                     });
                 });
+            }
+            // 2. Fallback to StaffSidebar dynamicMenuConfig / menuConfig
+            if (typeof StaffSidebar !== 'undefined') {
+                const cfg = StaffSidebar.dynamicMenuConfig || StaffSidebar.menuConfig;
+                if (cfg && cfg.sections) {
+                    cfg.sections.forEach(section => {
+                        const sectionTitle = section.title || section.id || 'Other';
+                        (section.items || []).forEach(item => {
+                            if (item.href && item.label && !seen.has(item.href)) {
+                                seen.add(item.href);
+                                menuItems.push({
+                                    label: item.label,
+                                    href: item.href,
+                                    icon: item.icon || 'fas fa-file',
+                                    section: sectionTitle
+                                });
+                            }
+                        });
+                        (section.subSections || []).forEach(sub => {
+                            (sub.items || []).forEach(item => {
+                                if (item.href && item.label && !seen.has(item.href)) {
+                                    seen.add(item.href);
+                                    menuItems.push({
+                                        label: item.label,
+                                        href: item.href,
+                                        icon: item.icon || 'fas fa-file',
+                                        section: sub.title || sectionTitle
+                                    });
+                                }
+                            });
+                        });
+                    });
+                }
             }
         };
         
