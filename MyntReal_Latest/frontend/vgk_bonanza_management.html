@@ -1611,7 +1611,7 @@ tbody tr { background: #ffffff !important; }
             <div id="tierAchieversPolicyBanner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 14px; font-size: 11.5px; color: #475569; display: flex; align-items: center; gap: 10px;">
                 <i class="fas fa-shield-alt text-primary" style="font-size: 15px;"></i>
                 <div>
-                    <strong>Attribution Integrity Rule:</strong> Active members (3+ completed solar files) who qualify an upline leader for a milestone are locked as contributors for that tier and strictly excluded from double-counting in subsequent tiers.
+                    <strong>Attribution &amp; Eligibility Policy:</strong> Active members are attributed once to up to 3 upline levels. <strong>Active Deal Maintenance Rule:</strong> At least 1 verified customer deal every 60 days is required for Lifetime Awards eligibility. Ineligible members (Blocked, Freelancers, or &gt;60 days inactive) are highlighted in light grey and should be ignored during gift payouts.
                 </div>
             </div>
 
@@ -4052,7 +4052,7 @@ function renderTierAchieversModalContent() {
                 <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px;">
                     <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible (Ignored)</div>
                     <div style="font-size: 20px; font-weight: 900; color: #475569; margin-top: 1px;">${ineligibleCount} <span style="font-size: 12px; font-weight: 700; color: #64748b;">Members</span></div>
-                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Blocked &amp; Freelancers</div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Blocked, Freelancers &amp; &gt;60d</div>
                 </div>
             `;
         }
@@ -4065,14 +4065,14 @@ function renderTierAchieversModalContent() {
             ? [
                 { id: 'all', label: 'All Contenders', count: totalCount, icon: 'fas fa-list', bg: '#0284c7', text: '#ffffff' },
                 { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
-                { id: 'ineligible', label: 'Ineligible (Blocked & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
+                { id: 'ineligible', label: 'Ineligible (Blocked, Freelancers & >60d)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
             ]
             : [
                 { id: 'all', label: 'All Achievers', count: totalCount, icon: 'fas fa-list', bg: '#4f46e5', text: '#ffffff' },
                 { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
                 { id: 'issued', label: 'Issued', count: issuedCount, icon: 'fas fa-check-double', bg: '#0284c7', text: '#ffffff' },
                 { id: 'pending', label: 'Pending', count: pendingCount, icon: 'fas fa-clock', bg: '#d97706', text: '#ffffff' },
-                { id: 'ineligible', label: 'Ineligible (Blocked & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
+                { id: 'ineligible', label: 'Ineligible (Blocked, Freelancers & >60d)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
             ];
 
         pillsWrap.innerHTML = pillsDef.map(p => {

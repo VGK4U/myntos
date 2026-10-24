@@ -369,7 +369,7 @@ body {
         <div class="d-flex flex-wrap gap-2" style="font-size:13px" id="memberMeta">
           <span><i class="fas fa-id-badge text-info me-1"></i> ID: <strong class="text-white" id="partnerIdText">—</strong></span>
           <span class="mx-2 text-muted">•</span>
-          <span><i class="fas fa-check-circle text-success me-1"></i> Status: <strong class="text-white">Active Verified Partner</strong></span>
+          <span><i class="fas fa-shield-alt text-warning me-1"></i> Status: <span id="memberStatusBadge"><strong class="text-white">Checking...</strong></span></span>
         </div>
       </div>
       <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
@@ -379,6 +379,28 @@ body {
           <div style="font-size:12px; color:#f1f5f9; font-weight:600" id="heroNextTarget">Next Target: Tier 1 Insurance</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Active Deal Maintenance Policy Notice Banner -->
+  <div id="memberPolicyAlert" class="alert d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-sm" style="background: rgba(245, 158, 11, 0.12); border: 1.5px solid rgba(245, 158, 11, 0.35); color: #fef08a;">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" id="policyIconBox">
+        <i class="fas fa-calendar-check text-warning" style="font-size: 18px;" id="policyIcon"></i>
+      </div>
+      <div>
+        <div class="fw-bold text-white" style="font-size: 14px;" id="policyTitle">
+          Active Partner Maintenance Rule: 1 Deal Every 60 Days
+        </div>
+        <div style="font-size: 12.5px; color: #cbd5e1; margin-top: 2px;" id="dealStatusNotice">
+          To maintain active status and claim Lifetime Awards, partners must submit at least 1 verified customer deal every 60 days. Accounts with no deal in 60 days are marked ineligible for award payouts.
+        </div>
+      </div>
+    </div>
+    <div class="text-end" id="partnerActivityBadge">
+      <span class="badge bg-warning text-dark px-3 py-2 fw-bold" style="font-size: 12px;">
+        Checking deal activity...
+      </span>
     </div>
   </div>
 
@@ -550,6 +572,57 @@ function renderMemberPortal(data) {
 
   const achievedAwards = data.achieved_awards || [];
   const ladder = data.ladder || [];
+
+  // Active Partner 60-Day Policy and Eligibility Rendering
+  const isIneligible = Boolean(data.is_ineligible);
+  const isNoDeal60d = Boolean(data.is_no_deal_60d);
+  const lastDealDate = data.last_deal_date;
+  const daysSinceDeal = data.days_since_last_deal;
+  const ineligReason = data.ineligible_reason || (isNoDeal60d ? 'No deal in last 60 days' : '');
+
+  const statusWrap = document.getElementById('memberStatusBadge');
+  const policyAlert = document.getElementById('memberPolicyAlert');
+  const policyIconBox = document.getElementById('policyIconBox');
+  const policyIcon = document.getElementById('policyIcon');
+  const policyTitle = document.getElementById('policyTitle');
+  const dealNotice = document.getElementById('dealStatusNotice');
+  const activityBadge = document.getElementById('partnerActivityBadge');
+
+  if (isIneligible) {
+    if (statusWrap) {
+      statusWrap.innerHTML = `<span class="badge bg-danger text-white px-2 py-1"><i class="fas fa-ban me-1"></i> Ineligible (${ineligReason})</span>`;
+    }
+    if (policyAlert) {
+      policyAlert.style.background = 'rgba(239, 68, 68, 0.15)';
+      policyAlert.style.border = '1.5px solid rgba(239, 68, 68, 0.4)';
+    }
+    if (policyIconBox) policyIconBox.style.background = 'rgba(239, 68, 68, 0.25)';
+    if (policyIcon) policyIcon.className = 'fas fa-exclamation-triangle text-danger';
+    if (policyTitle) policyTitle.textContent = 'Account Ineligible for Lifetime Awards';
+    if (dealNotice) {
+      dealNotice.innerHTML = `<strong>Attention:</strong> ${ineligReason}. Under company policy, at least <strong>1 verified deal in every 60 days</strong> is mandatory. Please register a customer deal to regain eligibility.`;
+    }
+    if (activityBadge) {
+      activityBadge.innerHTML = `<span class="badge bg-danger text-white px-3 py-2 fw-bold" style="font-size: 12px;"><i class="fas fa-ban me-1"></i> Ineligible (${daysSinceDeal !== null && daysSinceDeal !== undefined ? daysSinceDeal + 'd ago' : 'No deals'})</span>`;
+    }
+  } else {
+    if (statusWrap) {
+      statusWrap.innerHTML = `<span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i> Active Partner (Eligible)</span>`;
+    }
+    if (policyAlert) {
+      policyAlert.style.background = 'rgba(16, 185, 129, 0.12)';
+      policyAlert.style.border = '1.5px solid rgba(16, 185, 129, 0.35)';
+    }
+    if (policyIconBox) policyIconBox.style.background = 'rgba(16, 185, 129, 0.25)';
+    if (policyIcon) policyIcon.className = 'fas fa-check-circle text-success';
+    if (policyTitle) policyTitle.textContent = 'Active Partner Policy: 1 Deal Every 60 Days (Compliant)';
+    if (dealNotice) {
+      dealNotice.innerHTML = `<strong>Good Standing:</strong> Last verified customer deal was on <strong>${lastDealDate || 'Recent'}</strong> (${daysSinceDeal ?? 0} days ago). You are fully compliant and eligible for Lifetime Rewards.`;
+    }
+    if (activityBadge) {
+      activityBadge.innerHTML = `<span class="badge bg-success text-white px-3 py-2 fw-bold" style="font-size: 12px;"><i class="fas fa-check me-1"></i> Active (${daysSinceDeal ?? 0}d ago)</span>`;
+    }
+  }
 
   document.getElementById('heroAchievedCount').textContent = achievedAwards.length;
   document.getElementById('kpiTotalWon').textContent = achievedAwards.length;

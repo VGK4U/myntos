@@ -10870,18 +10870,65 @@ def get_vgk_awards_overview(
                 "core": {"partner_id": core_p.id if core_p else None, "partner_name": core_p.partner_name if core_p else "—", "partner_code": core_p.partner_code if core_p else ""}
             }
 
-            # DC Protocol: Ineligible classification (ONLY Blocked in VGK members page & Freelancers)
+            # DC Protocol: 60-Day Active Deal Maintenance Rule Check
+            # Rule: Must have at least 1 verified customer deal every 60 days to maintain active awards eligibility
+            file_dates = [f["first_payment_date"] for f in counted_files_details if f.get("first_payment_date")]
+            last_deal_date = max(file_dates) if file_dates else None
+            days_since_last_deal = None
+            is_no_deal_60d = False
+            today = now.date() if hasattr(now, 'date') else datetime.now().date()
+
+            if last_deal_date:
+                try:
+                    ld_dt = datetime.strptime(str(last_deal_date)[:10], "%Y-%m-%d").date()
+                    days_since_last_deal = (today - ld_dt).days
+                    if days_since_last_deal > 60:
+                        is_no_deal_60d = True
+                except Exception:
+                    pass
+            else:
+                # If partner has no deals yet, check registration date (grace period 60 days from registration)
+                if p.created_at:
+                    try:
+                        p_date = p.created_at.date() if hasattr(p.created_at, 'date') else datetime.strptime(str(p.created_at)[:10], "%Y-%m-%d").date()
+                        days_since_joined = (today - p_date).days
+                        days_since_last_deal = days_since_joined
+                        if days_since_joined > 60:
+                            is_no_deal_60d = True
+                    except Exception:
+                        pass
+                else:
+                    is_no_deal_60d = True
+
+            # DC Protocol: Ineligible classification
+            # 1. Blocked in VGK members page
+            # 2. Freelancers
+            # 3. No deal in 60 days (Active Deal Maintenance Rule)
             is_blocked = bool(p.is_blocked) or (getattr(p, 'member_status', '') == 'BLOCKED')
             is_freelancer = (getattr(p, 'partner_type', '') == 'FREELANCER') or bool(getattr(p, 'freelancer_classification', None))
-            is_ineligible = is_blocked or is_freelancer
+            is_ineligible = is_blocked or is_freelancer or is_no_deal_60d
 
-            ineligible_reason = ""
-            if is_blocked and is_freelancer:
-                ineligible_reason = "Blocked & Freelancer"
-            elif is_blocked:
-                ineligible_reason = "Blocked Member"
-            elif is_freelancer:
-                ineligible_reason = "Freelancer"
+            ineligible_reasons = []
+            if is_blocked:
+                ineligible_reasons.append("Blocked Member")
+            if is_freelancer:
+                ineligible_reasons.append("Freelancer")
+            if is_no_deal_60d:
+                if last_deal_date:
+                    ineligible_reasons.append(f"No Deal in 60 Days (Last Deal: {last_deal_date}, {days_since_last_deal}d ago)")
+                else:
+                    ineligible_reasons.append("No Deal in 60 Days (No deals on record)")
+
+            ineligible_reason = " • ".join(ineligible_reasons)
+
+            if is_no_deal_60d:
+                validation_problems.append({
+                    "problem_type": "NO_DEAL_IN_60_DAYS",
+                    "severity": "warning",
+                    "reason": f"Ineligible for Lifetime Awards: No customer deal submitted in the last 60 days (Last deal: {last_deal_date or 'None'}, {days_since_last_deal or '>60'} days ago). Rule: 1 deal required every 60 days.",
+                    "lead_id": None,
+                    "date": last_deal_date
+                })
 
             rec = {
                 "partner_id": p.id,
@@ -10900,6 +10947,9 @@ def get_vgk_awards_overview(
                 "validation_problems": validation_problems,
                 "has_validation_problems": len(validation_problems) > 0,
                 "counted_files": counted_files_details,
+                "last_deal_date": last_deal_date,
+                "days_since_last_deal": days_since_last_deal,
+                "is_no_deal_60d": is_no_deal_60d,
                 "upline_path": upline_path,
                 "placement_history": change_logs_by_member.get(p.id, []),
                 "is_account_active": bool(p.is_active),
@@ -10908,7 +10958,7 @@ def get_vgk_awards_overview(
                 "partner_type": p.partner_type or "PARTNER",
                 "freelancer_classification": p.freelancer_classification,
                 "is_freelancer": is_freelancer,
-                "is_deactivated": is_blocked,
+                "is_deactivated": is_blocked or is_no_deal_60d,
                 "is_ineligible": is_ineligible,
                 "ineligible_reason": ineligible_reason
             }
@@ -11093,6 +11143,9 @@ def get_vgk_awards_overview(
                             "is_deactivated": m.get("is_deactivated", False),
                             "is_ineligible": m.get("is_ineligible", False),
                             "ineligible_reason": m.get("ineligible_reason", ""),
+                            "last_deal_date": m.get("last_deal_date"),
+                            "days_since_last_deal": m.get("days_since_last_deal"),
+                            "is_no_deal_60d": m.get("is_no_deal_60d", False),
                             "qualifying_active_members": [
                                 {
                                     "partner_id": m["partner_id"],
@@ -11160,7 +11213,10 @@ def get_vgk_awards_overview(
                             "is_freelancer": m.get("is_freelancer", False),
                             "is_deactivated": m.get("is_deactivated", False),
                             "is_ineligible": m.get("is_ineligible", False),
-                            "ineligible_reason": m.get("ineligible_reason", "")
+                            "ineligible_reason": m.get("ineligible_reason", ""),
+                            "last_deal_date": m.get("last_deal_date"),
+                            "days_since_last_deal": m.get("days_since_last_deal"),
+                            "is_no_deal_60d": m.get("is_no_deal_60d", False)
                         })
                     elif can_unlock and len(available_actives) > 0 and (highest_tier == t_num - 1 or (highest_tier < 2 and t_num == 2)):
                         # Leader is actively progressing toward THIS immediate milestone tier ONLY (prevents leakage to higher tiers)
@@ -11185,7 +11241,10 @@ def get_vgk_awards_overview(
                             "is_freelancer": m.get("is_freelancer", False),
                             "is_deactivated": m.get("is_deactivated", False),
                             "is_ineligible": m.get("is_ineligible", False),
-                            "ineligible_reason": m.get("ineligible_reason", "")
+                            "ineligible_reason": m.get("ineligible_reason", ""),
+                            "last_deal_date": m.get("last_deal_date"),
+                            "days_since_last_deal": m.get("days_since_last_deal"),
+                            "is_no_deal_60d": m.get("is_no_deal_60d", False)
                         })
 
                 # Sort achievers: Leaders with direct (L1) contributors first, then by name
@@ -11582,6 +11641,13 @@ def get_my_vgk_awards_summary(
     partner_name = getattr(current_user, "partner_name", None) or getattr(current_user, "contact_person", None) or getattr(current_user, "name", None) or "VGK Partner"
     partner_code = getattr(current_user, "partner_code", None) or getattr(current_user, "code", None) or ""
 
+    my_member_rec = next((m for m in overview_data.get("members", []) if m.get("partner_id") == partner_id), None)
+    last_deal_date = my_member_rec.get("last_deal_date") if my_member_rec else None
+    days_since_last_deal = my_member_rec.get("days_since_last_deal") if my_member_rec else None
+    is_no_deal_60d = my_member_rec.get("is_no_deal_60d", False) if my_member_rec else False
+    is_ineligible = my_member_rec.get("is_ineligible", False) if my_member_rec else False
+    ineligible_reason = my_member_rec.get("ineligible_reason", "") if my_member_rec else ""
+
     return {
         "success": True,
         "is_partner": True,
@@ -11590,7 +11656,12 @@ def get_my_vgk_awards_summary(
         "partner_code": partner_code,
         "achieved_count": len(achieved_awards),
         "achieved_awards": achieved_awards,
-        "ladder": ladder_list
+        "ladder": ladder_list,
+        "last_deal_date": last_deal_date,
+        "days_since_last_deal": days_since_last_deal,
+        "is_no_deal_60d": is_no_deal_60d,
+        "is_ineligible": is_ineligible,
+        "ineligible_reason": ineligible_reason
     }
 
 
