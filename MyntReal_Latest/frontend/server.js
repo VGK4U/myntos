@@ -23512,7 +23512,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(htmlContent);
     });
     return;
-  } else if (url.startsWith('/staff/mnr/terms-versions')) {
+  } else if (url.startsWith('/staff/mnr/terms-versions') || url.startsWith('/rvz/terms-versions')) {
     // ===== STAFF MNR: T&C VERSION MANAGEMENT PAGE =====
     const cookies = cookie.parse(req.headers.cookie || '');
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
@@ -23605,7 +23605,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(htmlContent);
     return;
-  } else if (url.startsWith('/staff/mnr/terms-editor')) {
+  } else if (url.startsWith('/staff/mnr/terms-editor') || url.startsWith('/rvz/terms-editor')) {
     // ===== STAFF MNR: T&C CONTENT EDITOR PAGE =====
     const cookies = cookie.parse(req.headers.cookie || '');
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
@@ -23720,7 +23720,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
     res.end(htmlContent);
     return;
-  } else if (url.startsWith('/staff/mnr/terms-audit')) {
+  } else if (url.startsWith('/staff/mnr/terms-audit') || url.startsWith('/rvz/terms-audit')) {
     // ===== STAFF MNR: T&C ACCEPTANCE AUDIT PAGE =====
     const cookies = cookie.parse(req.headers.cookie || '');
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
