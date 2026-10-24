@@ -32,13 +32,25 @@ A1TOPUP_OPERATOR_MAP = {
 
 router = APIRouter()
 
-# Initialize Razorpay Client
-if settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
-    razorpay_client = razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
-else:
-    razorpay_client = None
+# Initialize Razorpay Client with dynamic fallback
+def get_razorpay_client():
+    global razorpay_client
+    key_id = getattr(settings, "RAZORPAY_KEY_ID", None) or os.getenv("RAZORPAY_KEY_ID")
+    key_secret = getattr(settings, "RAZORPAY_KEY_SECRET", None) or os.getenv("RAZORPAY_KEY_SECRET")
+    if key_id and key_secret:
+        k_id = str(key_id).strip()
+        k_sec = str(key_secret).strip()
+        if not razorpay_client:
+            try:
+                razorpay_client = razorpay.Client(auth=(k_id, k_sec))
+            except Exception as e:
+                print(f"[RAZORPAY-INIT] Client init warning: {e}")
+                return None
+        return razorpay_client
+    return razorpay_client
+
+razorpay_client = None
+get_razorpay_client()
 
 
 class CreateOrderRequest(BaseModel):
@@ -55,7 +67,8 @@ class CreateOrderRequest(BaseModel):
 
 @router.post("/create-order")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
-    if not razorpay_client:
+    client = get_razorpay_client()
+    if not client:
         raise HTTPException(status_code=503, detail="System is working on updates. Please try after some time.")
 
     # 1. Validation: Ensure positive valid amount and valid mobile number
@@ -76,7 +89,7 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
 
     
     try:
-        payment_order = razorpay_client.order.create(dict(
+        payment_order = client.order.create(dict(
             amount=order_amount,
             currency=order_currency,
             payment_capture='1'
@@ -129,7 +142,10 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         
     # Verify signature
     try:
-        razorpay_client.utility.verify_payment_signature({
+        client = get_razorpay_client()
+        if not client:
+            raise HTTPException(status_code=503, detail="Payment gateway unavailable")
+        client.utility.verify_payment_signature({
             'razorpay_order_id': req.razorpay_order_id,
             'razorpay_payment_id': req.razorpay_payment_id,
             'razorpay_signature': req.razorpay_signature
@@ -297,10 +313,11 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
             db.commit()
             
     # Step 4: Automatic Refund if A1Topup Failed
-    if tx.api_status == "Failed" and razorpay_client:
+    ref_client = get_razorpay_client()
+    if tx.api_status == "Failed" and ref_client:
         try:
             # Trigger Razorpay refund
-            razorpay_client.payment.refund(req.razorpay_payment_id, {"amount": int(tx.amount * 100)})
+            ref_client.payment.refund(req.razorpay_payment_id, {"amount": int(tx.amount * 100)})
             tx.payment_status = "Refunded"
             tx.api_status = "Refunded (Operator Failed)"
             db.commit()

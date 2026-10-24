@@ -59,9 +59,9 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: Optional[str] = None
     
     # Razorpay Configuration
-    RAZORPAY_KEY_ID: Optional[str] = None
-    RAZORPAY_KEY_SECRET: Optional[str] = None
-    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
+    RAZORPAY_KEY_ID: Optional[str] = os.getenv("RAZORPAY_KEY_ID")
+    RAZORPAY_KEY_SECRET: Optional[str] = os.getenv("RAZORPAY_KEY_SECRET")
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
     # RazorpayX Payout Configuration
     RAZORPAYX_KEY_ID: Optional[str] = os.getenv("RAZORPAYX_KEY_ID")

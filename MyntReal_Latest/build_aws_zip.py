@@ -73,7 +73,7 @@ def create_zip():
                 rel_path = file_path.relative_to(source_dir)
                 rel_str = str(rel_path).replace("\\", "/")
 
-                if file in exclude_files or file == '.env' or file.startswith('.env.') or file.endswith('.env') or file.endswith(('.key', '.pem', '.secret', '.token')):
+                if (rel_root == '.' and file.endswith('.py')) or file in exclude_files or file == '.env' or file.startswith('.env.') or file.endswith('.env') or file.endswith(('.key', '.pem', '.secret', '.token')):
                     continue
 
                 # Always keep production APK files

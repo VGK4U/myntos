@@ -23,6 +23,17 @@ backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ba
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
+# Compatibility patch for Starlette 0.36 + HTTPX 0.28 TestClient
+try:
+    import httpx
+    _orig_httpx_init = httpx.Client.__init__
+    def _patched_httpx_init(self, *args, **kwargs):
+        kwargs.pop("app", None)
+        return _orig_httpx_init(self, *args, **kwargs)
+    httpx.Client.__init__ = _patched_httpx_init
+except Exception:
+    pass
+
 from app.models.base import Base, get_indian_time
 from app.models.recharge import RechargeTransaction
 from app.models.reward_scratch import RewardCampaign, ScratchCard, RewardLedger, NotificationOutbox
