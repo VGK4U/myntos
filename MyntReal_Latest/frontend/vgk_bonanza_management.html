@@ -1580,7 +1580,7 @@ tbody tr { background: #ffffff !important; }
 
 
 <!-- Tier Achievers Modal (Show members who achieved the tier) -->
-<div class="modal-overlay" id="tierAchieversModal">
+<div class="modal-overlay" id="tierAchieversModal" onclick="if(event.target===this) closeTierAchieversModal();">
     <div class="modal-box" id="tierAchieversModalBox" style="width: 1100px; max-width: 96vw; height: 90vh; max-height: 90vh; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: #ffffff; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
         <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b, #31104b); color: white; padding: 14px 20px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -1598,7 +1598,7 @@ tbody tr { background: #ffffff !important; }
                 <button type="button" id="tierAchieversFullscreenBtn" onclick="toggleTierAchieversFullscreen()" title="Toggle Fullscreen" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 6px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
                     <i class="fas fa-expand"></i>
                 </button>
-                <button onclick="closeTierAchieversModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:white;opacity:0.8;line-height:1;">&times;</button>
+                <button type="button" id="tierAchieversCloseCrossBtn" onclick="closeTierAchieversModal()" title="Close (Esc)" style="background:none;border:none;font-size:24px;cursor:pointer;color:white;opacity:0.85;line-height:1;padding:4px 8px;outline:none;">&times;</button>
             </div>
         </div>
         <div class="modal-body" style="padding: 18px 22px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
@@ -1669,7 +1669,7 @@ tbody tr { background: #ffffff !important; }
             <div style="font-size: 11px; color: #6b7280;">
                 <i class="fas fa-lock me-1"></i> Data validated via verified 1st customer payments. Zero duplicate allocations.
             </div>
-            <button class="btn btn-secondary btn-sm" style="font-weight: 600; padding: 5px 16px;" onclick="closeTierAchieversModal()">Close</button>
+            <button type="button" id="tierAchieversCloseFooterBtn" class="btn btn-secondary btn-sm" style="font-weight: 600; padding: 5px 16px; cursor: pointer;" onclick="closeTierAchieversModal()">Close</button>
         </div>
     </div>
 </div>
@@ -3844,7 +3844,29 @@ function openTierAchieversModal(tierNumber) {
     renderTierAchieversModalContent();
 
     const modal = document.getElementById('tierAchieversModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.classList.add('open');
+        modal.style.display = 'flex';
+    }
+}
+
+function closeTierAchieversModal() {
+    const modal = document.getElementById('tierAchieversModal');
+    if (modal) {
+        modal.classList.remove('open');
+        modal.style.display = 'none';
+    }
+    const box = document.getElementById('tierAchieversModalBox');
+    const btn = document.getElementById('tierAchieversFullscreenBtn');
+    if (box && box.classList.contains('modal-fullscreen')) {
+        box.classList.remove('modal-fullscreen');
+        box.style.width = '1100px';
+        box.style.height = '90vh';
+        box.style.maxWidth = '96vw';
+        box.style.maxHeight = '90vh';
+        box.style.borderRadius = '14px';
+        if (btn) btn.innerHTML = '<i class="fas fa-expand"></i>';
+    }
 }
 
 function setTierModalFilter(filterId) {
@@ -6753,6 +6775,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('posterModalOverlay');
         if (modal && (modal.classList.contains('open') || modal.style.display === 'flex')) {
             fitPosterToScreen();
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            closeTierAchieversModal();
+            closeMemberValidationModal();
+            closeClaimUpdateModal();
+            closePosterModal();
         }
     });
     init().catch(e => console.error('[Init] error:', e));
