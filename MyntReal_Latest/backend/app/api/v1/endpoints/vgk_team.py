@@ -10931,7 +10931,7 @@ def get_vgk_awards_overview(
         for p in all_vgk:
             children_map.setdefault(p.parent_partner_id, []).append(p.id)
 
-        def get_downline_with_depth(pid, current_depth=1, max_depth=10):
+        def get_downline_with_depth(pid, current_depth=1, max_depth=3):
             result = []
             if current_depth > max_depth:
                 return result
@@ -11052,6 +11052,7 @@ def get_vgk_awards_overview(
         # Once an active member downline contributes to unlock a tier for a leader, that contributor
         # is permanently consumed and EXCLUDED from all subsequent tier levels for that leader!
         leader_consumed_contributors = {m["partner_id"]: set() for m in field_candidate_records}
+        leader_highest_achieved_tier = {m["partner_id"]: 1 if m.get("insurance_eligible") else 0 for m in field_candidate_records}
 
         ladder = []
         for t in tiers_def:
@@ -11106,23 +11107,32 @@ def get_vgk_awards_overview(
                 leading_contenders = []
             else:
                 tgt = t["target_count"]
+                t_num = t["tier_number"]
                 achievers = []
                 leading_contenders = []
 
                 for m in field_candidate_records:
                     pid = m["partner_id"]
                     consumed = leader_consumed_contributors[pid]
+                    highest_tier = leader_highest_achieved_tier.get(pid, 0)
+
                     # Filter downline actives: EXCLUDE any active member who already contributed to an earlier tier
                     available_actives = [
                         c for c in m.get("downline_active_members", [])
                         if c["partner_id"] not in consumed
                     ]
 
-                    if len(available_actives) >= tgt:
+                    # Sequential Milestone Gate:
+                    # Leaders must qualify sequentially.
+                    # Team leadership tiers start at Tier 2. Tier N requires previous tier qualification (highest_tier >= t_num - 1).
+                    can_unlock = (highest_tier >= t_num - 1) or (t_num == 2)
+
+                    if can_unlock and len(available_actives) >= tgt:
                         # Leader achieved this tier! Allocate the required active members and lock them
                         assigned = available_actives[:tgt]
                         leader_consumed_contributors[pid].update(c["partner_id"] for c in assigned)
-                        c_info = claims_map.get((pid, t["tier_number"]), {
+                        leader_highest_achieved_tier[pid] = max(leader_highest_achieved_tier.get(pid, 0), t_num)
+                        c_info = claims_map.get((pid, t_num), {
                             "claim_status": "pending",
                             "achievement_date": m.get("active_achieved_date") or "",
                             "issued_date": "",
@@ -11142,6 +11152,7 @@ def get_vgk_awards_overview(
                             "qualifying_active_members": assigned,
                             "claim_status": c_info.get("claim_status", "pending"),
                             "claim_info": c_info,
+                            "is_achiever": True,
                             "is_account_active": m.get("is_account_active", True),
                             "is_blocked": m.get("is_blocked", False),
                             "member_status": m.get("member_status", "ACTIVE"),
@@ -11151,16 +11162,22 @@ def get_vgk_awards_overview(
                             "is_ineligible": m.get("is_ineligible", False),
                             "ineligible_reason": m.get("ineligible_reason", "")
                         })
-                    elif len(available_actives) > 0:
-                        # Leader has progress toward this tier with unconsumed active members
+                    elif can_unlock and len(available_actives) > 0 and (highest_tier == t_num - 1 or (highest_tier < 2 and t_num == 2)):
+                        # Leader is actively progressing toward THIS immediate milestone tier ONLY (prevents leakage to higher tiers)
+                        pct = round((len(available_actives) / tgt) * 100, 1)
                         leading_contenders.append({
                             "leader_id": pid,
                             "leader_name": m["partner_name"],
                             "leader_code": m["partner_code"],
                             "upline_sponsor": m["upline_path"]["sponsor"]["partner_name"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "Direct Company",
+                            "upline_sponsor_code": m["upline_path"]["sponsor"]["partner_code"] if m.get("upline_path") and m["upline_path"].get("sponsor") else "",
                             "downline_active_count": len(available_actives),
+                            "target_count": tgt,
                             "gap": tgt - len(available_actives),
+                            "progress_pct": pct,
                             "qualifying_active_members": available_actives,
+                            "is_achiever": False,
+                            "is_contender": True,
                             "is_account_active": m.get("is_account_active", True),
                             "is_blocked": m.get("is_blocked", False),
                             "member_status": m.get("member_status", "ACTIVE"),

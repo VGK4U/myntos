@@ -1608,7 +1608,7 @@ tbody tr { background: #ffffff !important; }
             </div>
 
             <!-- Policy Guard Notice Banner -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 14px; font-size: 11.5px; color: #475569; display: flex; align-items: center; gap: 10px;">
+            <div id="tierAchieversPolicyBanner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 14px; font-size: 11.5px; color: #475569; display: flex; align-items: center; gap: 10px;">
                 <i class="fas fa-shield-alt text-primary" style="font-size: 15px;"></i>
                 <div>
                     <strong>Attribution Integrity Rule:</strong> Active members (3+ completed solar files) who qualify an upline leader for a milestone are locked as contributors for that tier and strictly excluded from double-counting in subsequent tiers.
@@ -3897,12 +3897,53 @@ function renderTierAchieversModalContent() {
     const targetCount = tier.target_count;
     const targetMetric = tier.target_metric;
 
+    const tierTag = document.getElementById('tierAchieversTierTag');
+    const policyBanner = document.getElementById('tierAchieversPolicyBanner');
+
+    if (isContenderMode) {
+        if (tierTag) {
+            tierTag.innerHTML = `<span style="background: #0284c7; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;"><i class="fas fa-chart-line me-1"></i>TIER ${tier.tier_number} CONTENDERS (IN PROGRESS)</span>`;
+        }
+        if (policyBanner) {
+            policyBanner.innerHTML = `
+                <i class="fas fa-chart-line text-info" style="font-size: 16px;"></i>
+                <div>
+                    <strong>Milestone In Progress:</strong> Leaders listed below are actively advancing towards this milestone (${targetCount} Active Members required). Awards &amp; claims can only be processed once 100% of the target requirement is achieved.
+                </div>
+            `;
+        }
+    } else if (achievers.length > 0) {
+        if (tierTag) {
+            tierTag.innerHTML = `<span style="background: #fbbf24; color: #000000; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;"><i class="fas fa-award me-1"></i>TIER ${tier.tier_number} ACHIEVERS</span>`;
+        }
+        if (policyBanner) {
+            policyBanner.innerHTML = `
+                <i class="fas fa-shield-alt text-primary" style="font-size: 16px;"></i>
+                <div>
+                    <strong>Attribution Integrity Rule:</strong> Active members (3+ completed solar files) who qualify an upline leader for a milestone are locked as contributors for that tier and strictly excluded from double-counting in subsequent tiers.
+                </div>
+            `;
+        }
+    } else {
+        if (tierTag) {
+            tierTag.innerHTML = `<span style="background: #64748b; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;"><i class="fas fa-lock me-1"></i>TIER ${tier.tier_number} LOCKED (0 ACHIEVERS)</span>`;
+        }
+        if (policyBanner) {
+            policyBanner.innerHTML = `
+                <i class="fas fa-lock text-secondary" style="font-size: 16px;"></i>
+                <div>
+                    <strong>Milestone Locked:</strong> No leaders have qualified for Tier ${tier.tier_number} (${tier.reward_name}) yet. Requirements: <strong>${tier.qualification_rule}</strong>.
+                </div>
+            `;
+        }
+    }
+
     // Build normalized items with eligibility and claim properties
     const normalizedList = sourceList.map(a => {
         const cInfo = a.claim_info || {};
-        const cStatus = (a.claim_status || cInfo.claim_status || 'pending').toLowerCase();
+        const cStatus = (a.claim_status || cInfo.claim_status || (isContenderMode ? 'in_progress' : 'pending')).toLowerCase();
         const isIssued = (cStatus === 'issued');
-        const isPending = !isIssued;
+        const isPending = !isIssued && (cStatus === 'pending');
 
         // Ineligible check: ONLY Blocked in VGK members page OR Freelancers
         const isBlocked = (a.is_blocked !== undefined)
@@ -3949,47 +3990,90 @@ function renderTierAchieversModalContent() {
     // Render 5 Data Labels KPI Cards in open mode
     const kpiRow = document.getElementById('tierAchieversKpiRow');
     if (kpiRow) {
-        kpiRow.innerHTML = `
-            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
-                <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Target Requirement</div>
-                <div style="font-size: 14.5px; font-weight: 800; color: #0f172a; margin-top: 1px;">${targetCount} ${targetMetric === 'files' ? 'Personal File (1st Payment Validated)' : 'Active Members in Downline'}</div>
-                <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">${tier.reward_name}</div>
-            </div>
-            <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 10px 14px;">
-                <div style="font-size: 10px; font-weight: 800; color: #7c3aed; text-transform: uppercase;">Total In Tier</div>
-                <div style="font-size: 20px; font-weight: 900; color: #6d28d9; margin-top: 1px;">${totalCount} <span style="font-size: 12px; font-weight: 700; color: #8b5cf6;">${isContenderMode ? 'Contenders' : 'Members'}</span></div>
-                <div style="font-size: 10.5px; color: #7c3aed; margin-top: 2px;">All qualified records</div>
-            </div>
-            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 14px;">
-                <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;"><i class="fas fa-check-circle me-1"></i>Eligible (Active)</div>
-                <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 1px;">${eligibleCount} <span style="font-size: 12px; font-weight: 700; color: #10b981;">Members</span></div>
-                <div style="font-size: 10.5px; color: #047857; margin-top: 2px;">Active Verified Leaders</div>
-            </div>
-            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;">
-                <div style="font-size: 10px; font-weight: 800; color: #1e40af; text-transform: uppercase;"><i class="fas fa-gift me-1"></i>Claims Status</div>
-                <div style="font-size: 15px; font-weight: 900; color: #1d4ed8; margin-top: 2px;">
-                    <span style="color:#059669;">${issuedCount} Issued</span> <span style="color:#94a3b8;font-size:12px;font-weight:400;">&bull;</span> <span style="color:#d97706;">${pendingCount} Pending</span>
+        if (isContenderMode) {
+            const topContender = normalizedList[0];
+            const maxCur = topContender ? topContender._filesCount : 0;
+            const topPct = topContender ? (topContender.progress_pct || Math.round((maxCur / targetCount) * 100)) : 0;
+            const minGap = topContender ? (topContender.gap || (targetCount - maxCur)) : targetCount;
+
+            kpiRow.innerHTML = `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Target Requirement</div>
+                    <div style="font-size: 14.5px; font-weight: 800; color: #0f172a; margin-top: 1px;">${targetCount} Active Members in Downline</div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">${tier.reward_name}</div>
                 </div>
-                <div style="font-size: 10.5px; color: #1e40af; margin-top: 2px;">Auditor Handover Status</div>
-            </div>
-            <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible (Ignored)</div>
-                <div style="font-size: 20px; font-weight: 900; color: #475569; margin-top: 1px;">${ineligibleCount} <span style="font-size: 12px; font-weight: 700; color: #64748b;">Members</span></div>
-                <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Blocked &amp; Freelancers</div>
-            </div>
-        `;
+                <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #0284c7; text-transform: uppercase;"><i class="fas fa-chart-line me-1"></i>Total In Progress</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #0369a1; margin-top: 1px;">${totalCount} <span style="font-size: 12px; font-weight: 700; color: #0284c7;">Contenders</span></div>
+                    <div style="font-size: 10.5px; color: #0369a1; margin-top: 2px;">Active Pipeline Leaders</div>
+                </div>
+                <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;"><i class="fas fa-check-circle me-1"></i>Eligible Contenders</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 1px;">${eligibleCount} <span style="font-size: 12px; font-weight: 700; color: #10b981;">Leaders</span></div>
+                    <div style="font-size: 10.5px; color: #047857; margin-top: 2px;">Verified Active Network</div>
+                </div>
+                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #b45309; text-transform: uppercase;"><i class="fas fa-hourglass-half me-1"></i>Milestone Gap</div>
+                    <div style="font-size: 18px; font-weight: 900; color: #d97706; margin-top: 1px;">
+                        ${minGap} <span style="font-size: 12px; font-weight: 700; color: #b45309;">More Needed</span>
+                    </div>
+                    <div style="font-size: 10.5px; color: #b45309; margin-top: 2px;">Closest Contender (${topPct}% met)</div>
+                </div>
+                <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible (Ignored)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #475569; margin-top: 1px;">${ineligibleCount} <span style="font-size: 12px; font-weight: 700; color: #64748b;">Members</span></div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Blocked &amp; Freelancers</div>
+                </div>
+            `;
+        } else {
+            kpiRow.innerHTML = `
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Target Requirement</div>
+                    <div style="font-size: 14.5px; font-weight: 800; color: #0f172a; margin-top: 1px;">${targetCount} ${targetMetric === 'files' ? 'Personal File (1st Payment Validated)' : 'Active Members in Downline'}</div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">${tier.reward_name}</div>
+                </div>
+                <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #7c3aed; text-transform: uppercase;">Total Achievers</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #6d28d9; margin-top: 1px;">${totalCount} <span style="font-size: 12px; font-weight: 700; color: #8b5cf6;">Members</span></div>
+                    <div style="font-size: 10.5px; color: #7c3aed; margin-top: 2px;">All qualified records</div>
+                </div>
+                <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase;"><i class="fas fa-check-circle me-1"></i>Eligible (Active)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 1px;">${eligibleCount} <span style="font-size: 12px; font-weight: 700; color: #10b981;">Members</span></div>
+                    <div style="font-size: 10.5px; color: #047857; margin-top: 2px;">Active Verified Leaders</div>
+                </div>
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #1e40af; text-transform: uppercase;"><i class="fas fa-gift me-1"></i>Claims Status</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #1d4ed8; margin-top: 2px;">
+                        <span style="color:#059669;">${issuedCount} Issued</span> <span style="color:#94a3b8;font-size:12px;font-weight:400;">&bull;</span> <span style="color:#d97706;">${pendingCount} Pending</span>
+                    </div>
+                    <div style="font-size: 10.5px; color: #1e40af; margin-top: 2px;">Auditor Handover Status</div>
+                </div>
+                <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible (Ignored)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #475569; margin-top: 1px;">${ineligibleCount} <span style="font-size: 12px; font-weight: 700; color: #64748b;">Members</span></div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Blocked &amp; Freelancers</div>
+                </div>
+            `;
+        }
     }
 
     // Render Filter Pills in Control Bar
     const pillsWrap = document.getElementById('tierModalFilterPills');
     if (pillsWrap) {
-        const pillsDef = [
-            { id: 'all', label: 'All', count: totalCount, icon: 'fas fa-list', bg: '#4f46e5', text: '#ffffff' },
-            { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
-            { id: 'issued', label: 'Issued', count: issuedCount, icon: 'fas fa-check-double', bg: '#0284c7', text: '#ffffff' },
-            { id: 'pending', label: 'Pending', count: pendingCount, icon: 'fas fa-clock', bg: '#d97706', text: '#ffffff' },
-            { id: 'ineligible', label: 'Ineligible (Blocked & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
-        ];
+        const pillsDef = isContenderMode
+            ? [
+                { id: 'all', label: 'All Contenders', count: totalCount, icon: 'fas fa-list', bg: '#0284c7', text: '#ffffff' },
+                { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
+                { id: 'ineligible', label: 'Ineligible (Blocked & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
+            ]
+            : [
+                { id: 'all', label: 'All Achievers', count: totalCount, icon: 'fas fa-list', bg: '#4f46e5', text: '#ffffff' },
+                { id: 'eligible', label: 'Eligible', count: eligibleCount, icon: 'fas fa-check-circle', bg: '#059669', text: '#ffffff' },
+                { id: 'issued', label: 'Issued', count: issuedCount, icon: 'fas fa-check-double', bg: '#0284c7', text: '#ffffff' },
+                { id: 'pending', label: 'Pending', count: pendingCount, icon: 'fas fa-clock', bg: '#d97706', text: '#ffffff' },
+                { id: 'ineligible', label: 'Ineligible (Blocked & Freelancers)', count: ineligibleCount, icon: 'fas fa-ban', bg: '#64748b', text: '#ffffff' }
+            ];
 
         pillsWrap.innerHTML = pillsDef.map(p => {
             const isActive = (_currentModalFilter === p.id);
@@ -4056,14 +4140,25 @@ function renderTierAchieversModalContent() {
     const tbody = document.getElementById('tierAchieversTableBody');
     const emptyBox = document.getElementById('tierAchieversEmptyContainer');
 
-    thead.innerHTML = `
-        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Member / Partner' : 'Leader (Who Met Tier)'}</th>
-        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
-        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Validated Files' : 'Active In Downline'}</th>
-        <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Qualification Detail' : 'Because Of Whom (Qualifying Downline Members)'}</th>
-        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 140px;">Claim &amp; Issuance</th>
-        <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 170px;">Auditor Action</th>
-    `;
+    if (isContenderMode) {
+        thead.innerHTML = `
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Leader / Contender</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 170px;">Current Progress &amp; Gap</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Because Of Whom (Active Downline Members)</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 130px;">Milestone Status</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 100px;">Action</th>
+        `;
+    } else {
+        thead.innerHTML = `
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Member / Partner' : 'Leader (Who Met Tier)'}</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">Upline Sponsor</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Validated Files' : 'Active In Downline'}</th>
+            <th style="padding: 10px 12px; border-bottom: 2px solid #e2e8f0;">${tier.is_insurance ? 'Qualification Detail' : 'Because Of Whom (Qualifying Downline Members)'}</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 140px;">Claim &amp; Issuance</th>
+            <th style="text-align: center; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; min-width: 170px;">Auditor Action</th>
+        `;
+    }
 
     if (filtered.length > 0) {
         tableWrap.style.display = '';
@@ -4074,6 +4169,74 @@ function renderTierAchieversModalContent() {
             const cInfo = a._cInfo || {};
             const cStatus = a._cStatus;
             const isInelig = a._isIneligible;
+
+            // Distinct light grey background for Ineligible members so they can be easily identified and ignored
+            const rowBgStyle = isInelig 
+                ? 'background: #f1f5f9 !important; border-left: 4px solid #94a3b8; color: #475569;' 
+                : 'background: #ffffff;';
+
+            const qmsHtml = qms.map(qm => `
+                <div style="background: ${isInelig ? '#e2e8f0' : '#f0fdf4'}; border: 1px solid ${isInelig ? '#cbd5e1' : '#86efac'}; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
+                    <div>
+                        <strong style="color: ${isInelig ? '#475569' : '#065f46'};"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
+                        <code>${qm.partner_code}</code>
+                        <span class="badge" style="background: ${isInelig ? '#cbd5e1' : '#dbeafe'}; color: ${isInelig ? '#334155' : '#1e40af'}; margin-left: 4px;">${qm.generation}</span>
+                        <span style="color: ${isInelig ? '#475569' : '#047857'}; font-weight: 600; margin-left: 4px;">• ${qm.files_count} Validated Files</span>
+                    </div>
+                    <button class="btn btn-xs btn-link p-0 text-success fw-bold" style="font-size: 10.5px; text-decoration: none;" onclick="closeTierAchieversModal(); openMemberValidationModal(${qm.partner_id});">
+                        Audit &rarr;
+                    </button>
+                </div>
+            `).join('');
+
+            // In Contender mode: render progress bar, gap, in-progress badge, and audit team button (NO claim button!)
+            if (isContenderMode) {
+                const curActives = a._filesCount || 1;
+                const pct = a.progress_pct || Math.min(100, Math.round((curActives / targetCount) * 100));
+                const gapNum = a.gap || Math.max(0, targetCount - curActives);
+
+                return `
+                    <tr style="${rowBgStyle}">
+                        <td style="padding: 10px 12px; vertical-align: middle;">
+                            <div style="font-weight: 700; color: ${isInelig ? '#475569' : '#111827'}; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                                ${a.leader_name}
+                                ${isInelig ? `<span class="badge" style="background:#e2e8f0;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:10px;padding:2px 7px;border-radius:4px;"><i class="fas fa-ban me-1 text-secondary"></i>Ineligible: ${escH(a._ineligibleReason)}</span>` : ''}
+                            </div>
+                            <div style="font-size: 11px; color: ${isInelig ? '#94a3b8' : '#6b7280'};"><code>${a.leader_code}</code></div>
+                        </td>
+                        <td style="padding: 10px 12px; vertical-align: middle;">
+                            <div style="font-size: 12px; color: ${isInelig ? '#64748b' : '#374151'};">${a.upline_sponsor}</div>
+                            <div style="font-size: 10.5px; color: #9ca3af;">${a.upline_sponsor_code || ''}</div>
+                        </td>
+                        <td style="padding: 10px 12px; vertical-align: middle; text-align: center;">
+                            <div style="font-weight: 800; font-size: 12.5px; color: #0284c7;">
+                                ${curActives} / ${targetCount} Active Members
+                            </div>
+                            <div style="background: #e2e8f0; border-radius: 4px; height: 6px; width: 100%; max-width: 140px; margin: 4px auto 0 auto; overflow: hidden;">
+                                <div style="background: #0284c7; height: 100%; width: ${pct}%;"></div>
+                            </div>
+                            <div style="font-size: 10.5px; color: #d97706; font-weight: 700; margin-top: 3px;">
+                                <i class="fas fa-arrow-up me-1"></i>${gapNum} more needed to achieve
+                            </div>
+                        </td>
+                        <td style="padding: 10px 12px; vertical-align: middle;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${qmsHtml}
+                            </div>
+                        </td>
+                        <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
+                            <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 11px; padding: 4px 8px; font-weight: 700;">
+                                <i class="fas fa-spinner fa-spin me-1"></i>In Progress (${pct}%)
+                            </span>
+                        </td>
+                        <td style="text-align: center; padding: 10px 12px; vertical-align: middle;">
+                            <button class="btn btn-sm btn-outline-primary" style="font-weight: 700; border-radius: 6px; padding: 3px 10px; font-size: 11px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${a.leader_id})">
+                                <i class="fas fa-search me-1"></i>Audit Team
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
 
             let cBadge = '';
             if (isInelig) {
@@ -4110,11 +4273,6 @@ function renderTierAchieversModalContent() {
                 </div>
             `;
 
-            // Distinct light grey background for Ineligible members so they can be easily identified and ignored
-            const rowBgStyle = isInelig 
-                ? 'background: #f1f5f9 !important; border-left: 4px solid #94a3b8; color: #475569;' 
-                : 'background: #ffffff;';
-
             if (tier.is_insurance) {
                 const detail = (qms[0] && qms[0].detail) || 'First payment validated on customer lead';
                 return `
@@ -4145,20 +4303,6 @@ function renderTierAchieversModalContent() {
                     </tr>
                 `;
             }
-
-            const qmsHtml = qms.map(qm => `
-                <div style="background: ${isInelig ? '#e2e8f0' : '#f0fdf4'}; border: 1px solid ${isInelig ? '#cbd5e1' : '#86efac'}; border-radius: 6px; padding: 5px 8px; font-size: 11px; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 220px;">
-                    <div>
-                        <strong style="color: ${isInelig ? '#475569' : '#065f46'};"><i class="fas fa-star text-warning me-1"></i>${qm.partner_name}</strong>
-                        <code>${qm.partner_code}</code>
-                        <span class="badge" style="background: ${isInelig ? '#cbd5e1' : '#dbeafe'}; color: ${isInelig ? '#334155' : '#1e40af'}; margin-left: 4px;">${qm.generation}</span>
-                        <span style="color: ${isInelig ? '#475569' : '#047857'}; font-weight: 600; margin-left: 4px;">• ${qm.files_count} Validated Files</span>
-                    </div>
-                    <button class="btn btn-xs btn-link p-0 text-success fw-bold" style="font-size: 10.5px; text-decoration: none;" onclick="closeTierAchieversModal(); openMemberValidationModal(${qm.partner_id});">
-                        Audit &rarr;
-                    </button>
-                </div>
-            `).join('');
 
             return `
                 <tr style="${rowBgStyle}">
@@ -4209,38 +4353,18 @@ function renderTierAchieversModalContent() {
             `;
         } else {
             emptyBox.innerHTML = `
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px;">
-                        <i class="fas fa-hourglass-half"></i>
+                <div style="text-align: center; padding: 45px 20px;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                        <i class="fas fa-lock" style="font-size: 24px; color: #94a3b8;"></i>
                     </div>
-                    <h5 style="font-weight: 800; color: #111827; margin-bottom: 4px;">No Leaders Have Met Tier ${tier.tier_number} (${tier.reward_name}) Yet</h5>
-                    <p style="font-size: 12px; color: #6b7280; margin: 0 auto; max-width: 580px;">
-                        Requires <strong>${targetCount} Active Members in downline</strong>. Current highest available is <strong>${tier.current_count} Active Member(s)</strong> (Deficit: <strong>${tier.gap} more</strong> needed to qualify).
+                    <h4 style="font-weight: 800; color: #1e293b; margin-bottom: 6px;">Milestone Locked — 0 Achievers</h4>
+                    <p style="font-size: 12.5px; color: #64748b; max-width: 520px; margin: 0 auto 14px auto;">
+                        No leaders have qualified for Tier ${tier.tier_number} (${tier.reward_name}) yet. Requirements: <strong>${tier.qualification_rule}</strong>.
                     </p>
-                </div>
-                ${leadingContenders.length > 0 ? `
-                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px;">
-                        <div style="font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; margin-bottom: 10px;">
-                            <i class="fas fa-chart-line text-primary me-1"></i> Leaders Closest To Unlocking This Milestone (${leadingContenders.length})
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            ${leadingContenders.map(c => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px;">
-                                    <div>
-                                        <strong style="color: #111827; font-size: 12.5px;">${c.leader_name}</strong>
-                                        <code>${c.leader_code}</code>
-                                        <span style="font-size: 11px; color: #6b7280; margin-left: 8px;">Sponsor: ${c.upline_sponsor}</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <span class="badge bg-primary" style="font-size: 11px; padding: 4px 8px;">${c.downline_active_count} / ${targetCount} Active Members</span>
-                                        <span style="font-size: 11px; color: #d97706; font-weight: 700;">Needs ${c.gap} more</span>
-                                        <button class="btn btn-xs btn-outline-secondary" style="font-size: 11px; font-weight: 600; padding: 2px 8px;" onclick="closeTierAchieversModal(); openMemberValidationModal(${c.leader_id})">Audit</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 16px; font-size: 11.5px; color: #475569;">
+                        <i class="fas fa-shield-alt text-primary"></i> Leaders unlock this milestone sequentially as active members complete 3+ verified solar files.
                     </div>
-                ` : ''}
+                </div>
             `;
         }
     }
