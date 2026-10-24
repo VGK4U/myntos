@@ -10870,16 +10870,16 @@ def get_vgk_awards_overview(
                 "core": {"partner_id": core_p.id if core_p else None, "partner_name": core_p.partner_name if core_p else "—", "partner_code": core_p.partner_code if core_p else ""}
             }
 
-            # DC Protocol: Ineligible classification (Deactivated & Freelancers)
-            is_deactivated = (not p.is_active) or bool(p.is_blocked) or (p.member_status in ('INACTIVE', 'BLOCKED', 'DEACTIVATED'))
+            # DC Protocol: Ineligible classification (ONLY Blocked in VGK members page & Freelancers)
+            is_blocked = bool(p.is_blocked) or (getattr(p, 'member_status', '') == 'BLOCKED')
             is_freelancer = (getattr(p, 'partner_type', '') == 'FREELANCER') or bool(getattr(p, 'freelancer_classification', None))
-            is_ineligible = is_deactivated or is_freelancer
+            is_ineligible = is_blocked or is_freelancer
 
             ineligible_reason = ""
-            if is_deactivated and is_freelancer:
-                ineligible_reason = "Deactivated & Freelancer"
-            elif is_deactivated:
-                ineligible_reason = "Deactivated Account"
+            if is_blocked and is_freelancer:
+                ineligible_reason = "Blocked & Freelancer"
+            elif is_blocked:
+                ineligible_reason = "Blocked Member"
             elif is_freelancer:
                 ineligible_reason = "Freelancer"
 
@@ -10903,12 +10903,12 @@ def get_vgk_awards_overview(
                 "upline_path": upline_path,
                 "placement_history": change_logs_by_member.get(p.id, []),
                 "is_account_active": bool(p.is_active),
-                "is_blocked": bool(p.is_blocked),
+                "is_blocked": is_blocked,
                 "member_status": p.member_status or "ACTIVE",
                 "partner_type": p.partner_type or "PARTNER",
                 "freelancer_classification": p.freelancer_classification,
                 "is_freelancer": is_freelancer,
-                "is_deactivated": is_deactivated,
+                "is_deactivated": is_blocked,
                 "is_ineligible": is_ineligible,
                 "ineligible_reason": ineligible_reason
             }
