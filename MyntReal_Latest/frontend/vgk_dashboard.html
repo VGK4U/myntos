@@ -7719,6 +7719,14 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Active Partner 100-Day Policy Bottom Line Notice -->
+                <div style="background:#fefce8;border:1.5px solid #fef08a;border-radius:10px;padding:12px 18px;margin-top:16px;display:flex;align-items:center;gap:12px;font-size:12.5px;color:#854d0e;">
+                    <i class="fas fa-calendar-check" style="font-size:18px;color:#ca8a04;flex-shrink:0;"></i>
+                    <div style="line-height:1.45;">
+                        <strong style="color:#713f12;font-weight:800;">Active Partner Policy:</strong> At least <strong>1 verified customer deal is required every 100 days</strong> to maintain active status and eligibility for Lifetime Awards. Accounts with no deal in 100 days become ineligible.
+                    </div>
+                </div>
             `;
 
             container.innerHTML = html;
@@ -8317,8 +8325,8 @@
                         }
                         localStorage.setItem('vgk_partner', JSON.stringify(p));
                         
-                        // Terms Acceptance Check
-                        if (data.requires_terms_acceptance && data.terms_and_conditions && !localStorage.getItem('vgk_tc_accepted')) {
+                        // Terms Acceptance Check (shown up to 3 times per version until accepted)
+                        if (data.requires_terms_acceptance && data.terms_and_conditions) {
                             showVGKTCModal(data.terms_and_conditions);
                         }
                     }
@@ -13181,8 +13189,8 @@
                 </label>
             </div>
             <div style="display:flex;gap:10px;">
-                <button onclick="vgkDashTCDecline()" style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.65);font-size:13px;font-weight:600;cursor:pointer;">
-                    <i class="fas fa-times me-1"></i> Decline &amp; Logout
+                <button onclick="vgkDashTCDecline()" style="flex:1;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.8);font-size:13px;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-clock me-1"></i> Remind Later
                 </button>
                 <button id="vgkDashTcAcceptBtn" onclick="vgkDashTCAccept()" disabled style="flex:2;padding:10px;background:linear-gradient(135deg,#7c3aed,#4c1d95);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;opacity:.5;transition:opacity .2s;">
                     <i class="fas fa-check me-1"></i> I Accept &amp; Continue
@@ -13195,21 +13203,40 @@
 <script>
 (function() {
     let _dashTcData = null;
-
     var _vgkTermsShown = false;
 
     window.showVGKTCModal = function(tcData) {
         if (_vgkTermsShown) return;
-        if (localStorage.getItem('vgk_tc_accepted')) return;  // already accepted
+        const p = _profileData || JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+        const partnerId = p.id || p.partner_code || 'user';
+        const ver = tcData.version || '1.0';
+
+        // Check if already accepted
+        if (localStorage.getItem('vgk_tc_accepted_' + partnerId + '_v' + ver)) return;
+        if (p.accepted_terms_version === ver) {
+            localStorage.setItem('vgk_tc_accepted_' + partnerId + '_v' + ver, '1');
+            return;
+        }
+
+        // 3-times view counter
+        const key = 'vgk_tc_views_' + partnerId + '_v' + ver;
+        let views = parseInt(localStorage.getItem(key) || '0', 10);
+        const maxDisplays = tcData.max_displays || 3;
+
+        if (views >= maxDisplays) return;
+
         _vgkTermsShown = true;
         _dashTcData = tcData;
-        document.getElementById('vgkDashTcContent').textContent = tcData.content || '';
-        document.getElementById('vgkDashTcVersion').textContent = 'Version ' + (tcData.version || '');
+        document.getElementById('vgkDashTcContent').innerHTML = tcData.content || '';
+        document.getElementById('vgkDashTcVersion').textContent = 'Version ' + ver + ' • Notice View ' + (views + 1) + ' of ' + maxDisplays;
         document.getElementById('vgkDashTcCheckbox').checked = false;
         const btn = document.getElementById('vgkDashTcAcceptBtn');
         btn.disabled = true;
         btn.style.opacity = '0.5';
         document.getElementById('vgkTcOverlay').style.display = 'flex';
+
+        // Increment view count on modal open
+        localStorage.setItem(key, String(views + 1));
     };
 
     window.vgkDashTCAccept = async function() {
@@ -13222,15 +13249,16 @@
                 headers: { 'Authorization': 'Bearer ' + localStorage.getItem('vgk_token'), 'Content-Type': 'application/json' }
             });
         } catch(_) {}
-        localStorage.setItem('vgk_tc_accepted', '1');  // persist acceptance across page loads
+        const p = _profileData || JSON.parse(localStorage.getItem('vgk_partner') || '{}');
+        const partnerId = p.id || p.partner_code || 'user';
+        const ver = (_dashTcData && _dashTcData.version) || '1.0';
+        localStorage.setItem('vgk_tc_accepted_' + partnerId + '_v' + ver, '1');
         document.getElementById('vgkTcOverlay').style.display = 'none';
     };
 
     window.vgkDashTCDecline = function() {
+        // Remind later: closes the modal without logging out, allowing up to 3 views
         document.getElementById('vgkTcOverlay').style.display = 'none';
-        localStorage.removeItem('vgk_token');
-        localStorage.removeItem('vgk_partner');
-        window.location.href = '/vgk/login';
     };
 
     // DC-ADV-POLICY-NOTIF-001: Member Advance Policy Notification Modal (shown at least 3 times per member)

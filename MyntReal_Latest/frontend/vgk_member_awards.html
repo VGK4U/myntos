@@ -390,10 +390,10 @@ body {
       </div>
       <div>
         <div class="fw-bold text-white" style="font-size: 14px;" id="policyTitle">
-          Active Partner Maintenance Rule: 1 Deal Every 60 Days
+          Active Partner Maintenance Rule: 1 Deal Every 100 Days
         </div>
         <div style="font-size: 12.5px; color: #cbd5e1; margin-top: 2px;" id="dealStatusNotice">
-          To maintain active status and claim Lifetime Awards, partners must submit at least 1 verified customer deal every 60 days. Accounts with no deal in 60 days are marked ineligible for award payouts.
+          To maintain active status and claim Lifetime Awards, partners must submit at least 1 verified customer deal every 100 days. Accounts with no deal in 100 days are marked ineligible for award payouts.
         </div>
       </div>
     </div>
@@ -480,6 +480,16 @@ body {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Active Partner 100-Day Policy Bottom Line Notice -->
+    <div style="background: rgba(254, 240, 138, 0.12); border: 1.5px solid rgba(254, 240, 138, 0.35); border-radius: 12px; padding: 14px 18px; margin-top: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 14px; font-size: 13px; color: #fef08a;">
+      <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <i class="fas fa-calendar-check text-warning" style="font-size: 17px;"></i>
+      </div>
+      <div style="line-height: 1.45;">
+        <strong style="color: #ffffff; font-weight: 700;">Active Partner Policy:</strong> At least <strong>1 verified customer deal is required every 100 days</strong> to maintain active status and eligibility for Lifetime Awards. Accounts with no deal in 100 days become ineligible.
       </div>
     </div>
   </div>
@@ -573,12 +583,12 @@ function renderMemberPortal(data) {
   const achievedAwards = data.achieved_awards || [];
   const ladder = data.ladder || [];
 
-  // Active Partner 60-Day Policy and Eligibility Rendering
+  // Active Partner 100-Day Policy and Eligibility Rendering
   const isIneligible = Boolean(data.is_ineligible);
-  const isNoDeal60d = Boolean(data.is_no_deal_60d);
+  const isNoDeal100d = Boolean(data.is_no_deal_100d || data.is_no_deal_60d);
   const lastDealDate = data.last_deal_date;
   const daysSinceDeal = data.days_since_last_deal;
-  const ineligReason = data.ineligible_reason || (isNoDeal60d ? 'No deal in last 60 days' : '');
+  const ineligReason = data.ineligible_reason || (isNoDeal100d ? 'No deal in last 100 days' : '');
 
   const statusWrap = document.getElementById('memberStatusBadge');
   const policyAlert = document.getElementById('memberPolicyAlert');
@@ -600,7 +610,7 @@ function renderMemberPortal(data) {
     if (policyIcon) policyIcon.className = 'fas fa-exclamation-triangle text-danger';
     if (policyTitle) policyTitle.textContent = 'Account Ineligible for Lifetime Awards';
     if (dealNotice) {
-      dealNotice.innerHTML = `<strong>Attention:</strong> ${ineligReason}. Under company policy, at least <strong>1 verified deal in every 60 days</strong> is mandatory. Please register a customer deal to regain eligibility.`;
+      dealNotice.innerHTML = `<strong>Attention:</strong> ${ineligReason}. Under company policy, at least <strong>1 verified deal in every 100 days</strong> is mandatory. Please register a customer deal to regain eligibility.`;
     }
     if (activityBadge) {
       activityBadge.innerHTML = `<span class="badge bg-danger text-white px-3 py-2 fw-bold" style="font-size: 12px;"><i class="fas fa-ban me-1"></i> Ineligible (${daysSinceDeal !== null && daysSinceDeal !== undefined ? daysSinceDeal + 'd ago' : 'No deals'})</span>`;
@@ -615,7 +625,7 @@ function renderMemberPortal(data) {
     }
     if (policyIconBox) policyIconBox.style.background = 'rgba(16, 185, 129, 0.25)';
     if (policyIcon) policyIcon.className = 'fas fa-check-circle text-success';
-    if (policyTitle) policyTitle.textContent = 'Active Partner Policy: 1 Deal Every 60 Days (Compliant)';
+    if (policyTitle) policyTitle.textContent = 'Active Partner Policy: 1 Deal Every 100 Days (Compliant)';
     if (dealNotice) {
       dealNotice.innerHTML = `<strong>Good Standing:</strong> Last verified customer deal was on <strong>${lastDealDate || 'Recent'}</strong> (${daysSinceDeal ?? 0} days ago). You are fully compliant and eligible for Lifetime Rewards.`;
     }

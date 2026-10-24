@@ -238,6 +238,7 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
                 "version": active_tc.version,
                 "content": active_tc.content,
                 "activated_at": active_tc.activated_at.isoformat() if active_tc.activated_at else None,
+                "max_displays": getattr(active_tc, 'max_displays', 3) or 3,
             }
     except Exception as _tc_err:
         logger.warning(f"[VGK-AUTH] T&C lookup failed (non-fatal): {_tc_err}")
@@ -336,6 +337,7 @@ def vgk_me(current_member: OfficialPartner = Depends(get_current_vgk_member), db
                 "version": active_tc.version,
                 "content": active_tc.content,
                 "activated_at": active_tc.activated_at.isoformat() if active_tc.activated_at else None,
+                "max_displays": getattr(active_tc, 'max_displays', 3) or 3,
             }
     except Exception as _tc_err:
         logger.warning(f"[VGK-ME] T&C lookup failed (non-fatal): {_tc_err}")
@@ -3787,6 +3789,7 @@ def vgk_public_terms(db: Session = Depends(get_db)):
             "content": tc.content,
             "activated_at": tc.activated_at.isoformat() if tc.activated_at else None,
             "platform_type": tc.platform_type,
+            "max_displays": getattr(tc, 'max_displays', 3) or 3,
         }
     }
 
